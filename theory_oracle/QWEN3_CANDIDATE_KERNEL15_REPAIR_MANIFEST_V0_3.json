@@ -1,0 +1,47 @@
+{
+  "schema_version": "forkcert.qwen3-candidate-kernel15-repair-manifest.v0.3",
+  "status": "FROZEN_PRE_EXECUTION_REVISION_3_AOT_FUNCTION_CLASS_RESOLUTION",
+  "freeze_date": "2026-07-19",
+  "subject": "original-candidate calls 0, 13 and 26 of the repeated residual-plus-input-RMSNorm Triton kernel family",
+  "selection": {
+    "state": "heldout-transport-B-step29",
+    "rule": "early/middle/late calls of the 27-call cross-layer fused family identified by the validated original-candidate inventory"
+  },
+  "artifacts": {
+    "contract": {
+      "path": "theory_oracle/QWEN3_CANDIDATE_KERNEL15_REPAIR_CONTRACT_V0_1_2026-07-19.md",
+      "sha256": "4ff3849ab8a5715680a9964d80148ec391d336a3763fdb57deaadb8c18b110ef"
+    },
+    "executor": {
+      "path": "theory_oracle/qwen3_candidate_kernel15_repair_v0_1.py",
+      "sha256": "e963e7c1320e24482c07ad4b75503816995661d2e3df8c36fb2a3d700ed2f887"
+    },
+    "snapshot_metadata": {
+      "path": "data/qwen3_grpo_heldout_transport_v01_b_step29_transition/forkcert_transition_snapshot.json",
+      "sha256": "62e59c566d0aec35ddcf528549aa10f03be81a54d1be024ef26b0e37a1879c6c"
+    },
+    "target_input": {
+      "path": "data/qwen3_grpo_heldout_transport_v01_b_step29_transition/compiler_history/step_000029_inputs.pt",
+      "sha256": "f767e065bd6aaafc953968fd2bbe0bb83193117934bd40baee61cdf5492f2d80"
+    }
+  },
+  "output": "results/operator_oracle/qwen3_candidate_kernel15_repair_v0_3/result.json",
+  "fail_closed": true,
+  "correctness_authority": null,
+  "acceptance_authority": null,
+  "revision_history": [
+    {
+      "revision": 2,
+      "reason": "recursively inspect callable closures",
+      "kernel_replacement_executed": false,
+      "preserved_invalid_result": "results/operator_oracle/qwen3_candidate_kernel15_repair_v0_2/result.json"
+    },
+    {
+      "revision": 3,
+      "reason": "AOT compiled forward is retained on a dynamic autograd.Function class / invocation context; inspect forward, backward, apply and bounded object dictionaries",
+      "target_effect_observed_before_revision": false,
+      "kernel_replacement_executed_before_revision": false,
+      "gate_relaxed": false
+    }
+  ]
+}

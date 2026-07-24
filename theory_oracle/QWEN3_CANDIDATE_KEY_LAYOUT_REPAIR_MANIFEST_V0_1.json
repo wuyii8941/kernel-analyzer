@@ -1,0 +1,39 @@
+{
+  "schema_version": "forkcert.qwen3-candidate-key-layout-repair-manifest.v0.1",
+  "status": "FROZEN_PRE_EXECUTION",
+  "freeze_date": "2026-07-19",
+  "subject": "original-candidate calls 0, 14 and 27 of the 28-call key head-repeat, layout and scaling generated kernel family",
+  "selection": {
+    "state": "heldout-transport-B-step29",
+    "kernel_family": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mean_mul_pow_rsqrt_sin_transpose_unsqueeze_view_7",
+    "call_indices": [0, 14, 27],
+    "rule": "early, middle and late decoder-layer invocations",
+    "target_effect_observed_before_freeze": false
+  },
+  "artifacts": {
+    "contract": {
+      "path": "theory_oracle/QWEN3_CANDIDATE_KEY_LAYOUT_REPAIR_CONTRACT_V0_1_2026-07-19.md",
+      "sha256": "27644cd46cf9e2284a28f4a0149e1fa63df6da63f977c299ecda82b2900c2bbe"
+    },
+    "common_executor": {
+      "path": "theory_oracle/qwen3_candidate_kernel_repair_common_v0_1.py",
+      "sha256": "999831b7082d886338ccbe1b73aa3dbf1ec549f3695d73abeea3f3fb9dab2b8b"
+    },
+    "subject_executor": {
+      "path": "theory_oracle/qwen3_candidate_key_layout_repair_v0_1.py",
+      "sha256": "18eccc1c5fb0e7013a86e0dcd4b831eddb31c7a2dca524b32a6bbbd827dd952b"
+    },
+    "snapshot_metadata": {
+      "path": "data/qwen3_grpo_heldout_transport_v01_b_step29_transition/forkcert_transition_snapshot.json",
+      "sha256": "62e59c566d0aec35ddcf528549aa10f03be81a54d1be024ef26b0e37a1879c6c"
+    },
+    "target_input": {
+      "path": "data/qwen3_grpo_heldout_transport_v01_b_step29_transition/compiler_history/step_000029_inputs.pt",
+      "sha256": "f767e065bd6aaafc953968fd2bbe0bb83193117934bd40baee61cdf5492f2d80"
+    }
+  },
+  "output": "results/operator_oracle/qwen3_candidate_key_layout_repair_v0_1/result.json",
+  "fail_closed": true,
+  "correctness_authority": null,
+  "acceptance_authority": null
+}

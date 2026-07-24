@@ -1,0 +1,80 @@
+{
+  "case": "pytorch_issue_105929_torchdispatch_capture",
+  "environment": {
+    "device": "cpu",
+    "torch": "2.2.0+cu121"
+  },
+  "not_a_claim": [
+    "blind localization",
+    "external patch validation",
+    "root cause"
+  ],
+  "qualification": "QUALIFIED_LOWER_STAGE_CANDIDATE_ROLE_MISMATCH",
+  "role": "candidate_qualification_only",
+  "schema_version": "forkcert.historical-candidate-screen.v0.1",
+  "semantic_contract": "TorchDispatchMode rewrite of aten.add to aten.mul must be observed by compiled execution",
+  "stage_summary": {
+    "aot_eager": {
+      "contract_holds": true,
+      "repeatable": true,
+      "value": 9.0
+    },
+    "dynamo_eager": {
+      "contract_holds": true,
+      "repeatable": true,
+      "value": 9.0
+    },
+    "eager": {
+      "contract_holds": true,
+      "repeatable": true,
+      "value": 9.0
+    },
+    "inductor": {
+      "contract_holds": false,
+      "repeatable": true,
+      "value": 6.0
+    }
+  },
+  "stages": {
+    "aot_eager": [
+      {
+        "contract_holds": true,
+        "value": 9.0
+      },
+      {
+        "contract_holds": true,
+        "value": 9.0
+      }
+    ],
+    "dynamo_eager": [
+      {
+        "contract_holds": true,
+        "value": 9.0
+      },
+      {
+        "contract_holds": true,
+        "value": 9.0
+      }
+    ],
+    "eager": [
+      {
+        "contract_holds": true,
+        "value": 9.0
+      },
+      {
+        "contract_holds": true,
+        "value": 9.0
+      }
+    ],
+    "inductor": [
+      {
+        "contract_holds": false,
+        "value": 6.0
+      },
+      {
+        "contract_holds": false,
+        "value": 6.0
+      }
+    ]
+  }
+}

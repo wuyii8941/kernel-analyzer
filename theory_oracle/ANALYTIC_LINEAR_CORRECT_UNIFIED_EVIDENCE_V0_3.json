@@ -1,0 +1,78 @@
+{
+  "candidate_identity": {
+    "evidence": "one tracked 9-node graph, one warmup and 64 scored runtime invocations",
+    "status": "VALID"
+  },
+  "ledgers": {
+    "exact_transition": {
+      "evidence": {
+        "accepted_states": 32,
+        "states": 32,
+        "structure_and_option_checks": "all accepted"
+      },
+      "status": "ACCEPT"
+    },
+    "numerical_transition": {
+      "evidence": {
+        "accepted_states": 32,
+        "independent_truth": "exact Python Fraction arithmetic",
+        "max_candidate_error_bound_ratio": 0.13864297060138323,
+        "rejected_states": 0,
+        "states": 32
+      },
+      "status": "ACCEPT"
+    },
+    "variability_profile": {
+      "sources": {
+        "algorithmic_rng": {
+          "classification": "ABSENT_OR_DISABLED",
+          "observation": "integer-formula bank generation and transition execution use no algorithmic RNG"
+        },
+        "compiled_selection": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "one tracked fullgraph realization is reused for all scored calls"
+        },
+        "features_and_targets": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "each state's exact feature and target tensors are shared by all arms and repeats"
+        },
+        "gpu_execution": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "32/32 states have identical signatures across two deterministic repeats"
+        },
+        "implementation_path": {
+          "classification": "FIXED_IMPLEMENTATION_EFFECT",
+          "observation": "the eager and correct compiled reduction realizations are fixed, not randomly selected per repeat"
+        },
+        "state_generation": {
+          "classification": "BETWEEN_STATE_DESIGN",
+          "observation": "the 32-state finite bank is enumerated by deterministic integer formulas"
+        },
+        "stochastic_rounding": {
+          "classification": "ABSENT_OR_DISABLED",
+          "observation": "round-to-nearest float32 protocol; no stochastic rounding"
+        }
+      },
+      "status": "CHARACTERIZED"
+    }
+  },
+  "schema_version": "forkcert.training-step-oracle-evidence.v0.3",
+  "subject_id": "analytic-linear-step-correct-v0.1",
+  "validity_gates": [
+    {
+      "evidence": "candidate_identity_all_valid=true in summary.json",
+      "id": "candidate_identity",
+      "passed": true
+    },
+    {
+      "evidence": "32/32 states stable across two exact-state repeats",
+      "id": "repeat_stability",
+      "passed": true
+    },
+    {
+      "evidence": "finite normal-range preconditions and TF32 exclusion checked by executor",
+      "id": "numerical_envelope_preconditions",
+      "passed": true
+    }
+  ]
+}

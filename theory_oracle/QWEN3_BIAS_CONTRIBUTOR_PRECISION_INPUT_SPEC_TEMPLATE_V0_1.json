@@ -1,0 +1,64 @@
+{
+  "schema_version": "forkcert.qwen3-bias-contributor-precision-input-spec.v0.1",
+  "status": "UNINSTANTIATED",
+  "target_endpoint": null,
+  "frozen_bias_direction": {
+    "source": "ENDPOINT_CONFIRMATION_ONLY",
+    "kind": null,
+    "scalar_sign": null,
+    "vector_direction_artifact_path": null,
+    "vector_direction_artifact_sha256": null
+  },
+  "candidate_freeze": {
+    "artifact_path": null,
+    "artifact_sha256": null
+  },
+  "precision_basis": {
+    "mode": null,
+    "allowed_modes": [
+      "INDEPENDENT_CONTRIBUTOR_PILOT_VARIANCE_ONLY",
+      "EXTERNAL_FIXED_CONSERVATIVE_VARIANCE"
+    ],
+    "contributor_pilot_summary_path": null,
+    "contributor_pilot_summary_sha256": null,
+    "external_fixed_rationale": null
+  },
+  "multiplicity": {
+    "primary_repair_family_members": [],
+    "method": null,
+    "family_alpha": null,
+    "injection_is_separate_family": true
+  },
+  "variance_upper_confidence": null,
+  "candidate_precision_inputs": {},
+  "required_candidate_precision_input_fields": [
+    "desired_halfwidth",
+    "directional_contribution_floor",
+    "variance_floor_sd",
+    "threshold_sources"
+  ],
+  "threshold_sources_schema": {
+    "desired_halfwidth": {"kind": "OPEN_CHOOSE_MEASUREMENT_NEGATIVE_CONTROL_OR_EXTERNAL_SCIENTIFIC", "description": null, "selection_rule": null, "uses_pilot_contribution_mean_or_sign": false},
+    "directional_contribution_floor": {"kind": "OPEN_CHOOSE_EXACT_ZERO_MEASUREMENT_NEGATIVE_CONTROL_OR_EXTERNAL_ATTRIBUTION_TOLERANCE", "description": null, "selection_rule": null, "uses_pilot_contribution_mean_or_sign": false},
+    "variance_floor_sd": {"kind": "OPEN_CHOOSE_MEASUREMENT_NEGATIVE_CONTROL_OR_EXTERNAL_CONSERVATIVE_VARIANCE", "description": null, "selection_rule": null, "uses_pilot_contribution_mean_or_sign": false}
+  },
+  "global_design": {
+    "minimum_confirmation_trajectories": 8,
+    "resource_cap_trajectories": null,
+    "tail": {
+      "scope": null,
+      "minimum_prevalence": null,
+      "alpha": null
+    },
+    "no_optional_stopping_on_mean_or_sign": true
+  },
+  "sensitivity": {
+    "method": "TRAJECTORY_RADEMACHER_SIGN_FLIP_STUDENTIZED",
+    "role": "VETO_PRIMARY_CONTRIBUTION_ONLY",
+    "multiplicity_adjusted_alpha_required": true,
+    "exact_max_trajectories": 16,
+    "monte_carlo_draws": 99999,
+    "monte_carlo_seed": 172904
+  },
+  "freeze_rule": "freeze this input spec before reading contributor-pilot dispersion or calculating the final contributor trajectory count"
+}

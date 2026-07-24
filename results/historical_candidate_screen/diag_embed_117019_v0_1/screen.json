@@ -1,0 +1,160 @@
+{
+  "case": "pytorch_issue_117019_diag_embed_negative_dims",
+  "environment": {
+    "device": "cpu",
+    "torch": "2.3.0+cu121"
+  },
+  "not_a_claim": [
+    "blind localization",
+    "external patch validation",
+    "root cause"
+  ],
+  "qualification": "REJECTED_ON_BOUND_RUNTIME",
+  "role": "candidate_qualification_only",
+  "schema_version": "forkcert.historical-candidate-screen.v0.1",
+  "semantic_contract": "diag_embed must preserve its declared dim/offset placement exactly in float64",
+  "stage_summary": {
+    "aot_eager": {
+      "contract_holds": true,
+      "max_abs": 0.0,
+      "repeatable": true
+    },
+    "dynamo_eager": {
+      "contract_holds": true,
+      "max_abs": 0.0,
+      "repeatable": true
+    },
+    "eager": {
+      "contract_holds": true,
+      "max_abs": 0.0,
+      "repeatable": true
+    },
+    "inductor": {
+      "contract_holds": true,
+      "max_abs": 0.0,
+      "repeatable": true
+    }
+  },
+  "stages": {
+    "aot_eager": [
+      {
+        "dtype": "torch.float64",
+        "equal": true,
+        "max_abs": 0.0,
+        "shape": [
+          2,
+          8,
+          6,
+          8,
+          6,
+          6,
+          2
+        ]
+      },
+      {
+        "dtype": "torch.float64",
+        "equal": true,
+        "max_abs": 0.0,
+        "shape": [
+          2,
+          8,
+          6,
+          8,
+          6,
+          6,
+          2
+        ]
+      }
+    ],
+    "dynamo_eager": [
+      {
+        "dtype": "torch.float64",
+        "equal": true,
+        "max_abs": 0.0,
+        "shape": [
+          2,
+          8,
+          6,
+          8,
+          6,
+          6,
+          2
+        ]
+      },
+      {
+        "dtype": "torch.float64",
+        "equal": true,
+        "max_abs": 0.0,
+        "shape": [
+          2,
+          8,
+          6,
+          8,
+          6,
+          6,
+          2
+        ]
+      }
+    ],
+    "eager": [
+      {
+        "dtype": "torch.float64",
+        "equal": true,
+        "max_abs": 0.0,
+        "shape": [
+          2,
+          8,
+          6,
+          8,
+          6,
+          6,
+          2
+        ]
+      },
+      {
+        "dtype": "torch.float64",
+        "equal": true,
+        "max_abs": 0.0,
+        "shape": [
+          2,
+          8,
+          6,
+          8,
+          6,
+          6,
+          2
+        ]
+      }
+    ],
+    "inductor": [
+      {
+        "dtype": "torch.float64",
+        "equal": true,
+        "max_abs": 0.0,
+        "shape": [
+          2,
+          8,
+          6,
+          8,
+          6,
+          6,
+          2
+        ]
+      },
+      {
+        "dtype": "torch.float64",
+        "equal": true,
+        "max_abs": 0.0,
+        "shape": [
+          2,
+          8,
+          6,
+          8,
+          6,
+          6,
+          2
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,341 @@
+{
+  "allowed_claim": "SEEDED_TRAINING_CALIBRATION_PASSED",
+  "controls": {
+    "noop_full_transition_exact": true,
+    "repair_full_transition_exact": true
+  },
+  "endpoints": {
+    "faulty": {
+      "clipped": true,
+      "grad_norm": 1.3123393058776855,
+      "loss": 0.9041347503662109
+    },
+    "optimizer_state_changed": true,
+    "reference": {
+      "clipped": false,
+      "grad_norm": 1.2904820442199707,
+      "loss": 0.8835520148277283
+    },
+    "update_changed": true
+  },
+  "environment": {
+    "cuda": "12.6",
+    "gpu": "Tesla T4",
+    "seed": 2307,
+    "torch": "2.11.0+cu126"
+  },
+  "frozen_state": {
+    "batch_sha256": "6d3bb23afed01fa15c52a8e29b4783c84f404bb72170de618d9652479810d304",
+    "model_sha256": "13f18a96e2c3e234259a067f2af822306d53dd78919ea59bd3dbbde701c97e94",
+    "optimizer_sha256": "96064e321f0fe46036d5dc06d1174e3d430d35cfcb9930a0af51488d6d0b3bb6"
+  },
+  "generic_locator": {
+    "certificate": {
+      "case_identity": {
+        "case_id": "tiny_training_calibration_v0_1",
+        "role": "seeded_calibration_only"
+      },
+      "evidence": {
+        "candidate_regions": [
+          "r_head"
+        ],
+        "mediation": true,
+        "no_op": true,
+        "production": true,
+        "repair": true
+      },
+      "manual_decisions": [],
+      "provenance": {
+        "candidate_regions": [
+          "r_head"
+        ],
+        "region_inventory": [
+          "r_encoder",
+          "r_head",
+          "r_loss_backward",
+          "r_clip_update"
+        ],
+        "source": "calibration harness"
+      },
+      "region_reduction": {
+        "candidate_regions": [
+          "r_head"
+        ],
+        "input_region_count": 4,
+        "not_claimed": "unique source region, causal share, or root cause",
+        "reduction_ratio": 0.75,
+        "status": "ONE_MINIMAL_CANDIDATE_SET",
+        "trace": [
+          {
+            "preserves_symptom": true,
+            "subset": [
+              "r_encoder",
+              "r_head",
+              "r_loss_backward",
+              "r_clip_update"
+            ]
+          },
+          {
+            "preserves_symptom": true,
+            "subset": [
+              "r_head",
+              "r_clip_update"
+            ]
+          },
+          {
+            "preserves_symptom": false,
+            "subset": [
+              "r_clip_update"
+            ]
+          },
+          {
+            "preserves_symptom": true,
+            "subset": [
+              "r_head"
+            ]
+          }
+        ]
+      },
+      "schema_version": "forkcert.generic-localization-certificate.v0.1",
+      "semantic_contract": {
+        "endpoint": "clip decision plus parameter and optimizer next state"
+      },
+      "stage_screen": {
+        "allowed_stage_claim": "SUPPORTED_STAGE_CANDIDATE",
+        "failing_stages": [
+          "declared_seeded_boundary_candidate"
+        ],
+        "not_claimed": "a unique first-bad compiler pass or a strict stage order",
+        "observations": [
+          {
+            "artifact_ids": [],
+            "contract_holds": true,
+            "notes": [],
+            "stage_id": "eager"
+          },
+          {
+            "artifact_ids": [],
+            "contract_holds": true,
+            "notes": [
+              "forward allclose(rtol=1e-5, atol=1e-6) contract"
+            ],
+            "stage_id": "dynamo_eager"
+          },
+          {
+            "artifact_ids": [],
+            "contract_holds": true,
+            "notes": [
+              "forward allclose(rtol=1e-5, atol=1e-6) contract"
+            ],
+            "stage_id": "aot_eager"
+          },
+          {
+            "artifact_ids": [],
+            "contract_holds": true,
+            "notes": [
+              "forward allclose(rtol=1e-5, atol=1e-6) contract"
+            ],
+            "stage_id": "inductor"
+          },
+          {
+            "artifact_ids": [],
+            "contract_holds": false,
+            "notes": [
+              "calibration-only"
+            ],
+            "stage_id": "declared_seeded_boundary_candidate"
+          }
+        ],
+        "passing_stages": [
+          "eager",
+          "dynamo_eager",
+          "aot_eager",
+          "inductor"
+        ],
+        "unknown_stages": []
+      },
+      "stopping_reason": "the certificate stops at the narrowest layer whose provenance and controlled evidence are present; absence of lower-level evidence is not permission to guess an operation or kernel"
+    },
+    "reducer_queries": [
+      {
+        "enabled_regions": [
+          "r_encoder",
+          "r_head",
+          "r_loss_backward",
+          "r_clip_update"
+        ],
+        "preserves_symptom": true,
+        "seeded_variants": [
+          "hidden_boundary_variant"
+        ],
+        "semantic_endpoint": {
+          "clip_changed": true,
+          "optimizer_next_state_changed": true,
+          "parameter_update_changed": true
+        }
+      },
+      {
+        "enabled_regions": [
+          "r_head",
+          "r_clip_update"
+        ],
+        "preserves_symptom": true,
+        "seeded_variants": [
+          "hidden_boundary_variant"
+        ],
+        "semantic_endpoint": {
+          "clip_changed": true,
+          "optimizer_next_state_changed": true,
+          "parameter_update_changed": true
+        }
+      },
+      {
+        "enabled_regions": [
+          "r_clip_update"
+        ],
+        "preserves_symptom": false,
+        "seeded_variants": [],
+        "semantic_endpoint": {
+          "clip_changed": false,
+          "optimizer_next_state_changed": false,
+          "parameter_update_changed": false
+        }
+      },
+      {
+        "enabled_regions": [
+          "r_head"
+        ],
+        "preserves_symptom": true,
+        "seeded_variants": [
+          "hidden_boundary_variant"
+        ],
+        "semantic_endpoint": {
+          "clip_changed": true,
+          "optimizer_next_state_changed": true,
+          "parameter_update_changed": true
+        }
+      }
+    ],
+    "reduction_execution": "each subset runs the complete frozen one-step transition; endpoint contract, not raw delta, answers the predicate",
+    "region_reduction": {
+      "candidate_regions": [
+        "r_head"
+      ],
+      "input_region_count": 4,
+      "not_claimed": "unique source region, causal share, or root cause",
+      "reduction_ratio": 0.75,
+      "status": "ONE_MINIMAL_CANDIDATE_SET",
+      "trace": [
+        {
+          "preserves_symptom": true,
+          "subset": [
+            "r_encoder",
+            "r_head",
+            "r_loss_backward",
+            "r_clip_update"
+          ]
+        },
+        {
+          "preserves_symptom": true,
+          "subset": [
+            "r_head",
+            "r_clip_update"
+          ]
+        },
+        {
+          "preserves_symptom": false,
+          "subset": [
+            "r_clip_update"
+          ]
+        },
+        {
+          "preserves_symptom": true,
+          "subset": [
+            "r_head"
+          ]
+        }
+      ]
+    },
+    "stage_screen": {
+      "allowed_stage_claim": "SUPPORTED_STAGE_CANDIDATE",
+      "failing_stages": [
+        "declared_seeded_boundary_candidate"
+      ],
+      "not_claimed": "a unique first-bad compiler pass or a strict stage order",
+      "observations": [
+        {
+          "artifact_ids": [],
+          "contract_holds": true,
+          "notes": [],
+          "stage_id": "eager"
+        },
+        {
+          "artifact_ids": [],
+          "contract_holds": true,
+          "notes": [
+            "forward allclose(rtol=1e-5, atol=1e-6) contract"
+          ],
+          "stage_id": "dynamo_eager"
+        },
+        {
+          "artifact_ids": [],
+          "contract_holds": true,
+          "notes": [
+            "forward allclose(rtol=1e-5, atol=1e-6) contract"
+          ],
+          "stage_id": "aot_eager"
+        },
+        {
+          "artifact_ids": [],
+          "contract_holds": true,
+          "notes": [
+            "forward allclose(rtol=1e-5, atol=1e-6) contract"
+          ],
+          "stage_id": "inductor"
+        },
+        {
+          "artifact_ids": [],
+          "contract_holds": false,
+          "notes": [
+            "calibration-only"
+          ],
+          "stage_id": "declared_seeded_boundary_candidate"
+        }
+      ],
+      "passing_stages": [
+        "eager",
+        "dynamo_eager",
+        "aot_eager",
+        "inductor"
+      ],
+      "unknown_stages": []
+    }
+  },
+  "limitations": [
+    "seeded head-boundary fault is calibration ground truth, not an automatically found compiler bug",
+    "this checks a frozen one-step transition, not long-run training"
+  ],
+  "mediation": {
+    "fixed_suffix_gradient_max_abs": 0.010416671633720398,
+    "observed": true
+  },
+  "production": {
+    "logit_max_abs": 0.125,
+    "observed": true,
+    "same_head_input_by_frozen_prefix": true
+  },
+  "regions": [
+    "encoder: linear\u2192layernorm\u2192gelu",
+    "head: linear",
+    "loss/backward",
+    "clip",
+    "AdamW update"
+  ],
+  "role": "seeded_calibration_only",
+  "schema_version": "forkcert.tiny-training-calibration.v0.1",
+  "threshold": {
+    "baseline_unclipped_norm": 1.2904820442199707,
+    "fault_unclipped_norm": 1.3123393058776855,
+    "max_norm": 1.3014106750488281
+  }
+}

@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /data1/tzh/forkcert
+export HF_HOME=/data1/tzh/forkcert/cache/huggingface
+export HF_HUB_CACHE=/data1/tzh/forkcert/cache/huggingface/hub
+export TRANSFORMERS_CACHE="$HF_HUB_CACHE"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export TORCHINDUCTOR_CACHE_DIR=/data1/tzh/forkcert/cache/torchinductor
+export TRITON_CACHE_DIR=/data1/tzh/forkcert/cache/triton
+export XDG_CACHE_HOME=/data1/tzh/forkcert/cache/xdg
+export PIP_CACHE_DIR=/data1/tzh/forkcert/cache/pip
+export MPLCONFIGDIR=/data1/tzh/forkcert/cache/matplotlib
+export CUBLAS_WORKSPACE_CONFIG=:4096:8
+export PYTHONHASHSEED=0
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export TOKENIZERS_PARALLELISM=false
+mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$TORCHINDUCTOR_CACHE_DIR" "$TRITON_CACHE_DIR" "$XDG_CACHE_HOME" "$PIP_CACHE_DIR" "$MPLCONFIGDIR" data results reports logs
+LOG="logs/run_$(date +%Y%m%d_%H%M%S).log"
+exec > >(tee -a "$LOG") 2>&1
+echo "ForkCert run log: $LOG"
+rm -f results/phase15_measurements.jsonl
+
+PY=/data1/tzh/conda-envs/forkcert/bin/python
+export PYTHONPATH=/data1/tzh/forkcert/src
+if [[ -z "${CUDA_VISIBLE_DEVICES:-}" || "${CUDA_VISIBLE_DEVICES}" == *,* ]]; then
+  SELECTED_GPU=$("$PY" scripts/select_gpu.py --require-bf16 --require-flash --fallback-any)
+  if [[ -n "$SELECTED_GPU" ]]; then
+    export CUDA_VISIBLE_DEVICES="$SELECTED_GPU"
+    echo "Selected one CUDA device: physical index $CUDA_VISIBLE_DEVICES"
+  fi
+fi
+RUNTIME_DIR=results/runtime_configs
+"$PY" scripts/resolve_runtime_configs.py \
+  --out-dir "$RUNTIME_DIR" \
+  --config configs/phase0_grpo.example.yaml \
+  --config configs/hf_pair.example.yaml \
+  --config configs/hf_debug_fp32_bf16.example.yaml \
+  --config configs/hf_sdpa_math_flash.example.yaml \
+  --config configs/hf_logsoftmax_upcast.example.yaml \
+  --config configs/hf_rmsnorm_reference.example.yaml \
+  --config configs/hf_materialization.example.yaml \
+  --config configs/hf_matmul_reduction.example.yaml
+PHASE0_CONFIG="$RUNTIME_DIR/phase0_grpo.example.yaml"
+PAIR_TEMPLATE="$RUNTIME_DIR/hf_pair.example.yaml"
+DEBUG_TEMPLATE="$RUNTIME_DIR/hf_debug_fp32_bf16.example.yaml"
+SDPA_TEMPLATE="$RUNTIME_DIR/hf_sdpa_math_flash.example.yaml"
+LOGSOFTMAX_TEMPLATE="$RUNTIME_DIR/hf_logsoftmax_upcast.example.yaml"
+RMSNORM_TEMPLATE="$RUNTIME_DIR/hf_rmsnorm_reference.example.yaml"
+MATERIALIZATION_TEMPLATE="$RUNTIME_DIR/hf_materialization.example.yaml"
+MATMUL_TEMPLATE="$RUNTIME_DIR/hf_matmul_reduction.example.yaml"
+PAIR_CONFIG=results/configs/hf_pair.phase0_final.yaml
+DEBUG_CONFIG=results/configs/hf_debug_fp32_bf16.phase0_final.yaml
+SDPA_CONFIG=results/configs/hf_sdpa_math_flash.phase0_final.yaml
+LOGSOFTMAX_CONFIG=results/configs/hf_logsoftmax_upcast.phase0_final.yaml
+RMSNORM_CONFIG=results/configs/hf_rmsnorm_reference.phase0_final.yaml
+MATERIALIZATION_CONFIG=results/configs/hf_materialization.phase0_final.yaml
+MATMUL_CONFIG=results/configs/hf_matmul_reduction.phase0_final.yaml
+SAMPLES=data/phase0_grpo_samples.jsonl
+
+$PY scripts/audit_env.py --out results/env_audit.json
+$PY scripts/prepare_prompt_pairs.py --count 100 --out data/prompt_pairs.jsonl
+$PY scripts/preflight.py \
+  --config "$PHASE0_CONFIG" \
+  --config "$PAIR_TEMPLATE" \
+  --config "$DEBUG_TEMPLATE" \
+  --config "$SDPA_TEMPLATE" \
+  --config "$LOGSOFTMAX_TEMPLATE" \
+  --config "$RMSNORM_TEMPLATE" \
+  --config "$MATERIALIZATION_TEMPLATE" \
+  --config "$MATMUL_TEMPLATE" \
+  --samples data/prompt_pairs.jsonl \
+  --require-ml \
+  --require-rl \
+  --require-cuda \
+  --out results/preflight.json
+$PY scripts/phase0_grpo_train.py \
+  --config "$PHASE0_CONFIG" \
+  --out-jsonl data/phase0_grpo_dump.jsonl \
+  --samples-jsonl "$SAMPLES" \
+  --final-rollout-jsonl data/phase0_final_rollout.jsonl \
+  --output-dir data/phase0_policy_final
+$PY scripts/write_checkpoint_configs.py \
+  --checkpoint data/phase0_policy_final \
+  --out-dir results/configs \
+  --config "$PAIR_TEMPLATE" \
+  --config "$DEBUG_TEMPLATE" \
+  --config "$SDPA_TEMPLATE" \
+  --config "$LOGSOFTMAX_TEMPLATE" \
+  --config "$RMSNORM_TEMPLATE" \
+  --config "$MATERIALIZATION_TEMPLATE" \
+  --config "$MATMUL_TEMPLATE"
+$PY scripts/preflight.py \
+  --config "$PAIR_CONFIG" \
+  --config "$DEBUG_CONFIG" \
+  --config "$SDPA_CONFIG" \
+  --config "$LOGSOFTMAX_CONFIG" \
+  --config "$RMSNORM_CONFIG" \
+  --config "$MATERIALIZATION_CONFIG" \
+  --config "$MATMUL_CONFIG" \
+  --samples "$SAMPLES" \
+  --require-ml \
+  --out results/preflight.phase0_final.json
+$PY scripts/phase0_margin_hist.py \
+  --input data/phase0_grpo_dump.jsonl \
+  --out-json results/phase0_margin_summary.json \
+  --report reports/phase0.md \
+  --fail-on-downgrade \
+  --require-real-training
+$PY scripts/phase1_logprob_pipeline.py \
+  --config "$DEBUG_CONFIG" \
+  --samples "$SAMPLES" \
+  --out-jsonl results/phase1_debug_fp32_bf16.jsonl \
+  --report reports/phase1_debug.md \
+  --enforce-self-gate \
+  --enforce-scale-gate
+$PY scripts/check_gates.py --phase phase1 --input results/phase1_debug_fp32_bf16.jsonl
+$PY scripts/phase1_logprob_pipeline.py \
+  --config "$PAIR_CONFIG" \
+  --samples "$SAMPLES" \
+  --out-jsonl results/phase1_logprobs.jsonl \
+  --report reports/phase1.md \
+  --enforce-self-gate \
+  --enforce-scale-gate
+$PY scripts/check_gates.py --phase phase1 --input results/phase1_logprobs.jsonl
+$PY scripts/phase1_logprob_pipeline.py \
+  --config "$SDPA_CONFIG" \
+  --samples "$SAMPLES" \
+  --out-jsonl results/phase1_sdpa_logprobs.jsonl \
+  --report reports/phase1_sdpa.md \
+  --enforce-self-gate \
+  --enforce-scale-gate
+$PY scripts/check_gates.py --phase phase1 --input results/phase1_sdpa_logprobs.jsonl
+$PY scripts/write_phase1_manifest.py \
+  --debug results/phase1_debug_fp32_bf16.jsonl \
+  --claim-compile results/phase1_logprobs.jsonl \
+  --claim-sdpa results/phase1_sdpa_logprobs.jsonl \
+  --env-audit results/env_audit.json \
+  --out results/phase1_pair_manifest.json \
+  --report reports/phase1_pairs.md \
+  --fail-on-incomplete
+$PY scripts/phase15_measure_hf.py \
+  --config "$PAIR_CONFIG" \
+  --samples "$SAMPLES" \
+  --out-jsonl results/phase15_measurements.jsonl \
+  --max-samples 4 \
+  --max-modules 64
+$PY scripts/phase15_measure_hf.py \
+  --config "$SDPA_CONFIG" \
+  --samples "$SAMPLES" \
+  --out-jsonl results/phase15_measurements.jsonl \
+  --max-samples 4 \
+  --max-modules 64
+$PY scripts/phase15_measure_hf.py \
+  --config "$LOGSOFTMAX_CONFIG" \
+  --samples "$SAMPLES" \
+  --out-jsonl results/phase15_measurements.jsonl \
+  --max-samples 4 \
+  --max-modules 64
+$PY scripts/phase15_measure_hf.py \
+  --config "$RMSNORM_CONFIG" \
+  --samples "$SAMPLES" \
+  --out-jsonl results/phase15_measurements.jsonl \
+  --max-samples 4 \
+  --max-modules 64
+$PY scripts/phase15_measure_hf.py \
+  --config "$MATERIALIZATION_CONFIG" \
+  --samples "$SAMPLES" \
+  --out-jsonl results/phase15_measurements.jsonl \
+  --max-samples 4 \
+  --max-modules 64
+$PY scripts/phase15_measure_hf.py \
+  --config "$MATMUL_CONFIG" \
+  --samples "$SAMPLES" \
+  --out-jsonl results/phase15_measurements.jsonl \
+  --max-samples 4 \
+  --max-modules 64
+$PY scripts/check_gates.py --phase phase15 --input results/phase15_measurements.jsonl
+$PY scripts/phase15_attribution_ladder.py \
+  --measurements results/phase15_measurements.jsonl \
+  --out-json results/phase15_attribution.json \
+  --report reports/phase15.md
+$PY scripts/make_analytic_source_template.py \
+  --measurements results/phase15_measurements.jsonl \
+  --out results/phase2_sources.analytic_draft.json
+$PY scripts/make_bounds_sources.py \
+  --measurements results/phase15_measurements.jsonl \
+  --out results/phase2_sources.initial.json
+$PY scripts/phase2_bounds.py \
+  --sources results/phase2_sources.initial.json \
+  --measurements results/phase15_measurements.jsonl \
+  --logprob-jsonl results/phase1_logprobs.jsonl \
+  --out-json results/phase2_bounds.json \
+  --report reports/phase2.md \
+  --fail-on-unusable
+$PY scripts/phase3_calibration.py \
+  --logprob-jsonl results/phase1_logprobs.jsonl \
+  --margin-jsonl data/phase0_grpo_dump.jsonl \
+  --out-model-json results/phase3_calibration.json \
+  --out-jsonl results/phase3_controlled_certificates.jsonl \
+  --report reports/phase3.md
+$PY scripts/check_gates.py --phase phase3 --input results/phase3_controlled_certificates.jsonl --calibration-json results/phase3_calibration.json
+$PY scripts/phase4_natural_scan.py \
+  --logprob-jsonl results/phase1_logprobs.jsonl \
+  --rollout-jsonl data/phase0_final_rollout.jsonl \
+  --bounds-json results/phase2_bounds.json \
+  --calibration-json results/phase3_calibration.json \
+  --attribution-json results/phase15_attribution.json \
+  --out-jsonl results/phase4_certificates.jsonl \
+  --report reports/phase4.md \
+  --fail-on-missing-rollout \
+  --require-rollout-state final \
+  --require-rollout-token-id
+$PY scripts/report_fork_cases.py \
+  --certificates results/phase4_certificates.jsonl \
+  --out reports/fork_cases.md \
+  --max-cases 20
+$PY scripts/phase5_hf_bug_injection.py \
+  --config "$PAIR_CONFIG" \
+  --samples "$SAMPLES" \
+  --logprob-jsonl results/phase1_logprobs.jsonl \
+  --rollout-jsonl data/phase0_final_rollout.jsonl \
+  --valid-certificates results/phase4_certificates.jsonl \
+  --bounds-json results/phase2_bounds.json \
+  --out-jsonl results/phase5_bug_certificates.jsonl \
+  --report reports/phase5.md
+$PY scripts/check_gates.py --phase phase5 --input results/phase5_bug_certificates.jsonl --require-token-match
+$PY scripts/phase6_grad_contrib.py \
+  --certificates results/phase4_certificates.jsonl \
+  --samples "$SAMPLES" \
+  --config "$PAIR_CONFIG" \
+  --out-jsonl results/phase6_grad_certificates.jsonl \
+  --report reports/phase6.md
+$PY scripts/check_gates.py --phase phase6 --input results/phase6_grad_certificates.jsonl --phase4-certificates results/phase4_certificates.jsonl --require-autograd
+$PY scripts/phase6_twin_training.py \
+  --config "$PAIR_CONFIG" \
+  --samples "$SAMPLES" \
+  --rollout-jsonl data/phase0_final_rollout.jsonl \
+  --phase4-certificates results/phase4_certificates.jsonl \
+  --steps 200 \
+  --measure-every 5 \
+  --out-jsonl results/phase6_twin_trajectory.jsonl \
+  --out-summary results/phase6_twin_summary.json \
+  --report reports/phase6_twin.md
+$PY scripts/check_gates.py --phase phase6_twin --input results/phase6_twin_summary.json --phase4-certificates results/phase4_certificates.jsonl
+$PY scripts/audit_results.py --report reports/audit.md

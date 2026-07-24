@@ -1,0 +1,88 @@
+Step 1: torchdynamo start tracing model /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py:29
+TRACE starts_line /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py:29 in model (main.model)
+        def model(x, scale):
+TRACE COPY_FREE_VARS 1 []
+TRACE RESUME 0 []
+TRACE starts_line /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py:30 in model (main.model)
+            max_scaled = x * scale
+TRACE LOAD_FAST x []
+TRACE LOAD_FAST scale [LazyVariableTracker()]
+TRACE BINARY_OP 5 [LazyVariableTracker(), LazyVariableTracker()]
+create_graph_input L_x_ L['x']
+wrap_to_fake L['x'] () [] []
+create_graph_input L_scale_ L['scale']
+wrap_to_fake L['scale'] () [] []
+TRACE FX call mul from /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py:30 in model (main.model)
+        max_scaled = x * scale
+                     ~~^~~~~~~
+TRACE STORE_FAST max_scaled [TensorVariable()]
+TRACE starts_line /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py:31 in model (main.model)
+            return torch.exp(max_scaled - x * scale)
+TRACE LOAD_DEREF torch []
+TRACE LOAD_METHOD exp [LazyVariableTracker()]
+TRACE LOAD_FAST max_scaled [NullVariable, TorchInGraphFunctionVariable(<built-in method exp of type object at 0x7f5f8470c8a0>)]
+TRACE LOAD_FAST x [NullVariable, TorchInGraphFunctionVariable(<built-in method exp of type object at 0x7f5f8470c8a0>), TensorVariable()]
+TRACE LOAD_FAST scale [NullVariable, TorchInGraphFunctionVariable(<built-in method exp of type object at 0x7f5f8470c8a0>), TensorVariable(), TensorVariable()]
+TRACE BINARY_OP 5 [NullVariable, TorchInGraphFunctionVariable(<built-in method exp of type object at 0x7f5f8470c8a0>), TensorVariable(), TensorVariable(), TensorVariable()]
+TRACE FX call mul_1 from /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py:31 in model (main.model)
+        return torch.exp(max_scaled - x * scale)
+                                      ~~^~~~~~~
+TRACE BINARY_OP 10 [NullVariable, TorchInGraphFunctionVariable(<built-in method exp of type object at 0x7f5f8470c8a0>), TensorVariable(), TensorVariable()]
+TRACE FX call sub from /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py:31 in model (main.model)
+        return torch.exp(max_scaled - x * scale)
+                         ~~~~~~~~~~~^~~~~~~~~~~
+TRACE PRECALL 1 [NullVariable, TorchInGraphFunctionVariable(<built-in method exp of type object at 0x7f5f8470c8a0>), TensorVariable()]
+TRACE CALL 1 [NullVariable, TorchInGraphFunctionVariable(<built-in method exp of type object at 0x7f5f8470c8a0>), TensorVariable()]
+TRACE FX call exp from /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py:31 in model (main.model)
+        return torch.exp(max_scaled - x * scale)
+               ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+TRACE RETURN_VALUE None [TensorVariable()]
+Step 1: torchdynamo done tracing model (RETURN_VALUE)
+RETURN_VALUE triggered compile
+COMPILING GRAPH due to GraphCompileReason(reason='return_value', user_stack=[<FrameSummary file /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py, line 31 in model>], graph_break=False)
+TRACED GRAPH
+ ===== __compiled_fn_0 =====
+ <eval_with_key>.1 class GraphModule(torch.nn.Module):
+    def forward(self, L_x_ : torch.Tensor, L_scale_ : torch.Tensor):
+        l_x_ = L_x_
+        l_scale_ = L_scale_
+        
+        # File: /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py:30, code: max_scaled = x * scale
+        max_scaled = l_x_ * l_scale_
+        
+        # File: /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py:31, code: return torch.exp(max_scaled - x * scale)
+        mul_1 = l_x_ * l_scale_;  l_x_ = l_scale_ = None
+        sub = max_scaled - mul_1;  max_scaled = mul_1 = None
+        exp = torch.exp(sub);  sub = None
+        return (exp,)
+        
+
+Tabulate module missing, please install tabulate to log the graph in tabular format, logging code instead:
+TRACED GRAPH
+ ===== __compiled_fn_0 =====
+ <eval_with_key>.1 class GraphModule(torch.nn.Module):
+    def forward(self, L_x_ : torch.Tensor, L_scale_ : torch.Tensor):
+        l_x_ = L_x_
+        l_scale_ = L_scale_
+        
+        # File: /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py:30, code: max_scaled = x * scale
+        max_scaled = l_x_ * l_scale_
+        
+        # File: /data1/tzh/forkcert/theory_oracle/capture_fma_context_inductor_provenance_v0_1.py:31, code: return torch.exp(max_scaled - x * scale)
+        mul_1 = l_x_ * l_scale_;  l_x_ = l_scale_ = None
+        sub = max_scaled - mul_1;  max_scaled = mul_1 = None
+        exp = torch.exp(sub);  sub = None
+        return (exp,)
+        
+
+TRACED GRAPH TENSOR SIZES
+===== __compiled_fn_0 =====
+l_x_: ()
+l_scale_: ()
+max_scaled: ()
+mul_1: ()
+sub: ()
+exp: ()
+
+Step 2: calling compiler function inductor
+Step 2: done compiler function inductor

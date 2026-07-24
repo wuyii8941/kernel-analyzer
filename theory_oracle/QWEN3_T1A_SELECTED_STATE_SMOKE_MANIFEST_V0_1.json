@@ -1,0 +1,78 @@
+{
+  "schema_version": "forkcert.qwen3-t1a-selected-state-smoke-manifest.v0.1",
+  "status": "FROZEN_SELECTED_STATE_T1A_CONSTRUCTION_SMOKE",
+  "state_scope": {
+    "query_id": "Q-R",
+    "trajectory_id": "legacy-B",
+    "state_id": "step29-natural-transition",
+    "population_role": "SELECTED_STATE_CONSTRUCTION_SMOKE_ONLY",
+    "snapshot_dir": "/data1/tzh/forkcert/data/qwen3_grpo_heldout_transport_v01_b_step29_transition",
+    "snapshot_metadata_sha256": "62e59c566d0aec35ddcf528549aa10f03be81a54d1be024ef26b0e37a1879c6c",
+    "pre_parameter_digest": "df66b8d48025ea4ee6f98ae85e80c7c1a594e42f806acbb8246231345107976d",
+    "pre_buffer_digest": "10aa93e003ba952be3e6314a97fbacad7e511ae4cef2297114edafb21e10ec05"
+  },
+  "arms": {
+    "reference": {
+      "transition_result": "/data1/tzh/forkcert/results/training_step_oracle/qwen3_grpo_natural_transition_v0_2/eager_1/result.json",
+      "transition_result_sha256": "b423fe4a9d2592a3ae81ff7f7462655aa0f58e6c794c585da919af284d18eb0a",
+      "parameter_updates": "/data1/tzh/forkcert/results/training_step_oracle/qwen3_grpo_natural_transition_v0_2/eager_1/parameter_updates.safetensors",
+      "parameter_updates_sha256": "b47f9d5741de881eed195bc7e0e4210165373f7799cfb81f6e5d06077f72580a",
+      "post_parameter_digest": "d0fc5844bbb22ca46a352fb5be991f192e8d5e4592ad1a81da8035034314ef49",
+      "post_buffer_digest": "10aa93e003ba952be3e6314a97fbacad7e511ae4cef2297114edafb21e10ec05"
+    },
+    "candidate": {
+      "transition_result": "/data1/tzh/forkcert/results/training_step_oracle/qwen3_grpo_natural_transition_v0_2/compiled_1/result.json",
+      "transition_result_sha256": "a4b01190da91cdfe40cc7a1f2de2ed588672d23a97e58f5bb6e7c3a28fee2cd7",
+      "parameter_updates": "/data1/tzh/forkcert/results/training_step_oracle/qwen3_grpo_natural_transition_v0_2/compiled_1/parameter_updates.safetensors",
+      "parameter_updates_sha256": "bd396c971423c4d30b5d88e9eae889fe68adb1f54578b63fef17a7e979feac65",
+      "post_parameter_digest": "b37ed418dfabce1b7f3753851fd5f77ff3b02ba6acf008581036286cd20dc604",
+      "post_buffer_digest": "10aa93e003ba952be3e6314a97fbacad7e511ae4cef2297114edafb21e10ec05"
+    }
+  },
+  "bank": {
+    "prompt_source": "forkcert_builtin_arithmetic",
+    "prompt_indices": [9000, 9001, 9002, 9003, 9004, 9005, 9006, 9007],
+    "prompt_template": "Solve the problem. Show concise reasoning and end with the numeric answer.\n\nA box starts with {start} items, receives {added}, then gives away {removed}. How many remain?",
+    "num_generations_per_prompt": 4,
+    "generation_order": "prompt index ascending; four repeated rows per prompt; one group generated at a time",
+    "prompt_encoding": "raw tokenizer text encoding with tokenizer defaults; left padded within group",
+    "generation": {
+      "do_sample": true,
+      "temperature": 1.0,
+      "top_p": 1.0,
+      "top_k": 0,
+      "repetition_penalty": 1.0,
+      "min_new_tokens": 128,
+      "max_new_tokens": 128,
+      "use_cache": false,
+      "autocast": "CUDA float16",
+      "attention": "SDPA MATH"
+    },
+    "seed_payload": "qwen3-bias-oracle-t1a-v0.1/Q-R/legacy-B/step29-natural-transition",
+    "seed_payload_sha256": "47f33ef41c77a935dfd90b7dde455afa5deacd477644383889222afded321072",
+    "seed_derivation": "int.from_bytes(digest[0:4], 'big') & 0x7fffffff",
+    "seed": 1207123700,
+    "reward": "forkcert numeric reward using the last parsed number",
+    "advantage": "float32 (reward-group_mean)/(sample_std_Bessel+1e-4) within each group of four",
+    "all_tied_rule": "retain tied groups with zero advantages; all groups tied makes this state endpoint UNINSTANTIATED, with no resampling for signal",
+    "old_logprob": "common eager pre-state scorer, FP16 autocast, SDPA MATH, temperature 1.0",
+    "artifact_rule": "prompt/completion/mask/old-logp/advantage/RNG identities recorded; two fresh bank generations must hash exactly for this smoke"
+  },
+  "endpoint": {
+    "id": "T1a",
+    "formula": "GRPO_loss(candidate_post,frozen_bank)-GRPO_loss(reference_post,frozen_bank)",
+    "epsilon": 0.2,
+    "importance_sampling_level": "token",
+    "loss_type": "grpo",
+    "aggregation": "within-completion valid-token mean, then equal mean over all 32 completions",
+    "post_state_evaluator": "same common eager FP16 SDPA-math scorer for both post states",
+    "fresh_reconstructions_per_arm": 2
+  },
+  "nonclaims": [
+    "selected-state T1a does not estimate population B",
+    "the sampled bank is baseline-anchored and does not represent all possible rollouts",
+    "GRPO surrogate shift is not identical to reward shift or long-run training harm",
+    "common eager scoring is a shared ruler, not truth",
+    "this smoke is not operator attribution or correctness evidence"
+  ]
+}

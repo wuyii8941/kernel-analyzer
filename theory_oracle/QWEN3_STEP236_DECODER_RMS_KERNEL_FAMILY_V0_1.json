@@ -1,0 +1,22 @@
+{
+  "schema_version": "forkcert.decoder-rms-kernel-family-manifest.v0.1",
+  "case_id": "qwen3-calibration-0-step236-decoder-rms-kernel-family",
+  "state_id": "calibration-0-late-step236",
+  "snapshot_dir": "/data1/tzh/forkcert/data/oracle_calibration/qwen3_bias_oracle_calibration_0_v0_1/captures/late/step_000236",
+  "realization_contract": "/data1/tzh/forkcert/results/oracle_calibration/qwen3_bias_oracle_calibration_0_v0_1/step236/realization_contract.json",
+  "baseline_compiled": "/data1/tzh/forkcert/results/oracle_calibration/qwen3_bias_oracle_calibration_0_v0_1/step236/transitions/compiled_1/result.json",
+  "generated_kernel": "triton_per_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_15",
+  "expected_runtime_calls": 27,
+  "selected_call_indices": [0, 13, 26],
+  "dynamic_sequence_length": 168,
+  "hidden_size": 1024,
+  "epsilon": 1e-6,
+  "reference_expression": "hidden = (component0 + fp32(component1)) + fp32(component2); normalized = weight * hidden * rsqrt(mean(square(hidden)) + epsilon); emit hidden fp32 and normalized fp16",
+  "intervention": "after the original live generated kernel returns, replace both generated outputs with the declared ATen reference-expression outputs while preserving the original compiled suffix",
+  "forbidden_claims": [
+    "the fused kernel family is a correctness bug",
+    "a selected invocation is a unique constituent ATen-op root cause",
+    "one selected state estimates population prevalence",
+    "forward mediation implies gradient or update mediation"
+  ]
+}

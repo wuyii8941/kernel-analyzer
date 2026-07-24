@@ -1,0 +1,196 @@
+{
+  "associations": {
+    "pvalue_descriptive_only": 7.856041585121872e-80,
+    "spearman_log_abs_delta_vs_log_boundary_distance": -0.28936150851645703
+  },
+  "boundary_conditioning": [
+    {
+      "abs_delta_mean": 0.006331443786621094,
+      "disagreement_rate": 0.5,
+      "distance_bin": "[1e-05,0.0001)",
+      "down_flips": 0,
+      "oriented_mean": 0.006331443786621094,
+      "signed_mean": -0.006331443786621094,
+      "tokens": 2,
+      "up_flips": 1
+    },
+    {
+      "abs_delta_mean": 0.0031099319458007812,
+      "disagreement_rate": 0.0,
+      "distance_bin": "[0.0001,0.001)",
+      "down_flips": 0,
+      "oriented_mean": -0.0031099319458007812,
+      "signed_mean": -0.0031099319458007812,
+      "tokens": 2,
+      "up_flips": 0
+    },
+    {
+      "abs_delta_mean": 0.003980100154876709,
+      "disagreement_rate": 0.0625,
+      "distance_bin": "[0.001,0.01)",
+      "down_flips": 0,
+      "oriented_mean": 0.0007236599922180176,
+      "signed_mean": -4.011392593383789e-05,
+      "tokens": 32,
+      "up_flips": 2
+    },
+    {
+      "abs_delta_mean": 0.0054090750844855056,
+      "disagreement_rate": 0.005263157894736842,
+      "distance_bin": "[0.01,0.1)",
+      "down_flips": 1,
+      "oriented_mean": -0.0004218101501464844,
+      "signed_mean": -0.00023670698467053865,
+      "tokens": 380,
+      "up_flips": 1
+    },
+    {
+      "abs_delta_mean": 0.001772847382918648,
+      "disagreement_rate": 0.0,
+      "distance_bin": "[0.1,inf)",
+      "down_flips": 0,
+      "oriented_mean": 8.024651071299677e-05,
+      "signed_mean": 3.329256306523862e-05,
+      "tokens": 3680,
+      "up_flips": 0
+    }
+  ],
+  "claim_scope": {
+    "comparison": "compiled minus eager; implementation-relative, not truth-relative",
+    "limitations": [
+      "one trajectory and one T4 FP16 configuration",
+      "token/case/rollout heterogeneity is not within-state runtime variance",
+      "no gradient, update, optimizer-state, or next-state endpoint in this dataset",
+      "semantic disagreement is impact evidence, not correctness evidence",
+      "the source data do not contain a per-row generated-code or compiled-path canary"
+    ],
+    "observable": "selected-token log probability and PPO/GRPO clipping event",
+    "state_population": "one canonical Qwen3-0.6B GRPO trajectory, rollout batches [0,8) only"
+  },
+  "coverage": {
+    "applicable_rows": 4096,
+    "cases": 32,
+    "optimizer_steps": 8,
+    "rollouts": 8,
+    "rows": 4096
+  },
+  "hierarchical_descriptive_decomposition": {
+    "by_case": {
+      "between_fraction": 0.0071003492673430875,
+      "between_group_variance": 1.392555298773343e-07,
+      "groups": 32,
+      "identity_residual": 0.0,
+      "mean_within_group_variance": 1.9473234593364586e-05,
+      "total_variance": 1.961249012324192e-05,
+      "unweighted_group_mean_std": 0.0003791406648519057
+    },
+    "by_rollout": {
+      "between_fraction": 0.0016068991846087239,
+      "between_group_variance": 3.151529438718409e-08,
+      "groups": 8,
+      "identity_residual": 0.0,
+      "mean_within_group_variance": 1.9580974828854736e-05,
+      "total_variance": 1.961249012324192e-05,
+      "unweighted_group_mean_std": 0.00018978271601923858
+    }
+  },
+  "moving_block_bootstrap": {
+    "directional_semantic_shift": {
+      "block_length_rollouts": 2,
+      "ci95_high": 0.00146484375,
+      "ci95_low": 0.0,
+      "draws": 5000
+    },
+    "event_oriented_mean": {
+      "block_length_rollouts": 2,
+      "ci95_high": 0.00011577736586332321,
+      "ci95_low": -2.3930799216032028e-05,
+      "draws": 5000
+    },
+    "semantic_disagreement": {
+      "block_length_rollouts": 2,
+      "ci95_high": 0.002685546875,
+      "ci95_low": 0.000244140625,
+      "draws": 5000
+    },
+    "signed_mean": {
+      "block_length_rollouts": 2,
+      "ci95_high": 0.00013934016460552718,
+      "ci95_low": -0.0001148739829659462,
+      "draws": 5000
+    }
+  },
+  "numeric": {
+    "absolute_max": 0.030731201171875,
+    "absolute_mean": 0.002130315639078617,
+    "absolute_min": 0.0,
+    "absolute_n": 4096,
+    "absolute_p01": 0.0,
+    "absolute_p50": 0.00018310546875,
+    "absolute_p99": 0.01588001251220707,
+    "absolute_std": 0.0038830317671804814,
+    "event_oriented_max": 0.026292800903320312,
+    "event_oriented_mean": 4.019029438495636e-05,
+    "event_oriented_min": -0.030731201171875,
+    "event_oriented_n": 4096,
+    "event_oriented_p01": -0.014233589172363281,
+    "event_oriented_p50": 0.0,
+    "event_oriented_p99": 0.014573192596435558,
+    "event_oriented_std": 0.004428958456939454,
+    "fraction_signed_negative": 0.4189453125,
+    "fraction_signed_positive": 0.416259765625,
+    "fraction_signed_zero": 0.164794921875,
+    "self_alt_max": 0.0,
+    "self_ref_max": 0.0,
+    "signed_max": 0.030731201171875,
+    "signed_mean": 3.0277296900749207e-06,
+    "signed_min": -0.026567459106445312,
+    "signed_n": 4096,
+    "signed_p01": -0.014432334899902343,
+    "signed_p50": 0.0,
+    "signed_p99": 0.014287090301513683,
+    "signed_std": 0.004429139814695331
+  },
+  "semantic": {
+    "applicable_tokens": 4096,
+    "compiled_event_rate": 0.06005859375,
+    "compiled_minus_reference_event_rate": 0.000732421875,
+    "directional_semantic_shift": 0.000732421875,
+    "down_flip_count": 1,
+    "reference_event_rate": 0.059326171875,
+    "semantic_disagreement": 0.001220703125,
+    "up_flip_count": 4
+  },
+  "training_stage": [
+    {
+      "down_flips": 0,
+      "oriented_mean": 6.275375684102376e-05,
+      "rollouts": 3,
+      "signed_mean": -5.3991874059041343e-05,
+      "signed_std": 0.004288061805302472,
+      "stage": "early",
+      "tokens": 1536,
+      "up_flips": 1
+    },
+    {
+      "down_flips": 1,
+      "oriented_mean": 5.743900934855143e-05,
+      "rollouts": 3,
+      "signed_mean": 6.42364223798116e-05,
+      "signed_std": 0.004256633084372764,
+      "stage": "middle",
+      "tokens": 1536,
+      "up_flips": 3
+    },
+    {
+      "down_flips": 0,
+      "oriented_mean": -1.9527971744537354e-05,
+      "rollouts": 2,
+      "signed_mean": -3.255903720855713e-06,
+      "signed_std": 0.00487223342756634,
+      "stage": "late",
+      "tokens": 1024,
+      "up_flips": 0
+    }
+  ]
+}

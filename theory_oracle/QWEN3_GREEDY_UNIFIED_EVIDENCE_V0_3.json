@@ -1,0 +1,129 @@
+{
+  "candidate_identity": {
+    "evidence": {
+      "backend_compiles": 1,
+      "candidate_identity_valid_states": 32,
+      "graph_nodes": 2510,
+      "runtime_invocations": 65
+    },
+    "status": "VALID"
+  },
+  "ledgers": {
+    "discrepancy": {
+      "average_implementation_relative_shift": {
+        "estimate": {
+          "loss_signed_delta_mean": -0.00021865405142307281,
+          "negative_state_means": 19,
+          "positive_state_means": 13
+        },
+        "scope_or_uncertainty": "32-state deterministic prompt-disjoint confirmation bank; one state per prompt/rollout cluster and no external-population interval"
+      },
+      "state_conditioned_heterogeneity": {
+        "estimate": {
+          "loss_signed_delta_maximum": 0.0021083950996398926,
+          "loss_signed_delta_minimum": -0.0021822452545166016,
+          "loss_state_mean_sample_sd": 0.0009296970886457872,
+          "mean_model_next_difference_l2": 0.001982423755252391,
+          "mean_optimizer_moment_difference_l2": 0.044834322573379916
+        },
+        "scope_or_uncertainty": "between-state descriptive summaries over 32 prompt/rollout-batch clusters; scalar and vector geometries are not pooled into one variance"
+      },
+      "status": "ESTIMATED",
+      "within_state_runtime_variability": {
+        "estimate": {
+          "repeat_stable_states": 32,
+          "repeats_per_state": 2,
+          "within_state_repeat_range": 0.0
+        },
+        "scope_or_uncertainty": "two deterministic repeats per implementation and state; zero observed range is protocol-specific"
+      }
+    },
+    "exact_transition": {
+      "evidence": {
+        "accepted_states": 32,
+        "invalid_states": 0,
+        "rejected_states": 0
+      },
+      "status": "ACCEPT"
+    },
+    "impacts": {
+      "greedy_next_token": {
+        "details": {
+          "boundary_exposure": {
+            "compiled_margin": 0.015625,
+            "eager_margin": 0.015625,
+            "event_state": "grpo_000002_80fe31334599",
+            "token_position": 51
+          },
+          "disagreement": 0.03125,
+          "distance_or_cost": {
+            "metric": "0/1 sequence inequality with token-transition table",
+            "sequence_disagreement_states": 1,
+            "states": 32,
+            "token_disagreements": 1,
+            "token_transition_counts": {"19->422": 1}
+          }
+        },
+        "evidence": "impact_evaluation.json and two stable repeats",
+        "status": "REJECT"
+      }
+    },
+    "sampling_uncertainty": {
+      "reason": "one state per prompt/rollout cluster avoids response pseudo-replication, but deterministic file-order selection is not a probability design",
+      "sampling_unit": "prompt and rollout-batch cluster",
+      "status": "INDETERMINATE"
+    },
+    "variability_profile": {
+      "sources": {
+        "algorithmic_rng": {
+          "classification": "ABSENT_OR_DISABLED",
+          "observation": "the teacher-forced greedy comparison and step repeats introduce no sampling draw"
+        },
+        "compiled_realization": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "one tracked graph hash with one warmup plus 64 scored runtime invocations"
+        },
+        "gpu_execution": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "all 32 states have identical paired signatures across two repeats"
+        },
+        "implementation_path": {
+          "classification": "FIXED_IMPLEMENTATION_EFFECT",
+          "observation": "eager and Inductor are fixed realizations; their state-conditioned deltas are not runtime variance"
+        },
+        "prompt_bank_selection": {
+          "classification": "BETWEEN_STATE_DESIGN",
+          "observation": "first eligible prompt-disjoint rows under a deterministic predeclared file-order rule"
+        },
+        "stochastic_rounding": {
+          "classification": "ABSENT_OR_DISABLED",
+          "observation": "no stochastic-rounding protocol is enabled"
+        },
+        "teacher_forced_tokens": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "identical frozen prompt, response and target tensors are used in both arms"
+        }
+      },
+      "status": "CHARACTERIZED"
+    }
+  },
+  "schema_version": "forkcert.training-step-oracle-evidence.v0.3",
+  "subject_id": "qwen3-greedy-impact-confirmation-v0.1",
+  "validity_gates": [
+    {
+      "evidence": "32 distinct prompt tuples and rollout-batch clusters selected without outcome inspection",
+      "id": "bank_identity",
+      "passed": true
+    },
+    {
+      "evidence": "candidate identity valid and exact core accepted in all 32 states",
+      "id": "candidate_and_exact_core",
+      "passed": true
+    },
+    {
+      "evidence": "all states and the token transition are stable across two repeats",
+      "id": "repeat_stability",
+      "passed": true
+    }
+  ]
+}

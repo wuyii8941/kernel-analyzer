@@ -1,0 +1,114 @@
+{
+  "candidate_identity": {
+    "evidence": {
+      "backend_compiles_per_bank": 1,
+      "graph_code_sha256": "1aed318f45213873ffeecd34aabaf769616ba7fa96887455ac228723cbcae943",
+      "graph_node_count": 134,
+      "states_per_bank": 128
+    },
+    "status": "VALID"
+  },
+  "ledgers": {
+    "operator_conformance": {
+      "coverage": {
+        "contract_covered": 0,
+        "encountered": 9,
+        "unidentified_or_uncontracted": 9
+      },
+      "entries": [
+        {
+          "identity_level": "R1",
+          "reason": "source lookup relation is known, but no constituent in-program compiled operator correspondence was established",
+          "semantic_operator": "embedding and index lookup family",
+          "subject_kind": "SEMANTIC_OPERATOR",
+          "unit_id": "embedding_lookup",
+          "verdict": "UNINSTANTIATED"
+        },
+        {
+          "identity_level": "R1",
+          "reason": "source contractions are present, but accumulation schedule, precision realization and R4 correspondence are not certified",
+          "semantic_operator": "linear and matrix-contraction family",
+          "subject_kind": "SEMANTIC_OPERATOR",
+          "unit_id": "linear_matmul",
+          "verdict": "UNINSTANTIATED"
+        },
+        {
+          "identity_level": "R1",
+          "reason": "source axes, epsilon and affine convention are known, but no constituent realization or numerical envelope is available",
+          "semantic_operator": "LayerNorm family",
+          "subject_kind": "SEMANTIC_OPERATOR",
+          "unit_id": "layer_norm",
+          "verdict": "UNINSTANTIATED"
+        },
+        {
+          "identity_level": "R1",
+          "reason": "the semantic softmax is present but the fused candidate realization and quantitative contract are not identified",
+          "semantic_operator": "attention softmax family",
+          "subject_kind": "SEMANTIC_OPERATOR",
+          "unit_id": "attention_softmax",
+          "verdict": "UNINSTANTIATED"
+        },
+        {
+          "identity_level": "R1",
+          "reason": "source nonlinearities are inventoried without R4 candidate correspondence or a backend accuracy envelope",
+          "semantic_operator": "GELU and tanh nonlinear family",
+          "subject_kind": "SEMANTIC_OPERATOR",
+          "unit_id": "nonlinearities",
+          "verdict": "UNINSTANTIATED"
+        },
+        {
+          "identity_level": "R1",
+          "reason": "residual and elementwise relations participate in fusion; no constituent operator boundary survives with certified identity",
+          "semantic_operator": "residual and elementwise family",
+          "subject_kind": "SEMANTIC_OPERATOR",
+          "unit_id": "residual_elementwise",
+          "verdict": "UNINSTANTIATED"
+        },
+        {
+          "identity_level": "R1",
+          "reason": "the loss relation is known at source level, but only a composite region boundary is observed and no numerical envelope is frozen",
+          "semantic_operator": "cross-entropy and log-softmax family",
+          "subject_kind": "SEMANTIC_OPERATOR",
+          "unit_id": "cross_entropy_logsoftmax",
+          "verdict": "UNINSTANTIATED"
+        },
+        {
+          "identity_level": "R1",
+          "reason": "gradient structure is checked at the step boundary, but individual derivative operators are not mapped to compiled realizations",
+          "semantic_operator": "backward derivative family",
+          "subject_kind": "SEMANTIC_OPERATOR",
+          "unit_id": "backward_derivatives",
+          "verdict": "UNINSTANTIATED"
+        },
+        {
+          "identity_level": "R1",
+          "reason": "dropout is semantically identity in eval mode; no executed stochastic candidate operator claim is made",
+          "semantic_operator": "dropout family",
+          "subject_kind": "SEMANTIC_OPERATOR",
+          "unit_id": "dropout_eval",
+          "verdict": "UNINSTANTIATED"
+        }
+      ],
+      "status": "PARTIAL"
+    }
+  },
+  "schema_version": "forkcert.training-step-oracle-evidence.v0.3",
+  "subject_id": "bert-training-step-operator-coverage-v0.1",
+  "validity_gates": [
+    {
+      "evidence": "the identical 134-node graph hash was tracked in both 128-state discovery and confirmation banks",
+      "id": "stable_composite_realization",
+      "passed": true
+    },
+    {
+      "evidence": "source module families and functional operator families were inventoried without observing new intermediate boundaries",
+      "id": "source_inventory",
+      "passed": true
+    },
+    {
+      "evidence": "the claim is restricted to coverage/refusal; no R1 family is promoted to an R4 terminal operator verdict",
+      "id": "claim_level_integrity",
+      "passed": true
+    }
+  ]
+}

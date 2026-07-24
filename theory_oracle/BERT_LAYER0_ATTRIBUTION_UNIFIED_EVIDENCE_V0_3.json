@@ -1,0 +1,139 @@
+{
+  "candidate_identity": {
+    "evidence": {
+      "backend_compiles": 2,
+      "graph_code_sha256": [
+        "80b7186bef21fa8198084d240058567473b84935b35f70b538d4692b83c82aba",
+        "5df9b24e2c4e578ffcc1fbae782a38d6cdd23d62e1aa9eaf4435a07e64ed5d4b"
+      ],
+      "graph_node_counts": [81, 57],
+      "measurement_runtime_invocations": 128
+    },
+    "status": "VALID"
+  },
+  "ledgers": {
+    "attribution": {
+      "effects": {
+        "full_gradient": {
+          "contrasts": {
+            "INJECTION": {
+              "definition": "G_I - G_A: compiled boundary value injected under the eager differentiation path",
+              "estimate": {
+                "mean_l2": 0.0029100506686678216,
+                "state_bootstrap_mean_l2_95ci": [0.0006924254400155637, 0.005737523022444047]
+              },
+              "scope_or_uncertainty": "16 held-out SST-2 states, two deterministic repeats per state; state-level bootstrap interval"
+            },
+            "INTERACTION": {
+              "definition": "G_B - G_I - G_R + G_A",
+              "estimate": {
+                "mean_l2": 0.0038865006890519585,
+                "state_bootstrap_mean_l2_95ci": [0.000953875730125353, 0.007671417745679242]
+              },
+              "scope_or_uncertainty": "16 held-out SST-2 states, two deterministic repeats per state; state-level bootstrap interval"
+            },
+            "REPAIR": {
+              "definition": "G_R - G_A: residual discrepancy after restoring eager boundary values under the compiled differentiation path",
+              "estimate": {
+                "mean_l2": 0.0049001595757285285,
+                "state_bootstrap_mean_l2_95ci": [0.0015714920701789458, 0.008784332314249063]
+              },
+              "scope_or_uncertainty": "16 held-out SST-2 states, two deterministic repeats per state; this is residual discrepancy, not amount repaired"
+            },
+            "TOTAL": {
+              "definition": "G_B - G_A in the segmented eager/compiled program",
+              "estimate": {
+                "mean_l2": 0.0051543135247604155,
+                "state_bootstrap_mean_l2_95ci": [0.0017341554769669892, 0.009210677730302158]
+              },
+              "scope_or_uncertainty": "16 held-out SST-2 states, two deterministic repeats per state; segmented-program total only"
+            }
+          }
+        }
+      },
+      "integrity": {
+        "anchor_parity": false,
+        "heldout_replication": true,
+        "injection_reported": true,
+        "interactions_reported": true,
+        "non_target_preserved": true,
+        "repair_reported": true,
+        "treatment_identity": true
+      },
+      "roles": [
+        {
+          "evidence": "The layer-0 boundary injection produces a nonzero full-gradient response, while large repair residual and interaction forbid localization to a unique upstream source.",
+          "role": "PROPAGATION"
+        }
+      ],
+      "status": "EFFECT_DETECTED",
+      "treatment": {
+        "claimed_subject": "REGION",
+        "correspondence_level": "R3",
+        "intervention_level": "I1"
+      }
+    },
+    "sampling_uncertainty": {
+      "intervals": {
+        "injection_mean_l2_95ci": [0.0006924254400155637, 0.005737523022444047],
+        "interaction_mean_l2_95ci": [0.000953875730125353, 0.007671417745679242],
+        "repair_residual_mean_l2_95ci": [0.0015714920701789458, 0.008784332314249063],
+        "segmented_total_mean_l2_95ci": [0.0017341554769669892, 0.009210677730302158]
+      },
+      "sampling_unit": "SST-2 state",
+      "status": "ESTIMATED"
+    },
+    "variability_profile": {
+      "sources": {
+        "algorithmic_rng": {
+          "classification": "ABSENT_OR_DISABLED",
+          "observation": "the gradient endpoint and four-arm comparison contain no sampling draw"
+        },
+        "compiled_realization": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "two tracked compiled segment graphs were warmed once and did not proliferate during measurement"
+        },
+        "confirmation_state_selection": {
+          "classification": "BETWEEN_STATE_DESIGN",
+          "observation": "the first 16 held-out confirmation-bank states were selected by original order, not effect size"
+        },
+        "gpu_execution": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "same-state repeat variance was zero for every reported contrast under two repeats"
+        },
+        "implementation_path": {
+          "classification": "FIXED_IMPLEMENTATION_EFFECT",
+          "observation": "eager/compiled prefix and suffix choices are fixed intervention arms, not runtime variance"
+        },
+        "sentence_and_label": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "the same frozen sentence and label are supplied to every arm within a state"
+        },
+        "stochastic_rounding": {
+          "classification": "ABSENT_OR_DISABLED",
+          "observation": "no stochastic-rounding protocol is enabled"
+        }
+      },
+      "status": "CHARACTERIZED"
+    }
+  },
+  "schema_version": "forkcert.training-step-oracle-evidence.v0.3",
+  "subject_id": "bert-layer0-region-attribution-confirmation-v1",
+  "validity_gates": [
+    {
+      "evidence": "all 16 confirmation states used the predeclared original-order selection and four-arm layer-0 boundary",
+      "id": "state_and_intervention_identity",
+      "passed": true
+    },
+    {
+      "evidence": "candidate calls were valid, no graph proliferation occurred after warmup, and self-pair metrics were exactly zero",
+      "id": "execution_integrity",
+      "passed": true
+    },
+    {
+      "evidence": "segmented reference endpoint matched its monolithic anchor; segmented candidate endpoint did not, so the claim is explicitly limited to the segmented intervention program",
+      "id": "claim_scope_matches_anchor_audit",
+      "passed": true
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": "forkcert.eager-layer-boundary-mediation-manifest.v0.5",
+  "case_id": "qwen3-calibration-0-step097-layer16-attention-mlp-slice-reference-stage",
+  "state_id": "calibration-0-early-step097",
+  "snapshot_dir": "/data1/tzh/forkcert/data/oracle_calibration/qwen3_bias_oracle_calibration_0_v0_1/captures/early/step_000097",
+  "realization_contract": "/data1/tzh/forkcert/results/oracle_calibration/qwen3_bias_oracle_calibration_0_v0_1/step097/realization_contract.json",
+  "generated_kernel": "triton_per_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_15",
+  "intermediate_generated_kernel": "triton_per_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_12",
+  "expected_runtime_calls": 27,
+  "selected_call_indices": [],
+  "subblock_layer_slices": [16],
+  "kernel_op_variants": ["reference_reduce", "reduce_fp64", "rsqrt_fp64", "input_fp16", "weight_fp16"],
+  "boundary_map_evidence": "/data1/tzh/forkcert/results/operator_oracle/qwen3_step097_layer16_boundary_map_v0_1/result.json",
+  "mapping_rule": "entry/exit calls map by exact input_layernorm-weight storage identity; intermediate call16 maps by exact model.layers.16.post_attention_layernorm.weight storage identity",
+  "same_input_contract": "all non-noop arms inject the same eager layer15 entry boundary; stage variants replace only the intermediate post-norm output computed from original compiled kernel inputs and use the original compiled MLP and suffix",
+  "kernel_treatment": "reference_reduce uses the eager RMSNorm variance expression only while retaining compiled normalization, weight multiply and store stages; other variants are stage-preserving counterfactuals",
+  "operation_hypothesis_treatment": "the reference_reduce variant tests whether the reduction expression alone can mediate the endpoint; the remaining variants separate accumulator, rsqrt, input representation and weight representation hypotheses",
+  "boundary_transport": "all interventions operate on captured generated-kernel boundary tensors and preserve destination layout",
+  "forbidden_claims": [
+    "reference_reduce proves the compiler reduction is the unique root cause",
+    "an operation hypothesis proves a unique compiler root cause",
+    "the generated kernel is mathematically incorrect",
+    "eager output is mathematical truth",
+    "forward mediation implies backward or update mediation"
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "schema_version": "forkcert.qwen3-operator-attribution-transport-manifest.v0.1",
+  "status": "FROZEN_PRE_EXECUTION",
+  "freeze_date": "2026-07-20",
+  "selection_protocol": {
+    "b_original_results_observed": true,
+    "a_replay_treatment_results_observed": false,
+    "c_replay_treatment_results_observed": false,
+    "note": "Treatments were frozen from the declared B discovery state before any A/C treatment arm was executed."
+  },
+  "artifacts": {
+    "contract": {
+      "path": "theory_oracle/QWEN3_OPERATOR_ATTRIBUTION_TRANSPORT_CONTRACT_V0_1_2026-07-20.md",
+      "sha256": "361c6118663e2b58a9cfa578b89ce05d71fc7ee2cff6a8600b10fa0b53533117"
+    },
+    "baseline_executor": {
+      "path": "theory_oracle/qwen3_grpo_natural_transition_v0_2.py",
+      "sha256": "4a8a708c74b8ce17a4dfea84c875693b705b6bdae171483ed603943fee95d84f"
+    },
+    "silu_executor": {
+      "path": "theory_oracle/qwen3_backward_repeated_family_repair_v0_1.py",
+      "sha256": "1e3910c460f3cea07e440060be4c20d4f8489a9a9546864f2712d66270db5dca"
+    },
+    "cast_executor": {
+      "path": "theory_oracle/qwen3_backward_multirole_cast_repair_v0_1.py",
+      "sha256": "2f35404822caafc7542ba8931edb3d4501ad0989e7e2dedeaef53bedd46a2c53"
+    },
+    "evaluator": {
+      "path": "theory_oracle/evaluate_qwen3_operator_attribution_transport_v0_1.py",
+      "sha256": "7bc9c5b3fa98e27c572e61c993b42473bae45566976dd85feacca9c31684f364"
+    },
+    "a_snapshot_metadata": {
+      "path": "data/qwen3_grpo_transport_a_replay_step29_transition_v0_1/forkcert_transition_snapshot.json",
+      "sha256": "33c2e1b0486435f4ab61f5701dabe11be4ad081c448f484bf31f8975576c5a6a"
+    },
+    "b_snapshot_metadata": {
+      "path": "data/qwen3_grpo_heldout_transport_v01_b_step29_transition/forkcert_transition_snapshot.json",
+      "sha256": "62e59c566d0aec35ddcf528549aa10f03be81a54d1be024ef26b0e37a1879c6c"
+    },
+    "c_snapshot_metadata": {
+      "path": "data/qwen3_grpo_transport_c_replay_step29_transition_v0_1/forkcert_transition_snapshot.json",
+      "sha256": "abf0e77998df05fc57b9da9b4f965ae530a148d6cb42efb56c9e89cc423d8f44"
+    },
+    "a_snapshot_verification": {
+      "path": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/a_transition_capture_verification.json",
+      "sha256": "b538231e6f5f21e4f873c807265b377facf8d9d6c02c64f90a199f67cf64b936"
+    },
+    "b_snapshot_verification": {
+      "path": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/b_transition_capture_verification.json",
+      "sha256": "335c50329bbac2f554b5eb92a8131dcf618ea604f8cec8ebca4611b7ff06b90f"
+    },
+    "c_snapshot_verification": {
+      "path": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/c_transition_capture_verification.json",
+      "sha256": "208c63a8dd499b8223dd69f196333a925b967768d7bda92a18161ff0294d1db5"
+    },
+    "a_anchor_states": {
+      "path": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/a_grad_states.jsonl",
+      "sha256": "5c1ce93c553bdfeac891a76e3a960a150934763b5a4492a2e4fb01598db505b6"
+    },
+    "b_anchor_states": {
+      "path": "results/training_step_oracle/qwen3_grpo_heldout_transport_v0_1/b_grad_states.jsonl",
+      "sha256": "e64c4fe1972812cc7df676c5a2293ec175408392b87e1d09976c34ad4c81da1a"
+    },
+    "c_anchor_states": {
+      "path": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/c_grad_states.jsonl",
+      "sha256": "362cded6490312f9619644cc971fb4346eb1da8a3e1a694ee635bd4f91f95e8b"
+    }
+  },
+  "states": {
+    "a_replay": {
+      "snapshot_dir": "data/qwen3_grpo_transport_a_replay_step29_transition_v0_1",
+      "anchor_states": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/a_grad_states.jsonl",
+      "snapshot_verification": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/a_transition_capture_verification.json",
+      "arms": {
+        "eager_1": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/a_replay/eager_1",
+        "eager_2": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/a_replay/eager_2",
+        "compiled_1": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/a_replay/compiled_1",
+        "compiled_2": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/a_replay/compiled_2",
+        "silu_middle_1": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/a_replay/silu_middle_1",
+        "silu_middle_2": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/a_replay/silu_middle_2",
+        "cast_up_control_1": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/a_replay/cast_up_control_1",
+        "cast_up_control_2": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/a_replay/cast_up_control_2"
+      }
+    },
+    "b_original": {
+      "snapshot_dir": "data/qwen3_grpo_heldout_transport_v01_b_step29_transition",
+      "anchor_states": "results/training_step_oracle/qwen3_grpo_heldout_transport_v0_1/b_grad_states.jsonl",
+      "snapshot_verification": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/b_transition_capture_verification.json",
+      "arms": {
+        "eager_1": "results/training_step_oracle/qwen3_grpo_natural_transition_v0_2/eager_1",
+        "eager_2": "results/training_step_oracle/qwen3_grpo_natural_transition_v0_2/eager_2",
+        "compiled_1": "results/training_step_oracle/qwen3_grpo_natural_transition_v0_2/compiled_1",
+        "compiled_2": "results/training_step_oracle/qwen3_grpo_natural_transition_v0_2/compiled_2",
+        "silu_middle_1": "results/operator_oracle/qwen3_backward_repeated_family_repair_v0_1/middle",
+        "silu_middle_2": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/b_original/silu_middle_2",
+        "cast_up_control_1": "results/operator_oracle/qwen3_backward_multirole_cast_repair_v0_1/up_projection_weight_gradient_cast",
+        "cast_up_control_2": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/b_original/cast_up_control_2"
+      }
+    },
+    "c_replay": {
+      "snapshot_dir": "data/qwen3_grpo_transport_c_replay_step29_transition_v0_1",
+      "anchor_states": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/c_grad_states.jsonl",
+      "snapshot_verification": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/c_transition_capture_verification.json",
+      "arms": {
+        "eager_1": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/c_replay/eager_1",
+        "eager_2": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/c_replay/eager_2",
+        "compiled_1": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/c_replay/compiled_1",
+        "compiled_2": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/c_replay/compiled_2",
+        "silu_middle_1": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/c_replay/silu_middle_1",
+        "silu_middle_2": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/c_replay/silu_middle_2",
+        "cast_up_control_1": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/c_replay/cast_up_control_1",
+        "cast_up_control_2": "results/operator_oracle/qwen3_operator_attribution_transport_v0_1/c_replay/cast_up_control_2"
+      }
+    }
+  },
+  "treatments": {
+    "silu_middle": {
+      "kernel_family": "triton_poi_fused__unsafe_view_mul_silu_silu_backward_view_32",
+      "selected_call_index_zero_based": 13,
+      "role": "non-null discovery treatment"
+    },
+    "cast_up_control": {
+      "kernel_family": "triton_poi_fused__to_copy_26",
+      "selected_call_index_zero_based": 0,
+      "role": "exact-null intervention control"
+    }
+  },
+  "gpu_protocol": "single visible physical GPU 0; fresh independent process per arm; serial execution; deterministic algorithms warn-only; CUBLAS_WORKSPACE_CONFIG=:4096:8",
+  "correctness_authority": null,
+  "fail_closed": true
+}

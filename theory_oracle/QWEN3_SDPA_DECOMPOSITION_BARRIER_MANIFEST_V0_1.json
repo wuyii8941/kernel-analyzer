@@ -1,0 +1,41 @@
+{
+  "schema_version": "forkcert.qwen3-sdpa-decomposition-barrier-manifest.v0.1",
+  "status": "FROZEN_PRE_EXECUTION_REVISION_2_CAUSAL_MASK_REPRESENTATION",
+  "freeze_date": "2026-07-19",
+  "subject": "qk-bmm, safe-softmax and pv-bmm at Qwen layers 0, 14 and 27",
+  "selection": {
+    "state": "heldout-transport-B-step29",
+    "rule": "all remaining early/middle/late attention primitive representatives after composite SDPA evidence"
+  },
+  "artifacts": {
+    "contract": {
+      "path": "theory_oracle/QWEN3_SDPA_DECOMPOSITION_BARRIER_CONTRACT_V0_1_2026-07-19.md",
+      "sha256": "e22c277b9e29aaad289352740b1421f72231136cd1f101dd4b6cca91c34d75ea"
+    },
+    "executor": {
+      "path": "theory_oracle/qwen3_sdpa_decomposition_barrier_v0_1.py",
+      "sha256": "dd6960a2cae6c99e297180eefb3f12e19c2af87876c6409ebf73921a9db51fd5"
+    },
+    "snapshot_metadata": {
+      "path": "data/qwen3_grpo_heldout_transport_v01_b_step29_transition/forkcert_transition_snapshot.json",
+      "sha256": "62e59c566d0aec35ddcf528549aa10f03be81a54d1be024ef26b0e37a1879c6c"
+    },
+    "target_input": {
+      "path": "data/qwen3_grpo_heldout_transport_v01_b_step29_transition/compiler_history/step_000029_inputs.pt",
+      "sha256": "f767e065bd6aaafc953968fd2bbe0bb83193117934bd40baee61cdf5492f2d80"
+    }
+  },
+  "output": "results/operator_oracle/qwen3_sdpa_decomposition_barrier_v0_1/result.json",
+  "fail_closed": true,
+  "correctness_authority": null,
+  "acceptance_authority": null,
+  "revision_history": [
+    {
+      "revision": 2,
+      "reason": "the actual eager SDPA call represented causal masking as attention_mask=None with is_causal=True; implement the equivalent causal masked-fill branch",
+      "effect_observed_before_revision": false,
+      "reconstructed_reference_observed_before_revision": false,
+      "gate_relaxed": false
+    }
+  ]
+}

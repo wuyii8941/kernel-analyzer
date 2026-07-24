@@ -1,0 +1,40 @@
+{
+  "schema_version": "forkcert.qwen3-backward-singleton-repair-manifest.v0.3",
+  "status": "FROZEN_PRE_EXECUTION",
+  "freeze_date": "2026-07-19",
+  "subject": "eager-boundary repair of one singleton generated attention safe-softmax reduction",
+  "selection": {
+    "state": "heldout-transport-B-step29",
+    "arm": "compiled",
+    "treatment": "attention_safe_softmax",
+    "kernel_family": "triton_red_fused__safe_softmax_add_prepare_softmax_online_view_12",
+    "repeat": 1,
+    "result_observed_before_freeze": false
+  },
+  "artifacts": {
+    "contract": {
+      "path": "theory_oracle/QWEN3_BACKWARD_SINGLETON_REPAIR_CONTRACT_V0_3_2026-07-19.md",
+      "sha256": "86c0ca61de88e08c6d0d1dbfcceabe8e235b67bfd6d70681f3c020c7c399fa42"
+    },
+    "executor": {
+      "path": "theory_oracle/qwen3_backward_singleton_repair_v0_3.py",
+      "sha256": "0987ccc216a1c5c9778e2005e822e5fc05fb62e111dce73fefdddf18cb121b3c"
+    },
+    "common_executor": {
+      "path": "theory_oracle/qwen3_backward_singleton_repair_v0_1.py",
+      "sha256": "07bc11026023dc24a95ab923703428f995147c7969455b881aa0f3b96e376706"
+    },
+    "snapshot_metadata": {
+      "path": "data/qwen3_grpo_heldout_transport_v01_b_step29_transition/forkcert_transition_snapshot.json",
+      "sha256": "62e59c566d0aec35ddcf528549aa10f03be81a54d1be024ef26b0e37a1879c6c"
+    },
+    "anchor_states": {
+      "path": "results/training_step_oracle/qwen3_grpo_heldout_transport_v0_1/b_grad_states.jsonl",
+      "sha256": "e64c4fe1972812cc7df676c5a2293ec175408392b87e1d09976c34ad4c81da1a"
+    }
+  },
+  "output": "results/operator_oracle/qwen3_backward_singleton_repair_v0_1/attention_safe_softmax_v0_3",
+  "fail_closed": true,
+  "correctness_authority": null,
+  "causal_scope": "intervention-dependent selected-state repair impact"
+}

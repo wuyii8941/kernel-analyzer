@@ -1,0 +1,133 @@
+{
+  "claim_scope": {
+    "covered_scope": "Frozen finite-bank grad-enabled eager versus tracked-Inductor Qwen GRPO scorer discrepancy, clipping compatibility and variability profile over twenty instrumented reference-trajectory states",
+    "explicit_non_claims": [
+      "eager is mathematical truth",
+      "compiler wrong-code or numerical correctness",
+      "natural-training or deployment prevalence",
+      "one-step update effect",
+      "operator or kernel root cause",
+      "long-run convergence, reward or quality impact"
+    ],
+    "mapping_mode": "POST_EXECUTION_SCHEMA_MAPPING_OF_PREDECLARED_V0_4_DESIGN_WITH_NO_NEW_ENDPOINT_OR_THRESHOLD"
+  },
+  "implementation_contract": {
+    "candidate": "grad-enabled tracked torch.compile/Inductor realization of the same Accelerate-wrapped Trainer scorer with per-state graph invocation evidence",
+    "declared": true,
+    "reference": "actual grad-enabled eager Accelerate FP16 Trainer scorer under SDPA MATH"
+  },
+  "ledgers": {
+    "attribution": {"scope": "NOT_IN_SCOPE"},
+    "discrepancy": {
+      "estimands": [
+        {
+          "aggregation_unit": "token and rollout-state cluster over the complete frozen bank",
+          "comparison": "mean of the two paired compiled-minus-eager current-token log-probability effects",
+          "geometry": "signed scalar mean reported with both token and state weighting",
+          "id": "average_implementation_relative_shift",
+          "observable": "grad-enabled current-token log-probability"
+        },
+        {
+          "aggregation_unit": "rollout-state cluster nested within checkpoint trajectory",
+          "comparison": "compiled-minus-eager within-state mean effect across frozen states",
+          "geometry": "between-state range and population standard deviation over the finite bank",
+          "id": "state_conditioned_heterogeneity",
+          "observable": "within-state mean grad-enabled current-token log-probability effect"
+        },
+        {
+          "aggregation_unit": "implementation by exactly matched rollout state",
+          "comparison": "first versus second measured execution within each implementation",
+          "geometry": "nonzero repeat count and maximum absolute repeat difference",
+          "id": "within_state_runtime_variability",
+          "observable": "complete grad-enabled current-token log-probability tensor"
+        }
+      ],
+      "scope": "REQUIRED"
+    },
+    "exact_transition": {"scope": "NOT_IN_SCOPE"},
+    "impacts": {
+      "grad_context_negative_advantage_grpo_clipping": {
+        "acceptance_rule": "ACCEPT iff every applicable token has stable and identical eager/compiled clipping decisions across both repeats; INDETERMINATE for repeat-unstable decisions; otherwise REJECT",
+        "authority": "QWEN3_GRPO_GRAD_EVENT_BANK_DESIGN_V0_4_2026-07-17.md and frozen manifest",
+        "boundary_geometry": "NATURAL",
+        "event_type": "BINARY",
+        "scope": "REQUIRED"
+      }
+    },
+    "numerical_transition": {"scope": "NOT_IN_SCOPE"},
+    "operator_conformance": {"scope": "NOT_IN_SCOPE"},
+    "sampling_uncertainty": {"scope": "NOT_IN_SCOPE"},
+    "stochastic_transition": {"scope": "NOT_IN_SCOPE"},
+    "variability_profile": {
+      "scope": "REQUIRED",
+      "sources": [
+        {"id": "state_bank_selection", "kind": "STATE_SAMPLING"},
+        {"id": "prompt_completion_tokens", "kind": "BATCH_TOKEN_SAMPLING"},
+        {"id": "trajectory_generation_rng", "kind": "ALGORITHMIC_RNG"},
+        {"id": "gpu_scoring", "kind": "EXECUTION_NONDETERMINISM"},
+        {"id": "compiled_specialization", "kind": "AUTOTUNING_SELECTION"},
+        {"id": "stochastic_rounding", "kind": "STOCHASTIC_ROUNDING"},
+        {"id": "implementation_path", "kind": "FIXED_IMPLEMENTATION_DIFFERENCE"}
+      ]
+    }
+  },
+  "observable_contract": {
+    "declared": true,
+    "fields": [
+      "two eager and two compiled grad-enabled current-token log-probability tensors",
+      "old token log-probability and group-normalized advantage",
+      "sign-specific clipping decision in each repeat",
+      "full scorer tensor hashes and per-token values",
+      "compiled graph specialization and runtime invocation evidence",
+      "RNG, gradient, tensor-version and Trainer-step preservation gates",
+      "trajectory-level byte-exact margin, sample, rollout and final-model controls"
+    ],
+    "outcome_relevant_omissions": []
+  },
+  "population_contract": {
+    "aggregation_rule": "complete finite-bank token and rollout-state summaries with trajectory strata retained; no target-population weights or prevalence claim",
+    "claim_kind": "FINITE_BANK",
+    "declared": true,
+    "population_kind": "MATCHED_STATE",
+    "population_id": "qwen3-grpo-v0.4-grad-enabled-two-checkpoint-twenty-state-bank",
+    "sampling_unit": "rollout-state cluster nested within checkpoint trajectory",
+    "selection_design": "ten policy-iteration-2 pre-minibatch states from each of two predeclared instrumented reference trajectories; event witness ordered independently of effect magnitude",
+    "strata": [
+      {
+        "enrichment": "NONE",
+        "id": "trajectory-A-grad",
+        "inclusion_rule": "prompt slice 320:384, seed 20260720, ten policy-iteration-2 states",
+        "provenance": "byte-exact noninterfering replay of eager-anchored trajectory from data/r1_from240_step242_pre",
+        "trajectory_anchor": "REFERENCE_TRAJECTORY"
+      },
+      {
+        "enrichment": "NONE",
+        "id": "trajectory-B-grad",
+        "inclusion_rule": "prompt slice 384:448, seed 20260721, ten policy-iteration-2 states",
+        "provenance": "byte-exact noninterfering replay of eager-anchored trajectory from data/r1_from270_step272_pre",
+        "trajectory_anchor": "REFERENCE_TRAJECTORY"
+      }
+    ]
+  },
+  "randomness_contract": {
+    "coupling": "every eager/compiled repeat starts from the same captured CPU/CUDA RNG state; the pre-probe state is restored afterward; completions and training state are paired exactly",
+    "declared": true,
+    "mode": "DETERMINISTIC_GRAD_ENABLED_MATCHED_SCORING_OVER_STOCHASTICALLY_GENERATED_BUT_FROZEN_STATES"
+  },
+  "schema_version": "forkcert.training-step-oracle-query.v0.3",
+  "state_contract": {
+    "declared": true,
+    "fields": [
+      "in-memory pre-minibatch parameters and buffers",
+      "optimizer and Trainer step state preserved by the forward-only probe",
+      "prompt, completion, attention mask, padding shape and token alignment",
+      "old policy log-probability, advantage, epsilon and temperature",
+      "training mode, gradient checkpointing and enabled autograd",
+      "FP16 autocast, Accelerate output-to-FP32 wrapper, SDPA MATH and logits_to_keep",
+      "compiler specialization, warm-up and repeat protocol",
+      "captured and restored CPU/CUDA RNG state"
+    ],
+    "outcome_relevant_omissions": []
+  },
+  "subject_id": "qwen3-grpo-grad-enabled-event-bank-v0.4"
+}

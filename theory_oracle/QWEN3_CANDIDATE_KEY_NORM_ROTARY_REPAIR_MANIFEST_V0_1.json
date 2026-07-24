@@ -1,0 +1,39 @@
+{
+  "schema_version": "forkcert.qwen3-candidate-key-norm-rotary-repair-manifest.v0.1",
+  "status": "FROZEN_PRE_EXECUTION",
+  "freeze_date": "2026-07-19",
+  "subject": "original-candidate calls 0, 14 and 27 of the 28-call fused key RMSNorm-rotary generated kernel family",
+  "selection": {
+    "state": "heldout-transport-B-step29",
+    "kernel_family": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mean_mul_neg_pow_rsqrt_sin_slice_transpose_unsqueeze_view_4",
+    "call_indices": [0, 14, 27],
+    "rule": "early, middle and late decoder-layer invocations",
+    "target_effect_observed_before_freeze": false
+  },
+  "artifacts": {
+    "contract": {
+      "path": "theory_oracle/QWEN3_CANDIDATE_KEY_NORM_ROTARY_REPAIR_CONTRACT_V0_1_2026-07-19.md",
+      "sha256": "e2b8bd1625b4489adb54cf0be556aa33a5ca3bf6683e8a4856a34470639b4342"
+    },
+    "common_executor": {
+      "path": "theory_oracle/qwen3_candidate_kernel_repair_common_v0_1.py",
+      "sha256": "999831b7082d886338ccbe1b73aa3dbf1ec549f3695d73abeea3f3fb9dab2b8b"
+    },
+    "subject_executor": {
+      "path": "theory_oracle/qwen3_candidate_key_norm_rotary_repair_v0_1.py",
+      "sha256": "036cf93956fc474311cd26886603b6b0af66170002e5de3e506bea174a1d1d73"
+    },
+    "snapshot_metadata": {
+      "path": "data/qwen3_grpo_heldout_transport_v01_b_step29_transition/forkcert_transition_snapshot.json",
+      "sha256": "62e59c566d0aec35ddcf528549aa10f03be81a54d1be024ef26b0e37a1879c6c"
+    },
+    "target_input": {
+      "path": "data/qwen3_grpo_heldout_transport_v01_b_step29_transition/compiler_history/step_000029_inputs.pt",
+      "sha256": "f767e065bd6aaafc953968fd2bbe0bb83193117934bd40baee61cdf5492f2d80"
+    }
+  },
+  "output": "results/operator_oracle/qwen3_candidate_key_norm_rotary_repair_v0_1/result.json",
+  "fail_closed": true,
+  "correctness_authority": null,
+  "acceptance_authority": null
+}

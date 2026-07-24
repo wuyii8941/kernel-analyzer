@@ -1,0 +1,90 @@
+{
+  "case": "pytorch_issue_122260_fused_fma_context",
+  "environment": {
+    "cuda": "12.1",
+    "gpu": "Tesla T4",
+    "torch": "2.2.0+cu121"
+  },
+  "not_a_claim": [
+    "blind localization",
+    "external patch validation",
+    "root cause",
+    "Triton source cause"
+  ],
+  "qualification": "QUALIFIED_LOWER_GPU_CANDIDATE",
+  "role": "candidate_qualification_only",
+  "schema_version": "forkcert.historical-candidate-screen.v0.1",
+  "semantic_contract": "for the declared identical float32 products, exp((x*scale)-(x*scale)) is finite one",
+  "stage_summary": {
+    "aot_eager": {
+      "contract_holds": true,
+      "repeatable": true,
+      "value": 1.0
+    },
+    "dynamo_eager": {
+      "contract_holds": true,
+      "repeatable": true,
+      "value": 1.0
+    },
+    "eager": {
+      "contract_holds": true,
+      "repeatable": true,
+      "value": 1.0
+    },
+    "inductor": {
+      "contract_holds": false,
+      "repeatable": true,
+      "value": Infinity
+    }
+  },
+  "stages": {
+    "aot_eager": [
+      {
+        "contract_holds": true,
+        "finite": true,
+        "value": 1.0
+      },
+      {
+        "contract_holds": true,
+        "finite": true,
+        "value": 1.0
+      }
+    ],
+    "dynamo_eager": [
+      {
+        "contract_holds": true,
+        "finite": true,
+        "value": 1.0
+      },
+      {
+        "contract_holds": true,
+        "finite": true,
+        "value": 1.0
+      }
+    ],
+    "eager": [
+      {
+        "contract_holds": true,
+        "finite": true,
+        "value": 1.0
+      },
+      {
+        "contract_holds": true,
+        "finite": true,
+        "value": 1.0
+      }
+    ],
+    "inductor": [
+      {
+        "contract_holds": false,
+        "finite": false,
+        "value": Infinity
+      },
+      {
+        "contract_holds": false,
+        "finite": false,
+        "value": Infinity
+      }
+    ]
+  }
+}

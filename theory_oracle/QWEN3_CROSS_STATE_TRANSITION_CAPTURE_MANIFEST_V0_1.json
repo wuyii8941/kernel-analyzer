@@ -1,0 +1,72 @@
+{
+  "schema_version": "forkcert.qwen3-cross-state-transition-capture-manifest.v0.1",
+  "status": "FROZEN_PRE_EXECUTION",
+  "freeze_date": "2026-07-19",
+  "results_observed_before_freeze": false,
+  "capture_step": 29,
+  "artifacts": {
+    "contract": {
+      "path": "theory_oracle/QWEN3_CROSS_STATE_TRANSITION_CAPTURE_CONTRACT_V0_1_2026-07-19.md",
+      "sha256": "d30cd6e91c026a5e673e2505b2a995f7766eb11948af33108a699513f1f19666"
+    },
+    "executor": {
+      "path": "scripts/phase0_grpo_train.py",
+      "sha256": "28a541cf4b24b732120ccf70d9350628882c357622638b49d245a9515b67c8ac"
+    },
+    "snapshot_verifier": {
+      "path": "theory_oracle/verify_qwen3_grpo_transition_snapshot_v0_1.py",
+      "sha256": "0e46f2573af788088c1739ac1335b3d2814fa6717e8bb0ee6b2733c27549139b"
+    },
+    "joint_verifier": {
+      "path": "theory_oracle/verify_qwen3_cross_state_transition_capture_v0_1.py",
+      "sha256": "68aee9b1d2af898bcf881423c66bd69155297dc06111c37efaf80e30ac3bcb68"
+    },
+    "config_a": {
+      "path": "configs/oracle_qwen3_grpo_heldout_transport_v01_a.yaml",
+      "sha256": "f59bac67fd4807bb764fa34811ed4971e09952aec0002204cadf0f514ec92ebc"
+    },
+    "config_c": {
+      "path": "configs/oracle_qwen3_grpo_heldout_transport_v01_c.yaml",
+      "sha256": "1c06cfe7bc5173f607746b5f075045f17d6c679cf4fcf1f4c4c8da43ce958b26"
+    },
+    "initial_model": {
+      "path": "data/phase0_policy_final/model.safetensors",
+      "sha256": "55fd2089d10c96a7bee1c38143ecd155d14bccf96694f4957b61c068402ebe04"
+    },
+    "initial_config": {
+      "path": "data/phase0_policy_final/config.json",
+      "sha256": "434086f920d0b657ea845c09902fd144a8641e7ced8a361253fad31fe47144c8"
+    },
+    "initial_tokenizer": {
+      "path": "data/phase0_policy_final/tokenizer.json",
+      "sha256": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506"
+    }
+  },
+  "arms": {
+    "a_replay": {
+      "config": "configs/oracle_qwen3_grpo_heldout_transport_v01_a.yaml",
+      "output_dir": "data/qwen3_grpo_transport_a_replay_capture_v0_1_run",
+      "transition_snapshot_dir": "data/qwen3_grpo_transport_a_replay_step29_transition_v0_1",
+      "margin_jsonl": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/a_margin.jsonl",
+      "samples_jsonl": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/a_samples.jsonl",
+      "final_rollout_jsonl": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/a_final_rollout.jsonl",
+      "grad_tokens_jsonl": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/a_grad_tokens.jsonl",
+      "grad_states_jsonl": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/a_grad_states.jsonl",
+      "verification": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/a_transition_capture_verification.json"
+    },
+    "c_replay": {
+      "config": "configs/oracle_qwen3_grpo_heldout_transport_v01_c.yaml",
+      "output_dir": "data/qwen3_grpo_transport_c_replay_capture_v0_1_run",
+      "transition_snapshot_dir": "data/qwen3_grpo_transport_c_replay_step29_transition_v0_1",
+      "margin_jsonl": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/c_margin.jsonl",
+      "samples_jsonl": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/c_samples.jsonl",
+      "final_rollout_jsonl": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/c_final_rollout.jsonl",
+      "grad_tokens_jsonl": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/c_grad_tokens.jsonl",
+      "grad_states_jsonl": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/c_grad_states.jsonl",
+      "verification": "results/training_step_oracle/qwen3_grpo_cross_state_capture_v0_1/c_transition_capture_verification.json"
+    }
+  },
+  "gpu_protocol": "one visible physical GPU, deterministic algorithms warn-only, CUBLAS_WORKSPACE_CONFIG=:4096:8, serial arms",
+  "correctness_authority": null,
+  "fail_closed": true
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "forkcert.eager-layer-boundary-mediation-manifest.v0.1",
+  "case_id": "qwen3-calibration-0-step236-eager-layer-boundary-mediation",
+  "state_id": "calibration-0-late-step236",
+  "snapshot_dir": "/data1/tzh/forkcert/data/oracle_calibration/qwen3_bias_oracle_calibration_0_v0_1/captures/late/step_000236",
+  "realization_contract": "/data1/tzh/forkcert/results/oracle_calibration/qwen3_bias_oracle_calibration_0_v0_1/step236/realization_contract.json",
+  "generated_kernel": "triton_per_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_15",
+  "expected_runtime_calls": 27,
+  "selected_call_indices": [0, 13, 26],
+  "mapping_rule": "generated call i must use the exact parameter storage of model.layers[i+1].input_layernorm.weight; its two outputs are aligned to eager layer i residual output and eager layer i+1 input_layernorm output",
+  "treatment": "replace both outputs of one selected original generated-kernel invocation with the aligned eager boundary tensors, then continue through the unchanged original compiled suffix",
+  "singleton_production_evidence": "/data1/tzh/forkcert/results/operator_oracle/qwen3_step236_live_decoder_rms_kernel_family_v0_1/result.json",
+  "forbidden_claims": [
+    "boundary mediation proves the selected kernel produced all upstream discrepancy",
+    "boundary substitution is an isolated constituent-op repair",
+    "one boundary result proves a unique root cause",
+    "eager boundary is mathematical truth",
+    "forward mediation implies gradient or update mediation"
+  ]
+}

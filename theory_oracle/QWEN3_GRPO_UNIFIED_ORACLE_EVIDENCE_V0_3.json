@@ -1,0 +1,127 @@
+{
+  "candidate_identity": {
+    "evidence": {
+      "all_states_tracked": true,
+      "backend_compiles": 20,
+      "runtime_invocations": 60,
+      "source": "results/training_step_oracle/qwen3_grpo_training_control_confirmation_v0_2/evaluation.json"
+    },
+    "status": "VALID"
+  },
+  "ledgers": {
+    "attribution": {
+      "status": "INDETERMINATE"
+    },
+    "discrepancy": {
+      "average_implementation_relative_shift": {
+        "estimate": -5.566659900877211e-05,
+        "scope_or_uncertainty": "descriptive mean over 4,608 applicable negative-advantage tokens in 20 frozen rollout-state clusters; no target-population interval"
+      },
+      "state_conditioned_heterogeneity": {
+        "estimate": {
+          "trajectory_A_cluster_mean_range": [
+            -0.00016595423221588135,
+            0.00015290826559066772
+          ],
+          "trajectory_A_cluster_mean_sd": 9.443269955999855e-05,
+          "trajectory_B_cluster_mean_range": [
+            -0.00026534125208854675,
+            0.00021696090698242188
+          ],
+          "trajectory_B_cluster_mean_sd": 0.00016756530518267712
+        },
+        "scope_or_uncertainty": "20 rollout-state clusters split across two deliberately selected checkpoint trajectories; heterogeneity is descriptive and trajectory-conditioned"
+      },
+      "status": "ESTIMATED",
+      "within_state_runtime_variability": {
+        "estimate": {
+          "observed_self_repeat_delta": 0.0,
+          "repeats_per_implementation_state": 2
+        },
+        "scope_or_uncertainty": "two exact measured repeats per implementation per frozen state; zero observed variability is not proof of universal determinism"
+      }
+    },
+    "impacts": {
+      "negative_advantage_grpo_clipping": {
+        "details": {
+          "boundary_exposure": {
+            "applicable_tokens": 4608,
+            "event_reference_margin_max": 0.018736865555907423,
+            "events": 4,
+            "non_events_at_least_as_close_as_farthest_event": 28
+          },
+          "direction_0_to_1_count": 2,
+          "direction_1_to_0_count": 2,
+          "directional_shift": 0.0,
+          "disagreement": 0.0008680555555555555,
+          "disagreement_count": 4,
+          "denominator": 4608
+        },
+        "evidence": "evaluation.json plus boundary_conditioning.json",
+        "status": "REJECT"
+      }
+    },
+    "sampling_uncertainty": {
+      "reason": "twenty rollout clusters are nested within only two deliberately selected checkpoint trajectories; no operational probability sample or target-population weights",
+      "sampling_unit": "rollout-state cluster nested within checkpoint trajectory",
+      "status": "INDETERMINATE"
+    },
+    "variability_profile": {
+      "sources": {
+        "compiled_specialization": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "every state records the tracked shape-specialized graph and all three compiled invocations"
+        },
+        "gpu_scoring": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "zero observed eager/eager and compiled/compiled repeat delta in two measured repeats per state"
+        },
+        "implementation_path": {
+          "classification": "FIXED_IMPLEMENTATION_EFFECT",
+          "observation": "eager and tracked Inductor realizations are fixed treatments; their difference is not runtime variance"
+        },
+        "prompt_completion_tokens": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "identical frozen prompt and sampled-completion token tensors are supplied to both implementations"
+        },
+        "state_bank_selection": {
+          "classification": "BETWEEN_STATE_DESIGN",
+          "observation": "twenty rollout states nested in two deliberately selected checkpoint trajectories"
+        },
+        "stochastic_rounding": {
+          "classification": "ABSENT_OR_DISABLED",
+          "observation": "no stochastic-rounding mechanism is enabled in the declared scoring protocol"
+        },
+        "trajectory_generation_rng": {
+          "classification": "FIXED_BY_PROTOCOL",
+          "observation": "sampling RNG affects which states entered the bank, but each matched scoring query freezes the realized state and RNG-dependent tokens"
+        }
+      },
+      "status": "CHARACTERIZED"
+    }
+  },
+  "schema_version": "forkcert.training-step-oracle-evidence.v0.3",
+  "subject_id": "qwen3-grpo-training-control-confirmation-v0.2",
+  "validity_gates": [
+    {
+      "evidence": "20/20 unique rollout states and 10,240 aligned token rows",
+      "id": "state_and_token_alignment",
+      "passed": true
+    },
+    {
+      "evidence": "tracked Inductor invocation for warmup and both measured calls in every state",
+      "id": "candidate_realization_identity",
+      "passed": true
+    },
+    {
+      "evidence": "zero eager/eager and compiled/compiled repeat delta in every state",
+      "id": "same_state_self_repeat",
+      "passed": true
+    },
+    {
+      "evidence": "all values finite; event rule and denominator frozen before scoring",
+      "id": "finite_and_predeclared_endpoint",
+      "passed": true
+    }
+  ]
+}

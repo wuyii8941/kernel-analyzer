@@ -1,0 +1,60 @@
+{
+  "schema_version": "forkcert.qwen3-bias-oracle-retention-policy.v0.1",
+  "status": "FROZEN_POLICY_NO_DELETION_AUTHORIZED_BY_POLICY_ALONE",
+  "frozen_before_complete_calibration_results": true,
+  "selection_key_sha256": "a04f854b00e75e8faddf59393bbf867728875206d30b14ff7c7d028337571706",
+  "selection_key_derivation": "sha256('forkcert/qwen3-bias-oracle/retention/v0.1/frozen-before-complete-calibration/2026-07-20')",
+  "storage_safety_floor_bytes": 2199023255552,
+  "observed_scale_before_policy": {
+    "complete_state_bytes_approx": 28991029248,
+    "full_24_state_trajectory_bytes_approx": 878320000000,
+    "interpretation": "capacity planning only; values are not Oracle outcomes"
+  },
+  "mechanism_replay_snapshot_rule": "for each frozen calibration trajectory and phase, retain the target with lowest sha256(selection_key/state_id) rank; this rule cannot inspect discrepancy",
+  "calibration_full_snapshot_retention": [
+    "calibration-0-early-step096",
+    "calibration-0-middle-step108",
+    "calibration-0-late-step275",
+    "calibration-1-early-step089",
+    "calibration-1-middle-step181",
+    "calibration-1-late-step271",
+    "calibration-2-early-step047",
+    "calibration-2-middle-step148",
+    "calibration-2-late-step218",
+    "calibration-3-early-step029",
+    "calibration-3-middle-step186",
+    "calibration-3-late-step279"
+  ],
+  "always_retain": [
+    "frozen configs and capture plans",
+    "source metadata and source-binding capture audit",
+    "per-state small result JSON, endpoint banks, record bundles and record validations",
+    "single-trajectory scalar summaries",
+    "single-trajectory signed U2 mean-field shards and summary",
+    "four-trajectory calibration scalar/vector summaries",
+    "all confirmation precision, bank, manifest and evaluator hashes",
+    "a tombstone ledger containing path, byte size and sha256 for every removed artifact",
+    "the twelve calibration mechanism-replay full snapshots selected above"
+  ],
+  "large_artifact_classes_potentially_eligible_after_gate": [
+    "non-retained snapshot model.safetensors and optimizer.pt",
+    "per-arm clipped_gradients.safetensors and parameter_updates.safetensors",
+    "per-state paired update-delta safetensors after signed trajectory U2 aggregation",
+    "source_final_model weights after every frozen state record and trajectory aggregate validate"
+  ],
+  "deletion_gate": [
+    "all 24 state records for the trajectory are population-eligible and freshly revalidated",
+    "the trajectory scalar summary is valid and complete without endpoint deletion",
+    "the signed U2 trajectory summary and every retained mean-field shard validate",
+    "every downstream multi-trajectory consumer needed by the current stage has completed",
+    "a pre-deletion ledger hashes every candidate and names its retained derived consumer",
+    "an independent validator confirms no candidate is required by a frozen confirmation or contributor endpoint",
+    "the deletion command is separately reviewed; this policy never deletes automatically"
+  ],
+  "confirmation_incremental_rule": "if precision J cannot fit above the storage safety floor, incremental pruning requires a separately validated per-trajectory scalar and any frozen U2-direction projection before the next source trajectory; otherwise confirmation is infeasible at the declared J",
+  "nonclaims": [
+    "a retained hash cannot reconstruct deleted raw tensors",
+    "derived summaries do not provide full raw replayability",
+    "retention selection does not identify important or bias-contributing states"
+  ]
+}

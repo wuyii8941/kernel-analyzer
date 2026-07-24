@@ -1,0 +1,125 @@
+{
+  "allowed_claim": "SEEDED_CALIBRATION_PLUMBING_PASSED",
+  "case_id": "kernel_plumbing_microcase_v0_1",
+  "controls": {
+    "baseline_matches_reference": true,
+    "noop_matches_baseline": true,
+    "repaired_matches_reference": true
+  },
+  "input": {
+    "dtype": "torch.float32",
+    "sha256": "2d18b47e17ec0d30b8976c105b10c12763a494817d70154c6352746754baaff5",
+    "shape": [
+      4,
+      257
+    ],
+    "stride": [
+      257,
+      1
+    ]
+  },
+  "intervention": {
+    "context_invariant_except_declared_target": true,
+    "faulty_sha256": "0b8a9bf896b2f8220568d1900ce6ce792218d3cbe8bd935441fcbccdb5f9a497",
+    "faulty_vs_reference": {
+      "max_abs": 1.0,
+      "mean_abs": 1.0,
+      "nonzero": 4
+    },
+    "non_target_signature": "ac6f9b89a3f9520d8253a72f2810aa90d3e286c85005b8b26634ee50c9149748",
+    "repaired_vs_reference": {
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "nonzero": 0
+    },
+    "source_sha256": "2e67f76adc752755eb6ffc89569596145d11b89c4d9c3b5435db0b6af592ef57",
+    "type": "direct_generated_expression_repair"
+  },
+  "limitations": [
+    "the seed recipe is calibration-only and is not visible to the opaque case consumer",
+    "this proves generated-code replay/intervention plumbing, not localization accuracy",
+    "a single generated wrapper has no nontrivial graph-reduction search space"
+  ],
+  "production": {
+    "delta": {
+      "max_abs": 1.0,
+      "mean_abs": 1.0,
+      "nonzero": 4
+    },
+    "faulty_output": {
+      "dtype": "torch.float32",
+      "sha256": "211a4aaaacf0151a96fdf8e2d5c0880e94d7f254a2045b30d961147d272b65a4",
+      "shape": [
+        4
+      ],
+      "stride": [
+        1
+      ]
+    },
+    "observed": true,
+    "reference_output": {
+      "dtype": "torch.float32",
+      "sha256": "817a8b791d4797767bbc0fb9c640ce695c08cc58122761b335862121e38f1e45",
+      "shape": [
+        4
+      ],
+      "stride": [
+        1
+      ]
+    },
+    "same_input": true
+  },
+  "provenance": {
+    "generated_wrapper": "/data1/tzh/forkcert/results/calibration/kernel_plumbing_v0_2/inductor_cache/bs/cbsbqtjutqmptd5rg4lx72ax6i7l7nd7udcozjuhlmavdnckdwxa.debug/output_code.py",
+    "kernel_inventory": [
+      {
+        "has_sum": true,
+        "has_view": false,
+        "kernel_names": [
+          "triton_per_fused_sum_0"
+        ],
+        "original_aten": [
+          "[aten.sum]",
+          "[aten.sum]"
+        ],
+        "path": "/data1/tzh/forkcert/results/calibration/kernel_plumbing_v0_2/inductor_cache/bs/cbsbqtjutqmptd5rg4lx72ax6i7l7nd7udcozjuhlmavdnckdwxa.debug/output_code.py",
+        "sha256": "2e67f76adc752755eb6ffc89569596145d11b89c4d9c3b5435db0b6af592ef57",
+        "source_nodes": [
+          "[sum_1], Original ATen: [aten.sum]",
+          "[sum_1], Original ATen: [aten.sum]"
+        ]
+      },
+      {
+        "has_sum": true,
+        "has_view": false,
+        "kernel_names": [
+          "triton_per_fused_sum_0"
+        ],
+        "original_aten": [
+          "[aten.sum]",
+          "[aten.sum]"
+        ],
+        "path": "/data1/tzh/forkcert/results/calibration/kernel_plumbing_v0_2/inductor_cache/bs/cbsbqtjutqmptd5rg4lx72ax6i7l7nd7udcozjuhlmavdnckdwxa.py",
+        "sha256": "2e67f76adc752755eb6ffc89569596145d11b89c4d9c3b5435db0b6af592ef57",
+        "source_nodes": [
+          "[sum_1], Original ATen: [aten.sum]",
+          "[sum_1], Original ATen: [aten.sum]"
+        ]
+      },
+      {
+        "has_sum": true,
+        "has_view": false,
+        "kernel_names": [
+          "triton_per_fused_sum_0"
+        ],
+        "original_aten": [],
+        "path": "/data1/tzh/forkcert/results/calibration/kernel_plumbing_v0_2/inductor_cache/uu/cuug5vt3vn4l7sp7whujxytgyzzgdn7skav3ljlif656zf4b4sas.py",
+        "sha256": "f3119b4e13a5052aa27726304124a3b55cc9bd897291bf2c5e286b5874fcb341",
+        "source_nodes": []
+      }
+    ],
+    "source_sha256": "2e67f76adc752755eb6ffc89569596145d11b89c4d9c3b5435db0b6af592ef57"
+  },
+  "role": "seeded_calibration_only",
+  "schema_version": "forkcert.seeded-kernel-plumbing-calibration.v0.1"
+}

@@ -1,0 +1,104 @@
+{
+  "claim_scope": {
+    "covered_scope": "32-state deterministic finite bank of the declared 257-dimensional float32 linear forward/backward/SGD transition with a candidate-only drop-last negative control",
+    "explicit_non_claims": [
+      "natural Inductor bug",
+      "failure on every possible state",
+      "transformer numerical correctness",
+      "semantic-event or long-run impact"
+    ]
+  },
+  "implementation_contract": {
+    "candidate": "tracked Inductor fullgraph realization with the last product intentionally omitted",
+    "declared": true,
+    "reference": "exact rational declared transition plus independently derived IEEE-754 envelope; eager is a measured control only"
+  },
+  "ledgers": {
+    "attribution": {"scope": "NOT_IN_SCOPE"},
+    "discrepancy": {"scope": "NOT_IN_SCOPE"},
+    "exact_transition": {
+      "authority": {
+        "acceptance_rule_frozen": true,
+        "independent_of_candidate_measurements": true,
+        "kind": "DOCUMENTED_SEMANTICS",
+        "scope": "declared tensor structure, SGD option branches and complete observable schema",
+        "source": "ANALYTIC_LINEAR_STEP_CONTRACT_V0_1_2026-07-17.md"
+      },
+      "scope": "REQUIRED"
+    },
+    "impacts": {},
+    "numerical_transition": {
+      "authority": {
+        "acceptance_rule_frozen": true,
+        "independent_of_candidate_measurements": true,
+        "kind": "CERTIFIED_ERROR_ENVELOPE",
+        "scope": "exact Fraction transition plus a priori gamma-based IEEE-754 error envelope",
+        "source": "ANALYTIC_LINEAR_STEP_CONTRACT_V0_1_2026-07-17.md"
+      },
+      "scope": "REQUIRED"
+    },
+    "operator_conformance": {"scope": "NOT_IN_SCOPE"},
+    "sampling_uncertainty": {"scope": "NOT_IN_SCOPE"},
+    "stochastic_transition": {"scope": "NOT_IN_SCOPE"},
+    "variability_profile": {
+      "scope": "REQUIRED",
+      "sources": [
+        {"id": "state_generation", "kind": "STATE_SAMPLING"},
+        {"id": "features_and_targets", "kind": "BATCH_TOKEN_SAMPLING"},
+        {"id": "algorithmic_rng", "kind": "ALGORITHMIC_RNG"},
+        {"id": "gpu_execution", "kind": "EXECUTION_NONDETERMINISM"},
+        {"id": "compiled_selection", "kind": "AUTOTUNING_SELECTION"},
+        {"id": "stochastic_rounding", "kind": "STOCHASTIC_ROUNDING"},
+        {"id": "implementation_path", "kind": "FIXED_IMPLEMENTATION_DIFFERENCE"}
+      ]
+    }
+  },
+  "observable_contract": {
+    "declared": true,
+    "fields": [
+      "prediction",
+      "loss",
+      "complete gradient vector",
+      "complete next-parameter vector",
+      "structure and SGD option branches"
+    ],
+    "outcome_relevant_omissions": []
+  },
+  "population_contract": {
+    "aggregation_rule": "equal weighting over the 32 enumerated synthetic states; retain the zero-omitted-product inapplicable witness rather than dropping it",
+    "claim_kind": "FINITE_BANK",
+    "declared": true,
+    "population_kind": "MATCHED_STATE",
+    "population_id": "analytic-linear-drop-last-32-state-enumerated-bank",
+    "sampling_unit": "generated state index",
+    "selection_design": "same complete frozen enumeration as the correct control, selected before negative-control scoring",
+    "strata": [
+      {
+        "id": "synthetic-enumeration",
+        "enrichment": "SYNTHETIC_CONTROL",
+        "inclusion_rule": "all 32 states in the frozen analytic manifest",
+        "provenance": "deterministically generated rational linear-SGD states",
+        "trajectory_anchor": "SYNTHETIC"
+      }
+    ]
+  },
+  "randomness_contract": {
+    "coupling": "integer-formula state generation and exact repeated execution under deterministic CUDA protocol",
+    "declared": true,
+    "mode": "DETERMINISTIC"
+  },
+  "schema_version": "forkcert.training-step-oracle-query.v0.3",
+  "state_contract": {
+    "declared": true,
+    "fields": [
+      "257 float32 weights",
+      "257 float32 features",
+      "float32 target",
+      "SGD lr=2^-5 and all option flags",
+      "empty optimizer state",
+      "CUDA and compiler realization"
+    ],
+    "outcome_relevant_omissions": []
+  },
+  "subject_id": "analytic-linear-step-drop-last-v0.1"
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "forkcert.eager-layer-boundary-mediation-manifest.v0.4",
+  "case_id": "qwen3-calibration-0-step236-layer15-contextual-slice",
+  "state_id": "calibration-0-late-step236",
+  "snapshot_dir": "/data1/tzh/forkcert/data/oracle_calibration/qwen3_bias_oracle_calibration_0_v0_1/captures/late/step_000236",
+  "realization_contract": "/data1/tzh/forkcert/results/oracle_calibration/qwen3_bias_oracle_calibration_0_v0_1/step236/realization_contract.json",
+  "generated_kernel": "triton_per_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_15",
+  "expected_runtime_calls": 27,
+  "selected_call_indices": [],
+  "contextual_layer_slices": [15],
+  "boundary_map_evidence": "/data1/tzh/forkcert/results/operator_oracle/qwen3_step236_eager_layer_boundary_map_v0_3/result.json",
+  "mapping_rule": "entry call 14 and exit call 15 are identified by exact storage identity with model.layers.15.input_layernorm.weight and model.layers.16.input_layernorm.weight respectively",
+  "same_input_contract": "both block arms inject the same eager boundary after layer14 into the original generated buffers; compiled-block retains original call15 outputs, eager-block replaces call15 outputs with the eager layer15 boundary; all other original compiled suffix execution is shared",
+  "boundary_transport": "eager residual values retain fp32; eager input_layernorm module outputs are explicitly cast to the original compiled fp16 consumer dtype; values are copied into original destination buffers without changing their layout",
+  "treatment": "compare compiled layer15 versus eager layer15 from the same eager entry boundary and under the same original compiled suffix",
+  "singleton_production_evidence": "/data1/tzh/forkcert/results/operator_oracle/qwen3_step236_live_decoder_rms_kernel_family_v0_1/result.json",
+  "forbidden_claims": [
+    "layer15 is a unique root cause",
+    "the contextual block effect identifies one constituent op or kernel",
+    "eager layer15 is mathematical truth",
+    "forward mediation implies backward or update mediation"
+  ]
+}
