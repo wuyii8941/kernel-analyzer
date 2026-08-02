@@ -18,6 +18,13 @@ def main() -> None:
     if hashlib.sha256(summary).hexdigest() != manifest["summary"]["sha256"]:
         raise ValueError("summary digest differs")
 
+    for name, row in manifest.get("files", {}).items():
+        payload = (ROOT / name).read_bytes()
+        if len(payload) != row["bytes"]:
+            raise ValueError(f"file size differs: {name}")
+        if hashlib.sha256(payload).hexdigest() != row["sha256"]:
+            raise ValueError(f"file digest differs: {name}")
+
     for name, row in manifest["archives"].items():
         compressed = (ROOT / name).read_bytes()
         if hashlib.sha256(compressed).hexdigest() != row["sha256"]:

@@ -1,0 +1,71 @@
+{
+  "claims": {
+    "additional_complete_natural_forward_backward_case": false,
+    "all_bf16_inductor_triton_regions_screened_for_seq64_128_256": true,
+    "all_compiler_configurations_certified": false,
+    "external_identity_replay_is_independent_math_proof": false,
+    "property_generalization_started": false
+  },
+  "external_identity_pilots": {
+    "seq128": {
+      "exact_regions_per_repeat": 760,
+      "nonexact_regions_per_repeat": 0,
+      "repeats": 2,
+      "states": 1
+    },
+    "seq256": {
+      "exact_regions_per_repeat": 760,
+      "nonexact_regions_per_repeat": 0,
+      "repeats": 2,
+      "states": 1
+    }
+  },
+  "method": {
+    "bootstrap_resamples": 200000,
+    "confirmation_states": 24,
+    "discovery_states": 7,
+    "multiplicity": "joint Benjamini-Hochberg over all frozen endpoint carriers",
+    "pilot_states_excluded": 1,
+    "repeats_per_state": 2,
+    "residual": "BF16 Inductor minus same-input BF16 eager semantic reference"
+  },
+  "notes": [
+    "The seq64 forward/backward and seq128 backward survivors are the already known terminal NLL implementation case, not new operator cases.",
+    "No seq256 complete semantic closure passed; this includes 57 newly closed RMSNorm weight-gradient split reductions.",
+    "A seq256 campaign-builder lexicographic region-order bug was caught by fail-closed runtime shape checking and corrected to numeric region order before the 32-state campaign. It is a measurement-boundary defect, not a candidate numerical bias."
+  ],
+  "schema": "kernel-analyzer-generated-screen-v1",
+  "scope": "Qwen3-1.7B BF16 Inductor, one complete forward+backward, seq64/128/256",
+  "triton": {
+    "seq128": {
+      "complete_closure_passed_units": 1,
+      "exact_discovery_controls": 286,
+      "generated_regions_in_coverage_denominator": 1446,
+      "joint_tests": 1645,
+      "nonzero_discovery_units": 827,
+      "passed_endpoint_units": 69,
+      "screened_triton_invocations": 686,
+      "total_endpoint_or_closure_units": 1113
+    },
+    "seq256": {
+      "complete_closure_passed_units": 0,
+      "exact_discovery_controls": 342,
+      "generated_regions_in_coverage_denominator": 1500,
+      "joint_tests": 1761,
+      "nonzero_discovery_units": 883,
+      "passed_endpoint_units": 125,
+      "screened_triton_invocations": 740,
+      "total_endpoint_or_closure_units": 1225
+    },
+    "seq64": {
+      "complete_closure_passed_units": 2,
+      "exact_discovery_controls": 291,
+      "generated_regions_in_coverage_denominator": 1446,
+      "joint_tests": 1636,
+      "nonzero_discovery_units": 822,
+      "passed_endpoint_units": 43,
+      "screened_triton_invocations": 686,
+      "total_endpoint_or_closure_units": 1113
+    }
+  }
+}
