@@ -17,10 +17,12 @@
 | BF16 | 21,861 | 122 | 0 | 1 |
 | FP16 | 22,641 | 510 | 21 | 0 |
 
-The single complete case is the seq128 `lm_head` input-gradient matrix
-multiplication. It is a different kernel from FlashAttention but has the same
-abstract mechanism: directional local arithmetic error, coherent parameter
-gradient carrier, and repeated weight divergence.
+The primary Qwen all-op census's single complete case is the seq128 `lm_head`
+input-gradient matrix multiplication. It is a natural, complete F+B case: its
+forward is exactly bound to the biased actual input-VJP edge. It is a different
+kernel from FlashAttention but has the same abstract mechanism: directional
+local arithmetic error, coherent parameter-gradient carrier, and repeated
+weight divergence.
 
 The 21 FP16 nonfinite cases are attention-mask additions. Their `-inf` values
 are causally absorbed by the closed softmax forward/backward region.
@@ -71,12 +73,15 @@ direction of finite-arithmetic bias while keeping dtype fixed: causal-softmax
 support geometry, RMSNorm hidden-energy-to-epsilon ratio, and terminal NLL
 implementation/materialization. Controlled SiLU input domain/scale and BF16
 GEMM operand layout also produce complete local forward/VJP effects, but their
-independent full-parameter carriers fail. Liger fused cross entropy adds a
-direct parameter-gradient mechanism: chunk geometry interacts with a BF16
-`dW` accumulator, and changing only that accumulator to FP32 removes 95.7% of
-the mean candidate-added `dW` error.
+independent full-parameter carriers fail. Liger fused cross entropy adds the
+project's second natural complete F+B case: chunk geometry interacts with a
+BF16 `dW` accumulator, and changing only that accumulator to FP32 removes 95.7%
+of the mean candidate-added `dW` error. The final tied-weight carrier confirms
+on 24/24 held-out states; the other 309 parameter gradients are bitwise-exact
+controls.
 
 These are mechanism cases, not yet a generalizable cross-operator property.
+The three-case comparison with the FlashAttention reference is in `case.md`.
 
 ## Files
 

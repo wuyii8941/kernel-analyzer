@@ -7,11 +7,18 @@
     "fp16_overflow": 21
   },
   "causal": {
-    "case": "seq128 lm_head input-gradient MM",
-    "compiled_coherent_cases": 0,
-    "compiled_positive_regions_tested": 16,
-    "compiled_target_states": 512,
-    "paper_like_cases": 1
+    "cases": [
+      "seq128 lm_head input-gradient MM",
+      "Liger fused-linear cross-entropy dW accumulation"
+    ],
+    "fused_extension_cases": 1,
+    "initial_inductor_screen": {
+      "complete_cases": 0,
+      "positive_regions_tested": 16,
+      "target_states": 512
+    },
+    "primary_all_op_cases": 1,
+    "project_natural_complete_cases": 2
   },
   "claims": {
     "all_bf16_inductor_triton_regions_screened_for_seq64_128_256": true,
@@ -27,7 +34,7 @@
     "unresolved_math_units": 0
   },
   "generated": {
-    "additional_complete_natural_forward_backward_cases": 0,
+    "additional_complete_natural_cases_in_primary_bf16_inductor_screen": 0,
     "confirmation_states_per_shape": 24,
     "screened_triton_invocations": {
       "seq128": 686,
@@ -35,7 +42,7 @@
       "seq64": 686
     }
   },
-  "next": "expand confirmed mechanisms across independent operator families before property induction",
+  "next": "collect more independent natural complete F+B mechanisms before property induction",
   "schema": "kernel-analyzer-summary-v1",
   "scope": "Qwen3-1.7B, one full forward+backward, seq64/128/256"
 }
