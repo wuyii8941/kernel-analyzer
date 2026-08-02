@@ -41,9 +41,8 @@ e_{precision}=R_{low}-R_{32},\qquad
 e_{optimization}=C_{low}-R_{low}.
 \]
 
-Current scope: Qwen3-1.7B, one full loss forward/backward, seq64/128/256,
-BF16 and FP16 eager, with a BF16 Inductor open-region extension. Property
-generalization has not started.
-
-Next phase holds precision constant and tests implementation factors, beginning
-with strict-FP32 eager versus strict-FP32 Inductor.
+Current scope includes Qwen3-1.7B text training steps and one natural
+Qwen3-VL-Reranker-2B multimodal training step. The Qwen3-VL AOT derivation is
+independently complete in BF16 and FP32. Implementation-factor experiments
+include a backward-only SiLU decomposition intervention with unchanged
+forward. Property generalization has not started.

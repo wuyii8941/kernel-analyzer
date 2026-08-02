@@ -83,6 +83,20 @@ controls.
 These are mechanism cases, not yet a generalizable cross-operator property.
 The three-case comparison with the FlashAttention reference is in `case.md`.
 
+## Qwen3-VL round 2
+
+The second-model census records 14,660 BF16 eager invocations. Its independent
+AOT proof closes 3,589/3,589 BF16 and 3,211/3,211 FP32 forward/backward units,
+including all functionalized auxiliary nodes.
+
+AOT's graph-dtype decomposition of text SiLU backward exactly explains the
+candidate gradient difference in all 625 parameters under both BF16 and FP32.
+The BF16 global delta L2 is 21.3679, versus 0.0009945 in FP32. Across six
+natural states, however, the global coherence ratio is -0.01136 and the tested
+weight carriers are not directional. This is retained as a complete causal
+numerical difference and a negative bias result, not promoted to a third
+project bias case. See `round2.md`.
+
 ## Files
 
 - `results/final/summary.json`: concise result.
@@ -90,6 +104,7 @@ The three-case comparison with the FlashAttention reference is in `case.md`.
 - `results/final/precision.json.gz`: BF16/FP16 census and causal evidence.
 - `results/final/compiled.json.gz`: compiled-region aggregates.
 - `results/final/generated.json`: full BF16 Inductor Triton screen.
+- `results/final/vl.json.gz`: compact Qwen3-VL proof and bias evidence.
 - `results/final/manifest.json`: checksums and archive contents.
 
 Run `python3 scripts/check.py` to verify the package.

@@ -9,13 +9,17 @@ Current result: two confirmed natural precision-mediated cases: the seq128
 Qwen3-1.7B `lm_head` input-gradient MM and Liger fused-linear cross-entropy
 `dW` accumulation. BF16/FP16 eager all-op precision coverage and the primary
 BF16 Inductor Triton screen at seq64/128/256 are complete in the frozen scope.
-Two cases are still insufficient for property induction.
+The Qwen3-VL round closes every BF16 and FP32 AOT forward/backward unit and
+isolates an AOT SiLU-backward decomposition difference, but that difference
+fails the cross-state directional-carrier gate. Two accepted cases are still
+insufficient for property induction.
 
 ## Read
 
 - [Method](docs/method.md)
 - [Results](docs/results.md)
 - [Three complete F+B cases](case.md)
+- [Qwen3-VL all-op F+B result](round2.md)
 
 ## Verify
 

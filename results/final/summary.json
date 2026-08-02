@@ -17,6 +17,14 @@
       "positive_regions_tested": 16,
       "target_states": 512
     },
+    "qwen3_vl_silu_aot": {
+      "bf16_gradient_delta_l2": 21.36792274152213,
+      "candidate_intervention_exact_parameters": 625,
+      "cross_state_coherence_ratio": -0.011355843970777258,
+      "directional_case": false,
+      "fp32_gradient_delta_l2": 0.000994541487633203,
+      "states": 6
+    },
     "primary_all_op_cases": 1,
     "project_natural_complete_cases": 2
   },
@@ -24,6 +32,8 @@
     "all_bf16_inductor_triton_regions_screened_for_seq64_128_256": true,
     "all_compiler_configurations_certified": false,
     "eager_precision_search_complete": true,
+    "qwen3_vl_aot_math_complete_bf16_fp32": true,
+    "qwen3_vl_silu_difference_is_directional": false,
     "property_generalization_started": false
   },
   "coverage": {
@@ -31,6 +41,9 @@
     "bf16_invocations": 9269,
     "fp16_invocations": 27639,
     "fp32_invocations": 8701,
+    "qwen3_vl_bf16_aot_forward_vjp_units": 3589,
+    "qwen3_vl_bf16_eager_invocations": 14660,
+    "qwen3_vl_fp32_aot_forward_vjp_units": 3211,
     "unresolved_math_units": 0
   },
   "generated": {
@@ -44,5 +57,5 @@
   },
   "next": "collect more independent natural complete F+B mechanisms before property induction",
   "schema": "kernel-analyzer-summary-v1",
-  "scope": "Qwen3-1.7B, one full forward+backward, seq64/128/256"
+  "scope": "Qwen3-1.7B text and Qwen3-VL-Reranker-2B multimodal complete forward+backward analyses"
 }

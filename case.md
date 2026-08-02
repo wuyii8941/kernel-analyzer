@@ -149,6 +149,23 @@ whether the fixed-precision arithmetic produces a coherent direction. Two
 independent project cases are still too few for a defensible generalized
 cross-operator property.
 
+## Screened complete F+B difference that is not a bias case
+
+The Qwen3-VL AOTAutograd screen closed every concrete F+B unit in BF16 and
+FP32. It also isolated one natural implementation difference: AOT decomposes
+the 28 text SiLU backward invocations into graph-dtype elementary arithmetic,
+whereas eager uses `aten.silu_backward`.
+
+A backward-only intervention with unchanged SiLU forward reproduced the AOT
+gradient bitwise for all 625 parameters in BF16 and FP32. The global gradient
+delta is 21.3679 in BF16 and 0.0009945 in FP32. Nevertheless, over six frozen
+natural states its global mean pairwise error inner product is negative, with
+coherence ratio -0.01136; the three prespecified weight endpoints are also
+negative. It is therefore a complete causal numerical-difference case, but it
+fails the directional-carrier gate and is not counted in the table above.
+
+See `round2.md` for the derivation boundary and full verdict.
+
 ## Evidence
 
 - FlashAttention paper: <https://arxiv.org/pdf/2510.04212>
@@ -156,3 +173,5 @@ cross-operator property.
   `mm_carrier`, and `mm_steps` entries in `results/final/manifest.json`)
 - Liger fused CE: `archive/nonprecision_v1/runs/liger.fused_ce.mechanism.json`,
   `liger.fused_ce.certificate.json`, and `liger.fused_ce.chunk.certificate.json`
+- Qwen3-VL negative directional case: `round2.md` and the compact round-2
+  result package
