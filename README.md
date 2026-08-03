@@ -7,7 +7,8 @@ accumulation.
 
 Current result: two confirmed natural precision-mediated cases: the seq128
 Qwen3-1.7B `lm_head` input-gradient MM and Liger fused-linear cross-entropy
-`dW` accumulation. BF16/FP16 eager all-op precision coverage and the primary
+`dW` accumulation. Both now include 32-step paired baseline/repair live-weight
+trajectories. BF16/FP16 eager all-op precision coverage and the primary
 BF16 Inductor Triton screen at seq64/128/256 are complete in the frozen scope.
 The Qwen3-VL round closes every BF16 and FP32 AOT forward/backward unit and
 isolates an AOT SiLU-backward decomposition difference, but that difference

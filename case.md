@@ -18,7 +18,7 @@ natural-case count is **2**, not 0 or 1.
 |---|---|---|---|---|
 | FlashAttention | Qiu and Yao | attention backward / query-weight gradient | low-precision online-softmax output reused in backward | coherent weight error across tokens and steps |
 | seq128 `lm_head` MM | this project | actual input VJP `dX` | BF16 GEMM reduction and arithmetic path | downstream gradient carrier and 32-step weight divergence |
-| Liger fused linear CE | this project | actual `dW` | 64 chunk contributions stored and added in BF16 | direct tied-weight gradient carrier across held-out states |
+| Liger fused linear CE | this project | actual `dW` | 64 chunk contributions stored and added in BF16 | tied-weight carrier and 32-step repaired trajectory |
 
 ## 1. FlashAttention reference case
 
@@ -77,8 +77,9 @@ actual backward program are closed as one unit.
 
 Disabling BF16 reduced-precision reduction removes about **91.05%** of the
 local residual RMS. The remaining error is consistent with the GEMM
-FMA/reduction tree and accumulation order. In an independent 32-step
-live-weight experiment:
+FMA/reduction tree and accumulation order. The independent 32-step experiment
+was already a paired baseline-versus-analytic-VJP-repair live-weight
+trajectory, not an observational baseline-only run:
 
 - the parameter-gradient carrier is nonzero in 32/32 steps;
 - FP32 master weights and materialized BF16 weights diverge in 32/32 steps;
@@ -124,6 +125,18 @@ a disjoint full-step confirmation, only the tied
 `model.embed_tokens.weight` gradient changes; loss, terminal `dH`, and the
 other 309 parameter gradients are bitwise exact. Its frozen carrier is positive
 in 24/24 states with bootstrap 95% CI \([0.168,0.220]\).
+
+A frozen 32-step paired trajectory now closes the live-weight consequence. At
+each arm's evolving weights, both accumulator implementations were evaluated
+before the selected arm update. All 64 same-weight contrasts retained exact
+loss, hidden state, labels, terminal `dH`, and 309 untied gradients; only the
+tied-weight gradient changed, and all 64 projections onto the previously
+frozen carrier were positive. With stateless SGD and an FP32 master, the
+default-minus-repair master distance grew from \(8.5868\times10^{-6}\) after
+step 1 to \(2.2394\times10^{-3}\) after step 32. The corresponding materialized
+BF16 distance grew from \(6.3461\times10^{-5}\) to \(3.2074\times10^{-3}\).
+This proves live-weight feedback from the repaired accumulator cause; it does
+not claim AdamW behavior or catastrophic loss instability.
 
 Appending mathematically ignored zero rows changes the chunk schedule from
 64 two-token chunks to 32 four-token chunks. The `dW` effect remains directional
@@ -172,6 +185,7 @@ See `round2.md` for the derivation boundary and full verdict.
 - `lm_head`: `results/final/precision.json.gz` (`mm_case`, `mm_arithmetic`,
   `mm_carrier`, and `mm_steps` entries in `results/final/manifest.json`)
 - Liger fused CE: `archive/nonprecision_v1/runs/liger.fused_ce.mechanism.json`,
-  `liger.fused_ce.certificate.json`, and `liger.fused_ce.chunk.certificate.json`
+  `liger.fused_ce.certificate.json`, `liger.fused_ce.chunk.certificate.json`,
+  and `results/final/trajectory.json.gz`
 - Qwen3-VL negative directional case: `round2.md` and the compact round-2
   result package

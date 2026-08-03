@@ -22,7 +22,8 @@ input-gradient matrix multiplication. It is a natural, complete F+B case: its
 forward is exactly bound to the biased actual input-VJP edge. It is a different
 kernel from FlashAttention but has the same abstract mechanism: directional
 local arithmetic error, coherent parameter-gradient carrier, and repeated
-weight divergence.
+weight divergence. Its 32-step experiment is paired baseline versus analytic
+VJP repair at the exact input-gradient edge.
 
 The 21 FP16 nonfinite cases are attention-mask additions. Their `-inf` values
 are causally absorbed by the closed softmax forward/backward region.
@@ -78,7 +79,13 @@ project's second natural complete F+B case: chunk geometry interacts with a
 BF16 `dW` accumulator, and changing only that accumulator to FP32 removes 95.7%
 of the mean candidate-added `dW` error. The final tied-weight carrier confirms
 on 24/24 held-out states; the other 309 parameter gradients are bitwise-exact
-controls.
+controls. A subsequent frozen 32-step paired trajectory evaluates both
+accumulators at each arm's evolving weights. All 64 same-weight carrier
+projections are positive and all controls remain exact. The FP32-master
+default-minus-repair distance grows from 8.5868e-6 after the first update to
+2.2394e-3 after the final update; the materialized-BF16 distance grows from
+6.3461e-5 to 3.2074e-3. This closes the stateless-SGD live-weight consequence,
+without claiming AdamW behavior or loss instability.
 
 These are mechanism cases, not yet a generalizable cross-operator property.
 The three-case comparison with the FlashAttention reference is in `case.md`.
@@ -105,6 +112,7 @@ project bias case. See `round2.md`.
 - `results/final/compiled.json.gz`: compiled-region aggregates.
 - `results/final/generated.json`: full BF16 Inductor Triton screen.
 - `results/final/vl.json.gz`: compact Qwen3-VL proof and bias evidence.
+- `results/final/trajectory.json.gz`: complete Liger 32-step repair trajectory.
 - `results/final/manifest.json`: checksums and archive contents.
 
 Run `python3 scripts/check.py` to verify the package.
