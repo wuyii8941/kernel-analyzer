@@ -1,0 +1,211 @@
+{
+  "artifact_sha256": "cffb810904ac200b5412f579d5a03cc852a36679770cda0571fd07fde5460723",
+  "bindings": {
+    "local_certificate": {
+      "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger.fused_ce.certificate.json",
+      "sha256": "fddc82ba041a90088b5ab8ec795cb527e873f217ee9264b72d15aab93dd11a20"
+    },
+    "state_design": {
+      "path": "/data1/tzh/kernel-analyzer/archive/round1_raw/training_semantic_oracle/qwen3_1p7b/state_design.json",
+      "sha256": "ddb79b24d8954d319286c9e9fdea2d97df2bfac55b69e8bd4255d1b7bcb9029e"
+    }
+  },
+  "claim_gate": {
+    "complete_flashattention_style": "the local complete region mechanism plus a discovery-frozen final tied-parameter carrier with positive bootstrap lower bound",
+    "negative_control": "loss, terminal dH, and all 309 other named-parameter gradients remain bitwise exact"
+  },
+  "controlled_full_step": {
+    "backbone": "complete Qwen3-1.7B eager BF16 transformer and final norm",
+    "common": "model weights, hidden computation, labels, loss, dH, external dtype, TF32 setting and chunk order",
+    "counterfactual_arm": "same implementation and chunks with only dW accum_dtype=FP32",
+    "default_arm": "64 dW chunks accumulated in BF16",
+    "terminal_region": "Liger fused-linear cross entropy"
+  },
+  "denominators": {
+    "complete_full_steps": 128,
+    "confirmation_states": 24,
+    "discovery_states": 8,
+    "disjoint_states": 32,
+    "parameters_per_state": 310
+  },
+  "readout": {
+    "confirmation": "24 untouched states with exact sign test and cluster bootstrap",
+    "discovery": "freeze one named-parameter CountSketch8192 carrier on eight states",
+    "endpoints": [
+      "loss",
+      "terminal dH",
+      "all 310 final named-parameter gradients"
+    ],
+    "expected_reach": "only the tied model.embed_tokens.weight final gradient may differ; all upstream gradients must be exact because dH is invariant",
+    "repeats": "both arms repeat twice per state and fail closed on any instability",
+    "residual_orientation": "default-BF16-accumulator minus FP32-accumulator"
+  },
+  "schema_version": "kernel-analyzer.liger-fused-ce-propagation-protocol.v1",
+  "state_allocations": {
+    "confirmation": [
+      {
+        "cluster_id": "natural-text-0121",
+        "record_sha256": "1efbbed9a8f9d18d9535f5def436b21ec0208fc50ab8348342e36221e9d84971",
+        "state_id": "qwen3-1p7b-0121"
+      },
+      {
+        "cluster_id": "natural-text-0124",
+        "record_sha256": "b2da244035d82ec1c0d58e1b02312ed028a2908863fff2dca7cfdec52ab6f710",
+        "state_id": "qwen3-1p7b-0124"
+      },
+      {
+        "cluster_id": "natural-text-0127",
+        "record_sha256": "8e13c55d69b6c361cffdfb6893327bc2733adc3abde842c8bf724c1ee4ecd5cc",
+        "state_id": "qwen3-1p7b-0127"
+      },
+      {
+        "cluster_id": "natural-text-0130",
+        "record_sha256": "ec20cdf94fa07a85adc4c846410d90f631f7a4f337f46715e60c7e9129078547",
+        "state_id": "qwen3-1p7b-0130"
+      },
+      {
+        "cluster_id": "natural-text-0133",
+        "record_sha256": "a51db221703dd402d4df6033dfe045cabb6c1f93f8699529bc6423a594d83072",
+        "state_id": "qwen3-1p7b-0133"
+      },
+      {
+        "cluster_id": "natural-text-0136",
+        "record_sha256": "9ebdbd6b112ccfc59af64551b0a43a41ac4a9a3b20c5af2024b6ebfa095f3a0b",
+        "state_id": "qwen3-1p7b-0136"
+      },
+      {
+        "cluster_id": "natural-text-0139",
+        "record_sha256": "0ae7863ade6d7ffecf51b397ede15a15567e36101fd2c8cbec928c591348b3c2",
+        "state_id": "qwen3-1p7b-0139"
+      },
+      {
+        "cluster_id": "natural-text-0142",
+        "record_sha256": "ce7390dba0b263c01e686d1042791a95eca1b82d32072386925584f89aece159",
+        "state_id": "qwen3-1p7b-0142"
+      },
+      {
+        "cluster_id": "natural-text-0145",
+        "record_sha256": "250a0b7ed364785385177c4733dc28c2a0fc7f6a1cd5573794a74954b697c6c2",
+        "state_id": "qwen3-1p7b-0145"
+      },
+      {
+        "cluster_id": "natural-text-0148",
+        "record_sha256": "ee66d8b45cf26db2108389234dbe2bc706045f287defbf2e01a0d458f8a4591e",
+        "state_id": "qwen3-1p7b-0148"
+      },
+      {
+        "cluster_id": "natural-text-0151",
+        "record_sha256": "da61871e93ca0fea1b7a43024e98b8872ef0db6377d42e2ef8fc8ee471301f6c",
+        "state_id": "qwen3-1p7b-0151"
+      },
+      {
+        "cluster_id": "natural-text-0154",
+        "record_sha256": "93bd750d56b644cfc10b88f4bc180f0bffc28b95539fbc2d8c6e6ff27e952594",
+        "state_id": "qwen3-1p7b-0154"
+      },
+      {
+        "cluster_id": "natural-text-0157",
+        "record_sha256": "79924c2eb2c44119824ec1e57b421e1b8400e27f79935b062ec28cac73288a7b",
+        "state_id": "qwen3-1p7b-0157"
+      },
+      {
+        "cluster_id": "natural-text-0160",
+        "record_sha256": "135bc2615a1bf4e64490476f9e1c2b30a86da3c917318cc1a0e8cee83a4b7b4a",
+        "state_id": "qwen3-1p7b-0160"
+      },
+      {
+        "cluster_id": "natural-text-0163",
+        "record_sha256": "a47592cd385e40492fc7e630b4df034881fbaf6760ae7836790e66fe8666094a",
+        "state_id": "qwen3-1p7b-0163"
+      },
+      {
+        "cluster_id": "natural-text-0166",
+        "record_sha256": "8e67fab8efd69018b0d3c1610949908d0786b6688898b334eb25495ec2195446",
+        "state_id": "qwen3-1p7b-0166"
+      },
+      {
+        "cluster_id": "natural-text-0169",
+        "record_sha256": "8444597c3e8a1a8e22613a773de9efb6113d3005604eac208295abb65c63b03a",
+        "state_id": "qwen3-1p7b-0169"
+      },
+      {
+        "cluster_id": "natural-text-0172",
+        "record_sha256": "36d94af73da6334b083977eca5d605b7a1064884b48b2c52d684c0e4f2ae201f",
+        "state_id": "qwen3-1p7b-0172"
+      },
+      {
+        "cluster_id": "natural-text-0175",
+        "record_sha256": "305e8c6b5234fcd7551877cdc62b5f4f9508e678b95e99dc28f18c57467f5eab",
+        "state_id": "qwen3-1p7b-0175"
+      },
+      {
+        "cluster_id": "natural-text-0178",
+        "record_sha256": "b3a6d18ba38a13876b21447c5afb11bf60a3135755dce146772c29d27e91bfb0",
+        "state_id": "qwen3-1p7b-0178"
+      },
+      {
+        "cluster_id": "natural-text-0181",
+        "record_sha256": "018c3c0fbbd0077e7e321495c59b845bb0bc11db4fb024c33b3c18838cfa3a5c",
+        "state_id": "qwen3-1p7b-0181"
+      },
+      {
+        "cluster_id": "natural-text-0184",
+        "record_sha256": "40bcab8cefd5b281e1ebf1120097d2f03401486e9a65cb61a86a559e8fd36647",
+        "state_id": "qwen3-1p7b-0184"
+      },
+      {
+        "cluster_id": "natural-text-0187",
+        "record_sha256": "55d27044336196976c3c8fc76ae3e8ce30a1eceeca92a6cc36e625ad1c635934",
+        "state_id": "qwen3-1p7b-0187"
+      },
+      {
+        "cluster_id": "natural-text-0190",
+        "record_sha256": "3a9a53e9bb51d1df96ecfcfe8a37173c91a26074a07876282d6718e5042ea06a",
+        "state_id": "qwen3-1p7b-0190"
+      }
+    ],
+    "discovery": [
+      {
+        "cluster_id": "natural-text-0097",
+        "record_sha256": "2809ff048d2165d476c582e64b747d07b27c667b4fee2c0862ad5316ecfed69f",
+        "state_id": "qwen3-1p7b-0097"
+      },
+      {
+        "cluster_id": "natural-text-0100",
+        "record_sha256": "f718b9bf5348973093782f0557e525fe909fcb1558f898c612a5f930bbeff1b9",
+        "state_id": "qwen3-1p7b-0100"
+      },
+      {
+        "cluster_id": "natural-text-0103",
+        "record_sha256": "05a6c7b62cf852303522f5a4096a0b16a3f6d646c7761a0347b694dbc25bc976",
+        "state_id": "qwen3-1p7b-0103"
+      },
+      {
+        "cluster_id": "natural-text-0106",
+        "record_sha256": "a72acb4e634b45d9c9a150c82a2d8ea61a41fc09dcc68672979301ced77b66e9",
+        "state_id": "qwen3-1p7b-0106"
+      },
+      {
+        "cluster_id": "natural-text-0109",
+        "record_sha256": "3073a0f7a6122bf88c04ec1154eefd7a01072ba9144e28fe02018ff9340c2dad",
+        "state_id": "qwen3-1p7b-0109"
+      },
+      {
+        "cluster_id": "natural-text-0112",
+        "record_sha256": "dea20dd825d0760a3a82ec3d64481531fe3611de2977c748b7d919f932061615",
+        "state_id": "qwen3-1p7b-0112"
+      },
+      {
+        "cluster_id": "natural-text-0115",
+        "record_sha256": "53911b03d24adc4626529b4ff05014f7487c7e660877c55aa63c9c548320a8ec",
+        "state_id": "qwen3-1p7b-0115"
+      },
+      {
+        "cluster_id": "natural-text-0118",
+        "record_sha256": "ce8032ff4ae6357da2df5d5a9bbf60e7188e25424b80938cfddd6b4b6e1c19ea",
+        "state_id": "qwen3-1p7b-0118"
+      }
+    ]
+  },
+  "status": "FROZEN_BEFORE_ANY_FULL_STEP_TIED_WEIGHT_VALUES"
+}

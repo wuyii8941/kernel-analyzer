@@ -1,0 +1,246 @@
+{
+  "accumulator_strata": {
+    "bf16": "Liger accum_dtype=None",
+    "fp32": "Liger accum_dtype=torch.float32"
+  },
+  "artifact_sha256": "2b33a550eff1f3ff753e2094e3e08035d1a025b31c363e1402375ae5b5bb773a",
+  "bindings": {
+    "prior_certificate": {
+      "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger.fused_ce.certificate.json",
+      "sha256": "fddc82ba041a90088b5ab8ec795cb527e873f217ee9264b72d15aab93dd11a20"
+    },
+    "state_design": {
+      "path": "/data1/tzh/kernel-analyzer/archive/round1_raw/training_semantic_oracle/qwen3_1p7b/supplementary_state_design_v1.json",
+      "sha256": "cc4a48993843c906228f84f420b85d5f44286c138f893eee37e417e2ed015242"
+    }
+  },
+  "claim_boundary": {
+    "not_independent_operator": "this refines the existing fused-CE mechanism and cannot be counted as a new operator case",
+    "supported_if_passed": "physical token/chunk geometry is a non-dtype trigger of a same-semantics dW residual"
+  },
+  "denominators": {
+    "accumulator_strata": 2,
+    "closed_forward_actual_vjp_units": 124,
+    "confirmation_states": 24,
+    "discovery_states": 7,
+    "padding_contrast_endpoint_cells": 6,
+    "pilot_states_excluded": 1
+  },
+  "endpoints": [
+    "loss",
+    "active_dH",
+    "dW"
+  ],
+  "mathematical_unit": {
+    "actual_vjp": [
+      "G[t,v]=(softmax(Z)[t,v]-1[v=a_t])/N",
+      "dH=G W",
+      "dW=G^T H"
+    ],
+    "candidate": "LigerFusedLinearCrossEntropyLoss custom forward and saved actual backward",
+    "closed_endpoints": [
+      "loss",
+      "dH",
+      "dW"
+    ],
+    "forward": [
+      "Z=H W^T",
+      "L=-(1/N) sum_t log(exp(Z[t,a_t])/sum_v exp(Z[t,v]))"
+    ],
+    "interpretive_reference": "FP32 evaluation of the displayed region using the exact BF16 H and W values",
+    "same_precision_reference": "BF16 eager lm_head followed by Transformers FP32 cross entropy and actual autograd",
+    "symbols": "H in R^(T x D), W in R^(V x D), targets a_t, scalar upstream q=1"
+  },
+  "runtime_gates": [
+    "the natural hidden state is produced by the unmodified eager Qwen backbone",
+    "base and padded arms share bitwise-identical active H/W/labels",
+    "all padded dH rows are exactly zero",
+    "both arms and accumulator strata repeat bitwise exactly",
+    "all six padding-contrast endpoint cells remain in the denominator"
+  ],
+  "same_semantics_intervention": {
+    "base": "128 actual hidden rows with 127 active shifted labels; physical BT=128, chunk_size=2",
+    "controlled_factor": "physical token cardinality, chunk width, and grouping/count of active dW additions",
+    "fixed": "actual H/W/labels, active support, Liger source, external BF16 dtype, accumulator dtype within each stratum, TF32=false",
+    "padded": "append 128 exactly-zero hidden rows and 128 ignore_index labels; physical BT=256, chunk_size=4",
+    "real_number_invariant": "zero ignored rows contribute exactly zero loss, dH and dW, so active loss, active dH and dW are unchanged"
+  },
+  "schema_version": "kernel-analyzer.liger-fused-ce-chunk-protocol.v1",
+  "selection_disclosure": "the known natural base-128 accumulator case motivated this factor test; no padded candidate value was read before freezing",
+  "state_allocations": {
+    "confirmation": [
+      {
+        "cluster_id": "natural-text-0217",
+        "record_sha256": "b69cc626ca09914972f43fe4c0dfd5584e3f89eeb194526eaaa684761779447d",
+        "state_id": "qwen3-1p7b-0217"
+      },
+      {
+        "cluster_id": "natural-text-0220",
+        "record_sha256": "61576561f723fd1cfe0d65cc3773b58f1f9ef1d140727c4cfad27f6c12bb48ce",
+        "state_id": "qwen3-1p7b-0220"
+      },
+      {
+        "cluster_id": "natural-text-0223",
+        "record_sha256": "db08ae72d451a1755d830f47c22f8046747863c45321bccff3cdd5ea2d0cf6e7",
+        "state_id": "qwen3-1p7b-0223"
+      },
+      {
+        "cluster_id": "natural-text-0226",
+        "record_sha256": "5e2384011ca0ef102c993676fb51234e9a8d7e73889dd9396ca541b5e3429642",
+        "state_id": "qwen3-1p7b-0226"
+      },
+      {
+        "cluster_id": "natural-text-0229",
+        "record_sha256": "0d1171e539fbdc8daacd3ee426796151ffc3221bf3e8e558fb6bfcc3c77ea723",
+        "state_id": "qwen3-1p7b-0229"
+      },
+      {
+        "cluster_id": "natural-text-0232",
+        "record_sha256": "d158fa5ac40debf7276ba3e431c1d289e902396e20411cf22ef30236f3ec0df3",
+        "state_id": "qwen3-1p7b-0232"
+      },
+      {
+        "cluster_id": "natural-text-0235",
+        "record_sha256": "1b575111eb57b09b1ad601930fee2fc7aa49e07a42c97c9e5639f4d6dbc071b0",
+        "state_id": "qwen3-1p7b-0235"
+      },
+      {
+        "cluster_id": "natural-text-0238",
+        "record_sha256": "e42d4096987f8658310e80e4e0cc0ac55162fcfaddf8fbf449b1048b58fa38ea",
+        "state_id": "qwen3-1p7b-0238"
+      },
+      {
+        "cluster_id": "natural-text-0241",
+        "record_sha256": "ec115198102702011b5238392f3b9d9dca10b4cfce107bf479d20b4caafd35ad",
+        "state_id": "qwen3-1p7b-0241"
+      },
+      {
+        "cluster_id": "natural-text-0244",
+        "record_sha256": "ee0c61ec2b85e10655f0b520665d1bf3e3c19813681d7c542d5d33e1961c95ff",
+        "state_id": "qwen3-1p7b-0244"
+      },
+      {
+        "cluster_id": "natural-text-0247",
+        "record_sha256": "360ec822aa4ed4cef5e63ff1db19beab8720f7477a02eb29f453564957e4144f",
+        "state_id": "qwen3-1p7b-0247"
+      },
+      {
+        "cluster_id": "natural-text-0250",
+        "record_sha256": "39d53b657323a75f1331e72bb5d5d43f0b8ee622f077de3002cffc87363f3a32",
+        "state_id": "qwen3-1p7b-0250"
+      },
+      {
+        "cluster_id": "natural-text-0253",
+        "record_sha256": "53a3518b9f5e0b99f0f0247459061848bca6579f6485c16e4a78c0a6e75405b8",
+        "state_id": "qwen3-1p7b-0253"
+      },
+      {
+        "cluster_id": "natural-text-0256",
+        "record_sha256": "173ca755ccdca3f2beead9d025f74a12430f14c2ff73e66daa0356133443158a",
+        "state_id": "qwen3-1p7b-0256"
+      },
+      {
+        "cluster_id": "natural-text-0259",
+        "record_sha256": "8926823cead3ba316245c87fe235c1eec3c74f55d34ce6c4501386faba1d2320",
+        "state_id": "qwen3-1p7b-0259"
+      },
+      {
+        "cluster_id": "natural-text-0262",
+        "record_sha256": "1d1dac4dd38fe0a8bd036e6cc8a101ac01aa6cba1e2a58a318d61ba0d15abacb",
+        "state_id": "qwen3-1p7b-0262"
+      },
+      {
+        "cluster_id": "natural-text-0265",
+        "record_sha256": "e54a668efd91b7e111f6ab2e4e4ed09590a9e25172d1d5be66e9e59a2d52d023",
+        "state_id": "qwen3-1p7b-0265"
+      },
+      {
+        "cluster_id": "natural-text-0268",
+        "record_sha256": "9bd2734d35c86e9dcf41f05833e7a0152d17663edf98afa5ff80f02a89c405e3",
+        "state_id": "qwen3-1p7b-0268"
+      },
+      {
+        "cluster_id": "natural-text-0271",
+        "record_sha256": "b5596f084ce1e6b184d516f45ac1451c3eab8083df869bdcdc87ef9dc5ffed91",
+        "state_id": "qwen3-1p7b-0271"
+      },
+      {
+        "cluster_id": "natural-text-0274",
+        "record_sha256": "224780e3efb767693ac39b7051ace2df9a07292f5b8f8adc53812d17b77a9fbf",
+        "state_id": "qwen3-1p7b-0274"
+      },
+      {
+        "cluster_id": "natural-text-0277",
+        "record_sha256": "855d8a45fcd769029ca8212c2211d0d8facf00f9b89ffdb10b718cf8cf620213",
+        "state_id": "qwen3-1p7b-0277"
+      },
+      {
+        "cluster_id": "natural-text-0280",
+        "record_sha256": "4aacad6a2cac5ec5cef3c3ae343a314afd4b2b20e8fc6d8ba9ce89f6f0ed9087",
+        "state_id": "qwen3-1p7b-0280"
+      },
+      {
+        "cluster_id": "natural-text-0283",
+        "record_sha256": "9f6b3e49d503f2ae88a5b2fb84395c38035c05e6e068877a71b8392c605dc67d",
+        "state_id": "qwen3-1p7b-0283"
+      },
+      {
+        "cluster_id": "natural-text-0286",
+        "record_sha256": "68b3adf310f162ae5273de56ed4c60b09e51e04b3cbbc399e1b73b018270ebc7",
+        "state_id": "qwen3-1p7b-0286"
+      }
+    ],
+    "discovery": [
+      {
+        "cluster_id": "natural-text-0196",
+        "record_sha256": "b83acbce2366a1a57a28f644c58b43f9ba84e4de242ef382bc08a0174fb86f51",
+        "state_id": "qwen3-1p7b-0196"
+      },
+      {
+        "cluster_id": "natural-text-0199",
+        "record_sha256": "7a9b13635ffc3eb5409220b2209eeef33388846096407330bb70ddf824c64fec",
+        "state_id": "qwen3-1p7b-0199"
+      },
+      {
+        "cluster_id": "natural-text-0202",
+        "record_sha256": "90d76ccf47416d61660228cc8da249d8e8ee0156fc338a4593b327faccbb6398",
+        "state_id": "qwen3-1p7b-0202"
+      },
+      {
+        "cluster_id": "natural-text-0205",
+        "record_sha256": "fb44f92fd75bab827538c42784865d5dce8bac019d3938d69b46f274e83e256d",
+        "state_id": "qwen3-1p7b-0205"
+      },
+      {
+        "cluster_id": "natural-text-0208",
+        "record_sha256": "b1b830d94ac18fcb39ae5a730af79a64237e49f73f3079b3c08ededaed098cd1",
+        "state_id": "qwen3-1p7b-0208"
+      },
+      {
+        "cluster_id": "natural-text-0211",
+        "record_sha256": "b0693b431b2af5fe9826609f96c00d99cec651aa8834df6fd074b0c49c5e524b",
+        "state_id": "qwen3-1p7b-0211"
+      },
+      {
+        "cluster_id": "natural-text-0214",
+        "record_sha256": "5cb5201b8ffcdeef33f001a7caf728a29c750a235f1ac771f8f3222d41ccfd5e",
+        "state_id": "qwen3-1p7b-0214"
+      }
+    ],
+    "pilot": [
+      {
+        "cluster_id": "natural-text-0193",
+        "record_sha256": "15362cc15aab006553575d2b86a3c6f805bdf5e007657b5eb50365eb6648969d",
+        "state_id": "qwen3-1p7b-0193"
+      }
+    ]
+  },
+  "statistics": {
+    "causal_gate": "BF16 dW padding contrast is directional; FP32 stratum quantifies whether higher accumulation precision suppresses the geometry effect",
+    "confirmation": "24 untouched states; exact sign, cluster bootstrap, and BH-FDR across all discovered cells",
+    "discovery": "freeze every nonzero CountSketch8192 endpoint direction on seven states",
+    "pilot": "one execution-only state excluded",
+    "primary_residual": "padded-256 minus base-128 within each accumulator stratum"
+  },
+  "status": "FROZEN_BEFORE_ANY_PADDED_CHUNK_VALUES_AFTER_BASELINE_CASE"
+}

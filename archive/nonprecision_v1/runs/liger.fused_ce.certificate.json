@@ -1,0 +1,682 @@
+{
+  "accumulator_causal_readout": {
+    "chunk_contributions": 64,
+    "default_accumulator_dtype": "BF16",
+    "default_dW_candidate_rms_mean": 6.656219559078256e-06,
+    "default_new_error_mean": 1.1057993714155798e-06,
+    "default_worse_than_eager_states": 24,
+    "eager_dW_rms_mean": 5.550420187662676e-06,
+    "fp32_accum_dW_candidate_rms_mean": 5.597911880770228e-06,
+    "fp32_accum_new_error_mean": 4.749169310755223e-08,
+    "fraction_of_mean_new_error_removed": 0.9570521612372087,
+    "inference": "At fixed H, W, labels, external BF16 dtype, chunk schedule, loss and dH, changing only the dW accumulator to FP32 removes most candidate-added dW error and the frozen default-minus-FP32 direction remains positive in every confirmation state.",
+    "intervention_accumulator_dtype": "FP32"
+  },
+  "artifact_sha256": "fe0f3a947876336b2bd03187c4ed930210682b6c87a78337a6a3091d50663d01",
+  "bindings": {
+    "amendment": {
+      "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger.fused_ce.protocol.amendment.json",
+      "sha256": "96107a492d610eb38757bdb45b110081baee74f097c4572638f1431696baa925"
+    },
+    "carriers": {
+      "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger.fused_ce.carriers.json.gz",
+      "sha256": "50431fd2a684b9496945e1a2dd3303a1e6d2b0571d38be679c5d8a6a734d3c5f"
+    },
+    "confirmation_states": [
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0217.json.gz",
+        "sha256": "f5e2b6691d8983167913a329afabcd9f328237d744dd786a1b668e235686ad84"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0220.json.gz",
+        "sha256": "b9bd962d2a00ca8a14acffa8719c0f6808aa51647f30a0b4eceef5c90e70e498"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0223.json.gz",
+        "sha256": "25368e6176397eed033a79edf5d55eee560623110445c63f1808724e928676a4"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0226.json.gz",
+        "sha256": "2cc354af28e962099d0fec3ce83661ff82d7c0ffa95bdcec1c8eceb23c8d2bf7"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0229.json.gz",
+        "sha256": "eab70abb437490ab48e5ff08ffd6e7af371775658331cbcb0ec995748415ee59"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0232.json.gz",
+        "sha256": "cf9f9550ceb5b4b2b38d6a751b93e325ca365d20ada39df1c0a42df902ced6bc"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0235.json.gz",
+        "sha256": "ef8d62fc5df909f3907cb6ad947721af296cdbef45606869f825ea6520e32537"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0238.json.gz",
+        "sha256": "6b486b875b7e1e8be18fe3d33fa9efc53dda307a55a5bdb6b925a27e7009d205"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0241.json.gz",
+        "sha256": "b19a9cc6ff06ebbb99ecfb34adefeeb787396870d48846c38b2f9832a39ffeec"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0244.json.gz",
+        "sha256": "3ff627a5d94886f3ea24f08d55b2e60ed346f5ecc719986a7587ae5a6fdccca1"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0247.json.gz",
+        "sha256": "0e5bd53ffdb32771ef3938b39bd9cd27fc5ca33710c8e8a1cb4b13345ea5c308"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0250.json.gz",
+        "sha256": "f5ca0325aa2fa7e0628021c7758d6cd0d42212593ae6a4f29203275994649120"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0253.json.gz",
+        "sha256": "3b1b1a766b8f4a973030099a6b57f4bdb4037c022ad895b63dba36bf78111ac5"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0256.json.gz",
+        "sha256": "c578a8454f09c984c197d3100d573bc8f624430c731f4b4988542da9f2f5c9ec"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0259.json.gz",
+        "sha256": "f222bb10da3433f5949a9b02f56dda67439ccdcfadfccd6344c2007ec38464ad"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0262.json.gz",
+        "sha256": "19a22922fa5ddff643d198f6a8d1d3aa0cfcd7879ce84d95d80b809cd977638a"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0265.json.gz",
+        "sha256": "2a042cd6493fcc30c9b0e296207e10250a3e8b1ac3a6eab49cee2af2efd9d40a"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0268.json.gz",
+        "sha256": "cf63a8f7d1279103440067c3768e8b851f7d6cda138a74d108581a8882fa3728"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0271.json.gz",
+        "sha256": "293813a009f648581170ca6a4bdd2b802278df6c860016454d2eed8cd9f41215"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0274.json.gz",
+        "sha256": "2d1b1b27a49bc0364b3cde364159dff1540e2065f52d6a8d83d1c237101710cf"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0277.json.gz",
+        "sha256": "96f51da7363bbf4eb4ee83e97f2cdfa59b9ffdb7a832fde1dae981ea36b6069b"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0280.json.gz",
+        "sha256": "2ff95320cf831e73c573a36979527cc5a18b9100e6444e335767c40095cd2b30"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0283.json.gz",
+        "sha256": "4f0b049fdffdb877b80f4aef1550cf7346d56900d0bf6346cf1f76e75a355bdb"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/confirmation/qwen3-1p7b-0286.json.gz",
+        "sha256": "e37b3b4eb9fe97638e6bea7865996d01ccd03e5c8fd41254a0050987586a0f0c"
+      }
+    ],
+    "protocol": {
+      "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger.fused_ce.protocol.json",
+      "sha256": "50ad21d6ae7bbd19843b4366426371172e6681d3665fdfdae0dc7a20e8c9cc7a"
+    }
+  },
+  "claim_boundary": {
+    "not_yet_supported": "coherence after adding the embedding-side gradient into the tied full-model parameter, multi-step behavior, or cross-model generalization",
+    "precision_scope": "the isolated cause is internal accumulation precision placement; it is not a non-precision trigger",
+    "supported": "natural same-external-dtype fused-region bias caused by BF16 storage/addition of 64 chunk contributions to the direct lm_head dW endpoint"
+  },
+  "complete_unit_gates": {
+    "accumulator_loss_and_dH_controls_exact": true,
+    "default_loss_dH_dW_directional": true,
+    "default_minus_fp32_accum_dW_directional": true,
+    "fp32_accum_loss_dH_dW_directional": true
+  },
+  "denominators": {
+    "closed_forward_actual_vjp_units": 62,
+    "confirmation_states": 24,
+    "discovery_states": 7,
+    "implementation_endpoint_state_cells": 186,
+    "implementations": 2,
+    "joint_directional_hypotheses": 7,
+    "pilot_states_excluded": 1,
+    "structural_zero_controls": 2
+  },
+  "directional_results": [
+    {
+      "bh_fdr_qvalue": 4.450480143229167e-06,
+      "carrier_projections": [
+        9.5367431640625e-07,
+        4.76837158203125e-07,
+        0.0,
+        0.0,
+        2.384185791015625e-07,
+        4.76837158203125e-07,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        4.76837158203125e-07,
+        4.76837158203125e-07,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        0.0,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        0.0,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        0.0,
+        0.0,
+        4.76837158203125e-07
+      ],
+      "cluster_bootstrap_95ci": [
+        1.7881393432617188e-07,
+        3.4769376118977863e-07
+      ],
+      "contrast": "default_accum",
+      "directional_confirmed": true,
+      "endpoint": "loss",
+      "fp32_region_adjudication": {
+        "candidate_closer_states": 11,
+        "candidate_rms": {
+          "max": 0.004987239837646484,
+          "mean": 0.001898805300394694,
+          "min": 0.0002377033233642578
+        },
+        "eager_closer_states": 7,
+        "eager_rms": {
+          "max": 0.004987239837646484,
+          "mean": 0.0018988649050394695,
+          "min": 0.00023794174194335938
+        },
+        "equal_states": 6
+      },
+      "mean_projection": 2.582867940266927e-07,
+      "negative": 0,
+      "nonzero_states": 18,
+      "one_sided_exact_sign_pvalue": 3.814697265625e-06,
+      "positive": 18,
+      "residual_max_abs": {
+        "max": 9.5367431640625e-07,
+        "mean": 2.582867940266927e-07,
+        "min": 0.0
+      },
+      "residual_rms": {
+        "max": 9.5367431640625e-07,
+        "mean": 2.582867940266927e-07,
+        "min": 0.0
+      },
+      "residual_signed_mean": {
+        "max": 9.5367431640625e-07,
+        "mean": 2.582867940266927e-07,
+        "min": 0.0
+      },
+      "tied": 6
+    },
+    {
+      "bh_fdr_qvalue": 1.043081283569336e-07,
+      "carrier_projections": [
+        0.0009824043446872257,
+        0.0007917009254661735,
+        0.0007544201429158339,
+        0.0007014111260217677,
+        0.000723322530378793,
+        0.0008282137619881444,
+        0.0007328845922746535,
+        0.0007334465492719957,
+        0.0007538884095252484,
+        0.0006276602392575828,
+        0.0005631597103658364,
+        0.0005749222132173472,
+        0.00039808328024340837,
+        0.0006238301090890007,
+        0.0005471580180324827,
+        0.0005900392246423103,
+        0.0005268285079333808,
+        0.0004736212988459455,
+        0.000523319741589359,
+        0.0007136033162842187,
+        0.0005758224953039937,
+        0.0009359102631496924,
+        0.0007434666941053397,
+        0.0004896196122506989
+      ],
+      "cluster_bootstrap_95ci": [
+        0.0006067629732789845,
+        0.0007209761332760644
+      ],
+      "contrast": "default_accum",
+      "directional_confirmed": true,
+      "endpoint": "dH",
+      "fp32_region_adjudication": {
+        "candidate_closer_states": 24,
+        "candidate_rms": {
+          "max": 2.4205181335381374e-06,
+          "mean": 2.1479751754281034e-06,
+          "min": 1.829335134536266e-06
+        },
+        "eager_closer_states": 0,
+        "eager_rms": {
+          "max": 2.5680221281672666e-06,
+          "mean": 2.2959907781565824e-06,
+          "min": 1.9623144599763387e-06
+        },
+        "equal_states": 0
+      },
+      "mean_projection": 0.0006628640461183513,
+      "negative": 0,
+      "nonzero_states": 24,
+      "one_sided_exact_sign_pvalue": 5.960464477539063e-08,
+      "positive": 24,
+      "residual_max_abs": {
+        "max": 2.6702880859375e-05,
+        "mean": 1.7642974853515625e-05,
+        "min": 1.52587890625e-05
+      },
+      "residual_rms": {
+        "max": 1.1046777709989733e-06,
+        "mean": 9.553603079270133e-07,
+        "min": 8.064155473202925e-07
+      },
+      "residual_signed_mean": {
+        "max": 4.982908862437296e-09,
+        "mean": 5.682957209287359e-10,
+        "min": -5.202529876408615e-09
+      },
+      "tied": 0
+    },
+    {
+      "bh_fdr_qvalue": 1.043081283569336e-07,
+      "carrier_projections": [
+        0.35009129418292084,
+        0.22509563987248885,
+        0.23541691779348312,
+        0.17495964620092125,
+        0.18997755820020945,
+        0.2905240660754795,
+        0.22901917525049675,
+        0.2256863150870802,
+        0.24241381638593829,
+        0.20264281130830883,
+        0.1337092744485674,
+        0.14666174858219702,
+        0.1005746393439379,
+        0.14668965458683797,
+        0.12663205120752544,
+        0.12303874924423955,
+        0.07696199236312962,
+        0.20335675339198978,
+        0.16480558809533113,
+        0.21452134331845174,
+        0.16988212941745623,
+        0.24629463570825377,
+        0.17515794832141474,
+        0.1634119223433326
+      ],
+      "cluster_bootstrap_95ci": [
+        0.16640404951333618,
+        0.21496618398574008
+      ],
+      "contrast": "default_accum",
+      "directional_confirmed": true,
+      "endpoint": "dW",
+      "fp32_region_adjudication": {
+        "candidate_closer_states": 0,
+        "candidate_rms": {
+          "max": 9.245914156122744e-06,
+          "mean": 6.656219559078256e-06,
+          "min": 4.7763161984518286e-06
+        },
+        "eager_closer_states": 24,
+        "eager_rms": {
+          "max": 7.180750693232234e-06,
+          "mean": 5.550420187662676e-06,
+          "min": 4.0999080096528626e-06
+        },
+        "equal_states": 0
+      },
+      "mean_projection": 0.18989690294708303,
+      "negative": 0,
+      "nonzero_states": 24,
+      "one_sided_exact_sign_pvalue": 5.960464477539063e-08,
+      "positive": 24,
+      "residual_max_abs": {
+        "max": 0.0390625,
+        "mean": 0.019083658854166668,
+        "min": 0.0078125
+      },
+      "residual_rms": {
+        "max": 5.624830733961057e-06,
+        "mean": 3.828932304253546e-06,
+        "min": 2.262843371737425e-06
+      },
+      "residual_signed_mean": {
+        "max": 2.3254579268063756e-09,
+        "mean": 1.385528738236442e-09,
+        "min": 5.65360099187926e-10
+      },
+      "tied": 0
+    },
+    {
+      "bh_fdr_qvalue": 4.450480143229167e-06,
+      "carrier_projections": [
+        9.5367431640625e-07,
+        4.76837158203125e-07,
+        0.0,
+        0.0,
+        2.384185791015625e-07,
+        4.76837158203125e-07,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        4.76837158203125e-07,
+        4.76837158203125e-07,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        0.0,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        0.0,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        0.0,
+        0.0,
+        4.76837158203125e-07
+      ],
+      "cluster_bootstrap_95ci": [
+        1.7881393432617188e-07,
+        3.4769376118977863e-07
+      ],
+      "contrast": "fp32_accum",
+      "directional_confirmed": true,
+      "endpoint": "loss",
+      "fp32_region_adjudication": {
+        "candidate_closer_states": 11,
+        "candidate_rms": {
+          "max": 0.004987239837646484,
+          "mean": 0.001898805300394694,
+          "min": 0.0002377033233642578
+        },
+        "eager_closer_states": 7,
+        "eager_rms": {
+          "max": 0.004987239837646484,
+          "mean": 0.0018988649050394695,
+          "min": 0.00023794174194335938
+        },
+        "equal_states": 6
+      },
+      "mean_projection": 2.582867940266927e-07,
+      "negative": 0,
+      "nonzero_states": 18,
+      "one_sided_exact_sign_pvalue": 3.814697265625e-06,
+      "positive": 18,
+      "residual_max_abs": {
+        "max": 9.5367431640625e-07,
+        "mean": 2.582867940266927e-07,
+        "min": 0.0
+      },
+      "residual_rms": {
+        "max": 9.5367431640625e-07,
+        "mean": 2.582867940266927e-07,
+        "min": 0.0
+      },
+      "residual_signed_mean": {
+        "max": 9.5367431640625e-07,
+        "mean": 2.582867940266927e-07,
+        "min": 0.0
+      },
+      "tied": 6
+    },
+    {
+      "bh_fdr_qvalue": 1.043081283569336e-07,
+      "carrier_projections": [
+        0.0009824043446872257,
+        0.0007917009254661735,
+        0.0007544201429158339,
+        0.0007014111260217677,
+        0.000723322530378793,
+        0.0008282137619881444,
+        0.0007328845922746535,
+        0.0007334465492719957,
+        0.0007538884095252484,
+        0.0006276602392575828,
+        0.0005631597103658364,
+        0.0005749222132173472,
+        0.00039808328024340837,
+        0.0006238301090890007,
+        0.0005471580180324827,
+        0.0005900392246423103,
+        0.0005268285079333808,
+        0.0004736212988459455,
+        0.000523319741589359,
+        0.0007136033162842187,
+        0.0005758224953039937,
+        0.0009359102631496924,
+        0.0007434666941053397,
+        0.0004896196122506989
+      ],
+      "cluster_bootstrap_95ci": [
+        0.0006068818921284044,
+        0.0007195465173258915
+      ],
+      "contrast": "fp32_accum",
+      "directional_confirmed": true,
+      "endpoint": "dH",
+      "fp32_region_adjudication": {
+        "candidate_closer_states": 24,
+        "candidate_rms": {
+          "max": 2.4205181335381374e-06,
+          "mean": 2.1479751754281034e-06,
+          "min": 1.829335134536266e-06
+        },
+        "eager_closer_states": 0,
+        "eager_rms": {
+          "max": 2.5680221281672666e-06,
+          "mean": 2.2959907781565824e-06,
+          "min": 1.9623144599763387e-06
+        },
+        "equal_states": 0
+      },
+      "mean_projection": 0.0006628640461183513,
+      "negative": 0,
+      "nonzero_states": 24,
+      "one_sided_exact_sign_pvalue": 5.960464477539063e-08,
+      "positive": 24,
+      "residual_max_abs": {
+        "max": 2.6702880859375e-05,
+        "mean": 1.7642974853515625e-05,
+        "min": 1.52587890625e-05
+      },
+      "residual_rms": {
+        "max": 1.1046777709989733e-06,
+        "mean": 9.553603079270133e-07,
+        "min": 8.064155473202925e-07
+      },
+      "residual_signed_mean": {
+        "max": 4.982908862437296e-09,
+        "mean": 5.682957209287359e-10,
+        "min": -5.202529876408615e-09
+      },
+      "tied": 0
+    },
+    {
+      "bh_fdr_qvalue": 0.0001385807991027832,
+      "carrier_projections": [
+        0.007875000824735327,
+        0.0002062967970611364,
+        0.001495333509338244,
+        0.004567441611887704,
+        0.0040527387915083365,
+        0.005424392861714875,
+        0.00018812310539322225,
+        0.007743478680472399,
+        0.0035193736734851037,
+        0.0005525745063665401,
+        -0.00021719042929890298,
+        0.007104431108107245,
+        -0.00408627025496644,
+        0.001537513459298838,
+        0.003677785599405927,
+        0.0056494679953925766,
+        0.0015375527897229834,
+        0.0034913186443725993,
+        7.1593827563148e-05,
+        0.006157233084466597,
+        1.44149155609719e-05,
+        -0.002950289958248696,
+        0.010359515488485968,
+        0.0007306378728176767
+      ],
+      "cluster_bootstrap_95ci": [
+        0.0014721394348268678,
+        0.004260516862836194
+      ],
+      "contrast": "fp32_accum",
+      "directional_confirmed": true,
+      "endpoint": "dW",
+      "fp32_region_adjudication": {
+        "candidate_closer_states": 3,
+        "candidate_rms": {
+          "max": 7.222857844359018e-06,
+          "mean": 5.597911880770228e-06,
+          "min": 4.184628039393979e-06
+        },
+        "eager_closer_states": 21,
+        "eager_rms": {
+          "max": 7.180750693232234e-06,
+          "mean": 5.550420187662676e-06,
+          "min": 4.0999080096528626e-06
+        },
+        "equal_states": 0
+      },
+      "mean_projection": 0.0028626028543601405,
+      "negative": 3,
+      "nonzero_states": 24,
+      "one_sided_exact_sign_pvalue": 0.0001385807991027832,
+      "positive": 21,
+      "residual_max_abs": {
+        "max": 0.015625,
+        "mean": 0.005777994791666667,
+        "min": 0.001953125
+      },
+      "residual_rms": {
+        "max": 1.7328360565016626e-06,
+        "mean": 1.2992186891709242e-06,
+        "min": 9.134567732439293e-07
+      },
+      "residual_signed_mean": {
+        "max": 1.2646841080191193e-10,
+        "mean": -2.4617181580317848e-11,
+        "min": -2.464063782412674e-10
+      },
+      "tied": 0
+    },
+    {
+      "bh_fdr_qvalue": 1.043081283569336e-07,
+      "carrier_projections": [
+        0.3691496829043968,
+        0.23036629134623016,
+        0.2383302226238282,
+        0.18766811596750904,
+        0.2008184037634243,
+        0.2949150024764541,
+        0.2342916662431186,
+        0.2308461352178333,
+        0.24634198819320416,
+        0.20411558957818765,
+        0.1344522893612889,
+        0.14906353264789327,
+        0.09999697310042134,
+        0.14668256548985023,
+        0.12812618993887553,
+        0.12733381322163845,
+        0.07967948239990469,
+        0.2091362492385101,
+        0.16881313991928518,
+        0.22087363000583274,
+        0.17261864971468383,
+        0.24933714534347684,
+        0.17867996996875177,
+        0.16778400626829895
+      ],
+      "cluster_bootstrap_95ci": [
+        0.17016359722672947,
+        0.2203532309265727
+      ],
+      "contrast": "default_minus_fp32_accum",
+      "directional_confirmed": true,
+      "endpoint": "dW",
+      "mean_projection": 0.19455919728887075,
+      "negative": 0,
+      "nonzero_states": 24,
+      "one_sided_exact_sign_pvalue": 5.960464477539063e-08,
+      "positive": 24,
+      "residual_max_abs": {
+        "max": 0.046875,
+        "mean": 0.0191650390625,
+        "min": 0.0078125
+      },
+      "residual_rms": {
+        "max": 6.080854539162052e-06,
+        "mean": 3.795170685741777e-06,
+        "min": 2.1917518407624496e-06
+      },
+      "residual_signed_mean": {
+        "max": 2.4001320864536154e-09,
+        "mean": 1.410145919816116e-09,
+        "min": 5.087612396787503e-10
+      },
+      "tied": 0
+    }
+  ],
+  "flashattention_style_gates": {
+    "closed_forward_and_actual_backward": true,
+    "complete_region_mechanism": true,
+    "controlled_causal_factor": true,
+    "direct_parameter_gradient_accumulation": true,
+    "directional_candidate_error": true,
+    "full_tied_weight_gradient": false,
+    "natural_inputs": true
+  },
+  "mathematical_unit": {
+    "actual_vjp": [
+      "G[t,v]=(softmax(Z)[t,v]-1[v=a_t])/N",
+      "dH=G W",
+      "dW=G^T H"
+    ],
+    "candidate": "LigerFusedLinearCrossEntropyLoss custom forward and saved actual backward",
+    "closed_endpoints": [
+      "loss",
+      "dH",
+      "dW"
+    ],
+    "forward": [
+      "Z=H W^T",
+      "L=-(1/N) sum_t log(exp(Z[t,a_t])/sum_v exp(Z[t,v]))"
+    ],
+    "interpretive_reference": "FP32 evaluation of the displayed region using the exact BF16 H and W values",
+    "same_precision_reference": "BF16 eager lm_head followed by Transformers FP32 cross entropy and actual autograd",
+    "symbols": "H in R^(T x D), W in R^(V x D), targets a_t, scalar upstream q=1"
+  },
+  "schema_version": "kernel-analyzer.liger-fused-ce-certificate.v1",
+  "status": "COMPLETE",
+  "verdict": "NATURAL_LIGER_FUSED_CE_BF16_DW_ACCUMULATION_BIAS_CONFIRMED",
+  "zero_controls": {
+    "default_minus_fp32_accum.dH": {
+      "exact_states": 24,
+      "states": 24
+    },
+    "default_minus_fp32_accum.loss": {
+      "exact_states": 24,
+      "states": 24
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "artifact_sha256": "891d13167232204ce0c0d9d9bc28a8e2047fb3577d7fbe263ee348d073c67557",
+  "bindings": {
+    "discovery_states": [
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/discovery/qwen3-1p7b-0196.json.gz",
+        "sha256": "15f42a120b41c15ee4b0522d6249f8ba7ab1a19af65705494f8533bbe2417713"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/discovery/qwen3-1p7b-0199.json.gz",
+        "sha256": "5726ca672326a1ea3c5bef9444d5c54b51a77cc43f66ae997737d2e574a5bc01"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/discovery/qwen3-1p7b-0202.json.gz",
+        "sha256": "7c2e9e8470ecf6121203a4fa31a180742c7001ce56b8285c8a42deefa52a991d"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/discovery/qwen3-1p7b-0205.json.gz",
+        "sha256": "ef8026d010aa74dc1dd5fc28b5ff4071e07386882b2bea568926757ec9fdc85f"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/discovery/qwen3-1p7b-0208.json.gz",
+        "sha256": "e2528688037e7419838f00daafeebb75be15332aed108d326cc3ff080b2b93e3"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/discovery/qwen3-1p7b-0211.json.gz",
+        "sha256": "04862cc19903a6462c7c71d5a0624bae226c7f78d4bb0b3d27035022d1c38637"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger_fused_ce/discovery/qwen3-1p7b-0214.json.gz",
+        "sha256": "c14598286cc7f3754eb3c66d85ac0f98c925a2d68451f03253de6650d84b61af"
+      }
+    ],
+    "original_protocol": {
+      "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger.fused_ce.protocol.json",
+      "sha256": "50ad21d6ae7bbd19843b4366426371172e6681d3665fdfdae0dc7a20e8c9cc7a"
+    }
+  },
+  "change_type": "DENOMINATOR_ARITHMETIC_ONLY",
+  "correction": {
+    "causal_accumulator_cells": 3,
+    "maximum_nonzero_directional_hypotheses": 7,
+    "multiplicity_rule": "BH-FDR jointly over every nonzero discovery carrier among all nine residual cells",
+    "primary_candidate_vs_eager_cells": 6,
+    "structural_zero_controls": [
+      "default_minus_fp32_accum.loss",
+      "default_minus_fp32_accum.dH"
+    ]
+  },
+  "original_text": {
+    "directional_hypotheses_maximum": 6,
+    "residuals": [
+      "default_accum minus eager",
+      "fp32_accum minus eager",
+      "default_accum minus fp32_accum"
+    ]
+  },
+  "schema_version": "kernel-analyzer.liger-fused-ce-protocol-amendment.v1",
+  "selection_unchanged": "The original protocol already required all six implementation-by-endpoint cells and the default-minus-fp32 accumulator residual. No endpoint, sign, carrier, threshold, state, or claim gate changes.",
+  "status": "FROZEN_BEFORE_CONFIRMATION",
+  "timing_disclosure": "This correction was written after the seven discovery executions exposed the bookkeeping mismatch and before any of the 24 confirmation states were executed."
+}
