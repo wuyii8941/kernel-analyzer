@@ -20,6 +20,7 @@ insufficient for property induction.
 - [Method](docs/method.md)
 - [Results](docs/results.md)
 - [Three complete F+B cases](case.md)
+- [Why new cases are rare and the next search matrix](docs/diagnosis.md)
 - [Qwen3-VL all-op F+B result](round2.md)
 
 ## Verify

@@ -90,6 +90,28 @@ without claiming AdamW behavior or loss instability.
 These are mechanism cases, not yet a generalizable cross-operator property.
 The three-case comparison with the FlashAttention reference is in `case.md`.
 
+## Why the new-case count is small
+
+The previous search had complete F+B coverage, but not complete coverage of
+the two conditions that make a FlashAttention-like bias observable: evolving
+optimizer checkpoints and genuinely different implementation schedules. Most
+local residuals cancel before reaching a parameter-gradient carrier, and many
+generated regions replay the same arithmetic program on both sides of the
+comparison. The diagnosis and next matrix are in [`diagnosis.md`](diagnosis.md).
+
+The first positive-control package now separates the public paper-reference
+algorithm from a real PyTorch CUDA flash-SDPA backend:
+
+- `results/final/flash_control.json` — BF16 F+B stress bank and paired live-
+  weight carrier control for the paper reference, plus real SDPA results;
+- `results/final/implementation_atlas.json` — all 1,446 frozen generated
+  regions, including the 940 exact-replay rows and 506 rows with an explicit
+  schedule/accumulator/materialization intervention.
+
+Neither control is counted as a new natural Qwen case. The paper stress bank is
+deliberately constructed; the CUDA control is a backend comparison, not a
+claim about the separate `flash_attn` package.
+
 ## Qwen3-VL round 2
 
 The second-model census records 14,660 BF16 eager invocations. Its independent
@@ -113,6 +135,8 @@ project bias case. See `round2.md`.
 - `results/final/generated.json`: full BF16 Inductor Triton screen.
 - `results/final/vl.json.gz`: compact Qwen3-VL proof and bias evidence.
 - `results/final/trajectory.json.gz`: complete Liger 32-step repair trajectory.
+- `results/final/flash_control.json`: paper-reference and real-SDPA positive controls.
+- `results/final/implementation_atlas.json`: metadata-only implementation-difference atlas.
 - `results/final/manifest.json`: checksums and archive contents.
 
 Run `python3 scripts/check.py` to verify the package.
