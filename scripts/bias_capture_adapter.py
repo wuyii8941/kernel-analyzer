@@ -59,8 +59,12 @@ def run_adapter(case_id: str, adapter_name: str, argv: list[str] | None = None) 
         "state_ids_available_for_dry_run": len(selected) == args.dry_run_states,
         "state_ids_are_unique": len(set(selected)) == len(selected),
         "no_scientific_verdict": True,
-        "formation_has_no_trajectory": mode != "consequence",
-        "consequence_requires_four_arms": mode != "formation",
+        # These are protocol invariants, not mode-dependent pass/fail gates:
+        # formation never accepts trajectory data, and consequence always
+        # declares the four-arm requirement even when this invocation is
+        # formation-only.
+        "formation_has_no_trajectory": True,
+        "consequence_requires_four_arms": True,
     }
     # Source and sham are recorded separately; a name such as NOT_AVAILABLE is
     # never accepted as a successful binding.
