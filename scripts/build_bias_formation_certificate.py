@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Build a v2 common-state formation certificate.
+"""Build a v2.1 open-loop Bias Formation certificate.
 
-This command is deliberately verdict-blind, not candidate-blind: candidate
-and repair measurements are required ground truth, while historical labels and
-trajectory drift are forbidden.
+This is a post-capture reducer.  It never runs a model and never infers a
+formation label from T1--T4 or SEUP.  Capture adapters must provide one
+complete local/gradient/update vector for every frozen calibration and
+confirmation state, plus the component-wise common-state certificate.
 """
 
 from __future__ import annotations
@@ -19,23 +20,27 @@ from typing import Any, Mapping
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from kernel_analyzer.bias_formation import BiasFormationTrace, FormationPolicy  # noqa: E402
+from kernel_analyzer.bias_formation_v21 import (  # noqa: E402
+    BiasFormationTrace,
+    FormationPolicy,
+)
 
 
 FORBIDDEN_KEYS = {
-    "candidate_output", "candidate_outputs", "oracle_verdict", "case_verdict",
-    "t1_verdict", "t2_verdict", "t3_verdict", "t4_verdict", "seup_verdict",
-    "historical_verdict", "trajectory_drift", "paired_trajectory_drift",
+    "candidate_output", "candidate_outputs", "candidate_tensor", "candidate_value",
+    "oracle_verdict", "case_verdict", "t1_verdict", "t2_verdict", "t3_verdict",
+    "t4_verdict", "seup_verdict", "final_drift_label", "historical_verdict",
+    "trajectory_drift", "paired_trajectory_drift", "parameter_drift",
 }
 
 
 def _load(path: Path) -> dict[str, Any]:
     opener = gzip.open if path.name.endswith(".gz") else open
     with opener(path, "rt", encoding="utf-8") as handle:
-        payload = json.load(handle)
-    if not isinstance(payload, dict):
+        value = json.load(handle)
+    if not isinstance(value, dict):
         raise ValueError("formation input must be a JSON object")
-    return payload
+    return value
 
 
 def _find_leaks(value: Any, prefix: str = "") -> list[str]:
@@ -56,17 +61,37 @@ def _find_leaks(value: Any, prefix: str = "") -> list[str]:
 def _layer(row: Mapping[str, Any], name: str) -> Any:
     if name in row:
         return row[name]
-    layers = row.get("layers")
-    if not isinstance(layers, Mapping):
-        return None
-    if name in layers:
-        return layers[name]
     aliases = {
         "LOCAL_ENDPOINT": "local_endpoint",
         "PARAMETER_GRADIENT": "parameter_gradient",
         "EFFECTIVE_UPDATE": "effective_update",
     }
-    return layers.get(aliases.get(name, name))
+    if aliases[name] in row:
+        return row[aliases[name]]
+    layers = row.get("layers")
+    if not isinstance(layers, Mapping):
+        return None
+    return layers.get(name, layers.get(aliases[name]))
+
+
+def _policy(payload: Mapping[str, Any]) -> FormationPolicy:
+    value = payload.get("policy", {})
+    if not isinstance(value, Mapping):
+        raise ValueError("policy must be an object")
+    # v2.1 margins are frozen in the library.  The payload may repeat them for
+    # provenance, but it cannot lower the state/bootstrap requirements.
+    policy = FormationPolicy(
+        min_states=int(value.get("min_states", 16)),
+        centered_margin=float(value.get("centered_margin", 0.20)),
+        bias_margin=float(value.get("bias_margin", 0.25)),
+        canceling_margin=float(value.get("canceling_margin", 0.20)),
+        bootstrap_samples=int(value.get("bootstrap_samples", 2000)),
+        bootstrap_seed=int(value.get("bootstrap_seed", 20260818)),
+        energy_floor=float(value.get("energy_floor", 1e-30)),
+    )
+    if policy.min_states < 16 or policy.bootstrap_samples < 2000:
+        raise ValueError("v2.1 requires at least 16 states and 2000 bootstrap draws")
+    return policy
 
 
 def build(payload: Mapping[str, Any]) -> dict[str, Any]:
@@ -77,39 +102,39 @@ def build(payload: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(split, Mapping):
         raise ValueError("state_split is required")
     calibration = [str(x) for x in split.get("calibration_state_ids", ())]
-    confirmation = [str(x) for x in split.get("confirmation_state_ids", split.get("evaluation_state_ids", ()))]
-    if not calibration or not confirmation:
-        raise ValueError("calibration_state_ids and confirmation_state_ids are required")
-    policy_payload = payload.get("policy", {})
-    if not isinstance(policy_payload, Mapping):
-        raise ValueError("policy must be an object")
-    policy = FormationPolicy(
-        min_states=int(policy_payload.get("min_states", 4)),
-        centered_ratio_upper=float(policy_payload.get("centered_ratio_upper", 0.01)),
-        biased_ratio_lower=float(policy_payload.get("biased_ratio_lower", 0.05)),
-        bootstrap_samples=int(policy_payload.get("bootstrap_samples", 256)),
-        bootstrap_seed=int(policy_payload.get("bootstrap_seed", 20260818)),
-        energy_floor=float(policy_payload.get("energy_floor", 1e-30)),
+    confirmation = [str(x) for x in split.get("confirmation_state_ids", ())]
+    if len(calibration) < 16 or len(confirmation) < 16:
+        raise ValueError("v2.1 requires at least 16 calibration and 16 confirmation states")
+    policy = _policy(payload)
+    trace = BiasFormationTrace(
+        str(payload.get("case_id", "")), calibration, confirmation, policy,
     )
-    trace = BiasFormationTrace(str(payload.get("case_id", "")), calibration, confirmation, policy)
     rows = payload.get("rows", ())
     if not isinstance(rows, list):
         raise ValueError("rows must be a list")
     for row in rows:
         if not isinstance(row, Mapping):
             raise ValueError("each formation row must be an object")
+        if "common_state_digest" in row:
+            raise ValueError("component-wise common_state_certificate is required; common_state_digest is obsolete")
+        common = row.get("common_state_certificate", row.get("common_state"))
+        if common is None:
+            raise ValueError("each state needs a component-wise common_state_certificate")
         trace.add(
             str(row.get("state_id", "")),
             str(row.get("partition", "")),
-            common_state_digest=row.get("common_state_digest"),
-            local_endpoint=_layer(row, "LOCAL_ENDPOINT") if "LOCAL_ENDPOINT" in row or "layers" in row else _layer(row, "local_endpoint"),
-            parameter_gradient=_layer(row, "PARAMETER_GRADIENT") if "PARAMETER_GRADIENT" in row or "layers" in row else _layer(row, "parameter_gradient"),
-            effective_update=_layer(row, "EFFECTIVE_UPDATE") if "EFFECTIVE_UPDATE" in row or "layers" in row else _layer(row, "effective_update"),
+            common_state_certificate=common,
+            local_endpoint=_layer(row, "LOCAL_ENDPOINT"),
+            parameter_gradient=_layer(row, "PARAMETER_GRADIENT"),
+            effective_update=_layer(row, "EFFECTIVE_UPDATE"),
             metadata=row.get("metadata") if isinstance(row.get("metadata"), Mapping) else {},
         )
     result = trace.finalize()
     result["input_schema"] = str(payload.get("schema", "UNDECLARED"))
-    result["input_sha256"] = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    result["input_sha256"] = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    result["formation_label_source"] = "v2_1_open_loop_population_certificate"
     return result
 
 
@@ -126,7 +151,10 @@ def main() -> None:
         json.dump(result, handle, indent=2, sort_keys=True)
         handle.write("\n")
     temporary.replace(args.output)
-    print(json.dumps({"output": str(args.output), "case_id": result["case_id"], "status": result["status"]}, sort_keys=True))
+    print(json.dumps({
+        "output": str(args.output), "case_id": result["case_id"],
+        "status": result["status"], "formation_label_source": result["formation_label_source"],
+    }, sort_keys=True))
 
 
 if __name__ == "__main__":

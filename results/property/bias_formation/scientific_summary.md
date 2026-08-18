@@ -27,3 +27,7 @@ strict/anchor records.  Its legacy endpoint roles are 57 coherent-carrier
 observations, 588 normal references, and 917 unresolved rows.  These counts
 are retained for coverage and sampling; none is a formation positive or
 negative until v2.1 open-loop measurements produce all three formation layers.
+
+The v2.1 reducer is `scripts/build_bias_formation_certificate.py`.  It rejects
+the old single `common_state_digest` format, requires component-wise equality,
+and does not emit a confirmed formation point from an incomplete layer.

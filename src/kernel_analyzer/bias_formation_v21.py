@@ -526,13 +526,18 @@ class BiasFormationTrace:
             overall = FormationStatus.COMPLETE.value
         confirmation_statuses = [populations["confirmation"][layer.value + "_status"] for layer in _LAYER_ORDER]
         first_observed = next((layer.value for layer, status in zip(_LAYER_ORDER, confirmation_statuses) if status == FormationStatus.BIASED.value), None)
+        # A confirmed formation point requires a complete confirmation
+        # population.  In particular, a downstream BIASED layer must not be
+        # promoted when an upstream layer is missing/malformed or when the
+        # overall certificate is unresolved.
         first_confirmed = None
-        prior_centered = True
-        for layer, status in zip(_LAYER_ORDER, confirmation_statuses):
-            if first_confirmed is None and prior_centered and status == FormationStatus.BIASED.value:
-                first_confirmed = layer.value
-            if status != FormationStatus.CENTERED.value:
-                prior_centered = False
+        if overall == FormationStatus.COMPLETE.value:
+            prior_centered = True
+            for layer, status in zip(_LAYER_ORDER, confirmation_statuses):
+                if first_confirmed is None and prior_centered and status == FormationStatus.BIASED.value:
+                    first_confirmed = layer.value
+                if status != FormationStatus.CENTERED.value:
+                    prior_centered = False
         return {
             "schema": "kernel-analyzer-bias-formation-certificate-v2_1",
             "case_id": self.case_id,
