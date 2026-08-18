@@ -1,0 +1,33 @@
+{
+  "schema": "kernel-analyzer-bias-formation-protocol-v2_1",
+  "protocol_id": "bias_formation_v2_1",
+  "status": "PRE_MEASUREMENT_STATISTICAL_CORRECTION",
+  "supersedes": "bias_formation_v2",
+  "v2_gpu_measurements": 0,
+  "formation": {
+    "state_row_owns": ["one_complete_vector_or_stream_handle", "vector_digest", "coordinate_count", "common_state_certificate"],
+    "partition_layer_owns": ["one_cross_state_gram", "cross_state_u_statistic", "bootstrap_interval", "classification"],
+    "primary_statistic": "off_diagonal_cross_state_u_statistic_over_average_per_state_error_energy",
+    "finite_sample_mean_energy_is_diagnostic_only": true,
+    "bootstrap_samples": 2000,
+    "state_split": {"calibration_count": 16, "confirmation_count": 16, "both_open_loop": true, "disjoint": true}
+  },
+  "margins": {
+    "centered_margin": 0.2,
+    "bias_margin": 0.25,
+    "canceling_margin": 0.2,
+    "source": "frozen_development_margin_pending_repeat_sham_and_synthetic_floor_audit",
+    "confirmation_cannot_modify": true
+  },
+  "common_state": {
+    "requires_componentwise_digest_equality": true,
+    "components": ["weights", "optimizer_moments", "input", "rng", "scheduler", "loss_scaler"]
+  },
+  "consequence": {
+    "requires_four_counterfactual_update_arms": true,
+    "requires_drift_before_and_after": true,
+    "library_computes_local_feedback_expected_drift_and_recurrence": true,
+    "recurrence_residual_is_not_runner_input": true
+  },
+  "gpu_campaign_started": false
+}

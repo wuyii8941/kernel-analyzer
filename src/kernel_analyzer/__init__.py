@@ -72,6 +72,11 @@ from .bias_formation_v21 import (
     summarize_state_vectors,
     summarize_streamed_state_vectors,
 )
+from .bias_consequence_v21 import (
+    BiasConsequenceTrace as BiasConsequenceTraceV21,
+    ConsequenceStatus as ConsequenceStatusV21,
+    UpdateValue,
+)
 
 __all__ = [
     "AnalysisReport",
@@ -137,4 +142,7 @@ __all__ = [
     "StateVectorObservation",
     "summarize_state_vectors",
     "summarize_streamed_state_vectors",
+    "BiasConsequenceTraceV21",
+    "ConsequenceStatusV21",
+    "UpdateValue",
 ]
