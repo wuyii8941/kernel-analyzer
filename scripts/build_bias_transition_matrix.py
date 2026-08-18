@@ -40,6 +40,9 @@ def _status(cert: dict[str, Any], layer: str) -> str:
     confirmation = populations.get("confirmation")
     if not isinstance(confirmation, dict):
         return "UNRESOLVED"
+    # v2.1 population keys preserve the enum spelling (for example
+    # ``LOCAL_ENDPOINT_status``).  Do not lower-case this lookup: doing so
+    # silently turns every measured layer into UNRESOLVED/PENDING.
     value = confirmation.get(layer + "_status")
     if value == "BIASED":
         return "{}{}_BIAS".format("LOCAL" if layer == "LOCAL_ENDPOINT" else "GRADIENT" if layer == "PARAMETER_GRADIENT" else "UPDATE", "")

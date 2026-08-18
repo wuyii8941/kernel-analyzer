@@ -49,6 +49,7 @@ class MMRepair:
         self.restores = []
         self.calls = 0
         self.local = None
+        self.local_vector = None
 
     def __enter__(self) -> "MMRepair":
         seen = set()
@@ -92,6 +93,10 @@ class MMRepair:
                     "candidate_vs_fp32_max_abs": float(candidate_error.abs().max().item()),
                     "repair_vs_fp32_max_abs": float(repair_error.abs().max().item()),
                 }
+                # The v2.1 formation capture consumes this complete endpoint
+                # residual.  Keep only the current state in host memory; the
+                # reducer stores a digest/Gram, not raw vectors.
+                self.local_vector = delta.detach().float().cpu().numpy().reshape(-1)
                 self.calls += 1
                 return result
 

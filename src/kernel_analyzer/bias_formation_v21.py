@@ -19,6 +19,11 @@ import math
 import random
 from typing import Any, Callable, Dict, Iterable, Mapping, MutableMapping, Sequence
 
+try:
+    import numpy as np
+except ImportError:  # pragma: no cover - the production measurement env has numpy
+    np = None  # type: ignore[assignment]
+
 
 class FormationLayer(str, Enum):
     LOCAL_ENDPOINT = "LOCAL_ENDPOINT"
@@ -362,15 +367,37 @@ def summarize_state_vectors(
     digests = tuple(vector_digests or [_digest_vector(row) for row in rows])
     if len(digests) != len(rows):
         raise ValueError("vector digests must align with vectors")
-    gram = _gram(rows)
-    avg_energy = math.fsum(gram[i][i] for i in range(len(rows))) / len(rows)
-    u_stat = math.fsum(gram[i][j] for i in range(len(rows)) for j in range(i + 1, len(rows))) / (len(rows) * (len(rows) - 1) / 2)
+    if np is not None:
+        # Compute one population Gram and bootstrap its off-diagonal U
+        # statistic.  Recomputing dot products over every bootstrap sample is
+        # prohibitively expensive for complete endpoint tensors.
+        matrix = np.asarray(rows, dtype=np.float64)
+        gram_array = matrix @ matrix.T
+        diagonal = np.diag(gram_array)
+        avg_energy = float(np.trace(gram_array) / len(rows))
+        pairs = len(rows) * (len(rows) - 1) / 2
+        u_stat = float((gram_array.sum() - np.trace(gram_array)) / (2.0 * pairs))
+        bootstrap = []
+        rng = np.random.default_rng(policy.bootstrap_seed)
+        while len(bootstrap) < policy.bootstrap_samples:
+            indices = rng.integers(0, len(rows), size=len(rows))
+            counts = np.bincount(indices, minlength=len(rows)).astype(np.float64)
+            denominator = float(len(rows) * len(rows) - counts @ counts)
+            if denominator <= 0.0:
+                continue
+            numerator = float(counts @ gram_array @ counts - (counts * counts) @ diagonal)
+            bootstrap.append(numerator / denominator / max(avg_energy, policy.energy_floor))
+        gram = gram_array.tolist()
+    else:
+        gram = _gram(rows)
+        avg_energy = math.fsum(gram[i][i] for i in range(len(rows))) / len(rows)
+        u_stat = math.fsum(gram[i][j] for i in range(len(rows)) for j in range(i + 1, len(rows))) / (len(rows) * (len(rows) - 1) / 2)
+        bootstrap = []
+        rng = random.Random(policy.bootstrap_seed)
+        for _ in range(policy.bootstrap_samples):
+            sample = [rows[rng.randrange(len(rows))] for _ in rows]
+            bootstrap.append(_ratio(sample, policy))
     observed_ratio = u_stat / max(avg_energy, policy.energy_floor)
-    rng = random.Random(policy.bootstrap_seed)
-    bootstrap: list[float] = []
-    for _ in range(policy.bootstrap_samples):
-        sample = [rows[rng.randrange(len(rows))] for _ in rows]
-        bootstrap.append(_ratio(sample, policy))
     bootstrap.sort()
     lower = bootstrap[max(0, int(0.025 * len(bootstrap)))]
     upper = bootstrap[min(len(bootstrap) - 1, int(0.975 * len(bootstrap)))]
