@@ -15,12 +15,12 @@ def test_synthetic_controls_pass_without_natural_case_evidence():
     assert all(row["pass"] for row in result["controls"])
 
 
-def test_bias_formation_map_records_partial_natural_measurement():
+def test_bias_formation_map_records_measured_eligible_cases():
     protocol = json.loads((ROOT / "results/property/bias_formation/protocol.json").read_text())
     matrix = json.loads((ROOT / "results/property/bias_formation/formation_matrix.json").read_text())
     assert protocol["protocol_id"] == "bias_formation_map_v1"
     assert protocol["gpu_campaign_started"] is False
-    assert matrix["status"] == "PARTIAL_NATURAL_FORMATION_MEASUREMENT"
+    assert matrix["status"] == "COMPLETE_MEASURED_ELIGIBLE_CASES_WITH_INELIGIBLE_NEGATIVE"
     phi = next(row for row in matrix["cases"] if row["case_id"] == "phi4_lm_head_dx_seq64")
     assert phi["local"] == "CENTERED"
     assert phi["parameter_gradient"] == "BIASED"

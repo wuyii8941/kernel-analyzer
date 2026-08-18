@@ -17,6 +17,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 PROTOCOL = ROOT / "results/property/bias_formation/protocol.json"
+ROSTER = ROOT / "results/property/bias_formation_v2_1/roster_bound.json"
 DEFAULT_OUTPUT = ROOT / "results/property/bias_formation/bias_transition_matrix.csv"
 
 LAYERS = (
@@ -82,6 +83,8 @@ def _mechanism(local: str, gradient: str, update: str, certificate: dict[str, An
 
 def build(certificate_paths: dict[str, Path] | None = None) -> list[dict[str, str]]:
     protocol = _load(PROTOCOL)
+    roster = _load(ROSTER)
+    roster_by_case = {str(row["case_id"]): row for row in roster.get("cases", [])}
     rows: list[dict[str, str]] = []
     for case in protocol.get("cases", []):
         case_id = str(case["case_id"])
@@ -89,18 +92,20 @@ def build(certificate_paths: dict[str, Path] | None = None) -> list[dict[str, st
         certificate = _load(path) if path is not None else None
         if certificate is not None:
             _validate_certificate(certificate)
-        statuses = [_status(certificate, layer) if certificate is not None else "PENDING" for layer, _ in LAYERS]
+        roster_case = roster_by_case.get(case_id, {})
+        ineligible = certificate is None and str(roster_case.get("feasibility", "READY")) not in {"READY", "CAPTURE_READY"}
+        statuses = [_status(certificate, layer) if certificate is not None else ("INELIGIBLE" if ineligible else "PENDING") for layer, _ in LAYERS]
         local, gradient, update = statuses
         rows.append({
             "case": case_id,
             "local": local,
             "gradient": gradient,
             "update": update,
-            "mechanism_candidate": _mechanism(local, gradient, update, certificate),
-            "certificate_status": "" if certificate is None else str(certificate.get("status", "UNRESOLVED")),
+            "mechanism_candidate": "UNRESOLVED_INELIGIBLE" if ineligible else _mechanism(local, gradient, update, certificate),
+            "certificate_status": "INELIGIBLE_FROZEN_ROSTER" if ineligible else ("" if certificate is None else str(certificate.get("status", "UNRESOLVED"))),
             "certificate_path": "" if path is None else str(path),
-            "formation_label_source": "v2_1_open_loop_certificate" if certificate is not None else "NOT_MEASURED",
-            "claim_boundary": "Transition only; mechanism requires its declared intervention and no T4/SEUP label is used.",
+            "formation_label_source": "v2_1_open_loop_certificate" if certificate is not None else ("FROZEN_ROSTER_FEASIBILITY" if ineligible else "NOT_MEASURED"),
+            "claim_boundary": ("No formation measurement: exact repair/sham binding is missing in the frozen roster." if ineligible else "Transition only; mechanism requires its declared intervention and no T4/SEUP label is used."),
         })
     return rows
 

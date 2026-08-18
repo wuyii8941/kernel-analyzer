@@ -79,8 +79,10 @@ def test_builder_rejects_old_single_digest_and_verdict_leakage():
 def test_transition_matrix_is_pending_without_certificates():
     rows = build_matrix()
     assert len(rows) == 4
-    assert all(row["local"] == "PENDING" for row in rows)
-    assert all(row["mechanism_candidate"] == "PENDING_MEASUREMENT" for row in rows)
+    assert sum(row["local"] == "PENDING" for row in rows) == 2
+    bmm = next(row for row in rows if row["case"] == "qwen_bmm_seq64")
+    assert bmm["local"] == "INELIGIBLE"
+    assert bmm["mechanism_candidate"] == "UNRESOLVED_INELIGIBLE"
 
 
 def test_transition_matrix_uses_only_v21_certificate(tmp_path):
