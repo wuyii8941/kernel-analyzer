@@ -1,0 +1,78 @@
+"""Automated, deterministic forward/backward numerical-bias analysis."""
+
+from .api import (
+    AnalysisReport,
+    AnalysisSpec,
+    AnalysisState,
+    CandidateBackend,
+    CaseCertificate,
+    ConcreteFBProof,
+    ReferenceProvider,
+    ResourceBudget,
+    StepExecution,
+    TierEvidence,
+)
+from .runner import Analyzer
+from .semantics import SemanticRegistry, SemanticRule
+from .property import (
+    SignedTransportState,
+    derive_signed_rounding_error,
+    signed_event_transport,
+    signed_transport_certificate,
+)
+from .seup import (
+    FrozenCarrier,
+    SEUPCalibrator,
+    SEUPAccumulator,
+    SymmetricSEUPEvaluator,
+    adamw_update,
+    adamw_effective_update_delta,
+    alternating_sign_schedule,
+    balanced_sign_schedule,
+    force_carrier_sign,
+    flip_carrier_component,
+    sgd_effective_update_delta,
+)
+from .geometry import (
+    GeometryAnalyzer,
+    load_spool,
+    normalized_gram,
+    projected_persistence,
+    subspace_overlap,
+)
+
+__all__ = [
+    "AnalysisReport",
+    "AnalysisSpec",
+    "AnalysisState",
+    "Analyzer",
+    "CandidateBackend",
+    "CaseCertificate",
+    "ConcreteFBProof",
+    "ReferenceProvider",
+    "ResourceBudget",
+    "SemanticRegistry",
+    "SemanticRule",
+    "SEUPAccumulator",
+    "SEUPCalibrator",
+    "FrozenCarrier",
+    "SymmetricSEUPEvaluator",
+    "SignedTransportState",
+    "StepExecution",
+    "TierEvidence",
+    "derive_signed_rounding_error",
+    "signed_event_transport",
+    "signed_transport_certificate",
+    "adamw_effective_update_delta",
+    "adamw_update",
+    "alternating_sign_schedule",
+    "balanced_sign_schedule",
+    "force_carrier_sign",
+    "flip_carrier_component",
+    "sgd_effective_update_delta",
+    "GeometryAnalyzer",
+    "load_spool",
+    "normalized_gram",
+    "projected_persistence",
+    "subspace_overlap",
+]

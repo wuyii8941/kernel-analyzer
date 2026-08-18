@@ -1,0 +1,357 @@
+{
+  "claim_boundary": "This is a transparent post-measurement methodology correction that separates case identity from property generalization. It does not create new measurements, does not promote incomplete candidates, and does not claim a cross-operator property.",
+  "counts": {
+    "audited_candidates": 8,
+    "completed_negative_cases": 2,
+    "composite_carrier_pass": 0,
+    "composite_flash_style_cases": 0,
+    "cross_operator_property_claims": 0,
+    "cross_state_concrete_mechanism_passes": 2,
+    "needs_reconfirmation": 0,
+    "previous_project_cases": 4,
+    "rejected_by_direction_gate": 0,
+    "strict_flash_style_cases": 6,
+    "strict_root_arithmetic_op_pass": 4,
+    "strict_semantic_region_pass": 2
+  },
+  "evidence_files": {
+    "results/coverage/cases/l23_qproj_attention_state_region.json": "b2a1526dab98283732e2ed3b94da21a1399d4ba2159a06383ed07fe5c877cd0c",
+    "results/coverage/cases/mamba_seq64_input_proj.json": "e81a8c671b9176f6c51880e94a39cb897436eb0c8e8340641477b69cdbe125a1",
+    "results/coverage/cases/mamba_seq64_input_proj_repair_pilot.json": "b9429471cc4730fc69bc564cfc96ab19a879210b3623217674548a9b83bfd8c5",
+    "results/coverage/cases/mamba_seq64_input_proj_trajectory.json": "bf12f297b9077eccdee800afc3c4765a55aa77d957dd5e697def7909a6df2995",
+    "results/coverage/cases/phi4_seq64_lmhead_dx.json": "e6227acd983b75f7606712c944e08ab327e7e07ba1d90dc68500d13a931e00e4",
+    "results/coverage/cases/qwen128_softmax_fb.json": "7475cbf29e2707b15c2358cca3f83dbc364e646774895083594f4ad49bc03ec5",
+    "results/coverage/cases/qwen128_softmax_fb_formal.json": "24afa07639d683369122891f09944966cd783d8ee637ea78b8bf3c44c7eb0753",
+    "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json": "079ea5f72c7b14d96e20158307786115c2ebb7782358a446d03b7115c1976dec",
+    "results/coverage/cases/qwen128_vproj.json": "e56159074436879ed5dea395e04fe3f6631288766c6990cde1e6881ff40b286d",
+    "results/coverage/cases/qwen128_vproj_repair_pilot.json": "29cafa31e731010812ecb8d181ebe0fe2221b35bad3e2ab1757e45f17120d3cc",
+    "results/coverage/cases/qwen128_vproj_trajectory.json": "fafd25a7a68f94e68de112fe2c2e6037bd1be35d2b80f12a252c25d4469e5f70",
+    "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json": "6ef17e30c61168cfd0d3692d042743e1a0ddc9029e868b839135430e6028217d",
+    "results/coverage/lmhead_t3_confirmation.json": "b09b13fe4ded6dfc562266b0c5e504a533ed37cd290817428d3462665c4834e4",
+    "results/final/precision.json.gz": "a647b7d1c3cda5d0a12188a5565ac1b3de79f40d35f9cbe27569107a9605169a",
+    "results/final/trajectory.json.gz": "015c3458fff07f188ea1a68475f5a8c6bfe4c2b14bc07581034199c84087febc",
+    "results/round2/vl_bias.json": "f8fc5db2a5435c0faa7e2973c4cfcc451573693897883794e00b874be0e54c0a",
+    "results/round2/vl_silu_cause.json": "ee113e228097ae8854d08b4fd6fc8e4547b3da44fc0117aa94e5f4943ac00e98"
+  },
+  "protocol_sha256": "271aad9fc03457531f5f419821b88be28aa2e81d834ee97211828c1c6f7dfa59",
+  "result_sha256": "1864815acb8b2de7ce6d75b5f806c058e20d426f8ffbe4b00e3ee8b0508994db",
+  "rows": [
+    {
+      "case": "seq128_lm_head_input_vjp_mm",
+      "flash_style": {
+        "gates": {
+          "F1_COMPLETE_FB": {
+            "evidence": "precision.json.gz:mm_case",
+            "note": "",
+            "status": "PASS"
+          },
+          "F2_CAUSAL_REPAIR": {
+            "evidence": "precision.json.gz:mm_case",
+            "note": "",
+            "status": "PASS"
+          },
+          "F3_REAL_CARRIER": {
+            "evidence": "precision.json.gz:mm_carrier",
+            "note": "Independent frozen-carrier projections and balanced-sign accumulation control pass.",
+            "status": "PASS"
+          },
+          "F4_PAIRED_TRAJECTORY": {
+            "evidence": "precision.json.gz:mm_steps",
+            "note": "32-step FP32-master trajectory; every step has a natural carrier and arm divergence.",
+            "status": "PASS"
+          }
+        },
+        "verdict": "PASS_FLASH_STYLE_CASE"
+      },
+      "generalizable_bias": {
+        "bootstrap": {
+          "draws": 10000,
+          "lower_95": -0.0006359939915155631,
+          "median": 0.00013866476418181373,
+          "method": "LEAVE_ONE_STATE_U_PSEUDOVALUE_CLUSTER_BOOTSTRAP",
+          "seed": 3454,
+          "upper_95": 0.0008822836990907036
+        },
+        "evidence": "results/coverage/lmhead_t3_confirmation.json",
+        "verdict": "FAIL_CROSS_STATE_NONCOHERENT"
+      },
+      "mechanism_level": "ROOT_ARITHMETIC",
+      "note": "Restored as a Flash-style case; the original 32-state negative result is retained.",
+      "property_positive_eligible": false
+    },
+    {
+      "case": "liger_fused_linear_ce_dw",
+      "flash_style": {
+        "gates": {
+          "F1_COMPLETE_FB": {
+            "evidence": "liger.fused_ce.mechanism.json",
+            "note": "",
+            "status": "PASS"
+          },
+          "F2_CAUSAL_REPAIR": {
+            "evidence": "liger.fused_ce.certificate.json",
+            "note": "",
+            "status": "PASS"
+          },
+          "F3_REAL_CARRIER": {
+            "evidence": "liger.fused_ce.certificate.json:default_accum.dW",
+            "note": "",
+            "status": "PASS"
+          },
+          "F4_PAIRED_TRAJECTORY": {
+            "evidence": "trajectory.json.gz",
+            "note": "",
+            "status": "PASS"
+          }
+        },
+        "verdict": "PASS_FLASH_STYLE_CASE"
+      },
+      "generalizable_bias": {
+        "bootstrap": {
+          "lower_95": 0.16640404951333618,
+          "upper_95": 0.21496618398574008
+        },
+        "evidence": "liger.fused_ce.certificate.json:default_accum.dW",
+        "verdict": "PASS_CROSS_STATE_CONCRETE_MECHANISM"
+      },
+      "mechanism_level": "ROOT_ARITHMETIC",
+      "property_positive_eligible": true
+    },
+    {
+      "case": "phi4_seq64_lmhead_dx_mm",
+      "flash_style": {
+        "gates": {
+          "F1_COMPLETE_FB": {
+            "evidence": "cases/phi4_seq64_lmhead_dx.json",
+            "note": "",
+            "status": "PASS"
+          },
+          "F2_CAUSAL_REPAIR": {
+            "evidence": "cases/phi4_seq64_lmhead_dx.json:causal_repair",
+            "note": "",
+            "status": "PASS"
+          },
+          "F3_REAL_CARRIER": {
+            "evidence": "cases/phi4_seq64_lmhead_dx.json:final_norm_weight_carrier",
+            "note": "",
+            "status": "PASS"
+          },
+          "F4_PAIRED_TRAJECTORY": {
+            "evidence": "cases/phi4_seq64_lmhead_dx_trajectory.json",
+            "note": "",
+            "status": "PASS"
+          }
+        },
+        "verdict": "PASS_FLASH_STYLE_CASE"
+      },
+      "generalizable_bias": {
+        "bootstrap": {
+          "lower_95": 6.74602642908133e-06,
+          "median": 7.877633234990786e-06,
+          "upper_95": 9.009937082786803e-06
+        },
+        "evidence": "cases/phi4_seq64_lmhead_dx.json",
+        "verdict": "PASS_CROSS_STATE_CONCRETE_MECHANISM"
+      },
+      "mechanism_level": "ROOT_ARITHMETIC",
+      "note": "Trajectory is bounded to model.norm.weight with other parameters frozen.",
+      "property_positive_eligible": true
+    },
+    {
+      "case": "layer23_qproj_attention_state_region",
+      "flash_style": {
+        "gates": {
+          "F1_COMPLETE_FB": {
+            "evidence": "cases/l23_qproj_attention_state_region.json:complete_forward_backward_math",
+            "note": "Concrete q_proj F+B unit bound to a closed attention-state semantic region.",
+            "status": "PASS"
+          },
+          "F2_CAUSAL_REPAIR": {
+            "evidence": "cases/l23_qproj_attention_state_region.json:causal_attribution",
+            "note": "",
+            "status": "PASS"
+          },
+          "F3_REAL_CARRIER": {
+            "evidence": "cases/l23_qproj_attention_state_region.json:real_directional_parameter_carrier",
+            "note": "",
+            "status": "PASS"
+          },
+          "F4_PAIRED_TRAJECTORY": {
+            "evidence": "cases/l23_qproj_attention_state_region.json:trajectory",
+            "note": "",
+            "status": "PASS"
+          }
+        },
+        "verdict": "PASS_STRICT_SEMANTIC_REGION_FLASH_STYLE_CASE"
+      },
+      "generalizable_bias": {
+        "evidence": "cases/l23_qproj_attention_state_region.json",
+        "verdict": "NOT_ELIGIBLE_AS_SINGLE_KERNEL_PROPERTY"
+      },
+      "mechanism_level": "CLOSED_SEMANTIC_REGION",
+      "note": "Strict concrete case at a causally closed semantic-region boundary; no unique single-kernel root or cross-operator property is claimed.",
+      "property_positive_eligible": false
+    },
+    {
+      "case": "qwen128_layer27_softmax_saved_state",
+      "flash_style": {
+        "gates": {
+          "F1_COMPLETE_FB": {
+            "evidence": "cases/qwen128_softmax_fb.json:concrete_program_proof",
+            "note": "",
+            "status": "PASS"
+          },
+          "F2_CAUSAL_REPAIR": {
+            "evidence": "cases/qwen128_softmax_saved_p_trajectory.json:initial_controls",
+            "note": "",
+            "status": "PASS"
+          },
+          "F3_REAL_CARRIER": {
+            "evidence": "cases/qwen128_softmax_saved_p_trajectory.json:records",
+            "note": "",
+            "status": "PASS"
+          },
+          "F4_PAIRED_TRAJECTORY": {
+            "evidence": "cases/qwen128_softmax_saved_p_trajectory.json:directional_projections",
+            "note": "",
+            "status": "PASS"
+          }
+        },
+        "verdict": "PASS_STRICT_SEMANTIC_REGION_FLASH_STYLE_CASE"
+      },
+      "generalizable_bias": {
+        "bootstrap": {
+          "lower_95": -2.648218383457308e-12,
+          "median": 7.777025792108621e-14,
+          "upper_95": 2.752867687156514e-12
+        },
+        "evidence": "cases/qwen128_softmax_fb_formal.json:semantic_total",
+        "verdict": "FAIL_CROSS_STATE_NONCOHERENT"
+      },
+      "mechanism_level": "ROOT_SEMANTIC_REGION",
+      "note": "The causal boundary replaces reconstructed probability at dS with the typed true-forward-P VJP. This is a closed saved-state semantic region, not a unique single-Triton-instruction attribution.",
+      "property_positive_eligible": false
+    },
+    {
+      "case": "qwen3vl_silu_backward_decomposition",
+      "flash_style": {
+        "gates": {
+          "F1_COMPLETE_FB": {
+            "evidence": "results/round2/vl_math_ledger.json.gz:vl-fb-1315",
+            "note": "",
+            "status": "PASS"
+          },
+          "F2_CAUSAL_REPAIR": {
+            "evidence": "cases/qwen3vl_layer0_silu_trajectory.json:initial_controls",
+            "note": "",
+            "status": "PASS"
+          },
+          "F3_REAL_CARRIER": {
+            "evidence": "cases/qwen3vl_layer0_silu_trajectory.json:records",
+            "note": "",
+            "status": "PASS"
+          },
+          "F4_PAIRED_TRAJECTORY": {
+            "evidence": "cases/qwen3vl_layer0_silu_trajectory.json:directional_projection_checkpoints",
+            "note": "Live weights diverge, but the frozen-direction projection does not grow through step 32.",
+            "status": "FAIL"
+          }
+        },
+        "verdict": "FAIL_DIRECTIONAL_ACCUMULATION"
+      },
+      "generalizable_bias": {
+        "evidence": "results/round2/vl_bias.json:global_direction",
+        "statistic": {
+          "average_state_error_norm2": 387.8576990796568,
+          "coherence_ratio": -0.011355843970777258,
+          "cross_state_error_inner_product": -4.404451513613261,
+          "sum_error_vector_norm2": 2195.012649069543
+        },
+        "verdict": "FAIL_CROSS_STATE_NONCOHERENT"
+      },
+      "mechanism_level": "ROOT_ARITHMETIC",
+      "property_positive_eligible": false
+    },
+    {
+      "case": "qwen128_layer0_vproj_output",
+      "flash_style": {
+        "gates": {
+          "F1_COMPLETE_FB": {
+            "evidence": "cases/qwen128_vproj.json:concrete_program_proof",
+            "note": "",
+            "status": "PASS"
+          },
+          "F2_CAUSAL_REPAIR": {
+            "evidence": "cases/qwen128_vproj_repair_pilot.json",
+            "note": "",
+            "status": "PASS"
+          },
+          "F3_REAL_CARRIER": {
+            "evidence": "cases/qwen128_vproj_trajectory.json:records",
+            "note": "",
+            "status": "PASS"
+          },
+          "F4_PAIRED_TRAJECTORY": {
+            "evidence": "cases/qwen128_vproj_trajectory.json:directional_projections",
+            "note": "The frozen-direction projection grows through step 16 but falls at step 32.",
+            "status": "FAIL"
+          }
+        },
+        "verdict": "FAIL_DIRECTIONAL_ACCUMULATION"
+      },
+      "generalizable_bias": {
+        "bootstrap": {
+          "lower_95": -0.0026242069807903,
+          "median": 0.003182975440764213,
+          "upper_95": 0.017577008262391614
+        },
+        "evidence": "cases/qwen128_vproj_repair_pilot.json",
+        "verdict": "FAIL_CROSS_STATE_CARRIER_NONCOHERENT"
+      },
+      "mechanism_level": "ROOT_ARITHMETIC",
+      "note": "The local MM-accumulation repair is causal but does not accumulate monotonically through step 32. Coherent output rounding is outside this root-arithmetic intervention and remains a separate semantic-region question.",
+      "property_positive_eligible": false
+    },
+    {
+      "case": "mamba64_layer0_input_proj_output",
+      "flash_style": {
+        "gates": {
+          "F1_COMPLETE_FB": {
+            "evidence": "cases/mamba_seq64_input_proj.json:concrete_program_proof",
+            "note": "",
+            "status": "PASS"
+          },
+          "F2_CAUSAL_REPAIR": {
+            "evidence": "cases/mamba_seq64_input_proj_repair_pilot.json",
+            "note": "",
+            "status": "PASS"
+          },
+          "F3_REAL_CARRIER": {
+            "evidence": "cases/mamba_seq64_input_proj_trajectory.json:records",
+            "note": "",
+            "status": "PASS"
+          },
+          "F4_PAIRED_TRAJECTORY": {
+            "evidence": "cases/mamba_seq64_input_proj_trajectory.json:directional_projections",
+            "note": "",
+            "status": "PASS"
+          }
+        },
+        "verdict": "PASS_FLASH_STYLE_CASE"
+      },
+      "generalizable_bias": {
+        "bootstrap": {
+          "lower_95": -0.0002801107469051073,
+          "median": 0.0004238053904850961,
+          "upper_95": 0.0011787317442796333
+        },
+        "evidence": "cases/mamba_seq64_input_proj_repair_pilot.json",
+        "verdict": "FAIL_CROSS_STATE_CARRIER_NONCOHERENT"
+      },
+      "mechanism_level": "ROOT_ARITHMETIC",
+      "property_positive_eligible": false
+    }
+  ],
+  "schema": "kernel-analyzer-flash-style-reaudit-v1",
+  "status": "COMPLETE_DUAL_TRACK_REAUDIT"
+}

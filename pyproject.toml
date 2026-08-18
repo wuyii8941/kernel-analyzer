@@ -4,6 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kernel-analyzer"
-version = "1.0.0"
-description = "Compact evidence for all-op numerical bias analysis"
+version = "1.1.0"
+description = "Automated forward/backward numerical-bias analysis"
 requires-python = ">=3.8"
+
+[project.scripts]
+kernel-analyzer = "kernel_analyzer.cli:main"
+
+[tool.setuptools]
+packages = ["kernel_analyzer", "scripts"]
+package-dir = {kernel_analyzer = "src/kernel_analyzer", scripts = "scripts"}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

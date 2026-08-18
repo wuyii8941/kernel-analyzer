@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 import torch
 from torch.fx import Graph, GraphModule, Node
@@ -49,6 +49,8 @@ def extract_pure_fx_reference_cut(
     graph_module: GraphModule,
     cut_node_names: Iterable[str],
     cut_id: str,
+    node_index: Mapping[str, Node] | None = None,
+    node_ordinal: Mapping[str, int] | None = None,
 ) -> tuple[GraphModule, dict[str, Any]]:
     """Return a standalone pure subgraph and its explicit interface.
 
@@ -60,13 +62,25 @@ def extract_pure_fx_reference_cut(
     requested = {str(name) for name in cut_node_names}
     if not requested:
         raise ValueError("reference cut must contain at least one node")
-    by_name = {node.name: node for node in graph_module.graph.nodes}
+    by_name = (
+        dict(node_index)
+        if node_index is not None
+        else {node.name: node for node in graph_module.graph.nodes}
+    )
     missing = sorted(requested - set(by_name))
     if missing:
         raise ValueError(f"reference cut nodes are absent: {missing}")
-    cut_nodes = [
-        node for node in graph_module.graph.nodes if node.name in requested
-    ]
+    ordinal = (
+        dict(node_ordinal)
+        if node_ordinal is not None
+        else {
+            node.name: index
+            for index, node in enumerate(graph_module.graph.nodes)
+        }
+    )
+    cut_nodes = sorted(
+        (by_name[name] for name in requested), key=lambda node: ordinal[node.name]
+    )
     unsupported = [
         node.name
         for node in cut_nodes
@@ -88,12 +102,15 @@ def extract_pure_fx_reference_cut(
         )
 
     cut_set = set(cut_nodes)
-    boundary_inputs = [
-        node
-        for node in graph_module.graph.nodes
-        if node not in cut_set
-        and any(node in cut_node.all_input_nodes for cut_node in cut_nodes)
-    ]
+    boundary_inputs = sorted(
+        {
+            node
+            for cut_node in cut_nodes
+            for node in cut_node.all_input_nodes
+            if node not in cut_set
+        },
+        key=lambda node: ordinal[node.name],
+    )
     boundary_outputs = [
         node
         for node in cut_nodes

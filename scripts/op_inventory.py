@@ -740,11 +740,15 @@ class _MetadataRecorder(TorchDispatchMode):
         module_context: _ModuleContext,
         *,
         emit_profiler_markers: bool = False,
+        retain_forward_outputs_for_origin_binding: bool = False,
     ) -> None:
         super().__init__()
         self.phase = StepPhase.FORWARD
         self.module_context = module_context
         self.emit_profiler_markers = emit_profiler_markers
+        self.retain_forward_outputs_for_origin_binding = (
+            retain_forward_outputs_for_origin_binding
+        )
         self.events: list[FullStepOperatorEvent] = []
         self.producer_by_object: dict[int, int] = {}
         self.producer_by_storage: dict[tuple[str, int], int] = {}
@@ -755,7 +759,10 @@ class _MetadataRecorder(TorchDispatchMode):
         # objects must be inspected after the forward closure returns.  They
         # are released before backward and never serialized.
         self._forward_output_tensors: dict[
-            int, tuple[weakref.ReferenceType[torch.Tensor], ...]
+            int,
+            tuple[
+                torch.Tensor | weakref.ReferenceType[torch.Tensor], ...
+            ],
         ] = {}
 
     def _metadata(
@@ -864,8 +871,10 @@ class _MetadataRecorder(TorchDispatchMode):
         )
         self.events.append(event)
         if self.phase is StepPhase.FORWARD:
-            self._forward_output_tensors[ordinal] = tuple(
-                weakref.ref(value) for value in output_tensors
+            self._forward_output_tensors[ordinal] = (
+                tuple(output_tensors)
+                if self.retain_forward_outputs_for_origin_binding
+                else tuple(weakref.ref(value) for value in output_tensors)
             )
         for value in output_tensors:
             self.producer_by_object[id(value)] = ordinal
@@ -910,7 +919,11 @@ class _MetadataRecorder(TorchDispatchMode):
                 sequence_nrs: list[int | None] = []
                 observation_statuses: list[str] = []
                 for output_reference in outputs:
-                    output = output_reference()
+                    output = (
+                        output_reference
+                        if isinstance(output_reference, torch.Tensor)
+                        else output_reference()
+                    )
                     if output is None:
                         nodes.append(None)
                         sequence_nrs.append(None)
@@ -972,6 +985,7 @@ def observe_full_forward_backward_step(
     endpoint_closure: Callable[[], Mapping[str, torch.Tensor]],
     model: Any | None = None,
     capture_autograd_sequence_numbers: bool = False,
+    retain_forward_outputs_for_origin_binding: bool = False,
 ) -> FullStepOperatorTrace:
     """Observe every ATen dispatch in one loss forward and backward."""
 
@@ -979,6 +993,9 @@ def observe_full_forward_backward_step(
     recorder = _MetadataRecorder(
         context,
         emit_profiler_markers=capture_autograd_sequence_numbers,
+        retain_forward_outputs_for_origin_binding=(
+            retain_forward_outputs_for_origin_binding
+        ),
     )
     context.install()
     try:

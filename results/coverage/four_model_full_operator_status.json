@@ -1,0 +1,3434 @@
+{
+  "cells": [
+    {
+      "candidate_fb_binding": {
+        "denominator": {
+          "bound_to_proved_fb_mathematics": 1446,
+          "candidate_compute_regions": 1446,
+          "proved_auxiliary_backward_nodes": 373,
+          "semantic_fb_units": 2261,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_aot_math_complete": true,
+          "all_candidate_compute_regions_retained": true,
+          "all_candidate_regions_bound": true,
+          "candidate_values_used": false,
+          "name_shape_or_runtime_ordinal_similarity_used": false,
+          "proof_tagged_generated_schedule_used": true
+        },
+        "path": "results/coverage/runtime_releases/qwen_seq64_r1/candidate_fb_bridge.json.gz",
+        "result_sha256": "39d0702486c826252d2b85e64e75e667393f945556b1e3d35b329d09c705b1fb",
+        "schema": "kernel-analyzer-candidate-fb-bridge-v1",
+        "status": "COMPLETE_ALL_EXECUTED_REGIONS_BOUND_TO_PROVED_FB_MATHEMATICS"
+      },
+      "candidate_inventory": {
+        "denominator": {
+          "all_runner_call_invocations": 6282,
+          "compute_invocations": 1446,
+          "compute_kind_counts": {
+            "DIRECT_ATEN": 1,
+            "EXTERN": 759,
+            "TRITON": 686
+          },
+          "helper_function_counts": {
+            "args.clear": 2,
+            "assert_size_stride": 1221,
+            "copy_if_misaligned": 2,
+            "empty_strided_cuda": 927,
+            "get_raw_stream": 686,
+            "reinterpret_tensor": 1994,
+            "torch.cuda._DeviceGuard": 2,
+            "torch.cuda.set_device": 2
+          },
+          "structural_or_runtime_helper_invocations": 4836
+        },
+        "gate": true,
+        "gates": null,
+        "path": "results/coverage/runtime_releases/qwen_seq64_r1/inventory.json.gz",
+        "result_sha256": "4b2cd303af2b33d1ab8e6d0f036dcf4eea165ea96b07d634bb2dc585106afd12",
+        "schema": "kernel-analyzer-executed-generated-inventory-summary-v1",
+        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+      },
+      "canonical_eager_fb_math": {
+        "analytic_fb_proof_units": 3459,
+        "auxiliary_backward_accounting_units": 677,
+        "closed_accounting_components": 4136,
+        "execution_census_invocations": 9269,
+        "origin_bound_fb_units": 3459,
+        "primary_fb_proof_units": 3459,
+        "source_ledger": "results/coverage/qwen_invocation_ledger.json.gz",
+        "status": "CAPTURED_EXECUTION_DERIVED_ANALYTIC_FB_PROVED"
+      },
+      "default_aot_fb_math": {
+        "binding_gates": {
+          "actual_inductor_default_partition": true,
+          "capture_present": true,
+          "math_capture_sha256_exact": true,
+          "math_ledger_complete": true,
+          "segmented_boundary_accounting_valid": true
+        },
+        "capture": {
+          "capture_sha256": "50ba127da692237c838c8e22129617df25de9b7e2995ec8a037160ae8ed4f283",
+          "gate": true,
+          "path": "results/coverage/standard_aot/qwen_seq64_capture_v2.json.gz",
+          "result_sha256": "7aa49ce71079ff146ebca9f2d15ad0c1c60b206c8e98acb8ab34fce7eee5c907",
+          "status": "COMPLETE_STANDARD_AOT_FORWARD_BACKWARD_CAPTURE"
+        },
+        "denominator": {
+          "auxiliary_backward_nodes": 373,
+          "backward_call_function_nodes": 6195,
+          "forward_call_function_nodes": 3530,
+          "requires_grad_forward_placeholders": 310,
+          "semantic_forward_backward_units": 2261,
+          "ssa_or_inactive_backward_units": 297,
+          "targets_with_declared_formula": 46,
+          "unique_targets": 46,
+          "units_pending_composite_vjp_proof": 0,
+          "units_with_actual_backward_nodes": 1964,
+          "units_with_complete_real_arithmetic_vjp_proof": 2261
+        },
+        "gate": true,
+        "gates": {
+          "all_argument_records_present": true,
+          "all_auxiliary_backward_nodes_derived": true,
+          "all_call_function_targets_have_declared_formulas": true,
+          "all_nodes_without_sequence_number_are_explicitly_derived_auxiliary": true,
+          "composite_vjp_proof_complete": true,
+          "every_backward_node_in_unit_or_auxiliary": true,
+          "every_forward_node_in_exactly_one_unit": true,
+          "every_semantic_origin_node_has_autograd_sequence_number": true
+        },
+        "path": "results/coverage/standard_aot/qwen_seq64_math_v2.json.gz",
+        "result_sha256": null,
+        "schema": "kernel-analyzer.round2-vl-math-ledger.v2",
+        "status": "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION"
+      },
+      "gates": {
+        "candidate_fb_binding": true,
+        "candidate_inventory": true,
+        "canonical_eager_fb_analytically_proved": true,
+        "default_aot_fb_analytically_proved": true,
+        "execution_census": true,
+        "fb_origin_bound": true,
+        "nontriton_precision_reference_valid": true,
+        "same_dtype_optimization_reference_valid": true,
+        "triton_execution_census": true,
+        "triton_numeric_reference_valid": true
+      },
+      "model": "qwen3_1p7b",
+      "nontriton_precision_oracle": {
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "qwen3-1p7b-0096": 760,
+              "qwen3-1p7b-0099": 760,
+              "qwen3-1p7b-0102": 760,
+              "qwen3-1p7b-0105": 760,
+              "qwen3-1p7b-0108": 760,
+              "qwen3-1p7b-0111": 760,
+              "qwen3-1p7b-0114": 760,
+              "qwen3-1p7b-0117": 760,
+              "qwen3-1p7b-0120": 760,
+              "qwen3-1p7b-0123": 760,
+              "qwen3-1p7b-0126": 760,
+              "qwen3-1p7b-0129": 760,
+              "qwen3-1p7b-0132": 760,
+              "qwen3-1p7b-0135": 760,
+              "qwen3-1p7b-0138": 760,
+              "qwen3-1p7b-0141": 760,
+              "qwen3-1p7b-0144": 760,
+              "qwen3-1p7b-0147": 760,
+              "qwen3-1p7b-0150": 760,
+              "qwen3-1p7b-0153": 760,
+              "qwen3-1p7b-0156": 760,
+              "qwen3-1p7b-0159": 760,
+              "qwen3-1p7b-0162": 760,
+              "qwen3-1p7b-0165": 760,
+              "qwen3-1p7b-0168": 760,
+              "qwen3-1p7b-0171": 760,
+              "qwen3-1p7b-0174": 760,
+              "qwen3-1p7b-0177": 760,
+              "qwen3-1p7b-0180": 760,
+              "qwen3-1p7b-0183": 760,
+              "qwen3-1p7b-0186": 760,
+              "qwen3-1p7b-0189": 760
+            },
+            "max": 760,
+            "min": 760
+          },
+          "actual_runtime_invocations_total": 24320,
+          "measured_runtime_endpoints": 760,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true
+        },
+        "path": "results/coverage/runtime_releases/qwen_seq64_r1/nontriton_oracle.json.gz",
+        "result_sha256": "aacab0119445b9f672be0d090e5ece8320779f4b9491ca81e5505a61e5dc0c57",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      },
+      "same_dtype_optimization_oracle": {
+        "denominator": {
+          "candidate_compute_regions": 1446,
+          "candidate_ports": 1785,
+          "exact_semantic_endpoints": 1612,
+          "internal_ports_closed_by_semantic_endpoint": 173,
+          "repeats_per_state": 2,
+          "states": 32,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "all_candidate_compute_regions_have_observed_output_ports": true,
+          "all_internal_candidate_ports_closed": true,
+          "all_reference_cuts_bitwise_self_replay": true,
+          "candidate_values_used_for_pairing": false,
+          "exact_compiler_origin_endpoints_only": true,
+          "runtime_environment_exact": true,
+          "same_dtype_bf16": true,
+          "same_model_weight_storage": true
+        },
+        "path": "results/coverage/runtime_releases/qwen_seq64_r1/same_dtype_oracle.json.gz",
+        "result_sha256": "7f143b1a9708c7524b0bffe06d6203db9fa017a69d1a66975dba23436db9c23a",
+        "schema": "kernel-analyzer-same-dtype-semantic-oracle-v1",
+        "status": "COMPLETE_SAME_DTYPE_OPTIMIZATION_ORACLE"
+      },
+      "shape": "batch1_seq64",
+      "status": "COMPLETE_ALL_DECLARED_GATES",
+      "triton_precision_oracle": {
+        "abi_audit": {
+          "historical_invalid_audit_not_applied": true,
+          "status": "VALID_INDEPENDENT_RECOMPILED_FP32_POINTER_ABI"
+        },
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "qwen3-1p7b-0096": 686,
+              "qwen3-1p7b-0099": 686,
+              "qwen3-1p7b-0102": 686,
+              "qwen3-1p7b-0105": 686,
+              "qwen3-1p7b-0108": 686,
+              "qwen3-1p7b-0111": 686,
+              "qwen3-1p7b-0114": 686,
+              "qwen3-1p7b-0117": 686,
+              "qwen3-1p7b-0120": 686,
+              "qwen3-1p7b-0123": 686,
+              "qwen3-1p7b-0126": 686,
+              "qwen3-1p7b-0129": 686,
+              "qwen3-1p7b-0132": 686,
+              "qwen3-1p7b-0135": 686,
+              "qwen3-1p7b-0138": 686,
+              "qwen3-1p7b-0141": 686,
+              "qwen3-1p7b-0144": 686,
+              "qwen3-1p7b-0147": 686,
+              "qwen3-1p7b-0150": 686,
+              "qwen3-1p7b-0153": 686,
+              "qwen3-1p7b-0156": 686,
+              "qwen3-1p7b-0159": 686,
+              "qwen3-1p7b-0162": 686,
+              "qwen3-1p7b-0165": 686,
+              "qwen3-1p7b-0168": 686,
+              "qwen3-1p7b-0171": 686,
+              "qwen3-1p7b-0174": 686,
+              "qwen3-1p7b-0177": 686,
+              "qwen3-1p7b-0180": 686,
+              "qwen3-1p7b-0183": 686,
+              "qwen3-1p7b-0186": 686,
+              "qwen3-1p7b-0189": 686
+            },
+            "max": 686,
+            "min": 686
+          },
+          "actual_runtime_invocations_total": 21952,
+          "measured_runtime_endpoints": 1025,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "execution_census_gate": true,
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true,
+          "typed_triton_pointer_abi_valid": true
+        },
+        "numeric_reference_gate": true,
+        "path": "results/coverage/runtime_releases/qwen_seq64_r1/typed_triton_oracle.json.gz",
+        "result_sha256": "b91a4be82acd20a6dfdbcdcb18d70ff07e7a56a0400844df846ed94f3d5e8d1d",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      }
+    },
+    {
+      "candidate_fb_binding": {
+        "denominator": {
+          "bound_to_proved_fb_mathematics": 1446,
+          "candidate_compute_regions": 1446,
+          "proved_auxiliary_backward_nodes": 373,
+          "semantic_fb_units": 2261,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_aot_math_complete": true,
+          "all_candidate_compute_regions_retained": true,
+          "all_candidate_regions_bound": true,
+          "candidate_values_used": false,
+          "name_shape_or_runtime_ordinal_similarity_used": false,
+          "proof_tagged_generated_schedule_used": true
+        },
+        "path": "results/coverage/runtime_releases/qwen_seq128_r1/candidate_fb_bridge.json.gz",
+        "result_sha256": "f1e5e79310deae132aca240a19442efadc7ff8068c808bdb72af7c94db7aa573",
+        "schema": "kernel-analyzer-candidate-fb-bridge-v1",
+        "status": "COMPLETE_ALL_EXECUTED_REGIONS_BOUND_TO_PROVED_FB_MATHEMATICS"
+      },
+      "candidate_inventory": {
+        "denominator": {
+          "all_runner_call_invocations": 6171,
+          "compute_invocations": 1446,
+          "compute_kind_counts": {
+            "DIRECT_ATEN": 1,
+            "EXTERN": 759,
+            "TRITON": 686
+          },
+          "helper_function_counts": {
+            "args.clear": 2,
+            "assert_size_stride": 1221,
+            "copy_if_misaligned": 2,
+            "empty_strided_cuda": 924,
+            "get_raw_stream": 686,
+            "reinterpret_tensor": 1886,
+            "torch.cuda._DeviceGuard": 2,
+            "torch.cuda.set_device": 2
+          },
+          "structural_or_runtime_helper_invocations": 4725
+        },
+        "gate": true,
+        "gates": null,
+        "path": "results/coverage/runtime_releases/qwen_seq128_r1/inventory.json.gz",
+        "result_sha256": "6eaa30fe7a7ac5b544a4dbc5baefccfd3cc3e45fa8ac987eccd561fa049f7bcf",
+        "schema": "kernel-analyzer-executed-generated-inventory-summary-v1",
+        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+      },
+      "canonical_eager_fb_math": {
+        "analytic_fb_proof_units": 3262,
+        "auxiliary_backward_accounting_units": 311,
+        "closed_accounting_components": 3573,
+        "execution_census_invocations": 9269,
+        "origin_bound_fb_units": 3262,
+        "primary_fb_proof_units": 3262,
+        "source_ledger": "results/coverage/qwen_seq128_invocation_ledger.json.gz",
+        "status": "CAPTURED_EXECUTION_DERIVED_ANALYTIC_FB_PROVED"
+      },
+      "default_aot_fb_math": {
+        "binding_gates": {
+          "actual_inductor_default_partition": true,
+          "capture_present": true,
+          "math_capture_sha256_exact": true,
+          "math_ledger_complete": true,
+          "segmented_boundary_accounting_valid": true
+        },
+        "capture": {
+          "capture_sha256": "292ce7a5ace0f12fe86a57a6a4149e6d389e01719f37f5e6f0bc453279538a20",
+          "gate": true,
+          "path": "results/coverage/standard_aot/qwen_seq128_capture.json.gz",
+          "result_sha256": "ae46cff0292465d0788148cbd327111f9352b7cfea2f2618a0510fa6cd0c7c2a",
+          "status": "COMPLETE_STANDARD_AOT_FORWARD_BACKWARD_CAPTURE"
+        },
+        "denominator": {
+          "auxiliary_backward_nodes": 373,
+          "backward_call_function_nodes": 6195,
+          "forward_call_function_nodes": 3530,
+          "requires_grad_forward_placeholders": 310,
+          "semantic_forward_backward_units": 2261,
+          "ssa_or_inactive_backward_units": 297,
+          "targets_with_declared_formula": 46,
+          "unique_targets": 46,
+          "units_pending_composite_vjp_proof": 0,
+          "units_with_actual_backward_nodes": 1964,
+          "units_with_complete_real_arithmetic_vjp_proof": 2261
+        },
+        "gate": true,
+        "gates": {
+          "all_argument_records_present": true,
+          "all_auxiliary_backward_nodes_derived": true,
+          "all_call_function_targets_have_declared_formulas": true,
+          "all_nodes_without_sequence_number_are_explicitly_derived_auxiliary": true,
+          "composite_vjp_proof_complete": true,
+          "every_backward_node_in_unit_or_auxiliary": true,
+          "every_forward_node_in_exactly_one_unit": true,
+          "every_semantic_origin_node_has_autograd_sequence_number": true
+        },
+        "path": "results/coverage/standard_aot/qwen_seq128_math.json.gz",
+        "result_sha256": null,
+        "schema": "kernel-analyzer.round2-vl-math-ledger.v2",
+        "status": "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION"
+      },
+      "gates": {
+        "candidate_fb_binding": true,
+        "candidate_inventory": true,
+        "canonical_eager_fb_analytically_proved": true,
+        "default_aot_fb_analytically_proved": true,
+        "execution_census": true,
+        "fb_origin_bound": true,
+        "nontriton_precision_reference_valid": true,
+        "same_dtype_optimization_reference_valid": true,
+        "triton_execution_census": true,
+        "triton_numeric_reference_valid": true
+      },
+      "model": "qwen3_1p7b",
+      "nontriton_precision_oracle": {
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "qwen3-1p7b-0097": 760,
+              "qwen3-1p7b-0100": 760,
+              "qwen3-1p7b-0103": 760,
+              "qwen3-1p7b-0106": 760,
+              "qwen3-1p7b-0109": 760,
+              "qwen3-1p7b-0112": 760,
+              "qwen3-1p7b-0115": 760,
+              "qwen3-1p7b-0118": 760,
+              "qwen3-1p7b-0121": 760,
+              "qwen3-1p7b-0124": 760,
+              "qwen3-1p7b-0127": 760,
+              "qwen3-1p7b-0130": 760,
+              "qwen3-1p7b-0133": 760,
+              "qwen3-1p7b-0136": 760,
+              "qwen3-1p7b-0139": 760,
+              "qwen3-1p7b-0142": 760,
+              "qwen3-1p7b-0145": 760,
+              "qwen3-1p7b-0148": 760,
+              "qwen3-1p7b-0151": 760,
+              "qwen3-1p7b-0154": 760,
+              "qwen3-1p7b-0157": 760,
+              "qwen3-1p7b-0160": 760,
+              "qwen3-1p7b-0163": 760,
+              "qwen3-1p7b-0166": 760,
+              "qwen3-1p7b-0169": 760,
+              "qwen3-1p7b-0172": 760,
+              "qwen3-1p7b-0175": 760,
+              "qwen3-1p7b-0178": 760,
+              "qwen3-1p7b-0181": 760,
+              "qwen3-1p7b-0184": 760,
+              "qwen3-1p7b-0187": 760,
+              "qwen3-1p7b-0190": 760
+            },
+            "max": 760,
+            "min": 760
+          },
+          "actual_runtime_invocations_total": 24320,
+          "measured_runtime_endpoints": 760,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true
+        },
+        "path": "results/coverage/runtime_releases/qwen_seq128_r1/nontriton_oracle.json.gz",
+        "result_sha256": "454ac864e8770c4a949fac0f8d779970b0af1e78a5f7ea16e5860f5e725d7598",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      },
+      "same_dtype_optimization_oracle": {
+        "denominator": {
+          "candidate_compute_regions": 1446,
+          "candidate_ports": 1785,
+          "exact_semantic_endpoints": 1612,
+          "internal_ports_closed_by_semantic_endpoint": 173,
+          "repeats_per_state": 2,
+          "states": 32,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "all_candidate_compute_regions_have_observed_output_ports": true,
+          "all_internal_candidate_ports_closed": true,
+          "all_reference_cuts_bitwise_self_replay": true,
+          "candidate_values_used_for_pairing": false,
+          "exact_compiler_origin_endpoints_only": true,
+          "runtime_environment_exact": true,
+          "same_dtype_bf16": true,
+          "same_model_weight_storage": true
+        },
+        "path": "results/coverage/runtime_releases/qwen_seq128_r1/same_dtype_oracle.json.gz",
+        "result_sha256": "1983d9c7386c06441ff5e5cd354dd4238ca616d2a9f98113adbee8d176dbabba",
+        "schema": "kernel-analyzer-same-dtype-semantic-oracle-v1",
+        "status": "COMPLETE_SAME_DTYPE_OPTIMIZATION_ORACLE"
+      },
+      "shape": "batch1_seq128",
+      "status": "COMPLETE_ALL_DECLARED_GATES",
+      "triton_precision_oracle": {
+        "abi_audit": {
+          "historical_invalid_audit_not_applied": true,
+          "status": "VALID_INDEPENDENT_RECOMPILED_FP32_POINTER_ABI"
+        },
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "qwen3-1p7b-0097": 686,
+              "qwen3-1p7b-0100": 686,
+              "qwen3-1p7b-0103": 686,
+              "qwen3-1p7b-0106": 686,
+              "qwen3-1p7b-0109": 686,
+              "qwen3-1p7b-0112": 686,
+              "qwen3-1p7b-0115": 686,
+              "qwen3-1p7b-0118": 686,
+              "qwen3-1p7b-0121": 686,
+              "qwen3-1p7b-0124": 686,
+              "qwen3-1p7b-0127": 686,
+              "qwen3-1p7b-0130": 686,
+              "qwen3-1p7b-0133": 686,
+              "qwen3-1p7b-0136": 686,
+              "qwen3-1p7b-0139": 686,
+              "qwen3-1p7b-0142": 686,
+              "qwen3-1p7b-0145": 686,
+              "qwen3-1p7b-0148": 686,
+              "qwen3-1p7b-0151": 686,
+              "qwen3-1p7b-0154": 686,
+              "qwen3-1p7b-0157": 686,
+              "qwen3-1p7b-0160": 686,
+              "qwen3-1p7b-0163": 686,
+              "qwen3-1p7b-0166": 686,
+              "qwen3-1p7b-0169": 686,
+              "qwen3-1p7b-0172": 686,
+              "qwen3-1p7b-0175": 686,
+              "qwen3-1p7b-0178": 686,
+              "qwen3-1p7b-0181": 686,
+              "qwen3-1p7b-0184": 686,
+              "qwen3-1p7b-0187": 686,
+              "qwen3-1p7b-0190": 686
+            },
+            "max": 686,
+            "min": 686
+          },
+          "actual_runtime_invocations_total": 21952,
+          "measured_runtime_endpoints": 1025,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "execution_census_gate": true,
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true,
+          "typed_triton_pointer_abi_valid": true
+        },
+        "numeric_reference_gate": true,
+        "path": "results/coverage/runtime_releases/qwen_seq128_r1/typed_triton_oracle.json.gz",
+        "result_sha256": "49d16513faa92d1f67889a846bada4a1ac17ede0e30c8d5e1f17d0f77418b220",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      }
+    },
+    {
+      "candidate_fb_binding": {
+        "denominator": {
+          "bound_to_proved_fb_mathematics": 1500,
+          "candidate_compute_regions": 1500,
+          "proved_auxiliary_backward_nodes": 373,
+          "semantic_fb_units": 2261,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_aot_math_complete": true,
+          "all_candidate_compute_regions_retained": true,
+          "all_candidate_regions_bound": true,
+          "candidate_values_used": false,
+          "name_shape_or_runtime_ordinal_similarity_used": false,
+          "proof_tagged_generated_schedule_used": true
+        },
+        "path": "results/coverage/runtime_releases/qwen_seq256_r1/candidate_fb_bridge.json.gz",
+        "result_sha256": "664f05e811afadc7250b3d336c4d26600a4fbf18dea7cd7cf9735070f3bf0c9c",
+        "schema": "kernel-analyzer-candidate-fb-bridge-v1",
+        "status": "COMPLETE_ALL_EXECUTED_REGIONS_BOUND_TO_PROVED_FB_MATHEMATICS"
+      },
+      "candidate_inventory": {
+        "denominator": {
+          "all_runner_call_invocations": 6391,
+          "compute_invocations": 1500,
+          "compute_kind_counts": {
+            "DIRECT_ATEN": 1,
+            "EXTERN": 759,
+            "TRITON": 740
+          },
+          "helper_function_counts": {
+            "args.clear": 2,
+            "assert_size_stride": 1221,
+            "copy_if_misaligned": 2,
+            "empty_strided_cuda": 929,
+            "get_raw_stream": 740,
+            "reinterpret_tensor": 1993,
+            "torch.cuda._DeviceGuard": 2,
+            "torch.cuda.set_device": 2
+          },
+          "structural_or_runtime_helper_invocations": 4891
+        },
+        "gate": true,
+        "gates": null,
+        "path": "results/coverage/runtime_releases/qwen_seq256_r1/inventory.json.gz",
+        "result_sha256": "d48cad90eb8b144ac296c5c5af0db1231ca6fdf0c689b9f1a8e8196ad229a526",
+        "schema": "kernel-analyzer-executed-generated-inventory-summary-v1",
+        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+      },
+      "canonical_eager_fb_math": {
+        "analytic_fb_proof_units": 3262,
+        "auxiliary_backward_accounting_units": 311,
+        "closed_accounting_components": 3573,
+        "execution_census_invocations": 9269,
+        "origin_bound_fb_units": 3262,
+        "primary_fb_proof_units": 3262,
+        "source_ledger": "results/coverage/qwen_seq256_invocation_ledger.json.gz",
+        "status": "CAPTURED_EXECUTION_DERIVED_ANALYTIC_FB_PROVED"
+      },
+      "default_aot_fb_math": {
+        "binding_gates": {
+          "actual_inductor_default_partition": true,
+          "capture_present": true,
+          "math_capture_sha256_exact": true,
+          "math_ledger_complete": true,
+          "segmented_boundary_accounting_valid": true
+        },
+        "capture": {
+          "capture_sha256": "7230af3b062f70af166ca2f44b63d8866f00907e2c31978664d0eec908080b57",
+          "gate": true,
+          "path": "results/coverage/standard_aot/qwen_seq256_capture.json.gz",
+          "result_sha256": "3ccbc44c3b46f285f9989004531a722a25becd8a2c7924894fb1e0258b76b420",
+          "status": "COMPLETE_STANDARD_AOT_FORWARD_BACKWARD_CAPTURE"
+        },
+        "denominator": {
+          "auxiliary_backward_nodes": 373,
+          "backward_call_function_nodes": 6195,
+          "forward_call_function_nodes": 3530,
+          "requires_grad_forward_placeholders": 310,
+          "semantic_forward_backward_units": 2261,
+          "ssa_or_inactive_backward_units": 297,
+          "targets_with_declared_formula": 46,
+          "unique_targets": 46,
+          "units_pending_composite_vjp_proof": 0,
+          "units_with_actual_backward_nodes": 1964,
+          "units_with_complete_real_arithmetic_vjp_proof": 2261
+        },
+        "gate": true,
+        "gates": {
+          "all_argument_records_present": true,
+          "all_auxiliary_backward_nodes_derived": true,
+          "all_call_function_targets_have_declared_formulas": true,
+          "all_nodes_without_sequence_number_are_explicitly_derived_auxiliary": true,
+          "composite_vjp_proof_complete": true,
+          "every_backward_node_in_unit_or_auxiliary": true,
+          "every_forward_node_in_exactly_one_unit": true,
+          "every_semantic_origin_node_has_autograd_sequence_number": true
+        },
+        "path": "results/coverage/standard_aot/qwen_seq256_math.json.gz",
+        "result_sha256": null,
+        "schema": "kernel-analyzer.round2-vl-math-ledger.v2",
+        "status": "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION"
+      },
+      "gates": {
+        "candidate_fb_binding": true,
+        "candidate_inventory": true,
+        "canonical_eager_fb_analytically_proved": true,
+        "default_aot_fb_analytically_proved": true,
+        "execution_census": true,
+        "fb_origin_bound": true,
+        "nontriton_precision_reference_valid": true,
+        "same_dtype_optimization_reference_valid": true,
+        "triton_execution_census": true,
+        "triton_numeric_reference_valid": true
+      },
+      "model": "qwen3_1p7b",
+      "nontriton_precision_oracle": {
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "qwen3-1p7b-0098": 760,
+              "qwen3-1p7b-0101": 760,
+              "qwen3-1p7b-0104": 760,
+              "qwen3-1p7b-0107": 760,
+              "qwen3-1p7b-0110": 760,
+              "qwen3-1p7b-0113": 760,
+              "qwen3-1p7b-0116": 760,
+              "qwen3-1p7b-0119": 760,
+              "qwen3-1p7b-0122": 760,
+              "qwen3-1p7b-0125": 760,
+              "qwen3-1p7b-0128": 760,
+              "qwen3-1p7b-0131": 760,
+              "qwen3-1p7b-0134": 760,
+              "qwen3-1p7b-0137": 760,
+              "qwen3-1p7b-0140": 760,
+              "qwen3-1p7b-0143": 760,
+              "qwen3-1p7b-0146": 760,
+              "qwen3-1p7b-0149": 760,
+              "qwen3-1p7b-0152": 760,
+              "qwen3-1p7b-0155": 760,
+              "qwen3-1p7b-0158": 760,
+              "qwen3-1p7b-0161": 760,
+              "qwen3-1p7b-0164": 760,
+              "qwen3-1p7b-0167": 760,
+              "qwen3-1p7b-0170": 760,
+              "qwen3-1p7b-0173": 760,
+              "qwen3-1p7b-0176": 760,
+              "qwen3-1p7b-0179": 760,
+              "qwen3-1p7b-0182": 760,
+              "qwen3-1p7b-0185": 760,
+              "qwen3-1p7b-0188": 760,
+              "qwen3-1p7b-0191": 760
+            },
+            "max": 760,
+            "min": 760
+          },
+          "actual_runtime_invocations_total": 24320,
+          "measured_runtime_endpoints": 760,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true
+        },
+        "path": "results/coverage/runtime_releases/qwen_seq256_r1/nontriton_oracle.json.gz",
+        "result_sha256": "3a9e4170687762527f9e82de0dae438115930b7d02e48b2c0e2086596dcccd43",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      },
+      "same_dtype_optimization_oracle": {
+        "denominator": {
+          "candidate_compute_regions": 1500,
+          "candidate_ports": 1840,
+          "compiler_added_ports_closed_by_exact_theorem": 0,
+          "exact_semantic_endpoints": 1612,
+          "internal_ports_closed_by_semantic_endpoint": 228,
+          "repeats_per_state": 2,
+          "states": 32,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "all_assigned_frozen_states_present": true,
+          "all_candidate_compute_regions_have_observed_output_ports": true,
+          "all_internal_candidate_ports_closed": true,
+          "all_reference_cuts_bitwise_self_replay": true,
+          "candidate_values_used_for_pairing": false,
+          "cross_phase_runtime_bridge_complete": true,
+          "exact_compiler_origin_endpoints_only": true,
+          "runtime_environment_exact": true,
+          "same_dtype_bf16": true,
+          "same_model_weight_storage": true
+        },
+        "path": "results/coverage/runtime_releases/qwen_seq256_r1/same_dtype_oracle.json.gz",
+        "result_sha256": "613a90678f9279284814823e1ded9f080e46c4255d2d735da591b9f05fc10dae",
+        "schema": "kernel-analyzer-same-dtype-semantic-oracle-v1",
+        "status": "COMPLETE_SAME_DTYPE_OPTIMIZATION_ORACLE"
+      },
+      "shape": "batch1_seq256",
+      "status": "COMPLETE_ALL_DECLARED_GATES",
+      "triton_precision_oracle": {
+        "abi_audit": {
+          "historical_invalid_audit_not_applied": true,
+          "status": "VALID_INDEPENDENT_RECOMPILED_FP32_POINTER_ABI"
+        },
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "qwen3-1p7b-0098": 740,
+              "qwen3-1p7b-0101": 740,
+              "qwen3-1p7b-0104": 740,
+              "qwen3-1p7b-0107": 740,
+              "qwen3-1p7b-0110": 740,
+              "qwen3-1p7b-0113": 740,
+              "qwen3-1p7b-0116": 740,
+              "qwen3-1p7b-0119": 740,
+              "qwen3-1p7b-0122": 740,
+              "qwen3-1p7b-0125": 740,
+              "qwen3-1p7b-0128": 740,
+              "qwen3-1p7b-0131": 740,
+              "qwen3-1p7b-0134": 740,
+              "qwen3-1p7b-0137": 740,
+              "qwen3-1p7b-0140": 740,
+              "qwen3-1p7b-0143": 740,
+              "qwen3-1p7b-0146": 740,
+              "qwen3-1p7b-0149": 740,
+              "qwen3-1p7b-0152": 740,
+              "qwen3-1p7b-0155": 740,
+              "qwen3-1p7b-0158": 740,
+              "qwen3-1p7b-0161": 740,
+              "qwen3-1p7b-0164": 740,
+              "qwen3-1p7b-0167": 740,
+              "qwen3-1p7b-0170": 740,
+              "qwen3-1p7b-0173": 740,
+              "qwen3-1p7b-0176": 740,
+              "qwen3-1p7b-0179": 740,
+              "qwen3-1p7b-0182": 740,
+              "qwen3-1p7b-0185": 740,
+              "qwen3-1p7b-0188": 740,
+              "qwen3-1p7b-0191": 740
+            },
+            "max": 740,
+            "min": 740
+          },
+          "actual_runtime_invocations_total": 23680,
+          "measured_runtime_endpoints": 1080,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "execution_census_gate": true,
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true,
+          "typed_triton_pointer_abi_valid": true
+        },
+        "numeric_reference_gate": true,
+        "path": "results/coverage/runtime_releases/qwen_seq256_r1/typed_triton_oracle.json.gz",
+        "result_sha256": "663a0a00ad1447fac872f236d0536bb826210a9f18501bc357df172cef33f687",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      }
+    },
+    {
+      "candidate_fb_binding": {
+        "denominator": {
+          "bound_to_proved_fb_mathematics": 8513,
+          "candidate_compute_regions": 8513,
+          "proved_auxiliary_backward_nodes": 10785,
+          "semantic_fb_units": 14824,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_aot_math_complete": true,
+          "all_candidate_compute_regions_retained": true,
+          "all_candidate_regions_bound": true,
+          "candidate_values_used": false,
+          "name_shape_or_runtime_ordinal_similarity_used": false,
+          "proof_capture_sha_or_exact_graph_identity": true,
+          "proof_tagged_generated_schedule_used": true
+        },
+        "path": "results/coverage/runtime_releases/mamba_seq64_r1/candidate_fb_bridge.json.gz",
+        "result_sha256": "12769a78cd0be616c0c4d0bec4e9957bd320f156e447a004f8e5fab2dcd11b09",
+        "schema": "kernel-analyzer-candidate-fb-bridge-v1",
+        "status": "COMPLETE_ALL_EXECUTED_REGIONS_BOUND_TO_PROVED_FB_MATHEMATICS"
+      },
+      "candidate_inventory": {
+        "denominator": {
+          "all_runner_call_invocations": 33002,
+          "compute_invocations": 8513,
+          "compute_kind_counts": {
+            "DIRECT_ATEN": 1,
+            "DIRECT_TORCH_OP": 24,
+            "EXTERN": 3387,
+            "TRITON": 5101
+          },
+          "helper_function_counts": {
+            "args.clear": 2,
+            "assert_alignment": 48,
+            "assert_size_stride": 5413,
+            "copy_if_misaligned": 2,
+            "empty_strided_cuda": 3786,
+            "get_raw_stream": 5101,
+            "reinterpret_tensor": 10133,
+            "torch.cuda._DeviceGuard": 2,
+            "torch.cuda.set_device": 2
+          },
+          "structural_or_runtime_helper_invocations": 24489
+        },
+        "gate": true,
+        "gates": null,
+        "path": "results/coverage/runtime_releases/mamba_seq64_r1/inventory.json.gz",
+        "result_sha256": "08a4e9437a2ec77df592d6c330fb931edbe87489d1ae3f5da6c2f23d01338778",
+        "schema": "kernel-analyzer-executed-generated-inventory-summary-v1",
+        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+      },
+      "canonical_eager_fb_math": {
+        "analytic_fb_proof_units": 22937,
+        "auxiliary_backward_accounting_units": 243,
+        "closed_accounting_components": 23180,
+        "execution_census_invocations": 56411,
+        "origin_bound_fb_units": 22937,
+        "primary_fb_proof_units": 22937,
+        "source_ledger": "results/coverage/mamba_invocation_ledger.json.gz",
+        "status": "CAPTURED_EXECUTION_DERIVED_ANALYTIC_FB_PROVED"
+      },
+      "default_aot_fb_math": {
+        "binding_gates": {
+          "actual_inductor_default_partition": true,
+          "capture_present": true,
+          "math_capture_sha256_exact": true,
+          "math_ledger_complete": true,
+          "segmented_boundary_accounting_valid": true
+        },
+        "capture": {
+          "capture_sha256": "19ae220ccdc859d7f1af3f5b272f2fa9a44127342ab101d87561d34d410b84b2",
+          "gate": true,
+          "path": "results/coverage/runtime_releases/mamba_seq64_r1/default_aot_capture.json.gz",
+          "result_sha256": "33f117a1c3c3cd14d31874d94c577517500b86d8c5834520c4a22acf705c31f3",
+          "status": "COMPLETE_AOT_FB_CAPTURE"
+        },
+        "denominator": {
+          "auxiliary_backward_nodes": 10785,
+          "backward_call_function_nodes": 34444,
+          "backward_only_partition_replay_nodes": 47,
+          "forward_call_function_nodes": 29509,
+          "partition_auxiliary_forward_nodes": 1536,
+          "requires_grad_forward_placeholders": 242,
+          "semantic_forward_backward_units": 14824,
+          "ssa_or_inactive_backward_units": 1607,
+          "targets_with_declared_formula": 45,
+          "unique_targets": 45,
+          "units_pending_composite_vjp_proof": 0,
+          "units_with_actual_backward_nodes": 13217,
+          "units_with_complete_real_arithmetic_vjp_proof": 14824
+        },
+        "gate": true,
+        "gates": {
+          "all_argument_records_present": true,
+          "all_auxiliary_backward_nodes_derived": true,
+          "all_backward_only_partition_replays_derived": true,
+          "all_call_function_targets_have_declared_formulas": true,
+          "all_nodes_without_sequence_number_are_inside_explicit_proofs": true,
+          "all_partition_auxiliary_forward_nodes_derived": true,
+          "composite_vjp_proof_complete": true,
+          "every_backward_node_in_unit_or_auxiliary": true,
+          "every_forward_node_in_unit_or_partition_auxiliary": true,
+          "every_semantic_unit_has_exact_origin_and_sequence_anchor": true
+        },
+        "path": "results/coverage/runtime_releases/mamba_seq64_r1/default_aot_math.json.gz",
+        "result_sha256": null,
+        "schema": "kernel-analyzer.round2-vl-math-ledger.v2",
+        "status": "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION"
+      },
+      "gates": {
+        "candidate_fb_binding": true,
+        "candidate_inventory": true,
+        "canonical_eager_fb_analytically_proved": true,
+        "default_aot_fb_analytically_proved": true,
+        "execution_census": true,
+        "fb_origin_bound": true,
+        "nontriton_precision_reference_valid": true,
+        "same_dtype_optimization_reference_valid": true,
+        "triton_execution_census": true,
+        "triton_numeric_reference_valid": true
+      },
+      "model": "mamba_130m",
+      "nontriton_precision_oracle": {
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 3412,
+              "1": 3412,
+              "10": 3412,
+              "11": 3412,
+              "12": 3412,
+              "13": 3412,
+              "14": 3412,
+              "15": 3412,
+              "16": 3412,
+              "17": 3412,
+              "18": 3412,
+              "19": 3412,
+              "2": 3412,
+              "20": 3412,
+              "21": 3412,
+              "22": 3412,
+              "23": 3412,
+              "24": 3412,
+              "25": 3412,
+              "26": 3412,
+              "27": 3412,
+              "28": 3412,
+              "29": 3412,
+              "3": 3412,
+              "30": 3412,
+              "31": 3412,
+              "4": 3412,
+              "5": 3412,
+              "6": 3412,
+              "7": 3412,
+              "8": 3412,
+              "9": 3412
+            },
+            "max": 3412,
+            "min": 3412
+          },
+          "actual_runtime_invocations_total": 109184,
+          "measured_runtime_endpoints": 3436,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true
+        },
+        "path": "results/coverage/runtime_releases/mamba_seq64_r1/nontriton_oracle.json.gz",
+        "result_sha256": "7610ef2c6c230f1465cdda586587b93189b0e9cb42ee37b0cf5aa90d005d3268",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      },
+      "same_dtype_optimization_oracle": {
+        "denominator": {
+          "candidate_compute_regions": 8513,
+          "candidate_ports": 11755,
+          "compiler_added_ports_closed_by_exact_theorem": 0,
+          "exact_semantic_endpoints": 6951,
+          "internal_ports_closed_by_semantic_endpoint": 4804,
+          "repeats_per_state": 2,
+          "states": 32,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "all_assigned_frozen_states_present": true,
+          "all_candidate_compute_regions_have_observed_output_ports": true,
+          "all_internal_candidate_ports_closed": true,
+          "all_reference_cuts_bitwise_self_replay": true,
+          "candidate_values_used_for_pairing": false,
+          "cross_phase_runtime_bridge_complete": true,
+          "exact_compiler_origin_endpoints_only": true,
+          "runtime_environment_exact": true,
+          "same_dtype_bf16": true,
+          "same_model_weight_storage": true
+        },
+        "path": "results/coverage/runtime_releases/mamba_seq64_r1/same_dtype_oracle.json.gz",
+        "result_sha256": "e71a96e8e4a3629d49468a86375d361de7ad998777e2383a7cb418c15f7bcfb6",
+        "schema": "kernel-analyzer-same-dtype-semantic-oracle-v1",
+        "status": "COMPLETE_SAME_DTYPE_OPTIMIZATION_ORACLE"
+      },
+      "shape": "batch1_seq64",
+      "status": "COMPLETE_ALL_DECLARED_GATES",
+      "triton_precision_oracle": {
+        "abi_audit": {
+          "historical_invalid_audit_not_applied": true,
+          "status": "VALID_INDEPENDENT_RECOMPILED_FP32_POINTER_ABI"
+        },
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 5101,
+              "1": 5101,
+              "10": 5101,
+              "11": 5101,
+              "12": 5101,
+              "13": 5101,
+              "14": 5101,
+              "15": 5101,
+              "16": 5101,
+              "17": 5101,
+              "18": 5101,
+              "19": 5101,
+              "2": 5101,
+              "20": 5101,
+              "21": 5101,
+              "22": 5101,
+              "23": 5101,
+              "24": 5101,
+              "25": 5101,
+              "26": 5101,
+              "27": 5101,
+              "28": 5101,
+              "29": 5101,
+              "3": 5101,
+              "30": 5101,
+              "31": 5101,
+              "4": 5101,
+              "5": 5101,
+              "6": 5101,
+              "7": 5101,
+              "8": 5101,
+              "9": 5101
+            },
+            "max": 5101,
+            "min": 5101
+          },
+          "actual_runtime_invocations_total": 163232,
+          "measured_runtime_endpoints": 8343,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "execution_census_gate": true,
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true,
+          "typed_triton_pointer_abi_valid": true
+        },
+        "numeric_reference_gate": true,
+        "path": "results/coverage/runtime_releases/mamba_seq64_r1/typed_triton_oracle.json.gz",
+        "result_sha256": "492b87ec8afde25fbff88c182aeec16e5dbf1d582d0faa1d7b30e1e168d15eba",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      }
+    },
+    {
+      "candidate_fb_binding": {
+        "denominator": {
+          "bound_to_proved_fb_mathematics": 16265,
+          "candidate_compute_regions": 16265,
+          "proved_auxiliary_backward_nodes": 21537,
+          "semantic_fb_units": 28648,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_aot_math_complete": true,
+          "all_candidate_compute_regions_retained": true,
+          "all_candidate_regions_bound": true,
+          "candidate_values_used": false,
+          "name_shape_or_runtime_ordinal_similarity_used": false,
+          "only_explicit_device_put_graphs_admitted": true,
+          "proof_capture_sha_or_exact_graph_identity": true,
+          "proof_tagged_generated_schedule_used": true,
+          "segmented_source_to_normalized_node_bijection": true
+        },
+        "path": "results/coverage/runtime_releases/mamba_seq128_r1/candidate_fb_bridge.json.gz",
+        "result_sha256": "0ea43f7f211142282af1a2cf034b99806050fdf0452da2a955544c3d79d13a39",
+        "schema": "kernel-analyzer-candidate-fb-bridge-v1",
+        "status": "COMPLETE_ALL_EXECUTED_REGIONS_BOUND_TO_PROVED_FB_MATHEMATICS"
+      },
+      "candidate_inventory": {
+        "denominator": {
+          "all_runner_call_invocations": 62629,
+          "compute_invocations": 16265,
+          "compute_kind_counts": {
+            "DIRECT_ATEN": 1,
+            "DIRECT_TORCH_OP": 24,
+            "EXTERN": 6459,
+            "TRITON": 9781
+          },
+          "helper_function_counts": {
+            "args.clear": 2,
+            "assert_alignment": 48,
+            "assert_size_stride": 10021,
+            "copy_if_misaligned": 2,
+            "empty_strided_cuda": 7113,
+            "get_raw_stream": 9781,
+            "reinterpret_tensor": 19393,
+            "torch.cuda._DeviceGuard": 2,
+            "torch.cuda.set_device": 2
+          },
+          "structural_or_runtime_helper_invocations": 46364
+        },
+        "gate": true,
+        "gates": null,
+        "path": "results/coverage/runtime_releases/mamba_seq128_r1/inventory.json.gz",
+        "result_sha256": "23683965d53fca13e2eeee12059fc5fdb557f7e5523b0091890de9e4fb23e96a",
+        "schema": "kernel-analyzer-executed-generated-inventory-summary-v1",
+        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+      },
+      "canonical_eager_fb_math": {
+        "analytic_fb_proof_units": 44441,
+        "auxiliary_backward_accounting_units": 243,
+        "closed_accounting_components": 44684,
+        "execution_census_invocations": 108635,
+        "origin_bound_fb_units": 44441,
+        "primary_fb_proof_units": 44441,
+        "source_ledger": "results/coverage/mamba_seq128_invocation_ledger.json.gz",
+        "status": "CAPTURED_EXECUTION_DERIVED_ANALYTIC_FB_PROVED"
+      },
+      "default_aot_fb_math": {
+        "binding_gates": {
+          "actual_inductor_default_partition": true,
+          "capture_present": true,
+          "math_capture_sha256_exact": true,
+          "math_ledger_complete": true,
+          "segmented_boundary_accounting_valid": true
+        },
+        "capture": {
+          "capture_sha256": "58d113b4ba5b4c05695d4d1d84df2c436106ac165ffa87751c9dd79a16cd7998",
+          "gate": true,
+          "path": "results/coverage/runtime_releases/mamba_seq128_r1/default_aot_capture.json.gz",
+          "result_sha256": "923bc04f4750f9d1d486e649ef2f196973953f320f90a5c931beeffde5800aad",
+          "status": "COMPLETE_AOT_FB_CAPTURE"
+        },
+        "denominator": {
+          "auxiliary_backward_nodes": 21537,
+          "backward_call_function_nodes": 65164,
+          "backward_only_partition_replay_nodes": 47,
+          "forward_call_function_nodes": 57157,
+          "partition_auxiliary_forward_nodes": 3072,
+          "requires_grad_forward_placeholders": 242,
+          "semantic_forward_backward_units": 28648,
+          "ssa_or_inactive_backward_units": 3143,
+          "targets_with_declared_formula": 45,
+          "unique_targets": 45,
+          "units_pending_composite_vjp_proof": 0,
+          "units_with_actual_backward_nodes": 25505,
+          "units_with_complete_real_arithmetic_vjp_proof": 28648
+        },
+        "gate": true,
+        "gates": {
+          "all_argument_records_present": true,
+          "all_auxiliary_backward_nodes_derived": true,
+          "all_backward_only_partition_replays_derived": true,
+          "all_call_function_targets_have_declared_formulas": true,
+          "all_nodes_without_sequence_number_are_inside_explicit_proofs": true,
+          "all_partition_auxiliary_forward_nodes_derived": true,
+          "composite_vjp_proof_complete": true,
+          "every_backward_node_in_unit_or_auxiliary": true,
+          "every_forward_node_in_unit_or_partition_auxiliary": true,
+          "every_semantic_unit_has_exact_origin_and_sequence_anchor": true
+        },
+        "path": "results/coverage/runtime_releases/mamba_seq128_r1/default_aot_math.json.gz",
+        "result_sha256": null,
+        "schema": "kernel-analyzer.round2-vl-math-ledger.v2",
+        "status": "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION"
+      },
+      "gates": {
+        "candidate_fb_binding": true,
+        "candidate_inventory": true,
+        "canonical_eager_fb_analytically_proved": true,
+        "default_aot_fb_analytically_proved": true,
+        "execution_census": true,
+        "fb_origin_bound": true,
+        "nontriton_precision_reference_valid": true,
+        "same_dtype_optimization_reference_valid": true,
+        "triton_execution_census": true,
+        "triton_numeric_reference_valid": true
+      },
+      "model": "mamba_130m",
+      "nontriton_precision_oracle": {
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 6484,
+              "1": 6484,
+              "10": 6484,
+              "11": 6484,
+              "12": 6484,
+              "13": 6484,
+              "14": 6484,
+              "15": 6484,
+              "16": 6484,
+              "17": 6484,
+              "18": 6484,
+              "19": 6484,
+              "2": 6484,
+              "20": 6484,
+              "21": 6484,
+              "22": 6484,
+              "23": 6484,
+              "24": 6484,
+              "25": 6484,
+              "26": 6484,
+              "27": 6484,
+              "28": 6484,
+              "29": 6484,
+              "3": 6484,
+              "30": 6484,
+              "31": 6484,
+              "4": 6484,
+              "5": 6484,
+              "6": 6484,
+              "7": 6484,
+              "8": 6484,
+              "9": 6484
+            },
+            "max": 6484,
+            "min": 6484
+          },
+          "actual_runtime_invocations_total": 207488,
+          "measured_runtime_endpoints": 6508,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true
+        },
+        "path": "results/coverage/runtime_releases/mamba_seq128_r1/nontriton_oracle.json.gz",
+        "result_sha256": "57cd63ce21c2b8a1b27b78abaa479e0f2c87e6a9fcb8656ac8ec7b8b2c9658f7",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      },
+      "same_dtype_optimization_oracle": {
+        "denominator": {
+          "candidate_compute_regions": 16265,
+          "candidate_ports": 22507,
+          "compiler_added_ports_closed_by_exact_theorem": 0,
+          "exact_semantic_endpoints": 13095,
+          "internal_ports_closed_by_semantic_endpoint": 9412,
+          "repeats_per_state": 2,
+          "states": 32,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "all_assigned_frozen_states_present": true,
+          "all_candidate_compute_regions_have_observed_output_ports": true,
+          "all_internal_candidate_ports_closed": true,
+          "all_reference_cuts_bitwise_self_replay": true,
+          "candidate_values_used_for_pairing": false,
+          "cross_phase_runtime_bridge_complete": true,
+          "exact_compiler_origin_endpoints_only": true,
+          "runtime_environment_exact": true,
+          "same_dtype_bf16": true,
+          "same_model_weight_storage": true
+        },
+        "path": "results/coverage/runtime_releases/mamba_seq128_r1/same_dtype_oracle.json.gz",
+        "result_sha256": "b6ffafd525f39b1d98187ffa336f5efa6521726b1c35f99f2729fafcfcaa83eb",
+        "schema": "kernel-analyzer-same-dtype-semantic-oracle-v1",
+        "status": "COMPLETE_SAME_DTYPE_OPTIMIZATION_ORACLE"
+      },
+      "shape": "batch1_seq128",
+      "status": "COMPLETE_ALL_DECLARED_GATES",
+      "triton_precision_oracle": {
+        "abi_audit": {
+          "historical_invalid_audit_not_applied": true,
+          "status": "VALID_INDEPENDENT_RECOMPILED_FP32_POINTER_ABI"
+        },
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 9781,
+              "1": 9781,
+              "10": 9781,
+              "11": 9781,
+              "12": 9781,
+              "13": 9781,
+              "14": 9781,
+              "15": 9781,
+              "16": 9781,
+              "17": 9781,
+              "18": 9781,
+              "19": 9781,
+              "2": 9781,
+              "20": 9781,
+              "21": 9781,
+              "22": 9781,
+              "23": 9781,
+              "24": 9781,
+              "25": 9781,
+              "26": 9781,
+              "27": 9781,
+              "28": 9781,
+              "29": 9781,
+              "3": 9781,
+              "30": 9781,
+              "31": 9781,
+              "4": 9781,
+              "5": 9781,
+              "6": 9781,
+              "7": 9781,
+              "8": 9781,
+              "9": 9781
+            },
+            "max": 9781,
+            "min": 9781
+          },
+          "actual_runtime_invocations_total": 312992,
+          "measured_runtime_endpoints": 16023,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "execution_census_gate": true,
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true,
+          "typed_triton_pointer_abi_valid": true
+        },
+        "numeric_reference_gate": true,
+        "path": "results/coverage/runtime_releases/mamba_seq128_r1/typed_triton_oracle.json.gz",
+        "result_sha256": "17efcbb57a5ea7320f08749d6057bf332ec8437877d98d21fca698f137e4db7c",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      }
+    },
+    {
+      "candidate_fb_binding": {
+        "denominator": {
+          "bound_to_proved_fb_mathematics": 31767,
+          "candidate_compute_regions": 31767,
+          "proved_auxiliary_backward_nodes": 43041,
+          "semantic_fb_units": 56296,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_aot_math_complete": true,
+          "all_candidate_compute_regions_retained": true,
+          "all_candidate_regions_bound": true,
+          "candidate_values_used": false,
+          "name_shape_or_runtime_ordinal_similarity_used": false,
+          "only_explicit_device_put_graphs_admitted": true,
+          "proof_capture_sha_or_exact_graph_identity": true,
+          "proof_tagged_generated_schedule_used": true,
+          "segmented_source_to_normalized_node_bijection": true
+        },
+        "path": "results/coverage/runtime_releases/mamba_seq256_r1/candidate_fb_bridge.json.gz",
+        "result_sha256": "4f4bde4a4e083800cb4e4795404beee316d46ed5137a325a60484ba134aa8088",
+        "schema": "kernel-analyzer-candidate-fb-bridge-v1",
+        "status": "COMPLETE_ALL_EXECUTED_REGIONS_BOUND_TO_PROVED_FB_MATHEMATICS"
+      },
+      "candidate_inventory": {
+        "denominator": {
+          "all_runner_call_invocations": 121769,
+          "compute_invocations": 31767,
+          "compute_kind_counts": {
+            "DIRECT_ATEN": 1,
+            "DIRECT_TORCH_OP": 24,
+            "EXTERN": 12603,
+            "TRITON": 19139
+          },
+          "helper_function_counts": {
+            "args.clear": 2,
+            "assert_alignment": 48,
+            "assert_size_stride": 19237,
+            "copy_if_misaligned": 2,
+            "empty_strided_cuda": 13770,
+            "get_raw_stream": 19139,
+            "reinterpret_tensor": 37800,
+            "torch.cuda._DeviceGuard": 2,
+            "torch.cuda.set_device": 2
+          },
+          "structural_or_runtime_helper_invocations": 90002
+        },
+        "gate": true,
+        "gates": null,
+        "path": "results/coverage/runtime_releases/mamba_seq256_r1/inventory.json.gz",
+        "result_sha256": "756c76e8670ddc0faae71f976e3218ec39debf33afe4d0d54ffc7e53bd446604",
+        "schema": "kernel-analyzer-executed-generated-inventory-summary-v1",
+        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+      },
+      "canonical_eager_fb_math": {
+        "analytic_fb_proof_units": 87449,
+        "auxiliary_backward_accounting_units": 243,
+        "closed_accounting_components": 87692,
+        "execution_census_invocations": 213083,
+        "origin_bound_fb_units": 87449,
+        "primary_fb_proof_units": 87449,
+        "source_ledger": "results/coverage/mamba_seq256_invocation_ledger.json.gz",
+        "status": "CAPTURED_EXECUTION_DERIVED_ANALYTIC_FB_PROVED"
+      },
+      "default_aot_fb_math": {
+        "binding_gates": {
+          "actual_inductor_default_partition": true,
+          "capture_present": true,
+          "math_capture_sha256_exact": true,
+          "math_ledger_complete": true,
+          "segmented_boundary_accounting_valid": true
+        },
+        "capture": {
+          "capture_sha256": "78c416f1fffe5fa69f51114866a66b59082c0ffb35c7c5725c4233a7b81dac6a",
+          "gate": true,
+          "path": "results/coverage/runtime_releases/mamba_seq256_r1/default_aot_capture.json.gz",
+          "result_sha256": "0b7b4e3e3f7e5048afbfc9410e679cd2d0f09731776af7f6d8dd60d4834a0140",
+          "status": "COMPLETE_AOT_FB_CAPTURE"
+        },
+        "denominator": {
+          "auxiliary_backward_nodes": 43041,
+          "backward_call_function_nodes": 126604,
+          "backward_only_partition_replay_nodes": 47,
+          "forward_call_function_nodes": 112453,
+          "partition_auxiliary_forward_nodes": 6144,
+          "requires_grad_forward_placeholders": 242,
+          "semantic_forward_backward_units": 56296,
+          "ssa_or_inactive_backward_units": 6215,
+          "targets_with_declared_formula": 45,
+          "unique_targets": 45,
+          "units_pending_composite_vjp_proof": 0,
+          "units_with_actual_backward_nodes": 50081,
+          "units_with_complete_real_arithmetic_vjp_proof": 56296
+        },
+        "gate": true,
+        "gates": {
+          "all_argument_records_present": true,
+          "all_auxiliary_backward_nodes_derived": true,
+          "all_backward_only_partition_replays_derived": true,
+          "all_call_function_targets_have_declared_formulas": true,
+          "all_nodes_without_sequence_number_are_inside_explicit_proofs": true,
+          "all_partition_auxiliary_forward_nodes_derived": true,
+          "composite_vjp_proof_complete": true,
+          "every_backward_node_in_unit_or_auxiliary": true,
+          "every_forward_node_in_unit_or_partition_auxiliary": true,
+          "every_semantic_unit_has_exact_origin_and_sequence_anchor": true
+        },
+        "path": "results/coverage/runtime_releases/mamba_seq256_r1/default_aot_math.json.gz",
+        "result_sha256": null,
+        "schema": "kernel-analyzer.round2-vl-math-ledger.v2",
+        "status": "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION"
+      },
+      "gates": {
+        "candidate_fb_binding": true,
+        "candidate_inventory": true,
+        "canonical_eager_fb_analytically_proved": true,
+        "default_aot_fb_analytically_proved": true,
+        "execution_census": true,
+        "fb_origin_bound": true,
+        "nontriton_precision_reference_valid": true,
+        "same_dtype_optimization_reference_valid": true,
+        "triton_execution_census": true,
+        "triton_numeric_reference_valid": true
+      },
+      "model": "mamba_130m",
+      "nontriton_precision_oracle": {
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 12628,
+              "1": 12628,
+              "10": 12628,
+              "11": 12628,
+              "12": 12628,
+              "13": 12628,
+              "14": 12628,
+              "15": 12628,
+              "16": 12628,
+              "17": 12628,
+              "18": 12628,
+              "19": 12628,
+              "2": 12628,
+              "20": 12628,
+              "21": 12628,
+              "22": 12628,
+              "23": 12628,
+              "24": 12628,
+              "25": 12628,
+              "26": 12628,
+              "27": 12628,
+              "28": 12628,
+              "29": 12628,
+              "3": 12628,
+              "30": 12628,
+              "31": 12628,
+              "4": 12628,
+              "5": 12628,
+              "6": 12628,
+              "7": 12628,
+              "8": 12628,
+              "9": 12628
+            },
+            "max": 12628,
+            "min": 12628
+          },
+          "actual_runtime_invocations_total": 404096,
+          "measured_runtime_endpoints": 12652,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true
+        },
+        "path": "results/coverage/runtime_releases/mamba_seq256_r1/nontriton_oracle.json.gz",
+        "result_sha256": "e92b5f8d8dc145dbd3278b6bb3fa68ae79b4e027ae13aeb9b333ea20a8592e1b",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      },
+      "same_dtype_optimization_oracle": {
+        "denominator": {
+          "candidate_compute_regions": 31767,
+          "candidate_ports": 44035,
+          "compiler_added_ports_closed_by_exact_theorem": 0,
+          "exact_semantic_endpoints": 25384,
+          "internal_ports_closed_by_semantic_endpoint": 18651,
+          "repeats_per_state": 2,
+          "states": 32,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "all_candidate_compute_regions_have_observed_output_ports": true,
+          "all_internal_candidate_ports_closed": true,
+          "all_reference_cuts_bitwise_self_replay": true,
+          "candidate_values_used_for_pairing": false,
+          "exact_compiler_origin_endpoints_only": true,
+          "runtime_environment_exact": true,
+          "same_dtype_bf16": true,
+          "same_model_weight_storage": true,
+          "state_shards_disjoint_and_complete": true
+        },
+        "path": "results/coverage/runtime_releases/mamba_seq256_r1/same_dtype_oracle.json.gz",
+        "result_sha256": "c84ab8e738a2e64edfad246be1021a34aed6788d8631f081c8e0cd35b95271dc",
+        "schema": "kernel-analyzer-same-dtype-semantic-oracle-v1",
+        "status": "COMPLETE_SAME_DTYPE_OPTIMIZATION_ORACLE"
+      },
+      "shape": "batch1_seq256",
+      "status": "COMPLETE_ALL_DECLARED_GATES",
+      "triton_precision_oracle": {
+        "abi_audit": {
+          "historical_invalid_audit_not_applied": true,
+          "status": "VALID_INDEPENDENT_RECOMPILED_FP32_POINTER_ABI"
+        },
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 19139,
+              "1": 19139,
+              "10": 19139,
+              "11": 19139,
+              "12": 19139,
+              "13": 19139,
+              "14": 19139,
+              "15": 19139,
+              "16": 19139,
+              "17": 19139,
+              "18": 19139,
+              "19": 19139,
+              "2": 19139,
+              "20": 19139,
+              "21": 19139,
+              "22": 19139,
+              "23": 19139,
+              "24": 19139,
+              "25": 19139,
+              "26": 19139,
+              "27": 19139,
+              "28": 19139,
+              "29": 19139,
+              "3": 19139,
+              "30": 19139,
+              "31": 19139,
+              "4": 19139,
+              "5": 19139,
+              "6": 19139,
+              "7": 19139,
+              "8": 19139,
+              "9": 19139
+            },
+            "max": 19139,
+            "min": 19139
+          },
+          "actual_runtime_invocations_total": 612448,
+          "measured_runtime_endpoints": 31407,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "execution_census_gate": true,
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true,
+          "typed_triton_pointer_abi_valid": true
+        },
+        "numeric_reference_gate": true,
+        "path": "results/coverage/runtime_releases/mamba_seq256_r1/typed_triton_oracle.json.gz",
+        "result_sha256": "a3796e55ea0659c32bd4852ed00442bdc76e8ee08ede83a8a4cd192b43b7aac2",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      }
+    },
+    {
+      "candidate_fb_binding": {
+        "denominator": {
+          "bound_to_proved_fb_mathematics": 1144,
+          "candidate_compute_regions": 1144,
+          "proved_auxiliary_backward_nodes": 393,
+          "semantic_fb_units": 2297,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_aot_math_complete": true,
+          "all_candidate_compute_regions_retained": true,
+          "all_candidate_regions_bound": true,
+          "candidate_values_used": false,
+          "name_shape_or_runtime_ordinal_similarity_used": false,
+          "only_explicit_device_put_graphs_admitted": true,
+          "proof_capture_sha_or_exact_graph_identity": true,
+          "proof_tagged_generated_schedule_used": true,
+          "segmented_source_to_normalized_node_bijection": true
+        },
+        "path": "results/coverage/runtime_releases/phi4_seq64_r1/candidate_fb_bridge.json.gz",
+        "result_sha256": "baa4cde2c8b5dda2c0b455fb73c428356be0f9279d5870a2022956962dbf85fd",
+        "schema": "kernel-analyzer-candidate-fb-bridge-v1",
+        "status": "COMPLETE_ALL_EXECUTED_REGIONS_BOUND_TO_PROVED_FB_MATHEMATICS"
+      },
+      "candidate_inventory": {
+        "denominator": {
+          "all_runner_call_invocations": 4835,
+          "compute_invocations": 1144,
+          "compute_kind_counts": {
+            "DIRECT_ATEN": 1,
+            "DIRECT_TENSOR_METHOD": 1,
+            "EXTERN": 579,
+            "TRITON": 563
+          },
+          "helper_function_counts": {
+            "args.clear": 9,
+            "assert_size_stride": 928,
+            "copy_if_misaligned": 13,
+            "empty_strided_cuda": 740,
+            "get_raw_stream": 563,
+            "reinterpret_tensor": 1420,
+            "torch.cuda._DeviceGuard": 9,
+            "torch.cuda.set_device": 9
+          },
+          "structural_or_runtime_helper_invocations": 3691
+        },
+        "gate": true,
+        "gates": null,
+        "path": "results/coverage/runtime_releases/phi4_seq64_r1/inventory.json.gz",
+        "result_sha256": "756d71686480d19d9c019de8944d266013ef0553c2f54ab14774b151997bd997",
+        "schema": "kernel-analyzer-executed-generated-inventory-summary-v1",
+        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+      },
+      "canonical_eager_fb_math": {
+        "analytic_fb_proof_units": 3156,
+        "auxiliary_backward_accounting_units": 195,
+        "closed_accounting_components": 3351,
+        "execution_census_invocations": 8223,
+        "origin_bound_fb_units": 3156,
+        "primary_fb_proof_units": 3156,
+        "source_ledger": "results/coverage/phi4_seq64_invocation_ledger.json.gz",
+        "status": "CAPTURED_EXECUTION_DERIVED_ANALYTIC_FB_PROVED"
+      },
+      "default_aot_fb_math": {
+        "binding_gates": {
+          "actual_inductor_default_partition": true,
+          "capture_present": true,
+          "math_capture_sha256_exact": true,
+          "math_ledger_complete": true,
+          "segmented_boundary_accounting_valid": true
+        },
+        "capture": {
+          "capture_sha256": "a76ae1ebb8de7a5856afb63f754580fe1b2801404fc9c266817ae8c40bef4d8f",
+          "gate": true,
+          "path": "results/coverage/runtime_releases/phi4_seq64_r1/default_aot_capture.json.gz",
+          "result_sha256": "aa5ed817b44ac7dcdfe999a1ee02cbcffc4d06d12ca1d0974cfc0355c98e575b",
+          "status": "COMPLETE_SEGMENT_LOCAL_CAPTURE_WITH_EXPLICIT_CROSS_SEGMENT_BOUNDARIES"
+        },
+        "denominator": {
+          "auxiliary_backward_nodes": 393,
+          "backward_call_function_nodes": 5481,
+          "backward_only_partition_replay_nodes": 0,
+          "forward_call_function_nodes": 3615,
+          "partition_auxiliary_forward_nodes": 0,
+          "requires_grad_forward_placeholders": 197,
+          "semantic_forward_backward_units": 2297,
+          "ssa_or_inactive_backward_units": 264,
+          "targets_with_declared_formula": 51,
+          "unique_targets": 51,
+          "units_pending_composite_vjp_proof": 0,
+          "units_with_actual_backward_nodes": 2033,
+          "units_with_complete_real_arithmetic_vjp_proof": 2297
+        },
+        "gate": true,
+        "gates": {
+          "all_argument_records_present": true,
+          "all_auxiliary_backward_nodes_derived": true,
+          "all_backward_only_partition_replays_derived": true,
+          "all_call_function_targets_have_declared_formulas": true,
+          "all_nodes_without_sequence_number_are_inside_explicit_proofs": true,
+          "all_partition_auxiliary_forward_nodes_derived": true,
+          "composite_vjp_proof_complete": true,
+          "every_backward_node_in_unit_or_auxiliary": true,
+          "every_forward_node_in_unit_or_partition_auxiliary": true,
+          "every_semantic_unit_has_exact_origin_and_sequence_anchor": true
+        },
+        "path": "results/coverage/runtime_releases/phi4_seq64_r1/default_aot_math.json.gz",
+        "result_sha256": null,
+        "schema": "kernel-analyzer.round2-vl-math-ledger.v2",
+        "status": "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION"
+      },
+      "gates": {
+        "candidate_fb_binding": true,
+        "candidate_inventory": true,
+        "canonical_eager_fb_analytically_proved": true,
+        "default_aot_fb_analytically_proved": true,
+        "execution_census": true,
+        "fb_origin_bound": true,
+        "nontriton_precision_reference_valid": true,
+        "same_dtype_optimization_reference_valid": true,
+        "triton_execution_census": true,
+        "triton_numeric_reference_valid": true
+      },
+      "model": "phi4_mini_3p8b",
+      "nontriton_precision_oracle": {
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 580,
+              "1": 580,
+              "10": 580,
+              "11": 580,
+              "12": 580,
+              "13": 580,
+              "14": 580,
+              "15": 580,
+              "16": 580,
+              "17": 580,
+              "18": 580,
+              "19": 580,
+              "2": 580,
+              "20": 580,
+              "21": 580,
+              "22": 580,
+              "23": 580,
+              "24": 580,
+              "25": 580,
+              "26": 580,
+              "27": 580,
+              "28": 580,
+              "29": 580,
+              "3": 580,
+              "30": 580,
+              "31": 580,
+              "4": 580,
+              "5": 580,
+              "6": 580,
+              "7": 580,
+              "8": 580,
+              "9": 580
+            },
+            "max": 580,
+            "min": 580
+          },
+          "actual_runtime_invocations_total": 18560,
+          "measured_runtime_endpoints": 580,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 1
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true
+        },
+        "path": "results/coverage/runtime_releases/phi4_seq64_r1/nontriton_oracle.json.gz",
+        "result_sha256": "1392132127cfa145456b3a582b3e64a42958990752537322663c97abee6f1209",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      },
+      "same_dtype_optimization_oracle": {
+        "denominator": {
+          "candidate_compute_regions": 1144,
+          "candidate_ports": 1340,
+          "compiler_added_ports_closed_by_exact_theorem": 1,
+          "exact_semantic_endpoints": 1203,
+          "internal_ports_closed_by_semantic_endpoint": 136,
+          "repeats_per_state": 2,
+          "states": 32,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "all_assigned_frozen_states_present": true,
+          "all_candidate_compute_regions_have_observed_output_ports": true,
+          "all_internal_candidate_ports_closed": true,
+          "all_reference_cuts_bitwise_self_replay": true,
+          "candidate_values_used_for_pairing": false,
+          "cross_phase_runtime_bridge_complete": true,
+          "exact_compiler_origin_endpoints_only": true,
+          "runtime_environment_exact": true,
+          "same_dtype_bf16": true,
+          "same_model_weight_storage": true
+        },
+        "path": "results/coverage/runtime_releases/phi4_seq64_r1/same_dtype_oracle.json.gz",
+        "result_sha256": "088c6eeb50af9408c6be54bee201d96df24aa4ae5179d7633b30f8a48a9852f9",
+        "schema": "kernel-analyzer-same-dtype-semantic-oracle-v1",
+        "status": "COMPLETE_SAME_DTYPE_OPTIMIZATION_ORACLE"
+      },
+      "shape": "batch1_seq64",
+      "status": "COMPLETE_ALL_DECLARED_GATES",
+      "triton_precision_oracle": {
+        "abi_audit": {
+          "historical_invalid_audit_not_applied": true,
+          "status": "VALID_INDEPENDENT_RECOMPILED_FP32_POINTER_ABI"
+        },
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 563,
+              "1": 563,
+              "10": 563,
+              "11": 563,
+              "12": 563,
+              "13": 563,
+              "14": 563,
+              "15": 563,
+              "16": 563,
+              "17": 563,
+              "18": 563,
+              "19": 563,
+              "2": 563,
+              "20": 563,
+              "21": 563,
+              "22": 563,
+              "23": 563,
+              "24": 563,
+              "25": 563,
+              "26": 563,
+              "27": 563,
+              "28": 563,
+              "29": 563,
+              "3": 563,
+              "30": 563,
+              "31": 563,
+              "4": 563,
+              "5": 563,
+              "6": 563,
+              "7": 563,
+              "8": 563,
+              "9": 563
+            },
+            "max": 563,
+            "min": 563
+          },
+          "actual_runtime_invocations_total": 18016,
+          "measured_runtime_endpoints": 759,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "execution_census_gate": true,
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true,
+          "typed_triton_pointer_abi_valid": true
+        },
+        "numeric_reference_gate": true,
+        "path": "results/coverage/runtime_releases/phi4_seq64_r1/typed_triton_oracle.json.gz",
+        "result_sha256": "67ca4b9b96e92ce6a21270bdee2df6fca193b4db202d988244eb98e76554540b",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      }
+    },
+    {
+      "candidate_fb_binding": {
+        "denominator": {
+          "bound_to_proved_fb_mathematics": 1144,
+          "candidate_compute_regions": 1144,
+          "proved_auxiliary_backward_nodes": 393,
+          "semantic_fb_units": 2297,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_aot_math_complete": true,
+          "all_candidate_compute_regions_retained": true,
+          "all_candidate_regions_bound": true,
+          "candidate_values_used": false,
+          "name_shape_or_runtime_ordinal_similarity_used": false,
+          "only_explicit_device_put_graphs_admitted": true,
+          "proof_capture_sha_or_exact_graph_identity": true,
+          "proof_tagged_generated_schedule_used": true,
+          "segmented_source_to_normalized_node_bijection": true
+        },
+        "path": "results/coverage/runtime_releases/phi4_seq128_r1/candidate_fb_bridge.json.gz",
+        "result_sha256": "694a7758d0c2b9ce695c28242bf09e371f1290903b4512bf36c01036c2b79471",
+        "schema": "kernel-analyzer-candidate-fb-bridge-v1",
+        "status": "COMPLETE_ALL_EXECUTED_REGIONS_BOUND_TO_PROVED_FB_MATHEMATICS"
+      },
+      "candidate_inventory": {
+        "denominator": {
+          "all_runner_call_invocations": 4773,
+          "compute_invocations": 1144,
+          "compute_kind_counts": {
+            "DIRECT_ATEN": 1,
+            "DIRECT_TENSOR_METHOD": 1,
+            "EXTERN": 579,
+            "TRITON": 563
+          },
+          "helper_function_counts": {
+            "args.clear": 9,
+            "assert_size_stride": 928,
+            "copy_if_misaligned": 13,
+            "empty_strided_cuda": 738,
+            "get_raw_stream": 563,
+            "reinterpret_tensor": 1360,
+            "torch.cuda._DeviceGuard": 9,
+            "torch.cuda.set_device": 9
+          },
+          "structural_or_runtime_helper_invocations": 3629
+        },
+        "gate": true,
+        "gates": null,
+        "path": "results/coverage/runtime_releases/phi4_seq128_r1/inventory.json.gz",
+        "result_sha256": "aaafb9492e1bb923977ca150dc7abbc580b81566c0f7c4f554fa1ea29144d91d",
+        "schema": "kernel-analyzer-executed-generated-inventory-summary-v1",
+        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+      },
+      "canonical_eager_fb_math": {
+        "analytic_fb_proof_units": 3156,
+        "auxiliary_backward_accounting_units": 195,
+        "closed_accounting_components": 3351,
+        "execution_census_invocations": 8223,
+        "origin_bound_fb_units": 3156,
+        "primary_fb_proof_units": 3156,
+        "source_ledger": "results/coverage/phi4_seq128_invocation_ledger.json.gz",
+        "status": "CAPTURED_EXECUTION_DERIVED_ANALYTIC_FB_PROVED"
+      },
+      "default_aot_fb_math": {
+        "binding_gates": {
+          "actual_inductor_default_partition": true,
+          "capture_present": true,
+          "math_capture_sha256_exact": true,
+          "math_ledger_complete": true,
+          "segmented_boundary_accounting_valid": true
+        },
+        "capture": {
+          "capture_sha256": "696a91348234f850a2b4921a639ce94c1204bf1c4f41b67f70647baa6f84c9c2",
+          "gate": true,
+          "path": "results/coverage/runtime_releases/phi4_seq128_r1/default_aot_capture.json.gz",
+          "result_sha256": "9d053fe02090ba416545bb99331fc547cb164ee17e8694f885a08712370a5ddb",
+          "status": "COMPLETE_SEGMENT_LOCAL_CAPTURE_WITH_EXPLICIT_CROSS_SEGMENT_BOUNDARIES"
+        },
+        "denominator": {
+          "auxiliary_backward_nodes": 393,
+          "backward_call_function_nodes": 5481,
+          "backward_only_partition_replay_nodes": 0,
+          "forward_call_function_nodes": 3615,
+          "partition_auxiliary_forward_nodes": 0,
+          "requires_grad_forward_placeholders": 197,
+          "semantic_forward_backward_units": 2297,
+          "ssa_or_inactive_backward_units": 264,
+          "targets_with_declared_formula": 51,
+          "unique_targets": 51,
+          "units_pending_composite_vjp_proof": 0,
+          "units_with_actual_backward_nodes": 2033,
+          "units_with_complete_real_arithmetic_vjp_proof": 2297
+        },
+        "gate": true,
+        "gates": {
+          "all_argument_records_present": true,
+          "all_auxiliary_backward_nodes_derived": true,
+          "all_backward_only_partition_replays_derived": true,
+          "all_call_function_targets_have_declared_formulas": true,
+          "all_nodes_without_sequence_number_are_inside_explicit_proofs": true,
+          "all_partition_auxiliary_forward_nodes_derived": true,
+          "composite_vjp_proof_complete": true,
+          "every_backward_node_in_unit_or_auxiliary": true,
+          "every_forward_node_in_unit_or_partition_auxiliary": true,
+          "every_semantic_unit_has_exact_origin_and_sequence_anchor": true
+        },
+        "path": "results/coverage/runtime_releases/phi4_seq128_r1/default_aot_math.json.gz",
+        "result_sha256": null,
+        "schema": "kernel-analyzer.round2-vl-math-ledger.v2",
+        "status": "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION"
+      },
+      "gates": {
+        "candidate_fb_binding": true,
+        "candidate_inventory": true,
+        "canonical_eager_fb_analytically_proved": true,
+        "default_aot_fb_analytically_proved": true,
+        "execution_census": true,
+        "fb_origin_bound": true,
+        "nontriton_precision_reference_valid": true,
+        "same_dtype_optimization_reference_valid": true,
+        "triton_execution_census": true,
+        "triton_numeric_reference_valid": true
+      },
+      "model": "phi4_mini_3p8b",
+      "nontriton_precision_oracle": {
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 580,
+              "1": 580,
+              "10": 580,
+              "11": 580,
+              "12": 580,
+              "13": 580,
+              "14": 580,
+              "15": 580,
+              "16": 580,
+              "17": 580,
+              "18": 580,
+              "19": 580,
+              "2": 580,
+              "20": 580,
+              "21": 580,
+              "22": 580,
+              "23": 580,
+              "24": 580,
+              "25": 580,
+              "26": 580,
+              "27": 580,
+              "28": 580,
+              "29": 580,
+              "3": 580,
+              "30": 580,
+              "31": 580,
+              "4": 580,
+              "5": 580,
+              "6": 580,
+              "7": 580,
+              "8": 580,
+              "9": 580
+            },
+            "max": 580,
+            "min": 580
+          },
+          "actual_runtime_invocations_total": 18560,
+          "measured_runtime_endpoints": 580,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 1
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true
+        },
+        "path": "results/coverage/runtime_releases/phi4_seq128_r1/nontriton_oracle.json.gz",
+        "result_sha256": "71140f2fda451d5d475ee1f7fc9a3d454cd63608418b05044a469b5585a1714b",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      },
+      "same_dtype_optimization_oracle": {
+        "denominator": {
+          "candidate_compute_regions": 1144,
+          "candidate_ports": 1340,
+          "compiler_added_ports_closed_by_exact_theorem": 1,
+          "exact_semantic_endpoints": 1203,
+          "internal_ports_closed_by_semantic_endpoint": 136,
+          "repeats_per_state": 2,
+          "states": 32,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "all_assigned_frozen_states_present": true,
+          "all_candidate_compute_regions_have_observed_output_ports": true,
+          "all_internal_candidate_ports_closed": true,
+          "all_reference_cuts_bitwise_self_replay": true,
+          "candidate_values_used_for_pairing": false,
+          "cross_phase_runtime_bridge_complete": true,
+          "exact_compiler_origin_endpoints_only": true,
+          "runtime_environment_exact": true,
+          "same_dtype_bf16": true,
+          "same_model_weight_storage": true
+        },
+        "path": "results/coverage/runtime_releases/phi4_seq128_r1/same_dtype_oracle.json.gz",
+        "result_sha256": "269c3b083f0cffd3168eab3eed48a4473241fbfa3f85d1cb65e7de18681c395e",
+        "schema": "kernel-analyzer-same-dtype-semantic-oracle-v1",
+        "status": "COMPLETE_SAME_DTYPE_OPTIMIZATION_ORACLE"
+      },
+      "shape": "batch1_seq128",
+      "status": "COMPLETE_ALL_DECLARED_GATES",
+      "triton_precision_oracle": {
+        "abi_audit": {
+          "historical_invalid_audit_not_applied": true,
+          "status": "VALID_INDEPENDENT_RECOMPILED_FP32_POINTER_ABI"
+        },
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 563,
+              "1": 563,
+              "10": 563,
+              "11": 563,
+              "12": 563,
+              "13": 563,
+              "14": 563,
+              "15": 563,
+              "16": 563,
+              "17": 563,
+              "18": 563,
+              "19": 563,
+              "2": 563,
+              "20": 563,
+              "21": 563,
+              "22": 563,
+              "23": 563,
+              "24": 563,
+              "25": 563,
+              "26": 563,
+              "27": 563,
+              "28": 563,
+              "29": 563,
+              "3": 563,
+              "30": 563,
+              "31": 563,
+              "4": 563,
+              "5": 563,
+              "6": 563,
+              "7": 563,
+              "8": 563,
+              "9": 563
+            },
+            "max": 563,
+            "min": 563
+          },
+          "actual_runtime_invocations_total": 18016,
+          "measured_runtime_endpoints": 759,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "execution_census_gate": true,
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true,
+          "typed_triton_pointer_abi_valid": true
+        },
+        "numeric_reference_gate": true,
+        "path": "results/coverage/runtime_releases/phi4_seq128_r1/typed_triton_oracle.json.gz",
+        "result_sha256": "ce97b7fb0faecf6654925465f1eed454cd81f0a58208da2b13c6aaa79ff1be94",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      }
+    },
+    {
+      "candidate_fb_binding": {
+        "denominator": {
+          "bound_to_proved_fb_mathematics": 1206,
+          "candidate_compute_regions": 1206,
+          "proved_auxiliary_backward_nodes": 393,
+          "semantic_fb_units": 2297,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_aot_math_complete": true,
+          "all_candidate_compute_regions_retained": true,
+          "all_candidate_regions_bound": true,
+          "candidate_values_used": false,
+          "name_shape_or_runtime_ordinal_similarity_used": false,
+          "only_explicit_device_put_graphs_admitted": true,
+          "proof_capture_sha_or_exact_graph_identity": true,
+          "proof_tagged_generated_schedule_used": true,
+          "segmented_source_to_normalized_node_bijection": true
+        },
+        "path": "results/coverage/runtime_releases/phi4_seq256_r1/candidate_fb_bridge.json.gz",
+        "result_sha256": "5cc0239ec4d0a1301f4f9e8b8c94070eafe1284523c31f572de2e62bf7f4d95e",
+        "schema": "kernel-analyzer-candidate-fb-bridge-v1",
+        "status": "COMPLETE_ALL_EXECUTED_REGIONS_BOUND_TO_PROVED_FB_MATHEMATICS"
+      },
+      "candidate_inventory": {
+        "denominator": {
+          "all_runner_call_invocations": 4959,
+          "compute_invocations": 1206,
+          "compute_kind_counts": {
+            "DIRECT_ATEN": 1,
+            "DIRECT_TENSOR_METHOD": 1,
+            "EXTERN": 579,
+            "TRITON": 625
+          },
+          "helper_function_counts": {
+            "args.clear": 9,
+            "assert_size_stride": 928,
+            "copy_if_misaligned": 13,
+            "empty_strided_cuda": 741,
+            "get_raw_stream": 625,
+            "reinterpret_tensor": 1419,
+            "torch.cuda._DeviceGuard": 9,
+            "torch.cuda.set_device": 9
+          },
+          "structural_or_runtime_helper_invocations": 3753
+        },
+        "gate": true,
+        "gates": null,
+        "path": "results/coverage/runtime_releases/phi4_seq256_r1/inventory.json.gz",
+        "result_sha256": "964efe1e3ab1b1772d7ae8f648835e2de6db4a08aad24a41010ec7cbe3873467",
+        "schema": "kernel-analyzer-executed-generated-inventory-summary-v1",
+        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+      },
+      "canonical_eager_fb_math": {
+        "analytic_fb_proof_units": 3156,
+        "auxiliary_backward_accounting_units": 195,
+        "closed_accounting_components": 3351,
+        "execution_census_invocations": 8223,
+        "origin_bound_fb_units": 3156,
+        "primary_fb_proof_units": 3156,
+        "source_ledger": "results/coverage/phi4_seq256_invocation_ledger.json.gz",
+        "status": "CAPTURED_EXECUTION_DERIVED_ANALYTIC_FB_PROVED"
+      },
+      "default_aot_fb_math": {
+        "binding_gates": {
+          "actual_inductor_default_partition": true,
+          "capture_present": true,
+          "math_capture_sha256_exact": true,
+          "math_ledger_complete": true,
+          "segmented_boundary_accounting_valid": true
+        },
+        "capture": {
+          "capture_sha256": "19a971bdfb32974dd3fbd92ea4dec651dc3c644e48b8027a5eb7447e5a4f727f",
+          "gate": true,
+          "path": "results/coverage/runtime_releases/phi4_seq256_r1/default_aot_capture.json.gz",
+          "result_sha256": "ffa89bd2f23638b1882c305d1d79c6a9eb035f0875f046bf1e0a32c2a0573e75",
+          "status": "COMPLETE_SEGMENT_LOCAL_CAPTURE_WITH_EXPLICIT_CROSS_SEGMENT_BOUNDARIES"
+        },
+        "denominator": {
+          "auxiliary_backward_nodes": 393,
+          "backward_call_function_nodes": 5481,
+          "backward_only_partition_replay_nodes": 0,
+          "forward_call_function_nodes": 3615,
+          "partition_auxiliary_forward_nodes": 0,
+          "requires_grad_forward_placeholders": 197,
+          "semantic_forward_backward_units": 2297,
+          "ssa_or_inactive_backward_units": 264,
+          "targets_with_declared_formula": 51,
+          "unique_targets": 51,
+          "units_pending_composite_vjp_proof": 0,
+          "units_with_actual_backward_nodes": 2033,
+          "units_with_complete_real_arithmetic_vjp_proof": 2297
+        },
+        "gate": true,
+        "gates": {
+          "all_argument_records_present": true,
+          "all_auxiliary_backward_nodes_derived": true,
+          "all_backward_only_partition_replays_derived": true,
+          "all_call_function_targets_have_declared_formulas": true,
+          "all_nodes_without_sequence_number_are_inside_explicit_proofs": true,
+          "all_partition_auxiliary_forward_nodes_derived": true,
+          "composite_vjp_proof_complete": true,
+          "every_backward_node_in_unit_or_auxiliary": true,
+          "every_forward_node_in_unit_or_partition_auxiliary": true,
+          "every_semantic_unit_has_exact_origin_and_sequence_anchor": true
+        },
+        "path": "results/coverage/runtime_releases/phi4_seq256_r1/default_aot_math.json.gz",
+        "result_sha256": null,
+        "schema": "kernel-analyzer.round2-vl-math-ledger.v2",
+        "status": "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION"
+      },
+      "gates": {
+        "candidate_fb_binding": true,
+        "candidate_inventory": true,
+        "canonical_eager_fb_analytically_proved": true,
+        "default_aot_fb_analytically_proved": true,
+        "execution_census": true,
+        "fb_origin_bound": true,
+        "nontriton_precision_reference_valid": true,
+        "same_dtype_optimization_reference_valid": true,
+        "triton_execution_census": true,
+        "triton_numeric_reference_valid": true
+      },
+      "model": "phi4_mini_3p8b",
+      "nontriton_precision_oracle": {
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 580,
+              "1": 580,
+              "10": 580,
+              "11": 580,
+              "12": 580,
+              "13": 580,
+              "14": 580,
+              "15": 580,
+              "16": 580,
+              "17": 580,
+              "18": 580,
+              "19": 580,
+              "2": 580,
+              "20": 580,
+              "21": 580,
+              "22": 580,
+              "23": 580,
+              "24": 580,
+              "25": 580,
+              "26": 580,
+              "27": 580,
+              "28": 580,
+              "29": 580,
+              "3": 580,
+              "30": 580,
+              "31": 580,
+              "4": 580,
+              "5": 580,
+              "6": 580,
+              "7": 580,
+              "8": 580,
+              "9": 580
+            },
+            "max": 580,
+            "min": 580
+          },
+          "actual_runtime_invocations_total": 18560,
+          "measured_runtime_endpoints": 580,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 1
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true
+        },
+        "path": "results/coverage/runtime_releases/phi4_seq256_r1/nontriton_oracle.json.gz",
+        "result_sha256": "dc86eb48c7d68c644421a7dd4bba83e996832cffc8be4c188d3f0ab27c3b4ec9",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      },
+      "same_dtype_optimization_oracle": {
+        "denominator": {
+          "candidate_compute_regions": 1206,
+          "candidate_ports": 1403,
+          "compiler_added_ports_closed_by_exact_theorem": 1,
+          "exact_semantic_endpoints": 1205,
+          "internal_ports_closed_by_semantic_endpoint": 197,
+          "repeats_per_state": 2,
+          "states": 32,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "all_assigned_frozen_states_present": true,
+          "all_candidate_compute_regions_have_observed_output_ports": true,
+          "all_internal_candidate_ports_closed": true,
+          "all_reference_cuts_bitwise_self_replay": true,
+          "candidate_values_used_for_pairing": false,
+          "cross_phase_runtime_bridge_complete": true,
+          "exact_compiler_origin_endpoints_only": true,
+          "runtime_environment_exact": true,
+          "same_dtype_bf16": true,
+          "same_model_weight_storage": true
+        },
+        "path": "results/coverage/runtime_releases/phi4_seq256_r1/same_dtype_oracle.json.gz",
+        "result_sha256": "d49bd11200dbb1703457f0f3236565c8e758cbec6c8238d590978bb8958ebd86",
+        "schema": "kernel-analyzer-same-dtype-semantic-oracle-v1",
+        "status": "COMPLETE_SAME_DTYPE_OPTIMIZATION_ORACLE"
+      },
+      "shape": "batch1_seq256",
+      "status": "COMPLETE_ALL_DECLARED_GATES",
+      "triton_precision_oracle": {
+        "abi_audit": {
+          "historical_invalid_audit_not_applied": true,
+          "status": "VALID_INDEPENDENT_RECOMPILED_FP32_POINTER_ABI"
+        },
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 625,
+              "1": 625,
+              "10": 625,
+              "11": 625,
+              "12": 625,
+              "13": 625,
+              "14": 625,
+              "15": 625,
+              "16": 625,
+              "17": 625,
+              "18": 625,
+              "19": 625,
+              "2": 625,
+              "20": 625,
+              "21": 625,
+              "22": 625,
+              "23": 625,
+              "24": 625,
+              "25": 625,
+              "26": 625,
+              "27": 625,
+              "28": 625,
+              "29": 625,
+              "3": 625,
+              "30": 625,
+              "31": 625,
+              "4": 625,
+              "5": 625,
+              "6": 625,
+              "7": 625,
+              "8": 625,
+              "9": 625
+            },
+            "max": 625,
+            "min": 625
+          },
+          "actual_runtime_invocations_total": 20000,
+          "measured_runtime_endpoints": 822,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "execution_census_gate": true,
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true,
+          "typed_triton_pointer_abi_valid": true
+        },
+        "numeric_reference_gate": true,
+        "path": "results/coverage/runtime_releases/phi4_seq256_r1/typed_triton_oracle.json.gz",
+        "result_sha256": "08bd61a25cc55c9fdbf4693bfaaf13531927d66831f3a262dd411a7e34f9a3d3",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      }
+    },
+    {
+      "candidate_fb_binding": {
+        "denominator": {
+          "bound_to_proved_fb_mathematics": 1890,
+          "candidate_compute_regions": 1890,
+          "proved_auxiliary_backward_nodes": 476,
+          "semantic_fb_units": 2893,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_aot_math_complete": true,
+          "all_candidate_compute_regions_retained": true,
+          "all_candidate_regions_bound": true,
+          "candidate_values_used": false,
+          "name_shape_or_runtime_ordinal_similarity_used": false,
+          "only_explicit_device_put_graphs_admitted": true,
+          "proof_capture_sha_or_exact_graph_identity": true,
+          "proof_tagged_generated_schedule_used": true,
+          "segmented_source_to_normalized_node_bijection": true
+        },
+        "path": "results/coverage/runtime_releases/deepseek8b_seq64_r1/candidate_fb_bridge.json.gz",
+        "result_sha256": "ea9ca890c8c9b04bf84ffe98821a05da6cb7e9d83ffc016d980f11c9daa6e2ae",
+        "schema": "kernel-analyzer-candidate-fb-bridge-v1",
+        "status": "COMPLETE_ALL_EXECUTED_REGIONS_BOUND_TO_PROVED_FB_MATHEMATICS"
+      },
+      "candidate_inventory": {
+        "denominator": {
+          "all_runner_call_invocations": 8054,
+          "compute_invocations": 1890,
+          "compute_kind_counts": {
+            "DIRECT_ATEN": 1,
+            "EXTERN": 975,
+            "TRITON": 914
+          },
+          "helper_function_counts": {
+            "args.clear": 2,
+            "assert_size_stride": 1566,
+            "copy_if_misaligned": 2,
+            "empty_strided_cuda": 1185,
+            "get_raw_stream": 914,
+            "reinterpret_tensor": 2491,
+            "torch.cuda._DeviceGuard": 2,
+            "torch.cuda.set_device": 2
+          },
+          "structural_or_runtime_helper_invocations": 6164
+        },
+        "gate": true,
+        "gates": null,
+        "path": "results/coverage/runtime_releases/deepseek8b_seq64_r1/inventory.json.gz",
+        "result_sha256": "78dbb726e521fd3acf3590dcdaf18ce4f730fbb6516c603a7c1cabfaa9d7bc6b",
+        "schema": "kernel-analyzer-executed-generated-inventory-summary-v1",
+        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+      },
+      "canonical_eager_fb_math": {
+        "analytic_fb_proof_units": 4181,
+        "auxiliary_backward_accounting_units": 400,
+        "closed_accounting_components": 4581,
+        "execution_census_invocations": 12044,
+        "origin_bound_fb_units": 4181,
+        "primary_fb_proof_units": 4181,
+        "source_ledger": "results/coverage/deepseek8b_seq64_invocation_ledger.json.gz",
+        "status": "CAPTURED_EXECUTION_DERIVED_ANALYTIC_FB_PROVED"
+      },
+      "default_aot_fb_math": {
+        "binding_gates": {
+          "actual_inductor_default_partition": true,
+          "capture_present": true,
+          "math_capture_sha256_exact": true,
+          "math_ledger_complete": true,
+          "segmented_boundary_accounting_valid": true
+        },
+        "capture": {
+          "capture_sha256": "a85f7219cea5d4863bb95269a7a686979c0f972e7c02ebe3baf026869541cf8a",
+          "gate": true,
+          "path": "results/coverage/runtime_releases/deepseek8b_seq64_r1/default_aot_capture_raw.json.gz",
+          "result_sha256": "5dcc55d72ac164129415c337595ac7750841d17de6658cca962fa64c08d52615",
+          "status": "COMPLETE_AOT_FB_CAPTURE"
+        },
+        "denominator": {
+          "auxiliary_backward_nodes": 476,
+          "backward_call_function_nodes": 7938,
+          "backward_only_partition_replay_nodes": 0,
+          "forward_call_function_nodes": 4514,
+          "partition_auxiliary_forward_nodes": 0,
+          "requires_grad_forward_placeholders": 399,
+          "semantic_forward_backward_units": 2893,
+          "ssa_or_inactive_backward_units": 377,
+          "targets_with_declared_formula": 46,
+          "unique_targets": 46,
+          "units_pending_composite_vjp_proof": 0,
+          "units_with_actual_backward_nodes": 2516,
+          "units_with_complete_real_arithmetic_vjp_proof": 2893
+        },
+        "gate": true,
+        "gates": {
+          "all_argument_records_present": true,
+          "all_auxiliary_backward_nodes_derived": true,
+          "all_backward_only_partition_replays_derived": true,
+          "all_call_function_targets_have_declared_formulas": true,
+          "all_nodes_without_sequence_number_are_inside_explicit_proofs": true,
+          "all_partition_auxiliary_forward_nodes_derived": true,
+          "composite_vjp_proof_complete": true,
+          "every_backward_node_in_unit_or_auxiliary": true,
+          "every_forward_node_in_unit_or_partition_auxiliary": true,
+          "every_semantic_unit_has_exact_origin_and_sequence_anchor": true
+        },
+        "path": "results/coverage/runtime_releases/deepseek8b_seq64_r1/default_aot_math.json.gz",
+        "result_sha256": null,
+        "schema": "kernel-analyzer.round2-vl-math-ledger.v2",
+        "status": "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION"
+      },
+      "gates": {
+        "candidate_fb_binding": true,
+        "candidate_inventory": true,
+        "canonical_eager_fb_analytically_proved": true,
+        "default_aot_fb_analytically_proved": true,
+        "execution_census": true,
+        "fb_origin_bound": true,
+        "nontriton_precision_reference_valid": true,
+        "same_dtype_optimization_reference_valid": true,
+        "triton_execution_census": true,
+        "triton_numeric_reference_valid": true
+      },
+      "model": "deepseek_r1_0528_qwen3_8b",
+      "nontriton_precision_oracle": {
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 976,
+              "1": 976,
+              "10": 976,
+              "11": 976,
+              "12": 976,
+              "13": 976,
+              "14": 976,
+              "15": 976,
+              "16": 976,
+              "17": 976,
+              "18": 976,
+              "19": 976,
+              "2": 976,
+              "20": 976,
+              "21": 976,
+              "22": 976,
+              "23": 976,
+              "24": 976,
+              "25": 976,
+              "26": 976,
+              "27": 976,
+              "28": 976,
+              "29": 976,
+              "3": 976,
+              "30": 976,
+              "31": 976,
+              "4": 976,
+              "5": 976,
+              "6": 976,
+              "7": 976,
+              "8": 976,
+              "9": 976
+            },
+            "max": 976,
+            "min": 976
+          },
+          "actual_runtime_invocations_total": 31232,
+          "measured_runtime_endpoints": 976,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true
+        },
+        "path": "results/coverage/runtime_releases/deepseek8b_seq64_r1/nontriton_oracle.json.gz",
+        "result_sha256": "5a231a599fd9c32fb3ac4e915ed79d7ac0f505a264568db82455345306762acd",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      },
+      "same_dtype_optimization_oracle": {
+        "denominator": {
+          "candidate_compute_regions": 1890,
+          "candidate_ports": 2325,
+          "compiler_added_ports_closed_by_exact_theorem": 0,
+          "exact_semantic_endpoints": 2104,
+          "internal_ports_closed_by_semantic_endpoint": 221,
+          "repeats_per_state": 2,
+          "states": 32,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "all_assigned_frozen_states_present": true,
+          "all_candidate_compute_regions_have_observed_output_ports": true,
+          "all_internal_candidate_ports_closed": true,
+          "all_reference_cuts_bitwise_self_replay": true,
+          "candidate_values_used_for_pairing": false,
+          "cross_phase_runtime_bridge_complete": true,
+          "exact_compiler_origin_endpoints_only": true,
+          "runtime_environment_exact": true,
+          "same_dtype_bf16": true,
+          "same_model_weight_storage": true
+        },
+        "path": "results/coverage/runtime_releases/deepseek8b_seq64_r1/same_dtype_oracle.json.gz",
+        "result_sha256": "1faaca9e21c2f179cfd89ad8765a266f9d7b6f26b2ffa21bb3f49b9b35858de8",
+        "schema": "kernel-analyzer-same-dtype-semantic-oracle-v1",
+        "status": "COMPLETE_SAME_DTYPE_OPTIMIZATION_ORACLE"
+      },
+      "shape": "batch1_seq64",
+      "status": "COMPLETE_ALL_DECLARED_GATES",
+      "triton_precision_oracle": {
+        "abi_audit": {
+          "historical_invalid_audit_not_applied": true,
+          "status": "VALID_INDEPENDENT_RECOMPILED_FP32_POINTER_ABI"
+        },
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 914,
+              "1": 914,
+              "10": 914,
+              "11": 914,
+              "12": 914,
+              "13": 914,
+              "14": 914,
+              "15": 914,
+              "16": 914,
+              "17": 914,
+              "18": 914,
+              "19": 914,
+              "2": 914,
+              "20": 914,
+              "21": 914,
+              "22": 914,
+              "23": 914,
+              "24": 914,
+              "25": 914,
+              "26": 914,
+              "27": 914,
+              "28": 914,
+              "29": 914,
+              "3": 914,
+              "30": 914,
+              "31": 914,
+              "4": 914,
+              "5": 914,
+              "6": 914,
+              "7": 914,
+              "8": 914,
+              "9": 914
+            },
+            "max": 914,
+            "min": 914
+          },
+          "actual_runtime_invocations_total": 29248,
+          "measured_runtime_endpoints": 1349,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "execution_census_gate": true,
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true,
+          "typed_triton_pointer_abi_valid": true
+        },
+        "numeric_reference_gate": true,
+        "path": "results/coverage/runtime_releases/deepseek8b_seq64_r1/typed_triton_oracle.json.gz",
+        "result_sha256": "d37753da59178400196e184d15c9a0beced12fa70172c28afd50d07a22d32399",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      }
+    },
+    {
+      "candidate_fb_binding": {
+        "denominator": {
+          "bound_to_proved_fb_mathematics": 1890,
+          "candidate_compute_regions": 1890,
+          "proved_auxiliary_backward_nodes": 476,
+          "semantic_fb_units": 2893,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_aot_math_complete": true,
+          "all_candidate_compute_regions_retained": true,
+          "all_candidate_regions_bound": true,
+          "candidate_values_used": false,
+          "name_shape_or_runtime_ordinal_similarity_used": false,
+          "only_explicit_device_put_graphs_admitted": true,
+          "proof_capture_sha_or_exact_graph_identity": true,
+          "proof_tagged_generated_schedule_used": true,
+          "segmented_source_to_normalized_node_bijection": true
+        },
+        "path": "results/coverage/runtime_releases/deepseek8b_seq128_r1/candidate_fb_bridge.json.gz",
+        "result_sha256": "3a514b0d342721f8ff67839c8152f2f940bec1e8a38815ba05a71fb8893c1f18",
+        "schema": "kernel-analyzer-candidate-fb-bridge-v1",
+        "status": "COMPLETE_ALL_EXECUTED_REGIONS_BOUND_TO_PROVED_FB_MATHEMATICS"
+      },
+      "candidate_inventory": {
+        "denominator": {
+          "all_runner_call_invocations": 7981,
+          "compute_invocations": 1890,
+          "compute_kind_counts": {
+            "DIRECT_ATEN": 1,
+            "EXTERN": 975,
+            "TRITON": 914
+          },
+          "helper_function_counts": {
+            "args.clear": 2,
+            "assert_size_stride": 1566,
+            "copy_if_misaligned": 2,
+            "empty_strided_cuda": 1181,
+            "get_raw_stream": 914,
+            "reinterpret_tensor": 2422,
+            "torch.cuda._DeviceGuard": 2,
+            "torch.cuda.set_device": 2
+          },
+          "structural_or_runtime_helper_invocations": 6091
+        },
+        "gate": true,
+        "gates": null,
+        "path": "results/coverage/runtime_releases/deepseek8b_seq128_r1/inventory.json.gz",
+        "result_sha256": "5839898ae6fe9cf12bc34612e9d58d31a0e6311c2ed3ca60476eb986a0aea308",
+        "schema": "kernel-analyzer-executed-generated-inventory-summary-v1",
+        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+      },
+      "canonical_eager_fb_math": {
+        "analytic_fb_proof_units": 4174,
+        "auxiliary_backward_accounting_units": 400,
+        "closed_accounting_components": 4574,
+        "execution_census_invocations": 11885,
+        "origin_bound_fb_units": 4174,
+        "primary_fb_proof_units": 4174,
+        "source_ledger": "results/coverage/deepseek8b_seq128_invocation_ledger.json.gz",
+        "status": "CAPTURED_EXECUTION_DERIVED_ANALYTIC_FB_PROVED"
+      },
+      "default_aot_fb_math": {
+        "binding_gates": {
+          "actual_inductor_default_partition": true,
+          "capture_present": true,
+          "math_capture_sha256_exact": true,
+          "math_ledger_complete": true,
+          "segmented_boundary_accounting_valid": true
+        },
+        "capture": {
+          "capture_sha256": "95f68622e1d695059275e45787b646f7085291d34c99c0545a4dca37ad8b8801",
+          "gate": true,
+          "path": "results/coverage/runtime_releases/deepseek8b_seq128_r1/default_aot_capture_raw.json.gz",
+          "result_sha256": "ec4de3504cdc65f05f53ff0299c5759d9d80229923390e631fb15b03f1200f60",
+          "status": "COMPLETE_AOT_FB_CAPTURE"
+        },
+        "denominator": {
+          "auxiliary_backward_nodes": 476,
+          "backward_call_function_nodes": 7938,
+          "backward_only_partition_replay_nodes": 0,
+          "forward_call_function_nodes": 4514,
+          "partition_auxiliary_forward_nodes": 0,
+          "requires_grad_forward_placeholders": 399,
+          "semantic_forward_backward_units": 2893,
+          "ssa_or_inactive_backward_units": 377,
+          "targets_with_declared_formula": 46,
+          "unique_targets": 46,
+          "units_pending_composite_vjp_proof": 0,
+          "units_with_actual_backward_nodes": 2516,
+          "units_with_complete_real_arithmetic_vjp_proof": 2893
+        },
+        "gate": true,
+        "gates": {
+          "all_argument_records_present": true,
+          "all_auxiliary_backward_nodes_derived": true,
+          "all_backward_only_partition_replays_derived": true,
+          "all_call_function_targets_have_declared_formulas": true,
+          "all_nodes_without_sequence_number_are_inside_explicit_proofs": true,
+          "all_partition_auxiliary_forward_nodes_derived": true,
+          "composite_vjp_proof_complete": true,
+          "every_backward_node_in_unit_or_auxiliary": true,
+          "every_forward_node_in_unit_or_partition_auxiliary": true,
+          "every_semantic_unit_has_exact_origin_and_sequence_anchor": true
+        },
+        "path": "results/coverage/runtime_releases/deepseek8b_seq128_r1/default_aot_math.json.gz",
+        "result_sha256": null,
+        "schema": "kernel-analyzer.round2-vl-math-ledger.v2",
+        "status": "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION"
+      },
+      "gates": {
+        "candidate_fb_binding": true,
+        "candidate_inventory": true,
+        "canonical_eager_fb_analytically_proved": true,
+        "default_aot_fb_analytically_proved": true,
+        "execution_census": true,
+        "fb_origin_bound": true,
+        "nontriton_precision_reference_valid": true,
+        "same_dtype_optimization_reference_valid": true,
+        "triton_execution_census": true,
+        "triton_numeric_reference_valid": true
+      },
+      "model": "deepseek_r1_0528_qwen3_8b",
+      "nontriton_precision_oracle": {
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 976,
+              "1": 976,
+              "10": 976,
+              "11": 976,
+              "12": 976,
+              "13": 976,
+              "14": 976,
+              "15": 976,
+              "16": 976,
+              "17": 976,
+              "18": 976,
+              "19": 976,
+              "2": 976,
+              "20": 976,
+              "21": 976,
+              "22": 976,
+              "23": 976,
+              "24": 976,
+              "25": 976,
+              "26": 976,
+              "27": 976,
+              "28": 976,
+              "29": 976,
+              "3": 976,
+              "30": 976,
+              "31": 976,
+              "4": 976,
+              "5": 976,
+              "6": 976,
+              "7": 976,
+              "8": 976,
+              "9": 976
+            },
+            "max": 976,
+            "min": 976
+          },
+          "actual_runtime_invocations_total": 31232,
+          "measured_runtime_endpoints": 976,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true
+        },
+        "path": "results/coverage/runtime_releases/deepseek8b_seq128_r1/nontriton_oracle.json.gz",
+        "result_sha256": "6539f92e41ab6e333dab4b8c4ab7c39c383d97534148e8e038e922373a8f83ec",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      },
+      "same_dtype_optimization_oracle": {
+        "denominator": {
+          "candidate_compute_regions": 1890,
+          "candidate_ports": 2325,
+          "compiler_added_ports_closed_by_exact_theorem": 0,
+          "exact_semantic_endpoints": 2104,
+          "internal_ports_closed_by_semantic_endpoint": 221,
+          "repeats_per_state": 2,
+          "states": 32,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "all_assigned_frozen_states_present": true,
+          "all_candidate_compute_regions_have_observed_output_ports": true,
+          "all_internal_candidate_ports_closed": true,
+          "all_reference_cuts_bitwise_self_replay": true,
+          "candidate_values_used_for_pairing": false,
+          "cross_phase_runtime_bridge_complete": true,
+          "exact_compiler_origin_endpoints_only": true,
+          "runtime_environment_exact": true,
+          "same_dtype_bf16": true,
+          "same_model_weight_storage": true
+        },
+        "path": "results/coverage/runtime_releases/deepseek8b_seq128_r1/same_dtype_oracle.json.gz",
+        "result_sha256": "4b26890c25f27551b5da110da2e201012d3f2a7b2cb40f8bb457d7ea87cdadab",
+        "schema": "kernel-analyzer-same-dtype-semantic-oracle-v1",
+        "status": "COMPLETE_SAME_DTYPE_OPTIMIZATION_ORACLE"
+      },
+      "shape": "batch1_seq128",
+      "status": "COMPLETE_ALL_DECLARED_GATES",
+      "triton_precision_oracle": {
+        "abi_audit": {
+          "historical_invalid_audit_not_applied": true,
+          "status": "VALID_INDEPENDENT_RECOMPILED_FP32_POINTER_ABI"
+        },
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 914,
+              "1": 914,
+              "10": 914,
+              "11": 914,
+              "12": 914,
+              "13": 914,
+              "14": 914,
+              "15": 914,
+              "16": 914,
+              "17": 914,
+              "18": 914,
+              "19": 914,
+              "2": 914,
+              "20": 914,
+              "21": 914,
+              "22": 914,
+              "23": 914,
+              "24": 914,
+              "25": 914,
+              "26": 914,
+              "27": 914,
+              "28": 914,
+              "29": 914,
+              "3": 914,
+              "30": 914,
+              "31": 914,
+              "4": 914,
+              "5": 914,
+              "6": 914,
+              "7": 914,
+              "8": 914,
+              "9": 914
+            },
+            "max": 914,
+            "min": 914
+          },
+          "actual_runtime_invocations_total": 29248,
+          "measured_runtime_endpoints": 1349,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "execution_census_gate": true,
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true,
+          "typed_triton_pointer_abi_valid": true
+        },
+        "numeric_reference_gate": true,
+        "path": "results/coverage/runtime_releases/deepseek8b_seq128_r1/typed_triton_oracle.json.gz",
+        "result_sha256": "5f33c2d96cd4d2e2488f04812c19bbaa6b094784c89880f6eba2e2f9a577fa58",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      }
+    },
+    {
+      "candidate_fb_binding": {
+        "denominator": {
+          "bound_to_proved_fb_mathematics": 1960,
+          "candidate_compute_regions": 1960,
+          "proved_auxiliary_backward_nodes": 476,
+          "semantic_fb_units": 2893,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_aot_math_complete": true,
+          "all_candidate_compute_regions_retained": true,
+          "all_candidate_regions_bound": true,
+          "candidate_values_used": false,
+          "name_shape_or_runtime_ordinal_similarity_used": false,
+          "only_explicit_device_put_graphs_admitted": true,
+          "proof_capture_sha_or_exact_graph_identity": true,
+          "proof_tagged_generated_schedule_used": true,
+          "segmented_source_to_normalized_node_bijection": true
+        },
+        "path": "results/coverage/runtime_releases/deepseek8b_seq256_r1/candidate_fb_bridge.json.gz",
+        "result_sha256": "ca8607cfb0852ecd78813729074339917c37c8507a389a6728a98510585bea84",
+        "schema": "kernel-analyzer-candidate-fb-bridge-v1",
+        "status": "COMPLETE_ALL_EXECUTED_REGIONS_BOUND_TO_PROVED_FB_MATHEMATICS"
+      },
+      "candidate_inventory": {
+        "denominator": {
+          "all_runner_call_invocations": 8267,
+          "compute_invocations": 1960,
+          "compute_kind_counts": {
+            "DIRECT_ATEN": 1,
+            "EXTERN": 975,
+            "TRITON": 984
+          },
+          "helper_function_counts": {
+            "args.clear": 2,
+            "assert_size_stride": 1566,
+            "copy_if_misaligned": 2,
+            "empty_strided_cuda": 1187,
+            "get_raw_stream": 984,
+            "reinterpret_tensor": 2562,
+            "torch.cuda._DeviceGuard": 2,
+            "torch.cuda.set_device": 2
+          },
+          "structural_or_runtime_helper_invocations": 6307
+        },
+        "gate": true,
+        "gates": null,
+        "path": "results/coverage/runtime_releases/deepseek8b_seq256_r1/inventory.json.gz",
+        "result_sha256": "947458c5c5d2dc843bdf24e930e6ff4bf787a16c25cb9f5d0474cb41b2102876",
+        "schema": "kernel-analyzer-executed-generated-inventory-summary-v1",
+        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+      },
+      "canonical_eager_fb_math": {
+        "analytic_fb_proof_units": 4174,
+        "auxiliary_backward_accounting_units": 400,
+        "closed_accounting_components": 4574,
+        "execution_census_invocations": 11885,
+        "origin_bound_fb_units": 4174,
+        "primary_fb_proof_units": 4174,
+        "source_ledger": "results/coverage/deepseek8b_seq256_invocation_ledger.json.gz",
+        "status": "CAPTURED_EXECUTION_DERIVED_ANALYTIC_FB_PROVED"
+      },
+      "default_aot_fb_math": {
+        "binding_gates": {
+          "actual_inductor_default_partition": true,
+          "capture_present": true,
+          "math_capture_sha256_exact": true,
+          "math_ledger_complete": true,
+          "segmented_boundary_accounting_valid": true
+        },
+        "capture": {
+          "capture_sha256": "755cce6967e0e58639f7d8d56910b837ee1ffdac65d4d3d42ba1a93e782dbe72",
+          "gate": true,
+          "path": "results/coverage/runtime_releases/deepseek8b_seq256_r1/default_aot_capture_raw.json.gz",
+          "result_sha256": "606c17229fe1c8ba67ac25152507d8f7cf8e5bc74f3790b7bcb345e187a879fa",
+          "status": "COMPLETE_AOT_FB_CAPTURE"
+        },
+        "denominator": {
+          "auxiliary_backward_nodes": 476,
+          "backward_call_function_nodes": 7938,
+          "backward_only_partition_replay_nodes": 0,
+          "forward_call_function_nodes": 4514,
+          "partition_auxiliary_forward_nodes": 0,
+          "requires_grad_forward_placeholders": 399,
+          "semantic_forward_backward_units": 2893,
+          "ssa_or_inactive_backward_units": 377,
+          "targets_with_declared_formula": 46,
+          "unique_targets": 46,
+          "units_pending_composite_vjp_proof": 0,
+          "units_with_actual_backward_nodes": 2516,
+          "units_with_complete_real_arithmetic_vjp_proof": 2893
+        },
+        "gate": true,
+        "gates": {
+          "all_argument_records_present": true,
+          "all_auxiliary_backward_nodes_derived": true,
+          "all_backward_only_partition_replays_derived": true,
+          "all_call_function_targets_have_declared_formulas": true,
+          "all_nodes_without_sequence_number_are_inside_explicit_proofs": true,
+          "all_partition_auxiliary_forward_nodes_derived": true,
+          "composite_vjp_proof_complete": true,
+          "every_backward_node_in_unit_or_auxiliary": true,
+          "every_forward_node_in_unit_or_partition_auxiliary": true,
+          "every_semantic_unit_has_exact_origin_and_sequence_anchor": true
+        },
+        "path": "results/coverage/runtime_releases/deepseek8b_seq256_r1/default_aot_math.json.gz",
+        "result_sha256": null,
+        "schema": "kernel-analyzer.round2-vl-math-ledger.v2",
+        "status": "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION"
+      },
+      "gates": {
+        "candidate_fb_binding": true,
+        "candidate_inventory": true,
+        "canonical_eager_fb_analytically_proved": true,
+        "default_aot_fb_analytically_proved": true,
+        "execution_census": true,
+        "fb_origin_bound": true,
+        "nontriton_precision_reference_valid": true,
+        "same_dtype_optimization_reference_valid": true,
+        "triton_execution_census": true,
+        "triton_numeric_reference_valid": true
+      },
+      "model": "deepseek_r1_0528_qwen3_8b",
+      "nontriton_precision_oracle": {
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 976,
+              "1": 976,
+              "10": 976,
+              "11": 976,
+              "12": 976,
+              "13": 976,
+              "14": 976,
+              "15": 976,
+              "16": 976,
+              "17": 976,
+              "18": 976,
+              "19": 976,
+              "2": 976,
+              "20": 976,
+              "21": 976,
+              "22": 976,
+              "23": 976,
+              "24": 976,
+              "25": 976,
+              "26": 976,
+              "27": 976,
+              "28": 976,
+              "29": 976,
+              "3": 976,
+              "30": 976,
+              "31": 976,
+              "4": 976,
+              "5": 976,
+              "6": 976,
+              "7": 976,
+              "8": 976,
+              "9": 976
+            },
+            "max": 976,
+            "min": 976
+          },
+          "actual_runtime_invocations_total": 31232,
+          "measured_runtime_endpoints": 976,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true
+        },
+        "path": "results/coverage/runtime_releases/deepseek8b_seq256_r1/nontriton_oracle.json.gz",
+        "result_sha256": "bc443fe34fbf7e2e42972bc6319138f286922200aa8f40885e912b9a75aa1dbd",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      },
+      "same_dtype_optimization_oracle": {
+        "denominator": {
+          "candidate_compute_regions": 1960,
+          "candidate_ports": 2432,
+          "compiler_added_ports_closed_by_exact_theorem": 0,
+          "exact_semantic_endpoints": 2140,
+          "internal_ports_closed_by_semantic_endpoint": 292,
+          "repeats_per_state": 2,
+          "states": 32,
+          "unresolved": 0
+        },
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "all_assigned_frozen_states_present": true,
+          "all_candidate_compute_regions_have_observed_output_ports": true,
+          "all_internal_candidate_ports_closed": true,
+          "all_reference_cuts_bitwise_self_replay": true,
+          "candidate_values_used_for_pairing": false,
+          "cross_phase_runtime_bridge_complete": true,
+          "exact_compiler_origin_endpoints_only": true,
+          "runtime_environment_exact": true,
+          "same_dtype_bf16": true,
+          "same_model_weight_storage": true
+        },
+        "path": "results/coverage/runtime_releases/deepseek8b_seq256_r1/same_dtype_oracle.json.gz",
+        "result_sha256": "4387368a5387ead464f82f5e6845affd7d43e8e27fcc6a9b8c4f4804654eba1f",
+        "schema": "kernel-analyzer-same-dtype-semantic-oracle-v1",
+        "status": "COMPLETE_SAME_DTYPE_OPTIMIZATION_ORACLE"
+      },
+      "shape": "batch1_seq256",
+      "status": "COMPLETE_ALL_DECLARED_GATES",
+      "triton_precision_oracle": {
+        "abi_audit": {
+          "historical_invalid_audit_not_applied": true,
+          "status": "VALID_INDEPENDENT_RECOMPILED_FP32_POINTER_ABI"
+        },
+        "denominator": {
+          "actual_runtime_invocations_per_state": {
+            "by_state": {
+              "0": 984,
+              "1": 984,
+              "10": 984,
+              "11": 984,
+              "12": 984,
+              "13": 984,
+              "14": 984,
+              "15": 984,
+              "16": 984,
+              "17": 984,
+              "18": 984,
+              "19": 984,
+              "2": 984,
+              "20": 984,
+              "21": 984,
+              "22": 984,
+              "23": 984,
+              "24": 984,
+              "25": 984,
+              "26": 984,
+              "27": 984,
+              "28": 984,
+              "29": 984,
+              "3": 984,
+              "30": 984,
+              "31": 984,
+              "4": 984,
+              "5": 984,
+              "6": 984,
+              "7": 984,
+              "8": 984,
+              "9": 984
+            },
+            "max": 984,
+            "min": 984
+          },
+          "actual_runtime_invocations_total": 31488,
+          "measured_runtime_endpoints": 1456,
+          "repeats_per_state": 2,
+          "states": 32,
+          "static_generated_calls_not_executed_in_at_least_one_state": 0
+        },
+        "execution_census_gate": true,
+        "gate": true,
+        "gates": {
+          "all_32_frozen_states_present": true,
+          "candidate_values_used_to_select_coordinates": false,
+          "runtime_identity_repeat_stable": true,
+          "same_state_metrics_repeat_exact": true,
+          "state_varying_actual_invocations_retained": true,
+          "static_nonexecuted_calls_retained_with_disposition": true,
+          "typed_triton_pointer_abi_valid": true
+        },
+        "numeric_reference_gate": true,
+        "path": "results/coverage/runtime_releases/deepseek8b_seq256_r1/typed_triton_oracle.json.gz",
+        "result_sha256": "0553c1970cf4d194adf71a97f16275a5becf35742b4f56c791193e5eb72e068d",
+        "schema": "kernel-analyzer-generated-fp32-oracle-v1",
+        "status": "COMPLETE_PRECISION_ONLY_RUNTIME_DENOMINATOR_ORACLE"
+      }
+    }
+  ],
+  "claim_boundary": "Completion requires each of 12 independent model-shape cells to close execution, actual F+B origins, concrete analytic F+B proofs, candidate-to-F+B bindings, valid typed Triton and non-Triton references, and a same-dtype optimization contrast. Formula registration, source inventory, or an invalidated replay cannot substitute for those gates. Bias-mechanism promotion remains a separate later stage.",
+  "counts": {
+    "candidate_fb_bindings_closed": 12,
+    "candidate_inventories_closed": 12,
+    "canonical_eager_fb_math_closed": 12,
+    "declared_cells": 12,
+    "default_aot_fb_math_closed": 12,
+    "fb_origin_bound": 12,
+    "fully_closed_cells": 12,
+    "nontriton_precision_oracles_closed": 12,
+    "same_dtype_optimization_oracles_closed": 12,
+    "triton_execution_censuses_closed": 12,
+    "triton_precision_oracles_closed": 12
+  },
+  "result_sha256": "2975f1bc44da9d09fa402196d125aadfb3c1aabe473f7007fbdf1b3ea85d2dd9",
+  "schema": "kernel-analyzer-four-model-full-operator-status-v1",
+  "scope": {
+    "deduplication_across_models_shapes_or_families": false,
+    "models": [
+      "qwen3_1p7b",
+      "mamba_130m",
+      "phi4_mini_3p8b",
+      "deepseek_r1_0528_qwen3_8b"
+    ],
+    "shapes": [
+      "batch1_seq64",
+      "batch1_seq128",
+      "batch1_seq256"
+    ]
+  },
+  "status": "COMPLETE"
+}

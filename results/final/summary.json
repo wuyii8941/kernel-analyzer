@@ -9,21 +9,88 @@
   "causal": {
     "cases": [
       "seq128 lm_head input-gradient MM",
-      "Liger fused-linear cross-entropy dW accumulation"
+      "Liger fused-linear cross-entropy dW accumulation",
+      "layer-23 q_proj composite tile carrier"
     ],
+    "fp32_endpoint_campaign": {
+      "all_repeats_match": true,
+      "checkpoints": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16,
+        32,
+        64
+      ],
+      "f_b_closure_complete": false,
+      "mapped_invocations": 526,
+      "mapped_symbols": 34,
+      "natural_bias_case_added": false,
+      "seq_len": 128,
+      "unresolved_invocations": 144
+    },
+    "fp32_seq64_full_source_mapping": {
+      "all_repeats_match": true,
+      "checkpoints": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16,
+        32,
+        64
+      ],
+      "interpretation": "source-derived reduction/layout mappings close the added seq64 subset; residuals are small schedule differences with no persistent directional carrier",
+      "mapped_invocations": 586,
+      "mapped_symbols": 40,
+      "natural_bias_case_added": false,
+      "unresolved_invocations": 84
+    },
     "fused_extension_cases": 1,
     "initial_inductor_screen": {
       "complete_cases": 0,
       "positive_regions_tested": 16,
       "target_states": 512
     },
-    "qwen3_vl_silu_aot": {
-      "bf16_gradient_delta_l2": 21.36792274152213,
-      "candidate_intervention_exact_parameters": 625,
-      "cross_state_coherence_ratio": -0.011355843970777258,
-      "directional_case": false,
-      "fp32_gradient_delta_l2": 0.000994541487633203,
-      "states": 6
+    "l23_qproj_composite": {
+      "checkpoints": [
+        64,
+        256,
+        1024,
+        2048,
+        4096
+      ],
+      "complete_boundary_live_weight_bf16_coordinates": 1007,
+      "complete_boundary_live_weight_projection": 3.7518300814554095e-05,
+      "complete_boundary_residual_ci": [
+        -1.23427190114711e-05,
+        1.5716665034304356e-05
+      ],
+      "complete_case_class": "COMPOSITE_PARTIALLY_SOURCE_ATTRIBUTED",
+      "d_fraction": 0.7210533536821676,
+      "downstream_decomposition": {
+        "actual_backward_rebinding_complete": true,
+        "all_reference_replays_and_shams_pass": true,
+        "final_rmsnorm_joint_f_b_fraction": 0.050068544716224746,
+        "layer23_direct_residual_fraction": 0.6275752396333869,
+        "layer26_attention_attenuation_fraction": -0.0996945630348233,
+        "layer27_mlp_attenuation_fraction": -0.343022905585015,
+        "remaining_boundary": "COMPOSITE_UPSTREAM_FORWARD_LOGIT_ORIGIN",
+        "terminal_lm_head_input_vjp_mm_fraction": 0.0,
+        "terminal_same_logits_vjp_fraction": 0.006443451236328892,
+        "terminal_upstream_forward_logits_fraction": 0.7622889612693229
+      },
+      "go_removal_fraction": 0.6549261160643564,
+      "local_key_materialization_fraction": 0.515,
+      "natural_complete_case_added": true,
+      "s_bwd_fraction": 0.9862222083117781,
+      "states": 32,
+      "total_projection_mean": 0.0003507913319040767,
+      "u_fraction": 0.8492127137413946,
+      "verdict": "THIRD_NATURAL_COMPLETE_FB_DIRECTIONAL_CARRIER_PARTIALLY_SOURCE_ATTRIBUTED"
     },
     "liger_trajectory": {
       "all_same_weight_controls_exact": true,
@@ -32,42 +99,311 @@
       "carrier_projections_total": 64,
       "final_bf16_materialized_pair_l2": 0.003207364056841524,
       "final_fp32_master_pair_l2": 0.0022393549008995974,
-      "first_bf16_materialized_pair_l2": 0.0000634612746021319,
-      "first_fp32_master_pair_l2": 0.000008586806677537658,
+      "first_bf16_materialized_pair_l2": 6.34612746021319e-05,
+      "first_fp32_master_pair_l2": 8.586806677537658e-06,
       "steps": 32,
       "verdict": "COMPLETE_LIGER_ACCUMULATOR_REPAIR_LIVE_WEIGHT_CAUSAL_CHAIN"
     },
     "primary_all_op_cases": 1,
-    "project_natural_complete_cases": 2
+    "priority_carrier_screen": {
+      "exact_chains": 28,
+      "focused_candidate_lost_direction": true,
+      "focused_followup_steps": [
+        16,
+        32,
+        64
+      ],
+      "initial_all_positive_regions": [
+        "backward:852"
+      ],
+      "initial_steps": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "verdict": "LOCAL_IMPLEMENTATION_DIFFERENCES_WITHOUT_COHERENT_CARRIER_BIAS"
+    },
+    "project_fully_single_kernel_attributed_cases": 2,
+    "project_natural_complete_cases": 3,
+    "qwen3_vl_silu_aot": {
+      "bf16_gradient_delta_l2": 21.36792274152213,
+      "candidate_intervention_exact_parameters": 625,
+      "cross_state_coherence_ratio": -0.011355843970777258,
+      "directional_case": false,
+      "fp32_gradient_delta_l2": 0.000994541487633203,
+      "states": 6
+    },
+    "region_intervention_batch": {
+      "all_repeats_match": true,
+      "arms": 8,
+      "checkpoints": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16,
+        32,
+        64
+      ],
+      "fixed_sketch": "131072 candidate-blind coordinates from step 0",
+      "natural_bias_case_added": false,
+      "persistent_directional_arms": 0,
+      "property_claim": false
+    },
+    "region_intervention_pilot": {
+      "carrier": "model.embed_tokens.weight",
+      "checkpoints": [
+        0,
+        1
+      ],
+      "directional_screen": 0.05,
+      "fixed_coordinate_sketch_cosine": [
+        0.011230871972227005,
+        0.011230871972227005
+      ],
+      "natural_bias_case_added": false,
+      "region": "strict FP32 seq128 RMSNorm/reduction invocation 45"
+    },
+    "seq1024_long_horizon": {
+      "aot_eager_equals_eager": true,
+      "heldout_structural_factor": [
+        {
+          "parameter": "model.layers.19.self_attn.k_norm.weight",
+          "variant": "minimal_fusion"
+        },
+        {
+          "parameter": "model.layers.19.self_attn.k_norm.weight",
+          "variant": "materialize_reused_intermediates"
+        }
+      ],
+      "milestones": [
+        0,
+        64,
+        256,
+        1024,
+        2048,
+        4096
+      ],
+      "natural_complete_case_added": false,
+      "repeats": 2,
+      "states": 8,
+      "triggered_parameters": [
+        "model.layers.19.self_attn.q_norm.weight",
+        "model.layers.19.self_attn.k_norm.weight"
+      ],
+      "verdict": "K_NORM_FUSION_MATERIALIZATION_PARTIAL_CAUSE_NOT_COMPLETE_CASE"
+    },
+    "structured_carrier_confirmation": {
+      "confirmed_carriers": 1,
+      "confirmed_columns": [
+        1664,
+        1792
+      ],
+      "confirmed_parameter": "model.layers.23.self_attn.q_proj.weight",
+      "confirmed_rows": [
+        1152,
+        1280
+      ],
+      "discovery_partition_blocks": 105976,
+      "discovery_triggers": 120,
+      "holm_family_size": 120,
+      "independent_confirmation_states": 32,
+      "natural_complete_case_added": false,
+      "verdict": "COMPOSITE_CARRIER_BOUNDARY_CLOSED_ONE_LOCAL_COMPONENT_ONLY"
+    }
   },
   "claims": {
     "all_bf16_inductor_triton_regions_screened_for_seq64_128_256": true,
     "all_compiler_configurations_certified": false,
+    "declared_implementation_cells_complete": true,
+    "dense_qwen_seq1024_long_search_complete": true,
     "eager_precision_search_complete": true,
+    "k_norm_fusion_materialization_is_partial_causal_factor": true,
+    "k_norm_is_new_complete_case": false,
+    "l23_qproj_is_fully_single_kernel_attributed": false,
+    "l23_qproj_is_natural_complete_f_b_directional_carrier_case": true,
+    "non_bf16_region_dynamic_attribution": "fp16_mapped_layer_and_exact_fp32_tf32_mappings_replayed; unresolved topology boundaries remain explicit",
+    "property_generalization_started": false,
     "qwen3_vl_aot_math_complete_bf16_fp32": true,
     "qwen3_vl_silu_difference_is_directional": false,
-    "property_generalization_started": false
+    "qwen_invocation_coverage_complete": false
   },
   "coverage": {
     "aot_forward_vjp_units": 3491,
+    "architecture_invocation_ledgers": {
+      "architectures": [
+        {
+          "actual_invocations": 9269,
+          "architecture": "qwen",
+          "candidate_correctness_certified": 311,
+          "directional_bias_certified": 0,
+          "exact_candidate_region_binding": 9269,
+          "fb_origin_or_program_accounted": 9269,
+          "fb_origin_unresolved": 0,
+          "invocation_level_numerical_measurement": 3169,
+          "ledger": "results/coverage/qwen_invocation_ledger.json.gz",
+          "ledger_sha256": "254425f2f716a93a1f7f45be121786002aaf5f12785852babf0430d3564f78d8",
+          "local_mathematics_complete": 9269,
+          "status": "PARTIAL_FAIL_CLOSED"
+        },
+        {
+          "actual_invocations": 56411,
+          "architecture": "mamba",
+          "candidate_correctness_certified": 0,
+          "directional_bias_certified": 0,
+          "exact_candidate_region_binding": 0,
+          "fb_origin_or_program_accounted": 56411,
+          "fb_origin_unresolved": 0,
+          "invocation_level_numerical_measurement": 0,
+          "ledger": "results/coverage/mamba_invocation_ledger.json.gz",
+          "ledger_sha256": "5eb32f54c08390e81b7ffe442f42f44d56827ace89f447017bf9f70a64f0b9d9",
+          "local_mathematics_complete": 56411,
+          "status": "PARTIAL_FAIL_CLOSED"
+        },
+        {
+          "actual_invocations": 25582,
+          "architecture": "moe",
+          "candidate_correctness_certified": 0,
+          "directional_bias_certified": 0,
+          "exact_candidate_region_binding": 0,
+          "fb_origin_or_program_accounted": 25582,
+          "fb_origin_unresolved": 0,
+          "invocation_level_numerical_measurement": 0,
+          "ledger": "results/coverage/moe_invocation_ledger.json.gz",
+          "ledger_sha256": "3076280c37ad69c9d8aeae7018a6238a0a259b283f1a338eead943ae0e3d70df",
+          "local_mathematics_complete": 25582,
+          "status": "PARTIAL_FAIL_CLOSED"
+        }
+      ],
+      "claim_boundary": "Mamba and MoE now have full-model eager F+B invocation atlases, not targeted-op screens. Qwen eager-to-AOT identity is closed by exact bindings, explicit elisions and one closed semantic rewrite; Qwen AOT-to-Inductor program identity is also closed by compiler-carried proof tags, while all three still lack complete per-invocation candidate measurement and verdict coverage.",
+      "global_gates": {
+        "all_architecture_candidate_bindings_exact": false,
+        "all_architecture_invocation_denominators_present": true,
+        "all_architecture_invocations_numerically_measured": false,
+        "all_architecture_local_mathematics_present": true,
+        "property_induction_allowed": false
+      },
+      "qwen_current_generated_program": {
+        "compute_invocations": 1446,
+        "exact_pointer_dataflow": true,
+        "heldout_values_observed": false,
+        "kind_counts": {
+          "DIRECT_ATEN": 1,
+          "EXTERN": 759,
+          "TRITON": 686
+        },
+        "triton_reference_plan": {
+          "reference_adapter_exact": 453,
+          "reference_adapter_unresolved": 233,
+          "triton_invocations": 686
+        }
+      },
+      "result_sha256": "4bf416712921eb8ccc4a95d46da90811344c468526689889f57ddc5f4b602bec",
+      "schema": "kernel-analyzer-coverage-overview-v1",
+      "status": "PARTIAL_FAIL_CLOSED"
+    },
+    "bf16_dynamic_changed_sites_by_shape": {
+      "seq128": "452/452",
+      "seq256": "450/450",
+      "seq64": "506/506"
+    },
     "bf16_invocations": 9269,
+    "changed_closed_f_b_all_parameter_reachability": "949/949 units; 310/310 trainable parameters; 0 unresolved",
+    "fail_closed_invocation_ledger": {
+      "actual_invocations": 9269,
+      "candidate_correctness_certified_invocations": 311,
+      "directional_bias_certified_invocations": 0,
+      "exact_candidate_region_binding_invocations": 9269,
+      "exact_eager_aot_fb_origin": 9269,
+      "gates": {
+        "all_candidate_region_bindings_exact": true,
+        "all_eager_aot_fb_origins_exact": true,
+        "all_invocations_have_bias_verdict": false,
+        "all_invocations_numerically_measured": false,
+        "all_local_mathematical_derivations_complete": true,
+        "every_actual_invocation_in_exactly_one_row": true
+      },
+      "legacy_changed_nonclosed_reclassified": 122,
+      "mathematical_local_derivation_complete": 9269,
+      "numerically_measured_invocations": 3169,
+      "status": "PARTIAL_FAIL_CLOSED",
+      "unresolved_eager_aot_fb_origin": 0
+    },
     "fp16_invocations": 27639,
+    "fp16_mapped_dynamic_changed_sites_by_shape": {
+      "seq128": "452/452",
+      "seq256": "450/450",
+      "seq64": "506/506"
+    },
     "fp32_invocations": 8701,
+    "fp32_seq64_full_source_mapping": "586/670 mapped at all 8 checkpoints and 2 repeats; 84 explicit unresolved",
+    "fp32_tf32_semantic_checkpoint_bank": {
+      "cells": 6,
+      "checkpoints_per_cell": 8,
+      "natural_bias_cases_added": 0,
+      "repeats_per_checkpoint": 2
+    },
+    "fp32_tf32_semantic_mapped_invocations_by_shape": {
+      "seq128": "670/670 numeric replay",
+      "seq256": "724/724 numeric replay",
+      "seq64": "670/670 numeric replay"
+    },
+    "fp32_tf32_source_static_mapping": {
+      "cells": 6,
+      "mapped_invocations": {
+        "seq128": "670/670",
+        "seq256": "724/724",
+        "seq64": "670/670"
+      },
+      "numeric_replay": "COMPLETE",
+      "planned_runs": 48,
+      "repeat_count": 2
+    },
     "qwen3_vl_bf16_aot_forward_vjp_units": 3589,
     "qwen3_vl_bf16_eager_invocations": 14660,
     "qwen3_vl_fp32_aot_forward_vjp_units": 3211,
+    "structured_parameter_coordinate_coverage": "1720574976/1720574976 coordinates in exactly one partition block; no sampled-coordinate subset",
+    "unified_generated_compute_binding": "507/507 real-changed sites across 1447 generated compute sites; 0 unresolved",
     "unresolved_math_units": 0
   },
   "generated": {
     "additional_complete_natural_cases_in_primary_bf16_inductor_screen": 0,
     "confirmation_states_per_shape": 24,
+    "dtype_topology_census": {
+      "cells": 6,
+      "runtime_invocations_by_shape": {
+        "seq128": 670,
+        "seq256": 724,
+        "seq64": 670
+      },
+      "runtime_symbols_by_shape": {
+        "seq128": 45,
+        "seq256": 43,
+        "seq64": 45
+      },
+      "semantic_mapping": "candidate-blind exact mappings and six-cell numeric replay complete; explicit topology boundaries retained"
+    },
     "screened_triton_invocations": {
       "seq128": 686,
       "seq256": 740,
       "seq64": 686
     }
   },
-  "next": "collect more independent natural complete F+B mechanisms before property induction",
+  "implementation_difference": {
+    "closed_fbv_sites": 507,
+    "closed_fbv_units": 949,
+    "excluded_nonclosed_units": 122,
+    "explicit_empty_or_elided_vjp_units_reclassified": 122,
+    "generated_sites": 1447,
+    "legacy_excluded_nonclosed_units": 122,
+    "real_changed_sites": 507,
+    "remaining_unresolved_changed_nonclosed_units": 0,
+    "unbound_changed_sites": 0
+  },
+  "next": "complete held-out Qwen per-invocation numerical measurements and verdicts, then build the same exact eager/AOT/candidate bridges and local measurements for every Mamba and MoE invocation; keep property induction paused",
   "schema": "kernel-analyzer-summary-v1",
   "scope": "Qwen3-1.7B text and Qwen3-VL-Reranker-2B multimodal complete forward+backward analyses"
 }

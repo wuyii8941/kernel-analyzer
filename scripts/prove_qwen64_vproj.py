@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""Close the concrete F+B proof for Qwen seq64 layer-0 v_proj."""
+
+from __future__ import annotations
+
+import gzip
+import hashlib
+import json
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from scripts.prove_qwen128_vproj import canonical, output_leaves, shortest_output_path  # noqa: E402
+
+
+COVERAGE = ROOT / "results/coverage"
+CID = "qwen_seq64_forward_8_output"
+SEQ = 9956
+SOURCE_LINE = 1750
+
+
+def main() -> None:
+    aot_path = COVERAGE / "qwen_seq64_aot.json.gz"
+    with gzip.open(aot_path, "rt") as handle:
+        capture = json.load(handle)
+    assert capture["status"] == "COMPLETE_AOT_FB_CAPTURE"
+    assert all(capture["observation_stability"].values())
+    assert all(capture["gates"].values())
+
+    live_path = COVERAGE / "live_contrasts/qwen_seq64.json"
+    live = json.loads(live_path.read_text())
+    queue_path = COVERAGE / "bias_candidate_queue.json"
+    queue = json.loads(queue_path.read_text())
+    candidate = next(row for row in queue["candidates"] if row["candidate_id"] == CID)
+    precision = next(row for row in live["results"] if row["candidate_id"] == CID
+                     and row["contrast_axis"] == "PRECISION")
+    optimization = next(row for row in live["results"] if row["candidate_id"] == CID
+                        and row["contrast_axis"] == "OPTIMIZATION")
+    assert precision["coordinates"] == 64 * 1024
+    assert precision["direction"]["status"] == "PASS"
+    assert precision["direction"]["cluster_bootstrap_95"]["lower_95"] > 0.0
+    assert optimization["max_abs"] == 0.0
+
+    release = COVERAGE / "runtime_releases/qwen_seq64_r1"
+    release_capture = json.loads((release / "capture.json").read_text())
+    source_path = Path(release_capture["modules"][0]["captured_source"])
+    source = source_path.read_text()
+    source_lines = source.splitlines()
+    source_call = source_lines[SOURCE_LINE - 1].strip()
+    source_comment = source_lines[SOURCE_LINE - 2].strip()
+    assert hashlib.sha256(source.encode()).hexdigest() == release_capture["modules"][0]["sha256"]
+    assert hashlib.sha256(source_call.encode()).hexdigest() == \
+        candidate["exact_generated_call"]["source_line_sha256"]
+    assert source_call == candidate["exact_generated_call"]["call_expression"]
+    assert "linear_2" in source_comment and "aten.mm" in source_comment
+    assert "buf7, (64, 2048)" in source_call
+    assert "primals_9, (2048, 1024)" in source_call and "out=buf14" in source_call
+
+    graphs = capture["capture"]["graphs"]
+    forward = next(graph for graph in graphs if graph["phase"] == "FORWARD")
+    backward = next(graph for graph in graphs if graph["phase"] == "BACKWARD")
+    fw = {node["name"]: node for node in forward["nodes"]}
+    bw = {node["name"]: node for node in backward["nodes"]}
+    root = fw["mm_2"]
+    assert root["seq_nr"] == SEQ and root["target"] == "aten.mm.default"
+    assert root["input_nodes"] == ["t_2", "view_14"]
+    assert root["tensor_meta"][0] == [64, 1024]
+    assert "v_proj" in root["stack_trace"] and root["source_fn_stack"][0][0] == "linear_2"
+    assert fw["t_2"]["input_nodes"] == ["primals_9"]
+    assert fw["t_2"]["tensor_meta"][0] == [2048, 1024]
+    assert fw["view_14"]["tensor_meta"][0] == [64, 2048]
+    assert {"t_2", "view_14"}.issubset(set(fw["output"]["input_nodes"]))
+    assert bw["t_2"]["op"] == "placeholder" and bw["view_14"]["op"] == "placeholder"
+
+    assert bw["view_1240"]["tensor_meta"][0] == [64, 1024]
+    assert bw["t_973"]["input_nodes"] == ["view_1240"]
+    assert bw["mm_585"]["input_nodes"] == ["t_973", "view_14"]
+    assert bw["mm_585"]["tensor_meta"][0] == [1024, 2048]
+    assert bw["t_976"]["input_nodes"] == ["t_974"]
+    assert bw["t_975"]["input_nodes"] == ["t_2"]
+    assert bw["mm_586"]["input_nodes"] == ["t_975", "view_1240"]
+    assert bw["mm_586"]["tensor_meta"][0] == [64, 2048]
+    assert all(bw[name]["seq_nr"] == SEQ for name in
+               ("t_973", "mm_585", "t_974", "t_975", "mm_586"))
+
+    ancestors: set[str] = set()
+    stack = ["view_1240"]
+    while stack:
+        name = stack.pop()
+        if name in ancestors:
+            continue
+        ancestors.add(name)
+        stack.extend(bw[name]["input_nodes"])
+    assert "tangents_1" in ancestors
+    outputs = set(output_leaves(bw["output"]))
+    assert "t_976" in outputs
+    dx_path = shortest_output_path(bw, "view_1241", outputs)
+    assert dx_path == ["view_1241", "add_614", "add_616", "mul_1489", "sum_281", "view_1248"]
+
+    derivation = {
+        "symbols": {"X": "[64,2048]", "W": "[1024,2048]", "Q=dL/dY": "[64,1024]"},
+        "forward": "Y = X W^T",
+        "backward": {"dX_contribution": "Q W", "dW": "Q^T X"},
+        "actual_aot_program": {
+            "forward": "mm_2(view_14(X), t_2(W^T))",
+            "dW": "t_976(t(t(mm_585(t_973(Q^T), view_14(X))))) = Q^T X",
+            "dX_contribution": "view_1241(mm_586(t_975(W), view_1240(Q))) = Q W",
+            "dX_output_accumulation_path": dx_path,
+        },
+        "candidate_generated_call": source_call,
+    }
+    concrete = {
+        "saved_tensor_origins_exact": True,
+        "cotangent_edge_exact": True,
+        "backward_program_matches_analytic_vjp": True,
+        "non_tensor_arguments_exact": True,
+        "output_edges_exact": True,
+        "forward_program_sha256": forward["code_sha256"],
+        "backward_program_sha256": backward["code_sha256"],
+        "analytic_derivation_sha256": canonical(derivation),
+    }
+    payload = {
+        "schema": "kernel-analyzer-concrete-fb-bias-case-v1",
+        "status": "T1_COHERENT_PRECISION_BIAS_WITH_CONCRETE_FB_PROOF",
+        "candidate_id": CID,
+        "subject": "Qwen3-1.7B seq64 layer-0 self-attention v_proj forward MM",
+        "cause_axis": "PRECISION",
+        "forward_backward_unit": derivation,
+        "concrete_program_proof": concrete,
+        "bindings": {
+            "aot_capture_sha256": capture["result_sha256"],
+            "aot_file_sha256": hashlib.sha256(aot_path.read_bytes()).hexdigest(),
+            "release_capture_sha256": release_capture["result_sha256"],
+            "generated_source_sha256": release_capture["modules"][0]["sha256"],
+            "generated_source_line": SOURCE_LINE,
+            "generated_source_line_sha256": candidate["exact_generated_call"]["source_line_sha256"],
+            "forward_root": "mm_2", "sequence_nr": SEQ,
+            "module": "model.layers.0.self_attn.v_proj",
+            "saved_tensor_nodes": ["view_14", "t_2"],
+            "cotangent_node": "view_1240", "weight_gradient_output": "t_976",
+            "input_gradient_contribution": "view_1241",
+        },
+        "numerical": {
+            "states": live["state_count"], "coordinates": precision["coordinates"],
+            "max_abs": precision["max_abs"],
+            "u_statistic": precision["direction"]["cross_state_inner_product_u"],
+            "cluster_bootstrap_95": precision["direction"]["cluster_bootstrap_95"],
+            "repeat_exact": precision["repeat_exact"],
+            "optimization_max_abs": optimization["max_abs"],
+            "live_result_sha256": live["result_sha256"],
+        },
+        "claim_boundary": (
+            "Complete concrete local F+B proof and 32-state full-coordinate T1 coherent "
+            "precision bias for seq64 v_proj. The exact same-dtype optimization contrast is zero. "
+            "A causal intervention and live-weight accumulation remain separate gates."
+        ),
+    }
+    payload["result_sha256"] = canonical(payload)
+    output = COVERAGE / "cases/qwen64_vproj.json"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    print(json.dumps({"output": str(output.relative_to(ROOT)), "status": payload["status"]}))
+
+
+if __name__ == "__main__":
+    main()

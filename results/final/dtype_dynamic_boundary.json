@@ -1,0 +1,373 @@
+{
+  "claim_boundary": {
+    "natural_bias_case_added": false,
+    "next_required_artifact": "Carrier-level attribution for mapped regions and exact semantic mapping of unresolved FP32/TF32 topology rows",
+    "property_generalization_allowed": false
+  },
+  "direct_dynamic_region_layer": {
+    "bf16_shape_sites": {
+      "seq128": "452/452",
+      "seq256": "450/450",
+      "seq64": "506/506"
+    },
+    "checkpoint_steps": [
+      0,
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64
+    ],
+    "repeats_per_checkpoint": 2
+  },
+  "dtype_probe": {
+    "candidate_values_used_to_select_regions": false,
+    "checkpoint_step": 0,
+    "configuration": "fp16_inductor",
+    "failure_message": "scores_bf16 must be torch.bfloat16",
+    "failure_stage": "same_precision_reference",
+    "failure_type": "TypeError",
+    "interpretation": "The existing exact Triton campaign is BF16-specific and cannot certify FP16 per-region attribution. This is an unresolved boundary, not a correctness verdict.",
+    "reference_source": "archive/round1_code/src/forkcert/fused_causal_softmax_reference.py",
+    "seq_len": 64,
+    "status": "INVALID_REFERENCE_CAMPAIGN_DTYPE"
+  },
+  "fp16_dynamic_probe": {
+    "all_observation_repeats_stable": true,
+    "candidate_values_used_to_select_regions": false,
+    "changed_sites_observed": {
+      "seq128": "452/452",
+      "seq256": "450/450",
+      "seq64": "506/506"
+    },
+    "checkpoint_steps": [
+      0,
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64
+    ],
+    "dtype": "fp16",
+    "finite_sign_pattern_counts": {
+      "seq128": {
+        "both_signs": 413,
+        "negative_only": 4,
+        "positive_only": 6,
+        "zero": 25
+      },
+      "seq256": {
+        "both_signs": 408,
+        "negative_only": 4,
+        "positive_only": 4,
+        "zero": 27
+      },
+      "seq64": {
+        "both_signs": 467,
+        "negative_only": 6,
+        "positive_only": 4,
+        "zero": 25
+      }
+    },
+    "interpretation": "The dtype-matched references close the mapped FP16 changed-site layer, but one additional exact pointwise cast kernel is outside the BF16 atlas and naturally masked softmax rows are nonfinite. These are explicit denominator boundaries; the FP16 layer is not promoted to exhaustive finite per-region certification.",
+    "nonfinite_changed_sites": {
+      "seq128": 4,
+      "seq256": 7,
+      "seq64": 4
+    },
+    "ordinary_region_counts": {
+      "seq128": 683,
+      "seq256": 737,
+      "seq64": 683
+    },
+    "repeats_per_checkpoint": 2,
+    "status": "DYNAMIC_CHANGED_SITE_LAYER_WITH_NONFINITE_BOUNDARY",
+    "tf32": false,
+    "unmatched_warmed_symbol": "triton_poi_fused__to_copy_unsqueeze_2"
+  },
+  "full_step_matrix": {
+    "cells": 12,
+    "cells_valid": 12,
+    "dtypes": [
+      "bf16",
+      "fp16",
+      "fp32_strict",
+      "fp32_tf32"
+    ],
+    "shape_strata": [
+      64,
+      128,
+      256
+    ]
+  },
+  "schema": "kernel-analyzer-dtype-dynamic-boundary-v1",
+  "semantic_mapping_observations": {
+    "entries": [
+      {
+        "candidate_values_used_to_select_or_classify": false,
+        "checkpoint_steps": [
+          0,
+          1,
+          2,
+          4,
+          8,
+          16,
+          32,
+          64
+        ],
+        "dtype": "fp32",
+        "endpoint_count": 455,
+        "file": "dtype_semantic_fp32_seq64.json",
+        "mapped_invocations": 318,
+        "mapped_regions_observed_at_all_steps_and_repeats": 318,
+        "max_abs_max": 9.1552734375e-05,
+        "natural_bias_case_added": false,
+        "repeats_per_checkpoint": 2,
+        "rows_with_any_nonexact_endpoint": 234,
+        "runtime_invocations": 670,
+        "seq_len": 64,
+        "sign_persistent_endpoint_count": 7,
+        "tf32": false,
+        "unresolved_invocations": 352
+      },
+      {
+        "candidate_values_used_to_select_or_classify": false,
+        "checkpoint_steps": [
+          0,
+          1,
+          2,
+          4,
+          8,
+          16,
+          32,
+          64
+        ],
+        "dtype": "fp32",
+        "endpoint_count": 401,
+        "file": "dtype_semantic_fp32_seq128.json",
+        "mapped_invocations": 264,
+        "mapped_regions_observed_at_all_steps_and_repeats": 264,
+        "max_abs_max": 0.0001220703125,
+        "natural_bias_case_added": false,
+        "repeats_per_checkpoint": 2,
+        "rows_with_any_nonexact_endpoint": 180,
+        "runtime_invocations": 670,
+        "seq_len": 128,
+        "sign_persistent_endpoint_count": 6,
+        "tf32": false,
+        "unresolved_invocations": 406
+      },
+      {
+        "candidate_values_used_to_select_or_classify": false,
+        "checkpoint_steps": [
+          0,
+          1,
+          2,
+          4,
+          8,
+          16,
+          32,
+          64
+        ],
+        "dtype": "fp32",
+        "endpoint_count": 401,
+        "file": "dtype_semantic_fp32_seq256.json",
+        "mapped_invocations": 264,
+        "mapped_regions_observed_at_all_steps_and_repeats": 264,
+        "max_abs_max": 0.0001220703125,
+        "natural_bias_case_added": false,
+        "repeats_per_checkpoint": 2,
+        "rows_with_any_nonexact_endpoint": 180,
+        "runtime_invocations": 724,
+        "seq_len": 256,
+        "sign_persistent_endpoint_count": 12,
+        "tf32": false,
+        "unresolved_invocations": 460
+      },
+      {
+        "candidate_values_used_to_select_or_classify": false,
+        "checkpoint_steps": [
+          0,
+          1,
+          2,
+          4,
+          8,
+          16,
+          32,
+          64
+        ],
+        "dtype": "fp32",
+        "endpoint_count": 455,
+        "file": "dtype_semantic_tf32_seq64.json",
+        "mapped_invocations": 318,
+        "mapped_regions_observed_at_all_steps_and_repeats": 318,
+        "max_abs_max": 0.0001220703125,
+        "natural_bias_case_added": false,
+        "repeats_per_checkpoint": 2,
+        "rows_with_any_nonexact_endpoint": 234,
+        "runtime_invocations": 670,
+        "seq_len": 64,
+        "sign_persistent_endpoint_count": 7,
+        "tf32": true,
+        "unresolved_invocations": 352
+      },
+      {
+        "candidate_values_used_to_select_or_classify": false,
+        "checkpoint_steps": [
+          0,
+          1,
+          2,
+          4,
+          8,
+          16,
+          32,
+          64
+        ],
+        "dtype": "fp32",
+        "endpoint_count": 401,
+        "file": "dtype_semantic_tf32_seq128.json",
+        "mapped_invocations": 264,
+        "mapped_regions_observed_at_all_steps_and_repeats": 264,
+        "max_abs_max": 0.0001220703125,
+        "natural_bias_case_added": false,
+        "repeats_per_checkpoint": 2,
+        "rows_with_any_nonexact_endpoint": 180,
+        "runtime_invocations": 670,
+        "seq_len": 128,
+        "sign_persistent_endpoint_count": 10,
+        "tf32": true,
+        "unresolved_invocations": 406
+      },
+      {
+        "candidate_values_used_to_select_or_classify": false,
+        "checkpoint_steps": [
+          0,
+          1,
+          2,
+          4,
+          8,
+          16,
+          32,
+          64
+        ],
+        "dtype": "fp32",
+        "endpoint_count": 401,
+        "file": "dtype_semantic_tf32_seq256.json",
+        "mapped_invocations": 264,
+        "mapped_regions_observed_at_all_steps_and_repeats": 264,
+        "max_abs_max": 9.1552734375e-05,
+        "natural_bias_case_added": false,
+        "repeats_per_checkpoint": 2,
+        "rows_with_any_nonexact_endpoint": 180,
+        "runtime_invocations": 724,
+        "seq_len": 256,
+        "sign_persistent_endpoint_count": 9,
+        "tf32": true,
+        "unresolved_invocations": 460
+      }
+    ],
+    "interpretation": "All exact candidate-blind mappings are observed across the natural checkpoint bank. Unresolved topology rows remain in the denominator and are not safety-certified. Finite residuals are common but directional signs are not a carrier verdict.",
+    "status": "COMPLETE_FOR_EXACT_MAPPINGS_ALL_FP32_TF32_SHAPES"
+  },
+  "shape256_unresolved_probe": {
+    "all_observation_repeats_stable": true,
+    "atlas_rows": 114,
+    "candidate_values_used_to_select_regions": false,
+    "checkpoint_steps": [
+      0,
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64
+    ],
+    "internal_endpoint_summary": {
+      "nll_remaining_singleton": {
+        "exact_zero_endpoints": 1,
+        "regions": 1,
+        "state_mixed_endpoints": 1
+      },
+      "rmsnorm_split_final": {
+        "exact_zero_endpoints": 56,
+        "regions": 56
+      },
+      "rmsnorm_split_partial": {
+        "endpoint_observations": 57,
+        "persistent_positive_endpoint": 1,
+        "regions": 56,
+        "state_mixed_endpoints": 56
+      },
+      "softmax_loss_partial": {
+        "exact_zero_endpoints": 1,
+        "persistent_negative_endpoints": 1,
+        "regions": 1
+      }
+    },
+    "interpretation": "The only persistent positive residual is an internal RMSNorm split-partial endpoint; its final reduction endpoint is exactly zero across the bank. These rows are not closed semantic F+B endpoints and are not a natural bias case or a shape-transfer proof.",
+    "observed_rows": "114/114",
+    "repeats_per_checkpoint": 2,
+    "status": "PROBE_ONLY_NO_COMPLETE_CASE"
+  },
+  "subject": "Qwen3-1.7B per-region evolving attribution boundary",
+  "topology_census": {
+    "candidate_values_used_to_select_or_classify": false,
+    "entries": [
+      {
+        "dtype": "fp32",
+        "runtime_invocations": 670,
+        "runtime_symbols": 45,
+        "semantic_mapping": "UNRESOLVED_TOPOLOGY_ONLY",
+        "seq_len": 64,
+        "tf32": false
+      },
+      {
+        "dtype": "fp32",
+        "runtime_invocations": 670,
+        "runtime_symbols": 45,
+        "semantic_mapping": "UNRESOLVED_TOPOLOGY_ONLY",
+        "seq_len": 128,
+        "tf32": false
+      },
+      {
+        "dtype": "fp32",
+        "runtime_invocations": 724,
+        "runtime_symbols": 43,
+        "semantic_mapping": "UNRESOLVED_TOPOLOGY_ONLY",
+        "seq_len": 256,
+        "tf32": false
+      },
+      {
+        "dtype": "fp32",
+        "runtime_invocations": 670,
+        "runtime_symbols": 45,
+        "semantic_mapping": "UNRESOLVED_TOPOLOGY_ONLY",
+        "seq_len": 64,
+        "tf32": true
+      },
+      {
+        "dtype": "fp32",
+        "runtime_invocations": 670,
+        "runtime_symbols": 45,
+        "semantic_mapping": "UNRESOLVED_TOPOLOGY_ONLY",
+        "seq_len": 128,
+        "tf32": true
+      },
+      {
+        "dtype": "fp32",
+        "runtime_invocations": 724,
+        "runtime_symbols": 43,
+        "semantic_mapping": "UNRESOLVED_TOPOLOGY_ONLY",
+        "seq_len": 256,
+        "tf32": true
+      }
+    ],
+    "interpretation": "All strict-FP32 and TF32 shapes now have generated-topology and exact-mapping records. The mapped subset has value-bearing F+B observations; unresolved topology rows remain an explicit boundary.",
+    "status": "COMPLETE_METADATA_ONLY_FOR_FP32_AND_TF32_SHAPES"
+  }
+}

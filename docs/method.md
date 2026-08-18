@@ -1,48 +1,43 @@
 # Method
 
-We analyze each concrete operator invocation in one complete model forward and
-actual backward. Names, modules, and operator families are not proof units.
-
-For invocation \(i\):
+For each concrete invocation, the scientific unit is one forward and its actual
+backward:
 
 \[
-U_i=(F_i,x_i,y_i,q_i,J_{F_i}(x_i)^Tq_i,B_i),
+U_i=(F_i,x_i,y_i,q_i,J_{F_i}(x_i)^Tq_i,B_i).
 \]
 
-where \(B_i\) is the backward program that actually ran. A unit closes only
-when operands, saved tensors, upstream cotangent, output edge, shape, and dtype
-match the analytic VJP.
+`seq_nr` establishes runtime origin only. Analytic closure additionally proves
+that operands, saved tensors, upstream cotangent, output edge, shapes, dtypes,
+non-tensor arguments and the arithmetic of the executed backward program
+implement the derived VJP. Formula registration, autograd and finite differences
+are checks, not substitutes for that proof.
 
-The numerical test follows the mechanism used in arXiv:2510.04212:
-
-\[
-\text{directional local error}
-\rightarrow
-\text{coherent gradient carrier}
-\rightarrow
-\text{weight accumulation}.
-\]
-
-Local error alone is not a training bug. For state \(s\), a repair produces
-
-\[
-\Delta g_s=g_s^{repair}-g_s^{baseline}.
-\]
-
-We require an identity-copy sham to preserve loss and every parameter gradient
-exactly. Cross-state direction is then tested with fixed, candidate-independent
-coordinates, a U-statistic, leave-one-state-out uncertainty, coherence, and
-rank-one energy. Only targets passing this gate enter a live-weight trajectory.
-
-Precision is separated from optimization:
+Numerical contrasts are kept distinct:
 
 \[
 e_{precision}=R_{low}-R_{32},\qquad
 e_{optimization}=C_{low}-R_{low}.
 \]
 
-Current scope includes Qwen3-1.7B text training steps and one natural
-Qwen3-VL-Reranker-2B multimodal training step. The Qwen3-VL AOT derivation is
-independently complete in BF16 and FP32. Implementation-factor experiments
-include a backward-only SiLU decomposition intervention with unchanged
-forward. Property generalization has not started.
+The first can support a precision-caused case; the second can attribute a local
+difference to an optimized implementation. Total error is explanatory only and
+cannot assign a cause without those arms. Every certificate records
+`PRECISION`, `OPTIMIZATION`, `MIXED`, or `OTHER`. All arms require exact semantic
+boundaries and program identities. A directional bias case then follows the
+paper-style ordered gates:
+
+1. T1: nonzero, finite, repeat-stable attributable local error with a predeclared
+   complete local endpoint;
+2. T2: exact local reference replacement, exact sham and parameter reach;
+3. T3: independent states, complete fixed parameter-gradient coordinates and
+   family-wise-controlled raw/relative/factor coherence hypotheses;
+4. T4: paired same-weight updates with directional accumulation and live-weight
+   divergence, used only to certify a training consequence.
+
+Missing repair or trajectory blocks Flash-style promotion. Failure of the
+separate cross-state gate does not revoke a complete trajectory-local case.
+The cross-operator property target is T3 F+B bias; T4 is never its label or
+predictor. Precision is the first searched mechanism, not the only recorded cause;
+layout, fusion/materialization,
+reduction order, ABI, alias/mutation and other mechanisms retain explicit fields.

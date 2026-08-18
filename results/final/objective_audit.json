@@ -1,0 +1,183 @@
+{
+  "boundary": "This audit records completion and blockers; it does not infer numeric safety from missing replay rows.",
+  "candidate_values_used_to_select_or_classify": false,
+  "conclusion": {
+    "cross_state_concrete_mechanism_passes": 2,
+    "fully_closed_model_shape_cells": 0,
+    "historical_cases_rejected_by_direction_gate": 0,
+    "property_claim_allowed": false,
+    "reason": "Execution and F+B-origin accounting are complete for all 12 declared cells, but strict analytic F+B proof, candidate binding, valid Triton reference, and same-dtype optimization gates remain partial. Five strict Flash-style cases (four root arithmetic and one closed semantic region) pass trajectory-local gates; only two concrete mechanisms pass cross-state confirmation, so no cross-operator property claim is issued.",
+    "strict_flash_style_cases": 6,
+    "strict_root_arithmetic_op_cases": 4,
+    "strict_semantic_region_cases": 2,
+    "unresolved_composite_carrier_cases": 0
+  },
+  "gpu_blocker": {
+    "device_nodes_present": true,
+    "loaded_nvidia_modules": [
+      "nvidia",
+      "nvidia_drm",
+      "nvidia_modeset",
+      "nvidia_uvm"
+    ],
+    "status": "READY",
+    "view": "external"
+  },
+  "objective": "Flash-style positive control plus natural checkpoint x real implementation matrix search",
+  "requirements": [
+    {
+      "checks": {
+        "closed_f_b": true,
+        "heldout_negative_repair": 31,
+        "heldout_positive": 31
+      },
+      "evidence": "results/final/flash_control.json",
+      "id": "flash_positive_control",
+      "status": "COMPLETE"
+    },
+    {
+      "checks": {
+        "checkpoint_steps": [
+          0,
+          1,
+          2,
+          4,
+          8,
+          16,
+          32,
+          64
+        ],
+        "distinct_parameter_hashes": 8,
+        "natural_training": true,
+        "not_frozen_text_state_campaign": true,
+        "optimizer": "AdamW",
+        "optimizer_steps": 64
+      },
+      "evidence": "results/final/natural_bank.json",
+      "id": "natural_training_checkpoint_bank",
+      "status": "COMPLETE"
+    },
+    {
+      "checks": {
+        "changed_closed_fbv_units": 949,
+        "excluded_nonclosed_units_retained": 122,
+        "generated_sites": 1447,
+        "real_changed_sites": 507
+      },
+      "evidence": "results/final/invocation_atlas.json",
+      "id": "invocation_level_real_difference_table",
+      "status": "COMPLETE_FOR_FROZEN_SCOPE"
+    },
+    {
+      "checks": {
+        "complete_cells": 6,
+        "gpu_replay_authorized": true,
+        "pending_cells": 0,
+        "planned_runs": 48
+      },
+      "evidence": "results/final/source_replay_matrix.json",
+      "id": "evolving_checkpoint_numeric_replay",
+      "status": "COMPLETE_FOR_SIX_CELL_SOURCE_REPLAY"
+    },
+    {
+      "checks": {
+        "changed_closed_fbv_units": 949,
+        "exact_forward_saved_tensor_backward_edges": 3094,
+        "exact_parameter_reachability_units": 949,
+        "parameters_reached_by_any_changed_unit": 310,
+        "trainable_unique_parameters": 310,
+        "unit_parameter_reachability_pairs": 234268,
+        "unresolved_units": 0
+      },
+      "evidence": "results/final/carrier_census.json",
+      "id": "all_parameter_carrier_census",
+      "status": "COMPLETE_FOR_949_CHANGED_FBV_UNITS"
+    },
+    {
+      "checks": {
+        "actual_invocations": 9269,
+        "all_candidate_region_bindings_exact": true,
+        "all_eager_aot_fb_origins_exact": true,
+        "all_invocations_have_bias_verdict": false,
+        "all_invocations_numerically_measured": false,
+        "all_local_mathematical_derivations_complete": true,
+        "candidate_correctness_certified_invocations": 311,
+        "directional_bias_certified_invocations": 0,
+        "every_actual_invocation_in_exactly_one_row": true,
+        "exact_candidate_region_binding_invocations": 9269,
+        "exact_eager_aot_fb_origin": 9269,
+        "legacy_changed_nonclosed_reclassified": 122,
+        "mathematical_local_derivation_complete": 9269,
+        "numerically_measured_invocations": 3169,
+        "unresolved_eager_aot_fb_origin": 0
+      },
+      "evidence": "results/coverage/qwen_invocation_ledger.json.gz",
+      "id": "qwen_fail_closed_invocation_coverage",
+      "status": "PARTIAL_FAIL_CLOSED"
+    },
+    {
+      "checks": {
+        "actual_invocations": 56411,
+        "all_candidate_region_bindings_exact": false,
+        "all_fb_origins_or_explicit_auxiliaries_complete": true,
+        "all_invocations_have_bias_verdict": false,
+        "all_invocations_numerically_measured": false,
+        "all_local_maps_and_adjoints_declared": true,
+        "backward_invocations": 33398,
+        "candidate_correctness_certified": 0,
+        "directional_bias_certified": 0,
+        "every_actual_invocation_in_exactly_one_row": true,
+        "exact_candidate_region_binding": 0,
+        "fb_origin_or_explicit_auxiliary_complete": 56411,
+        "forward_invocations": 23013,
+        "invocation_level_numerical_measurement": 0,
+        "local_map_adjoint_and_argument_binding_complete": 56411,
+        "unique_overloads": 43,
+        "unresolved_fb_origin": 0
+      },
+      "evidence": "results/coverage/mamba_invocation_ledger.json.gz",
+      "id": "mamba_full_forward_backward_invocation_atlas",
+      "status": "COMPLETE_EAGER_FB_INVOCATION_ATLAS"
+    },
+    {
+      "checks": {
+        "actual_invocations": 25582,
+        "all_candidate_region_bindings_exact": false,
+        "all_fb_origins_or_explicit_auxiliaries_complete": true,
+        "all_invocations_have_bias_verdict": false,
+        "all_invocations_numerically_measured": false,
+        "all_local_maps_and_adjoints_declared": true,
+        "backward_invocations": 17967,
+        "candidate_correctness_certified": 0,
+        "directional_bias_certified": 0,
+        "every_actual_invocation_in_exactly_one_row": true,
+        "exact_candidate_region_binding": 0,
+        "fb_origin_or_explicit_auxiliary_complete": 25582,
+        "forward_invocations": 7615,
+        "invocation_level_numerical_measurement": 0,
+        "local_map_adjoint_and_argument_binding_complete": 25582,
+        "unique_overloads": 63,
+        "unresolved_fb_origin": 0
+      },
+      "evidence": "results/coverage/moe_invocation_ledger.json.gz",
+      "id": "moe_full_forward_backward_invocation_atlas",
+      "status": "COMPLETE_EAGER_FB_INVOCATION_ATLAS"
+    },
+    {
+      "checks": {
+        "candidate_blind": true,
+        "chain_count": 28,
+        "focused_candidate_lost_direction": true,
+        "initial_all_positive_regions": [
+          "backward:852"
+        ],
+        "natural_bias_case_added": false
+      },
+      "evidence": "results/final/priority_carrier_replay.json",
+      "id": "priority_carrier_screen",
+      "status": "COMPLETE_FOR_28_CHAIN_SCREEN"
+    }
+  ],
+  "result_sha256": "d9c70a54ded3befdd2bb806d0efbd22d71fb0e9e58e9071808911bcb0fcab433",
+  "schema": "kernel-analyzer-objective-audit-v1"
+}

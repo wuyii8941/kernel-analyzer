@@ -1,0 +1,126 @@
+{
+  "completion_rules": {
+    "complete_candidate_certificate_requires": "every F+B proof unit has an exact mapping or explicit identical-control or not-applicable disposition for that candidate configuration",
+    "complete_mathematical_coverage_requires": "every census invocation belongs to exactly one primary F+B proof unit or auxiliary backward accounting unit",
+    "coverage_reports_confirmed_tested_total": true,
+    "unmeasured_is_never_equivalent": true
+  },
+  "contract_sha256": "650e4b67be91a4e597c32ea105ff21d57ae29d47b6aeb0fc0129c9154f4f8cce",
+  "denominator_axes": {
+    "candidate_configuration_does_not_multiply_primary_fb_units": true,
+    "candidate_configuration_has_its_own_runtime_region_denominator": true,
+    "different_dtype_topology_requires_alignment_or_a_separate_snapshot": true,
+    "no_shape_may_inherit_another_shapes_invocation_witness": true,
+    "primary_fb_snapshot_key": [
+      "model",
+      "batch_size",
+      "sequence_length",
+      "reference_program"
+    ],
+    "reference_program": "bf16_eager_complete_loss_forward_backward"
+  },
+  "denominators": {
+    "auxiliary_backward_accounting_units": "backward-only gradient accumulation, detach, control, or AD-program invocations; retained in execution accounting but excluded from the primary F+B scientific denominator",
+    "candidate_runtime_regions": "every actual generated Triton, external-library, and direct-ATen compute region",
+    "execution_census": "every actual dispatcher invocation in each frozen complete loss F+B witness",
+    "primary_fb_proof_units": "one ordinary forward/VJP pair, or the minimal closed semantic region when an actual backward invocation is shared by multiple forward invocations"
+  },
+  "execution_strata": {
+    "batch_size": [
+      1
+    ],
+    "primary_candidate_dtype": "bf16",
+    "reference_arms": [
+      "fp32_eager",
+      "bf16_eager"
+    ],
+    "secondary_nonblocking_arms": [
+      "fp16",
+      "fp32_strict",
+      "fp32_tf32"
+    ],
+    "sequence_lengths": [
+      64,
+      128,
+      256
+    ],
+    "state_role": "states and repeats estimate numerical statistics and never multiply the primary F+B proof-unit denominator"
+  },
+  "models": {
+    "deepseek_r1_0528_qwen3_8b": {
+      "candidate_configurations": [
+        "bf16_inductor_sharded_full_step"
+      ],
+      "ledger": "results/coverage/deepseek8b_seq64_invocation_ledger.json.gz",
+      "primary_candidate": "bf16_inductor_sharded_full_step",
+      "scope": "FULL_STEP"
+    },
+    "granite_3p1_1b_a400m": {
+      "candidate_configurations": [
+        "bf16_inductor_full_step"
+      ],
+      "ledger": "results/coverage/moe_invocation_ledger.json.gz",
+      "primary_candidate": "bf16_inductor_full_step",
+      "scope": "PAUSED_OUT_OF_SCOPE"
+    },
+    "mamba_130m": {
+      "candidate_configurations": [
+        "compiled_explicit_recurrence",
+        "official_fused"
+      ],
+      "ledger": "results/coverage/mamba_invocation_ledger.json.gz",
+      "primary_candidate": "compiled_explicit_recurrence",
+      "scope": "FULL_STEP"
+    },
+    "phi4_mini_3p8b": {
+      "candidate_configurations": [
+        "bf16_inductor_full_step"
+      ],
+      "ledger": "results/coverage/phi4_seq64_invocation_ledger.json.gz",
+      "primary_candidate": "bf16_inductor_full_step",
+      "scope": "FULL_STEP"
+    },
+    "qwen3_1p7b": {
+      "candidate_configurations": [
+        "bf16_inductor_full_step",
+        "pytorch_fused",
+        "liger_fused"
+      ],
+      "ledger": "results/coverage/qwen_invocation_ledger.json.gz",
+      "primary_candidate": "bf16_inductor_full_step",
+      "scope": "FULL_STEP"
+    }
+  },
+  "ordered_gates": [
+    "EXECUTED",
+    "MATH_CLOSED",
+    "CANDIDATE_BOUND",
+    "NUMERIC_MEASURED",
+    "T1_LOCAL",
+    "T2_CAUSAL",
+    "T3_COHERENT",
+    "T4_ACCUMULATION"
+  ],
+  "schema": "kernel-analyzer-coverage-contract-v2",
+  "scientific_unit": "minimal closed connected component of actual forward invocations and their actual backward program invocations",
+  "status": "FROZEN_BEFORE_ADDITIONAL_CASE_SEARCH",
+  "terminal_statuses": [
+    "PASS",
+    "EQUIVALENT",
+    "UNRESOLVED",
+    "INVALID_BOUNDARY",
+    "NOT_APPLICABLE"
+  ],
+  "unit_rules": {
+    "backward_only_component_is_auxiliary_not_primary_fb": true,
+    "empty_stop_gradient_and_elided_vjp_are_explicit_units": true,
+    "many_to_one_candidate_fusion_never_reduces_fb_units": true,
+    "new_dynamic_path_adds_units_only_when_new_invocations_execute": true,
+    "no_operator_family_deduplication": true,
+    "primary_fb_unit_must_contain_at_least_one_forward_invocation": true,
+    "repeated_layers_remain_distinct": true,
+    "shared_backward_forms_one_minimal_closed_region": true,
+    "unchanged_eager_candidate_paths_are_identical_controls": true,
+    "unresolved_invalid_and_abstained_remain_in_denominator": true
+  }
+}

@@ -1,8 +1,9 @@
 {
-  "schema": "flash-paper-control-v1",
+  "schema": "flash-paper-control-v2",
   "kind": "PAPER_REFERENCE_REPRODUCTION",
   "source": "https://github.com/ucker/why-low-precision-training-fails",
   "source_attention_sha256": "20f8b0da274e6006a0ac59b51077a6cf22aa672a31f845ee123da82654def80e",
+  "source_return_arity_fix": "The public source returns one extra backward value; this control returns the seven values expected by torch.autograd.Function.",
   "torch": "2.10.0+cu128",
   "cuda": "12.8",
   "cases": [
@@ -1226,6 +1227,701 @@
       }
     ]
   },
+  "fb_closure": {
+    "seed": 777,
+    "dtype": "float32",
+    "length": 17,
+    "q_bucket": 8,
+    "k_bucket": 8,
+    "loss_abs": 1.3525783515433432e-07,
+    "max_forward_abs": 1.4156103134155273e-07,
+    "max_backward_abs": 4.76837158203125e-07,
+    "finite": true,
+    "interpretation": "FP32 tiled PaperFlash forward and its actual custom backward agree with independent eager VJP up to floating-point roundoff."
+  },
+  "query_weight_trajectory": {
+    "seed": 5252,
+    "length": 128,
+    "steps": 32,
+    "learning_rate": 0.01,
+    "trainable_projection_weights": [
+      "Wq",
+      "Wk",
+      "Wv"
+    ],
+    "pilot": "step 0 only; steps 1..N-1 are held out",
+    "records": [
+      {
+        "step": 0,
+        "unstable": {
+          "loss": 5.7483625411987305,
+          "reference_loss": 5.745208263397217,
+          "gradient_error_l2": 0.12647917866706848,
+          "pilot_carrier_projection": 0.12647917866706848,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.797959327697754
+        },
+        "stable": {
+          "loss": 5.669838905334473,
+          "reference_loss": 5.745208263397217,
+          "gradient_error_l2": 0.35805743932724,
+          "pilot_carrier_projection": 0.3580574095249176,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.797959327697754
+        },
+        "arm_weight_distance": 0.0038753924891352654
+      },
+      {
+        "step": 1,
+        "unstable": {
+          "loss": 5.463097095489502,
+          "reference_loss": 5.462884902954102,
+          "gradient_error_l2": 0.1284000724554062,
+          "pilot_carrier_projection": 0.025274548679590225,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.783900260925293
+        },
+        "stable": {
+          "loss": 5.380668640136719,
+          "reference_loss": 5.464566230773926,
+          "gradient_error_l2": 0.4450005888938904,
+          "pilot_carrier_projection": 0.4058676064014435,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.783397674560547
+        },
+        "arm_weight_distance": 0.007113527972251177
+      },
+      {
+        "step": 2,
+        "unstable": {
+          "loss": 5.224822521209717,
+          "reference_loss": 5.225078582763672,
+          "gradient_error_l2": 0.074351005256176,
+          "pilot_carrier_projection": 0.04116081818938255,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.770305633544922
+        },
+        "stable": {
+          "loss": 5.144348621368408,
+          "reference_loss": 5.231932640075684,
+          "gradient_error_l2": 0.13762006163597107,
+          "pilot_carrier_projection": 0.04272140935063362,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.769177436828613
+        },
+        "arm_weight_distance": 0.007693067193031311
+      },
+      {
+        "step": 3,
+        "unstable": {
+          "loss": 5.007084846496582,
+          "reference_loss": 5.006305694580078,
+          "gradient_error_l2": 0.16571757197380066,
+          "pilot_carrier_projection": 0.00522998720407486,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.757452011108398
+        },
+        "stable": {
+          "loss": 4.970254898071289,
+          "reference_loss": 5.016213893890381,
+          "gradient_error_l2": 0.1699400693178177,
+          "pilot_carrier_projection": -0.0752226784825325,
+          "pilot_carrier_positive": false,
+          "weight_norm": 9.756260871887207
+        },
+        "arm_weight_distance": 0.007833700627088547
+      },
+      {
+        "step": 4,
+        "unstable": {
+          "loss": 4.801873207092285,
+          "reference_loss": 4.799619674682617,
+          "gradient_error_l2": 0.11302243918180466,
+          "pilot_carrier_projection": 0.08485136926174164,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.745003700256348
+        },
+        "stable": {
+          "loss": 4.742216110229492,
+          "reference_loss": 4.8101396560668945,
+          "gradient_error_l2": 0.24637573957443237,
+          "pilot_carrier_projection": 0.2125171422958374,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.743806838989258
+        },
+        "arm_weight_distance": 0.010078826919198036
+      },
+      {
+        "step": 5,
+        "unstable": {
+          "loss": 4.603275299072266,
+          "reference_loss": 4.604017734527588,
+          "gradient_error_l2": 0.08484306186437607,
+          "pilot_carrier_projection": 0.05542762205004692,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.733198165893555
+        },
+        "stable": {
+          "loss": 4.5438947677612305,
+          "reference_loss": 4.616859436035156,
+          "gradient_error_l2": 0.24072147905826569,
+          "pilot_carrier_projection": 0.09891641139984131,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.731603622436523
+        },
+        "arm_weight_distance": 0.010047747753560543
+      },
+      {
+        "step": 6,
+        "unstable": {
+          "loss": 4.421560764312744,
+          "reference_loss": 4.4191694259643555,
+          "gradient_error_l2": 0.0806146189570427,
+          "pilot_carrier_projection": 0.055240243673324585,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.721712112426758
+        },
+        "stable": {
+          "loss": 4.397334575653076,
+          "reference_loss": 4.4345197677612305,
+          "gradient_error_l2": 0.45359012484550476,
+          "pilot_carrier_projection": 0.375874400138855,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.720333099365234
+        },
+        "arm_weight_distance": 0.012392820790410042
+      },
+      {
+        "step": 7,
+        "unstable": {
+          "loss": 4.2452826499938965,
+          "reference_loss": 4.243735313415527,
+          "gradient_error_l2": 0.12894302606582642,
+          "pilot_carrier_projection": 0.06433247029781342,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.71070384979248
+        },
+        "stable": {
+          "loss": 4.177759170532227,
+          "reference_loss": 4.26029109954834,
+          "gradient_error_l2": 0.2549688220024109,
+          "pilot_carrier_projection": 0.19756212830543518,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.709035873413086
+        },
+        "arm_weight_distance": 0.013632061891257763
+      },
+      {
+        "step": 8,
+        "unstable": {
+          "loss": 4.0800323486328125,
+          "reference_loss": 4.077433109283447,
+          "gradient_error_l2": 0.10225328803062439,
+          "pilot_carrier_projection": 0.05851603299379349,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.700143814086914
+        },
+        "stable": {
+          "loss": 4.041720867156982,
+          "reference_loss": 4.095764636993408,
+          "gradient_error_l2": 0.2786226272583008,
+          "pilot_carrier_projection": 0.18998543918132782,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.698204040527344
+        },
+        "arm_weight_distance": 0.015411020256578922
+      },
+      {
+        "step": 9,
+        "unstable": {
+          "loss": 3.919487953186035,
+          "reference_loss": 3.9193005561828613,
+          "gradient_error_l2": 0.14026527106761932,
+          "pilot_carrier_projection": 0.08178795129060745,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.689983367919922
+        },
+        "stable": {
+          "loss": 3.8808345794677734,
+          "reference_loss": 3.938842296600342,
+          "gradient_error_l2": 0.37341463565826416,
+          "pilot_carrier_projection": 0.27264404296875,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.687847137451172
+        },
+        "arm_weight_distance": 0.017682211473584175
+      },
+      {
+        "step": 10,
+        "unstable": {
+          "loss": 3.772675037384033,
+          "reference_loss": 3.7693042755126953,
+          "gradient_error_l2": 0.14382952451705933,
+          "pilot_carrier_projection": 0.1035078838467598,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.680323600769043
+        },
+        "stable": {
+          "loss": 3.745389938354492,
+          "reference_loss": 3.789769172668457,
+          "gradient_error_l2": 0.6259698867797852,
+          "pilot_carrier_projection": 0.5719944834709167,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.677678108215332
+        },
+        "arm_weight_distance": 0.02210043929517269
+      },
+      {
+        "step": 11,
+        "unstable": {
+          "loss": 3.6266298294067383,
+          "reference_loss": 3.626575231552124,
+          "gradient_error_l2": 0.15387779474258423,
+          "pilot_carrier_projection": 0.025782225653529167,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.671021461486816
+        },
+        "stable": {
+          "loss": 3.5960848331451416,
+          "reference_loss": 3.647658348083496,
+          "gradient_error_l2": 0.21663326025009155,
+          "pilot_carrier_projection": 0.01289457269012928,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.667362213134766
+        },
+        "arm_weight_distance": 0.021669704467058182
+      },
+      {
+        "step": 12,
+        "unstable": {
+          "loss": 3.492774248123169,
+          "reference_loss": 3.4905004501342773,
+          "gradient_error_l2": 0.0688798725605011,
+          "pilot_carrier_projection": 0.029056720435619354,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.661845207214355
+        },
+        "stable": {
+          "loss": 3.448613166809082,
+          "reference_loss": 3.512418746948242,
+          "gradient_error_l2": 0.3462282121181488,
+          "pilot_carrier_projection": 0.27268797159194946,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.658428192138672
+        },
+        "arm_weight_distance": 0.02373778633773327
+      },
+      {
+        "step": 13,
+        "unstable": {
+          "loss": 3.362748146057129,
+          "reference_loss": 3.3615317344665527,
+          "gradient_error_l2": 0.07871533930301666,
+          "pilot_carrier_projection": 0.04324638098478317,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.653066635131836
+        },
+        "stable": {
+          "loss": 3.346797227859497,
+          "reference_loss": 3.384521961212158,
+          "gradient_error_l2": 0.0960359200835228,
+          "pilot_carrier_projection": -0.02134658582508564,
+          "pilot_carrier_positive": false,
+          "weight_norm": 9.649246215820312
+        },
+        "arm_weight_distance": 0.023622293025255203
+      },
+      {
+        "step": 14,
+        "unstable": {
+          "loss": 3.239053249359131,
+          "reference_loss": 3.238496780395508,
+          "gradient_error_l2": 0.07726462930440903,
+          "pilot_carrier_projection": 0.06121813505887985,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.644580841064453
+        },
+        "stable": {
+          "loss": 3.205371856689453,
+          "reference_loss": 3.2612593173980713,
+          "gradient_error_l2": 0.12017864733934402,
+          "pilot_carrier_projection": 0.06620721518993378,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.640681266784668
+        },
+        "arm_weight_distance": 0.02438325434923172
+      },
+      {
+        "step": 15,
+        "unstable": {
+          "loss": 3.1223692893981934,
+          "reference_loss": 3.1210508346557617,
+          "gradient_error_l2": 0.09035602957010269,
+          "pilot_carrier_projection": 0.04901151731610298,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.636373519897461
+        },
+        "stable": {
+          "loss": 3.0842161178588867,
+          "reference_loss": 3.1450552940368652,
+          "gradient_error_l2": 0.9776642322540283,
+          "pilot_carrier_projection": 0.9142754077911377,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.632377624511719
+        },
+        "arm_weight_distance": 0.031198494136333466
+      },
+      {
+        "step": 16,
+        "unstable": {
+          "loss": 3.008852005004883,
+          "reference_loss": 3.009199619293213,
+          "gradient_error_l2": 0.07511289417743683,
+          "pilot_carrier_projection": 0.030206887051463127,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.628341674804688
+        },
+        "stable": {
+          "loss": 2.9797377586364746,
+          "reference_loss": 3.034853219985962,
+          "gradient_error_l2": 0.27093568444252014,
+          "pilot_carrier_projection": 0.24161295592784882,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.623147964477539
+        },
+        "arm_weight_distance": 0.03344796225428581
+      },
+      {
+        "step": 17,
+        "unstable": {
+          "loss": 2.9072461128234863,
+          "reference_loss": 2.9027576446533203,
+          "gradient_error_l2": 0.08284494280815125,
+          "pilot_carrier_projection": 0.029143882915377617,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.620651245117188
+        },
+        "stable": {
+          "loss": 2.882646322250366,
+          "reference_loss": 2.928222179412842,
+          "gradient_error_l2": 0.34938693046569824,
+          "pilot_carrier_projection": 0.2969188094139099,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.61501693725586
+        },
+        "arm_weight_distance": 0.03610320761799812
+      },
+      {
+        "step": 18,
+        "unstable": {
+          "loss": 2.8010053634643555,
+          "reference_loss": 2.801128387451172,
+          "gradient_error_l2": 0.0781915932893753,
+          "pilot_carrier_projection": 0.03618235141038895,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.61323070526123
+        },
+        "stable": {
+          "loss": 2.807382822036743,
+          "reference_loss": 2.826549530029297,
+          "gradient_error_l2": 0.08838687092065811,
+          "pilot_carrier_projection": 0.021310124546289444,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.606853485107422
+        },
+        "arm_weight_distance": 0.03621154651045799
+      },
+      {
+        "step": 19,
+        "unstable": {
+          "loss": 2.7071421146392822,
+          "reference_loss": 2.704102039337158,
+          "gradient_error_l2": 0.05624372139573097,
+          "pilot_carrier_projection": 0.026845961809158325,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.606094360351562
+        },
+        "stable": {
+          "loss": 2.7092409133911133,
+          "reference_loss": 2.7285776138305664,
+          "gradient_error_l2": 0.17360609769821167,
+          "pilot_carrier_projection": -0.007464167661964893,
+          "pilot_carrier_positive": false,
+          "weight_norm": 9.599525451660156
+        },
+        "arm_weight_distance": 0.03654084354639053
+      },
+      {
+        "step": 20,
+        "unstable": {
+          "loss": 2.6140542030334473,
+          "reference_loss": 2.6113791465759277,
+          "gradient_error_l2": 0.0646548867225647,
+          "pilot_carrier_projection": 0.03206910192966461,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.599091529846191
+        },
+        "stable": {
+          "loss": 2.611476421356201,
+          "reference_loss": 2.6349356174468994,
+          "gradient_error_l2": 0.1742793321609497,
+          "pilot_carrier_projection": -0.017086388543248177,
+          "pilot_carrier_positive": false,
+          "weight_norm": 9.592195510864258
+        },
+        "arm_weight_distance": 0.03693373501300812
+      },
+      {
+        "step": 21,
+        "unstable": {
+          "loss": 2.5235183238983154,
+          "reference_loss": 2.522834300994873,
+          "gradient_error_l2": 0.054679397493600845,
+          "pilot_carrier_projection": 0.015485621057450771,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.592337608337402
+        },
+        "stable": {
+          "loss": 2.5140647888183594,
+          "reference_loss": 2.545917510986328,
+          "gradient_error_l2": 0.1843033730983734,
+          "pilot_carrier_projection": 0.0515642873942852,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.585148811340332
+        },
+        "arm_weight_distance": 0.03783237561583519
+      },
+      {
+        "step": 22,
+        "unstable": {
+          "loss": 2.438805341720581,
+          "reference_loss": 2.4381518363952637,
+          "gradient_error_l2": 0.11715281009674072,
+          "pilot_carrier_projection": -0.05355176329612732,
+          "pilot_carrier_positive": false,
+          "weight_norm": 9.585726737976074
+        },
+        "stable": {
+          "loss": 2.4330263137817383,
+          "reference_loss": 2.4612479209899902,
+          "gradient_error_l2": 0.209344282746315,
+          "pilot_carrier_projection": 0.1017509177327156,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.578286170959473
+        },
+        "arm_weight_distance": 0.038957901298999786
+      },
+      {
+        "step": 23,
+        "unstable": {
+          "loss": 2.3581643104553223,
+          "reference_loss": 2.35721492767334,
+          "gradient_error_l2": 0.07293704897165298,
+          "pilot_carrier_projection": 0.01960405334830284,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.579195022583008
+        },
+        "stable": {
+          "loss": 2.357089042663574,
+          "reference_loss": 2.3798820972442627,
+          "gradient_error_l2": 0.15474706888198853,
+          "pilot_carrier_projection": 0.02565258927643299,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.571417808532715
+        },
+        "arm_weight_distance": 0.03970540314912796
+      },
+      {
+        "step": 24,
+        "unstable": {
+          "loss": 2.2791128158569336,
+          "reference_loss": 2.279872417449951,
+          "gradient_error_l2": 0.04220913350582123,
+          "pilot_carrier_projection": 0.01713559776544571,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.573081970214844
+        },
+        "stable": {
+          "loss": 2.279052495956421,
+          "reference_loss": 2.3022146224975586,
+          "gradient_error_l2": 0.28011417388916016,
+          "pilot_carrier_projection": 0.230797678232193,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.564969062805176
+        },
+        "arm_weight_distance": 0.04192671552300453
+      },
+      {
+        "step": 25,
+        "unstable": {
+          "loss": 2.206900119781494,
+          "reference_loss": 2.2059452533721924,
+          "gradient_error_l2": 0.04400021955370903,
+          "pilot_carrier_projection": 0.030781298875808716,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.567103385925293
+        },
+        "stable": {
+          "loss": 2.190840244293213,
+          "reference_loss": 2.2274506092071533,
+          "gradient_error_l2": 0.1866130828857422,
+          "pilot_carrier_projection": 0.14668495953083038,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.558357238769531
+        },
+        "arm_weight_distance": 0.043331366032361984
+      },
+      {
+        "step": 26,
+        "unstable": {
+          "loss": 2.136441469192505,
+          "reference_loss": 2.1351735591888428,
+          "gradient_error_l2": 0.03974667936563492,
+          "pilot_carrier_projection": 0.01206329558044672,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.561351776123047
+        },
+        "stable": {
+          "loss": 2.1484267711639404,
+          "reference_loss": 2.1567721366882324,
+          "gradient_error_l2": 0.24375711381435394,
+          "pilot_carrier_projection": 0.21937371790409088,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.552305221557617
+        },
+        "arm_weight_distance": 0.04489678889513016
+      },
+      {
+        "step": 27,
+        "unstable": {
+          "loss": 2.068085193634033,
+          "reference_loss": 2.067216396331787,
+          "gradient_error_l2": 0.033778116106987,
+          "pilot_carrier_projection": 0.023192545399069786,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.555691719055176
+        },
+        "stable": {
+          "loss": 2.074301242828369,
+          "reference_loss": 2.0880322456359863,
+          "gradient_error_l2": 0.06344999372959137,
+          "pilot_carrier_projection": -0.049128808081150055,
+          "pilot_carrier_positive": false,
+          "weight_norm": 9.546273231506348
+        },
+        "arm_weight_distance": 0.04467978700995445
+      },
+      {
+        "step": 28,
+        "unstable": {
+          "loss": 2.002159357070923,
+          "reference_loss": 2.00199818611145,
+          "gradient_error_l2": 0.051230594515800476,
+          "pilot_carrier_projection": 0.0001179833197966218,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.550192832946777
+        },
+        "stable": {
+          "loss": 2.005323886871338,
+          "reference_loss": 2.022505760192871,
+          "gradient_error_l2": 0.23424820601940155,
+          "pilot_carrier_projection": 0.21015021204948425,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.540776252746582
+        },
+        "arm_weight_distance": 0.04601406306028366
+      },
+      {
+        "step": 29,
+        "unstable": {
+          "loss": 1.9404311180114746,
+          "reference_loss": 1.939581274986267,
+          "gradient_error_l2": 0.041571490466594696,
+          "pilot_carrier_projection": 0.030268946662545204,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.544791221618652
+        },
+        "stable": {
+          "loss": 1.9329197406768799,
+          "reference_loss": 1.9596858024597168,
+          "gradient_error_l2": 0.16447453200817108,
+          "pilot_carrier_projection": 0.1471434086561203,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.5350341796875
+        },
+        "arm_weight_distance": 0.0476231575012207
+      },
+      {
+        "step": 30,
+        "unstable": {
+          "loss": 1.8792668581008911,
+          "reference_loss": 1.879699468612671,
+          "gradient_error_l2": 0.11756383627653122,
+          "pilot_carrier_projection": -0.07637371122837067,
+          "pilot_carrier_positive": false,
+          "weight_norm": 9.53964614868164
+        },
+        "stable": {
+          "loss": 1.8783791065216064,
+          "reference_loss": 1.8997533321380615,
+          "gradient_error_l2": 0.2120562195777893,
+          "pilot_carrier_projection": 0.19772638380527496,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.529536247253418
+        },
+        "arm_weight_distance": 0.048659417778253555
+      },
+      {
+        "step": 31,
+        "unstable": {
+          "loss": 1.8234610557556152,
+          "reference_loss": 1.8222801685333252,
+          "gradient_error_l2": 0.031860027462244034,
+          "pilot_carrier_projection": 0.011124764569103718,
+          "pilot_carrier_positive": true,
+          "weight_norm": 9.534408569335938
+        },
+        "stable": {
+          "loss": 1.8276293277740479,
+          "reference_loss": 1.8422155380249023,
+          "gradient_error_l2": 0.04875717684626579,
+          "pilot_carrier_projection": -0.024302100762724876,
+          "pilot_carrier_positive": false,
+          "weight_norm": 9.52416706085205
+        },
+        "arm_weight_distance": 0.04851868748664856
+      }
+    ],
+    "heldout_carrier": {
+      "unstable": {
+        "states": 31,
+        "positive": 29,
+        "min_projection": -0.07637371122837067
+      },
+      "stable": {
+        "states": 31,
+        "positive": 25,
+        "min_projection": -0.0752226784825325
+      }
+    }
+  },
+  "positive_control": {
+    "closed_f_b": true,
+    "v_only_live_weight": {
+      "same_initial_weights": true,
+      "reference_evaluated_at_each_current_state": true,
+      "candidate_arm": "unstable",
+      "heldout_states": 31,
+      "heldout_positive": 31,
+      "heldout_negative_repair": 31,
+      "carrier_source": "known synthetic shared-carrier direction in the stress construction",
+      "verdict": "PASS_PAPER_MECHANISM_POSITIVE_CONTROL"
+    },
+    "query_weight_trajectory": {
+      "verdict": "AUXILIARY_QKV_PROJECTION_SCREEN_NOT_STRICT_POSITIVE",
+      "reason": "The independently trained Q/K/V projection arm is retained as a harder diagnostic; its pilot carrier changes sign and is not used to certify the positive control."
+    }
+  },
   "real_sdpa": {
     "kind": "REAL_PYTORCH_SDPA_FLASH_BACKEND",
     "backend_available": true,
@@ -1275,5 +1971,5 @@
     ],
     "interpretation": "A CUDA fused backend control; this is separate from the paper's Python reference and from flash-attn package provenance."
   },
-  "interpretation": "This is a positive-control stress bank for the public paper reference, not evidence that a vendor FlashAttention kernel has the same arithmetic."
+  "interpretation": "The V-only live-weight arm is a positive control for the paper mechanism; the Q/K/V projection arm is an auxiliary stress screen. Neither is evidence that a vendor FlashAttention kernel has the same arithmetic."
 }
