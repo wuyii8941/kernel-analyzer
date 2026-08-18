@@ -50,6 +50,17 @@ from .bias import (
     LayerValue,
     PropertyDecision,
 )
+from .bias_formation import (
+    BiasFormationTrace,
+    FormationLayer,
+    FormationPolicy,
+    FormationStatus,
+    ProjectionCertificate,
+    VectorObservation,
+    summarize_vectors,
+)
+from .bias_consequence import BiasConsequenceTrace, ConsequenceStatus, ConsequenceValue
+from .bias_predictor import ReferenceOnlyInputs, ReferenceOnlyPredictor, validate_reference_payload
 
 __all__ = [
     "AnalysisReport",
@@ -93,4 +104,17 @@ __all__ = [
     "LayerCertificate",
     "LayerValue",
     "PropertyDecision",
+    "BiasFormationTrace",
+    "FormationLayer",
+    "FormationPolicy",
+    "FormationStatus",
+    "ProjectionCertificate",
+    "VectorObservation",
+    "summarize_vectors",
+    "BiasConsequenceTrace",
+    "ConsequenceStatus",
+    "ConsequenceValue",
+    "ReferenceOnlyInputs",
+    "ReferenceOnlyPredictor",
+    "validate_reference_payload",
 ]
