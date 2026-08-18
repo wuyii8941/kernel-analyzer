@@ -18,10 +18,14 @@ def _common(weights="w", optimizer="o"):
         "repair_weights_digest": weights,
         "candidate_optimizer_digest": optimizer,
         "repair_optimizer_digest": optimizer,
-        "input_digest": "input",
-        "rng_digest": "rng",
-        "scheduler_digest": "scheduler",
-        "loss_scaler_digest": "scale",
+        "candidate_input_digest": "input",
+        "repair_input_digest": "input",
+        "candidate_rng_digest": "rng",
+        "repair_rng_digest": "rng",
+        "candidate_scheduler_digest": "scheduler",
+        "repair_scheduler_digest": "scheduler",
+        "candidate_loss_scaler_digest": "scale",
+        "repair_loss_scaler_digest": "scale",
     }
 
 

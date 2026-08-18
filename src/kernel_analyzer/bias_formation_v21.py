@@ -94,10 +94,14 @@ class CommonStateCertificate:
     repair_weights_digest: str
     candidate_optimizer_digest: str
     repair_optimizer_digest: str
-    input_digest: str
-    rng_digest: str
-    scheduler_digest: str
-    loss_scaler_digest: str
+    candidate_input_digest: str
+    repair_input_digest: str
+    candidate_rng_digest: str
+    repair_rng_digest: str
+    candidate_scheduler_digest: str
+    repair_scheduler_digest: str
+    candidate_loss_scaler_digest: str
+    repair_loss_scaler_digest: str
 
     @classmethod
     def from_value(cls, value: Any) -> "CommonStateCertificate":
@@ -108,7 +112,10 @@ class CommonStateCertificate:
         fields = (
             "candidate_weights_digest", "repair_weights_digest",
             "candidate_optimizer_digest", "repair_optimizer_digest",
-            "input_digest", "rng_digest", "scheduler_digest", "loss_scaler_digest",
+            "candidate_input_digest", "repair_input_digest",
+            "candidate_rng_digest", "repair_rng_digest",
+            "candidate_scheduler_digest", "repair_scheduler_digest",
+            "candidate_loss_scaler_digest", "repair_loss_scaler_digest",
         )
         missing = [name for name in fields if not str(value.get(name, ""))]
         if missing:
@@ -120,6 +127,10 @@ class CommonStateCertificate:
         return (
             self.candidate_weights_digest == self.repair_weights_digest
             and self.candidate_optimizer_digest == self.repair_optimizer_digest
+            and self.candidate_input_digest == self.repair_input_digest
+            and self.candidate_rng_digest == self.repair_rng_digest
+            and self.candidate_scheduler_digest == self.repair_scheduler_digest
+            and self.candidate_loss_scaler_digest == self.repair_loss_scaler_digest
         )
 
     def as_dict(self) -> Dict[str, Any]:
@@ -128,10 +139,14 @@ class CommonStateCertificate:
             "repair_weights_digest": self.repair_weights_digest,
             "candidate_optimizer_digest": self.candidate_optimizer_digest,
             "repair_optimizer_digest": self.repair_optimizer_digest,
-            "input_digest": self.input_digest,
-            "rng_digest": self.rng_digest,
-            "scheduler_digest": self.scheduler_digest,
-            "loss_scaler_digest": self.loss_scaler_digest,
+            "candidate_input_digest": self.candidate_input_digest,
+            "repair_input_digest": self.repair_input_digest,
+            "candidate_rng_digest": self.candidate_rng_digest,
+            "repair_rng_digest": self.repair_rng_digest,
+            "candidate_scheduler_digest": self.candidate_scheduler_digest,
+            "repair_scheduler_digest": self.repair_scheduler_digest,
+            "candidate_loss_scaler_digest": self.candidate_loss_scaler_digest,
+            "repair_loss_scaler_digest": self.repair_loss_scaler_digest,
             "all_components_equal": self.all_components_equal,
         }
 
