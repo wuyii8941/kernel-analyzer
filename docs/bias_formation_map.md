@@ -33,3 +33,10 @@ or SEUP artifact exists. The current measured cells are recorded in
 `bias_transition_matrix.csv`: Phi is
 `LOCAL_CENTERED → GRADIENT_BIAS → UPDATE_BIAS`, saved-P is centered through all
 three layers, and Liger remains unresolved on confirmation.
+
+The final compact package is under
+`results/property/bias_formation_final/`. It contains the fail-closed
+population screening table, Phi transport decomposition, Liger confirmation
+analysis, mechanism reports, taxonomy, and `SHA256SUMS`. Rows without a v2.1
+capture are explicitly `NOT_CAPTURED_EXISTING_ARTIFACT_ONLY`; legacy T1–T4 and
+SEUP evidence is never promoted into formation labels.
