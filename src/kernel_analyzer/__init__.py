@@ -61,6 +61,17 @@ from .bias_formation import (
 )
 from .bias_consequence import BiasConsequenceTrace, ConsequenceStatus, ConsequenceValue
 from .bias_predictor import ReferenceOnlyInputs, ReferenceOnlyPredictor, validate_reference_payload
+from .bias_formation_v21 import (
+    BiasFormationTrace as BiasFormationTraceV21,
+    CommonStateCertificate,
+    FormationLayer as FormationLayerV21,
+    FormationPolicy as FormationPolicyV21,
+    FormationStatus as FormationStatusV21,
+    LayerPopulationCertificate,
+    StateVectorObservation,
+    summarize_state_vectors,
+    summarize_streamed_state_vectors,
+)
 
 __all__ = [
     "AnalysisReport",
@@ -117,4 +128,13 @@ __all__ = [
     "ReferenceOnlyInputs",
     "ReferenceOnlyPredictor",
     "validate_reference_payload",
+    "BiasFormationTraceV21",
+    "CommonStateCertificate",
+    "FormationLayerV21",
+    "FormationPolicyV21",
+    "FormationStatusV21",
+    "LayerPopulationCertificate",
+    "StateVectorObservation",
+    "summarize_state_vectors",
+    "summarize_streamed_state_vectors",
 ]
