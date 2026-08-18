@@ -37,3 +37,14 @@ selected-carrier drift L2 4.77e-5. This connects the measured gradient-stage
 formation candidate to a persistent effective-update drift, but it does not
 identify whether transport pairing or a numerical contract is the formation
 cause.
+
+## Exploratory pairing intervention
+
+`interventions/phi4_mm_transport_pairing.json` keeps the local residual norm and
+row multiset fixed while permuting its row pairing. The natural gradient
+population is BIASED and the shuffled population is CENTERED, with local norm
+error below 1e-6 on all 16 states. However, the simple analytic RMSNorm
+transport reconstruction misses the actual gradient delta by 0.32--0.60
+relative error. The strict result is therefore `MEASURED_NO_TRANSPORT_SUPPORT`:
+the pairing effect is recorded as evidence, but it is not promoted to a P2
+mechanism until the complete semantic transport region is closed.

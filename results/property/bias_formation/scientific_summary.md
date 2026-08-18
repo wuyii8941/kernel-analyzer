@@ -33,6 +33,9 @@ intervention, while Liger's confirmation gate did not trigger a source
 intervention. Phi's separate consequence replay passes signed persistence and
 recurrence gates, so the formation-to-persistence chain is measured for that
 case even though its root formation mechanism remains unresolved.
+An exploratory Phi residual-row permutation changes the gradient population from
+BIASED to CENTERED, but its current analytic transport reconstruction is not
+closed; the strict P2 verdict remains unresolved.
 
 The frozen population denominator is `bias_population.csv`: 1,562 endpoint
 units from the existing endpoint population, plus 12 canonical known

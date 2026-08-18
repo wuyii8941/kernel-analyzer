@@ -43,13 +43,15 @@ def canonical(value: object) -> str:
 
 
 class MMRepair:
-    def __init__(self, modules: list[Any], mode: str) -> None:
+    def __init__(self, modules: list[Any], mode: str, permutation: torch.Tensor | None = None) -> None:
         self.modules = modules
         self.mode = mode
+        self.permutation = permutation
         self.restores = []
         self.calls = 0
         self.local = None
         self.local_vector = None
+        self.natural_vector = None
 
     def __enter__(self) -> "MMRepair":
         seen = set()
@@ -76,11 +78,25 @@ class MMRepair:
                     replacement = torch.mm(args[0], args[1])
                 elif self.mode == "REPAIR_FP32_CAST_BF16":
                     replacement = fp32_external_reference("mm", args, kwargs)
+                elif self.mode == "REPAIR_PERMUTE":
+                    if self.permutation is None or before.ndim != 2:
+                        raise RuntimeError("permuted Phi MM repair needs a row permutation")
+                    replacement = fp32_external_reference("mm", args, kwargs)
                 else:
                     raise ValueError(self.mode)
                 cast = replacement.to(candidate.dtype)
-                candidate.copy_(cast)
-                delta = before.float() - cast.float()
+                natural_delta = before.float() - cast.float()
+                self.natural_vector = natural_delta.detach().float().cpu().numpy().reshape(-1).copy()
+                if self.mode == "REPAIR_PERMUTE":
+                    if int(self.permutation.numel()) != int(natural_delta.shape[0]):
+                        raise RuntimeError("Phi MM permutation row count differs")
+                    shuffled = natural_delta.index_select(0, self.permutation.to(natural_delta.device))
+                    delivered = cast.float() + shuffled
+                    candidate.copy_(delivered.to(candidate.dtype))
+                    delta = before.float() - delivered
+                else:
+                    candidate.copy_(cast)
+                    delta = natural_delta
                 candidate_error = before.float() - replacement.float()
                 repair_error = cast.float() - replacement.float()
                 self.local = {
