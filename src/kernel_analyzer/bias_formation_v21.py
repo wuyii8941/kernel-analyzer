@@ -248,6 +248,8 @@ class StateVectorObservation:
         values = tuple(float(x) for x in self.vector_handle())
         if len(values) != self.coordinate_count or any(not math.isfinite(x) for x in values):
             raise ValueError("streamed state vector is malformed or nonfinite")
+        if _digest_vector(values) != self.vector_digest:
+            raise ValueError("streamed state vector digest does not match provenance")
         return values
 
     def as_dict(self) -> Dict[str, Any]:

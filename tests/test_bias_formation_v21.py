@@ -99,3 +99,17 @@ def test_component_digest_mismatch_is_invalid_common_state():
             trace.add(state_id, partition, common_state_certificate=bad,
                       local_endpoint=vectors[i], parameter_gradient=vectors[i], effective_update=vectors[i])
     assert trace.finalize()["status"] == FormationStatus.INVALID_COMMON_STATE.value
+
+
+def test_non_weight_component_digest_mismatch_is_also_invalid():
+    trace = BiasFormationTrace("toy", [f"c{i}" for i in range(16)], [f"e{i}" for i in range(16)], POLICY)
+    vectors = _independent_vectors(seed=12)
+    bad = _common()
+    bad["candidate_rng_digest"] = "candidate-rng"
+    bad["repair_rng_digest"] = "repair-rng"
+    for partition, prefix in (("calibration", "c"), ("confirmation", "e")):
+        for i in range(16):
+            state_id = prefix + str(i)
+            trace.add(state_id, partition, common_state_certificate=bad,
+                      local_endpoint=vectors[i], parameter_gradient=vectors[i], effective_update=vectors[i])
+    assert trace.finalize()["status"] == FormationStatus.INVALID_COMMON_STATE.value
