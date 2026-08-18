@@ -1,0 +1,112 @@
+{
+  "cases": [
+    {
+      "case_id": "liger_fused_ce_t128",
+      "properties": {
+        "P1_CONDITIONAL_SOURCE_ASYMMETRY": "CAPTURE_READY",
+        "P2_SOURCE_TRANSPORT_ALIGNMENT": "NOT_APPLICABLE",
+        "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY": "NOT_APPLICABLE"
+      },
+      "role": "DEEP_POSITIVE_ANCHOR",
+      "source_status": "M3_CLOSED_CHUNK_GEOMETRY_BF16_ACCUMULATION"
+    },
+    {
+      "case_id": "phi4_lm_head_dx_seq64",
+      "properties": {
+        "P1_CONDITIONAL_SOURCE_ASYMMETRY": "BLOCKED_MISSING_ATOMIZATION",
+        "P2_SOURCE_TRANSPORT_ALIGNMENT": "BLOCKED_MISSING_TRANSPORT",
+        "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY": "NOT_APPLICABLE"
+      },
+      "role": "BREADTH_POSITIVE",
+      "source_status": "M3_CLOSED_MM_KERNEL_ARITHMETIC"
+    },
+    {
+      "case_id": "qwen_saved_p_seq128",
+      "properties": {
+        "P1_CONDITIONAL_SOURCE_ASYMMETRY": "NOT_APPLICABLE",
+        "P2_SOURCE_TRANSPORT_ALIGNMENT": "CAPTURE_READY",
+        "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY": "CAPTURE_READY"
+      },
+      "role": "P2_P3_CANDIDATE",
+      "source_status": "M3_CLOSED_SAVED_STATE_RECONSTRUCTION_REGION"
+    },
+    {
+      "case_id": "qwen_l23_key_materialization_seq1024",
+      "properties": {
+        "P1_CONDITIONAL_SOURCE_ASYMMETRY": "BLOCKED_MISSING_ATOMIZATION",
+        "P2_SOURCE_TRANSPORT_ALIGNMENT": "BLOCKED_MISSING_ATOMIZATION",
+        "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY": "BLOCKED_MISSING_ATOMIZATION"
+      },
+      "role": "P3_CANDIDATE",
+      "source_status": "M3_CLOSED_MM_OPERAND_DECOMPOSITION"
+    },
+    {
+      "case_id": "qwen_rsqrt_seq128",
+      "properties": {
+        "P1_CONDITIONAL_SOURCE_ASYMMETRY": "BLOCKED_MISSING_ATOMIZATION",
+        "P2_SOURCE_TRANSPORT_ALIGNMENT": "BLOCKED_MISSING_ATOMIZATION",
+        "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY": "BLOCKED_MISSING_ATOMIZATION"
+      },
+      "role": "CRITICAL_BOUNDARY",
+      "source_status": "M3_ENDPOINT_BOUNDARY_ONLY"
+    },
+    {
+      "case_id": "qwen_bmm_seq64",
+      "properties": {
+        "P1_CONDITIONAL_SOURCE_ASYMMETRY": "NOT_APPLICABLE",
+        "P2_SOURCE_TRANSPORT_ALIGNMENT": "CAPTURE_READY",
+        "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY": "NOT_APPLICABLE"
+      },
+      "role": "LOCAL_VARIANCE_NEGATIVE",
+      "source_status": "M3_ENDPOINT_BOUNDARY_ONLY"
+    },
+    {
+      "case_id": "qwen_vproj_seq128",
+      "properties": {
+        "P1_CONDITIONAL_SOURCE_ASYMMETRY": "BLOCKED_MISSING_ATOMIZATION",
+        "P2_SOURCE_TRANSPORT_ALIGNMENT": "BLOCKED_MISSING_ATOMIZATION",
+        "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY": "BLOCKED_MISSING_ATOMIZATION"
+      },
+      "role": "NONPERSISTENT_SOURCE_BOUNDARY",
+      "source_status": "M3_OUTPUT_ROUNDING_CAUSAL_BOUNDARY"
+    },
+    {
+      "case_id": "qwen3vl_silu_seq160",
+      "properties": {
+        "P1_CONDITIONAL_SOURCE_ASYMMETRY": "BLOCKED_MISSING_ATOMIZATION",
+        "P2_SOURCE_TRANSPORT_ALIGNMENT": "BLOCKED_MISSING_ATOMIZATION",
+        "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY": "BLOCKED_MISSING_ATOMIZATION"
+      },
+      "role": "LOCAL_ERROR_NEGATIVE",
+      "source_status": "M3_ENDPOINT_BOUNDARY_ONLY"
+    },
+    {
+      "case_id": "flash_attention_literature_anchor",
+      "properties": {
+        "P1_CONDITIONAL_SOURCE_ASYMMETRY": "BLOCKED_MISSING_ATOMIZATION",
+        "P2_SOURCE_TRANSPORT_ALIGNMENT": "BLOCKED_MISSING_ATOMIZATION",
+        "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY": "BLOCKED_MISSING_ATOMIZATION"
+      },
+      "role": "EXTERNAL_CONTROL_NOT_MEASURED",
+      "source_status": "LITERATURE_ANCHOR_NOT_MEASURED"
+    }
+  ],
+  "property_ids": [
+    "P1_CONDITIONAL_SOURCE_ASYMMETRY",
+    "P2_SOURCE_TRANSPORT_ALIGNMENT",
+    "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY"
+  ],
+  "property_specs_sha256": "6ca2212e33e47ded84971d82a750788f82dcbe7a6b2f56f329a023be46a5d115",
+  "schema": "kernel-analyzer-bias-property-feasibility-v2_1",
+  "status": "PRE_MEASUREMENT_STATISTICAL_CORRECTION",
+  "statuses": [
+    "CAPTURE_READY",
+    "INTERVENTION_READY",
+    "NOT_APPLICABLE",
+    "BLOCKED_MISSING_ATOMIZATION",
+    "BLOCKED_MISSING_TRANSPORT",
+    "BLOCKED_MISSING_SHAM"
+  ],
+  "supersedes": "bias_formation_v2",
+  "v2_gpu_measurements": 0
+}
