@@ -1,0 +1,102 @@
+{
+  "candidate_properties": [
+    {
+      "id": "P1_CONDITIONAL_SOURCE_ASYMMETRY",
+      "role": "baseline",
+      "short_name": "CONDITIONAL_SOURCE_ASYMMETRY",
+      "status": "HYPOTHESIS_ONLY",
+      "uses_seup_as_label": false,
+      "uses_t4_as_predictor": false
+    },
+    {
+      "id": "P2_SOURCE_TRANSPORT_ALIGNMENT",
+      "role": "formation_candidate",
+      "short_name": "SOURCE_TRANSPORT_ALIGNMENT",
+      "status": "HYPOTHESIS_ONLY",
+      "uses_seup_as_label": false,
+      "uses_t4_as_predictor": false
+    },
+    {
+      "id": "P3_FB_NUMERICAL_CONSISTENCY",
+      "role": "formation_candidate",
+      "short_name": "FB_NUMERICAL_CONSISTENCY",
+      "status": "HYPOTHESIS_ONLY",
+      "uses_seup_as_label": false,
+      "uses_t4_as_predictor": false
+    },
+    {
+      "id": "P4_NONLINEAR_RECTIFICATION",
+      "role": "formation_candidate",
+      "short_name": "NONLINEAR_RECTIFICATION",
+      "status": "HYPOTHESIS_ONLY",
+      "uses_seup_as_label": false,
+      "uses_t4_as_predictor": false
+    },
+    {
+      "id": "P5_OPTIMIZER_RECTIFICATION",
+      "role": "formation_candidate",
+      "short_name": "OPTIMIZER_RECTIFICATION",
+      "status": "HYPOTHESIS_ONLY",
+      "uses_seup_as_label": false,
+      "uses_t4_as_predictor": false
+    },
+    {
+      "id": "P6_SEMANTIC_ORBIT_CENTERING",
+      "role": "method_candidate",
+      "short_name": "SEMANTIC_ORBIT_CENTERING",
+      "status": "HYPOTHESIS_ONLY",
+      "uses_seup_as_label": false,
+      "uses_t4_as_predictor": false
+    }
+  ],
+  "decision_rules": [
+    "NON_CIRCULAR_CALIBRATION_ONLY",
+    "CROSS_MECHANISM_REPLICATION",
+    "POSITIVE_AND_NEGATIVE_DISCRIMINATION",
+    "MATCHED_CAUSAL_INTERVENTION",
+    "BEATS_TOLERANCE_AND_NORM_BASELINES"
+  ],
+  "freeze_rules": {
+    "case_roster_frozen_before_trace": true,
+    "external_control_cannot_count_as_project_discovery": true,
+    "no_single_property_is_required_to_pass": true,
+    "old_t1_t4_and_seup_verdicts_immutable": true,
+    "property_ranking_not_used_to_change_roster": true
+  },
+  "protocol_id": "bias_formation_v1",
+  "protocol_sha256": "084a30761a4f96cf4dcdce7ccccd09db8ca2aacd46f92424c9ad714c925044a5",
+  "schema": "kernel-analyzer-bias-formation-protocol-v1",
+  "state_split": {
+    "calibration_and_evaluation_must_be_disjoint": true,
+    "calibration_count": 16,
+    "calibration_is_open_loop": true,
+    "evaluation_count": 16,
+    "evaluation_is_closed_loop": true,
+    "split_seed": 20260818,
+    "state_ids_must_be_bound_from_frozen_artifact": true
+  },
+  "status": "FROZEN_PROTOCOL_NO_PROPERTY_RESULT",
+  "transition": [
+    "local_endpoint_residual",
+    "parameter_gradient_residual",
+    "effective_optimizer_update_residual",
+    "paired_trajectory_drift"
+  ],
+  "transition_certificate": {
+    "continuous_metrics_are_primary": true,
+    "labels": [
+      "LOCAL_CENTERED",
+      "LOCAL_BIASED",
+      "GRADIENT_CENTERED",
+      "GRADIENT_BIASED",
+      "UPDATE_CENTERED",
+      "UPDATE_BIASED",
+      "TEMPORALLY_CANCELING",
+      "PERSISTENT",
+      "ABSTAIN_UNRESOLVED"
+    ],
+    "missing_layer_fails_closed": true,
+    "ordinary_atol_rtol_is_baseline_only": true
+  },
+  "unit": "ONE_EXACT_FORWARD_PLUS_ACTUAL_BACKWARD_ENDPOINT"
+}

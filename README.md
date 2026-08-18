@@ -17,7 +17,8 @@ local same-dtype implementation difference
 
 See [PROJECT.md](PROJECT.md) for the live status and retention map,
 [cases_flash_style.md](cases_flash_style.md) for the case standard, and
-[case.md](case.md) for the current case registry.
+[case.md](case.md) for the current case registry.  The next formation-layer
+experiment is frozen in [docs/bias_properties.md](docs/bias_properties.md).
 
 The main code is in `src/` and `scripts/`.  Scientific artifacts are kept
 under `results/coverage/` and compact derivations under `results/final/`.

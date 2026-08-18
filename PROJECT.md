@@ -33,6 +33,7 @@ denominator and are not called normal controls or cases.
 | `tests/` | unit tests | keep |
 | `case.md`, `cases_flash_style.md` | case registry and Flash-style logic | keep |
 | `docs/coverage.md`, `docs/denominator.md`, `docs/bias_protocol.md` | compact protocol/status references | keep |
+| `docs/bias_properties.md` | candidate bias-formation tournament | keep |
 | `docs/l23_qproj_tile.md` | detailed mathematical case derivation | keep |
 | `results/coverage/` | frozen inputs, releases, ledgers, T1--T4 evidence | keep; remove only validated intermediates |
 | `results/final/` | compact historical derivations and summaries | keep |

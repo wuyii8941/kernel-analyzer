@@ -40,6 +40,16 @@ from .geometry import (
     projected_persistence,
     subspace_overlap,
 )
+from .bias import (
+    BiasLayer,
+    BiasProperty,
+    BiasStatus,
+    BiasTrace,
+    BiasTracePolicy,
+    LayerCertificate,
+    LayerValue,
+    PropertyDecision,
+)
 
 __all__ = [
     "AnalysisReport",
@@ -75,4 +85,12 @@ __all__ = [
     "normalized_gram",
     "projected_persistence",
     "subspace_overlap",
+    "BiasLayer",
+    "BiasProperty",
+    "BiasStatus",
+    "BiasTrace",
+    "BiasTracePolicy",
+    "LayerCertificate",
+    "LayerValue",
+    "PropertyDecision",
 ]
