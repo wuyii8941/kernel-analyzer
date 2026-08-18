@@ -19,8 +19,9 @@ labels.  If the required decomposition or intervention is absent, the stage is
 ## Current map
 
 * **Phi MM:** `CENTERED → BIASED → BIASED`, first confirmed at the
-  parameter-gradient layer. This is a transport/contract candidate only until
-  its declared intervention is run.
+  parameter-gradient layer. Its separate SEUP replay passes (signed
+  persistence 1.0; local projected fraction 0.9992), but this remains a
+  transport/contract candidate until its declared intervention is run.
 * **Qwen saved-P:** all three layers are `CENTERED` in both partitions. This is
   a measured case-level centered result, not evidence that all local error is
   harmless.

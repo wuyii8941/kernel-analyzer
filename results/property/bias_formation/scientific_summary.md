@@ -22,7 +22,7 @@ The measured transition matrix is:
 | case | local | parameter gradient | effective update | interpretation |
 |---|---|---|---|---|
 | Liger fused CE | UNRESOLVED in confirmation | UNRESOLVED | UNRESOLVED | calibration-only local signal; no held-out formation confirmation |
-| Phi MM | CENTERED | BIASED | BIASED | transport/contract candidate; intervention still required |
+| Phi MM | CENTERED | BIASED | BIASED | transport/contract candidate; SEUP consequence passes |
 | Qwen saved-P | CENTERED | CENTERED | CENTERED | case-level variance-only candidate |
 | Qwen bmm | INELIGIBLE | INELIGIBLE | INELIGIBLE | missing exact candidate/repair/sham provenance |
 
@@ -30,7 +30,9 @@ Synthetic detector controls remain separate from natural-case evidence. Existing
 SEUP results remain consequence evidence only. No mechanism intervention is
 promoted automatically: Phi requires a valid transport or numerical-contract
 intervention, while Liger's confirmation gate did not trigger a source
-intervention.
+intervention. Phi's separate consequence replay passes signed persistence and
+recurrence gates, so the formation-to-persistence chain is measured for that
+case even though its root formation mechanism remains unresolved.
 
 The frozen population denominator is `bias_population.csv`: 1,562 endpoint
 units from the existing endpoint population, plus 12 canonical known

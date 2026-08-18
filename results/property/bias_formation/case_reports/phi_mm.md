@@ -26,3 +26,14 @@ This is formation evidence only. It does not by itself prove whether the
 gradient direction is caused by source/transport pairing or by a forward/backward
 numerical contract; that requires the declared intervention. It also does not
 use T4 or SEUP as a label.
+
+## Consequence
+
+The separate Phi SEUP replay is recorded in
+`results/property/bias_formation/consequence/phi4_lm_head_dx_seup.json`. It
+passes the frozen consequence gates: signed persistence 1.0, local projected
+accumulation fraction 0.9992, recurrence residual at most 7.04e-9, and final
+selected-carrier drift L2 4.77e-5. This connects the measured gradient-stage
+formation candidate to a persistent effective-update drift, but it does not
+identify whether transport pairing or a numerical contract is the formation
+cause.
