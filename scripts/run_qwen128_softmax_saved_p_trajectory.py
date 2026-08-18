@@ -99,6 +99,7 @@ class SavedProbabilityRepair:
         self.probability: torch.Tensor | None = None
         self.forward_calls = 0; self.backward_calls = 0
         self.changed_coordinates = 0; self.correction_l2 = 0.0
+        self.correction_vector: Any | None = None
 
     def __enter__(self) -> "SavedProbabilityRepair":
         def forward_wrapped(*args: Any, **kwargs: Any) -> Any:
@@ -144,6 +145,10 @@ class SavedProbabilityRepair:
                 correction = destination.detach().float() - actual.float()
                 self.changed_coordinates = int(torch.count_nonzero(correction).item())
                 self.correction_l2 = float(torch.linalg.vector_norm(correction).item())
+                # Formation capture consumes this one endpoint residual.  The
+                # large tensor is copied to a temporary disk spool by the
+                # caller and is never retained in the certificate JSON.
+                self.correction_vector = correction.detach().cpu().numpy().reshape(-1).copy()
             self.backward_calls += 1
             return result
 

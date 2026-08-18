@@ -1,11 +1,15 @@
 import random
 
+import numpy as np
+import pytest
+
 from kernel_analyzer.bias_formation_v21 import (
     BiasFormationTrace,
     FormationPolicy,
     FormationStatus,
     summarize_state_vectors,
     summarize_streamed_state_vectors,
+    summarize_streamed_state_vector_files,
 )
 
 
@@ -69,6 +73,30 @@ def test_streamed_and_dense_population_are_identical_and_order_invariant():
     assert dense.status == streamed.status
     assert reordered.status == dense.status
     assert reordered.cross_state_ratio == dense.cross_state_ratio
+
+
+def test_file_streamed_and_dense_population_are_identical(tmp_path):
+    vectors = _independent_vectors(seed=14)
+    dense = summarize_state_vectors(
+        vectors, state_ids=[str(i) for i in range(16)], policy=POLICY,
+    )
+    files = []
+    for index, values in enumerate(vectors):
+        path = tmp_path / f"state-{index}.f32"
+        np.asarray(values, dtype=np.float32).tofile(path)
+        files.append({
+            "state_id": str(index), "path": str(path),
+            "coordinate_count": len(values), "vector_digest": f"digest-{index}",
+            "storage_dtype": "float32",
+        })
+    streamed = summarize_streamed_state_vector_files(
+        files, layer="LOCAL_ENDPOINT", partition="confirmation", policy=POLICY,
+    )
+    assert dense.status == streamed.status
+    assert dense.cross_state_ratio == pytest.approx(streamed.cross_state_ratio)
+    assert np.asarray(dense.complete_gram) == pytest.approx(
+        np.asarray(streamed.complete_gram), rel=1e-6, abs=1e-6,
+    )
 
 
 def _trace(local, gradient, update):

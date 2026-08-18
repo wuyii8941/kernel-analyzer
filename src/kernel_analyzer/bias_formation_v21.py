@@ -16,6 +16,7 @@ from enum import Enum
 import hashlib
 import json
 import math
+from pathlib import Path
 import random
 from typing import Any, Callable, Dict, Iterable, Mapping, MutableMapping, Sequence
 
@@ -341,6 +342,83 @@ def _ratio(rows: Sequence[Sequence[float]], policy: FormationPolicy) -> float:
     return cross / max(energy, policy.energy_floor)
 
 
+def _certificate_from_gram(
+    gram: Any,
+    *,
+    coordinate_count: int,
+    state_ids: Sequence[str],
+    vector_digests: Sequence[str],
+    layer: str,
+    partition: str,
+    policy: FormationPolicy,
+) -> LayerPopulationCertificate:
+    """Finish a population certificate once its complete Gram is available.
+
+    This is shared by dense and disk-backed paths.  Keeping the status logic
+    here is important: a streamed capture must be statistically identical to
+    the in-memory reference path, not merely report a similar ratio.
+    """
+    if np is not None:
+        matrix = np.asarray(gram, dtype=np.float64)
+        if matrix.shape != (len(state_ids), len(state_ids)):
+            raise ValueError("complete Gram shape does not match state IDs")
+        diagonal = np.diag(matrix)
+        average_energy = float(np.trace(matrix) / len(state_ids))
+        pairs = len(state_ids) * (len(state_ids) - 1) / 2
+        cross_u = float((matrix.sum() - np.trace(matrix)) / (2.0 * pairs))
+        bootstrap = []
+        rng = np.random.default_rng(policy.bootstrap_seed)
+        while len(bootstrap) < policy.bootstrap_samples:
+            indices = rng.integers(0, len(state_ids), size=len(state_ids))
+            counts = np.bincount(indices, minlength=len(state_ids)).astype(np.float64)
+            denominator = float(len(state_ids) * len(state_ids) - counts @ counts)
+            if denominator <= 0.0:
+                continue
+            numerator = float(counts @ matrix @ counts - (counts * counts) @ diagonal)
+            bootstrap.append(numerator / denominator / max(average_energy, policy.energy_floor))
+        complete = matrix.tolist()
+    else:
+        matrix = [[float(x) for x in row] for row in gram]
+        if len(matrix) != len(state_ids) or any(len(row) != len(state_ids) for row in matrix):
+            raise ValueError("complete Gram shape does not match state IDs")
+        diagonal = [matrix[i][i] for i in range(len(state_ids))]
+        average_energy = math.fsum(diagonal) / len(state_ids)
+        pairs = len(state_ids) * (len(state_ids) - 1) / 2
+        cross_u = math.fsum(matrix[i][j] for i in range(len(state_ids)) for j in range(len(state_ids)) if i != j) / (2.0 * pairs)
+        bootstrap = []
+        rng = random.Random(policy.bootstrap_seed)
+        for _ in range(policy.bootstrap_samples):
+            sample = [rng.randrange(len(state_ids)) for _ in state_ids]
+            counts = [sample.count(i) for i in range(len(state_ids))]
+            denominator = float(len(state_ids) * len(state_ids) - sum(x * x for x in counts))
+            if denominator <= 0.0:
+                continue
+            numerator = sum(counts[i] * counts[j] * matrix[i][j] for i in range(len(state_ids)) for j in range(len(state_ids)) if i != j)
+            bootstrap.append(numerator / denominator / max(average_energy, policy.energy_floor))
+        complete = matrix
+    observed_ratio = cross_u / max(average_energy, policy.energy_floor)
+    bootstrap.sort()
+    lower = bootstrap[max(0, int(0.025 * len(bootstrap)))]
+    upper = bootstrap[min(len(bootstrap) - 1, int(0.975 * len(bootstrap)))]
+    if lower >= policy.bias_margin or upper <= -policy.bias_margin:
+        status = FormationStatus.BIASED.value
+    elif lower >= -policy.centered_margin and upper <= policy.centered_margin:
+        status = FormationStatus.CENTERED.value
+    elif upper <= -policy.canceling_margin:
+        status = FormationStatus.CANCELING_STRUCTURE.value
+    else:
+        status = FormationStatus.UNRESOLVED_INSUFFICIENT_STATES.value
+    return LayerPopulationCertificate(
+        layer=str(layer), partition=str(partition), state_ids=tuple(str(x) for x in state_ids),
+        coordinate_count=int(coordinate_count), complete_gram=tuple(tuple(float(x) for x in row) for row in complete),
+        average_state_energy=average_energy, cross_state_u_statistic=cross_u,
+        cross_state_ratio=observed_ratio, bootstrap_lower=lower,
+        bootstrap_upper=upper, bootstrap_samples=policy.bootstrap_samples,
+        vector_digests=tuple(str(x) for x in vector_digests), status=status,
+        canceling_structure=(status == FormationStatus.CANCELING_STRUCTURE.value),
+    )
+
+
 def summarize_state_vectors(
     state_vectors: Sequence[Sequence[float]],
     *,
@@ -368,56 +446,55 @@ def summarize_state_vectors(
     if len(digests) != len(rows):
         raise ValueError("vector digests must align with vectors")
     if np is not None:
-        # Compute one population Gram and bootstrap its off-diagonal U
-        # statistic.  Recomputing dot products over every bootstrap sample is
-        # prohibitively expensive for complete endpoint tensors.
-        matrix = np.asarray(rows, dtype=np.float64)
-        gram_array = matrix @ matrix.T
-        diagonal = np.diag(gram_array)
-        avg_energy = float(np.trace(gram_array) / len(rows))
-        pairs = len(rows) * (len(rows) - 1) / 2
-        u_stat = float((gram_array.sum() - np.trace(gram_array)) / (2.0 * pairs))
-        bootstrap = []
-        rng = np.random.default_rng(policy.bootstrap_seed)
-        while len(bootstrap) < policy.bootstrap_samples:
-            indices = rng.integers(0, len(rows), size=len(rows))
-            counts = np.bincount(indices, minlength=len(rows)).astype(np.float64)
-            denominator = float(len(rows) * len(rows) - counts @ counts)
-            if denominator <= 0.0:
-                continue
-            numerator = float(counts @ gram_array @ counts - (counts * counts) @ diagonal)
-            bootstrap.append(numerator / denominator / max(avg_energy, policy.energy_floor))
-        gram = gram_array.tolist()
+        gram = np.asarray(rows, dtype=np.float64) @ np.asarray(rows, dtype=np.float64).T
     else:
         gram = _gram(rows)
-        avg_energy = math.fsum(gram[i][i] for i in range(len(rows))) / len(rows)
-        u_stat = math.fsum(gram[i][j] for i in range(len(rows)) for j in range(i + 1, len(rows))) / (len(rows) * (len(rows) - 1) / 2)
-        bootstrap = []
-        rng = random.Random(policy.bootstrap_seed)
-        for _ in range(policy.bootstrap_samples):
-            sample = [rows[rng.randrange(len(rows))] for _ in rows]
-            bootstrap.append(_ratio(sample, policy))
-    observed_ratio = u_stat / max(avg_energy, policy.energy_floor)
-    bootstrap.sort()
-    lower = bootstrap[max(0, int(0.025 * len(bootstrap)))]
-    upper = bootstrap[min(len(bootstrap) - 1, int(0.975 * len(bootstrap)))]
-    if lower >= policy.bias_margin or upper <= -policy.bias_margin:
-        status = FormationStatus.BIASED.value
-    elif lower >= -policy.centered_margin and upper <= policy.centered_margin:
-        status = FormationStatus.CENTERED.value
-    elif upper <= -policy.canceling_margin:
-        status = FormationStatus.CANCELING_STRUCTURE.value
-    else:
-        status = FormationStatus.UNRESOLVED_INSUFFICIENT_STATES.value
-    return LayerPopulationCertificate(
-        layer=str(layer), partition=str(partition), state_ids=ids,
-        coordinate_count=dimension, complete_gram=tuple(tuple(row) for row in gram),
-        average_state_energy=avg_energy, cross_state_u_statistic=u_stat,
-        cross_state_ratio=observed_ratio, bootstrap_lower=lower,
-        bootstrap_upper=upper, bootstrap_samples=policy.bootstrap_samples,
-        vector_digests=digests, status=status,
-        canceling_structure=(status == FormationStatus.CANCELING_STRUCTURE.value),
+    return _certificate_from_gram(
+        gram, coordinate_count=dimension, state_ids=ids, vector_digests=digests,
+        layer=layer, partition=partition, policy=policy,
     )
+
+
+def summarize_streamed_state_vector_files(
+    rows: Sequence[Mapping[str, Any]], *, layer: str, partition: str,
+    policy: FormationPolicy | None = None, chunk_elements: int = 1_048_576,
+) -> LayerPopulationCertificate:
+    """Summarize vectors retained as temporary float32/float64 files.
+
+    Only a ``state_count × state_count`` Gram remains in memory.  This is the
+    required path for large declared parameter carriers such as tied Qwen
+    projections; callers own cleanup of the temporary files after finalizing.
+    """
+    policy = policy or FormationPolicy()
+    if len(rows) < policy.min_states:
+        raise ValueError("insufficient state vectors")
+    coordinates = int(rows[0].get("coordinate_count", rows[0].get("coordinates", 0)))
+    if coordinates < 1 or any(int(row.get("coordinate_count", row.get("coordinates", 0))) != coordinates for row in rows):
+        raise ValueError("state vectors must share one coordinate count")
+    if chunk_elements < 1:
+        raise ValueError("chunk_elements must be positive")
+    arrays = []
+    for row in rows:
+        path = Path(str(row["path"]))
+        storage_dtype = str(row.get("storage_dtype", "float32"))
+        dtype = np.float32 if storage_dtype == "float32" else np.float64
+        expected_bytes = coordinates * np.dtype(dtype).itemsize
+        if path.stat().st_size != expected_bytes:
+            raise ValueError("streamed vector file size does not match coordinate count")
+        arrays.append(np.memmap(path, dtype=dtype, mode="r", shape=(coordinates,)))
+    gram = np.zeros((len(arrays), len(arrays)), dtype=np.float64)
+    for start in range(0, coordinates, chunk_elements):
+        stop = min(coordinates, start + chunk_elements)
+        block = np.stack([np.asarray(array[start:stop], dtype=np.float64) for array in arrays])
+        gram += block @ block.T
+    certificate = _certificate_from_gram(
+        gram, coordinate_count=coordinates,
+        state_ids=[str(row["state_id"]) for row in rows],
+        vector_digests=[str(row["vector_digest"]) for row in rows],
+        layer=layer, partition=partition, policy=policy,
+    )
+    del arrays
+    return certificate
 
 
 def summarize_streamed_state_vectors(
