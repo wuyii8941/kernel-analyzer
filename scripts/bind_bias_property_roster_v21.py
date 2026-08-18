@@ -21,6 +21,24 @@ BINDING_GENERATOR_COMMIT = "2642ca2bdb007cbf47edee1a6e9b53021906549a"
 PROTOCOL_FREEZE_COMMIT = "02d9743a1c91b260e15fb0133576ab28f55eba21"
 PROPERTY_SPECS_PATH = ROOT / "results/property/bias_formation_v2/property_specs.json"
 
+SOURCE_BINDINGS = {
+    "liger_fused_ce_t128": {
+        "candidate": "scripts/run_liger_seup.py",
+        "repair": "scripts/run_liger_seup.py",
+        "sham": None,
+    },
+    "phi4_lm_head_dx_seq64": {
+        "candidate": "scripts/run_phi64_lmhead_dx_repair.py",
+        "repair": "scripts/run_phi64_lmhead_dx_repair.py",
+        "sham": "scripts/run_phi64_lmhead_dx_repair.py",
+    },
+    "qwen_saved_p_seq128": {
+        "candidate": "scripts/run_qwen128_softmax_saved_p_trajectory.py",
+        "repair": "scripts/run_qwen128_softmax_saved_p_trajectory.py",
+        "sham": "scripts/run_qwen128_softmax_saved_p_trajectory.py",
+    },
+}
+
 sys.path.insert(0, str(ROOT))
 from scripts.bind_bias_property_roster import CASE_BINDINGS, load, sha256, walk_state_ids, model_manifest  # noqa: E402
 
@@ -71,12 +89,28 @@ def bind_case(spec: Mapping[str, Any]) -> dict[str, Any]:
         reasons.append("INELIGIBLE_IN_V2_1_INSUFFICIENT_STATES:only_six_unique_natural_states")
     if spec["case_id"] in {"qwen_l23_key_materialization_seq1024", "qwen_rsqrt_seq128"}:
         reasons.append("INELIGIBLE_MISSING_CONSEQUENCE_TRACE")
-    candidate_wrapper = [item for item in wrapper_hashes if "generated_source" in item["field"].lower() or "wrapper" in item["field"].lower()]
-    candidate_wrapper_bound = bool(candidate_wrapper)
-    # Existing result artifacts do not contain an independently addressable
-    # repair/sham source path.  Never turn a name into a provenance claim.
-    repair_bound = False
-    sham_bound = False
+    source = SOURCE_BINDINGS.get(spec["case_id"], {})
+    candidate_path = ROOT / source["candidate"] if source.get("candidate") else None
+    repair_path = ROOT / source["repair"] if source.get("repair") else None
+    sham_path = ROOT / source["sham"] if source.get("sham") else None
+    candidate_wrapper_bound = bool(candidate_path and candidate_path.exists())
+    repair_bound = bool(repair_path and repair_path.exists())
+    sham_bound = bool(sham_path and sham_path.exists())
+    candidate_wrapper = []
+    if candidate_wrapper_bound:
+        candidate_wrapper.append({"path": source["candidate"], "sha256": sha256(candidate_path)})
+    repair_binding = {
+        "implementation_path": None if repair_path is None else str(repair_path.relative_to(ROOT)),
+        "source_sha256": None if repair_path is None else sha256(repair_path),
+        "target_endpoint": spec.get("endpoint_or_region_id"),
+        "bound": repair_bound,
+    }
+    sham_binding = {
+        "implementation_path": None if sham_path is None else str(sham_path.relative_to(ROOT)),
+        "source_sha256": None if sham_path is None else sha256(sham_path),
+        "target_endpoint": spec.get("endpoint_or_region_id"),
+        "bound": sham_bound,
+    }
     if not candidate_wrapper_bound:
         reasons.append("BLOCKED_MISSING_CANDIDATE_WRAPPER_SOURCE_HASH")
     if not repair_bound:
@@ -94,18 +128,8 @@ def bind_case(spec: Mapping[str, Any]) -> dict[str, Any]:
             "wrapper_sources": candidate_wrapper,
             "artifact_hashes_are_not_wrapper_hashes": True,
         },
-        "repair_binding": {
-            "implementation_path": None,
-            "source_sha256": None,
-            "target_endpoint": spec.get("endpoint_or_region_id"),
-            "bound": repair_bound,
-        },
-        "sham_binding": {
-            "implementation_path": None,
-            "source_sha256": None,
-            "target_endpoint": spec.get("endpoint_or_region_id"),
-            "bound": sham_bound,
-        },
+        "repair_binding": repair_binding,
+        "sham_binding": sham_binding,
         "repair_and_sham_bound": repair_bound and sham_bound,
         "state_ids": unique_states,
         "state_count": len(set(unique_states)),

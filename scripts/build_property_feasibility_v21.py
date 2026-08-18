@@ -22,13 +22,13 @@ def build() -> dict:
     for case in roster["cases"]:
         cid = case["case_id"]
         if cid == "liger_fused_ce_t128":
-            statuses = {PROPERTIES[0]: "CAPTURE_READY", PROPERTIES[1]: "NOT_APPLICABLE", PROPERTIES[2]: "NOT_APPLICABLE"}
+            statuses = {PROPERTIES[0]: "BLOCKED_MISSING_SHAM", PROPERTIES[1]: "NOT_APPLICABLE", PROPERTIES[2]: "NOT_APPLICABLE"}
         elif cid == "phi4_lm_head_dx_seq64":
             statuses = {PROPERTIES[0]: "BLOCKED_MISSING_ATOMIZATION", PROPERTIES[1]: "BLOCKED_MISSING_TRANSPORT", PROPERTIES[2]: "NOT_APPLICABLE"}
         elif cid == "qwen_saved_p_seq128":
             statuses = {PROPERTIES[0]: "NOT_APPLICABLE", PROPERTIES[1]: "CAPTURE_READY", PROPERTIES[2]: "CAPTURE_READY"}
         elif cid == "qwen_bmm_seq64":
-            statuses = {PROPERTIES[0]: "NOT_APPLICABLE", PROPERTIES[1]: "CAPTURE_READY", PROPERTIES[2]: "NOT_APPLICABLE"}
+            statuses = {PROPERTIES[0]: "NOT_APPLICABLE", PROPERTIES[1]: "BLOCKED_MISSING_SHAM", PROPERTIES[2]: "NOT_APPLICABLE"}
         else:
             statuses = {prop: "BLOCKED_MISSING_ATOMIZATION" for prop in PROPERTIES}
         case_rows.append({"case_id": cid, "role": case.get("role"), "properties": statuses, "source_status": case.get("source_status")})
