@@ -1,8 +1,9 @@
 # Bias Formation Map — current status
 
-The project has frozen the scientific question and measurement protocol, but
-has not yet measured natural formation stages.  Therefore this file makes no
-claim that Liger, Phi, saved-P or bmm belongs to any stage.
+The protocol is frozen and the three eligible cases have now completed the
+32-state open-loop formation campaign. The fourth case, Qwen bmm, remains
+explicitly ineligible because its frozen roster has no exact repair/sham
+wrapper source.
 
 The current deliverable is a map from implementation difference to the next
 measurement boundary:
@@ -16,17 +17,28 @@ implementation difference
   → parameter drift
 ```
 
-Synthetic detector controls are separate from natural-case evidence.  Existing
-SEUP results remain consequence evidence only.  The next permitted scientific
-measurement is the v2.1 16+16 open-loop formation campaign after all case
-preflight and repair/sham provenance blockers pass.
+The measured transition matrix is:
+
+| case | local | parameter gradient | effective update | interpretation |
+|---|---|---|---|---|
+| Liger fused CE | UNRESOLVED in confirmation | UNRESOLVED | UNRESOLVED | calibration-only local signal; no held-out formation confirmation |
+| Phi MM | CENTERED | BIASED | BIASED | transport/contract candidate; intervention still required |
+| Qwen saved-P | CENTERED | CENTERED | CENTERED | case-level variance-only candidate |
+| Qwen bmm | INELIGIBLE | INELIGIBLE | INELIGIBLE | missing exact candidate/repair/sham provenance |
+
+Synthetic detector controls remain separate from natural-case evidence. Existing
+SEUP results remain consequence evidence only. No mechanism intervention is
+promoted automatically: Phi requires a valid transport or numerical-contract
+intervention, while Liger's confirmation gate did not trigger a source
+intervention.
 
 The frozen population denominator is `bias_population.csv`: 1,562 endpoint
 units from the existing endpoint population, plus 12 canonical known
 strict/anchor records.  Its legacy endpoint roles are 57 coherent-carrier
 observations, 588 normal references, and 917 unresolved rows.  These counts
-are retained for coverage and sampling; none is a formation positive or
-negative until v2.1 open-loop measurements produce all three formation layers.
+are retained for coverage and sampling; they are not formation positives or
+negatives. The case-level cells above come only from compact v2.1 certificates
+and frozen roster feasibility.
 
 The v2.1 reducer is `scripts/build_bias_formation_certificate.py`.  It rejects
 the old single `common_state_digest` format, requires component-wise equality,
