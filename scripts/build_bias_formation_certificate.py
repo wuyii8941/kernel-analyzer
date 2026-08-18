@@ -57,7 +57,16 @@ def _layer(row: Mapping[str, Any], name: str) -> Any:
     if name in row:
         return row[name]
     layers = row.get("layers")
-    return layers.get(name) if isinstance(layers, Mapping) else None
+    if not isinstance(layers, Mapping):
+        return None
+    if name in layers:
+        return layers[name]
+    aliases = {
+        "LOCAL_ENDPOINT": "local_endpoint",
+        "PARAMETER_GRADIENT": "parameter_gradient",
+        "EFFECTIVE_UPDATE": "effective_update",
+    }
+    return layers.get(aliases.get(name, name))
 
 
 def build(payload: Mapping[str, Any]) -> dict[str, Any]:

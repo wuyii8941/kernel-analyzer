@@ -108,20 +108,21 @@ class BiasConsequenceTrace:
             local = row["local_increment"]
             feedback = row["feedback_increment"]
             actual = row["actual_drift_increment"]
+            final = row["final_drift"]
             residual = float(row["recurrence_residual"])
             local_sum += local.signed_value
             feedback_sum += feedback.signed_value
             actual_sum += actual.signed_value
             recurrence_bad = recurrence_bad or abs(residual) > self.recurrence_tolerance
             vals = [local.signed_value, local.norm, feedback.signed_value, feedback.norm,
-                    actual.signed_value, actual.norm, residual]
+                    actual.signed_value, actual.norm, final.signed_value, final.norm, residual]
             nonfinite = nonfinite or any(not math.isfinite(value) for value in vals)
             rows.append({
                 "step_id": step,
                 "local_increment": local.as_dict(),
                 "feedback_increment": feedback.as_dict(),
                 "actual_drift_increment": actual.as_dict(),
-                "final_drift": row["final_drift"].as_dict(),
+                "final_drift": final.as_dict(),
                 "recurrence_residual": residual,
                 "metadata": row["metadata"],
             })

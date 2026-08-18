@@ -1,0 +1,48 @@
+{
+  "schema": "kernel-analyzer-bias-formation-protocol-v2",
+  "protocol_id": "bias_formation_v2",
+  "status": "SCAFFOLD_FROZEN_NO_GPU_MEASUREMENT",
+  "v1_scaffold": {
+    "protocol_sha256": "196767ad105ecfd8ab519adf851433693b21bb54e79e6d78d6c48c33f3570425",
+    "roster_sha256": "c47d1734bdbb5926a98dc0572c595389a5cbc395cf1707225dde7bc1f86ce95a"
+  },
+  "unit": "ONE_EXACT_FORWARD_PLUS_ACTUAL_BACKWARD_ENDPOINT",
+  "formation": {
+    "measurement_kind": "candidate_repair_ground_truth",
+    "uses_candidate_measurements": true,
+    "uses_historical_verdicts": false,
+    "verdict_blind": true,
+    "layers": ["LOCAL_ENDPOINT", "PARAMETER_GRADIENT", "EFFECTIVE_UPDATE"],
+    "requires_complete_vector_statistics": true,
+    "trajectory_drift_is_not_a_formation_input": true,
+    "state_split": {
+      "calibration_count": 16,
+      "confirmation_count": 16,
+      "both_open_loop_common_state": true,
+      "disjoint": true,
+      "candidate_repair_match": ["weights", "optimizer_moments", "input", "rng", "scheduler", "loss_scaler"]
+    }
+  },
+  "consequence": {
+    "measurement_kind": "candidate_repair_closed_loop_consequence",
+    "separate_from_formation": true,
+    "reports": ["endpoint_mediated_local_increment", "feedback_increment", "actual_drift_increment", "final_drift"],
+    "cannot_set_first_bias_stage": true
+  },
+  "statuses": [
+    "COMPLETE",
+    "UNRESOLVED_MISSING_LAYER",
+    "UNRESOLVED_INSUFFICIENT_STATES",
+    "INVALID_NONFINITE",
+    "INVALID_PROJECTION",
+    "INVALID_COMMON_STATE",
+    "INVALID_MALFORMED"
+  ],
+  "freeze_rules": {
+    "v1_artifacts_immutable": true,
+    "property_specs_frozen_before_gpu": true,
+    "gpu_campaign_started": false,
+    "no_case_substitution_after_measurement": true,
+    "no_threshold_tuning_from_confirmation": true
+  }
+}

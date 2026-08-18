@@ -1,0 +1,46 @@
+{
+  "schema": "kernel-analyzer-bias-property-specs-v2",
+  "status": "FROZEN_OPERATIONAL_SPECIFICATIONS_NO_RESULT",
+  "specs": [
+    {
+      "id": "P1_CONDITIONAL_SOURCE_ASYMMETRY",
+      "applicability": "local endpoint residual has declared operand or schedule strata",
+      "required_fields": ["local_residual_atoms", "strata_ids", "stratum_signed_mean", "stratum_variance", "gradient_residual", "update_residual"],
+      "intervention": "remove stratum-conditioned mean while preserving support, variance and residual norm distribution",
+      "sham": "matched permutation preserving each stratum marginal",
+      "support_criterion": "raw local bias and downstream bias are present; mean-removal reduces downstream bias; sham does not",
+      "counterexample_criterion": "mean-removal leaves downstream bias unchanged",
+      "not_applicable": "no predeclared strata or no endpoint atomization",
+      "unresolved": "missing complete vector layer, insufficient states, or failed common-state match"
+    },
+    {
+      "id": "P2_SOURCE_TRANSPORT_ALIGNMENT",
+      "applicability": "local residual atoms can be paired with cotangent, Jacobian/VJP, or saved-state transport factors",
+      "required_fields": ["local_residual_atoms", "transport_atoms", "real_pairing", "gradient_residual", "update_residual"],
+      "intervention": "permute residual and transport pairing while preserving both multisets, marginals, support and norms",
+      "sham": "within-orbit permutation that preserves declared semantic pairing",
+      "support_criterion": "local residual is centered, real pairing yields downstream directional bias, pairing shuffle removes it, sham does not",
+      "counterexample_criterion": "pairing shuffle does not change downstream bias",
+      "not_applicable": "no independently declared transport factor",
+      "unresolved": "pairing or transport provenance is incomplete"
+    },
+    {
+      "id": "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY",
+      "applicability": "forward, saved/recomputed representation and backward reconstruction have a declared numerical contract",
+      "required_fields": ["forward_representation", "saved_representation", "backward_reconstruction", "materialization_boundary", "scaling_contract", "gradient_residual", "update_residual"],
+      "intervention": "unify the forward/backward numerical contract without changing real-valued semantics or ABI",
+      "sham": "change an unrelated representation field with matched compute and memory footprint",
+      "support_criterion": "candidate downstream bias disappears under contract repair and not under sham",
+      "counterexample_criterion": "contract repair leaves downstream bias unchanged",
+      "not_applicable": "no saved/reconstructed value or no contract boundary",
+      "unresolved": "contract repair is not exact, common state is invalid, or a layer is missing"
+    }
+  ],
+  "decision_rules": {
+    "cross_mechanism_property_requires_two_physical_mechanisms": true,
+    "matched_causal_intervention_required": true,
+    "positive_negative_discrimination_required": true,
+    "historical_verdicts_cannot_be_predictors": true,
+    "no_single_property_is_required_to_pass": true
+  }
+}

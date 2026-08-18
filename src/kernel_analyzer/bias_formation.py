@@ -36,6 +36,7 @@ class FormationStatus(str, Enum):
     INVALID_NONFINITE = "INVALID_NONFINITE"
     INVALID_PROJECTION = "INVALID_PROJECTION"
     INVALID_COMMON_STATE = "INVALID_COMMON_STATE"
+    INVALID_MALFORMED = "INVALID_MALFORMED"
 
 
 _LAYER_ORDER = (
@@ -129,6 +130,7 @@ class VectorObservation:
     signed_projection: float | None = None
     projection: ProjectionCertificate | None = None
     vector: tuple[float, ...] | None = field(default=None, repr=False, compare=False)
+    complete_gram: tuple[tuple[float, ...], ...] | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if self.coordinate_count < 1 or not self.vector_digest:
@@ -197,13 +199,22 @@ class VectorObservation:
                                    else float(value["signed_projection"])),
                 projection=projection,
                 vector=values,
+                complete_gram=None,
             )
         required = (
             "coordinate_count", "vector_digest", "mean_vector_energy",
-            "total_error_energy", "u_statistic", "bootstrap_lower", "bootstrap_upper",
+            "total_error_energy", "u_statistic", "bootstrap_lower", "bootstrap_upper", "complete_gram",
         )
         if any(key not in value for key in required):
             raise ValueError("complete Gram/U-statistic summary is required")
+        gram_payload = value["complete_gram"]
+        if not isinstance(gram_payload, (list, tuple)) or any(
+            not isinstance(row, (list, tuple)) for row in gram_payload
+        ):
+            raise ValueError("complete_gram must be a matrix")
+        gram = tuple(tuple(float(x) for x in row) for row in gram_payload)
+        if not gram or len(gram) != len(gram[0]) or any(len(row) != len(gram) for row in gram):
+            raise ValueError("complete_gram must be square")
         return cls(
             coordinate_count=int(value["coordinate_count"]),
             vector_digest=str(value["vector_digest"]),
@@ -215,6 +226,7 @@ class VectorObservation:
             signed_projection=(None if value.get("signed_projection") is None
                                else float(value["signed_projection"])),
             projection=projection,
+            complete_gram=gram,
         )
 
     def as_dict(self) -> Dict[str, Any]:
@@ -228,6 +240,7 @@ class VectorObservation:
             "bootstrap_upper": self.bootstrap_upper,
             "signed_projection": self.signed_projection,
             "projection": None if self.projection is None else self.projection.as_dict(),
+            "complete_gram": None if self.complete_gram is None else [list(row) for row in self.complete_gram],
         }
 
 
@@ -328,6 +341,9 @@ def _layer_summary(layer: FormationLayer, observations: Sequence[VectorObservati
     projection_ok = all(
         obs.projection is not None for obs in observations if obs.signed_projection is not None
     )
+    gram_ok = all(obs.complete_gram is not None for obs in observations)
+    if not gram_ok:
+        status = FormationStatus.INVALID_MALFORMED
     return {
         "layer": layer.value,
         "state_count": len(observations),
@@ -342,8 +358,7 @@ def _layer_summary(layer: FormationLayer, observations: Sequence[VectorObservati
         "complete_vector_statistics": True,
         "status": status.value,
         "projection_provenance_present": projection_ok,
-        "complete_gram_available": all(obs.u_statistic != 0.0 or obs.total_error_energy == 0.0
-                                        for obs in observations),
+        "complete_gram_available": gram_ok,
     }
 
 
@@ -402,8 +417,14 @@ class BiasFormationTrace:
                 continue
             try:
                 normalized[layer.value] = VectorObservation.from_value(value, self.policy)
-            except (TypeError, ValueError, KeyError):
-                normalized[layer.value] = "INVALID"
+            except (TypeError, ValueError, KeyError) as exc:
+                # Keep malformed schema separate from a finite/nonfinite
+                # numerical failure.  Both fail closed, but they imply
+                # different remediation and must not be conflated in audits.
+                text = str(exc).lower()
+                normalized[layer.value] = (
+                    "INVALID_NONFINITE" if "nonfinite" in text else "INVALID_MALFORMED"
+                )
         self._rows[state_id] = {
             "state_id": state_id,
             "partition": str(partition),
@@ -423,7 +444,7 @@ class BiasFormationTrace:
             if row is None or row["layers"].get(layer.value) is None:
                 missing.append(state_id)
                 continue
-            if row["layers"].get(layer.value) == "INVALID":
+            if str(row["layers"].get(layer.value)).startswith("INVALID"):
                 invalid = True
                 continue
             if not row.get("common_state_digest"):
@@ -444,9 +465,15 @@ class BiasFormationTrace:
                 summary["status"] = FormationStatus.UNRESOLVED_MISSING_LAYER.value
                 missing_all.extend(missing)
             if invalid:
-                summary["status"] = FormationStatus.INVALID_NONFINITE.value
+                values = [self._rows[state_id]["layers"].get(layer.value) for state_id in (
+                    self.calibration_state_ids if partition == "calibration" else self.confirmation_state_ids
+                ) if state_id in self._rows]
+                if "INVALID_NONFINITE" in values:
+                    summary["status"] = FormationStatus.INVALID_NONFINITE.value
+                else:
+                    summary["status"] = FormationStatus.INVALID_MALFORMED.value
                 invalid_layers.append(layer.value)
-                invalid_kinds.append(FormationStatus.INVALID_NONFINITE.value)
+                invalid_kinds.append(summary["status"])
             if common_invalid:
                 summary["status"] = FormationStatus.INVALID_COMMON_STATE.value
                 invalid_layers.append(layer.value)
@@ -455,6 +482,10 @@ class BiasFormationTrace:
                 summary["status"] = FormationStatus.INVALID_PROJECTION.value
                 invalid_layers.append(layer.value)
                 invalid_kinds.append(FormationStatus.INVALID_PROJECTION.value)
+            elif not summary.get("complete_gram_available", True):
+                summary["status"] = FormationStatus.INVALID_MALFORMED.value
+                invalid_layers.append(layer.value)
+                invalid_kinds.append(FormationStatus.INVALID_MALFORMED.value)
             summaries[layer.value] = summary
         return summaries, sorted(set(missing_all)), invalid_layers, invalid_kinds
 
@@ -475,6 +506,8 @@ class BiasFormationTrace:
             status = FormationStatus.INVALID_COMMON_STATE.value
         elif FormationStatus.INVALID_PROJECTION.value in invalid_kinds:
             status = FormationStatus.INVALID_PROJECTION.value
+        elif FormationStatus.INVALID_MALFORMED.value in invalid_kinds:
+            status = FormationStatus.INVALID_MALFORMED.value
         elif any(layer["status"] == FormationStatus.UNRESOLVED_INSUFFICIENT_STATES.value for layer in all_layer_summaries):
             status = FormationStatus.UNRESOLVED_INSUFFICIENT_STATES.value
         elif any(layer["status"] not in {FormationStatus.CENTERED.value, FormationStatus.BIASED.value}
