@@ -1,0 +1,80 @@
+{
+  "schema": "kernel-analyzer-bias-formation-map-protocol-v1",
+  "protocol_id": "bias_formation_map_v1",
+  "title": "Bias Formation Map",
+  "status": "FROZEN_PRE_MEASUREMENT_PROTOCOL",
+  "objective": "Discover how implementation differences become directional training bias without presupposing one universal property.",
+  "causal_chain": [
+    "implementation_difference",
+    "local_numerical_variation",
+    "bias_formation_mechanism",
+    "effective_optimizer_update_bias",
+    "seup_persistence_consequence",
+    "parameter_drift"
+  ],
+  "formation_and_consequence_are_disjoint": true,
+  "formation_stages": {
+    "A_SOURCE_BIAS": "local endpoint residual is directional and downstream layers remain directional",
+    "B_TRANSPORT_BIAS": "local residual is centered but backward transport produces directional gradient bias",
+    "C_NUMERICAL_CONTRACT_BIAS": "forward/saved/reconstructed/backward contract repair removes downstream bias",
+    "D_OPTIMIZER_BIAS": "gradient residual is centered but optimizer update residual is directional",
+    "E_NO_BIAS": "implementation difference remains centered through the measured formation layers"
+  },
+  "cases": [
+    {"case_id": "liger_fused_ce_t128", "role": "SOURCE_BIAS_ANCHOR", "artifact_case": "qwen3_liger_fused_linear_ce:dW"},
+    {"case_id": "phi4_lm_head_dx_seq64", "role": "ARITHMETIC_REPLICATION", "artifact_case": "phi4_seq64:lm_head.input_gradient.mm"},
+    {"case_id": "qwen_saved_p_seq128", "role": "TRANSPORT_OR_CONTRACT_CANDIDATE", "artifact_case": "qwen_seq128_layer27_attention_softmax_saved_P"},
+    {"case_id": "qwen_bmm_seq64", "role": "NEGATIVE_CONTROL", "artifact_case": "forward:10:output_0"}
+  ],
+  "formation_protocol": {
+    "implementation": "BiasFormation v2.1",
+    "calibration_states": 16,
+    "confirmation_states": 16,
+    "both_open_loop": true,
+    "same_weights_optimizer_input_rng_scheduler_loss_scaler": true,
+    "primary_statistic": "off_diagonal_cross_state_u_statistic_over_average_state_energy",
+    "bootstrap_samples": 2000,
+    "formation_labels_cannot_use": ["T4", "SEUP", "trajectory_drift"]
+  },
+  "intervention_policy": {
+    "source": "only_if_local_is_biased",
+    "transport": "only_if_local_centered_and_gradient_biased_with_valid_transport_atoms",
+    "numerical_contract": "only_if_declared_forward_saved_backward contract exists",
+    "optimizer": "only_if_gradient_centered_and_update_biased",
+    "preserve_support_marginals_variance_and_semantics": true,
+    "matched_sham_required": true
+  },
+  "consequence_policy": {
+    "uses_existing_seup": true,
+    "seup_is_not_a_formation_label": true,
+    "requires_four_counterfactual_recurrence": true,
+    "m7_required": false
+  },
+  "provenance": {
+    "formation_v2_1_protocol": "results/property/bias_formation_v2_1/protocol.json",
+    "formation_v2_1_gpu_measurements": 0,
+    "new_endpoint_discovery": false,
+    "definitions_frozen_before_natural_measurement": true
+  },
+  "population": {
+    "artifact": "results/property/bias_formation/bias_population.csv",
+    "endpoint_units": 1562,
+    "known_strict_case_records": 12,
+    "legacy_endpoint_role_counts": {
+      "COHERENT_F_B_BIAS": 57,
+      "NORMAL_REFERENCE": 588,
+      "UNRESOLVED": 917
+    },
+    "legacy_coherent_population_is_not_formation_positive": true,
+    "legacy_population_source": "results/property/hypothesis_matrix.json",
+    "legacy_case_sources": [
+      "results/property/bias_formation_v2_1/roster_bound.json",
+      "results/coverage/existing_case_reaudit.json"
+    ],
+    "formation_labels_assigned": false,
+    "legacy_t3_t4_seup_are_metadata_only": true,
+    "duplicate_policy": "candidate_id unique for endpoint units; canonical aliases collapse renamed known cases; distinct semantic regions remain distinct"
+  },
+  "gpu_campaign_started": false,
+  "scientific_verdicts_present": false
+}
