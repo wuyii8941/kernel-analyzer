@@ -197,9 +197,22 @@ def certify_trajectory_separation(
     required = (
         "repair_effect_present_every_step",
         "matched_sham_exact",
-        "only_declared_parameter_updated",
+        "parameter_scope_closed",
     )
-    missing_gates = [name for name in required if gates.get(name) is not True]
+    missing_gates = [
+        name
+        for name in required
+        if (
+            gates.get(name) is not True
+            and not (
+                name == "parameter_scope_closed"
+                and (
+                    gates.get("only_declared_parameter_updated") is True
+                    or gates.get("full_step_two_arm_scope_closed") is True
+                )
+            )
+        )
+    ]
     if len(rows) < policy.min_steps:
         return {
             "schema": "kernel-analyzer-trajectory-bias-certificate-v1",

@@ -50,7 +50,10 @@ kernel attribution.
 
 The v2.1 global-scope interpretation is superseded for training-bias claims by
 the v2.2 addendum and trajectory reclassification under
-`results/property/bias_formation_v22/`. That addendum reports eight
-trajectory-level causal separation cases, while leaving P1–P6 mechanism
-identification as the next analysis stage. It does not claim a universal
-property.
+`results/property/bias_formation_v22/`. The strict audit reports eight complete
+paired trajectory artifacts and eight semantic cases; six retain the older
+fixed-direction evidence and two are trajectory-only observations. One additional
+layer-23 key repair artifact is retained as an incomplete candidate because
+its same-weight sham is not exact; it is not counted. P1–P6 mechanism
+identification remains the next analysis stage, and no universal property is
+claimed.

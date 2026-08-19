@@ -87,6 +87,9 @@ SPECS = [
     {
         "case_id": "qwen_layer23_attention_state",
         "mechanism_family": "ATTENTION_STATE_TRANSPORT",
+        "semantic_case_group": "qwen_layer23_qproj_composite",
+        "count_as_unique_case": True,
+        "dedup_reason": None,
         "path": "results/final/l23_attention_live_weight.json",
         "row_key": "records",
         "metric": "fp32_master_l2",
@@ -95,31 +98,126 @@ SPECS = [
     },
 ]
 
+# Candidate artifacts deliberately retained in the audit ledger but excluded
+# from the complete-case count.  This is important: an alternate repair
+# boundary is not a duplicate *complete* case when its sham is not exact, and
+# an old SEUP negative control must not be silently promoted to a v2.2 case.
+EXCLUDED_ARTIFACTS = [
+    {
+        "artifact": "results/final/l23_key_live_weight_adamw.json",
+        "classification": "INCOMPLETE_COMMON_TRAJECTORY",
+        "reason": (
+            "same_weight sham is not exact: every step has a nonzero "
+            "baseline_loss-repaired_loss difference; fail closed"
+        ),
+        "semantic_group": "qwen_layer23_qproj_composite",
+    },
+    {
+        "artifact": "results/property/seup_mainline/qwen_bmm_seq64_seup.json.gz",
+        "classification": "REGISTERED_NEGATIVE_CONTROL",
+        "reason": (
+            "endpoint repair is not nonzero at every step, matched sham is "
+            "not certified, and stable carrier gate failed"
+        ),
+        "semantic_group": "qwen_bmm_seq64",
+    },
+    {
+        "artifact": "results/property/seup_mainline/qwen_rsqrt_seq256_seup.json.gz",
+        "classification": "REGISTERED_NEGATIVE_CONTROL",
+        "reason": (
+            "matched sham is not certified and stable carrier gate failed; "
+            "not a complete v2.2 causal case"
+        ),
+        "semantic_group": "qwen_rsqrt_seq256",
+    },
+    {
+        "artifact": "results/property/seup_mainline/liger_seup.json",
+        "classification": "DUPLICATE_OF_COMPLETE_ARTIFACT",
+        "reason": "shorter SEUP certificate for results/trajectory/liger_trajectory.json",
+        "semantic_group": "liger_fused_ce",
+    },
+    {
+        "artifact": "results/property/seup_mainline/phi_seup.json",
+        "classification": "DUPLICATE_OF_COMPLETE_ARTIFACT",
+        "reason": "shorter SEUP certificate for the Phi seq64 lm-head trajectory",
+        "semantic_group": "phi4_seq64_lmhead_dx",
+    },
+    {
+        "artifact": "results/property/bias_formation/consequence/phi4_lm_head_dx_trajectory.json",
+        "classification": "DUPLICATE_OF_COMPLETE_ARTIFACT",
+        "reason": "same Phi seq64 paired trajectory under the older consequence path",
+        "semantic_group": "phi4_seq64_lmhead_dx",
+    },
+    {
+        "artifact": "results/property/bias_formation/consequence/phi4_lm_head_dx_seup.json",
+        "classification": "DUPLICATE_OF_COMPLETE_ARTIFACT",
+        "reason": "same Phi seq64 SEUP certificate under the older consequence path",
+        "semantic_group": "phi4_seq64_lmhead_dx",
+    },
+    {
+        "artifact": "results/property/seup_mainline/qwen_softmax_seup.json",
+        "classification": "DUPLICATE_OF_COMPLETE_ARTIFACT",
+        "reason": "shorter saved-P softmax consequence certificate",
+        "semantic_group": "qwen_saved_p_seq128",
+    },
+]
 
-def normalized_gates(payload: dict[str, Any]) -> dict[str, bool]:
+
+def normalized_gates(payload: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, bool]:
     gates = payload.get("gates", {})
+    # Some older live-weight runners did not emit a boolean sham field.  The
+    # nested same-weight controls are sufficient only when we verify the
+    # equality from the recorded values; merely measuring both arms is not a
+    # sham certificate.
+    nested_sham_exact = False
+    nested_sham_observed = bool(rows) and all(
+        isinstance(row.get("same_weight"), dict)
+        and all(
+            isinstance(row["same_weight"].get(arm), dict)
+            and row["same_weight"][arm].get("baseline_loss")
+            == row["same_weight"][arm].get("repaired_loss")
+            for arm in ("default", "repair")
+        )
+        for row in rows
+    )
+    nested_sham_exact = nested_sham_observed
+    raw_sham_exact = bool(
+        gates.get("matched_sham_exact")
+        or gates.get("same_weight_loss_exact_every_step")
+        or gates.get("all_same_weight_local_controls_pass")
+        or gates.get("all_64_same_weight_local_controls_pass")
+    )
+    only_declared = bool(
+        gates.get("only_declared_parameter_updated")
+        or gates.get("only_declared_q_proj_live_weight_updated")
+        or gates.get("only_q_proj_live_weight_updated")
+        or gates.get("only_declared_qk_parameters_updated")
+        or bool(payload.get("frozen_other_parameters"))
+        or payload.get("other_parameters_updated") is False
+    )
+    full_step_scope = bool(
+        gates.get("all_32_steps_and_both_arms_complete")
+        and (
+            gates.get("all_same_weight_local_controls_pass")
+            or gates.get("all_64_same_weight_local_controls_pass")
+        )
+        and gates.get("fp32_master_divergence_after_every_step")
+    )
     return {
         "repair_effect_present_every_step": bool(
             gates.get("repair_effect_present_every_step")
             or gates.get("all_steps_repair_nonzero")
-            or gates.get("all_32_steps_and_both_arms_complete")
             or gates.get("endpoint_repair_nonzero_every_step")
-            or gates.get("bf16_live_weight_feedback_observed")
+            or all(
+                row.get("bf16_materialized_nonzero", 0) > 0
+                for row in rows
+            )
+            or gates.get("all_64_same_weight_accumulator_deltas_nonzero")
         ),
-        "matched_sham_exact": bool(
-            gates.get("matched_sham_exact")
-            or gates.get("same_weight_loss_exact_every_step")
-            or gates.get("same_weight_baseline_and_repair_measured_each_arm_each_step")
-            or gates.get("all_32_steps_and_both_arms_complete")
-        ),
-        "only_declared_parameter_updated": bool(
-            gates.get("only_declared_parameter_updated")
-            or gates.get("only_declared_q_proj_live_weight_updated")
-            or gates.get("only_q_proj_live_weight_updated")
-            or gates.get("only_declared_qk_parameters_updated")
-            or gates.get("all_32_steps_and_both_arms_complete")
-            or bool(payload.get("frozen_other_parameters"))
-        ),
+        "matched_sham_exact": raw_sham_exact or nested_sham_exact,
+        "only_declared_parameter_updated": only_declared,
+        "full_step_two_arm_scope_closed": full_step_scope,
+        "parameter_scope_closed": only_declared or full_step_scope,
     }
 
 
@@ -131,20 +229,39 @@ def main() -> None:
         rows = payload.get(spec["row_key"], [])
         metric = spec["metric"]
         trajectory_rows = [{"drift_norm": float(row[metric])} for row in rows]
-        gates = normalized_gates(payload)
+        gates = normalized_gates(payload, rows)
         cert = certify_trajectory_separation(
             trajectory_rows,
             gates=gates,
         )
         old_status = payload.get(spec["old_status_key"])
         old_direction = payload.get("gates", {}).get(spec["old_direction_key"])
+        semantic_case_group = spec.get("semantic_case_group", spec["case_id"])
         cases.append({
             "case_id": spec["case_id"],
             "mechanism_family": spec["mechanism_family"],
+            "semantic_case_group": semantic_case_group,
+            "count_as_unique_case": spec.get("count_as_unique_case", True),
+            "dedup_reason": spec.get("dedup_reason"),
             "artifact": spec["path"],
             "old_status": old_status,
             "old_fixed_direction_gate": old_direction,
             "normalized_causal_gates": gates,
+            "sham_validation": {
+                "nested_same_weight_exact": bool(
+                    gates.get("matched_sham_exact")
+                    and not bool(payload.get("gates", {}).get("matched_sham_exact"))
+                    and not bool(payload.get("gates", {}).get("same_weight_loss_exact_every_step"))
+                    and not bool(payload.get("gates", {}).get("all_same_weight_local_controls_pass"))
+                    and not bool(payload.get("gates", {}).get("all_64_same_weight_local_controls_pass"))
+                ),
+                "raw_gate_present": bool(
+                    payload.get("gates", {}).get("matched_sham_exact")
+                    or payload.get("gates", {}).get("same_weight_loss_exact_every_step")
+                    or payload.get("gates", {}).get("all_same_weight_local_controls_pass")
+                    or payload.get("gates", {}).get("all_64_same_weight_local_controls_pass")
+                ),
+            },
             "trajectory_certificate": cert,
             "property_analysis_status": "MECHANISM_NOT_IDENTIFIED",
             "claim_boundary": (
@@ -156,7 +273,19 @@ def main() -> None:
         "schema": "kernel-analyzer-bias-level-reclassification-v1",
         "definition": "v2.2 conditional/trajectory/global observation levels",
         "old_fixed_carrier_gate_is_not_trajectory_requirement": True,
+        "strict_complete_case_gate": {
+            "required": [
+                "repair_effect_present_every_step",
+                "matched_sham_exact",
+                "parameter_scope_closed",
+                "at_least_8_live_steps",
+                "finite_drift_norms",
+                "final_separation_greater_than_initial",
+            ],
+            "note": "A raw trajectory artifact without an exact sham is excluded, not deduplicated.",
+        },
         "cases": cases,
+        "excluded_artifacts": EXCLUDED_ARTIFACTS,
         "counts": {},
         "property_analysis": {
             "uses_original_theory": True,
@@ -171,6 +300,16 @@ def main() -> None:
         status = case["trajectory_certificate"]["status"]
         counts[status] = counts.get(status, 0) + 1
     result["counts"] = counts
+    result["counts"]["trajectory_artifacts"] = len(cases)
+    result["counts"]["unique_semantic_cases"] = len({case["semantic_case_group"] for case in cases})
+    result["counts"]["mechanism_family_clusters"] = len({case["mechanism_family"].replace("KEY_MATERIALIZATION", "STATE_TRANSPORT") for case in cases})
+    result["counts"]["prior_fixed_direction_confirmed"] = sum(
+        case["old_fixed_direction_gate"] is True for case in cases
+    )
+    result["counts"]["trajectory_only_without_fixed_direction"] = sum(
+        case["old_fixed_direction_gate"] is not True for case in cases
+    )
+    result["counts"]["excluded_artifacts"] = len(EXCLUDED_ARTIFACTS)
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "trajectory_reclassification.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
     lines = [
@@ -181,16 +320,23 @@ def main() -> None:
         "property claims remain unresolved until the original P1-P6 theory is",
         "tested with endpoint-level interventions.",
         "",
-        "| case | old status | old fixed-direction gate | v2.2 trajectory status | initial norm | final norm |",
-        "|---|---|---:|---|---:|---:|",
+        "| case | semantic group | old status | old fixed-direction gate | v2.2 trajectory status | initial norm | final norm |",
+        "|---|---|---|---:|---|---:|---:|",
     ]
     for case in cases:
         cert = case["trajectory_certificate"]
         lines.append(
-            f"| {case['case_id']} ({case['mechanism_family']}) | {case['old_status']} | {case['old_fixed_direction_gate']} | "
+            f"| {case['case_id']} ({case['mechanism_family']}) | {case['semantic_case_group']} | {case['old_status']} | {case['old_fixed_direction_gate']} | "
             f"{cert['status']} | {cert.get('initial_drift_norm', '—')} | {cert.get('final_drift_norm', '—')} |"
         )
     lines += [
+        "",
+        "The table contains only complete artifact rows.  The strict count is",
+        f"{len(cases)} complete paired trajectory artifacts and {len({case['semantic_case_group'] for case in cases})} semantic cases.",
+        f"{sum(case['old_fixed_direction_gate'] is True for case in cases)} retain the older fixed-direction gate; "
+        f"{sum(case['old_fixed_direction_gate'] is not True for case in cases)} are trajectory-only observations.",
+        "Excluded candidates (including the incomplete layer-23 key repair) are",
+        "listed in the JSON audit and are not silently counted as duplicates.",
         "",
         "A v2.2 trajectory case means a complete causal candidate/repair run has",
         "basis-free live parameter separation above its initial separation.  It does",

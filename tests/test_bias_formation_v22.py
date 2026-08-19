@@ -49,3 +49,29 @@ def test_missing_sham_fails_closed():
     )
     assert result["status"] == BiasV22Status.TRAJECTORY_UNRESOLVED.value
     assert "MISSING_CAUSAL_OR_SHAM_GATE" in result["reason"]
+
+
+def test_closed_full_step_scope_can_replace_single_parameter_scope():
+    rows = [{"drift_norm": 1.0 + 0.1 * i} for i in range(8)]
+    result = certify_trajectory_separation(
+        rows,
+        gates={
+            "repair_effect_present_every_step": True,
+            "matched_sham_exact": True,
+            "full_step_two_arm_scope_closed": True,
+        },
+    )
+    assert result["status"] == BiasV22Status.TRAJECTORY_BIAS.value
+
+
+def test_scope_missing_fails_closed_even_when_drift_grows():
+    rows = [{"drift_norm": 1.0 + 0.1 * i} for i in range(8)]
+    result = certify_trajectory_separation(
+        rows,
+        gates={
+            "repair_effect_present_every_step": True,
+            "matched_sham_exact": True,
+        },
+    )
+    assert result["status"] == BiasV22Status.TRAJECTORY_UNRESOLVED.value
+    assert "MISSING_CAUSAL_OR_SHAM_GATE" in result["reason"]

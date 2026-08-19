@@ -9,7 +9,7 @@ therefore reaudited with a basis-free parameter-separation criterion:
 ```text
 complete F+B candidate/repair + exact sham
 → live parameter separation grows
-→ TRAJECTORY_BIAS
+→ trajectory-level causal separation
 ```
 
 No fixed carrier, monotone projection, or common sign across unrelated states
@@ -18,7 +18,10 @@ identify P1--P6 or establish an oracle property.
 
 ## Current trajectory-level population
 
-The artifact audit finds eight trajectory-level cases:
+The strict artifact audit finds eight complete trajectory artifacts, eight
+semantic cases, and seven mechanism-family clusters. One additional layer-23
+key live-weight artifact is explicitly excluded because its same-weight sham
+is not exact:
 
 | semantic mechanism family | cases | count |
 |---|---|---:|
@@ -31,16 +34,19 @@ The artifact audit finds eight trajectory-level cases:
 | attention-state transport | Qwen layer-23 q-projection region | 1 |
 
 The two Qwen v_proj rows are two shape/trajectory instances of one candidate
-mechanism family, not two independent physical mechanisms.  The same caution
-applies to any later grouping by operator name or model.
+mechanism family, not two independent physical mechanisms.  The excluded
+layer-23 key repair is not a complete trajectory case because its same-weight
+sham fails exactness at every step.  The same caution applies to any later
+grouping by operator name or model.
 
 ## What this fixes
 
 Qwen seq128 v_proj and Qwen3-VL SiLU previously failed the fixed-direction
 gate, but their paired live parameter separation still grows under exact
-repair/sham controls.  They are no longer called negative cases.  Conversely,
-this does not make them source, transport, nonlinear, or optimizer properties;
-their causal mechanism remains to be decomposed.
+repair/sham controls.  They are retained as trajectory-only observations, not
+as fixed-carrier or mechanism positives.  Conversely, this does not make them
+source, transport, nonlinear, or optimizer properties; their causal mechanism
+remains to be decomposed.
 
 ## What remains to be measured
 

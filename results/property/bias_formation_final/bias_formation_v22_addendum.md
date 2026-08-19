@@ -16,10 +16,14 @@ The corrected observation levels are:
 3. `GLOBAL`: the old v2.1 cross-state statistic, reported only as a stronger
    state-invariant statement.
 
-The artifact audit in
+The strict artifact audit in
 `results/property/bias_formation_v22/trajectory_reclassification.json`
-currently classifies eight existing paired trajectories as
-`TRAJECTORY_BIAS`. This is a corrected case ledger, not eight independent
+classifies eight existing paired trajectory artifacts as complete trajectory
+separation observations, giving eight semantic cases. Six retain the older
+fixed-direction evidence; two are trajectory-only observations. An additional
+layer-23 key live-weight artifact is retained as an incomplete candidate because
+its same-weight sham is not exact, and is therefore excluded rather than
+silently deduplicated. This is a corrected case ledger, not eight independent
 physical mechanisms and not a property result.
 
 Mechanism/property analysis remains the original P1–P6 program: source
