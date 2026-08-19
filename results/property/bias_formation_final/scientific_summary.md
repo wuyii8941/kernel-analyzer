@@ -1,32 +1,18 @@
-# Bias Formation Map — final current result
+# Bias Formation Map — mechanism discovery result
 
-## Scientific question
+## Core answer
 
-When does an implementation-induced numerical difference stop being harmless variance and become directional training bias?
+The current study validates two independent training-semantic bottlenecks that can turn implementation variation into directional parameter-gradient/update effects:
 
-The measured chain is:
+1. **Phi MM: composite backward transport pairing.** Local numerical variation is centered in the strict v2.1 formation capture, but the parameter-gradient and effective-update populations are biased. A norm-preserving residual/transport pairing intervention removes the gradient bias. The complete analytic transport decomposition is still open, so this is a validated empirical composite mechanism, not a universal source–transport law.
+2. **Qwen layer-23 attention state: semantic backward-state transport.** The exact F+B equations close at the semantic region. Restoring `S_bwd` closes the q_proj carrier direction while restoring `K` alone does not; the sham is exact. This is an independently validated attention-state mechanism, explicitly bounded as a semantic region rather than a single kernel.
 
-```text
-implementation difference -> local residual -> parameter-gradient residual
-                         -> effective-update residual -> SEUP consequence
-```
+Qwen saved-P remains a centered boundary case. Liger remains unresolved at formation despite prior persistence. No optimizer-induced mechanism has been observed.
 
-## Current answer
+## Formation versus persistence
 
-Phi MM is the only completed natural case with a confirmed formation transition: local error is centered, while the parameter-gradient and effective-update populations are directionally biased in both 16-state partitions. Its separate SEUP replay closes the consequence link, but the residual/transport pairing intervention is not yet a complete causal transport proof because the current analytic reconstruction misses part of the gradient delta.
+Formation labels come only from open-loop common-state measurements. SEUP and live-weight trajectories answer a separate question: whether an already measured mechanism persists into parameter drift. The consequence summary records this separation for Phi and layer-23.
 
-Qwen saved-P is centered at all three measured layers. This is a valuable case-level variance-only observation, not a universal negative. Liger has a directional calibration signal but its independent confirmation interval crosses the frozen bias margin, so source bias remains unresolved. Qwen bmm is not eligible for formation labeling because exact repair/sham provenance is missing.
+## Scientific scope
 
-## What can be claimed
-
-1. The formation pipeline distinguishes local, gradient, and update stages with open-loop common states.
-2. A real example exists where bias first appears at the parameter-gradient stage (Phi MM).
-3. A local difference can remain centered through all measured stages (Qwen saved-P).
-4. Persistence and formation are separate: Phi's SEUP consequence does not serve as its formation label.
-5. No universal source, transport, contract, or optimizer property is established yet.
-
-## What remains open
-
-The endpoint denominator is retained in `population_screening.csv`, but only the exact v2.1 capture cases receive formation labels. The remaining endpoint population is explicitly `NOT_CAPTURED_EXISTING_ARTIFACT_ONLY`; legacy T1--T4 and SEUP roles are provenance, never formation ground truth.
-
-The next scientific step is to close Phi's complete semantic transport decomposition and add an independent eligible case before promoting transport bias beyond a case-specific candidate.
+The evidence supports a taxonomy of training-semantic bottlenecks, not a single universal property and not an endpoint-count claim. The remaining endpoint population is retained in `bias_population_matrix.csv`; rows without formation capture are explicitly unresolved/not captured. Legacy T1--T4 and SEUP roles are provenance only.

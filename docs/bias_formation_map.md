@@ -36,7 +36,11 @@ three layers, and Liger remains unresolved on confirmation.
 
 The final compact package is under
 `results/property/bias_formation_final/`. It contains the fail-closed
-population screening table, Phi transport decomposition, Liger confirmation
-analysis, mechanism reports, taxonomy, and `SHA256SUMS`. Rows without a v2.1
-capture are explicitly `NOT_CAPTURED_EXISTING_ARTIFACT_ONLY`; legacy T1–T4 and
-SEUP evidence is never promoted into formation labels.
+population screening/matrix, Phi transport mechanism, Qwen layer-23 attention
+state mechanism, anchor reports, intervention results, SEUP consequence
+summary, taxonomy, and `SHA256SUMS`. Rows without a v2.1 capture are explicitly
+`NOT_CAPTURED_EXISTING_ARTIFACT_ONLY`; legacy T1–T4 and SEUP evidence is never
+promoted into formation labels. The two validated mechanisms are deliberately
+kept at their evidence boundaries: Phi is an empirical composite transport
+mechanism, while layer-23 is a closed semantic region rather than a single
+kernel attribution.

@@ -1,0 +1,46 @@
+{
+  "case_id": "layer23_qproj_attention_state_region",
+  "causal_intervention": {
+    "joint_attention_state_repair_closes_direction": true,
+    "k_only_state_repair_bootstrap": [
+      0.00018719415617169944,
+      0.0004961272234766057
+    ],
+    "matched_sham_exact": true,
+    "root_boundary": "actual bmm_76 left operand S_bwd",
+    "s_bwd_only_repair_closes_direction": true,
+    "s_bwd_shapley_bootstrap": [
+      0.00019140614129469215,
+      0.0004910881547402823
+    ],
+    "states": 32
+  },
+  "claim": "The attention-backward semantic region S_bwd is the causal root of the q_proj tile direction: restoring S_bwd closes the direction, restoring K alone does not, and the sham is exact. This is a second, independent semantic-region mechanism. It is not a single-kernel attribution and does not by itself supply a v2.1 local/gradient/update formation label.",
+  "closed_forward_backward_math": {
+    "attention_state": "S_bwd = alpha * J_softmax(P)^T * (D V^T)",
+    "attention_vjp_boundary": "G_q = S_bwd K",
+    "difference_factorization": "delta_dW=(delta_G)^T H_ref + G_ref^T(delta_H) + (delta_G)^T(delta_H)",
+    "forward": "Y = H W^T",
+    "parameter_vjp": "dW = G_q^T H"
+  },
+  "evidence": {
+    "live_weight": "results/final/l23_attention_live_weight.json",
+    "semantic_region": "results/coverage/cases/l23_qproj_attention_state_region.json"
+  },
+  "formation": {
+    "not_inferred_from_t4_or_seup": true,
+    "stage_label": "SEMANTIC_REGION_CAUSAL_EVIDENCE",
+    "strict_v2_1_layer_labels": "NOT_CAPTURED"
+  },
+  "mechanism_type": "ATTENTION_STATE_RECONSTRUCTION_TRANSPORT",
+  "persistence_separation": {
+    "evidence": "results/final/l23_attention_live_weight.json",
+    "final_projection": 3.7518300814554095e-05,
+    "first_projection": 3.384866786859675e-08,
+    "paired_live_weight_trajectory": true,
+    "projection_strictly_increases_each_step": true,
+    "steps": 32
+  },
+  "schema": "kernel-analyzer-l23-attention-state-mechanism-v1",
+  "status": "VALIDATED_SEMANTIC_REGION_MECHANISM"
+}

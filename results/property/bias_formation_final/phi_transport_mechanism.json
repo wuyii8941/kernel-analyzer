@@ -1,0 +1,33 @@
+{
+  "analytic_transport": {
+    "closed": false,
+    "relative_error_max": 0.6005272269248962,
+    "relative_error_mean": 0.4321421105414629,
+    "relative_error_min": 0.3244112432003021,
+    "status": "INCOMPLETE_SEMANTIC_TRANSPORT_DECOMPOSITION"
+  },
+  "case_id": "phi4_lm_head_dx_seq64",
+  "claim": "The paired residual/transport intervention causally changes the gradient bias while preserving the local residual norm. This is a case-level composite transport mechanism. The incomplete analytic reconstruction prevents a claim about one physical transport factor or a universal property.",
+  "evidence": {
+    "formation": "results/property/bias_formation/formation/phi4_lm_head_dx_seq64.json",
+    "intervention": "results/property/bias_formation/interventions/phi4_mm_transport_pairing.json"
+  },
+  "formation": {
+    "effective_update": "BIASED",
+    "first_confirmed_bias_stage": "PARAMETER_GRADIENT",
+    "local": "CENTERED",
+    "parameter_gradient": "BIASED",
+    "source": "results/property/bias_formation/formation/phi4_lm_head_dx_seq64.json"
+  },
+  "intervention": {
+    "description": "row-permute local MM residual while preserving residual multiset, norm, and RMSNorm transport multiset",
+    "local_norm_preserved_every_state": true,
+    "matched_sham": "same candidate implementation and no-op endpoint observer",
+    "natural_gradient_status": "BIASED",
+    "shuffled_gradient_status": "CENTERED",
+    "states": 16
+  },
+  "mechanism_type": "BACKWARD_TRANSPORT_PAIRING",
+  "schema": "kernel-analyzer-phi-transport-mechanism-v1",
+  "status": "EMPIRICALLY_VALIDATED_COMPOSITE_TRANSPORT_MECHANISM"
+}
