@@ -20,11 +20,11 @@ failure of the v2.1 global gate is no longer interpreted as absence of
 training bias.  Existing SEUP is used only after formation to study persistence
 and drift.
 
-The four frozen cases are Liger fused CE, Phi MM, Qwen saved-P softmax and Qwen
-bmm. No endpoint discovery, T1–T4 redesign, or universal property assumption
-is introduced. Three eligible cases now have complete 16+16 formation
-certificates; bmm is explicitly `INELIGIBLE` because its exact repair/sham
-provenance is absent.
+The original four-case pilot was Liger fused CE, Phi MM, Qwen saved-P softmax
+and Qwen bmm.  It remains a historical open-loop/global measurement and is not
+the current case denominator.  The current systematic audit uses eight unique
+closed F+B paired-trajectory cases under
+`results/property/bias_formation_systematic/`.
 The machine-readable protocol and deliverables are under
 `results/property/bias_formation/`.
 
@@ -55,5 +55,14 @@ paired trajectory artifacts and eight semantic cases; six retain the older
 fixed-direction evidence and two are trajectory-only observations. One additional
 layer-23 key repair artifact is retained as an incomplete candidate because
 its same-weight sham is not exact; it is not counted. P1–P6 mechanism
-identification remains the next analysis stage, and no universal property is
-claimed.
+identification has now produced the two-channel effective-antithetic-symmetry
+map:
+
+```text
+E[F(epsilon)|c] = integral p_s F_e + integral p_a F_o.
+```
+
+Liger/Phi give matched evidence for event/pairing asymmetry; saved-P/SiLU give
+matched evidence for optimizer response rectification.  The remaining four
+cases retain partial or unresolved boundaries.  This is a cross-case working
+property, not yet a zero-shot predictor for unseen operators.

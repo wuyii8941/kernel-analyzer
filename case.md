@@ -1,5 +1,41 @@
 # Directional-bias cases
 
+## Bias Formation Map update (2026-08-20)
+
+The denominator remains **eight unique closed F+B trajectory cases**; a new
+optimizer experiment on Qwen3-VL SiLU is evidence for that existing case, not a
+ninth case.  Four cases now have matched formation-mechanism evidence:
+
+- Liger and Phi support **event/pairing asymmetry**: the natural schedule or
+  residual--transport pairing is directional, while a semantic-orbit or
+  marginal-preserving control restores cancellation.
+- Qwen saved-P and Qwen3-VL SiLU support **optimizer response rectification**:
+  exact equal-norm `+delta_g/-delta_g` pairs at the same Adam state do not map
+  to opposite effective updates.  Their accumulated non-oddness ratios are
+  `0.6817` and `0.6956`.  Energy weighting shows that sign-crossing coordinates
+  carry `99.48%` and `99.87%` of the response-even energy, and steps 1--2
+  generate more than `99.5%` of it in both cases.  This locates the shared
+  rectification at Adam's cold-start small-gradient/sign boundary.
+
+For a predeclared semantic antithetic operation, the common equation is
+
+```text
+E[F(epsilon)|c]
+  = integral p_s(epsilon) F_e(epsilon)
+  + integral p_a(epsilon) F_o(epsilon).
+```
+
+The first term is response rectification; the second is event/pairing
+asymmetry.  If the event population is antithetically closed and the complete
+F+B/optimizer response is odd, both terms vanish regardless of error variance.
+This is the current testable property; SEUP remains the downstream persistence
+condition.  Qwen64, Qwen128, Mamba and layer-23 retain their partial or
+semantic-region evidence boundaries and are not promoted to matched positives.
+
+The canonical per-case audit is
+`results/property/bias_formation_systematic/scientific_summary.md`; the full
+derivation is in `docs/effective_antithetic_symmetry.md`.
+
 ## Endpoint re-screen update (2026-08-17)
 
 The previous eight-row audit was a stale snapshot, not the completed endpoint

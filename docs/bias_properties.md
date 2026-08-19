@@ -1,5 +1,10 @@
 # Bias-formation property tournament
 
+> Historical preregistration.  The tournament has been replaced by the
+> two-channel Bias Formation Map in `docs/effective_antithetic_symmetry.md` and
+> the eight-case audit in
+> `results/property/bias_formation_systematic/scientific_summary.md`.
+
 This is the next experimental layer after the frozen T1--T4 and SEUP
 evidence.  It does **not** assume that source--transport alignment is the only
 mechanism.  The question is narrower and falsifiable:

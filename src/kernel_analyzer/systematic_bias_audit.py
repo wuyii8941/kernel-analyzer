@@ -27,6 +27,7 @@ class MechanismVerdict(str, Enum):
     TRANSPORT_CONTRACT = "SUPPORTED_SEMANTIC_REGION_TRANSPORT_CONTRACT_MECHANISM"
     PARTIAL_SOURCE = "PARTIAL_SOURCE_MECHANISM"
     CAUSAL_DIFFERENCE = "CAUSAL_IMPLEMENTATION_DIFFERENCE_FORMATION_UNRESOLVED"
+    OPTIMIZER_RESPONSE = "SUPPORTED_CASE_SPECIFIC_OPTIMIZER_RESPONSE_MECHANISM"
     CONTRAST_MISMATCH = "UNRESOLVED_CONTRAST_MISMATCH"
     VARIANCE_ONLY = "VARIANCE_ONLY_UNDER_DECLARED_CONDITION"
     UNRESOLVED = "UNRESOLVED"
@@ -79,6 +80,7 @@ def validate_case(case: Mapping[str, Any]) -> None:
         MechanismVerdict.TRANSPORT,
         MechanismVerdict.CONTRACT,
         MechanismVerdict.TRANSPORT_CONTRACT,
+        MechanismVerdict.OPTIMIZER_RESPONSE,
     }
     intervention = case["mechanism"].get("intervention", {})
     if verdict in supported and not (

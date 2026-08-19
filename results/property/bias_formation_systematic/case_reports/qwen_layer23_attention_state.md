@@ -8,9 +8,15 @@ F+B：S_bwd=alpha*J_softmax(P)^T(DV^T); Gq=S_bwd*K; dWq=Gq^T H
 
 闭合范围：layer-23 q_proj attention-state semantic region and exact tile carrier（CLOSED）。
 
-## 统一 bias 分解
+## 统一 Bias Formation Map
 
-使用 `E[Δg|c] = E[T|c]E[ε|c] + Cov(T,ε|c) + E[R(ε)|c]`。本例的物理差异是：attention-backward state S_bwd is causal; upstream contributors overlap and include delayed key materialization。
+对预先声明的反对称操作，将事件分布写成 `p=p_s+p_a`，将真实 F+B/optimizer 响应写成 `F=F_e+F_o`。精确形成式是：
+
+`E[F(ε)|c] = ∫p_s(ε)F_e(ε)dε + ∫p_a(ε)F_o(ε)dε`。
+
+本例归入：`EVENT_PAIRING_ASYMMETRY`（`CONSISTENT_NOT_MARGINAL_PRESERVING`）。S_bwd carries the direction through Gq=S_bwd*K, but its repair removes rather than antithetically pairs the residual。
+
+本例的物理差异是：attention-backward state S_bwd is causal; upstream contributors overlap and include delayed key materialization。
 
 条件化 formation（local / gradient / update）：`NOT_MEASURED / NOT_MEASURED / NOT_MEASURED`。
 

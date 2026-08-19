@@ -1,0 +1,48 @@
+{
+  "schema": "kernel-analyzer-effective-antithetic-symmetry-measurement-v1",
+  "conditioning_rule": {
+    "definition": "c is fixed before candidate measurements and may denote one semantic stratum or an ordered repair-driven training trajectory",
+    "forbidden": [
+      "requiring unrelated states to share an absolute parameter direction",
+      "choosing c from the observed candidate drift",
+      "using T4 or SEUP verdicts as formation labels"
+    ]
+  },
+  "exact_object": {
+    "local_residual": "epsilon = z_candidate - z_repair at one closed F+B semantic boundary",
+    "effective_influence": "A_bar = integral_0^1 D U_s(z_repair+t epsilon) dt",
+    "effective_contribution": "w = A_bar epsilon = U_s(z_candidate)-U_s(z_repair)"
+  },
+  "exact_parity_budget": {
+    "event_parts": "p_s(epsilon)=[p(epsilon)+p(-epsilon)]/2; p_a(epsilon)=[p(epsilon)-p(-epsilon)]/2",
+    "response_parts": "F_e(epsilon)=[F(epsilon)+F(-epsilon)]/2; F_o(epsilon)=[F(epsilon)-F(-epsilon)]/2",
+    "formation": "E[F(epsilon)|c] = integral p_s F_e + integral p_a F_o",
+    "event_pairing_channel": "integral p_a F_o",
+    "response_rectification_channel": "integral p_s F_e"
+  },
+  "basis_free_metrics": {
+    "source_resultant_ratio": "norm(sum_i epsilon_i) / sum_i norm(epsilon_i)",
+    "effective_resultant_ratio": "norm(sum_i w_i) / sum_i norm(w_i)",
+    "pairing_excess": "effective resultant under real pairing minus its preregistered pairing-permutation control",
+    "orbit_defect": "effective resultant ratio across mathematically equivalent implementation schedules",
+    "nonoddness_defect": "norm(Delta_u(+epsilon)+Delta_u(-epsilon)) / (norm(Delta_u(+epsilon))+norm(Delta_u(-epsilon)))",
+    "response_even_energy_fraction": "norm(F_e)^2 / (norm(F_e)^2 + norm(F_o)^2)",
+    "gradient_sign_crossing_fraction": "fraction of active coordinates where (g+delta_g)(g-delta_g)<=0",
+    "even_energy_on_sign_crossings": "fraction of response-even energy carried by those coordinates"
+  },
+  "interpretation": {
+    "source_asymmetry": "source resultant is nonzero and mean-removal or precision/schedule repair suppresses effective work",
+    "error_influence_coupling": "source marginal is preserved but pairing disruption suppresses effective work",
+    "nonodd_response": "a norm/support-matched plus/minus residual has nonzero oddness defect",
+    "variance_only": "effective contributions remain antithetically centered under the declared condition"
+  },
+  "required_causal_controls": [
+    "same pre-step weights and optimizer state",
+    "same forward input and RNG",
+    "closed local F+B boundary",
+    "residual marginal preservation for a coupling intervention",
+    "matched sham",
+    "continuous effect sizes instead of a post-hoc universal threshold"
+  ],
+  "relationship_to_persistence": "SEUP and feedback are evaluated only after bias formation; they are not part of this marker."
+}

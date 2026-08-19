@@ -88,7 +88,7 @@ class SavedProbabilityRepair:
                 forward.append(f_kernel)
         if len(backward) != 1 or len(forward) != 1:
             raise RuntimeError(f"softmax kernel identity drift: F={len(forward)} B={len(backward)}")
-        if mode not in ("SHAM", "REPAIR_SAVED_P"):
+        if mode not in ("SHAM", "REPAIR_SAVED_P", "PERMUTE_SAVED_P_RESIDUAL"):
             raise ValueError(mode)
         self.backward = backward[0]
         self.forward = forward[0]
@@ -100,6 +100,12 @@ class SavedProbabilityRepair:
         self.forward_calls = 0; self.backward_calls = 0
         self.changed_coordinates = 0; self.correction_l2 = 0.0
         self.correction_vector: Any | None = None
+        self.natural_residual_l2 = 0.0
+        self.permuted_residual_l2 = 0.0
+        self.delivered_residual_l2 = 0.0
+        self.residual_sum = 0.0
+        self.permuted_residual_sum = 0.0
+        self.head_shift = 1
 
     def __enter__(self) -> "SavedProbabilityRepair":
         def forward_wrapped(*args: Any, **kwargs: Any) -> Any:
@@ -141,7 +147,35 @@ class SavedProbabilityRepair:
                 gradient = upstream.detach().float().reshape(1, 16, 128, 128)
                 inner = (gradient * self.probability).sum(dim=-1, keepdim=True)
                 repaired = (self.probability * (gradient - inner) * ALPHA).to(destination.dtype)
-                destination.copy_(repaired)
+                if self.mode == "REPAIR_SAVED_P":
+                    destination.copy_(repaired)
+                else:
+                    # A fixed head derangement preserves the complete local dS
+                    # residual multiset, support, and L2 norm while breaking its
+                    # pairing with the head-specific downstream Q/K transport.
+                    # This is a causal intervention, not a candidate kernel.
+                    natural_residual = actual.float() - repaired.float()
+                    permuted_residual = torch.roll(
+                        natural_residual, shifts=self.head_shift, dims=1
+                    )
+                    delivered = (repaired.float() + permuted_residual).to(
+                        destination.dtype
+                    )
+                    destination.copy_(delivered)
+                    delivered_residual = destination.detach().float() - repaired.float()
+                    self.natural_residual_l2 = float(
+                        torch.linalg.vector_norm(natural_residual).item()
+                    )
+                    self.permuted_residual_l2 = float(
+                        torch.linalg.vector_norm(permuted_residual).item()
+                    )
+                    self.delivered_residual_l2 = float(
+                        torch.linalg.vector_norm(delivered_residual).item()
+                    )
+                    self.residual_sum = float(natural_residual.double().sum().item())
+                    self.permuted_residual_sum = float(
+                        permuted_residual.double().sum().item()
+                    )
                 correction = destination.detach().float() - actual.float()
                 self.changed_coordinates = int(torch.count_nonzero(correction).item())
                 self.correction_l2 = float(torch.linalg.vector_norm(correction).item())

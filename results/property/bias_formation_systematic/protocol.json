@@ -1,8 +1,11 @@
 {
   "case_denominator": 8,
   "equations": {
-    "formation": "E[delta_g|c] = E[T|c]E[epsilon|c] + Cov(T,epsilon|c) + E[R(epsilon)|c]",
+    "event_pairing_channel": "integral p_a(epsilon)F_o(epsilon)",
+    "exact_response": "F_c(epsilon) = U_s(z_repair+epsilon)-U_s(z_repair)",
+    "formation": "E[F(epsilon)|c] = integral p_s(epsilon)F_e(epsilon) + integral p_a(epsilon)F_o(epsilon)",
     "optimizer": "delta_u = Opt(g+delta_g,z)-Opt(g,z)",
+    "response_rectification_channel": "integral p_s(epsilon)F_e(epsilon)",
     "trajectory": "D_(t+1) = D_t + L_t + B_t + recurrence_residual_t"
   },
   "mechanism_family_clusters": 7,
@@ -14,7 +17,8 @@
     "A trajectory is consequence evidence and never labels formation.",
     "A supported mechanism requires a causal intervention and exact matched sham.",
     "Do not join evidence produced by different repaired contrasts.",
-    "SEUP describes persistence only after formation evidence exists."
+    "SEUP describes persistence only after formation evidence exists.",
+    "The semantic antithetic operation must be declared from the F+B boundary, not fitted to drift."
   ],
   "schema": "kernel-analyzer-systematic-bias-audit-protocol-v1",
   "status": "FROZEN_EIGHT_CASE_EVIDENCE_AUDIT"

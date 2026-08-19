@@ -82,8 +82,42 @@ def symmetric_consequence(relative: str) -> dict[str, Any]:
     }
 
 
+def rectification_aggregate(document: dict[str, Any]) -> dict[str, Any]:
+    """Add energy-weighted geometry derivable from complete per-step records."""
+
+    aggregate = dict(document["aggregate"])
+    records = document.get("records", [])
+    if records and "response_even_l2" in records[0]:
+        even_energy = sum(row["response_even_l2"] ** 2 for row in records)
+        odd_energy = sum(row["response_odd_l2"] ** 2 for row in records)
+        aggregate["energy_weighted_response_even_on_sign_crossings"] = sum(
+            row["response_even_l2"] ** 2
+            * row["response_even_energy_on_sign_crossings"]
+            for row in records
+        ) / max(even_energy, 1e-30)
+        aggregate["response_even_energy_in_first_two_steps"] = sum(
+            row["response_even_l2"] ** 2 for row in records[:2]
+        ) / max(even_energy, 1e-30)
+        aggregate["step_integrated_response_even_energy_fraction"] = (
+            even_energy / max(even_energy + odd_energy, 1e-30)
+        )
+    return aggregate
+
+
 def cases() -> list[dict[str, Any]]:
     trajectories = trajectory_index()
+    saved_p_symmetry_path = (
+        "results/property/bias_property_search/saved_p_pairing_work_v2.json"
+        if (ROOT / "results/property/bias_property_search/saved_p_pairing_work_v2.json").exists()
+        else "results/property/bias_property_search/saved_p_pairing_work.json"
+    )
+    silu_symmetry_path = (
+        "results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json"
+        if (ROOT / "results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json").exists()
+        else "results/property/bias_property_search/vl_silu_optimizer_oddness.json"
+    )
+    saved_p_symmetry = rectification_aggregate(read_json(saved_p_symmetry_path))
+    silu_symmetry = rectification_aggregate(read_json(silu_symmetry_path))
     not_measured = {"local": "NOT_MEASURED", "gradient": "NOT_MEASURED", "update": "NOT_MEASURED"}
 
     result = [
@@ -116,6 +150,14 @@ def cases() -> list[dict[str, Any]]:
                     "declared chunk schedule, so E[epsilon|chunk geometry] need not vanish"
                 ),
                 "claim_boundary": "case-specific source mechanism; no universal P1 property and no M7",
+            },
+            "bias_map": {
+                "channel": "EVENT_PAIRING_ASYMMETRY",
+                "status": "MATCHED_SUPPORT",
+                "reason": (
+                    "the BF16 chunk/schedule orbit is 24/24 one-signed, while the "
+                    "same semantic orbit with FP32 accumulation is 13/11 and centered"
+                ),
             },
             "trajectory": {
                 **trajectory(trajectories["liger_fused_ce"]),
@@ -159,6 +201,14 @@ def cases() -> list[dict[str, Any]]:
                 ),
                 "claim_boundary": "empirical composite transport mechanism; analytic transport reconstruction remains incomplete",
             },
+            "bias_map": {
+                "channel": "EVENT_PAIRING_ASYMMETRY",
+                "status": "MATCHED_SUPPORT",
+                "reason": (
+                    "the natural residual/transport joint pairing is directional, while "
+                    "a residual-marginal-preserving row permutation restores centering"
+                ),
+            },
             "trajectory": {
                 **trajectory(trajectories["phi4_seq64_lmhead_dx"]),
                 "local_feedback": symmetric_consequence(
@@ -192,6 +242,11 @@ def cases() -> list[dict[str, Any]]:
                 "why_directional": "the isolated accumulation residual changes the real dW path, but its relation to the complete precision residual is not closed",
                 "claim_boundary": "trajectory-local partial source; no complete P1 attribution",
             },
+            "bias_map": {
+                "channel": "EVENT_PAIRING_ASYMMETRY",
+                "status": "PARTIAL_SUPPORT",
+                "reason": "the accumulation arm changes the real VJP, but the complete local contrast is not decomposed",
+            },
             "trajectory": trajectory(trajectories["qwen64_vproj_mm"]),
             "next_decisive_test": "complete the three-way local source decomposition, then capture within-condition formation",
             "evidence": [
@@ -222,6 +277,11 @@ def cases() -> list[dict[str, Any]]:
                 ),
                 "claim_boundary": "do not attribute the trajectory to output rounding until an output-rounding repair is run",
             },
+            "bias_map": {
+                "channel": "EVENT_PAIRING_ASYMMETRY",
+                "status": "SUPPORTING_SOURCE_OBSERVATION_CONTRAST_MISMATCH",
+                "reason": "output rounding is directional, but the existing trajectory repairs accumulation instead",
+            },
             "trajectory": trajectory(trajectories["qwen128_vproj_mm"]),
             "next_decisive_test": "run an exact output-rounding intervention with sham at the same F+B boundary",
             "evidence": [
@@ -244,7 +304,7 @@ def cases() -> list[dict[str, Any]]:
                 "interpretation": "global centered does not imply conditional or trajectory variance-only",
             },
             "mechanism": {
-                "candidate_properties": ["P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY", "P2_SOURCE_TRANSPORT_ALIGNMENT"],
+                "candidate_properties": ["P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY", "P2_SOURCE_TRANSPORT_ALIGNMENT", "P5_OPTIMIZER_RECTIFICATION"],
                 "verdict": "SUPPORTED_CASE_SPECIFIC_CONTRACT_MECHANISM",
                 "intervention": {
                     "description": "replace reconstructed P by the exact true-forward P only at dS, retain BF16 dS ABI",
@@ -253,13 +313,35 @@ def cases() -> list[dict[str, Any]]:
                     "forward_loss_unchanged": True,
                 },
                 "why_directional": (
-                    "the implementation violates a forward/saved/backward representation contract; "
-                    "its effect is trajectory-conditioned even though unrelated-state directions cancel"
+                    "the implementation violates a forward/saved/backward representation contract, "
+                    "and Adam maps an exact +delta_g/-delta_g pair to non-antithetic updates"
                 ),
                 "claim_boundary": (
-                    "validated case-specific contract difference; conditional formation stage is "
-                    "unresolved, while symmetric recurrence shows local and feedback accumulation "
-                    "of comparable norm without a stable fixed carrier"
+                    "the head-specific transport-pairing hypothesis is rejected; the contract source "
+                    "and optimizer response are supported, while unrelated-state global centering "
+                    "remains compatible with trajectory-conditioned bias"
+                ),
+            },
+            "bias_map": {
+                "channel": "RESPONSE_RECTIFICATION",
+                "status": "MATCHED_SUPPORT",
+                "reason": (
+                    "equal and opposite gradient residuals at identical weights and Adam moments "
+                    "produce a nonzero response-even update component"
+                ),
+                "accumulated_nonoddness_ratio": saved_p_symmetry["optimizer_oddness_resultant_ratio"],
+                "mean_step_nonoddness_ratio": saved_p_symmetry["mean_step_optimizer_oddness_ratio"],
+                "natural_antithetic_resultant_cosine": saved_p_symmetry["natural_antithetic_update_resultant_cosine"],
+                "mean_step_sign_crossing_fraction": saved_p_symmetry.get("mean_step_sign_crossing_fraction"),
+                "mean_step_delta_energy_on_sign_crossings": saved_p_symmetry.get("mean_step_delta_energy_on_sign_crossings"),
+                "mean_step_response_even_energy_on_sign_crossings": saved_p_symmetry.get("mean_step_response_even_energy_on_sign_crossings"),
+                "energy_weighted_response_even_on_sign_crossings": saved_p_symmetry.get("energy_weighted_response_even_on_sign_crossings"),
+                "response_even_energy_in_first_two_steps": saved_p_symmetry.get("response_even_energy_in_first_two_steps"),
+                "step_integrated_response_even_energy_fraction": saved_p_symmetry.get("step_integrated_response_even_energy_fraction"),
+                "rejected_subhypothesis": (
+                    "rolling dS residuals across heads suppresses the gradient resultant by only "
+                    f"{100.0 * saved_p_symmetry['gradient_pairing_suppression']:.2f}% and increases "
+                    "the update resultant"
                 ),
             },
             "trajectory": {
@@ -268,15 +350,13 @@ def cases() -> list[dict[str, Any]]:
                     "results/property/seup_mainline/qwen_softmax_seup.json"
                 ),
             },
-            "next_decisive_test": (
-                "measure conditional local/gradient/update traces; symmetric recurrence is already "
-                "closed and shows comparable local and feedback accumulation"
-            ),
+            "next_decisive_test": "derive a coordinate/state susceptibility predictor for the measured Adam even response",
             "evidence": [
                 "results/coverage/cases/qwen128_softmax_fb.json",
                 "results/coverage/cases/qwen128_softmax_fb_formal.json",
                 "results/property/bias_formation/formation/qwen_saved_p_seq128.json",
                 "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json",
+                saved_p_symmetry_path,
             ],
         },
         {
@@ -287,25 +367,40 @@ def cases() -> list[dict[str, Any]]:
             "physical_source": "AOT graph-dtype elementary backward arithmetic differs from native aten.silu_backward arithmetic",
             "formation": {"conditional": dict(not_measured), "global": dict(not_measured), "label_source": "NOT_MEASURED"},
             "mechanism": {
-                "candidate_properties": ["P4_NONLINEAR_RECTIFICATION", "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY"],
-                "verdict": "CAUSAL_IMPLEMENTATION_DIFFERENCE_FORMATION_UNRESOLVED",
+                "candidate_properties": ["P4_NONLINEAR_RECTIFICATION", "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY", "P5_OPTIMIZER_RECTIFICATION"],
+                "verdict": "SUPPORTED_CASE_SPECIFIC_OPTIMIZER_RESPONSE_MECHANISM",
                 "intervention": {
-                    "description": "swap only the target backward between decomposed and native implementations; forward is identical",
+                    "description": "use the exact natural delta_g and its negation around the native-SiLU repair gradient at identical Adam state",
                     "causal_effect": True,
                     "matched_sham_exact": True,
                 },
                 "why_directional": (
-                    "the backward implementation causes real update differences, but no sign-symmetric "
-                    "epsilon intervention or conditional formation trace identifies rectification"
+                    "the backward implementation supplies delta_g, and Adam maps the exact "
+                    "+delta_g/-delta_g pair to almost orthogonal rather than opposite update resultants"
                 ),
-                "claim_boundary": "complete causal F+B difference and trajectory; P3/P4 formation mechanism unresolved",
+                "claim_boundary": "optimizer response rectification is closed; the arithmetic origin inside the decomposed backward remains case-specific",
+            },
+            "bias_map": {
+                "channel": "RESPONSE_RECTIFICATION",
+                "status": "MATCHED_INDEPENDENT_REPLICATION",
+                "reason": "an exact antithetic gradient pair produces a nonzero Adam response-even component",
+                "accumulated_nonoddness_ratio": silu_symmetry["optimizer_oddness_resultant_ratio"],
+                "mean_step_nonoddness_ratio": silu_symmetry["mean_step_optimizer_oddness_ratio"],
+                "natural_antithetic_resultant_cosine": silu_symmetry["natural_antithetic_update_resultant_cosine"],
+                "mean_step_sign_crossing_fraction": silu_symmetry.get("mean_step_sign_crossing_fraction"),
+                "mean_step_delta_energy_on_sign_crossings": silu_symmetry.get("mean_step_delta_energy_on_sign_crossings"),
+                "mean_step_response_even_energy_on_sign_crossings": silu_symmetry.get("mean_step_response_even_energy_on_sign_crossings"),
+                "energy_weighted_response_even_on_sign_crossings": silu_symmetry.get("energy_weighted_response_even_on_sign_crossings"),
+                "response_even_energy_in_first_two_steps": silu_symmetry.get("response_even_energy_in_first_two_steps"),
+                "step_integrated_response_even_energy_fraction": silu_symmetry.get("step_integrated_response_even_energy_fraction"),
             },
             "trajectory": trajectory(trajectories["qwen3vl_silu_layer0"]),
-            "next_decisive_test": "capture repeated within-condition traces and run a norm/support-matched +/-epsilon nonlinear control",
+            "next_decisive_test": "derive a coordinate/state susceptibility predictor shared with saved-P",
             "evidence": [
                 "results/round2/vl_silu_cause.json",
                 "results/round2/vl_silu_cause_fp32.json",
                 "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json",
+                silu_symmetry_path,
             ],
         },
         {
@@ -329,6 +424,11 @@ def cases() -> list[dict[str, Any]]:
                     "the kernel-accumulation arm but not the output-rounding arm"
                 ),
                 "claim_boundary": "cross-architecture partial source mechanism; total observed error is not single-source",
+            },
+            "bias_map": {
+                "channel": "EVENT_PAIRING_ASYMMETRY",
+                "status": "PARTIAL_CROSS_ARCHITECTURE_SUPPORT",
+                "reason": "kernel arithmetic and output rounding are each directional, but only one trajectory contrast is closed",
             },
             "trajectory": trajectory(trajectories["mamba_seq64_input_proj"]),
             "next_decisive_test": "run separate kernel-only and output-rounding-only conditional interventions",
@@ -360,6 +460,11 @@ def cases() -> list[dict[str, Any]]:
                 ),
                 "claim_boundary": "validated semantic-region mechanism, not a uniquely identified kernel instruction",
             },
+            "bias_map": {
+                "channel": "EVENT_PAIRING_ASYMMETRY",
+                "status": "CONSISTENT_NOT_MARGINAL_PRESERVING",
+                "reason": "S_bwd carries the direction through Gq=S_bwd*K, but its repair removes rather than antithetically pairs the residual",
+            },
             "trajectory": trajectory(trajectories["qwen_layer23_attention_state"]),
             "next_decisive_test": "capture conditional layer traces if a first-bias-stage claim is required; do not force single-kernel attribution",
             "evidence": [
@@ -379,6 +484,7 @@ def report(case: dict[str, Any]) -> str:
     cond = case["formation"]["conditional"]
     glob = case["formation"]["global"]
     mechanism = case["mechanism"]
+    bias_map = case["bias_map"]
     evidence = "\n".join(f"- `{path}`" for path in case["evidence"])
     local_feedback = case["trajectory"].get("local_feedback")
     consequence = ""
@@ -399,9 +505,15 @@ F+B：{case['semantic_unit']}
 
 闭合范围：{case['forward_backward']['scope']}（{case['forward_backward']['status']}）。
 
-## 统一 bias 分解
+## 统一 Bias Formation Map
 
-使用 `E[Δg|c] = E[T|c]E[ε|c] + Cov(T,ε|c) + E[R(ε)|c]`。本例的物理差异是：{case['physical_source']}。
+对预先声明的反对称操作，将事件分布写成 `p=p_s+p_a`，将真实 F+B/optimizer 响应写成 `F=F_e+F_o`。精确形成式是：
+
+`E[F(ε)|c] = ∫p_s(ε)F_e(ε)dε + ∫p_a(ε)F_o(ε)dε`。
+
+本例归入：`{bias_map['channel']}`（`{bias_map['status']}`）。{bias_map['reason']}。
+
+本例的物理差异是：{case['physical_source']}。
 
 条件化 formation（local / gradient / update）：`{cond['local']} / {cond['gradient']} / {cond['update']}`。
 
@@ -445,7 +557,10 @@ def main() -> None:
         "case_denominator": 8,
         "mechanism_family_clusters": 7,
         "equations": {
-            "formation": "E[delta_g|c] = E[T|c]E[epsilon|c] + Cov(T,epsilon|c) + E[R(epsilon)|c]",
+            "exact_response": "F_c(epsilon) = U_s(z_repair+epsilon)-U_s(z_repair)",
+            "formation": "E[F(epsilon)|c] = integral p_s(epsilon)F_e(epsilon) + integral p_a(epsilon)F_o(epsilon)",
+            "event_pairing_channel": "integral p_a(epsilon)F_o(epsilon)",
+            "response_rectification_channel": "integral p_s(epsilon)F_e(epsilon)",
             "optimizer": "delta_u = Opt(g+delta_g,z)-Opt(g,z)",
             "trajectory": "D_(t+1) = D_t + L_t + B_t + recurrence_residual_t",
         },
@@ -457,6 +572,7 @@ def main() -> None:
             "A supported mechanism requires a causal intervention and exact matched sham.",
             "Do not join evidence produced by different repaired contrasts.",
             "SEUP describes persistence only after formation evidence exists.",
+            "The semantic antithetic operation must be declared from the F+B boundary, not fitted to drift.",
         ],
     }
     write_json(OUT / "protocol.json", protocol)
@@ -477,6 +593,8 @@ def main() -> None:
             "global_gradient": glob["gradient"],
             "global_update": glob["update"],
             "mechanism_verdict": case["mechanism"]["verdict"],
+            "bias_map_channel": case["bias_map"]["channel"],
+            "bias_map_status": case["bias_map"]["status"],
             "trajectory": case["trajectory"]["status"],
             "next_decisive_test": case["next_decisive_test"],
         })
@@ -505,7 +623,7 @@ def main() -> None:
     ]
     write_json(OUT / "gap_plan.json", {
         "schema": "kernel-analyzer-systematic-bias-gap-plan-v1",
-        "principle": "run only experiments that resolve a specific missing link in the common equation",
+        "principle": "run only experiments that resolve a specific missing link in the two-channel parity equation",
         "ordered_cases": [
             {
                 "case_id": case_id,
@@ -519,37 +637,36 @@ def main() -> None:
 
 ## 结论
 
-8 个案例都具有完整或语义闭合的 F+B 边界和因果成对轨迹，但它们**尚不能被解释为一个共同 property 的 8 个正例**。当前最严格的机制分层是：
+8 个独立案例都具有完整或语义闭合的 F+B 边界和因果成对轨迹。它们不是同一个 kernel bug，也不应被包装成 8 个同质正例；但现在可以由同一个精确的两通道 Bias Formation Map 组织：
 
-- Liger：case-specific source mechanism；
-- Phi：case-specific composite transport mechanism；
-- saved-P：case-specific F/B numerical-contract mechanism；conditional formation 未测，四反事实 recurrence 已闭合且 local/feedback 累积同量级；
+- Liger、Phi：`EVENT_PAIRING_ASYMMETRY` 的 matched positives；
+- saved-P、Qwen3-VL SiLU：`RESPONSE_RECTIFICATION` 的两个独立 matched positives；
 - layer-23：semantic-region transport/contract mechanism，不是单 kernel root；
 - Qwen64 与 Mamba：partial source mechanisms；
 - Qwen128 v_proj：source decomposition 与 trajectory repair 不是同一 contrast，暂不能拼接；
-- Qwen3-VL SiLU：因果 backward implementation difference 和 trajectory 已闭合，bias formation mechanism 未闭合。
+- 因此严格机制证据是 4/8；其余 4 个保留为 partial、consistent 或 unresolved，而不是重复计数。
 
 ## 为什么会出现系统性 bias
 
-统一解释不是“误差大”，而是条件化的一阶与高阶项：
+统一解释不是“任何环节都可能有偏”，而是一个精确的奇偶分解。固定训练条件 `c` 和从 F+B 数学边界预先声明的 `ε→-ε`，令 `p_s/p_a` 是事件分布的对称/反对称部分，`F_e/F_o` 是真实 F+B+optimizer 响应的偶/奇部分：
 
-`E[Δg|c] = E[T|c]E[ε|c] + Cov(T,ε|c) + E[R(ε)|c]`。
+`E[F(ε)|c] = ∫p_sF_e + ∫p_aF_o`。
 
-- `E[ε|c] != 0`：source arithmetic 在声明条件下已经有方向（Liger；MM source candidates）。
-- `Cov(T,ε|c) != 0`：局部 residual 可近似居中，但真实 backward pairing 将其整流（Phi）。
-- `E[R(ε)|c] != 0` 或 numerical contract 改变：saved/reconstructed state 与 backward 表示使语义区域产生方向（saved-P、layer-23）。
-- optimizer 还可能把 centered gradient residual 变成 update bias，但 8 个案例中尚无严格 P5 positive。
+- `∫p_aF_o` 是事件/配对失衡：相反 residual 没有以相同条件质量出现，或 residual 与 transport 的真实配对不具反对称闭包。Liger 与 Phi 分别给出 schedule/source 和 composite transport 的 matched evidence。
+- `∫p_sF_e` 是响应整流：即使人为构造严格等范数、反号的 `+δg/-δg`，真实映射仍不满足 `F(-δg)=-F(+δg)`。saved-P 与 SiLU 在相同 Adam state 下独立复现这一项，累计 non-oddness ratio 分别为 `0.6817` 与 `0.6956`。
+- 按 response-even 能量加权，saved-P 与 SiLU 分别有 `99.48%` 和 `99.87%` 的偶分量落在梯度符号穿越坐标；两者又分别有 `99.51%` 和 `>99.99%` 的偶分量能量出现在前两步。这把响应整流定位到 Adam 冷启动时的小梯度/符号边界，而不是笼统归因于“优化器非线性”。
+- 若事件配对闭合且响应为奇函数，两项同时为零，variance 无论多大都不会产生条件均值。这才是可以区分“有 bias/无 bias”的安全 property。
 - 进入轨迹后，`D_(t+1)=D_t+L_t+B_t+r_t`；local effect 与 feedback 决定差异持续还是抵消。固定 global carrier 不是必要条件。
 
 ## 当前可以声称什么
 
-可以声称：多种 implementation difference 会通过 source asymmetry、backward transport 或 F/B contract 的不同路径形成训练相关的方向性更新，并在闭环轨迹中造成参数分离。
+可以声称：在四个具有 matched 机制证据的独立 F+B 案例中，training bias 均对应条件反对称消除失败；失败来自事件/transport 配对失衡或真实 optimizer 响应的偶分量。error norm、raw tensor mean、BF16 dtype 与固定 global carrier 都不是统一判据。
 
-不能声称：已经发现一个跨全部 8 个案例的统一 property；也不能把 global-centered saved-P 称为 variance-only，或把 Qwen128 的 output-rounding source 与 accumulation repair trajectory 拼成同一因果链。
+不能声称：该 map 已经能零样本预测所有未见算子；也不能把剩余 4 个 partial/unresolved 案例补写成 positives，或把 Qwen128 的 output-rounding source 与 accumulation repair trajectory 拼成同一因果链。
 
 ## 下一步
 
-优先补三个最能改变结论的实验：Qwen128 output-rounding matched repair、saved-P conditional formation、SiLU conditional formation + sign-symmetric nonlinear control。其余缺口见 `gap_plan.json`。
+主线下一步不再是重复校验，而是把两个 formation channel 变成自动特征：从 event atomization 测 joint antithetic closure，从 `(g,m,v,δg)` 测 optimizer response-even susceptibility；再用剩余四个案例做预测而非反向拟合。其余个案缺口见 `gap_plan.json`。
 """
     (OUT / "scientific_summary.md").write_text(summary, encoding="utf-8")
     write_json(OUT / "summary.json", {
@@ -557,8 +674,13 @@ def main() -> None:
         "cases": len(rows),
         "mechanism_family_clusters": len({row["mechanism_family"] for row in trajectory_index().values()}),
         "mechanism_verdict_counts": counts,
-        "cross_case_property": "NOT_YET_IDENTIFIED",
-        "next_gpu_work_is_gap_driven": True,
+        "cross_case_property": "EFFECTIVE_ANTITHETIC_SYMMETRY_WORKING_PROPERTY",
+        "matched_property_cases": 4,
+        "property_channels": {
+            "EVENT_PAIRING_ASYMMETRY": ["liger_fused_ce", "phi4_seq64_lmhead_dx"],
+            "RESPONSE_RECTIFICATION": ["qwen_saved_p_seq128", "qwen3vl_silu_layer0"],
+        },
+        "next_work": "AUTOMATE_CHANNEL_FEATURES_AND_PREDICT_REMAINING_CASES",
     })
     print(json.dumps({"output": str(OUT.relative_to(ROOT)), "cases": len(rows), "verdicts": counts}, sort_keys=True))
 

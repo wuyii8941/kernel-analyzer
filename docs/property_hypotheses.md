@@ -1,5 +1,10 @@
 # Signed Transport Coherence
 
+> Historical candidate, superseded for current bias-formation claims by
+> `docs/effective_antithetic_symmetry.md`.  Signed transport coherence remains
+> a useful special case of event/pairing asymmetry and a downstream carrier
+> description; it is not the current general property.
+
 ## Result
 
 The property target is one exact forward plus its actual backward.  It asks

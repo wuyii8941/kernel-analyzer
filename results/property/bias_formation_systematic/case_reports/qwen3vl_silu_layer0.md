@@ -8,9 +8,15 @@ F+B：y=x*sigmoid(x); dx=q*sigmoid(x)*(1+x*(1-sigmoid(x)))
 
 闭合范围：same forward and one exact layer-0 SiLU backward invocation（CLOSED）。
 
-## 统一 bias 分解
+## 统一 Bias Formation Map
 
-使用 `E[Δg|c] = E[T|c]E[ε|c] + Cov(T,ε|c) + E[R(ε)|c]`。本例的物理差异是：AOT graph-dtype elementary backward arithmetic differs from native aten.silu_backward arithmetic。
+对预先声明的反对称操作，将事件分布写成 `p=p_s+p_a`，将真实 F+B/optimizer 响应写成 `F=F_e+F_o`。精确形成式是：
+
+`E[F(ε)|c] = ∫p_s(ε)F_e(ε)dε + ∫p_a(ε)F_o(ε)dε`。
+
+本例归入：`RESPONSE_RECTIFICATION`（`MATCHED_INDEPENDENT_REPLICATION`）。an exact antithetic gradient pair produces a nonzero Adam response-even component。
+
+本例的物理差异是：AOT graph-dtype elementary backward arithmetic differs from native aten.silu_backward arithmetic。
 
 条件化 formation（local / gradient / update）：`NOT_MEASURED / NOT_MEASURED / NOT_MEASURED`。
 
@@ -18,13 +24,13 @@ F+B：y=x*sigmoid(x); dx=q*sigmoid(x)*(1+x*(1-sigmoid(x)))
 
 ## 机制判定
 
-判定：`CAUSAL_IMPLEMENTATION_DIFFERENCE_FORMATION_UNRESOLVED`。
+判定：`SUPPORTED_CASE_SPECIFIC_OPTIMIZER_RESPONSE_MECHANISM`。
 
-原因：the backward implementation causes real update differences, but no sign-symmetric epsilon intervention or conditional formation trace identifies rectification。
+原因：the backward implementation supplies delta_g, and Adam maps the exact +delta_g/-delta_g pair to almost orthogonal rather than opposite update resultants。
 
-干预：swap only the target backward between decomposed and native implementations; forward is identical。
+干预：use the exact natural delta_g and its negation around the native-SiLU repair gradient at identical Adam state。
 
-边界：complete causal F+B difference and trajectory; P3/P4 formation mechanism unresolved。
+边界：optimizer response rectification is closed; the arithmetic origin inside the decomposed backward remains case-specific。
 
 ## 轨迹后果
 
@@ -32,10 +38,11 @@ F+B：y=x*sigmoid(x); dx=q*sigmoid(x)*(1+x*(1-sigmoid(x)))
 
 ## 下一项决定性实验
 
-capture repeated within-condition traces and run a norm/support-matched +/-epsilon nonlinear control。
+derive a coordinate/state susceptibility predictor shared with saved-P。
 
 ## 证据
 
 - `results/round2/vl_silu_cause.json`
 - `results/round2/vl_silu_cause_fp32.json`
 - `results/coverage/cases/qwen3vl_layer0_silu_trajectory.json`
+- `results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json`

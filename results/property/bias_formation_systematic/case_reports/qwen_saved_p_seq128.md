@@ -8,9 +8,15 @@ F+B：p=softmax(a); da=p*(q-<p,q>) at layer-27 attention
 
 闭合范围：softmax forward, saved/reconstructed P, dS, and actual q/k VJPs（CLOSED）。
 
-## 统一 bias 分解
+## 统一 Bias Formation Map
 
-使用 `E[Δg|c] = E[T|c]E[ε|c] + Cov(T,ε|c) + E[R(ε)|c]`。本例的物理差异是：backward reconstructs P from BF16 logits plus FP32 max/sum instead of consuming true-forward FP32 P。
+对预先声明的反对称操作，将事件分布写成 `p=p_s+p_a`，将真实 F+B/optimizer 响应写成 `F=F_e+F_o`。精确形成式是：
+
+`E[F(ε)|c] = ∫p_s(ε)F_e(ε)dε + ∫p_a(ε)F_o(ε)dε`。
+
+本例归入：`RESPONSE_RECTIFICATION`（`MATCHED_SUPPORT`）。equal and opposite gradient residuals at identical weights and Adam moments produce a nonzero response-even update component。
+
+本例的物理差异是：backward reconstructs P from BF16 logits plus FP32 max/sum instead of consuming true-forward FP32 P。
 
 条件化 formation（local / gradient / update）：`NOT_MEASURED / NOT_MEASURED / NOT_MEASURED`。
 
@@ -20,11 +26,11 @@ F+B：p=softmax(a); da=p*(q-<p,q>) at layer-27 attention
 
 判定：`SUPPORTED_CASE_SPECIFIC_CONTRACT_MECHANISM`。
 
-原因：the implementation violates a forward/saved/backward representation contract; its effect is trajectory-conditioned even though unrelated-state directions cancel。
+原因：the implementation violates a forward/saved/backward representation contract, and Adam maps an exact +delta_g/-delta_g pair to non-antithetic updates。
 
 干预：replace reconstructed P by the exact true-forward P only at dS, retain BF16 dS ABI。
 
-边界：validated case-specific contract difference; conditional formation stage is unresolved, while symmetric recurrence shows local and feedback accumulation of comparable norm without a stable fixed carrier。
+边界：the head-specific transport-pairing hypothesis is rejected; the contract source and optimizer response are supported, while unrelated-state global centering remains compatible with trajectory-conditioned bias。
 
 ## 轨迹后果
 
@@ -34,7 +40,7 @@ F+B：p=softmax(a); da=p*(q-<p,q>) at layer-27 attention
 
 ## 下一项决定性实验
 
-measure conditional local/gradient/update traces; symmetric recurrence is already closed and shows comparable local and feedback accumulation。
+derive a coordinate/state susceptibility predictor for the measured Adam even response。
 
 ## 证据
 
@@ -42,3 +48,4 @@ measure conditional local/gradient/update traces; symmetric recurrence is alread
 - `results/coverage/cases/qwen128_softmax_fb_formal.json`
 - `results/property/bias_formation/formation/qwen_saved_p_seq128.json`
 - `results/coverage/cases/qwen128_softmax_saved_p_trajectory.json`
+- `results/property/bias_property_search/saved_p_pairing_work_v2.json`

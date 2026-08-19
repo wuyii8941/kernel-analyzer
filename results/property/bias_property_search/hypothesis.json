@@ -1,0 +1,62 @@
+{
+  "schema": "kernel-analyzer-effective-antithetic-symmetry-hypothesis-v1",
+  "name": "EFFECTIVE_ANTITHETIC_SYMMETRY_DEFECT",
+  "status": "WORKING_HYPOTHESIS",
+  "equation": "Delta_u(c) = [integral_0^1 D U_s(z_r+t epsilon) dt] epsilon = A_bar_s(epsilon) epsilon",
+  "exact_parity_budget": "E[F(epsilon)|c] = integral p_s(epsilon)F_e(epsilon) + integral p_a(epsilon)F_o(epsilon)",
+  "irreducible_channels": {
+    "event_pairing_asymmetry": "integral p_a(epsilon)F_o(epsilon)",
+    "response_rectification": "integral p_s(epsilon)F_e(epsilon)"
+  },
+  "structural_null": "the conditional transported event ensemble is closed under w -> -w, where w=A epsilon",
+  "bias_marker": "a nonzero event-pairing term or response-even term in effective-update coordinates",
+  "non_circular_test": "preserve residual and transport marginals while breaking only their pairing or semantic orbit, then measure gradient/update resultant suppression",
+  "existing_evidence": [
+    {
+      "case": "liger_fused_ce",
+      "role": "source_schedule_symmetry_defect",
+      "natural": "BF16 semantic-orbit projections are 24/24 positive",
+      "matched_control": "FP32 accumulator projections are 13 positive and 11 negative",
+      "artifact": "archive/nonprecision_v1/runs/liger.fused_ce.chunk.certificate.json"
+    },
+    {
+      "case": "phi4_seq64_lmhead_dx",
+      "role": "composite_error_transport_coupling",
+      "natural": "gradient population cross-state ratio 0.675352",
+      "matched_control": "pairing-shuffled ratio 0.108337 with every local norm preserved",
+      "artifact": "results/property/bias_formation/interventions/phi4_mm_transport_pairing.json"
+    }
+  ],
+  "completed_test": {
+    "case": "qwen_saved_p_seq128",
+    "intervention": "roll natural dS residual across attention heads",
+    "preserves": [
+      "residual multiset",
+      "causal support",
+      "pre-cast residual norm"
+    ],
+    "breaks": "head-specific q/k backward transport pairing",
+    "output": "results/property/bias_property_search/saved_p_pairing_work_v2.json",
+    "result": "HEAD_PAIRING_REJECTED: gradient resultant suppression 2.53%; effective-update resultant suppression -13.73%"
+  },
+  "completed_optimizer_test": {
+    "case": "qwen_saved_p_seq128",
+    "intervention": "exact antithetic +delta_g/-delta_g around the same repair gradient and optimizer state",
+    "preserves": [
+      "gradient residual norm",
+      "gradient residual support",
+      "pre-step parameter and Adam moments"
+    ],
+    "tests": "whether AdamW is non-odd around the natural repair gradient and rectifies a symmetric residual pair",
+    "output": "results/property/bias_property_search/saved_p_pairing_work_v2.json",
+    "result": "OPTIMIZER_NONODD_RECTIFICATION: accumulated nonoddness ratio 0.681687; 99.4827% of response-even energy lies on sign-crossing coordinates; 99.5149% occurs in steps 1-2"
+  },
+  "completed_optimizer_replication": {
+    "case": "qwen3vl_layer0_silu_backward",
+    "intervention": "exact antithetic +delta_g/-delta_g around the same native-SiLU repair gradient and Adam state",
+    "purpose": "independent model/operator replication of optimizer nonodd rectification",
+    "output": "results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json",
+    "result": "OPTIMIZER_NONODD_RECTIFICATION_REPLICATED: accumulated nonoddness ratio 0.695580; 99.8705% of response-even energy lies on sign-crossing coordinates; >99.9999% occurs in steps 1-2"
+  },
+  "claim_boundary": "Exact two-channel formation map with matched support for event/pairing asymmetry and optimizer response rectification across independent cases; held-out prediction for unseen operators remains open."
+}

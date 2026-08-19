@@ -1,6 +1,11 @@
 {
   "cases": [
     {
+      "bias_map": {
+        "channel": "EVENT_PAIRING_ASYMMETRY",
+        "reason": "the BF16 chunk/schedule orbit is 24/24 one-signed, while the same semantic orbit with FP32 accumulation is 13/11 and centered",
+        "status": "MATCHED_SUPPORT"
+      },
       "case_id": "liger_fused_ce",
       "evidence": [
         "archive/nonprecision_v1/runs/liger.fused_ce.mechanism.json",
@@ -68,6 +73,11 @@
       }
     },
     {
+      "bias_map": {
+        "channel": "EVENT_PAIRING_ASYMMETRY",
+        "reason": "the natural residual/transport joint pairing is directional, while a residual-marginal-preserving row permutation restores centering",
+        "status": "MATCHED_SUPPORT"
+      },
       "case_id": "phi4_seq64_lmhead_dx",
       "evidence": [
         "results/coverage/cases/phi4_seq64_lmhead_dx.json",
@@ -134,6 +144,11 @@
       }
     },
     {
+      "bias_map": {
+        "channel": "EVENT_PAIRING_ASYMMETRY",
+        "reason": "the accumulation arm changes the real VJP, but the complete local contrast is not decomposed",
+        "status": "PARTIAL_SUPPORT"
+      },
       "case_id": "qwen64_vproj_mm",
       "evidence": [
         "results/coverage/cases/qwen64_vproj.json",
@@ -187,6 +202,11 @@
       }
     },
     {
+      "bias_map": {
+        "channel": "EVENT_PAIRING_ASYMMETRY",
+        "reason": "output rounding is directional, but the existing trajectory repairs accumulation instead",
+        "status": "SUPPORTING_SOURCE_OBSERVATION_CONTRAST_MISMATCH"
+      },
       "case_id": "qwen128_vproj_mm",
       "evidence": [
         "results/coverage/cases/qwen128_vproj.json",
@@ -242,12 +262,28 @@
       }
     },
     {
+      "bias_map": {
+        "accumulated_nonoddness_ratio": 0.6816873220999589,
+        "channel": "RESPONSE_RECTIFICATION",
+        "energy_weighted_response_even_on_sign_crossings": 0.994826684289277,
+        "mean_step_delta_energy_on_sign_crossings": 0.10710425554049473,
+        "mean_step_nonoddness_ratio": 0.19977158722745042,
+        "mean_step_response_even_energy_on_sign_crossings": 0.8149280563841769,
+        "mean_step_sign_crossing_fraction": 0.018664030572403102,
+        "natural_antithetic_resultant_cosine": -0.07065726071596146,
+        "reason": "equal and opposite gradient residuals at identical weights and Adam moments produce a nonzero response-even update component",
+        "rejected_subhypothesis": "rolling dS residuals across heads suppresses the gradient resultant by only 2.53% and increases the update resultant",
+        "response_even_energy_in_first_two_steps": 0.9951490034730237,
+        "status": "MATCHED_SUPPORT",
+        "step_integrated_response_even_energy_fraction": 0.456169586582714
+      },
       "case_id": "qwen_saved_p_seq128",
       "evidence": [
         "results/coverage/cases/qwen128_softmax_fb.json",
         "results/coverage/cases/qwen128_softmax_fb_formal.json",
         "results/property/bias_formation/formation/qwen_saved_p_seq128.json",
-        "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json"
+        "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json",
+        "results/property/bias_property_search/saved_p_pairing_work_v2.json"
       ],
       "formation": {
         "conditional": {
@@ -271,9 +307,10 @@
       "mechanism": {
         "candidate_properties": [
           "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY",
-          "P2_SOURCE_TRANSPORT_ALIGNMENT"
+          "P2_SOURCE_TRANSPORT_ALIGNMENT",
+          "P5_OPTIMIZER_RECTIFICATION"
         ],
-        "claim_boundary": "validated case-specific contract difference; conditional formation stage is unresolved, while symmetric recurrence shows local and feedback accumulation of comparable norm without a stable fixed carrier",
+        "claim_boundary": "the head-specific transport-pairing hypothesis is rejected; the contract source and optimizer response are supported, while unrelated-state global centering remains compatible with trajectory-conditioned bias",
         "intervention": {
           "causal_effect": true,
           "description": "replace reconstructed P by the exact true-forward P only at dS, retain BF16 dS ABI",
@@ -281,10 +318,10 @@
           "matched_sham_exact": true
         },
         "verdict": "SUPPORTED_CASE_SPECIFIC_CONTRACT_MECHANISM",
-        "why_directional": "the implementation violates a forward/saved/backward representation contract; its effect is trajectory-conditioned even though unrelated-state directions cancel"
+        "why_directional": "the implementation violates a forward/saved/backward representation contract, and Adam maps an exact +delta_g/-delta_g pair to non-antithetic updates"
       },
       "model": "Qwen3-1.7B",
-      "next_decisive_test": "measure conditional local/gradient/update traces; symmetric recurrence is already closed and shows comparable local and feedback accumulation",
+      "next_decisive_test": "derive a coordinate/state susceptibility predictor for the measured Adam even response",
       "physical_source": "backward reconstructs P from BF16 logits plus FP32 max/sum instead of consuming true-forward FP32 P",
       "semantic_unit": "p=softmax(a); da=p*(q-<p,q>) at layer-27 attention",
       "trajectory": {
@@ -308,11 +345,26 @@
       }
     },
     {
+      "bias_map": {
+        "accumulated_nonoddness_ratio": 0.695579794224944,
+        "channel": "RESPONSE_RECTIFICATION",
+        "energy_weighted_response_even_on_sign_crossings": 0.99870515038319,
+        "mean_step_delta_energy_on_sign_crossings": 0.002159619778281442,
+        "mean_step_nonoddness_ratio": 0.03543076592310364,
+        "mean_step_response_even_energy_on_sign_crossings": 0.06378480843159491,
+        "mean_step_sign_crossing_fraction": 0.0033011746961361652,
+        "natural_antithetic_resultant_cosine": -0.03234051547068406,
+        "reason": "an exact antithetic gradient pair produces a nonzero Adam response-even component",
+        "response_even_energy_in_first_two_steps": 0.9999990840787242,
+        "status": "MATCHED_INDEPENDENT_REPLICATION",
+        "step_integrated_response_even_energy_fraction": 0.48494478413444125
+      },
       "case_id": "qwen3vl_silu_layer0",
       "evidence": [
         "results/round2/vl_silu_cause.json",
         "results/round2/vl_silu_cause_fp32.json",
-        "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json"
+        "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json",
+        "results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json"
       ],
       "formation": {
         "conditional": {
@@ -335,19 +387,20 @@
       "mechanism": {
         "candidate_properties": [
           "P4_NONLINEAR_RECTIFICATION",
-          "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY"
+          "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY",
+          "P5_OPTIMIZER_RECTIFICATION"
         ],
-        "claim_boundary": "complete causal F+B difference and trajectory; P3/P4 formation mechanism unresolved",
+        "claim_boundary": "optimizer response rectification is closed; the arithmetic origin inside the decomposed backward remains case-specific",
         "intervention": {
           "causal_effect": true,
-          "description": "swap only the target backward between decomposed and native implementations; forward is identical",
+          "description": "use the exact natural delta_g and its negation around the native-SiLU repair gradient at identical Adam state",
           "matched_sham_exact": true
         },
-        "verdict": "CAUSAL_IMPLEMENTATION_DIFFERENCE_FORMATION_UNRESOLVED",
-        "why_directional": "the backward implementation causes real update differences, but no sign-symmetric epsilon intervention or conditional formation trace identifies rectification"
+        "verdict": "SUPPORTED_CASE_SPECIFIC_OPTIMIZER_RESPONSE_MECHANISM",
+        "why_directional": "the backward implementation supplies delta_g, and Adam maps the exact +delta_g/-delta_g pair to almost orthogonal rather than opposite update resultants"
       },
       "model": "Qwen3-VL-2B",
-      "next_decisive_test": "capture repeated within-condition traces and run a norm/support-matched +/-epsilon nonlinear control",
+      "next_decisive_test": "derive a coordinate/state susceptibility predictor shared with saved-P",
       "physical_source": "AOT graph-dtype elementary backward arithmetic differs from native aten.silu_backward arithmetic",
       "semantic_unit": "y=x*sigmoid(x); dx=q*sigmoid(x)*(1+x*(1-sigmoid(x)))",
       "trajectory": {
@@ -361,6 +414,11 @@
       }
     },
     {
+      "bias_map": {
+        "channel": "EVENT_PAIRING_ASYMMETRY",
+        "reason": "kernel arithmetic and output rounding are each directional, but only one trajectory contrast is closed",
+        "status": "PARTIAL_CROSS_ARCHITECTURE_SUPPORT"
+      },
       "case_id": "mamba_seq64_input_proj",
       "evidence": [
         "results/coverage/cases/mamba_seq64_input_proj.json",
@@ -415,6 +473,11 @@
       }
     },
     {
+      "bias_map": {
+        "channel": "EVENT_PAIRING_ASYMMETRY",
+        "reason": "S_bwd carries the direction through Gq=S_bwd*K, but its repair removes rather than antithetically pairs the residual",
+        "status": "CONSISTENT_NOT_MARGINAL_PRESERVING"
+      },
       "case_id": "qwen_layer23_attention_state",
       "evidence": [
         "results/coverage/cases/l23_qproj_attention_state_region.json",

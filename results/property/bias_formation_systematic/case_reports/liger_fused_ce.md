@@ -8,9 +8,15 @@ F+B：Z=HW^T; G=(softmax(Z)-onehot)/N; dH=GW; dW=G^T H
 
 闭合范围：full fused loss F+B region（CLOSED）。
 
-## 统一 bias 分解
+## 统一 Bias Formation Map
 
-使用 `E[Δg|c] = E[T|c]E[ε|c] + Cov(T,ε|c) + E[R(ε)|c]`。本例的物理差异是：64 two-token chunk contributions are added sequentially to a BF16 dW accumulator; chunk geometry changes the rounding schedule。
+对预先声明的反对称操作，将事件分布写成 `p=p_s+p_a`，将真实 F+B/optimizer 响应写成 `F=F_e+F_o`。精确形成式是：
+
+`E[F(ε)|c] = ∫p_s(ε)F_e(ε)dε + ∫p_a(ε)F_o(ε)dε`。
+
+本例归入：`EVENT_PAIRING_ASYMMETRY`（`MATCHED_SUPPORT`）。the BF16 chunk/schedule orbit is 24/24 one-signed, while the same semantic orbit with FP32 accumulation is 13/11 and centered。
+
+本例的物理差异是：64 two-token chunk contributions are added sequentially to a BF16 dW accumulator; chunk geometry changes the rounding schedule。
 
 条件化 formation（local / gradient / update）：`NOT_MEASURED / NOT_MEASURED / NOT_MEASURED`。
 

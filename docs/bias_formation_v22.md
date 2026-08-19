@@ -85,7 +85,7 @@ negative case.
 Conditional claims still require new condition metadata and repeated units;
 they must not be inferred from the old mixed-state artifacts.
 
-## Property analysis is unchanged
+## Property analysis
 
 These three levels are observation labels, not a replacement property.  After
 the level is identified, mechanism analysis must still use the original causal
@@ -99,13 +99,21 @@ local residual
   → parameter drift
 ```
 
-The preregistered candidate mechanisms remain source asymmetry (P1),
-source--transport alignment (P2), forward/backward numerical consistency
-(P3), nonlinear rectification (P4), optimizer rectification (P5), and semantic
-orbit centering (P6).  Conditional or trajectory bias only says *where the
-effect is observed*; it does not identify which of P1--P6 caused it.  A
-trajectory case therefore still needs the same endpoint proof, intervention,
-and SEUP consequence evidence before it supports a mechanism property.
+The P1--P6 list has now been reduced to an exact two-channel formation map.
+For a predeclared semantic antithetic operation, split the conditional event
+population into `p_s/p_a` and the complete F+B/optimizer response into
+`F_e/F_o`:
+
+```text
+E[F(epsilon)|c] = integral p_s F_e + integral p_a F_o.
+```
+
+`p_a F_o` is event/pairing asymmetry; `p_s F_e` is response rectification.
+Source schedule, backward transport and numerical-contract effects change the
+first channel's joint event population.  Nonlinear and optimizer response can
+create the second channel.  This replaces a loose list of possible stages with
+one falsifiable cancellation property: antithetically paired events plus an
+odd response have zero conditional bias regardless of variance.
 
 The property question is consequently not “which level wins?” but:
 
@@ -127,5 +135,9 @@ exact missing intervention for each case.  Its safeguards are deliberate:
 * every supported mechanism has a causal intervention and exact sham;
 * trajectory and SEUP fields cannot create a formation-stage label.
 
-The audit currently supports several case-specific mechanisms, not one shared
-property across all eight cases.
+The audit now has matched evidence for the shared map in four independent
+cases: Liger/Phi exercise event-pairing asymmetry, while saved-P/Qwen3-VL SiLU
+exercise Adam response rectification.  The other four cases remain partial or
+unresolved and are not silently promoted.  This supports the formation map as
+a cross-case working property, not yet as a zero-shot predictor for unseen
+operators.

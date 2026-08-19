@@ -1,0 +1,209 @@
+{
+  "bias_equation": {
+    "conditional_mean": "E[A_bar epsilon|c] = E[A_bar|c]E[epsilon|c] + Cov_c(A_bar,epsilon)",
+    "coupling_term": "Cov_c(A_bar,epsilon)",
+    "event_pairing_channel": "integral p_a(epsilon)F_o(epsilon)",
+    "exact_parity_budget": "E[F(epsilon)|c] = integral p_s(epsilon)F_e(epsilon) + integral p_a(epsilon)F_o(epsilon)",
+    "exact_secant": "Delta_u = [integral_0^1 D U_s(z_r+t epsilon) dt] epsilon = A_bar epsilon",
+    "nonlinear_optimizer_role": "absorbed into the path-averaged influence A_bar",
+    "response_rectification_channel": "integral p_s(epsilon)F_e(epsilon)",
+    "source_term": "E[A_bar|c]E[epsilon|c]"
+  },
+  "cases": [
+    {
+      "antithetic_control": {
+        "bootstrap_95": [
+          -0.0008266762867469485,
+          0.0013163193857872917
+        ],
+        "condition": "FP32 accumulator under the same semantic geometry orbit",
+        "mean_projection": 0.00018199590516328139,
+        "negative_states": 11,
+        "positive_states": 13
+      },
+      "artifact": "archive/nonprecision_v1/runs/liger.fused_ce.chunk.certificate.json",
+      "case": "liger_fused_ce",
+      "causal_reading": "Finite-precision accumulation and physical chunk schedule break effective orbit centering; raw tensor signed mean is not the marker.",
+      "mechanism": "SOURCE_SCHEDULE_SYMMETRY_DEFECT",
+      "natural_effect": {
+        "bootstrap_95": [
+          0.061070188503539784,
+          0.08839872605891756
+        ],
+        "condition": "BF16 accumulator",
+        "mean_projection": 0.07419004999493128,
+        "negative_states": 0,
+        "positive_states": 24,
+        "raw_coordinate_signed_mean": -5.206966273527538e-10
+      },
+      "status": "MATCHED_SUPPORT"
+    },
+    {
+      "antithetic_control": {
+        "bootstrap_95": [
+          0.07644163533553913,
+          0.14513320562822202
+        ],
+        "gradient_cross_state_ratio": 0.10833660941878624,
+        "local_norm_preserved_every_state": true,
+        "operation": "row-pairing permutation",
+        "verdict": "CENTERED"
+      },
+      "artifact": "results/property/bias_formation/interventions/phi4_mm_transport_pairing.json",
+      "case": "phi4_seq64_lmhead_dx",
+      "causal_reading": "Marginal local residual size is insufficient; its real pairing with the composite backward influence creates the directional gradient population.",
+      "claim_boundary": "The RMSNorm-only analytic transport reconstruction does not close the full effect.",
+      "mechanism": "COMPOSITE_ERROR_TRANSPORT_COUPLING",
+      "natural_effect": {
+        "bootstrap_95": [
+          0.5410753004277176,
+          0.8251384485158917
+        ],
+        "gradient_cross_state_ratio": 0.6753524189697294,
+        "verdict": "BIASED"
+      },
+      "status": "MATCHED_SUPPORT_WITH_ANALYTIC_BOUNDARY_OPEN"
+    },
+    {
+      "all_forward_losses_equal": true,
+      "artifact": "results/property/bias_property_search/saved_p_pairing_work_v2.json",
+      "case": "qwen_saved_p_seq128",
+      "gradient_pairing_suppression": 0.02529861153896773,
+      "max_precast_norm_relative_error": 0.0,
+      "mechanism": "HEAD_SPECIFIC_ERROR_TRANSPORT_COUPLING",
+      "natural_gradient_resultant_l2": 0.11621246486902237,
+      "natural_update_resultant_l2": 0.004687322769314051,
+      "optimizer_oddness": {
+        "adam_over_stateless_sgd_resultant": 4033.4079262469068,
+        "energy_weighted_response_even_on_sign_crossings": 0.994826684289277,
+        "mean_step_ratio": 0.19977158722745042,
+        "mean_step_response_even_energy_on_sign_crossings": 0.8149280563841769,
+        "mean_step_sign_crossing_fraction": 0.018664030572403102,
+        "natural_antithetic_resultant_cosine": -0.07065726071596146,
+        "oddness_alignment_with_natural_resultant": 0.6871474869988837,
+        "response_even_energy_in_first_two_steps": 0.9951490034730237,
+        "resultant_l2": 0.006346141453832388,
+        "resultant_ratio": 0.6816873220999589
+      },
+      "shuffled_gradient_resultant_l2": 0.11327245086431503,
+      "shuffled_update_resultant_l2": 0.005330816842615604,
+      "status": "HEAD_PAIRING_HYPOTHESIS_REJECTED",
+      "update_pairing_suppression": -0.13728392623487373
+    },
+    {
+      "artifact": "results/coverage/cases/l23_qproj_attention_state_region.json",
+      "case": "qwen_layer23_attention_state",
+      "causal_reading": "The direction enters through S_bwd and survives G_q=S_bwd K and dW=G_q^T H.",
+      "claim_boundary": "Repair removes the residual rather than preserving its marginal distribution.",
+      "mechanism": "ATTENTION_STATE_EFFECTIVE_DIRECTION",
+      "natural_effect": {
+        "bootstrap_95": [
+          0.00019140614129469215,
+          0.0004910881547402823
+        ],
+        "s_bwd_shapley_positive_states": 27,
+        "states": 32
+      },
+      "repair": {
+        "matched_sham_max_abs": 0.0,
+        "s_bwd_only_residual_bootstrap_95": [
+          -1.2321658915936953e-05,
+          1.8732652091557614e-05
+        ]
+      },
+      "status": "CONSISTENT_NOT_MARGINAL_PRESERVING"
+    },
+    {
+      "adam_over_stateless_sgd_resultant": 1529.2364195205414,
+      "artifact": "results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json",
+      "case": "qwen3vl_silu",
+      "causal_reading": "AdamW maps exact +delta_g/-delta_g residuals around the same repair gradient to a non-antithetic update pair.",
+      "energy_weighted_response_even_on_sign_crossings": 0.99870515038319,
+      "global_cross_state_ratio": -0.011355843970777258,
+      "mean_step_optimizer_oddness_ratio": 0.03543076592310364,
+      "mean_step_response_even_energy_on_sign_crossings": 0.06378480843159491,
+      "mean_step_sign_crossing_fraction": 0.0033011746961361652,
+      "mechanism": "OPTIMIZER_NONODD_RECTIFICATION",
+      "natural_antithetic_update_resultant_cosine": -0.03234051547068406,
+      "optimizer_oddness_resultant_l2": 0.002871247474104166,
+      "optimizer_oddness_resultant_ratio": 0.695579794224944,
+      "response_even_alignment_with_natural_resultant": 0.6968624941715695,
+      "response_even_energy_in_first_two_steps": 0.9999990840787242,
+      "response_even_resultant_energy_fraction": 0.4838298187872902,
+      "status": "MATCHED_INDEPENDENT_REPLICATION_WITH_GLOBAL_BOUNDARY",
+      "trajectory_artifact": "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json"
+    },
+    {
+      "artifact": "results/coverage/cases/qwen128_vproj_precision_decomposition.json",
+      "case": "qwen128_vproj_mm",
+      "causal_reading": "Same-operand kernel arithmetic centers while deterministic output rounding carries the directional local component.",
+      "claim_boundary": "The existing live trajectory repairs a different contrast.",
+      "kernel_bootstrap_95": {
+        "lower_95": -4.030620452902246e-11,
+        "median": 6.104253664959683e-10,
+        "upper_95": 1.2968024466510028e-08
+      },
+      "kernel_u": 2.4578135982537962e-09,
+      "mechanism": "OUTPUT_ROUNDING_SOURCE_SYMMETRY_DEFECT",
+      "output_rounding_bootstrap_95": {
+        "lower_95": 5.533830880851833e-05,
+        "median": 6.65262059999474e-05,
+        "upper_95": 7.917291742592349e-05
+      },
+      "output_rounding_u": 6.68121511115583e-05,
+      "status": "SUPPORTING_SOURCE_OBSERVATION_NOT_TRAJECTORY_MATCHED"
+    },
+    {
+      "artifact": "results/coverage/cases/mamba_seq64_input_proj_precision_decomposition.json",
+      "case": "mamba_seq64_input_proj",
+      "causal_reading": "Both same-operand MM arithmetic and output rounding have non-centered local contribution ensembles in a non-Transformer architecture.",
+      "claim_boundary": "The two source arms are not yet separately closed through matched trajectories.",
+      "kernel_bootstrap_95": {
+        "lower_95": 1.9517788156647083e-06,
+        "median": 3.5846511781018374e-06,
+        "upper_95": 6.8807563224660265e-06
+      },
+      "kernel_u": 3.763605221982563e-06,
+      "mechanism": "KERNEL_AND_OUTPUT_ROUNDING_SOURCE_SYMMETRY_DEFECT",
+      "output_rounding_bootstrap_95": {
+        "lower_95": 0.001370016619277128,
+        "median": 0.0017573367880970223,
+        "upper_95": 0.002177752247976391
+      },
+      "output_rounding_u": 0.0017625598325291428,
+      "status": "SUPPORTING_CROSS_ARCHITECTURE_SOURCE_OBSERVATION"
+    }
+  ],
+  "claim_boundary": "The equation is a testable organizing principle, not yet a universal predictor. Cross-operator promotion requires another independent marginal-preserving intervention.",
+  "headline_status": "SAVED_P_HEAD_PAIRING_REJECTED; OPTIMIZER_NONODD_RECTIFICATION_MEASURED; SILU_REPLICATION_PASSED",
+  "hypothesis": "Bias forms when implementation-error events fail to cancel after actual F+B/optimizer influence; equivalently, their conditional effective contribution ensemble has an antithetic-symmetry defect.",
+  "rejected_alternatives": [
+    {
+      "candidate": "LOCAL_ERROR_MAGNITUDE",
+      "reason": "Phi changes downstream bias under an exactly norm-preserving local intervention.",
+      "verdict": "INSUFFICIENT"
+    },
+    {
+      "candidate": "RAW_SIGNED_TENSOR_MEAN",
+      "reason": "Liger has a tiny raw coordinate mean but unanimous effective carrier projections.",
+      "verdict": "INSUFFICIENT"
+    },
+    {
+      "candidate": "FIXED_GLOBAL_RANK1_CARRIER",
+      "reason": "Saved-P and SiLU live trajectories do not require unrelated-state rank-1 stability.",
+      "verdict": "NOT_NECESSARY"
+    },
+    {
+      "candidate": "LOW_PRECISION_DTYPE",
+      "reason": "The same dtype can yield coherent or canceling errors depending on schedule and influence pairing.",
+      "verdict": "SOURCE_CONDITION_NOT_EXPLANATION"
+    },
+    {
+      "candidate": "SEUP",
+      "reason": "SEUP measures persistence after an effective-update difference has formed.",
+      "verdict": "DOWNSTREAM_CONSEQUENCE"
+    }
+  ],
+  "saved_p_result_available": true,
+  "schema": "kernel-analyzer-effective-antithetic-symmetry-evidence-v1"
+}
