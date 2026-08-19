@@ -77,6 +77,15 @@ from .bias_consequence_v21 import (
     ConsequenceStatus as ConsequenceStatusV21,
     UpdateValue,
 )
+from .bias_formation_v22 import (
+    BiasLevel,
+    BiasV22Status,
+    ConditionalPolicy,
+    TrajectoryPolicy,
+    summarize_conditional_vectors,
+    certify_trajectory_separation,
+    classify_global_certificate,
+)
 
 __all__ = [
     "AnalysisReport",
@@ -145,4 +154,11 @@ __all__ = [
     "BiasConsequenceTraceV21",
     "ConsequenceStatusV21",
     "UpdateValue",
+    "BiasLevel",
+    "BiasV22Status",
+    "ConditionalPolicy",
+    "TrajectoryPolicy",
+    "summarize_conditional_vectors",
+    "certify_trajectory_separation",
+    "classify_global_certificate",
 ]

@@ -13,9 +13,12 @@ implementation difference
 ```
 
 Kernel Analyzer supplies exact forward/backward semantic ground truth and
-repair/sham boundaries.  BiasFormation v2.1 measures the first centered-to-
-directional transition in open-loop common states.  Existing SEUP is used only
-after that transition to study persistence and drift.
+repair/sham boundaries.  BiasFormation v2.1 measures only a global,
+state-comparable centered-to-directional transition in open-loop common
+states.  BiasFormation v2.2 adds conditional and trajectory observation levels;
+failure of the v2.1 global gate is no longer interpreted as absence of
+training bias.  Existing SEUP is used only after formation to study persistence
+and drift.
 
 The four frozen cases are Liger fused CE, Phi MM, Qwen saved-P softmax and Qwen
 bmm. No endpoint discovery, T1–T4 redesign, or universal property assumption
@@ -44,3 +47,10 @@ promoted into formation labels. The two validated mechanisms are deliberately
 kept at their evidence boundaries: Phi is an empirical composite transport
 mechanism, while layer-23 is a closed semantic region rather than a single
 kernel attribution.
+
+The v2.1 global-scope interpretation is superseded for training-bias claims by
+the v2.2 addendum and trajectory reclassification under
+`results/property/bias_formation_v22/`. That addendum reports eight
+trajectory-level causal separation cases, while leaving P1–P6 mechanism
+identification as the next analysis stage. It does not claim a universal
+property.
