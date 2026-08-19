@@ -1,0 +1,473 @@
+{
+  "cases": [
+    {
+      "case_id": "liger_fused_ce",
+      "evidence": [
+        "archive/nonprecision_v1/runs/liger.fused_ce.mechanism.json",
+        "archive/nonprecision_v1/runs/liger.fused_ce.certificate.json",
+        "archive/nonprecision_v1/runs/liger.fused_ce.chunk.certificate.json",
+        "results/trajectory/liger_trajectory.json",
+        "results/property/seup_mainline/liger_seup.json"
+      ],
+      "formation": {
+        "conditional": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "first_conditional_bias_stage": "UNRESOLVED",
+        "global": {
+          "gradient": "UNRESOLVED",
+          "local": "UNRESOLVED",
+          "update": "UNRESOLVED"
+        },
+        "interpretation": "calibration was directional, disjoint confirmation unresolved; this is not a conditional null",
+        "label_source": "OPEN_LOOP_GLOBAL_V21"
+      },
+      "forward_backward": {
+        "scope": "full fused loss F+B region",
+        "status": "CLOSED"
+      },
+      "mechanism": {
+        "candidate_properties": [
+          "P1_CONDITIONAL_SOURCE_ASYMMETRY",
+          "P6_SEMANTIC_ORBIT_CENTERING"
+        ],
+        "claim_boundary": "case-specific source mechanism; no universal P1 property and no M7",
+        "intervention": {
+          "causal_effect": true,
+          "description": "promote only dW accumulation to FP32 while preserving loss, dH, and all untied gradients",
+          "matched_sham_exact": true,
+          "removed_candidate_added_error_fraction": 0.957
+        },
+        "verdict": "SUPPORTED_CASE_SPECIFIC_SOURCE_MECHANISM",
+        "why_directional": "finite-precision sequential accumulation is conditionally asymmetric under the declared chunk schedule, so E[epsilon|chunk geometry] need not vanish"
+      },
+      "model": "Qwen3-1.7B + Liger fused linear CE",
+      "next_decisive_test": "variance-matched stratum-mean removal if P1 is to become a general property",
+      "physical_source": "64 two-token chunk contributions are added sequentially to a BF16 dW accumulator; chunk geometry changes the rounding schedule",
+      "semantic_unit": "Z=HW^T; G=(softmax(Z)-onehot)/N; dH=GW; dW=G^T H",
+      "trajectory": {
+        "artifact": "results/trajectory/liger_trajectory.json",
+        "final_drift_norm": 0.0022393549008995974,
+        "fixed_global_direction_passed_old_gate": true,
+        "formation_label": false,
+        "initial_drift_norm": 8.586806677537658e-06,
+        "local_feedback": {
+          "evaluation_steps": 16,
+          "feedback_accumulation_l2": 0.0002732251622248212,
+          "local_accumulation_l2": 7.63580291049743e-05,
+          "max_recurrence_relative_residual": 3.4057641385143195e-08,
+          "signed_persistence": 1.0,
+          "source": "results/property/seup_mainline/liger_seup.json",
+          "stable_fixed_carrier": true,
+          "status": "PASS_SEUP_ANCHOR"
+        },
+        "status": "TRAJECTORY_BIAS",
+        "steps": 32
+      }
+    },
+    {
+      "case_id": "phi4_seq64_lmhead_dx",
+      "evidence": [
+        "results/coverage/cases/phi4_seq64_lmhead_dx.json",
+        "results/property/bias_formation/formation/phi4_lm_head_dx_seq64.json",
+        "results/property/bias_formation/interventions/phi4_mm_transport_pairing.json",
+        "results/coverage/cases/phi4_seq64_lmhead_dx_trajectory.json"
+      ],
+      "formation": {
+        "conditional": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "first_conditional_bias_stage": "UNRESOLVED",
+        "global": {
+          "gradient": "BIASED",
+          "local": "CENTERED",
+          "update": "BIASED"
+        },
+        "interpretation": "the strongest existing population result is LOCAL_CENTERED -> GRADIENT_BIASED -> UPDATE_BIASED",
+        "label_source": "OPEN_LOOP_GLOBAL_V21"
+      },
+      "forward_backward": {
+        "scope": "one exact backward MM invocation and both VJP edges",
+        "status": "CLOSED"
+      },
+      "mechanism": {
+        "candidate_properties": [
+          "P2_SOURCE_TRANSPORT_ALIGNMENT"
+        ],
+        "claim_boundary": "empirical composite transport mechanism; analytic transport reconstruction remains incomplete",
+        "intervention": {
+          "causal_effect": true,
+          "description": "permute residual/row transport pairing while preserving the local residual multiset and norm",
+          "matched_sham_exact": true,
+          "natural_gradient": "BIASED",
+          "shuffled_gradient": "CENTERED"
+        },
+        "verdict": "SUPPORTED_CASE_SPECIFIC_TRANSPORT_MECHANISM",
+        "why_directional": "the local mean is small, but the real backward pairing makes Cov(T,epsilon|c) nonzero"
+      },
+      "model": "Phi-4-mini",
+      "next_decisive_test": "close the remaining analytic VJP factors before naming one physical transport factor",
+      "physical_source": "same-BF16-operand MM kernel arithmetic; final output rounding is noncoherent",
+      "semantic_unit": "Y=XW^T; dX=QW; dW=Q^T X at lm_head input VJP",
+      "trajectory": {
+        "artifact": "results/coverage/cases/phi4_seq64_lmhead_dx_trajectory.json",
+        "final_drift_norm": 9.185909584630281e-05,
+        "fixed_global_direction_passed_old_gate": true,
+        "formation_label": false,
+        "initial_drift_norm": 2.127923607986304e-06,
+        "local_feedback": {
+          "evaluation_steps": 16,
+          "feedback_accumulation_l2": 2.3945317827997007e-06,
+          "local_accumulation_l2": 4.751236706890506e-05,
+          "max_recurrence_relative_residual": 7.037889645672179e-09,
+          "signed_persistence": 1.0,
+          "source": "results/property/seup_mainline/phi_seup.json",
+          "stable_fixed_carrier": true,
+          "status": "PASS_SEUP_POSITIVE"
+        },
+        "status": "TRAJECTORY_BIAS",
+        "steps": 32
+      }
+    },
+    {
+      "case_id": "qwen64_vproj_mm",
+      "evidence": [
+        "results/coverage/cases/qwen64_vproj.json",
+        "results/coverage/cases/qwen64_vproj_repair_pilot.json",
+        "results/coverage/cases/qwen64_vproj_trajectory.json"
+      ],
+      "formation": {
+        "conditional": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "first_conditional_bias_stage": "UNRESOLVED",
+        "global": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "label_source": "NOT_MEASURED"
+      },
+      "forward_backward": {
+        "scope": "one exact forward MM with actual AOT backward edges",
+        "status": "CLOSED"
+      },
+      "mechanism": {
+        "candidate_properties": [
+          "P1_CONDITIONAL_SOURCE_ASYMMETRY"
+        ],
+        "claim_boundary": "trajectory-local partial source; no complete P1 attribution",
+        "intervention": {
+          "causal_effect": true,
+          "description": "same-input FP32 MM accumulation followed by the original BF16 ABI",
+          "full_observed_source_repaired": false,
+          "matched_sham_exact": true
+        },
+        "verdict": "PARTIAL_SOURCE_MECHANISM",
+        "why_directional": "the isolated accumulation residual changes the real dW path, but its relation to the complete precision residual is not closed"
+      },
+      "model": "Qwen3-1.7B",
+      "next_decisive_test": "complete the three-way local source decomposition, then capture within-condition formation",
+      "physical_source": "precision contrast is directional; full split into kernel, output rounding, and inherited operands is incomplete",
+      "semantic_unit": "Y=XW^T; dX=QW; dW=Q^T X at layer-0 v_proj",
+      "trajectory": {
+        "artifact": "results/coverage/cases/qwen64_vproj_trajectory.json",
+        "final_drift_norm": 0.010890079662203789,
+        "fixed_global_direction_passed_old_gate": true,
+        "formation_label": false,
+        "initial_drift_norm": 0.003998710308223963,
+        "status": "TRAJECTORY_BIAS",
+        "steps": 32
+      }
+    },
+    {
+      "case_id": "qwen128_vproj_mm",
+      "evidence": [
+        "results/coverage/cases/qwen128_vproj.json",
+        "results/coverage/cases/qwen128_vproj_precision_decomposition.json",
+        "results/coverage/cases/qwen128_vproj_repair_pilot.json",
+        "results/coverage/cases/qwen128_vproj_trajectory.json"
+      ],
+      "formation": {
+        "conditional": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "first_conditional_bias_stage": "UNRESOLVED",
+        "global": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "label_source": "NOT_MEASURED"
+      },
+      "forward_backward": {
+        "scope": "one exact forward MM with actual AOT backward edges",
+        "status": "CLOSED"
+      },
+      "mechanism": {
+        "candidate_properties": [
+          "P1_CONDITIONAL_SOURCE_ASYMMETRY",
+          "P6_SEMANTIC_ORBIT_CENTERING"
+        ],
+        "claim_boundary": "do not attribute the trajectory to output rounding until an output-rounding repair is run",
+        "intervention": {
+          "causal_effect": true,
+          "description": "existing trajectory promotes MM accumulation but retains BF16 output rounding",
+          "matched_sham_exact": true
+        },
+        "trajectory_repairs_declared_local_source": false,
+        "verdict": "UNRESOLVED_CONTRAST_MISMATCH",
+        "why_directional": "the source decomposition and trajectory manipulate different contrasts; they cannot yet be composed into one causal explanation"
+      },
+      "model": "Qwen3-1.7B",
+      "next_decisive_test": "run an exact output-rounding intervention with sham at the same F+B boundary",
+      "physical_source": "global local decomposition identifies deterministic FP32-to-BF16 output rounding, not MM kernel arithmetic",
+      "semantic_unit": "Y=XW^T; dX=QW; dW=Q^T X at layer-0 v_proj",
+      "trajectory": {
+        "artifact": "results/coverage/cases/qwen128_vproj_trajectory.json",
+        "final_drift_norm": 0.010251143015921116,
+        "fixed_global_direction_passed_old_gate": false,
+        "formation_label": false,
+        "initial_drift_norm": 0.004516110755503178,
+        "status": "TRAJECTORY_BIAS",
+        "steps": 32
+      }
+    },
+    {
+      "case_id": "qwen_saved_p_seq128",
+      "evidence": [
+        "results/coverage/cases/qwen128_softmax_fb.json",
+        "results/coverage/cases/qwen128_softmax_fb_formal.json",
+        "results/property/bias_formation/formation/qwen_saved_p_seq128.json",
+        "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json"
+      ],
+      "formation": {
+        "conditional": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "first_conditional_bias_stage": "UNRESOLVED",
+        "global": {
+          "gradient": "CENTERED",
+          "local": "CENTERED",
+          "update": "CENTERED"
+        },
+        "interpretation": "global centered does not imply conditional or trajectory variance-only",
+        "label_source": "OPEN_LOOP_GLOBAL_V21"
+      },
+      "forward_backward": {
+        "scope": "softmax forward, saved/reconstructed P, dS, and actual q/k VJPs",
+        "status": "CLOSED"
+      },
+      "mechanism": {
+        "candidate_properties": [
+          "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY",
+          "P2_SOURCE_TRANSPORT_ALIGNMENT"
+        ],
+        "claim_boundary": "validated case-specific contract difference; conditional formation stage is unresolved, while symmetric recurrence shows local and feedback accumulation of comparable norm without a stable fixed carrier",
+        "intervention": {
+          "causal_effect": true,
+          "description": "replace reconstructed P by the exact true-forward P only at dS, retain BF16 dS ABI",
+          "forward_loss_unchanged": true,
+          "matched_sham_exact": true
+        },
+        "verdict": "SUPPORTED_CASE_SPECIFIC_CONTRACT_MECHANISM",
+        "why_directional": "the implementation violates a forward/saved/backward representation contract; its effect is trajectory-conditioned even though unrelated-state directions cancel"
+      },
+      "model": "Qwen3-1.7B",
+      "next_decisive_test": "measure conditional local/gradient/update traces; symmetric recurrence is already closed and shows comparable local and feedback accumulation",
+      "physical_source": "backward reconstructs P from BF16 logits plus FP32 max/sum instead of consuming true-forward FP32 P",
+      "semantic_unit": "p=softmax(a); da=p*(q-<p,q>) at layer-27 attention",
+      "trajectory": {
+        "artifact": "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json",
+        "final_drift_norm": 0.008657907135784626,
+        "fixed_global_direction_passed_old_gate": true,
+        "formation_label": false,
+        "initial_drift_norm": 0.0044684866443276405,
+        "local_feedback": {
+          "evaluation_steps": 16,
+          "feedback_accumulation_l2": 0.004862931525779159,
+          "local_accumulation_l2": 0.004676968354223248,
+          "max_recurrence_relative_residual": 3.3190557446489453e-08,
+          "signed_persistence": null,
+          "source": "results/property/seup_mainline/qwen_softmax_seup.json",
+          "stable_fixed_carrier": false,
+          "status": "PASS_SEUP_NEGATIVE_CONTROL"
+        },
+        "status": "TRAJECTORY_BIAS",
+        "steps": 32
+      }
+    },
+    {
+      "case_id": "qwen3vl_silu_layer0",
+      "evidence": [
+        "results/round2/vl_silu_cause.json",
+        "results/round2/vl_silu_cause_fp32.json",
+        "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json"
+      ],
+      "formation": {
+        "conditional": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "first_conditional_bias_stage": "UNRESOLVED",
+        "global": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "label_source": "NOT_MEASURED"
+      },
+      "forward_backward": {
+        "scope": "same forward and one exact layer-0 SiLU backward invocation",
+        "status": "CLOSED"
+      },
+      "mechanism": {
+        "candidate_properties": [
+          "P4_NONLINEAR_RECTIFICATION",
+          "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY"
+        ],
+        "claim_boundary": "complete causal F+B difference and trajectory; P3/P4 formation mechanism unresolved",
+        "intervention": {
+          "causal_effect": true,
+          "description": "swap only the target backward between decomposed and native implementations; forward is identical",
+          "matched_sham_exact": true
+        },
+        "verdict": "CAUSAL_IMPLEMENTATION_DIFFERENCE_FORMATION_UNRESOLVED",
+        "why_directional": "the backward implementation causes real update differences, but no sign-symmetric epsilon intervention or conditional formation trace identifies rectification"
+      },
+      "model": "Qwen3-VL-2B",
+      "next_decisive_test": "capture repeated within-condition traces and run a norm/support-matched +/-epsilon nonlinear control",
+      "physical_source": "AOT graph-dtype elementary backward arithmetic differs from native aten.silu_backward arithmetic",
+      "semantic_unit": "y=x*sigmoid(x); dx=q*sigmoid(x)*(1+x*(1-sigmoid(x)))",
+      "trajectory": {
+        "artifact": "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json",
+        "final_drift_norm": 0.08343788981437683,
+        "fixed_global_direction_passed_old_gate": false,
+        "formation_label": false,
+        "initial_drift_norm": 0.0020657628774642944,
+        "status": "TRAJECTORY_BIAS",
+        "steps": 32
+      }
+    },
+    {
+      "case_id": "mamba_seq64_input_proj",
+      "evidence": [
+        "results/coverage/cases/mamba_seq64_input_proj.json",
+        "results/coverage/cases/mamba_seq64_input_proj_precision_decomposition.json",
+        "results/coverage/cases/mamba_seq64_input_proj_repair_pilot.json",
+        "results/coverage/cases/mamba_seq64_input_proj_trajectory.json"
+      ],
+      "formation": {
+        "conditional": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "first_conditional_bias_stage": "UNRESOLVED",
+        "global": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "label_source": "NOT_MEASURED"
+      },
+      "forward_backward": {
+        "scope": "one exact recurrent input-projection MM and actual VJP edges",
+        "status": "CLOSED"
+      },
+      "mechanism": {
+        "candidate_properties": [
+          "P1_CONDITIONAL_SOURCE_ASYMMETRY"
+        ],
+        "claim_boundary": "cross-architecture partial source mechanism; total observed error is not single-source",
+        "intervention": {
+          "causal_effect": true,
+          "description": "promote only MM accumulation to FP32, then restore the BF16 ABI",
+          "full_observed_source_repaired": false,
+          "matched_sham_exact": true
+        },
+        "verdict": "PARTIAL_SOURCE_MECHANISM",
+        "why_directional": "at least two additive local source terms are directional; the trajectory closes the kernel-accumulation arm but not the output-rounding arm"
+      },
+      "model": "Mamba-130M",
+      "next_decisive_test": "run separate kernel-only and output-rounding-only conditional interventions",
+      "physical_source": "both same-operand MM kernel arithmetic and deterministic output rounding are directional",
+      "semantic_unit": "Y=XW^T; dX=QW; dW=Q^T X at layer-0 in_proj",
+      "trajectory": {
+        "artifact": "results/coverage/cases/mamba_seq64_input_proj_trajectory.json",
+        "final_drift_norm": 0.008289474993944168,
+        "fixed_global_direction_passed_old_gate": true,
+        "formation_label": false,
+        "initial_drift_norm": 0.004031004849821329,
+        "status": "TRAJECTORY_BIAS",
+        "steps": 32
+      }
+    },
+    {
+      "case_id": "qwen_layer23_attention_state",
+      "evidence": [
+        "results/coverage/cases/l23_qproj_attention_state_region.json",
+        "results/final/l23_attention_live_weight.json",
+        "results/property/bias_formation_final/qwen_l23_attention_mechanism.json"
+      ],
+      "formation": {
+        "conditional": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "first_conditional_bias_stage": "UNRESOLVED",
+        "global": {
+          "gradient": "NOT_MEASURED",
+          "local": "NOT_MEASURED",
+          "update": "NOT_MEASURED"
+        },
+        "label_source": "SEMANTIC_REGION_CAUSAL_EVIDENCE"
+      },
+      "forward_backward": {
+        "scope": "layer-23 q_proj attention-state semantic region and exact tile carrier",
+        "status": "CLOSED"
+      },
+      "mechanism": {
+        "candidate_properties": [
+          "P2_SOURCE_TRANSPORT_ALIGNMENT",
+          "P3_FORWARD_BACKWARD_NUMERICAL_CONSISTENCY",
+          "P6_SEMANTIC_ORBIT_CENTERING"
+        ],
+        "claim_boundary": "validated semantic-region mechanism, not a uniquely identified kernel instruction",
+        "intervention": {
+          "causal_effect": true,
+          "description": "restore S_bwd at bmm_76; K-only repair is insufficient; joint S/K repair closes the direction",
+          "matched_sham_exact": true
+        },
+        "verdict": "SUPPORTED_SEMANTIC_REGION_TRANSPORT_CONTRACT_MECHANISM",
+        "why_directional": "the changed attention state is transported through Gq=S_bwd*K into a fixed q_proj tile; S_bwd restoration removes that carrier"
+      },
+      "model": "Qwen3-1.7B",
+      "next_decisive_test": "capture conditional layer traces if a first-bias-stage claim is required; do not force single-kernel attribution",
+      "physical_source": "attention-backward state S_bwd is causal; upstream contributors overlap and include delayed key materialization",
+      "semantic_unit": "S_bwd=alpha*J_softmax(P)^T(DV^T); Gq=S_bwd*K; dWq=Gq^T H",
+      "trajectory": {
+        "artifact": "results/final/l23_attention_live_weight.json",
+        "final_drift_norm": 0.0006082479958422482,
+        "fixed_global_direction_passed_old_gate": true,
+        "formation_label": false,
+        "initial_drift_norm": 0.00032629986526444554,
+        "status": "TRAJECTORY_BIAS",
+        "steps": 32
+      }
+    }
+  ],
+  "schema": "kernel-analyzer-systematic-bias-audit-v1"
+}
