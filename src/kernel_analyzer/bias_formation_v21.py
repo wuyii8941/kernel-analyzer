@@ -474,6 +474,7 @@ def summarize_streamed_state_vector_files(
     if chunk_elements < 1:
         raise ValueError("chunk_elements must be positive")
     arrays = []
+    scales = []
     for row in rows:
         path = Path(str(row["path"]))
         storage_dtype = str(row.get("storage_dtype", "float32"))
@@ -482,15 +483,23 @@ def summarize_streamed_state_vector_files(
         if path.stat().st_size != expected_bytes:
             raise ValueError("streamed vector file size does not match coordinate count")
         arrays.append(np.memmap(path, dtype=dtype, mode="r", shape=(coordinates,)))
+        scales.append(float(row.get("scale", 1.0)))
     gram = np.zeros((len(arrays), len(arrays)), dtype=np.float64)
     for start in range(0, coordinates, chunk_elements):
         stop = min(coordinates, start + chunk_elements)
-        block = np.stack([np.asarray(array[start:stop], dtype=np.float64) for array in arrays])
+        block = np.stack([
+            np.asarray(array[start:stop], dtype=np.float64) * scale
+            for array, scale in zip(arrays, scales, strict=True)
+        ])
         gram += block @ block.T
     certificate = _certificate_from_gram(
         gram, coordinate_count=coordinates,
         state_ids=[str(row["state_id"]) for row in rows],
-        vector_digests=[str(row["vector_digest"]) for row in rows],
+        # Per-vector byte hashes are optional provenance.  The complete Gram,
+        # coordinate count, state IDs, and common-state certificate are the
+        # scientific measurement; hashing every transient multi-GB vector is
+        # not required for the verdict.
+        vector_digests=[str(row.get("vector_digest", "NOT_RETAINED")) for row in rows],
         layer=layer, partition=partition, policy=policy,
     )
     del arrays

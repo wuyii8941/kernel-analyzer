@@ -260,12 +260,13 @@ class SameDtypeSemanticCandidateObserver:
 
     def _emit_nontriton(
         self, row: Mapping[str, Any], value: torch.Tensor, endpoint: str,
+        runtime_metadata: Mapping[str, Any] | None = None,
     ) -> None:
         region_id = str(row["compute_region_id"])
         for task in self.tasks_by_region.get(region_id, ()):
             if str(task["formal_pointer"]) != endpoint:
                 continue
-            self.sink(str(task["task_id"]), value, {
+            metadata = {
                 "candidate_region_id": region_id,
                 "implementation_kind": row["implementation_kind_or_helper_role"],
                 "function": row["function"],
@@ -274,7 +275,10 @@ class SameDtypeSemanticCandidateObserver:
                 "shape": list(value.shape),
                 "stride": list(value.stride()),
                 "dtype": str(value.dtype),
-            })
+            }
+            if runtime_metadata:
+                metadata.update(runtime_metadata)
+            self.sink(str(task["task_id"]), value, metadata)
             self.task_counts[str(task["task_id"])] += 1
 
     def _install_externals(self) -> None:
@@ -302,7 +306,11 @@ class SameDtypeSemanticCandidateObserver:
                     value = kwargs.get("out", result)
                     if not isinstance(value, torch.Tensor):
                         raise RuntimeError("external candidate endpoint is not a tensor")
-                    self._emit_nontriton(row, value, "output_0")
+                    self._emit_nontriton(row, value, "output_0", {
+                        "external_symbol": _symbol,
+                        "runtime_args": args,
+                        "runtime_kwargs": kwargs,
+                    })
                     return result
 
                 setattr(namespace, symbol, wrapped)

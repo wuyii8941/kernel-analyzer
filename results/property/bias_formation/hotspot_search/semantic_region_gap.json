@@ -1,0 +1,37 @@
+{
+  "backward_is_never_tested_without_its_bound_forward": true,
+  "compiler_bound_region_representatives": 67,
+  "complete_fb_unit_remains_required": true,
+  "corrected_semantic_cells": 791,
+  "counts": {
+    "deepseek8b:seq256:NORMALIZATION_BACKWARD": 2,
+    "mamba:seq128:LOSS_HEAD_BACKWARD": 1,
+    "mamba:seq128:STATE_SPACE_RECURRENT_BACKWARD": 17,
+    "mamba:seq256:LOSS_HEAD_BACKWARD": 1,
+    "mamba:seq256:NORMALIZATION_BACKWARD": 1,
+    "mamba:seq256:STATE_SPACE_RECURRENT_BACKWARD": 18,
+    "mamba:seq64:LOSS_HEAD_BACKWARD": 1,
+    "mamba:seq64:STATE_SPACE_RECURRENT_BACKWARD": 18,
+    "phi4:seq128:LOSS_CE_BACKWARD": 1,
+    "phi4:seq256:NORMALIZATION_BACKWARD": 1,
+    "phi4:seq64:LOSS_CE_BACKWARD": 1,
+    "qwen:seq128:LOSS_CE_BACKWARD": 1,
+    "qwen:seq256:LOSS_CE_BACKWARD": 1,
+    "qwen:seq256:NORMALIZATION_BACKWARD": 2,
+    "qwen:seq64:LOSS_CE_BACKWARD": 1
+  },
+  "known_sensitivity_anchor": {
+    "capture_boundary": "COMPILER_BOUND_SEMANTIC_REGION",
+    "case": "phi4_seq64_lm_head_input_gradient_mm",
+    "cell_id": "multishape-backward-cell-0571",
+    "corrected_denominator_includes": true,
+    "internal_aot_node": "backward:graph0:backward_g0__mm_2",
+    "old_screen_included": false,
+    "task_id": "backward:497:output_0"
+  },
+  "old_leaf_only_cells": 724,
+  "provenance_policy": "Retain release/input/common-state identity only; do not hash transient vectors or duplicate derived reports.",
+  "schema": "kernel-analyzer-semantic-region-screening-gap-v1",
+  "scientific_consequence": "Existing negative leaf-screen results cover exact leaf endpoints only. They do not exclude bias formation in compiler-bound backward semantic regions, especially loss, normalization, and recurrent bottlenecks.",
+  "status": "LEAF_ONLY_SCREEN_WAS_NOT_SENSITIVE_TO_KNOWN_POSITIVE"
+}

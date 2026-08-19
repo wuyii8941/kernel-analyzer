@@ -1,0 +1,61 @@
+{
+  "blocked": [],
+  "cases": [
+    {
+      "capture_boundary": "COMPILER_BOUND_INTERNAL_AOT_OUTPUT",
+      "carrier": "model.norm.weight",
+      "carrier_binding": "KNOWN_STRICT_SENSITIVITY_ANCHOR",
+      "case_id": "multishape-backward-cell-0571",
+      "family": "LOSS_CE_BACKWARD",
+      "reference_cut_task": {
+        "aot_node_ids": [
+          "backward:graph0:mm_2"
+        ],
+        "aot_node_names": [
+          "mm_2"
+        ],
+        "cut_id": "semantic-region-reference:backward:497:output_0",
+        "expected_boundary_inputs": [
+          {
+            "consumer_argument_path": [
+              "args",
+              "0"
+            ],
+            "consumer_node_id": "backward:graph0:mm_2",
+            "source_node": "view_5"
+          },
+          {
+            "consumer_argument_path": [
+              "args",
+              "1"
+            ],
+            "consumer_node_id": "backward:graph0:mm_2",
+            "source_node": "permute_3"
+          }
+        ],
+        "expected_boundary_outputs": [
+          {
+            "consumer_argument_path": [
+              "args",
+              "0"
+            ],
+            "consumer_node_id": "backward:graph0:view_6",
+            "source_node_id": "backward:graph0:mm_2"
+          }
+        ],
+        "expected_graph_code_sha256": "12cf398b500a55184849315edde8dad984e326dd365abfabb18171d9fd4ed351",
+        "graph_index": 0,
+        "phase": "BACKWARD",
+        "required_extractor_schema": "forkcert.fx-reference-cut.v2",
+        "semantic_endpoint_id": "semantic-region:backward:497:output_0",
+        "task_id": "semantic-region-reference:backward:497:output_0"
+      },
+      "reference_method": "AOT_REPLAY",
+      "task_id": "backward:497:output_0"
+    }
+  ],
+  "complete_fb_unit_required": true,
+  "model": "phi4",
+  "schema": "kernel-analyzer-semantic-region-capture-plan-v1",
+  "sequence_length": 64
+}

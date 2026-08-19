@@ -1,0 +1,146 @@
+{
+  "aggregate": {
+    "carrier": {
+      "BACKWARD": 8,
+      "FORWARD": 512
+    },
+    "causal": {
+      "BACKWARD": 46,
+      "FORWARD": 820
+    },
+    "causal_positive": {
+      "BACKWARD": 46,
+      "FORWARD": 779
+    },
+    "exact_task_denominator": {
+      "BACKWARD": 43379,
+      "FORWARD": 51493
+    },
+    "historical_observed_labels_by_phase": {
+      "BACKWARD:COHERENT_F_B_BIAS": 6,
+      "BACKWARD:NORMAL_REFERENCE": 36,
+      "BACKWARD:UNRESOLVED": 67,
+      "FORWARD:COHERENT_F_B_BIAS": 51,
+      "FORWARD:NORMAL_REFERENCE": 552,
+      "FORWARD:UNRESOLVED": 850
+    },
+    "trajectory": {
+      "BACKWARD": 6,
+      "FORWARD": 51
+    }
+  },
+  "claim_boundary": "This audit proves selection imbalance, not that rejected backward cases contain bias.",
+  "finding": "The exact F+B denominator contains substantial backward coverage, but T1 requires a directionally coherent local endpoint residual before causal transport is measured. This excludes LOCAL_CENTERED_TO_GRADIENT_BIASED mechanisms by construction.",
+  "priority_semantic_bottlenecks": [
+    "LOSS_CE_DLOGITS",
+    "LM_HEAD_DX_DW",
+    "COMPLETE_RMSNORM_VJP",
+    "ATTENTION_SAVED_STATE",
+    "ATTENTION_SOFTMAX_VJP",
+    "ATTENTION_DQ_DK_DV_DP",
+    "STATE_SPACE_RECURRENT_BACKWARD"
+  ],
+  "releases": [
+    {
+      "release": "deepseek8b_seq128_r1",
+      "task_denominator": {
+        "BACKWARD": 1304,
+        "FORWARD": 1021
+      }
+    },
+    {
+      "release": "deepseek8b_seq256_r1",
+      "task_denominator": {
+        "BACKWARD": 1413,
+        "FORWARD": 1019
+      }
+    },
+    {
+      "release": "deepseek8b_seq64_r1",
+      "task_denominator": {
+        "BACKWARD": 1304,
+        "FORWARD": 1021
+      }
+    },
+    {
+      "release": "mamba_seq128_r1",
+      "task_denominator": {
+        "BACKWARD": 9897,
+        "FORWARD": 12610
+      }
+    },
+    {
+      "release": "mamba_seq256_r1",
+      "task_denominator": {
+        "BACKWARD": 19139,
+        "FORWARD": 24896
+      }
+    },
+    {
+      "release": "mamba_seq64_r1",
+      "task_denominator": {
+        "BACKWARD": 5289,
+        "FORWARD": 6466
+      }
+    },
+    {
+      "release": "phi4_seq128_r1",
+      "task_denominator": {
+        "BACKWARD": 649,
+        "FORWARD": 691
+      }
+    },
+    {
+      "release": "phi4_seq256_r1",
+      "task_denominator": {
+        "BACKWARD": 714,
+        "FORWARD": 689
+      }
+    },
+    {
+      "release": "phi4_seq64_r1",
+      "task_denominator": {
+        "BACKWARD": 649,
+        "FORWARD": 691
+      }
+    },
+    {
+      "release": "qwen_seq128_r1",
+      "task_denominator": {
+        "BACKWARD": 988,
+        "FORWARD": 797
+      }
+    },
+    {
+      "release": "qwen_seq256_r1",
+      "task_denominator": {
+        "BACKWARD": 1045,
+        "FORWARD": 795
+      }
+    },
+    {
+      "release": "qwen_seq64_r1",
+      "task_denominator": {
+        "BACKWARD": 988,
+        "FORWARD": 797
+      }
+    }
+  ],
+  "required_rescreen_rule": {
+    "entry_gates": [
+      "EXACT_FB_BINDING",
+      "FINITE",
+      "REPEAT_STABLE",
+      "NONZERO_LOCAL_DIFFERENCE"
+    ],
+    "forbidden_entry_gate": "LOCAL_DIRECTIONAL_BIAS",
+    "measured_transition": [
+      "LOCAL_ENDPOINT",
+      "PARAMETER_GRADIENT",
+      "EFFECTIVE_UPDATE"
+    ],
+    "unit": "COMPLETE_FORWARD_BACKWARD_STEP_WITH_ENDPOINT_REPAIR"
+  },
+  "schema": "kernel-analyzer-backward-bias-funnel-audit-v1",
+  "status": "BACKWARD_STRUCTURALLY_COVERED_BUT_SELECTION_UNDERREPRESENTED"
+}

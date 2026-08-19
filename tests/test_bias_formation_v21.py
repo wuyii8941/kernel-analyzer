@@ -99,6 +99,31 @@ def test_file_streamed_and_dense_population_are_identical(tmp_path):
     )
 
 
+def test_file_streamed_scale_reuses_one_vector_without_changing_gram(tmp_path):
+    vectors = _independent_vectors(seed=15)
+    files = []
+    scaled = []
+    for index, values in enumerate(vectors):
+        path = tmp_path / f"scaled-{index}.f32"
+        np.asarray(values, dtype=np.float32).tofile(path)
+        scale = -1.0e-4
+        files.append({
+            "state_id": str(index), "path": str(path),
+            "coordinate_count": len(values), "storage_dtype": "float32",
+            "scale": scale,
+        })
+        scaled.append(np.asarray(values) * scale)
+    dense = summarize_state_vectors(
+        scaled, state_ids=[str(i) for i in range(16)], policy=POLICY,
+    )
+    streamed = summarize_streamed_state_vector_files(
+        files, layer="EFFECTIVE_UPDATE", partition="confirmation", policy=POLICY,
+    )
+    assert np.asarray(dense.complete_gram) == pytest.approx(
+        np.asarray(streamed.complete_gram), rel=1e-6, abs=1e-18,
+    )
+
+
 def _trace(local, gradient, update):
     trace = BiasFormationTrace("toy", [f"c{i}" for i in range(16)], [f"e{i}" for i in range(16)], POLICY)
     for partition, prefix in (("calibration", "c"), ("confirmation", "e")):
