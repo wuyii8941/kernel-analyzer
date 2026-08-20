@@ -41,3 +41,14 @@ def test_invalid_orbit_member_fails_closed():
             torch.ones((1, 3)), torch.ones((3, 1)),
             permutations=(torch.tensor([0, 0, 1]), torch.tensor([0, 1, 2])),
         )
+
+
+def test_vectors_are_opt_in_and_not_part_of_default_artifact():
+    operands = (torch.ones((1, 2)), torch.ones((2, 1)))
+    permutations = frozen_permutations(2, 2, 3)
+    compact = gemm_reduction_orbit(*operands, permutations=permutations)
+    retained = gemm_reduction_orbit(
+        *operands, permutations=permutations, return_vectors=True,
+    )
+    assert "_residual_vectors" not in compact
+    assert retained["_residual_vectors"].shape == (2, 1)

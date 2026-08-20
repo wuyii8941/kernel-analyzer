@@ -1,0 +1,32 @@
+{
+  "comparisons": [
+    {
+      "bmm_floor": 2.5726335459133,
+      "case_id": "qwen_saved_p_seq128",
+      "exceeds_bmm_floor": false,
+      "feedback_amplification": 2.380034305617599,
+      "mechanism_verdict": "UNRESOLVED_WITHOUT_MATCHED_PERTURBATION_NULL",
+      "ratio_to_bmm_floor": 0.9251353770918325
+    },
+    {
+      "bmm_floor": 2.5726335459133,
+      "case_id": "qwen128_vproj_mm",
+      "exceeds_bmm_floor": true,
+      "feedback_amplification": 2.748398260865456,
+      "mechanism_verdict": "UNRESOLVED_WITHOUT_MATCHED_PERTURBATION_NULL",
+      "ratio_to_bmm_floor": 1.0683209294348832
+    },
+    {
+      "bmm_floor": 2.5726335459133,
+      "case_id": "qwen3vl_silu_layer0",
+      "exceeds_bmm_floor": true,
+      "feedback_amplification": 3.967687298174451,
+      "mechanism_verdict": "UNRESOLVED_WITHOUT_MATCHED_PERTURBATION_NULL",
+      "ratio_to_bmm_floor": 1.5422667967916506
+    }
+  ],
+  "null_case": "qwen_bmm_seq64",
+  "schema": "kernel-analyzer-feedback-matched-floor-v1",
+  "scientific_conclusion": "A_B>1 is not sufficient evidence of feedback-sustained bias: the bmm hard control itself has A_B=2.572634. Saved-P does not exceed that floor; Qwen128 and SiLU require an RMS-matched random-injection null before attribution.",
+  "status": "DEVELOPMENT_DIAGNOSTIC"
+}

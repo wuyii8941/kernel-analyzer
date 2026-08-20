@@ -30,6 +30,7 @@ def gemm_reduction_orbit(
     permutations: Sequence[torch.Tensor],
     candidate: Callable[[torch.Tensor, torch.Tensor], torch.Tensor] | None = None,
     reference: Callable[[torch.Tensor, torch.Tensor], torch.Tensor] | None = None,
+    return_vectors: bool = False,
 ) -> dict[str, Any]:
     """Measure residuals over equivalent permutations of a GEMM K axis.
 
@@ -65,7 +66,7 @@ def gemm_reduction_orbit(
     mean = matrix.mean(dim=0)
     centered = matrix - mean
     total_energy = float(matrix.square().sum().item())
-    return {
+    result = {
         "schema": "kernel-analyzer-gemm-reduction-orbit-v1",
         "variant_ids": ids,
         "variants": len(ids),
@@ -81,3 +82,6 @@ def gemm_reduction_orbit(
         "mathematical_target_dtype": "FP32",
         "training_bias_or_persistence_verdict": False,
     }
+    if return_vectors:
+        result["_residual_vectors"] = matrix.float()
+    return result
