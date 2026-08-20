@@ -39,7 +39,13 @@ def main() -> None:
         "--allow-graph-breaks", action="store_true",
         help="Capture every actually compiled segment when model control flow prevents one full graph.",
     )
+    parser.add_argument(
+        "--repeat", type=int, default=2,
+        help="Use one run for state-specific schedule capture; numerical repeat stability is measured by the replay screen.",
+    )
     args = parser.parse_args()
+    if args.repeat not in {1, 2}:
+        raise ValueError("schedule capture repeat must be one or two")
     if args.output_dir.exists() and any(args.output_dir.iterdir()):
         raise RuntimeError("output directory must be absent or empty")
 
@@ -70,7 +76,7 @@ def main() -> None:
     )
     values = torch.tensor([token_ids], dtype=torch.long, device=device)
     runs = []
-    for repeat in range(2):
+    for repeat in range(args.repeat):
         model.zero_grad(set_to_none=True)
         loss = candidate(values)
         loss.backward()
@@ -128,7 +134,10 @@ def main() -> None:
             "token_ids_sha256": digest(token_ids),
             "input_bank_sha256": hashlib.sha256(args.input_bank.read_bytes()).hexdigest(),
         },
-        "repeat_stable": runs[0] == runs[1], "runs": runs, "modules": rows,
+        "repeat_stable": (
+            runs[0] == runs[1] if len(runs) == 2 else "DEFERRED_TO_REPLAY_SCREEN"
+        ),
+        "runs": runs, "modules": rows,
         "phase_module_counts": {key.upper(): value for key, value in phase_counts.items()},
         "non_wrapper_pycodecache_modules": non_wrapper_modules,
     }
