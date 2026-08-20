@@ -75,10 +75,9 @@ Not yet supported:
 
 ## Frozen confirmation
 
-The next confirmation must not reuse Phi or Qwen128 for threshold selection.
-Use Liger fused CE as a reduction/accumulation positive and one independently
-bound attention or state-space endpoint as a negative or second positive. The
-prediction is frozen before those values are measured:
+The confirmation did not reuse Phi or Qwen128 for threshold selection. It bound
+new Qwen seq256 and DeepSeek seq128 lm-head backward invocations and their state
+orders before values were measured. The frozen predictions were:
 
 1. a temporally persistent orbit mean transported into the declared parameter
    predicts effective-update persistence;
@@ -86,5 +85,41 @@ prediction is frozen before those values are measured:
    is large;
 3. stochastic centering must reduce persistence without requiring lower RMS.
 
-Until that confirmation is complete, the result is a causally supported
-development property, not a universal oracle.
+The confirmation below upgrades the result beyond development evidence, while
+still not making it a universal all-operator oracle.
+
+## Prospective confirmation result
+
+The frozen Qwen seq256 invocation passed all three preregistered gates. Its
+local orbit mean was only weakly above its sign-flip null
+(`A=1.001706`),
+while the effective update reached
+`A=1.434768`.
+
+The cross-model DeepSeek test preserved an informative failed prediction:
+the local orbit mean was not persistent
+(`A=0.999775`,
+`p=0.603599`),
+although the natural update was persistent. Directly averaging eight real
+backward orbit variants measured the required transported mean and gave
+`A=1.487177`
+(`p=0.000250`).
+
+Thus the evidence rejects the stronger but unnecessary rule that $m_t$ must
+share a fixed direction in endpoint coordinates. The supported rule is about
+$M_t m_t$ in declared parameter coordinates. This is precisely a
+source--transport interaction, not source magnitude or endpoint direction alone.
+
+## Oracle cost and generality
+
+The direct confirmation used eight semantic-orbit members plus one FP32 repair
+per state. The research runner conservatively reruns full F+B, but an automated
+implementation can capture the endpoint once and replay its already-proven VJP;
+the marginal cost is therefore $K$ endpoint kernels and $K$ local VJPs, not
+$K$ complete training steps. Sixteen states and $K=8$ are the confirmation
+configuration; a two-state engineering pass is already supported.
+
+The oracle is general for endpoints with a valid semantics-preserving orbit and
+an executable F+B boundary. It must abstain for operators without such an orbit
+or without a closed transport. This is broad across reduction implementations,
+but it is not yet an all-operator universal oracle.
