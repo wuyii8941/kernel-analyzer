@@ -51,7 +51,7 @@ def test_denominator_never_drops_unresolved_invocations():
 
 
 def test_campaign_freezes_unique_cells_and_8_16_protocol():
-    cells = [ModelCellSpec("m_text128", "owner/model", "TEXT", 128)]
+    cells = [ModelCellSpec("m_text128", "owner/model", "d" * 40, "TEXT", 128)]
     campaign = ModelCampaignSpec("c", "deadbeef", cells)
     assert campaign.screening_steps == 8
     assert campaign.confirmation_steps == 16

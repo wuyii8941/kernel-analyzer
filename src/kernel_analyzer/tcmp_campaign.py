@@ -49,13 +49,14 @@ UNRESOLVED_DISPOSITIONS = {
 class ModelCellSpec:
     cell_id: str
     model_id: str
+    model_revision: str
     modality: str
     sequence_length: int
     image_policy: str | None = None
     phase: str = "EXPANSION"
 
     def __post_init__(self) -> None:
-        if not self.cell_id or not self.model_id:
+        if not self.cell_id or not self.model_id or len(self.model_revision) != 40:
             raise ValueError("model cell IDs must be non-empty")
         if self.modality not in {"TEXT", "IMAGE_TEXT"}:
             raise ValueError("unsupported modality")

@@ -16,32 +16,32 @@ PARENT = "50898c8321c1543c072ddd58b725bfc70026efa9"
 
 def main() -> None:
     cells = [
-        ModelCellSpec("gemma3_4b_text128", "google/gemma-3-4b-pt", "TEXT", 128),
-        ModelCellSpec("gemma3_4b_text512", "google/gemma-3-4b-pt", "TEXT", 512),
+        ModelCellSpec("gemma3_4b_text128", "google/gemma-3-4b-pt", "cc012e0a6d0787b4adcc0fa2c4da74402494554d", "TEXT", 128),
+        ModelCellSpec("gemma3_4b_text512", "google/gemma-3-4b-pt", "cc012e0a6d0787b4adcc0fa2c4da74402494554d", "TEXT", 512),
         ModelCellSpec(
-            "gemma3_4b_image_text128", "google/gemma-3-4b-pt", "IMAGE_TEXT", 128,
+            "gemma3_4b_image_text128", "google/gemma-3-4b-pt", "cc012e0a6d0787b4adcc0fa2c4da74402494554d", "IMAGE_TEXT", 128,
             image_policy="OFFICIAL_PROCESSOR_DEFAULT_RESOLUTION_FROZEN_AT_PREFLIGHT",
         ),
-        ModelCellSpec("olmoe_1b7b_text128", "allenai/OLMoE-1B-7B-0125", "TEXT", 128),
-        ModelCellSpec("olmoe_1b7b_text512", "allenai/OLMoE-1B-7B-0125", "TEXT", 512),
+        ModelCellSpec("olmoe_1b7b_text128", "allenai/OLMoE-1B-7B-0125", "9b0c1aa87e34a20052389dce1f0cf01da783f654", "TEXT", 128),
+        ModelCellSpec("olmoe_1b7b_text512", "allenai/OLMoE-1B-7B-0125", "9b0c1aa87e34a20052389dce1f0cf01da783f654", "TEXT", 512),
         ModelCellSpec(
-            "llama32_3b_text128", "meta-llama/Llama-3.2-3B", "TEXT", 128,
+            "llama32_3b_text128", "meta-llama/Llama-3.2-3B", "13afe5124825b4f3751f836b40dafda64c1ed062", "TEXT", 128,
             phase="HELDOUT_CONFIRMATION",
         ),
         ModelCellSpec(
-            "llama32_3b_text512", "meta-llama/Llama-3.2-3B", "TEXT", 512,
+            "llama32_3b_text512", "meta-llama/Llama-3.2-3B", "13afe5124825b4f3751f836b40dafda64c1ed062", "TEXT", 512,
             phase="HELDOUT_CONFIRMATION",
         ),
         ModelCellSpec(
-            "ministral3_3b_text128", "mistralai/Ministral-3-3B-Base-2512", "TEXT", 128,
+            "ministral3_3b_text128", "mistralai/Ministral-3-3B-Base-2512", "6f9c4b12a95b139af68670a6713616b757923735", "TEXT", 128,
             phase="HELDOUT_CONFIRMATION",
         ),
         ModelCellSpec(
-            "ministral3_3b_text512", "mistralai/Ministral-3-3B-Base-2512", "TEXT", 512,
+            "ministral3_3b_text512", "mistralai/Ministral-3-3B-Base-2512", "6f9c4b12a95b139af68670a6713616b757923735", "TEXT", 512,
             phase="HELDOUT_CONFIRMATION",
         ),
         ModelCellSpec(
-            "ministral3_3b_image_text128", "mistralai/Ministral-3-3B-Base-2512",
+            "ministral3_3b_image_text128", "mistralai/Ministral-3-3B-Base-2512", "6f9c4b12a95b139af68670a6713616b757923735",
             "IMAGE_TEXT", 128,
             image_policy="OFFICIAL_PROCESSOR_DEFAULT_RESOLUTION_FROZEN_AT_PREFLIGHT",
             phase="HELDOUT_CONFIRMATION",
