@@ -1,0 +1,132 @@
+{
+  "all_cuts_support_double_backward": true,
+  "cost_scope": "probe count is shared across all declared blocks inside one graph; this benchmark does not establish compiled/custom-kernel coverage",
+  "cuts": [
+    {
+      "cut_id": "loss_head_cross_entropy",
+      "ordinary_fb": {
+        "peak_memory_bytes": 548765696,
+        "repeats": 5,
+        "wall_seconds_median": 0.0005677565932273865,
+        "wall_seconds_min": 0.0005563981831073761
+      },
+      "shared_hvp_screen": {
+        "declared_block_coordinates": [
+          2048
+        ],
+        "declared_block_count": 1,
+        "parameter_coordinates": 4096,
+        "peak_memory_bytes": 548954112,
+        "repeats": 5,
+        "sketch": {
+          "cross_block_terms_cancel_only_in_expectation": true,
+          "curvature_projections": [
+            2.7364503484946712e-08
+          ],
+          "curvature_standard_errors": [
+            2.2846364683710488e-08
+          ],
+          "probe_count": 4,
+          "shared_first_backward_passes": 1,
+          "shared_forward_evaluations": 1,
+          "shared_hvp_passes": 4,
+          "transported_mean_projections": [
+            1.7831594165236806e-05
+          ]
+        },
+        "status": "SUPPORTED",
+        "wall_seconds": 0.0031028976663947105,
+        "wall_seconds_median": 0.0031828247010707855,
+        "wall_seconds_min": 0.002912296913564205,
+        "wall_time_multiple_vs_ordinary_fb": 5.605966956681495
+      }
+    },
+    {
+      "cut_id": "rmsnorm_backward",
+      "ordinary_fb": {
+        "peak_memory_bytes": 549707776,
+        "repeats": 5,
+        "wall_seconds_median": 0.00044131558388471603,
+        "wall_seconds_min": 0.00038765836507081985
+      },
+      "shared_hvp_screen": {
+        "declared_block_coordinates": [
+          2048
+        ],
+        "declared_block_count": 1,
+        "parameter_coordinates": 64,
+        "peak_memory_bytes": 549707776,
+        "repeats": 5,
+        "sketch": {
+          "cross_block_terms_cancel_only_in_expectation": true,
+          "curvature_projections": [
+            5.44888412803778e-07
+          ],
+          "curvature_standard_errors": [
+            1.2890507445734293e-07
+          ],
+          "probe_count": 4,
+          "shared_first_backward_passes": 1,
+          "shared_forward_evaluations": 1,
+          "shared_hvp_passes": 4,
+          "transported_mean_projections": [
+            -0.00015199509282837605
+          ]
+        },
+        "status": "SUPPORTED",
+        "wall_seconds": 0.0030166208744049072,
+        "wall_seconds_median": 0.003109426237642765,
+        "wall_seconds_min": 0.0030166208744049072,
+        "wall_time_multiple_vs_ordinary_fb": 7.045811095705685
+      }
+    },
+    {
+      "cut_id": "attention_backward",
+      "ordinary_fb": {
+        "peak_memory_bytes": 550088704,
+        "repeats": 5,
+        "wall_seconds_median": 0.0008521527051925659,
+        "wall_seconds_min": 0.000849386677145958
+      },
+      "shared_hvp_screen": {
+        "declared_block_coordinates": [
+          1024,
+          1024
+        ],
+        "declared_block_count": 2,
+        "parameter_coordinates": 3072,
+        "peak_memory_bytes": 550871040,
+        "repeats": 5,
+        "sketch": {
+          "cross_block_terms_cancel_only_in_expectation": true,
+          "curvature_projections": [
+            -2.9663538178876945e-05,
+            0.0
+          ],
+          "curvature_standard_errors": [
+            2.159496097996591e-05,
+            0.0
+          ],
+          "probe_count": 4,
+          "shared_first_backward_passes": 1,
+          "shared_forward_evaluations": 1,
+          "shared_hvp_passes": 4,
+          "transported_mean_projections": [
+            -0.0033629166397191857,
+            0.0034040760278870753
+          ]
+        },
+        "status": "SUPPORTED",
+        "wall_seconds": 0.004128927364945412,
+        "wall_seconds_median": 0.0041286880150437355,
+        "wall_seconds_min": 0.004070826806128025,
+        "wall_time_multiple_vs_ordinary_fb": 4.845009573854198
+      }
+    }
+  ],
+  "device": "cpu",
+  "dtype": "torch.float64",
+  "probes": 4,
+  "schema": "kernel-analyzer-shared-hvp-fb-benchmark-v1",
+  "scientific_role": "ENGINEERING_FEASIBILITY_NOT_MODEL_CORRECTNESS"
+}

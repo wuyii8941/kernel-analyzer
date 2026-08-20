@@ -1,0 +1,1207 @@
+{
+  "coded_group_screen_controls": {
+    "assumed_sparsity": 4,
+    "heldout_mask_runs_per_trial": 16,
+    "output_dimension_retained_in_full": 16,
+    "scenarios": {
+      "DENSE_ADDITIVE": {
+        "16": {
+          "active_support_recall_mean": 0.1675,
+          "active_support_recall_min": 0.05,
+          "heldout_response_residual_max": 1.1399495844160028,
+          "heldout_response_residual_mean": 0.8325076387669663,
+          "ordinary_fb_mask_runs": 16
+        },
+        "24": {
+          "active_support_recall_mean": 0.20000000000000004,
+          "active_support_recall_min": 0.2,
+          "heldout_response_residual_max": 0.8557003111125248,
+          "heldout_response_residual_mean": 0.7377789183486165,
+          "ordinary_fb_mask_runs": 24
+        },
+        "32": {
+          "active_support_recall_mean": 0.20000000000000004,
+          "active_support_recall_min": 0.2,
+          "heldout_response_residual_max": 0.7867553403912582,
+          "heldout_response_residual_mean": 0.6778663570492065,
+          "ordinary_fb_mask_runs": 32
+        },
+        "8": {
+          "active_support_recall_mean": 0.11499999999999999,
+          "active_support_recall_min": 0.0,
+          "heldout_response_residual_max": 1.2121277430597754,
+          "heldout_response_residual_mean": 0.9330865634641892,
+          "ordinary_fb_mask_runs": 8
+        }
+      },
+      "SPARSE_ADDITIVE": {
+        "16": {
+          "active_support_recall_mean": 0.975,
+          "active_support_recall_min": 0.75,
+          "heldout_response_residual_max": 0.5931696193573496,
+          "heldout_response_residual_mean": 0.06182610184101115,
+          "ordinary_fb_mask_runs": 16
+        },
+        "24": {
+          "active_support_recall_mean": 1.0,
+          "active_support_recall_min": 1.0,
+          "heldout_response_residual_max": 0.010726860825048486,
+          "heldout_response_residual_mean": 0.007979620352562828,
+          "ordinary_fb_mask_runs": 24
+        },
+        "32": {
+          "active_support_recall_mean": 1.0,
+          "active_support_recall_min": 1.0,
+          "heldout_response_residual_max": 0.010188463592627666,
+          "heldout_response_residual_mean": 0.008186181757765204,
+          "ordinary_fb_mask_runs": 32
+        },
+        "8": {
+          "active_support_recall_mean": 0.4875,
+          "active_support_recall_min": 0.0,
+          "heldout_response_residual_max": 0.9665779352952614,
+          "heldout_response_residual_mean": 0.6441476100196193,
+          "ordinary_fb_mask_runs": 8
+        }
+      },
+      "SPARSE_WITH_INTERACTION": {
+        "16": {
+          "active_support_recall_mean": 0.725,
+          "active_support_recall_min": 0.25,
+          "heldout_response_residual_max": 1.8151950396141296,
+          "heldout_response_residual_mean": 1.0588914904872366,
+          "ordinary_fb_mask_runs": 16
+        },
+        "24": {
+          "active_support_recall_mean": 0.9,
+          "active_support_recall_min": 0.75,
+          "heldout_response_residual_max": 1.3180415652434263,
+          "heldout_response_residual_mean": 0.9467150025080089,
+          "ordinary_fb_mask_runs": 24
+        },
+        "32": {
+          "active_support_recall_mean": 0.9625,
+          "active_support_recall_min": 0.75,
+          "heldout_response_residual_max": 1.3191579381228624,
+          "heldout_response_residual_mean": 1.0005788632467076,
+          "ordinary_fb_mask_runs": 32
+        },
+        "8": {
+          "active_support_recall_mean": 0.35,
+          "active_support_recall_min": 0.0,
+          "heldout_response_residual_max": 1.780978433822407,
+          "heldout_response_residual_mean": 1.3116888989406372,
+          "ordinary_fb_mask_runs": 8
+        }
+      }
+    },
+    "scientific_boundary": "requires a controllable candidate/repair switch at every included unit; does not certify uninstrumentable units",
+    "screening_rule": "use support ranking only when heldout vector-response residual is small; otherwise escalate because additivity/sparsity failed",
+    "trials": 20,
+    "unit_count": 64
+  },
+  "methods": {
+    "coded_group": "ordinary F+B candidate/repair masks with held-out sparse-response closure",
+    "curvature_sketch": "Rademacher antithetic response through a covariance factor",
+    "output_projection_ablation": "Gaussian JL sketches reconstructed from retained complete Grams",
+    "paired_response": "exact empirical odd/even decomposition on sampled residuals",
+    "repeat_ablation": "retrospective complete-Gram principal-submatrix analysis",
+    "shared_hvp": "one global coded HVP population estimates every declared local block",
+    "transported_mean": "two symmetric responses at the conditional source mean"
+  },
+  "projection_dimension_ablation": {
+    "cases": {
+      "mamba64_input_proj": {
+        "dimensions": {
+          "16": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.00625,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "FULL_UNRESOLVED": 1,
+              "SAME": 117,
+              "SUBSET_UNRESOLVED": 42
+            },
+            "same_fraction": 0.73125,
+            "unresolved_fraction": 0.2625
+          },
+          "32": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 123,
+              "SUBSET_UNRESOLVED": 37
+            },
+            "same_fraction": 0.76875,
+            "unresolved_fraction": 0.23125
+          },
+          "4": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 82,
+              "SUBSET_UNRESOLVED": 78
+            },
+            "same_fraction": 0.5125,
+            "unresolved_fraction": 0.4875
+          },
+          "64": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 147,
+              "SUBSET_UNRESOLVED": 13
+            },
+            "same_fraction": 0.91875,
+            "unresolved_fraction": 0.08125
+          },
+          "8": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0125,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "FULL_UNRESOLVED": 2,
+              "SAME": 102,
+              "SUBSET_UNRESOLVED": 56
+            },
+            "same_fraction": 0.6375,
+            "unresolved_fraction": 0.35
+          }
+        },
+        "maximum_clipped_negative_eigenvalue_mass": 0.0,
+        "maximum_reconstructed_rank": 16,
+        "source_artifact": "results/coverage/cases/mamba_seq64_input_proj_conditional_debias.json.gz"
+      },
+      "qwen128_vproj": {
+        "dimensions": {
+          "16": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 110,
+              "SUBSET_UNRESOLVED": 50
+            },
+            "same_fraction": 0.6875,
+            "unresolved_fraction": 0.3125
+          },
+          "32": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 125,
+              "SUBSET_UNRESOLVED": 35
+            },
+            "same_fraction": 0.78125,
+            "unresolved_fraction": 0.21875
+          },
+          "4": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 59,
+              "SUBSET_UNRESOLVED": 101
+            },
+            "same_fraction": 0.36875,
+            "unresolved_fraction": 0.63125
+          },
+          "64": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 127,
+              "SUBSET_UNRESOLVED": 33
+            },
+            "same_fraction": 0.79375,
+            "unresolved_fraction": 0.20625
+          },
+          "8": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 93,
+              "SUBSET_UNRESOLVED": 67
+            },
+            "same_fraction": 0.58125,
+            "unresolved_fraction": 0.41875
+          }
+        },
+        "maximum_clipped_negative_eigenvalue_mass": 0.0,
+        "maximum_reconstructed_rank": 8,
+        "source_artifact": "results/coverage/cases/qwen128_vproj_conditional_debias.json.gz"
+      },
+      "qwen64_vproj": {
+        "dimensions": {
+          "16": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 124,
+              "SUBSET_UNRESOLVED": 36
+            },
+            "same_fraction": 0.775,
+            "unresolved_fraction": 0.225
+          },
+          "32": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 130,
+              "SUBSET_UNRESOLVED": 30
+            },
+            "same_fraction": 0.8125,
+            "unresolved_fraction": 0.1875
+          },
+          "4": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 88,
+              "SUBSET_UNRESOLVED": 72
+            },
+            "same_fraction": 0.55,
+            "unresolved_fraction": 0.45
+          },
+          "64": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 151,
+              "SUBSET_UNRESOLVED": 9
+            },
+            "same_fraction": 0.94375,
+            "unresolved_fraction": 0.05625
+          },
+          "8": {
+            "comparisons": 160,
+            "full_unresolved_fraction": 0.0,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 107,
+              "SUBSET_UNRESOLVED": 53
+            },
+            "same_fraction": 0.66875,
+            "unresolved_fraction": 0.33125
+          }
+        },
+        "maximum_clipped_negative_eigenvalue_mass": 0.0,
+        "maximum_reconstructed_rank": 16,
+        "source_artifact": "results/coverage/cases/qwen64_vproj_conditional_debias_r16.json.gz"
+      }
+    },
+    "full_verdict_is_not_treated_as_an_external_ground_truth": true,
+    "projection": "GAUSSIAN_JL_FROM_COMPLETE_GRAM",
+    "trials": 2
+  },
+  "repeat_budget_ablation": {
+    "cases": {
+      "mamba64_input_proj": {
+        "budgets": {
+          "12": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.9791666666666666,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.9791666666666666,
+                "unresolved_fraction": 0.0
+              },
+              "repair_local_residual": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              }
+            },
+            "comparisons": 240,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "FULL_UNRESOLVED": 2,
+              "SAME": 238
+            },
+            "same_fraction": 0.9916666666666667,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 176,
+              "CONDITIONAL_CENTERED": 48,
+              "CONDITIONAL_UNRESOLVED": 16
+            },
+            "unresolved_fraction": 0.0
+          },
+          "16": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "repair_local_residual": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              }
+            },
+            "comparisons": 80,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 80
+            },
+            "same_fraction": 1.0,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 58,
+              "CONDITIONAL_CENTERED": 16,
+              "CONDITIONAL_UNRESOLVED": 6
+            },
+            "unresolved_fraction": 0.0
+          },
+          "4": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.8958333333333334,
+                "unresolved_fraction": 0.10416666666666667
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.7291666666666666,
+                "unresolved_fraction": 0.25
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.7291666666666666,
+                "unresolved_fraction": 0.25
+              },
+              "repair_local_residual": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              }
+            },
+            "comparisons": 240,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "FULL_UNRESOLVED": 2,
+              "SAME": 209,
+              "SUBSET_UNRESOLVED": 29
+            },
+            "same_fraction": 0.8708333333333333,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 147,
+              "CONDITIONAL_CENTERED": 48,
+              "CONDITIONAL_UNRESOLVED": 45
+            },
+            "unresolved_fraction": 0.12083333333333333
+          },
+          "6": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.75,
+                "unresolved_fraction": 0.25
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.75,
+                "unresolved_fraction": 0.25
+              },
+              "repair_local_residual": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              }
+            },
+            "comparisons": 240,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 216,
+              "SUBSET_UNRESOLVED": 24
+            },
+            "same_fraction": 0.9,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 150,
+              "CONDITIONAL_CENTERED": 48,
+              "CONDITIONAL_UNRESOLVED": 42
+            },
+            "unresolved_fraction": 0.1
+          },
+          "8": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.7916666666666666,
+                "unresolved_fraction": 0.1875
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.7916666666666666,
+                "unresolved_fraction": 0.1875
+              },
+              "repair_local_residual": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              }
+            },
+            "comparisons": 240,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "FULL_UNRESOLVED": 2,
+              "SAME": 220,
+              "SUBSET_UNRESOLVED": 18
+            },
+            "same_fraction": 0.9166666666666666,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 158,
+              "CONDITIONAL_CENTERED": 48,
+              "CONDITIONAL_UNRESOLVED": 34
+            },
+            "unresolved_fraction": 0.075
+          }
+        },
+        "fixed_condition_count": 16,
+        "original_repeat_counts": [
+          16
+        ],
+        "source_artifact": "results/coverage/cases/mamba_seq64_input_proj_conditional_debias.json.gz"
+      },
+      "qwen128_vproj": {
+        "budgets": {
+          "4": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.8541666666666666,
+                "unresolved_fraction": 0.14583333333333334
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.8541666666666666,
+                "unresolved_fraction": 0.14583333333333334
+              },
+              "repair_local_residual": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.9583333333333334,
+                "unresolved_fraction": 0.041666666666666664
+              }
+            },
+            "comparisons": 240,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 224,
+              "SUBSET_UNRESOLVED": 16
+            },
+            "same_fraction": 0.9333333333333333,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 178,
+              "CONDITIONAL_CENTERED": 46,
+              "CONDITIONAL_UNRESOLVED": 16
+            },
+            "unresolved_fraction": 0.06666666666666667
+          },
+          "6": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.9375,
+                "unresolved_fraction": 0.0625
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.9375,
+                "unresolved_fraction": 0.0625
+              },
+              "repair_local_residual": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              }
+            },
+            "comparisons": 240,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 234,
+              "SUBSET_UNRESOLVED": 6
+            },
+            "same_fraction": 0.975,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 186,
+              "CONDITIONAL_CENTERED": 48,
+              "CONDITIONAL_UNRESOLVED": 6
+            },
+            "unresolved_fraction": 0.025
+          },
+          "8": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "repair_local_residual": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              }
+            },
+            "comparisons": 80,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 80
+            },
+            "same_fraction": 1.0,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 64,
+              "CONDITIONAL_CENTERED": 16
+            },
+            "unresolved_fraction": 0.0
+          }
+        },
+        "fixed_condition_count": 16,
+        "original_repeat_counts": [
+          8
+        ],
+        "source_artifact": "results/coverage/cases/qwen128_vproj_conditional_debias.json.gz"
+      },
+      "qwen64_vproj": {
+        "budgets": {
+          "12": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "repair_local_residual": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              }
+            },
+            "comparisons": 240,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 240
+            },
+            "same_fraction": 1.0,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 192,
+              "CONDITIONAL_CENTERED": 48
+            },
+            "unresolved_fraction": 0.0
+          },
+          "16": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "repair_local_residual": {
+                "comparisons": 16,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              }
+            },
+            "comparisons": 80,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 80
+            },
+            "same_fraction": 1.0,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 64,
+              "CONDITIONAL_CENTERED": 16
+            },
+            "unresolved_fraction": 0.0
+          },
+          "4": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.9583333333333334,
+                "unresolved_fraction": 0.041666666666666664
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.8958333333333334,
+                "unresolved_fraction": 0.10416666666666667
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.8958333333333334,
+                "unresolved_fraction": 0.10416666666666667
+              },
+              "repair_local_residual": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.8958333333333334,
+                "unresolved_fraction": 0.10416666666666667
+              }
+            },
+            "comparisons": 240,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 223,
+              "SUBSET_UNRESOLVED": 17
+            },
+            "same_fraction": 0.9291666666666667,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 180,
+              "CONDITIONAL_CENTERED": 43,
+              "CONDITIONAL_UNRESOLVED": 17
+            },
+            "unresolved_fraction": 0.07083333333333333
+          },
+          "6": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.9375,
+                "unresolved_fraction": 0.0625
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.9375,
+                "unresolved_fraction": 0.0625
+              },
+              "repair_local_residual": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              }
+            },
+            "comparisons": 240,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 234,
+              "SUBSET_UNRESOLVED": 6
+            },
+            "same_fraction": 0.975,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 186,
+              "CONDITIONAL_CENTERED": 48,
+              "CONDITIONAL_UNRESOLVED": 6
+            },
+            "unresolved_fraction": 0.025
+          },
+          "8": {
+            "by_role": {
+              "candidate_adamw_zero_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_gradient_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.9375,
+                "unresolved_fraction": 0.0625
+              },
+              "candidate_local_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              },
+              "candidate_sgd_update_effect_removed": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 0.9375,
+                "unresolved_fraction": 0.0625
+              },
+              "repair_local_residual": {
+                "comparisons": 48,
+                "opposite_resolved_fraction": 0.0,
+                "same_fraction": 1.0,
+                "unresolved_fraction": 0.0
+              }
+            },
+            "comparisons": 240,
+            "opposite_resolved_fraction": 0.0,
+            "relation_counts": {
+              "SAME": 234,
+              "SUBSET_UNRESOLVED": 6
+            },
+            "same_fraction": 0.975,
+            "subset_status_counts": {
+              "CONDITIONAL_BIAS": 186,
+              "CONDITIONAL_CENTERED": 48,
+              "CONDITIONAL_UNRESOLVED": 6
+            },
+            "unresolved_fraction": 0.025
+          }
+        },
+        "fixed_condition_count": 16,
+        "original_repeat_counts": [
+          16
+        ],
+        "source_artifact": "results/coverage/cases/qwen64_vproj_conditional_debias_r16.json.gz"
+      }
+    },
+    "comparison_target": "FROZEN_FULL_REPEAT_CONDITIONAL_VERDICT",
+    "full_verdict_is_not_treated_as_an_external_ground_truth": true,
+    "policy": {
+      "bias_margin": 0.1,
+      "bootstrap_samples": 2000,
+      "bootstrap_seed": 20260820,
+      "canceling_margin": 0.1,
+      "centered_margin": 0.05,
+      "condition_statistic": "within_condition_off_diagonal_cross_state_u_statistic",
+      "min_replicates": 4
+    },
+    "subset_trials": 3
+  },
+  "schema": "kernel-analyzer-bias-oracle-feasibility-v1",
+  "scientific_role": "SCREENING_METHOD_SELECTION_NOT_CORRECTNESS_CERTIFICATION",
+  "shared_hvp_control": {
+    "boundary": "cross-block terms cancel over independent/coded probes; real custom backward graphs may not support second differentiation",
+    "claim": "one forward, one first reverse pass, and K global HVPs return an unbiased curvature sketch for every declared block simultaneously",
+    "expected_curvature_projections": [
+      4.0,
+      5.0
+    ],
+    "expected_transported_mean_projections": [
+      1.5,
+      -0.5
+    ],
+    "measurement": {
+      "cross_block_terms_cancel_only_in_expectation": true,
+      "curvature_projections": [
+        4.0,
+        5.0
+      ],
+      "curvature_standard_errors": [
+        1.3228756555322951,
+        1.3228756555322951
+      ],
+      "probe_count": 8,
+      "shared_first_backward_passes": 1,
+      "shared_forward_evaluations": 1,
+      "shared_hvp_passes": 8,
+      "transported_mean_projections": [
+        1.5,
+        -0.5
+      ]
+    },
+    "status": "PASS"
+  },
+  "synthetic_controls": [
+    {
+      "control_id": "centered_linear_safe",
+      "exact_paired_response": {
+        "closure_relative_error": 0.0,
+        "even_mean_l2": 0.0,
+        "even_mean_response": [
+          0.0
+        ],
+        "natural_mean_l2": 0.0,
+        "natural_mean_response": [
+          0.0
+        ],
+        "odd_mean_l2": 0.0,
+        "odd_mean_response": [
+          0.0
+        ],
+        "response_evaluations": 9,
+        "sample_count": 4
+      },
+      "expected_channel": "NONE",
+      "moment_response_sketch": {
+        "amplitude_relative_difference": 0.0,
+        "baseline_evaluations": 1,
+        "curvature_evaluations": 16,
+        "curvature_probe_count": 4,
+        "curvature_rectification": [
+          0.0
+        ],
+        "curvature_rectification_l2": 0.0,
+        "predicted_bias": [
+          0.0
+        ],
+        "predicted_bias_l2": 0.0,
+        "status": "SCREEN",
+        "transported_evaluations": 4,
+        "transported_mean": [
+          0.0
+        ],
+        "transported_mean_l2": 0.0
+      },
+      "note": "The moment sketch estimates a local second-order response; the exact paired response is the reference decomposition.",
+      "prediction_relative_error": 0.0
+    },
+    {
+      "control_id": "source_mean_linear_transport",
+      "exact_paired_response": {
+        "closure_relative_error": 0.0,
+        "even_mean_l2": 0.0,
+        "even_mean_response": [
+          0.0
+        ],
+        "natural_mean_l2": 1.0,
+        "natural_mean_response": [
+          1.0
+        ],
+        "odd_mean_l2": 1.0,
+        "odd_mean_response": [
+          1.0
+        ],
+        "response_evaluations": 9,
+        "sample_count": 4
+      },
+      "expected_channel": "TRANSPORTED_MEAN",
+      "moment_response_sketch": {
+        "amplitude_relative_difference": 0.0,
+        "baseline_evaluations": 1,
+        "curvature_evaluations": 16,
+        "curvature_probe_count": 4,
+        "curvature_rectification": [
+          0.0
+        ],
+        "curvature_rectification_l2": 0.0,
+        "predicted_bias": [
+          1.0
+        ],
+        "predicted_bias_l2": 1.0,
+        "status": "SCREEN",
+        "transported_evaluations": 4,
+        "transported_mean": [
+          1.0
+        ],
+        "transported_mean_l2": 1.0
+      },
+      "note": "The moment sketch estimates a local second-order response; the exact paired response is the reference decomposition.",
+      "prediction_relative_error": 0.0
+    },
+    {
+      "control_id": "centered_variance_quadratic_rectification",
+      "exact_paired_response": {
+        "closure_relative_error": 0.0,
+        "even_mean_l2": 3.0,
+        "even_mean_response": [
+          3.0
+        ],
+        "natural_mean_l2": 3.0,
+        "natural_mean_response": [
+          3.0
+        ],
+        "odd_mean_l2": 0.0,
+        "odd_mean_response": [
+          0.0
+        ],
+        "response_evaluations": 9,
+        "sample_count": 4
+      },
+      "expected_channel": "CURVATURE_RECTIFICATION",
+      "moment_response_sketch": {
+        "amplitude_relative_difference": 0.0,
+        "baseline_evaluations": 1,
+        "curvature_evaluations": 16,
+        "curvature_probe_count": 4,
+        "curvature_rectification": [
+          3.0
+        ],
+        "curvature_rectification_l2": 3.0,
+        "predicted_bias": [
+          3.0
+        ],
+        "predicted_bias_l2": 3.0,
+        "status": "SCREEN",
+        "transported_evaluations": 4,
+        "transported_mean": [
+          0.0
+        ],
+        "transported_mean_l2": 0.0
+      },
+      "note": "The moment sketch estimates a local second-order response; the exact paired response is the reference decomposition.",
+      "prediction_relative_error": 0.0
+    },
+    {
+      "control_id": "mixed_source_and_rectification",
+      "exact_paired_response": {
+        "closure_relative_error": 0.0,
+        "even_mean_l2": 2.25,
+        "even_mean_response": [
+          2.25
+        ],
+        "natural_mean_l2": 3.25,
+        "natural_mean_response": [
+          3.25
+        ],
+        "odd_mean_l2": 1.0,
+        "odd_mean_response": [
+          1.0
+        ],
+        "response_evaluations": 9,
+        "sample_count": 4
+      },
+      "expected_channel": "BOTH",
+      "moment_response_sketch": {
+        "amplitude_relative_difference": 1.9737298215558335e-16,
+        "baseline_evaluations": 1,
+        "curvature_evaluations": 16,
+        "curvature_probe_count": 4,
+        "curvature_rectification": [
+          2.25
+        ],
+        "curvature_rectification_l2": 2.25,
+        "predicted_bias": [
+          3.25
+        ],
+        "predicted_bias_l2": 3.25,
+        "status": "SCREEN",
+        "transported_evaluations": 4,
+        "transported_mean": [
+          1.0
+        ],
+        "transported_mean_l2": 1.0
+      },
+      "note": "The moment sketch estimates a local second-order response; the exact paired response is the reference decomposition.",
+      "prediction_relative_error": 0.0
+    },
+    {
+      "control_id": "nonsmooth_support_switch",
+      "exact_paired_response": {
+        "closure_relative_error": 0.0,
+        "even_mean_l2": 0.4,
+        "even_mean_response": [
+          0.4
+        ],
+        "natural_mean_l2": 0.4,
+        "natural_mean_response": [
+          0.4
+        ],
+        "odd_mean_l2": 0.0,
+        "odd_mean_response": [
+          0.0
+        ],
+        "response_evaluations": 9,
+        "sample_count": 4
+      },
+      "expected_channel": "ESCALATE",
+      "moment_response_sketch": {
+        "amplitude_relative_difference": 1.0,
+        "baseline_evaluations": 1,
+        "curvature_evaluations": 16,
+        "curvature_probe_count": 4,
+        "curvature_rectification": [
+          0.4
+        ],
+        "curvature_rectification_l2": 0.4,
+        "predicted_bias": [
+          0.4
+        ],
+        "predicted_bias_l2": 0.4,
+        "status": "ESCALATE_NONLOCAL_OR_NONSMOOTH_RESPONSE",
+        "transported_evaluations": 4,
+        "transported_mean": [
+          0.0
+        ],
+        "transported_mean_l2": 0.0
+      },
+      "note": "The moment sketch estimates a local second-order response; the exact paired response is the reference decomposition.",
+      "prediction_relative_error": 0.0
+    }
+  ]
+}
