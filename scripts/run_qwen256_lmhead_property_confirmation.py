@@ -35,8 +35,11 @@ CARRIER = "model.norm.weight"
 
 
 class ShapeObserver:
-    def __init__(self, modules: list[Any], mode: str, permutations: list[torch.Tensor]) -> None:
+    def __init__(self, modules: list[Any], mode: str, permutations: list[torch.Tensor],
+                 *, left_shape: tuple[int, int] = LEFT,
+                 right_shape: tuple[int, int] = RIGHT) -> None:
         self.modules = modules; self.mode = mode; self.permutations = permutations
+        self.left_shape = left_shape; self.right_shape = right_shape
         self.restores: list[tuple[Any, Any]] = []; self.calls = 0
         self.orbit: dict[str, Any] | None = None; self.changed_l2 = 0.0
 
@@ -50,7 +53,7 @@ class ShapeObserver:
 
             def wrapped(*args: Any, _original: Any = original, **kwargs: Any) -> Any:
                 result = _original(*args, **kwargs)
-                if tuple(args[0].shape) != LEFT or tuple(args[1].shape) != RIGHT:
+                if tuple(args[0].shape) != self.left_shape or tuple(args[1].shape) != self.right_shape:
                     return result
                 actual = kwargs.get("out", result); before = actual.detach().float().clone()
                 if self.mode == "orbit":
