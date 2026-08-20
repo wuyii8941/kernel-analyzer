@@ -88,6 +88,15 @@ from .bias_formation_v22 import (
     certify_trajectory_separation,
     classify_global_certificate,
 )
+from .bias_oracle_recovery import (
+    RecoveryDisposition,
+    RecoveryPrediction,
+    compare_recovery,
+    missing_screen_prediction,
+    predict_conditional_source_risk,
+    predict_response_rectification_risk,
+    predict_source_fidelity_boundary,
+)
 
 __all__ = [
     "AnalysisReport",
@@ -165,4 +174,11 @@ __all__ = [
     "aggregate_conditional_debias",
     "certify_trajectory_separation",
     "classify_global_certificate",
+    "RecoveryDisposition",
+    "RecoveryPrediction",
+    "compare_recovery",
+    "missing_screen_prediction",
+    "predict_conditional_source_risk",
+    "predict_response_rectification_risk",
+    "predict_source_fidelity_boundary",
 ]

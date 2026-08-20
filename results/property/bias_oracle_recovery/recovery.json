@@ -1,0 +1,228 @@
+{
+  "decision": "CURRENT_DIRECT_INDICATOR_INCOMPLETE__ADD_EVENT_AND_TRANSPORT_JOINT_MOMENTS",
+  "historical_verdicts_used_as_predictor_inputs": false,
+  "prediction_built_before_target_comparison": true,
+  "predictions": [
+    {
+      "case_id": "liger_fused_ce",
+      "direct_risk": false,
+      "disposition": "ESCALATE_MISSING_EVENT_MOMENT",
+      "evidence_kind": "CAPABILITY_GATE",
+      "measurements": {
+        "missing_screen_input": "EVENT_MOMENT"
+      },
+      "reason": "no label-blind schedule-conditioned event-moment screen is bound",
+      "routed_for_exact_followup": true,
+      "safe_release": false
+    },
+    {
+      "case_id": "phi4_seq64_lmhead_dx",
+      "direct_risk": false,
+      "disposition": "ESCALATE_MISSING_TRANSPORT_JOINT_MOMENT",
+      "evidence_kind": "CAPABILITY_GATE",
+      "measurements": {
+        "missing_screen_input": "TRANSPORT_JOINT_MOMENT"
+      },
+      "reason": "no label-blind residual/transport joint-moment screen is bound",
+      "routed_for_exact_followup": true,
+      "safe_release": false
+    },
+    {
+      "case_id": "qwen64_vproj_mm",
+      "direct_risk": true,
+      "disposition": "DIRECT_LOCAL_RISK_DOWNSTREAM_ESCALATE",
+      "evidence_kind": "FOUR_REPEAT_FIXED_CONDITION_COMPLETE_GRAM",
+      "measurements": {
+        "candidate_local_biased_conditions": 16,
+        "condition_count": 16,
+        "downstream_biased_conditions": {
+          "candidate_adamw_zero_update_effect_removed": 15,
+          "candidate_gradient_effect_removed": 14,
+          "candidate_sgd_update_effect_removed": 14
+        },
+        "full_repeat_or_historical_verdict_read": false,
+        "repair_local_centered_conditions": 14,
+        "repeat_budget": 4
+      },
+      "reason": "candidate-local risk is direct, but repair centering or the complete downstream chain remains unresolved at this budget",
+      "routed_for_exact_followup": true,
+      "safe_release": false
+    },
+    {
+      "case_id": "qwen128_vproj_mm",
+      "direct_risk": true,
+      "disposition": "DIRECT_LOCAL_RISK_DOWNSTREAM_ESCALATE",
+      "evidence_kind": "FOUR_REPEAT_FIXED_CONDITION_COMPLETE_GRAM",
+      "measurements": {
+        "candidate_local_biased_conditions": 16,
+        "condition_count": 16,
+        "downstream_biased_conditions": {
+          "candidate_adamw_zero_update_effect_removed": 16,
+          "candidate_gradient_effect_removed": 13,
+          "candidate_sgd_update_effect_removed": 13
+        },
+        "full_repeat_or_historical_verdict_read": false,
+        "repair_local_centered_conditions": 16,
+        "repeat_budget": 4
+      },
+      "reason": "candidate-local risk is direct, but repair centering or the complete downstream chain remains unresolved at this budget",
+      "routed_for_exact_followup": true,
+      "safe_release": false
+    },
+    {
+      "case_id": "qwen_saved_p_seq128",
+      "direct_risk": true,
+      "disposition": "DIRECT_RISK_RESPONSE_RECTIFICATION",
+      "evidence_kind": "EXACT_ANTITHETIC_OPTIMIZER_RESPONSE",
+      "measurements": {
+        "all_forward_losses_equal": true,
+        "energy_weighted_response_even_on_sign_crossings": 0.994826684289277,
+        "historical_mechanism_verdict_read": false,
+        "minimum_crossing_even_fraction": 0.5,
+        "minimum_nonoddness_ratio": 0.05,
+        "optimizer_nonoddness_resultant_ratio": 0.6816873220999589,
+        "steps": 32
+      },
+      "reason": "an exact sign-symmetric gradient pair has a strong Adam response-even component",
+      "routed_for_exact_followup": false,
+      "safe_release": false
+    },
+    {
+      "case_id": "qwen3vl_silu_layer0",
+      "direct_risk": true,
+      "disposition": "DIRECT_RISK_RESPONSE_RECTIFICATION",
+      "evidence_kind": "EXACT_ANTITHETIC_OPTIMIZER_RESPONSE",
+      "measurements": {
+        "all_forward_losses_equal": true,
+        "energy_weighted_response_even_on_sign_crossings": 0.9987051503831904,
+        "historical_mechanism_verdict_read": false,
+        "minimum_crossing_even_fraction": 0.5,
+        "minimum_nonoddness_ratio": 0.05,
+        "optimizer_nonoddness_resultant_ratio": 0.695579794224944,
+        "steps": 32
+      },
+      "reason": "an exact sign-symmetric gradient pair has a strong Adam response-even component",
+      "routed_for_exact_followup": false,
+      "safe_release": false
+    },
+    {
+      "case_id": "mamba_seq64_input_proj",
+      "direct_risk": true,
+      "disposition": "DIRECT_LOCAL_RISK_DOWNSTREAM_ESCALATE",
+      "evidence_kind": "FOUR_REPEAT_FIXED_CONDITION_COMPLETE_GRAM",
+      "measurements": {
+        "candidate_local_biased_conditions": 16,
+        "condition_count": 16,
+        "downstream_biased_conditions": {
+          "candidate_adamw_zero_update_effect_removed": 14,
+          "candidate_gradient_effect_removed": 10,
+          "candidate_sgd_update_effect_removed": 10
+        },
+        "full_repeat_or_historical_verdict_read": false,
+        "repair_local_centered_conditions": 16,
+        "repeat_budget": 4
+      },
+      "reason": "candidate-local risk is direct, but repair centering or the complete downstream chain remains unresolved at this budget",
+      "routed_for_exact_followup": true,
+      "safe_release": false
+    },
+    {
+      "case_id": "qwen_layer23_attention_state",
+      "direct_risk": false,
+      "disposition": "ABSTAIN_SOURCE_FIDELITY_FAILED",
+      "evidence_kind": "ANTITHETIC_SOURCE_FIDELITY",
+      "measurements": {
+        "mechanism_verdict_read": false,
+        "minimum_natural_source_fidelity": 0.9,
+        "natural_source_fidelity_every_condition": false
+      },
+      "reason": "the exact projected antithetic probe does not faithfully represent the natural source in every frozen condition",
+      "routed_for_exact_followup": true,
+      "safe_release": false
+    }
+  ],
+  "protocol": {
+    "coded_group_natural_case_measurements": 0,
+    "conditional_repeat_budget": 4,
+    "conditional_subset": "FIRST_FOUR_ACQUISITION_REPEATS",
+    "response_minimum_energy_weighted_crossing_even_fraction": 0.5,
+    "response_minimum_nonoddness_ratio": 0.05,
+    "safe_release_on_unresolved": false,
+    "shared_hvp_natural_case_measurements": 0
+  },
+  "recovery": {
+    "all_boundaries_preserved": true,
+    "false_safe_count": 0,
+    "rows": [
+      {
+        "case_id": "liger_fused_ce",
+        "directly_recovered": false,
+        "fail_closed_routed": true,
+        "false_safe": false,
+        "prediction": "ESCALATE_MISSING_EVENT_MOMENT",
+        "target": "STRICT_POSITIVE"
+      },
+      {
+        "case_id": "phi4_seq64_lmhead_dx",
+        "directly_recovered": false,
+        "fail_closed_routed": true,
+        "false_safe": false,
+        "prediction": "ESCALATE_MISSING_TRANSPORT_JOINT_MOMENT",
+        "target": "STRICT_POSITIVE"
+      },
+      {
+        "case_id": "qwen64_vproj_mm",
+        "directly_recovered": true,
+        "fail_closed_routed": true,
+        "false_safe": false,
+        "prediction": "DIRECT_LOCAL_RISK_DOWNSTREAM_ESCALATE",
+        "target": "STRICT_POSITIVE"
+      },
+      {
+        "case_id": "qwen128_vproj_mm",
+        "directly_recovered": true,
+        "fail_closed_routed": true,
+        "false_safe": false,
+        "prediction": "DIRECT_LOCAL_RISK_DOWNSTREAM_ESCALATE",
+        "target": "STRICT_POSITIVE"
+      },
+      {
+        "case_id": "qwen_saved_p_seq128",
+        "directly_recovered": true,
+        "fail_closed_routed": true,
+        "false_safe": false,
+        "prediction": "DIRECT_RISK_RESPONSE_RECTIFICATION",
+        "target": "STRICT_POSITIVE"
+      },
+      {
+        "case_id": "qwen3vl_silu_layer0",
+        "directly_recovered": true,
+        "fail_closed_routed": true,
+        "false_safe": false,
+        "prediction": "DIRECT_RISK_RESPONSE_RECTIFICATION",
+        "target": "STRICT_POSITIVE"
+      },
+      {
+        "case_id": "mamba_seq64_input_proj",
+        "directly_recovered": true,
+        "fail_closed_routed": true,
+        "false_safe": false,
+        "prediction": "DIRECT_LOCAL_RISK_DOWNSTREAM_ESCALATE",
+        "target": "PARTIAL_POSITIVE"
+      },
+      {
+        "case_id": "qwen_layer23_attention_state",
+        "directly_recovered": true,
+        "fail_closed_routed": true,
+        "false_safe": false,
+        "prediction": "ABSTAIN_SOURCE_FIDELITY_FAILED",
+        "target": "ABSTAIN_BOUNDARY"
+      }
+    ],
+    "strict_direct_recall": 0.6666666666666666,
+    "strict_positive_count": 6,
+    "strict_routed_recall": 1.0
+  },
+  "schema": "kernel-analyzer-bias-oracle-recovery-v1",
+  "scientific_role": "DEVELOPMENT_CASE_RECOVERY_NOT_HELDOUT_VALIDATION"
+}
