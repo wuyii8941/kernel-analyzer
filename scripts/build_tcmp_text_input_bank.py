@@ -78,7 +78,8 @@ def main() -> None:
         "splits": {"ENGINEERING": 2, "SCREENING": 8, "CONFIRMATION": 16},
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    # Token banks are runtime inputs, not human reports.  Keep them compact.
+    args.output.write_text(json.dumps(payload, separators=(",", ":"), sort_keys=True) + "\n")
     print(json.dumps({"output": str(args.output), "states": len(rows), "sequence_length": args.sequence_length}))
 
 
