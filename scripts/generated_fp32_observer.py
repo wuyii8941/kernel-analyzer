@@ -381,7 +381,7 @@ class GeneratedFP32Observer:
                 if callable(getattr(value, "run", None)) and hasattr(value, "triton_meta"):
                     seen.add(id(value))
                     found.append((symbol, value))
-        return sorted(found)
+        return sorted(found, key=lambda item: (item[0], id(item[1])))
 
     def __enter__(self) -> "GeneratedFP32Observer":
         self.validate_program_identity()
