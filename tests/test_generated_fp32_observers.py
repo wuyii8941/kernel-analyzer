@@ -23,7 +23,10 @@ def test_two_state_bootstrap_rejects_degenerate_cluster_draws() -> None:
 
 
 from scripts.typed_triton_reference import fp32_pointer_program
-from scripts.generated_nontriton_fp32_observer import fp32_external_reference
+from scripts.generated_nontriton_fp32_observer import (
+    GeneratedNonTritonFP32Observer,
+    fp32_external_reference,
+)
 from scripts.inductor_buffer_origins import (
     InductorBufferOriginRecorder,
     _node_record,
@@ -51,6 +54,52 @@ def test_promotion_fails_closed_for_cross_dtype_alias() -> None:
     base = torch.arange(8, dtype=torch.bfloat16)
     with pytest.raises(RuntimeError, match="cross-dtype aliases"):
         promoted_pointer_arguments((base, base.view(torch.uint8)))
+
+
+def _nontriton_row(source_path: str = "torchinductor/model__0_forward_segment0_executed/output_code.py"):
+    source = "extern_kernels.mm(a, b, out=buf0)"
+    return {
+        "category": "COMPUTE",
+        "compute_region_id": "forward:0",
+        "phase": "FORWARD",
+        "implementation_kind_or_helper_role": "EXTERN",
+        "function": "extern_kernels.mm",
+        "source_path": source_path,
+        "source_line": 2,
+        "source_line_sha256": hashlib.sha256(source.encode()).hexdigest(),
+    }, source
+
+
+def test_nontriton_observer_preserves_repeated_runtime_invocations(tmp_path) -> None:
+    runtime = tmp_path / "output_code.py"
+    row, source = _nontriton_row()
+    runtime.write_text("# AOT ID: ['0_forward']\n" + source + "\n")
+    observer = GeneratedNonTritonFP32Observer(
+        modules=[SimpleNamespace(__file__=str(runtime))], inventory_rows=[row]
+    )
+    digest = hashlib.sha256(source.encode()).hexdigest()
+    assert observer._take("EXTERN", str(runtime), 2, digest) == row
+    observer._record(row, str(runtime), 2, {})
+    assert observer._take("EXTERN", str(runtime), 2, digest) == row
+    observer._record(row, str(runtime), 2, {})
+    summary = observer.summary()
+    assert summary["denominator"] == {
+        "static_generated_compute_calls": 1,
+        "static_calls_executed_in_measured_step": 1,
+        "actual_invocations_in_measured_step": 2,
+        "static_calls_not_executed_in_measured_step": 0,
+    }
+    assert [record[4] for record in summary["runtime_identity"]] == [0, 1]
+
+
+def test_nontriton_observer_rejects_ambiguous_static_callsite(tmp_path) -> None:
+    runtime = tmp_path / "output_code.py"
+    row, source = _nontriton_row()
+    runtime.write_text("# AOT ID: ['0_forward']\n" + source + "\n")
+    with pytest.raises(RuntimeError, match="ambiguous exact callsites"):
+        GeneratedNonTritonFP32Observer(
+            modules=[SimpleNamespace(__file__=str(runtime))], inventory_rows=[row, dict(row)]
+        )
 
 
 def test_compiled_triton_replay_rejects_pointer_dtype_promotion() -> None:

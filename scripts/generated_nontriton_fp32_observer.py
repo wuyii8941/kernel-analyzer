@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections import defaultdict
 import hashlib
 import linecache
+from pathlib import Path
+import re
 import sys
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
@@ -121,27 +123,61 @@ class GeneratedNonTritonFP32Observer:
         self.expected_kinds = {
             str(row["implementation_kind_or_helper_role"]) for row in rows
         }
-        self.rows: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+        self.rows: dict[tuple[str, str, int, str], list[dict[str, Any]]] = defaultdict(list)
         for row in rows:
             key = (
                 str(row["implementation_kind_or_helper_role"]),
+                str(row["source_path"]),
+                int(row["source_line"]),
                 str(row["source_line_sha256"]),
             )
             self.rows[key].append(row)
-        self.counts: dict[tuple[str, str], int] = defaultdict(int)
+        duplicate_callsites = {key: value for key, value in self.rows.items() if len(value) != 1}
+        if duplicate_callsites:
+            raise RuntimeError(
+                "static non-Triton inventory has ambiguous exact callsites: "
+                f"{sorted((key, len(value)) for key, value in duplicate_callsites.items())}"
+            )
+        # The capture script numbers copied wrappers in PyCodeCache insertion order.
+        # Reconstruct that bijection for the independently compiled replay modules.
+        captured_by_ordinal: dict[int, str] = {}
+        for row in rows:
+            match = re.search(r"(?:^|/)model__(\d+)_", str(row["source_path"]))
+            if match is not None:
+                ordinal = int(match.group(1))
+                previous = captured_by_ordinal.setdefault(ordinal, str(row["source_path"]))
+                if previous != str(row["source_path"]):
+                    raise RuntimeError(f"ambiguous captured wrapper ordinal: {ordinal}")
+        wrapper_modules = []
+        for module in self.modules:
+            source = Path(module.__file__).resolve()
+            header = source.read_text(errors="ignore")[:512]
+            if re.search(r"# AOT ID: \['\d+_(?:forward|backward|inference)'\]", header):
+                wrapper_modules.append(module)
+        if captured_by_ordinal and max(captured_by_ordinal) >= len(wrapper_modules):
+            raise RuntimeError("replay compiled fewer modules than the frozen callsite inventory")
+        self.runtime_to_captured_path = {
+            str(Path(module.__file__).resolve()): captured_by_ordinal[ordinal]
+            for ordinal, module in enumerate(wrapper_modules)
+            if ordinal in captured_by_ordinal
+        }
+        self.counts: dict[tuple[str, str, int, str], int] = defaultdict(int)
         self.records: list[dict[str, Any]] = []
         self.unmatched_generated_copy_calls: list[dict[str, Any]] = []
         self.restores: list[Callable[[], None]] = []
         self.installed_kinds: set[str] = set()
 
-    def _take(self, kind: str, digest: str) -> dict[str, Any]:
-        key = (kind, digest)
-        index = self.counts[key]
+    def _take(self, kind: str, filename: str, line: int, digest: str) -> dict[str, Any]:
+        runtime_path = str(Path(filename).resolve())
+        captured_path = self.runtime_to_captured_path.get(runtime_path)
+        if captured_path is None:
+            raise RuntimeError(f"runtime module absent from frozen inventory: {runtime_path}")
+        key = (kind, captured_path, int(line), digest)
         choices = self.rows.get(key, [])
-        if index >= len(choices):
-            raise RuntimeError(f"runtime non-Triton call absent from inventory: {key}:{index}")
+        if len(choices) != 1:
+            raise RuntimeError(f"runtime non-Triton call absent or ambiguous: {key}")
         self.counts[key] += 1
-        return choices[index]
+        return choices[0]
 
     def _metric(self, candidate: torch.Tensor, reference: torch.Tensor) -> dict[str, Any]:
         return nonfinite_aware_metrics(
@@ -161,6 +197,12 @@ class GeneratedNonTritonFP32Observer:
             "source_path": str(row["source_path"]),
             "runtime_filename": filename,
             "runtime_line": line,
+            "runtime_invocation_ordinal": len(self.records),
+            "callsite_execution_ordinal": self.counts[(
+                str(row["implementation_kind_or_helper_role"]),
+                str(row["source_path"]), int(row["source_line"]),
+                str(row["source_line_sha256"]),
+            )] - 1,
             "source_line_sha256": str(row["source_line_sha256"]),
             "reference_role": "PRECISION_ONLY_SAME_DECLARED_OP_FP32_STORAGE_COUNTERFACTUAL",
             "endpoint_metrics": dict(metrics),
@@ -184,7 +226,7 @@ class GeneratedNonTritonFP32Observer:
                     **kwargs: Any,
                 ) -> Any:
                     filename, line, digest = _source_identity()
-                    row = self._take("EXTERN", digest)
+                    row = self._take("EXTERN", filename, line, digest)
                     reference = fp32_external_reference(_symbol, args, kwargs)
                     result = _original(*args, **kwargs)
                     candidate = kwargs.get("out", result)
@@ -212,7 +254,7 @@ class GeneratedNonTritonFP32Observer:
                 _original: Any = original,
             ) -> Any:
                 filename, line, digest = _source_identity()
-                row = self._take("DIRECT_ATEN", digest)
+                row = self._take("DIRECT_ATEN", filename, line, digest)
                 promoted = _promote_args((buffer, *indices, values))
                 reference_buffer = promoted[0]
                 reference_indices = promoted[1:1 + len(indices)]
@@ -241,10 +283,12 @@ class GeneratedNonTritonFP32Observer:
 
             def wrapped(*args: Any, _original: Any = original, **kwargs: Any) -> Any:
                 filename, line, digest = _source_identity()
-                key = ("DIRECT_TORCH_OP", digest)
+                runtime_path = str(Path(filename).resolve())
+                captured_path = self.runtime_to_captured_path.get(runtime_path)
+                key = ("DIRECT_TORCH_OP", captured_path, line, digest)
                 if key not in self.rows:
                     return _original(*args, **kwargs)
-                row = self._take(*key)
+                row = self._take("DIRECT_TORCH_OP", filename, line, digest)
                 promoted = _promote_args(args)
                 result = _original(*args, **kwargs)
                 reference = torch.ops.aten.convolution_backward.default(*promoted, **kwargs)
@@ -274,7 +318,9 @@ class GeneratedNonTritonFP32Observer:
 
         def wrapped(target: torch.Tensor, source: torch.Tensor, non_blocking: bool = False) -> torch.Tensor:
             filename, line, digest = _source_identity()
-            key = ("DIRECT_TENSOR_METHOD", digest)
+            runtime_path = str(Path(filename).resolve())
+            captured_path = self.runtime_to_captured_path.get(runtime_path)
+            key = ("DIRECT_TENSOR_METHOD", captured_path, line, digest)
             if key not in self.rows:
                 if "output_code.py" in filename:
                     self.unmatched_generated_copy_calls.append({
@@ -283,7 +329,7 @@ class GeneratedNonTritonFP32Observer:
                         "source": linecache.getline(filename, line).strip(),
                     })
                 return original(target, source, non_blocking)
-            row = self._take(*key)
+            row = self._take("DIRECT_TENSOR_METHOD", filename, line, digest)
             promoted = _promote_args((target, source))
             result = original(target, source, non_blocking)
             original(promoted[0], promoted[1], non_blocking)
@@ -315,22 +361,25 @@ class GeneratedNonTritonFP32Observer:
         observed = len(self.records)
         missing = []
         for key, rows in sorted(self.rows.items()):
-            for row in rows[self.counts.get(key, 0):]:
+            if self.counts.get(key, 0) == 0:
+                row = rows[0]
                 missing.append({
-                    "kind": key[0], "source_line_sha256": key[1],
+                    "kind": key[0], "source_line_sha256": key[3],
                     "function": row["function"], "source_path": row["source_path"],
                     "source_line": row["source_line"],
                 })
-        accounted = observed + len(missing) == self.expected
+        executed_static_calls = self.expected - len(missing)
+        accounted = executed_static_calls + len(missing) == self.expected
         identities = [
             (
                 row["implementation_kind"], row["source_line_sha256"],
-                row["region_id"], tuple(sorted(row["endpoint_metrics"])),
+                row["region_id"], row["runtime_invocation_ordinal"],
+                row["callsite_execution_ordinal"], tuple(sorted(row["endpoint_metrics"])),
             )
             for row in self.records
         ]
         return {
-            "schema": "kernel-analyzer-generated-nontriton-fp32-observer-v1",
+            "schema": "kernel-analyzer-generated-nontriton-fp32-observer-v2",
             "status": (
                 "COMPLETE_RUNTIME_NONTRITON_FP32_REPLAY_WITH_STATIC_DISPOSITION"
                 if accounted and not self.unmatched_generated_copy_calls
@@ -338,6 +387,7 @@ class GeneratedNonTritonFP32Observer:
             ),
             "denominator": {
                 "static_generated_compute_calls": self.expected,
+                "static_calls_executed_in_measured_step": executed_static_calls,
                 "actual_invocations_in_measured_step": observed,
                 "static_calls_not_executed_in_measured_step": len(missing),
             },
