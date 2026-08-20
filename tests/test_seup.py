@@ -115,6 +115,37 @@ def test_cross_fit_gate_and_symmetric_recurrence_close_exactly():
     assert math.isclose(result["local_fraction_of_projected_accumulation"], 0.5)
 
 
+def test_symmetric_evaluator_streams_lbd_and_reports_actual_energy():
+    calibrator = SEUPCalibrator(calibration_steps=2, gate_cosine=0.5)
+    calibrator.add("c0", torch.tensor([1.0, 0.0]))
+    calibrator.add("c1", torch.tensor([1.0, 0.0]))
+    carrier = calibrator.freeze()
+    captured = []
+    evaluator = SymmetricSEUPEvaluator(
+        carrier, evaluation_steps=2,
+        vector_sink=lambda step, values: captured.append((step, {
+            name: tensor["value"].clone() for name, tensor in values.items()
+        })),
+    )
+    for index in range(2):
+        before = torch.tensor([float(index), 0.0])
+        after = before + torch.tensor([1.0, 1.0])
+        evaluator.add(
+            f"s{index}",
+            torch.tensor([1.0, 1.0]), torch.tensor([0.0, 1.0]),
+            torch.tensor([1.0, 0.0]), torch.tensor([0.0, 0.0]),
+            before, after,
+        )
+    result = evaluator.finalize()
+    assert [row[0] for row in captured] == ["s0", "s1"]
+    assert torch.equal(captured[0][1]["local"], torch.tensor([1.0, 0.0]))
+    assert torch.equal(captured[0][1]["feedback"], torch.tensor([0.0, 1.0]))
+    assert torch.equal(captured[0][1]["actual"], torch.tensor([1.0, 1.0]))
+    assert math.isclose(result["actual_energy"], 4.0)
+    assert math.isclose(result["actual_accumulation_l2"], math.sqrt(8.0))
+    assert math.isclose(result["local_fraction_of_projected_accumulation"], 1.0)
+
+
 def test_unstable_cross_fit_is_fail_closed_without_a_basis():
     calibrator = SEUPCalibrator(4, gate_cosine=0.5)
     for index, value in enumerate((1.0, -1.0, 1.0, -1.0)):

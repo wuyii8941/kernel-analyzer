@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import hashlib
 import math
 import random
-from typing import Any, Dict, Mapping, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Mapping, Sequence, Tuple, Union
 
 
 TensorTree = Union[Any, Mapping[str, Any]]
@@ -321,7 +321,8 @@ class SEUPAccumulator:
 class SymmetricSEUPEvaluator:
     """Evaluate the exact four-counterfactual symmetric decomposition."""
 
-    def __init__(self, carrier: FrozenCarrier, evaluation_steps: int = 16):
+    def __init__(self, carrier: FrozenCarrier, evaluation_steps: int = 16,
+                 vector_sink: Callable[[str, Mapping[str, Mapping[str, Any]]], None] | None = None):
         self.carrier = carrier
         self.evaluation_steps = int(evaluation_steps)
         self._records: list[Dict[str, Any]] = []
@@ -335,7 +336,10 @@ class SymmetricSEUPEvaluator:
         self._sum_a2 = 0.0
         self._sum_local2 = 0.0
         self._sum_feedback2 = 0.0
+        self._sum_actual2 = 0.0
         self._max_recurrence_relative = 0.0
+        self._actual_sum: Dict[str, Any] | None = None
+        self._vector_sink = vector_sink
 
     def add(self, step_id: str, uc_sc: TensorTree, ur_sc: TensorTree,
             uc_sr: TensorTree, ur_sr: TensorTree,
@@ -347,10 +351,12 @@ class SymmetricSEUPEvaluator:
         before, after = _as_tree(drift_before), _as_tree(drift_after)
         local = _tree_avg(_tree_sub(ucc, urc), _tree_sub(ucr, urr))
         feedback = _tree_avg(_tree_sub(ucc, ucr), _tree_sub(urc, urr))
+        actual = _tree_sub(after, before)
         expected = _tree_add(_tree_add(before, local), feedback)
         recurrence = _tree_sub(after, expected)
         local_l2 = _tree_norm(local)
         feedback_l2 = _tree_norm(feedback)
+        actual_l2 = _tree_norm(actual)
         recurrence_l2 = _tree_norm(recurrence)
         denom = max(_tree_norm(after), _tree_norm(before), local_l2, 1e-30)
         relative = recurrence_l2 / denom
@@ -359,6 +365,7 @@ class SymmetricSEUPEvaluator:
             "step_id": str(step_id),
             "local_l2": local_l2,
             "feedback_l2": feedback_l2,
+            "actual_l2": actual_l2,
             "recurrence_residual_l2": recurrence_l2,
             "recurrence_relative": relative,
             "endpoint_repair_nonzero": bool(endpoint_repair_nonzero),
@@ -372,9 +379,17 @@ class SymmetricSEUPEvaluator:
             self._sum_b += b; self._sum_abs_b += abs(b)
         self._sum_local2 += local_l2 * local_l2
         self._sum_feedback2 += feedback_l2 * feedback_l2
+        self._sum_actual2 += actual_l2 * actual_l2
         self._local_sum = local if self._local_sum is None else _tree_add(self._local_sum, local)
         self._feedback_sum = feedback if self._feedback_sum is None else _tree_add(self._feedback_sum, feedback)
+        self._actual_sum = actual if self._actual_sum is None else _tree_add(self._actual_sum, actual)
         self._last_drift = _clone_float(after)
+        if self._vector_sink is not None:
+            self._vector_sink(str(step_id), {
+                "local": local,
+                "feedback": feedback,
+                "actual": actual,
+            })
         self._records.append(row)
 
     def finalize(self) -> Dict[str, Any]:
@@ -388,8 +403,10 @@ class SymmetricSEUPEvaluator:
             "max_recurrence_relative_residual": self._max_recurrence_relative,
             "local_accumulation_l2": _tree_norm(self._local_sum or {}),
             "feedback_accumulation_l2": _tree_norm(self._feedback_sum or {}),
+            "actual_accumulation_l2": _tree_norm(self._actual_sum or {}),
             "local_energy": self._sum_local2,
             "feedback_energy": self._sum_feedback2,
+            "actual_energy": self._sum_actual2,
             "evaluation_records": self._records,
         }
         if self.carrier.basis is not None:
