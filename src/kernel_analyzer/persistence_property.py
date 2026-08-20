@@ -81,6 +81,10 @@ def path_statistics_from_gram(
             "coherence_amplification": (
                 math.sqrt(block_resultant2 / block_energy) if block_energy > 0.0 else 0.0
             ),
+            "coherence_fraction_of_max": (
+                math.sqrt(block_resultant2 / block_energy) / math.sqrt(stop)
+                if block_energy > 0.0 else 0.0
+            ),
         }
 
     lags: list[dict[str, float | int]] = []
@@ -116,6 +120,7 @@ def path_statistics_from_gram(
         "path_l2": path_l2,
         "resultant_over_path": math.sqrt(resultant2) / max(path_l2, 1e-30),
         "coherence_amplification": observed,
+        "coherence_fraction_of_max": observed / math.sqrt(steps),
         "prefix": prefix,
         "lag_correlation": lags,
         "sign_flip_null": {
@@ -235,6 +240,10 @@ def _crossfit_path_statistics(
             "coherence_amplification": (
                 math.sqrt(max(0.0, num / den)) if den > 0.0 else None
             ),
+            "coherence_fraction_of_max": (
+                math.sqrt(max(0.0, num / den)) / math.sqrt(stop)
+                if den > 0.0 else None
+            ),
         }
     rng = np.random.default_rng(seed)
     null = []
@@ -251,6 +260,9 @@ def _crossfit_path_statistics(
         "cross_resultant_squared": numerator,
         "squared_coherence_amplification": amplification2 if estimable else None,
         "coherence_amplification": amplification,
+        "coherence_fraction_of_max": (
+            amplification / math.sqrt(len(state_ids)) if amplification is not None else None
+        ),
         "estimable_positive_cross_energy": estimable,
         "prefix": prefixes,
         "sign_flip_null": (
