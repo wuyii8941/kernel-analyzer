@@ -37,9 +37,11 @@ CARRIER = "model.norm.weight"
 class ShapeObserver:
     def __init__(self, modules: list[Any], mode: str, permutations: list[torch.Tensor],
                  *, left_shape: tuple[int, int] = LEFT,
-                 right_shape: tuple[int, int] = RIGHT) -> None:
+                 right_shape: tuple[int, int] = RIGHT,
+                 selected_permutation: torch.Tensor | None = None) -> None:
         self.modules = modules; self.mode = mode; self.permutations = permutations
         self.left_shape = left_shape; self.right_shape = right_shape
+        self.selected_permutation = selected_permutation
         self.restores: list[tuple[Any, Any]] = []; self.calls = 0
         self.orbit: dict[str, Any] | None = None; self.changed_l2 = 0.0
 
@@ -64,6 +66,16 @@ class ShapeObserver:
                 elif self.mode == "fp32":
                     high = fp32_external_reference("mm", args, kwargs)
                     actual.copy_(high.to(actual.dtype))
+                    self.changed_l2 = float(torch.linalg.vector_norm(before - actual.float()).item())
+                elif self.mode == "permuted":
+                    if self.selected_permutation is None:
+                        raise RuntimeError("permuted endpoint needs a frozen permutation")
+                    permutation = self.selected_permutation.to(args[0].device)
+                    replacement = torch.mm(
+                        args[0].index_select(1, permutation),
+                        args[1].index_select(0, permutation),
+                    )
+                    actual.copy_(replacement.to(actual.dtype))
                     self.changed_l2 = float(torch.linalg.vector_norm(before - actual.float()).item())
                 else:
                     raise ValueError(self.mode)
