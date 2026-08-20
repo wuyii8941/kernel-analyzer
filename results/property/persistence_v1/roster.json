@@ -98,6 +98,24 @@
         "transport_does_not_destroy_source_persistence": true
       },
       "selection_reason": "held-out sequence shape and invocation; same loss-head bottleneck as Phi but a different model implementation"
+    },
+    {
+      "case_id": "deepseek8b_seq128_lm_head_dx",
+      "model": "DeepSeek-R1-0528-Qwen3-8B",
+      "endpoint_binding": {
+        "phase": "AOT_BACKWARD",
+        "operation": "extern_kernels.mm",
+        "left_shape": [128, 151936],
+        "right_shape": [151936, 4096],
+        "expected_calls_per_step": 1
+      },
+      "state_ids": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"],
+      "prediction_frozen_before_values": {
+        "orbit_mean_temporal_amplification_above_sign_flip_95": true,
+        "effective_update_temporal_amplification_above_sign_flip_95": true,
+        "transport_does_not_destroy_source_persistence": true
+      },
+      "selection_reason": "held-out model family and sequence shape at the same loss-head semantic bottleneck"
     }
   ],
   "retrospective_only_not_heldout": [
