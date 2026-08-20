@@ -67,6 +67,10 @@ def main() -> None:
     with opener(args.capture, "rt", encoding="utf-8") as handle:
         capture = json.load(handle)
     inventory = build_inductor_generated_region_inventory(trace_dir=args.trace_dir)
+    try:
+        candidate_artifact = str(args.capture.resolve().relative_to(ROOT))
+    except ValueError:
+        candidate_artifact = str(args.capture.resolve())
     wrapped = {
         "schema_version": "kernel-analyzer-executed-generated-region-v1",
         "architecture": capture.get("architecture", "qwen"),
@@ -78,7 +82,7 @@ def main() -> None:
             "record_sha256": capture["input"]["token_ids_sha256"],
             "split": "identity_witness",
         },
-        "candidate_artifact": str(args.capture.resolve().relative_to(ROOT)),
+        "candidate_artifact": candidate_artifact,
         "candidate_status": capture["status"],
         "inventory": inventory,
     }
