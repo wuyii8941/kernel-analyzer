@@ -507,11 +507,18 @@ def main() -> None:
         help="Raw segmented actual-AOT capture cryptographically bound by the normalized capture",
     )
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--trace-dir", type=Path,
+        help="Executed wrapper-source root; defaults to the legacy inventory-parent/trace layout.",
+    )
     args = parser.parse_args()
     inventory, aot, math = load(args.inventory), load(args.aot), load(args.math)
     proof_capture = load(args.proof_capture) if args.proof_capture else None
     source_aot = load(args.source_aot) if args.source_aot else None
-    if inventory["status"] != "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW":
+    if inventory["status"] not in {
+        "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW",
+        "COMPLETE_GENERATED_SCHEDULE_PARTIAL_POINTER_DATAFLOW",
+    }:
         raise RuntimeError("candidate inventory is not complete")
     if math["status"] != "COMPLETE_AOT_FORWARD_BACKWARD_DERIVATION":
         raise RuntimeError("AOT F+B mathematics is not complete")
@@ -629,7 +636,9 @@ def main() -> None:
     requested: dict[str, set[int]] = defaultdict(set)
     for row in all_rows:
         requested[row["source_path"]].add(int(row["source_line"]))
-    wrappers = args.inventory.parent / "trace"
+    wrappers = args.trace_dir if args.trace_dir is not None else args.inventory.parent / "trace"
+    if not wrappers.is_dir():
+        raise RuntimeError(f"executed wrapper-source root is absent: {wrappers}")
     definitions: dict[tuple[str, str], dict[str, Any]] = {}
     call_provenance: dict[tuple[str, int], dict[str, list[str]]] = {}
     for source_path, lines in requested.items():

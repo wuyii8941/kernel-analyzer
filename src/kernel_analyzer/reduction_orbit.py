@@ -45,7 +45,10 @@ def gemm_reduction_orbit(
         raise ValueError("incompatible GEMM operands")
     candidate = candidate or torch.matmul
     reference = reference or torch.matmul
-    target = reference(left.float(), right.float()).detach().float()
+    # Orbit means can be much smaller than any one BF16/FP16 residual.  Keep
+    # the mathematical target and subtraction in FP64 so reference rounding
+    # cannot masquerade as a shared orbit component.
+    target = reference(left.double(), right.double()).detach().double()
     residuals: list[torch.Tensor] = []
     ids: list[str] = []
     for index, permutation in enumerate(permutations):
@@ -56,7 +59,7 @@ def gemm_reduction_orbit(
             raise ValueError("reduction orbit member is not a permutation")
         observed = candidate(
             left.index_select(-1, permutation), right.index_select(0, permutation)
-        ).detach().float()
+        ).detach().double()
         if observed.shape != target.shape or not bool(torch.isfinite(observed).all()):
             raise ValueError("candidate orbit output is invalid")
         residuals.append((observed - target).reshape(-1).cpu())
@@ -79,9 +82,11 @@ def gemm_reduction_orbit(
             len(ids) * float(mean.square().sum().item()) / max(total_energy, 1e-30)
         ),
         "default_residual_l2": float(torch.linalg.vector_norm(matrix[0]).item()),
-        "mathematical_target_dtype": "FP32",
+        "mathematical_target_dtype": "FP64",
+        "permutation_application": "CAPTURED_OPERANDS_AT_KERNEL_REPLAY_ONLY",
+        "model_inputs_permuted": False,
         "training_bias_or_persistence_verdict": False,
     }
     if return_vectors:
-        result["_residual_vectors"] = matrix.float()
+        result["_residual_vectors"] = matrix
     return result

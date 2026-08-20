@@ -192,6 +192,46 @@ def collect_programs(modules: Iterable[Any]) -> dict[str, str]:
     return result
 
 
+def collect_program_variants(modules: Iterable[Any]) -> dict[tuple[str, str], str]:
+    """Collect every distinct generated program even when symbols are reused.
+
+    Graph-break recompilations can emit shape-specialized programs under the
+    same Python symbol.  Their embedded source digest, not the symbol alone,
+    is the executable identity.
+    """
+
+    result: dict[tuple[str, str], str] = {}
+    for module in modules:
+        for symbol, source in embedded_triton_programs(Path(module.__file__).resolve()).items():
+            key = (symbol, hashlib.sha256(source.encode()).hexdigest())
+            result[key] = source
+    return result
+
+
+def compile_fp32_pointer_kernel_variants(
+    modules: Iterable[Any], expected_programs: set[tuple[str, str]],
+) -> tuple[dict[tuple[str, str], Any], dict[str, dict[str, Any]]]:
+    """Compile typed FP32 references keyed by ``(symbol, program digest)``."""
+
+    programs = collect_program_variants(modules)
+    missing = expected_programs - programs.keys()
+    if missing:
+        raise RuntimeError(f"frozen Triton program variants absent: {sorted(missing)}")
+    compiler = AsyncCompile()
+    pending: dict[str, Any] = {}
+    key_by_label: dict[str, tuple[str, str]] = {}
+    metadata: dict[str, dict[str, Any]] = {}
+    for ordinal, key in enumerate(sorted(expected_programs)):
+        symbol, program_digest = key
+        typed, row = fp32_pointer_program(programs[key], symbol)
+        label = f"ka_variant_{ordinal}_{symbol}"
+        pending[label] = compiler.triton(symbol, typed, device_str="cuda")
+        key_by_label[label] = key
+        metadata[f"{symbol}@{program_digest}"] = row
+    compiler.wait(pending)
+    return {key_by_label[label]: value for label, value in pending.items()}, metadata
+
+
 def compile_fp32_pointer_kernels(
     modules: Iterable[Any],
     *,

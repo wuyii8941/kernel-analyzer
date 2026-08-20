@@ -200,6 +200,144 @@ def semantic_orbit_statistics_from_gram(
     }
 
 
+def _crossfit_path_statistics(
+    cross: np.ndarray,
+    *,
+    state_ids: Sequence[str],
+    sign_flip_draws: int,
+    seed: int,
+) -> dict[str, Any]:
+    """Estimate persistence from independent vector estimators A and B.
+
+    ``cross[t,s] = <x_t^(A), x_s^(B)>``.  The numerator and denominator of
+    squared amplification are therefore free of the within-ensemble Monte
+    Carlo energy that biases a plug-in mean toward diffusion.
+    """
+
+    matrix = np.asarray(cross, dtype=np.float64)
+    if matrix.shape != (len(state_ids), len(state_ids)) or not np.isfinite(matrix).all():
+        raise ValueError("cross-fit matrix shape or values are invalid")
+    matrix = (matrix + matrix.T) * 0.5
+    denominator = float(np.trace(matrix))
+    numerator = float(matrix.sum())
+    estimable = denominator > 0.0
+    amplification2 = numerator / denominator if estimable else float("nan")
+    amplification = math.sqrt(max(0.0, amplification2)) if estimable else None
+    prefixes: dict[str, Any] = {}
+    for stop in sorted(set([1, 2, 4, 8, 16, 32, len(state_ids)])):
+        if stop > len(state_ids):
+            continue
+        block = matrix[:stop, :stop]
+        den = float(np.trace(block)); num = float(block.sum())
+        prefixes[str(stop)] = {
+            "cross_energy": den,
+            "cross_resultant_squared": num,
+            "coherence_amplification": (
+                math.sqrt(max(0.0, num / den)) if den > 0.0 else None
+            ),
+        }
+    rng = np.random.default_rng(seed)
+    null = []
+    if estimable:
+        for _ in range(sign_flip_draws):
+            signs = rng.choice(np.array([-1.0, 1.0]), size=len(state_ids))
+            null.append(math.sqrt(max(0.0, float(signs @ matrix @ signs) / denominator)))
+    null_array = np.asarray(null, dtype=np.float64)
+    return {
+        "schema": "kernel-analyzer-crossfit-path-statistics-v1",
+        "state_ids": list(state_ids),
+        "steps": len(state_ids),
+        "cross_energy": denominator,
+        "cross_resultant_squared": numerator,
+        "squared_coherence_amplification": amplification2 if estimable else None,
+        "coherence_amplification": amplification,
+        "estimable_positive_cross_energy": estimable,
+        "prefix": prefixes,
+        "sign_flip_null": (
+            {
+                "draws": sign_flip_draws,
+                "seed": seed,
+                "upper_95": float(np.quantile(null_array, 0.95)),
+                "one_sided_p": float(
+                    (1 + np.count_nonzero(null_array >= amplification))
+                    / (sign_flip_draws + 1)
+                ),
+            }
+            if estimable else None
+        ),
+        "above_sign_flip_95": bool(
+            estimable and amplification > float(np.quantile(null_array, 0.95))
+        ),
+    }
+
+
+def crossfit_semantic_orbit_statistics_from_gram(
+    gram: Any,
+    *,
+    state_ids: Sequence[str],
+    variant_ids: Sequence[str],
+    default_variant: str,
+    orbit_mean_variant_ids: Sequence[str],
+    sign_flip_draws: int = 4000,
+    seed: int = 20260820,
+) -> dict[str, Any]:
+    """Cross-fit a tiling-conditional orbit mean and default residual.
+
+    The identity/default execution is not used to estimate either mean half.
+    Exactly eight separate orbit members are split deterministically into two
+    groups of four.  All operations are Gram-only, so production runners may
+    delete full vectors after emitting their complete Gram matrix.
+    """
+
+    matrix = _gram(gram)
+    states, variants = len(state_ids), len(variant_ids)
+    if matrix.shape != (states * variants, states * variants):
+        raise ValueError("semantic-orbit Gram shape is inconsistent")
+    if len(set(variant_ids)) != variants or default_variant not in variant_ids:
+        raise ValueError("semantic-orbit variant IDs are invalid")
+    mean_ids = list(orbit_mean_variant_ids)
+    if len(mean_ids) != 8 or len(set(mean_ids)) != 8 or default_variant in mean_ids:
+        raise ValueError("cross-fit protocol requires eight non-default orbit-mean members")
+    positions = {value: index for index, value in enumerate(variant_ids)}
+    if not set(mean_ids).issubset(positions):
+        raise ValueError("orbit-mean member is absent")
+    a_ids, b_ids = mean_ids[:4], mean_ids[4:]
+    a = [positions[value] for value in a_ids]
+    b = [positions[value] for value in b_ids]
+    default = positions[default_variant]
+    four = matrix.reshape(states, variants, states, variants)
+    cross_mean = np.take(np.take(four, a, axis=1), b, axis=3).mean(axis=(1, 3))
+    default_gram = four[:, default, :, default]
+    default_to_b = np.take(four[:, default, :, :], b, axis=2).mean(axis=2)
+    a_to_default = np.take(four[:, :, :, default], a, axis=1).mean(axis=1)
+    cross_residual = default_gram - default_to_b - a_to_default + cross_mean
+    return {
+        "schema": "kernel-analyzer-crossfit-semantic-orbit-statistics-v1",
+        "state_ids": list(state_ids),
+        "variant_ids": list(variant_ids),
+        "default_variant": default_variant,
+        "default_excluded_from_orbit_mean": True,
+        "orbit_mean_halves": {"A": a_ids, "B": b_ids},
+        "tiling_conditional_orbit_mean": _crossfit_path_statistics(
+            cross_mean, state_ids=state_ids,
+            sign_flip_draws=sign_flip_draws, seed=seed,
+        ),
+        "default_schedule": path_statistics_from_gram(
+            default_gram, state_ids=state_ids,
+            sign_flip_draws=sign_flip_draws, seed=seed + 1,
+        ),
+        "default_minus_tiling_conditional_orbit_mean": _crossfit_path_statistics(
+            cross_residual, state_ids=state_ids,
+            sign_flip_draws=sign_flip_draws, seed=seed + 2,
+        ),
+        "claim_boundary": (
+            "The mean is conditional on the frozen tile/chunk family.  The A/B "
+            "cross statistic removes within-orbit Monte Carlo energy; it does not "
+            "claim an implementation-independent orbit invariant."
+        ),
+    }
+
+
 def transported_orbit_certificate_from_gram(
     gram: Any,
     *,

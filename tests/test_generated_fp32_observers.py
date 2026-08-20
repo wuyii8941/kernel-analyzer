@@ -102,6 +102,43 @@ def test_nontriton_observer_rejects_ambiguous_static_callsite(tmp_path) -> None:
         )
 
 
+def _triton_campaign_row():
+    source = "triton_poi_fused_x_0.run(arg0, buf0, 4, stream=stream0)"
+    return {
+        "symbol": "triton_poi_fused_x_0",
+        "region_id": "forward:0",
+        "phase": "FORWARD",
+        "source_path": "torchinductor/model__0_forward_segment0_executed/output_code.py",
+        "source_line": 2,
+        "source_line_sha256": hashlib.sha256(source.encode()).hexdigest(),
+        "embedded_program_sha256": "program-sha",
+        "output_names": ["out_ptr0"],
+    }, source
+
+
+def test_triton_observer_binds_exact_wrapper_callsite(tmp_path) -> None:
+    runtime = tmp_path / "output_code.py"
+    row, source = _triton_campaign_row()
+    runtime.write_text("# AOT ID: ['0_forward']\n" + source + "\n")
+    observer = GeneratedFP32Observer(
+        modules=[SimpleNamespace(__file__=str(runtime))], campaign_rows=[row]
+    )
+    assert observer.exact_callsite_mode
+    assert observer.runtime_to_captured_path[str(runtime.resolve())] == row["source_path"]
+    assert len(observer.rows_by_callsite) == 1
+
+
+def test_triton_observer_rejects_ambiguous_static_callsite(tmp_path) -> None:
+    runtime = tmp_path / "output_code.py"
+    row, source = _triton_campaign_row()
+    runtime.write_text("# AOT ID: ['0_forward']\n" + source + "\n")
+    with pytest.raises(ValueError, match="ambiguous Triton static callsite"):
+        GeneratedFP32Observer(
+            modules=[SimpleNamespace(__file__=str(runtime))],
+            campaign_rows=[row, dict(row)],
+        )
+
+
 def test_compiled_triton_replay_rejects_pointer_dtype_promotion() -> None:
     kernel = SimpleNamespace(triton_meta={
         "signature": {"in_ptr0": "*bf16", "out_ptr0": "*bf16", "xnumel": "i32"}

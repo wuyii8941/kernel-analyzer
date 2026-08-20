@@ -226,6 +226,8 @@ def main() -> None:
         torch.cuda.synchronize(device)
         baseline = {"loss": tensor_digest(baseline_loss), "gradients": gradient_digest(model)}
         state_row = {"token_ids_sha256": hashlib.sha256(bytes(json.dumps(token_ids), "utf-8")).hexdigest(), "repeats": []}
+        frozen_runtime_identity = None
+        frozen_missing_regions = None
         for repeat in range(args.repeat):
             torch.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
@@ -247,10 +249,32 @@ def main() -> None:
                     f"Triton replay census incomplete: {state_id}: "
                     f"{summary['denominator']}"
                 )
+            identity = [
+                (
+                    row["region_id"], row["symbol"],
+                    row.get("runtime_invocation_ordinal"),
+                    row.get("callsite_execution_ordinal"),
+                    tuple(sorted(row["endpoint_metrics"])),
+                )
+                for row in summary["records"]
+            ]
+            missing = summary.get("missing_region_ids", [])
+            if frozen_runtime_identity is None:
+                frozen_runtime_identity, frozen_missing_regions = identity, missing
+            elif identity != frozen_runtime_identity or missing != frozen_missing_regions:
+                raise RuntimeError(f"Triton runtime identity changed across repeats: {state_id}")
             state_row["repeats"].append({"repeat": repeat, "summary": summary})
+        state_row["runtime_denominator"] = {
+            "actual_invocations_per_repeat": len(frozen_runtime_identity or []),
+            "static_not_executed_per_repeat": len(frozen_missing_regions or []),
+            "repeat_stable": True if args.repeat > 1 else "SMOKE_SINGLE_REPEAT_ONLY",
+        }
         payload["states"][state_id] = state_row
         write(args.output, payload)
-        print(json.dumps({"event": "STATE_COMPLETE", "state": state_id, "records": len(rows)}, sort_keys=True), flush=True)
+        print(json.dumps({
+            "event": "STATE_COMPLETE", "state": state_id,
+            "records": state_row["runtime_denominator"]["actual_invocations_per_repeat"],
+        }, sort_keys=True), flush=True)
     payload["status"] = "COMPLETE_SHARD_ALL_TRITON_FP32_REPLAY"
     write(args.output, payload)
     print(json.dumps({"event": "SHARD_COMPLETE", "states": len(selected), "output": str(args.output)}, sort_keys=True))

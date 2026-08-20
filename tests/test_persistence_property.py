@@ -7,6 +7,7 @@ import torch
 from kernel_analyzer.persistence_property import (
     CompleteTreeGramPath,
     aligned_level_statistics_from_gram,
+    crossfit_semantic_orbit_statistics_from_gram,
     five_level_signature,
     path_statistics_from_gram,
     semantic_orbit_statistics_from_gram,
@@ -51,6 +52,38 @@ def test_semantic_orbit_separates_mean_from_default_schedule_residual():
     assert math.isclose(result["orbit_mean"]["coherence_amplification"], math.sqrt(2))
     assert result["default_minus_orbit_mean"]["coherence_amplification"] == 0.0
     assert result["orbit_mean_energy_fraction"] == 0.5
+
+
+def test_crossfit_orbit_mean_excludes_default_and_removes_half_noise_energy():
+    variants = ("default",) + tuple(f"orbit_{index}" for index in range(8))
+    rows = []
+    # Each half has zero-mean within-half noise around the same persistent
+    # component. The default is deliberately large and alternating.
+    noise = (10.0, -10.0, 20.0, -20.0, 7.0, -7.0, 13.0, -13.0)
+    for state in range(16):
+        rows.append([100.0 if state % 2 == 0 else -100.0, 0.0])
+        rows.extend([[1.0, value] for value in noise])
+    result = crossfit_semantic_orbit_statistics_from_gram(
+        _gram(rows), state_ids=tuple(f"s{i}" for i in range(16)),
+        variant_ids=variants, default_variant="default",
+        orbit_mean_variant_ids=variants[1:], sign_flip_draws=200, seed=4,
+    )
+    mean = result["tiling_conditional_orbit_mean"]
+    assert mean["coherence_amplification"] == 4.0
+    assert result["default_excluded_from_orbit_mean"] is True
+    assert result["orbit_mean_halves"] == {
+        "A": list(variants[1:5]), "B": list(variants[5:]),
+    }
+
+
+def test_crossfit_orbit_rejects_default_leakage():
+    variants = ("default",) + tuple(f"orbit_{index}" for index in range(8))
+    with pytest.raises(ValueError, match="eight non-default"):
+        crossfit_semantic_orbit_statistics_from_gram(
+            np.eye(18), state_ids=("s0", "s1"), variant_ids=variants,
+            default_variant="default", orbit_mean_variant_ids=variants[:8],
+            sign_flip_draws=200,
+        )
 
 
 def test_aligned_levels_report_feedback_alignment_without_posthoc_basis():

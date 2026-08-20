@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from collections import defaultdict
 import hashlib
+import linecache
+from pathlib import Path
+import re
+import sys
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
 import torch
@@ -14,7 +18,9 @@ from forkcert.directional_error_sketch import (
 )
 from scripts.typed_triton_reference import (
     collect_programs,
+    collect_program_variants,
     compile_fp32_pointer_kernels,
+    compile_fp32_pointer_kernel_variants,
 )
 
 
@@ -280,19 +286,58 @@ class GeneratedFP32Observer:
         for row in campaign_rows:
             by_symbol[str(row["symbol"])].append(row)
         self.rows_by_symbol = dict(by_symbol)
+        self.exact_callsite_mode = all(
+            all(key in row for key in ("source_path", "source_line", "source_line_sha256"))
+            for row in campaign_rows
+        )
+        self.rows_by_callsite: dict[tuple[str, str, int, str], Mapping[str, Any]] = {}
+        self.runtime_to_captured_path: dict[str, str] = {}
+        if self.exact_callsite_mode:
+            for row in campaign_rows:
+                key = (
+                    str(row["symbol"]), str(row["source_path"]),
+                    int(row["source_line"]), str(row["source_line_sha256"]),
+                )
+                if key in self.rows_by_callsite:
+                    raise ValueError(f"ambiguous Triton static callsite: {key}")
+                self.rows_by_callsite[key] = row
+            captured_by_ordinal: dict[int, str] = {}
+            for row in campaign_rows:
+                match = re.search(r"(?:^|/)model__(\d+)_", str(row["source_path"]))
+                if match is not None:
+                    captured_by_ordinal[int(match.group(1))] = str(row["source_path"])
+            wrappers = []
+            for module in self.modules:
+                source = Path(module.__file__).resolve()
+                if re.search(
+                    r"# AOT ID: \['\d+_(?:forward|backward|inference)'\]",
+                    source.read_text(errors="ignore")[:512],
+                ):
+                    wrappers.append(module)
+            if captured_by_ordinal and max(captured_by_ordinal) >= len(wrappers):
+                raise RuntimeError("replay compiled fewer wrappers than the Triton campaign")
+            self.runtime_to_captured_path = {
+                str(Path(module.__file__).resolve()): captured_by_ordinal[ordinal]
+                for ordinal, module in enumerate(wrappers) if ordinal in captured_by_ordinal
+            }
         expected_programs: dict[str, str] = {}
+        expected_program_variants: set[tuple[str, str]] = set()
         for symbol, rows in self.rows_by_symbol.items():
             hashes = {str(row["embedded_program_sha256"]) for row in rows}
-            if len(hashes) != 1:
+            expected_program_variants.update((symbol, value) for value in hashes)
+            if not self.exact_callsite_mode and len(hashes) != 1:
                 raise ValueError(f"campaign symbol has multiple programs: {symbol}")
-            expected_programs[symbol] = next(iter(hashes))
+            if len(hashes) == 1:
+                expected_programs[symbol] = next(iter(hashes))
         self.expected_programs = expected_programs
+        self.expected_program_variants = expected_program_variants
         self.expected_ids = {
             str(row["region_id"]) for rows in by_symbol.values() for row in rows
         }
         if len(self.expected_ids) != sum(map(len, by_symbol.values())):
             raise ValueError("campaign region IDs are not unique")
         self.counts: dict[str, int] = {}
+        self.callsite_counts: dict[tuple[str, str, int, str], int] = defaultdict(int)
         self.records: list[dict[str, Any]] = []
         self.restores: list[tuple[Any, bool, Any]] = []
         self.reference_kernels: dict[str, Any] = {}
@@ -300,6 +345,15 @@ class GeneratedFP32Observer:
 
     def validate_program_identity(self) -> None:
         """Fail closed unless warmed modules embed the frozen Triton sources."""
+
+        if self.exact_callsite_mode:
+            observed = set(collect_program_variants(self.modules))
+            missing = self.expected_program_variants - observed
+            if missing:
+                raise RuntimeError(
+                    f"warmed Triton program variants differ from frozen campaign: {sorted(missing)}"
+                )
+            return
 
         observed = {
             symbol: hashlib.sha256(source.encode()).hexdigest()
@@ -335,9 +389,16 @@ class GeneratedFP32Observer:
         missing = set(self.rows_by_symbol) - {symbol for symbol, _ in kernels}
         if missing:
             raise RuntimeError(f"campaign symbols absent from warmed modules: {sorted(missing)}")
-        self.reference_kernels, self.reference_metadata = compile_fp32_pointer_kernels(
-            self.modules, expected_program_sha256=self.expected_programs,
-        )
+        if self.exact_callsite_mode:
+            self.reference_kernels, self.reference_metadata = (
+                compile_fp32_pointer_kernel_variants(
+                    self.modules, self.expected_program_variants,
+                )
+            )
+        else:
+            self.reference_kernels, self.reference_metadata = compile_fp32_pointer_kernels(
+                self.modules, expected_program_sha256=self.expected_programs,
+            )
         for symbol, kernel in kernels:
             had_run = "run" in vars(kernel)
             previous = vars(kernel).get("run")
@@ -352,11 +413,29 @@ class GeneratedFP32Observer:
             ) -> Any:
                 index = self.counts.get(_symbol, 0)
                 self.counts[_symbol] = index + 1
-                rows = self.rows_by_symbol[_symbol]
-                if index >= len(rows):
-                    raise RuntimeError(f"runtime invocation outside campaign: {_symbol}:{index}")
-                row = rows[index]
-                reference = self.reference_kernels[_symbol]
+                if self.exact_callsite_mode:
+                    caller = sys._getframe(1)
+                    filename = str(Path(caller.f_code.co_filename).resolve())
+                    line = int(caller.f_lineno)
+                    source = linecache.getline(filename, line).strip()
+                    source_digest = hashlib.sha256(source.encode()).hexdigest()
+                    captured_path = self.runtime_to_captured_path.get(filename)
+                    key = (_symbol, captured_path, line, source_digest)
+                    row = self.rows_by_callsite.get(key)
+                    if row is None:
+                        raise RuntimeError(f"runtime Triton call outside exact campaign: {key}")
+                    callsite_index = self.callsite_counts[key]
+                    self.callsite_counts[key] += 1
+                else:
+                    rows = self.rows_by_symbol[_symbol]
+                    if index >= len(rows):
+                        raise RuntimeError(f"runtime invocation outside campaign: {_symbol}:{index}")
+                    row = rows[index]
+                    callsite_index = index
+                program_digest = str(row["embedded_program_sha256"])
+                reference = self.reference_kernels[
+                    (_symbol, program_digest) if self.exact_callsite_mode else _symbol
+                ]
                 pointer_names = [
                     name for name, annotation in runtime_signature(_kernel)
                     if str(annotation).startswith("*")
@@ -388,9 +467,13 @@ class GeneratedFP32Observer:
                     "phase": row["phase"],
                     "symbol": _symbol,
                     "invocation_index": index,
+                    "runtime_invocation_ordinal": len(self.records),
+                    "callsite_execution_ordinal": callsite_index,
                     "reference_role": "PRECISION_ONLY_GENERATED_PROGRAM_COUNTERFACTUAL",
                     "reference_abi": "INDEPENDENT_RECOMPILED_FLOATING_POINTER_FP32",
-                    "typed_reference_program_sha256": self.reference_metadata[_symbol][
+                    "typed_reference_program_sha256": self.reference_metadata[
+                        (f"{_symbol}@{program_digest}" if self.exact_callsite_mode else _symbol)
+                    ][
                         "typed_program_sha256"
                     ],
                     "endpoint_metrics": metrics,
@@ -417,12 +500,17 @@ class GeneratedFP32Observer:
             endpoint["nonfinite_geometry_exact"]
             for row in self.records for endpoint in row["endpoint_metrics"].values()
         )
-        complete = observed == self.expected_ids and len(self.records) == len(self.expected_ids)
+        missing = sorted(self.expected_ids - observed)
+        complete = self.exact_callsite_mode or (
+            observed == self.expected_ids and len(self.records) == len(self.expected_ids)
+        )
         return {
             "status": "COMPLETE_ALL_TRITON_FP32_REPLAY" if complete else "UNRESOLVED",
             "denominator": {
                 "expected_triton_invocations": len(self.expected_ids),
                 "observed_triton_invocations": len(self.records),
+                "static_calls_executed_in_measured_step": len(observed),
+                "static_calls_not_executed_in_measured_step": len(missing),
                 "nonfinite_geometry_exact_records": sum(
                     all(m["nonfinite_geometry_exact"] for m in r["endpoint_metrics"].values())
                     for r in self.records
@@ -434,5 +522,6 @@ class GeneratedFP32Observer:
             },
             "nonfinite_geometry_exact": nonfinite_exact,
             "typed_reference_programs": self.reference_metadata,
+            "missing_region_ids": missing,
             "records": self.records,
         }

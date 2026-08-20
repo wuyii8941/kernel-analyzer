@@ -1,0 +1,43 @@
+{
+  "amendment_id": "tcmp_allop_v1_1_pre_orbit_correction",
+  "status": "FROZEN_BEFORE_ANY_NEW_MODEL_ORBIT_MEASUREMENT",
+  "supersedes_only": [
+    "orbit_mean_estimator",
+    "trajectory_horizon",
+    "heldout_sampling_rule",
+    "feedback_primary_null"
+  ],
+  "unchanged_parent_protocol": "tcmp_allop_v1",
+  "orbit": {
+    "default_variant": "pi_0_separate_evaluation_only",
+    "mean_members": 8,
+    "total_executions_per_state": 9,
+    "half_A_members": 4,
+    "half_B_members": 4,
+    "estimator": "cross_inner_product_of_disjoint_half_means",
+    "default_excluded_from_both_mean_halves": true,
+    "full_A_and_B_sufficient_statistics_required": true,
+    "mean_name": "tiling_conditional_orbit_mean",
+    "mathematical_reference": "FP64_OR_EXACT_ACCUMULATION",
+    "permutation_location": "captured_kernel_operands_during_replay",
+    "model_inputs_are_never_permuted": true,
+    "tile_or_chunk_geometry": "frozen_and_reported_unless_explicitly_an_orbit_dimension"
+  },
+  "trajectory": {
+    "steps": 32,
+    "report_full_prefix_curve": true,
+    "report_A_over_sqrt_T": true,
+    "sixteen_step_only_result": "UNRESOLVED_HORIZON_LIMITED"
+  },
+  "feedback": {
+    "primary_null": "time_shuffled_natural_residual",
+    "direction_control": "cosine_final_natural_drift_vs_rms_matched_random_drift",
+    "high_direction_cosine_interpretation": "DYNAMICS_DOMINATED_NOT_OPERATOR_SPECIFIC"
+  },
+  "heldout": {
+    "pool_rule": "all_enumerated_closed_FB_units_with_matched_repair_in_frozen_new_model_roster",
+    "selection": "measure_all_or_sample_once_with_committed_seed_before_predictor_values",
+    "must_include_predictor_negative": true,
+    "retrospective_cases_receive_no_generalization_credit": true
+  }
+}
