@@ -112,6 +112,15 @@ from .reference_relative_oracle import (
     ReferenceRelativeObservation,
     certify_reference_relative,
 )
+from .tcmp_campaign import (
+    ModelCampaignSpec,
+    ModelCellSpec,
+    TCMPDisposition,
+    audit_denominator,
+    benjamini_hochberg,
+    exact_sign_flip_statistics,
+    holm_rejections,
+)
 
 __all__ = [
     "AnalysisReport",
@@ -132,6 +141,13 @@ __all__ = [
     "SignedTransportState",
     "StepExecution",
     "TierEvidence",
+    "ModelCampaignSpec",
+    "ModelCellSpec",
+    "TCMPDisposition",
+    "audit_denominator",
+    "benjamini_hochberg",
+    "exact_sign_flip_statistics",
+    "holm_rejections",
     "derive_signed_rounding_error",
     "signed_event_transport",
     "signed_transport_certificate",

@@ -28,7 +28,7 @@ def digest(value: object) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--architecture", choices=("qwen", "mamba", "phi", "deepseek8"), default="qwen"
+        "--architecture", choices=("qwen", "mamba", "phi", "deepseek8", "generic"), default="qwen"
     )
     parser.add_argument("--model", type=Path, required=True)
     parser.add_argument("--input-bank", type=Path, required=True)

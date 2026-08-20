@@ -106,6 +106,7 @@ def load_model(
             "moe": "transformers_eager_granite_moe_bfloat16",
             "phi": "transformers_eager_phi4_mini_bfloat16",
             "deepseek8": "transformers_eager_deepseek_r1_qwen3_8b_bfloat16_sharded",
+            "generic": "transformers_eager_generic_causal_lm_bfloat16",
         }[architecture]
     if shard_gpus == 1:
         model = model.to(device)
@@ -117,7 +118,7 @@ def load_model(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--architecture", choices=("qwen", "mamba", "moe", "phi", "deepseek8"),
+        "--architecture", choices=("qwen", "mamba", "moe", "phi", "deepseek8", "generic"),
         required=True,
     )
     parser.add_argument("--model", required=True, type=Path)

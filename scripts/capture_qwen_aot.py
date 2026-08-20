@@ -67,7 +67,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--architecture",
-        choices=("qwen", "mamba", "moe", "phi", "deepseek8"),
+        choices=("qwen", "mamba", "moe", "phi", "deepseek8", "generic"),
         default="qwen",
     )
     parser.add_argument("--model", type=Path, default=Path("/data1/tzh/models/Qwen/Qwen3-1.7B"))
