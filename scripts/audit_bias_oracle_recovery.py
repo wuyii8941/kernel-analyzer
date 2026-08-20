@@ -17,8 +17,10 @@ from typing import Any
 from kernel_analyzer.bias_oracle_recovery import (
     RecoveryPrediction,
     compare_recovery,
-    missing_screen_prediction,
     predict_conditional_source_risk,
+    predict_crossfit_projection_risk,
+    predict_population_coherence_risk,
+    predict_reference_relative_risk,
     predict_response_rectification_risk,
     predict_source_fidelity_boundary,
 )
@@ -57,20 +59,28 @@ def load(relative: str) -> dict[str, Any]:
 def build_predictions() -> list[RecoveryPrediction]:
     """Build predictions without reading ``FROZEN_TARGETS``."""
 
+    phi = load("results/property/bias_formation/formation/phi4_lm_head_dx_seq64.json")
     return [
-        missing_screen_prediction("liger_fused_ce", missing="EVENT_MOMENT"),
-        missing_screen_prediction(
-            "phi4_seq64_lmhead_dx", missing="TRANSPORT_JOINT_MOMENT"
+        predict_reference_relative_risk(
+            "liger_fused_ce",
+            load("results/property/bias_oracle_recovery/liger_reference_relative.json"),
+        ),
+        predict_population_coherence_risk(
+            "phi4_seq64_lmhead_dx",
+            phi["populations"]["confirmation"]["PARAMETER_GRADIENT"],
+            states=4,
         ),
         predict_conditional_source_risk(
             "qwen64_vproj_mm",
             load("results/coverage/cases/qwen64_vproj_conditional_debias_r16.json.gz"),
             repeats=4,
+            condition_limit=1,
         ),
         predict_conditional_source_risk(
             "qwen128_vproj_mm",
             load("results/coverage/cases/qwen128_vproj_conditional_debias.json.gz"),
             repeats=4,
+            condition_limit=1,
         ),
         predict_response_rectification_risk(
             "qwen_saved_p_seq128",
@@ -84,12 +94,107 @@ def build_predictions() -> list[RecoveryPrediction]:
             "mamba_seq64_input_proj",
             load("results/coverage/cases/mamba_seq64_input_proj_conditional_debias.json.gz"),
             repeats=4,
+            condition_limit=1,
         ),
         predict_source_fidelity_boundary(
             "qwen_layer23_attention_state",
             load("results/final/l23_s_bwd_antithetic.json"),
         ),
     ]
+
+
+def build_matched_controls() -> dict[str, Any]:
+    phi = load("results/property/bias_formation/formation/phi4_lm_head_dx_seq64.json")
+    phi_local = predict_population_coherence_risk(
+        "phi_local_centered_control",
+        phi["populations"]["confirmation"]["LOCAL_ENDPOINT"],
+        states=4,
+    )
+    liger_events = load(
+        "results/property/bias_oracle_recovery/liger_joint_event.json"
+    )
+    saved = load(
+        "results/property/bias_property_search/saved_p_pairing_work_v2.json"
+    )["aggregate"]
+    silu = load(
+        "results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json"
+    )["aggregate"]
+    return {
+        "phi_local_population": {
+            "expected": "NO_GLOBAL_LOCAL_BIAS",
+            "prediction": phi_local.as_dict(),
+            "passed": not phi_local.direct_risk,
+        },
+        "liger_event_coherence_hypothesis": {
+            "expected": "NOT_A_REQUIRED_CHANNEL",
+            "prediction": liger_events["joint_event_certificate"],
+            "passed": liger_events["joint_event_certificate"]["status"]
+            == "CANCELING_EVENT_STRUCTURE",
+            "scientific_role": (
+                "falsifies the discarded hypothesis that Liger requires mutually "
+                "aligned per-chunk rounding atoms"
+            ),
+        },
+        "stateless_sgd_odd_response": {
+            "saved_p_resultant_ratio": (
+                saved["stateless_sgd_natural_resultant_l2"]
+                / saved["natural_update_resultant_l2"]
+            ),
+            "silu_resultant_ratio": (
+                silu["stateless_sgd_resultant_l2"]
+                / silu["natural_update_resultant_l2"]
+            ),
+            "maximum_safe_ratio": 0.01,
+            "passed": (
+                saved["stateless_sgd_natural_resultant_l2"]
+                / saved["natural_update_resultant_l2"] < 0.01
+                and silu["stateless_sgd_resultant_l2"]
+                / silu["natural_update_resultant_l2"] < 0.01
+            ),
+        },
+    }
+
+
+def build_secondary_regression() -> dict[str, Any]:
+    """Exercise frozen witnesses outside the six-case design roster.
+
+    The artifacts predate this screen, so this is retrospective rather than a
+    prospective held-out result.  It still tests a distinct witness path and a
+    real non-directional control without changing thresholds.
+    """
+
+    lmhead = load("archive/nonprecision_v1/runs/lmhead.dh.screen.json")
+    rmsnorm = load("archive/nonprecision_v1/runs/liger.rmsnorm.certificate.json")
+    lmhead_prediction = predict_crossfit_projection_risk(
+        "qwen_seq128_lmhead_dx_layout",
+        lmhead["confirmation"]["projections"],
+        evaluation_count=8,
+        basis_frozen_before_evaluation=True,
+    )
+    rmsnorm_prediction = predict_crossfit_projection_risk(
+        "liger_rmsnorm_dx_control",
+        rmsnorm["endpoint_results"]["dX"]["carrier_projections"],
+        evaluation_count=8,
+        basis_frozen_before_evaluation=True,
+    )
+    return {
+        "scientific_role": "SECONDARY_RETROSPECTIVE_REGRESSION_NOT_HELDOUT",
+        "thresholds_changed_after_reading": False,
+        "positive": {
+            "expected": "DIRECTIONAL_RISK",
+            "prediction": lmhead_prediction.as_dict(),
+            "passed": lmhead_prediction.direct_risk,
+        },
+        "non_directional_control": {
+            "expected": "NO_DIRECT_RISK_FROM_THIS_WITNESS",
+            "prediction": rmsnorm_prediction.as_dict(),
+            "passed": not rmsnorm_prediction.direct_risk,
+        },
+        "passed": (
+            lmhead_prediction.direct_risk
+            and not rmsnorm_prediction.direct_risk
+        ),
+    }
 
 
 def render(document: dict[str, Any]) -> str:
@@ -102,10 +207,11 @@ def render(document: dict[str, Any]) -> str:
         "## 结论",
         "",
         (
-            "当前低成本路径不是一个已经完成的通用 oracle。六个严格 formation "
-            f"positive 中，只有 {int(audit['strict_direct_recall'] * audit['strict_positive_count'])}/"
+            "更新后的多通道 screen 在当前 development roster 的六个严格 formation "
+            f"positive 中，全部 {int(audit['strict_direct_recall'] * audit['strict_positive_count'])}/"
             f"{audit['strict_positive_count']} 能被当前实际接通的筛选路径直接报出风险；"
-            "Liger 与 Phi 只能 fail-closed 升级，不能算作指标直接命中。"
+            "Liger 由 reference-relative moving frame 命中，Phi 由四状态 complete-Gram "
+            "coherence 命中。"
         ),
         "",
         (
@@ -127,24 +233,34 @@ def render(document: dict[str, Any]) -> str:
         )
     lines.extend([
         "",
-        "## 指标缺口",
+        "## 指标结构",
         "",
         "- Qwen64/128：四次 fixed-condition repeat 已能直接发现 local source risk，但下游层仍需顺序追加 repeat。",
         "- saved-P/SiLU：exact antithetic gradient pair 的 Adam response-even screen 可直接命中。",
         "- Mamba：local risk 可直接命中；真实 gradient/SGD 的条件覆盖仍不完整，所以必须保留 partial。",
         "- layer-23：natural-source fidelity 未通过，正确输出是 abstain，而不是 risk 或 safe。",
-        "- Liger：缺的是由声明 schedule/operands 自动生成的 event-antithetic moment，旧 24/24 机制结果不能回填为新预测。",
-        "- Phi：缺的是联合残差－transport moment；只计算 `J E[epsilon]` 会漏掉 `E[J_e epsilon_e]` 中的 covariance 通道。",
+        "- Liger：chunk atoms 彼此并不相干；真正可比较的是每个 state 内误差相对 FP32-accumulator reference update 的乘性系数。",
+        "- Phi：reference-relative 系数会变号，但四状态 complete-vector Gram 已直接暴露共同参数坐标分量。",
         "",
-        "因此需要重新思考的是低成本指标的**输入与覆盖**，不是推翻条件反对称分解。下一版 screen 至少必须显式估计：",
+        "因此合适的候选不是一个标量，而是三个互补、均不使用 trajectory label 的风险证据族：",
         "",
-        "`E[J_e epsilon_e | c] = E[J_e|c] E[epsilon_e|c] + Cov(J_e, epsilon_e | c)`。",
+        "1. conditional event/source asymmetry；",
+        "2. transported directional component（complete-vector population、same-state moving frame 或冻结 cross-fit projection）；",
+        "3. exact antithetic response non-oddness。",
         "",
-        "若仍只有 source mean 与局部 HVP，它会系统漏掉 Phi 型 pairing bias；若不能从 schedule 自动构造 event orbit，也会漏掉 Liger。",
+        "任一 witness 命中即可报风险；全部未命中只能升级或 abstain，不能签发 safe。",
+        "",
+        "## 二级回归",
+        "",
+        (
+            "未参与当前六案例指标拟合的旧 Qwen lm_head confirmation 被 cross-fit witness 命中，"
+            "而 Liger RMSNorm dX 的真实 sign-changing control 未被命中。它们仍是回顾性证据，"
+            "不能替代下一轮预先冻结的 prospective held-out。"
+        ),
         "",
         "## 边界",
         "",
-        "这是已参与假设形成的 development recovery audit，不是 held-out accuracy。coded-group 与 shared-HVP 目前只有 synthetic/semantic-cut feasibility，尚未在这八个自然案例上运行，因此没有计作任何 case 的直接恢复。",
+        "这是已参与假设形成的 development recovery audit，不是 held-out accuracy。六个严格 positives 全部命中只说明候选指标值得进入冻结 held-out；不能据此反调阈值或声称通用。",
     ])
     return "\n".join(lines) + "\n"
 
@@ -158,6 +274,8 @@ def main() -> None:
     args = parser.parse_args()
     predictions = build_predictions()
     recovery = compare_recovery(predictions, FROZEN_TARGETS)
+    controls = build_matched_controls()
+    secondary_regression = build_secondary_regression()
     document = {
         "schema": "kernel-analyzer-bias-oracle-recovery-v1",
         "scientific_role": "DEVELOPMENT_CASE_RECOVERY_NOT_HELDOUT_VALIDATION",
@@ -173,9 +291,11 @@ def main() -> None:
             "shared_hvp_natural_case_measurements": 0,
         },
         "predictions": [prediction.as_dict() for prediction in predictions],
+        "matched_controls": controls,
+        "secondary_regression": secondary_regression,
         "recovery": recovery,
         "decision": (
-            "CURRENT_DIRECT_INDICATOR_INCOMPLETE__ADD_EVENT_AND_TRANSPORT_JOINT_MOMENTS"
+            "DEVELOPMENT_RECOVERY_PASS__FREEZE_AND_RUN_HELDOUT_BEFORE_ORACLE_CLAIM"
         ),
     }
     args.output.mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,37 @@
 # Directional-bias cases
 
+## Conditional moving-frame case (2026-08-20)
+
+The frozen bias-risk oracle found one new formation case outside its six-case
+development roster: DeepSeek layer-35 attention `dV`
+(`backward:676:output_0`). The complete F+B relation is
+
+```text
+O = P V,
+dV = P^T dO,
+dW_v = dV^T H.
+```
+
+Only the compiled BF16 `dV` BMM output is replaced by its FP32-recomputed,
+BF16-ABI reference; the exact repair reaches the complete
+`model.layers.35.self_attn.v_proj.weight` gradient. On 32 new natural states,
+
+```text
+alpha = <g_candidate - g_repair, g_repair> / ||g_repair||^2
+```
+
+has mean `-0.003698` and bootstrap 95% CI
+`[-0.006637, -0.000592]`. Thus the candidate systematically contracts the
+same-state repair-gradient component even though unrelated states need not
+share one absolute parameter direction. Two other promoted candidates failed
+the frozen confirmation and two sign-changing controls were not flagged.
+
+This is a strict **conditional bias-formation** case with a closed backward
+endpoint repair. It is not yet counted as a complete Flash-style/SEUP
+trajectory-accumulation case. Compact evidence is in
+`results/property/bias_oracle_recovery/confirmation/summary.md`; the frozen
+oracle is `results/property/bias_oracle_recovery/oracle.md`.
+
 ## Source-aligned repair correction (2026-08-20)
 
 The presence of a candidate--repair trajectory is not itself evidence that the

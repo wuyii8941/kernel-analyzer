@@ -1,0 +1,68 @@
+{
+  "cases": [
+    {
+      "case_id": "qwen_seq64_l23_attention_dq",
+      "development_role": "UNRESOLVED",
+      "frozen_direction": null,
+      "model": "qwen"
+    },
+    {
+      "case_id": "qwen_seq64_l23_softmax_vjp",
+      "development_role": "UNRESOLVED",
+      "frozen_direction": null,
+      "model": "qwen"
+    },
+    {
+      "case_id": "qwen_seq64_l27_q_norm_vjp",
+      "development_role": "CANDIDATE",
+      "frozen_direction": -1,
+      "model": "qwen"
+    },
+    {
+      "case_id": "qwen_seq64_lm_head_dx",
+      "development_role": "SIGN_CHANGING_CONTROL",
+      "frozen_direction": null,
+      "model": "qwen"
+    },
+    {
+      "case_id": "deepseek8b_seq64_ce_dlogits",
+      "development_role": "SIGN_CHANGING_CONTROL",
+      "frozen_direction": null,
+      "model": "deepseek8b"
+    },
+    {
+      "case_id": "deepseek8b_seq64_final_norm_vjp",
+      "development_role": "UNRESOLVED",
+      "frozen_direction": null,
+      "model": "deepseek8b"
+    },
+    {
+      "case_id": "deepseek8b_seq64_l35_attention_dv",
+      "development_role": "CANDIDATE",
+      "frozen_direction": -1,
+      "model": "deepseek8b"
+    },
+    {
+      "case_id": "deepseek8b_seq64_l35_softmax_vjp",
+      "development_role": "CANDIDATE",
+      "frozen_direction": -1,
+      "model": "deepseek8b"
+    }
+  ],
+  "confirmation": {
+    "bootstrap_draws": 4000,
+    "candidate_success": "POOLED_95_PERCENT_BOOTSTRAP_INTERVAL_EXCLUDES_ZERO_IN_FROZEN_DIRECTION",
+    "control_role": "REGRESSION_FOR_SPURIOUS_UNIVERSAL_DIRECTION_NOT_A_SAFETY_LABEL",
+    "minimum_absolute_mean_coefficient": 1e-05,
+    "state_source": "TOKENS_64_TO_127_OF_DISJOINT_SEQ128_NATURAL_STATES",
+    "states": 32,
+    "threshold_changes_after_measurement": "FORBIDDEN"
+  },
+  "development_selection_rule": {
+    "candidate": "SAME_NONZERO_PARTITION_MEAN_SIGN_AND_AT_LEAST_ONE_PARTITION_DIRECTIONAL",
+    "control": "OPPOSITE_PARTITION_MEAN_SIGNS",
+    "threshold_changed": false
+  },
+  "schema": "kernel-analyzer-moving-frame-confirmation-v1",
+  "status": "FROZEN_BEFORE_TAIL_STATE_MEASUREMENT"
+}

@@ -1,30 +1,93 @@
 {
-  "decision": "CURRENT_DIRECT_INDICATOR_INCOMPLETE__ADD_EVENT_AND_TRANSPORT_JOINT_MOMENTS",
+  "decision": "DEVELOPMENT_RECOVERY_PASS__FREEZE_AND_RUN_HELDOUT_BEFORE_ORACLE_CLAIM",
   "historical_verdicts_used_as_predictor_inputs": false,
+  "matched_controls": {
+    "liger_event_coherence_hypothesis": {
+      "expected": "NOT_A_REQUIRED_CHANNEL",
+      "passed": true,
+      "prediction": {
+        "coordinate_count": 65536,
+        "cross_event_energy": -1.3271497663864815e-08,
+        "event_count": 65,
+        "normalized_cross_event_coherence": -0.0018069680578986574,
+        "random_sign_draws": 4000,
+        "random_sign_pvalue": 0.435391152211947,
+        "resultant_energy": 1.0148822378856486e-07,
+        "resultant_over_independent_null": 0.8843540442944859,
+        "status": "CANCELING_EVENT_STRUCTURE",
+        "total_event_energy": 1.1475972145242968e-07
+      },
+      "scientific_role": "falsifies the discarded hypothesis that Liger requires mutually aligned per-chunk rounding atoms"
+    },
+    "phi_local_population": {
+      "expected": "NO_GLOBAL_LOCAL_BIAS",
+      "passed": true,
+      "prediction": {
+        "case_id": "phi_local_centered_control",
+        "direct_risk": false,
+        "disposition": "UNRESOLVED",
+        "evidence_kind": "FOUR_STATE_POPULATION_COHERENCE",
+        "measurements": {
+          "candidate_error_fitted_direction_used": false,
+          "cross_state_ratio": 0.11980666944487836,
+          "miss_is_safety_certificate": false,
+          "risk_margin": 0.25,
+          "state_count": 4
+        },
+        "reason": "no shared component at the screening margin; moving-frame tests remain required",
+        "routed_for_exact_followup": true,
+        "safe_release": false
+      }
+    },
+    "stateless_sgd_odd_response": {
+      "maximum_safe_ratio": 0.01,
+      "passed": true,
+      "saved_p_resultant_ratio": 0.00024792929906559236,
+      "silu_resultant_ratio": 0.0006539211251021134
+    }
+  },
   "prediction_built_before_target_comparison": true,
   "predictions": [
     {
       "case_id": "liger_fused_ce",
-      "direct_risk": false,
-      "disposition": "ESCALATE_MISSING_EVENT_MOMENT",
-      "evidence_kind": "CAPABILITY_GATE",
+      "direct_risk": true,
+      "disposition": "DIRECT_RISK_REFERENCE_RELATIVE",
+      "evidence_kind": "REFERENCE_RELATIVE_MOVING_FRAME",
       "measurements": {
-        "missing_screen_input": "EVENT_MOMENT"
+        "bootstrap_interval": [
+          -0.0017232780345725928,
+          -3.0348669829423625e-05
+        ],
+        "condition_count": 8,
+        "mean_coefficient": -0.0008286324051844129,
+        "mean_cosine": -0.13621076412614075,
+        "minimum_absolute_mean_coefficient": 1e-05,
+        "negative": 6,
+        "positive": 2,
+        "reference_frame_uses_candidate_error": false,
+        "status": "REFERENCE_RELATIVE_DIRECTIONAL_RISK",
+        "tied": 0,
+        "trajectory_direction_used": false,
+        "two_sided_sign_pvalue": 0.2890625
       },
-      "reason": "no label-blind schedule-conditioned event-moment screen is bound",
-      "routed_for_exact_followup": true,
+      "reason": "candidate-repair error has a nonzero mean multiplicative component in the same-state repair-update frame",
+      "routed_for_exact_followup": false,
       "safe_release": false
     },
     {
       "case_id": "phi4_seq64_lmhead_dx",
-      "direct_risk": false,
-      "disposition": "ESCALATE_MISSING_TRANSPORT_JOINT_MOMENT",
-      "evidence_kind": "CAPABILITY_GATE",
+      "direct_risk": true,
+      "disposition": "DIRECT_RISK_POPULATION_COHERENCE",
+      "evidence_kind": "FOUR_STATE_POPULATION_COHERENCE",
       "measurements": {
-        "missing_screen_input": "TRANSPORT_JOINT_MOMENT"
+        "candidate_error_fitted_direction_used": false,
+        "cross_state_ratio": 0.735363016079961,
+        "miss_is_safety_certificate": false,
+        "risk_margin": 0.25,
+        "state_count": 4
       },
-      "reason": "no label-blind residual/transport joint-moment screen is bound",
-      "routed_for_exact_followup": true,
+      "reason": "complete-vector Gram exposes a shared parameter-coordinate component",
+      "routed_for_exact_followup": false,
       "safe_release": false
     },
     {
@@ -33,16 +96,19 @@
       "disposition": "DIRECT_LOCAL_RISK_DOWNSTREAM_ESCALATE",
       "evidence_kind": "FOUR_REPEAT_FIXED_CONDITION_COMPLETE_GRAM",
       "measurements": {
-        "candidate_local_biased_conditions": 16,
-        "condition_count": 16,
+        "candidate_local_biased_conditions": 1,
+        "condition_count": 1,
         "downstream_biased_conditions": {
-          "candidate_adamw_zero_update_effect_removed": 15,
-          "candidate_gradient_effect_removed": 14,
-          "candidate_sgd_update_effect_removed": 14
+          "candidate_adamw_zero_update_effect_removed": 1,
+          "candidate_gradient_effect_removed": 1,
+          "candidate_sgd_update_effect_removed": 1
         },
         "full_repeat_or_historical_verdict_read": false,
-        "repair_local_centered_conditions": 14,
-        "repeat_budget": 4
+        "repair_local_biased_conditions": 0,
+        "repair_local_centered_conditions": 0,
+        "repair_local_unresolved_conditions": 1,
+        "repeat_budget": 4,
+        "screen_is_existence_witness_not_population_prevalence": true
       },
       "reason": "candidate-local risk is direct, but repair centering or the complete downstream chain remains unresolved at this budget",
       "routed_for_exact_followup": true,
@@ -51,22 +117,25 @@
     {
       "case_id": "qwen128_vproj_mm",
       "direct_risk": true,
-      "disposition": "DIRECT_LOCAL_RISK_DOWNSTREAM_ESCALATE",
+      "disposition": "DIRECT_RISK_SOURCE",
       "evidence_kind": "FOUR_REPEAT_FIXED_CONDITION_COMPLETE_GRAM",
       "measurements": {
-        "candidate_local_biased_conditions": 16,
-        "condition_count": 16,
+        "candidate_local_biased_conditions": 1,
+        "condition_count": 1,
         "downstream_biased_conditions": {
-          "candidate_adamw_zero_update_effect_removed": 16,
-          "candidate_gradient_effect_removed": 13,
-          "candidate_sgd_update_effect_removed": 13
+          "candidate_adamw_zero_update_effect_removed": 1,
+          "candidate_gradient_effect_removed": 1,
+          "candidate_sgd_update_effect_removed": 1
         },
         "full_repeat_or_historical_verdict_read": false,
-        "repair_local_centered_conditions": 16,
-        "repeat_budget": 4
+        "repair_local_biased_conditions": 0,
+        "repair_local_centered_conditions": 1,
+        "repair_local_unresolved_conditions": 0,
+        "repeat_budget": 4,
+        "screen_is_existence_witness_not_population_prevalence": true
       },
-      "reason": "candidate-local risk is direct, but repair centering or the complete downstream chain remains unresolved at this budget",
-      "routed_for_exact_followup": true,
+      "reason": "four-repeat fixed-condition screen finds candidate-local bias, a centered repair residual, and directional downstream effects",
+      "routed_for_exact_followup": false,
       "safe_release": false
     },
     {
@@ -111,16 +180,19 @@
       "disposition": "DIRECT_LOCAL_RISK_DOWNSTREAM_ESCALATE",
       "evidence_kind": "FOUR_REPEAT_FIXED_CONDITION_COMPLETE_GRAM",
       "measurements": {
-        "candidate_local_biased_conditions": 16,
-        "condition_count": 16,
+        "candidate_local_biased_conditions": 1,
+        "condition_count": 1,
         "downstream_biased_conditions": {
-          "candidate_adamw_zero_update_effect_removed": 14,
-          "candidate_gradient_effect_removed": 10,
-          "candidate_sgd_update_effect_removed": 10
+          "candidate_adamw_zero_update_effect_removed": 1,
+          "candidate_gradient_effect_removed": 0,
+          "candidate_sgd_update_effect_removed": 0
         },
         "full_repeat_or_historical_verdict_read": false,
-        "repair_local_centered_conditions": 16,
-        "repeat_budget": 4
+        "repair_local_biased_conditions": 0,
+        "repair_local_centered_conditions": 1,
+        "repair_local_unresolved_conditions": 0,
+        "repeat_budget": 4,
+        "screen_is_existence_witness_not_population_prevalence": true
       },
       "reason": "candidate-local risk is direct, but repair centering or the complete downstream chain remains unresolved at this budget",
       "routed_for_exact_followup": true,
@@ -156,18 +228,18 @@
     "rows": [
       {
         "case_id": "liger_fused_ce",
-        "directly_recovered": false,
+        "directly_recovered": true,
         "fail_closed_routed": true,
         "false_safe": false,
-        "prediction": "ESCALATE_MISSING_EVENT_MOMENT",
+        "prediction": "DIRECT_RISK_REFERENCE_RELATIVE",
         "target": "STRICT_POSITIVE"
       },
       {
         "case_id": "phi4_seq64_lmhead_dx",
-        "directly_recovered": false,
+        "directly_recovered": true,
         "fail_closed_routed": true,
         "false_safe": false,
-        "prediction": "ESCALATE_MISSING_TRANSPORT_JOINT_MOMENT",
+        "prediction": "DIRECT_RISK_POPULATION_COHERENCE",
         "target": "STRICT_POSITIVE"
       },
       {
@@ -183,7 +255,7 @@
         "directly_recovered": true,
         "fail_closed_routed": true,
         "false_safe": false,
-        "prediction": "DIRECT_LOCAL_RISK_DOWNSTREAM_ESCALATE",
+        "prediction": "DIRECT_RISK_SOURCE",
         "target": "STRICT_POSITIVE"
       },
       {
@@ -219,10 +291,65 @@
         "target": "ABSTAIN_BOUNDARY"
       }
     ],
-    "strict_direct_recall": 0.6666666666666666,
+    "strict_direct_recall": 1.0,
     "strict_positive_count": 6,
     "strict_routed_recall": 1.0
   },
   "schema": "kernel-analyzer-bias-oracle-recovery-v1",
-  "scientific_role": "DEVELOPMENT_CASE_RECOVERY_NOT_HELDOUT_VALIDATION"
+  "scientific_role": "DEVELOPMENT_CASE_RECOVERY_NOT_HELDOUT_VALIDATION",
+  "secondary_regression": {
+    "non_directional_control": {
+      "expected": "NO_DIRECT_RISK_FROM_THIS_WITNESS",
+      "passed": true,
+      "prediction": {
+        "case_id": "liger_rmsnorm_dx_control",
+        "direct_risk": false,
+        "disposition": "UNRESOLVED",
+        "evidence_kind": "CROSSFIT_FROZEN_PROJECTION",
+        "measurements": {
+          "basis_frozen_before_evaluation": true,
+          "bootstrap_interval": [
+            -0.00040974473708351903,
+            0.0001418021929989797
+          ],
+          "evaluation_count": 8,
+          "mean_projection": -0.00010257762697470344,
+          "minimum_absolute_mean": 1e-08,
+          "negative": 4,
+          "positive": 4
+        },
+        "reason": "the cross-fit projection mean is centered or unresolved",
+        "routed_for_exact_followup": true,
+        "safe_release": false
+      }
+    },
+    "passed": true,
+    "positive": {
+      "expected": "DIRECTIONAL_RISK",
+      "passed": true,
+      "prediction": {
+        "case_id": "qwen_seq128_lmhead_dx_layout",
+        "direct_risk": true,
+        "disposition": "DIRECT_RISK_CROSSFIT_PROJECTION",
+        "evidence_kind": "CROSSFIT_FROZEN_PROJECTION",
+        "measurements": {
+          "basis_frozen_before_evaluation": true,
+          "bootstrap_interval": [
+            7.310298756527242e-05,
+            8.65602062861388e-05
+          ],
+          "evaluation_count": 8,
+          "mean_projection": 7.974290797308002e-05,
+          "minimum_absolute_mean": 1e-08,
+          "negative": 0,
+          "positive": 8
+        },
+        "reason": "a calibration-frozen direction confirms on untouched evaluation states",
+        "routed_for_exact_followup": false,
+        "safe_release": false
+      }
+    },
+    "scientific_role": "SECONDARY_RETROSPECTIVE_REGRESSION_NOT_HELDOUT",
+    "thresholds_changed_after_reading": false
+  }
 }

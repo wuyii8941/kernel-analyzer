@@ -234,6 +234,29 @@ as sufficient explanations.
 The analytic RMSNorm-only reconstruction is incomplete, so this supports a
 composite backward coupling mechanism, not one uniquely named Jacobian factor.
 
+### DeepSeek attention dV: state-conditioned transport component
+
+The prospective moving-frame screen tests a conditional scalar that does not
+require unrelated inputs to share an absolute parameter direction:
+
+```text
+alpha_c = <g_candidate(c)-g_repair(c), g_repair(c)>
+          / ||g_repair(c)||^2.
+```
+
+For layer-35 attention, `O=P V`, `dV=P^T dO`, and `dW_v=dV^T H`. Replacing only
+the compiled BF16 `dV` BMM output with its FP32-recomputed, BF16-ABI reference
+produces a negative held-out mean coefficient (`-0.003698`, 95% CI
+`[-0.006637, -0.000592]`) over 32 new natural states. This is a transported
+directional component in a reference-defined moving frame: the candidate
+repeatedly contracts the repair update even though the full parameter-space
+direction rotates with the input.
+
+The direction, selection rule, and confidence criterion were frozen before
+these states were measured. Only one of three promoted candidates confirmed;
+two sign-changing controls did not fire. The result validates a sufficient
+risk witness, not a claim that this scalar is necessary for every bias mode.
+
 ### Qwen saved-P: head pairing rejected; optimizer oddness active
 
 The saved/reconstructed-probability repair closes the exact softmax

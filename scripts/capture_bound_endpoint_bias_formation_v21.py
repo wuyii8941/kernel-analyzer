@@ -34,17 +34,39 @@ from kernel_analyzer.bias_formation_v21 import (  # noqa: E402
     FormationPolicy,
     summarize_streamed_state_vector_files,
 )
+from kernel_analyzer.reference_relative_oracle import (  # noqa: E402
+    ReferenceRelativeObservation,
+    certify_reference_relative,
+)
 from scripts.aot_capture import AOTForwardBackwardCapture  # noqa: E402
 from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime  # noqa: E402
 from scripts.run_frozen_candidate_fp32_screen import wrapper_modules  # noqa: E402
 from scripts.run_generated_fp32_screen import file_digest, load_model  # noqa: E402
 from scripts.run_same_dtype_semantic_oracle import load  # noqa: E402
-from scripts.run_targeted_full_coordinate import validate_release  # noqa: E402
 from scripts.generated_nontriton_fp32_observer import fp32_external_reference  # noqa: E402
 from scripts.same_dtype_semantic_observer import SameDtypeSemanticCandidateObserver  # noqa: E402
 
 
 LR = 1.0e-4
+
+
+def validate_runtime_structure(
+    modules: list[tuple[Any, str]], capture: dict[str, Any]
+) -> None:
+    """Bind the runtime graph without requiring unstable codegen byte identity.
+
+    Exact endpoint identity and call cardinality are checked later by the
+    candidate observer for every state.  Here we only reject a changed graph
+    partition/order; cache-path and generated-source byte changes are not a
+    scientific gate.
+    """
+
+    observed = [phase.upper() for _, phase in modules]
+    expected = [str(row["phase"]).upper() for row in capture["modules"]]
+    if observed != expected:
+        raise RuntimeError(
+            f"runtime F+B wrapper structure changed: {observed} != {expected}"
+        )
 
 
 def canonical(value: object) -> str:
@@ -291,7 +313,7 @@ def main() -> None:
     warm = torch.tensor([warm_tokens], dtype=torch.long, device=device)
     model.zero_grad(set_to_none=True); candidate(warm).backward(); torch.cuda.synchronize(device)
     modules = list(PyCodeCache.modules[start:])
-    validate_release(wrapper_modules(modules), capture)
+    validate_runtime_structure(wrapper_modules(modules), capture)
 
     active: dict[str, Any] = {"sink": None}
     def dispatch(cut: Any, outputs: tuple[Any, ...]) -> None:
@@ -322,6 +344,9 @@ def main() -> None:
         for task_id in task_ids
     }
     metadata: dict[str, list[dict[str, Any]]] = {task_id: [] for task_id in task_ids}
+    reference_relative: dict[str, list[dict[str, Any]]] = {
+        task_id: [] for task_id in task_ids
+    }
     reach_rows: dict[str, list[dict[str, Any]]] = {task_id: [] for task_id in task_ids}
     args.spool_dir.mkdir(parents=True, exist_ok=True)
 
@@ -423,6 +448,21 @@ def main() -> None:
             repair_gradient = parameters[carrier].grad.detach().float().cpu().clone()
             gradient_delta = baseline_gradients[carrier] - repair_gradient
             update_delta = -LR * gradient_delta
+            gradient_delta_flat = gradient_delta.double().reshape(-1)
+            repair_gradient_flat = repair_gradient.double().reshape(-1)
+            reference_relative[task_id].append({
+                "condition_id": state_id,
+                "partition": partition,
+                "error_reference_dot": float(torch.dot(
+                    gradient_delta_flat, repair_gradient_flat
+                )),
+                "error_energy": float(torch.dot(
+                    gradient_delta_flat, gradient_delta_flat
+                )),
+                "reference_energy": float(torch.dot(
+                    repair_gradient_flat, repair_gradient_flat
+                )),
+            })
             case_id = str(case.get("case_id", task_id.replace(":", "_")))
             if args.engineering_reach_only:
                 reach_rows[task_id].append({
@@ -525,6 +565,7 @@ def main() -> None:
     for case in cases:
         task_id = str(case["task_id"]); case_id = str(case.get("case_id", task_id.replace(":", "_")))
         populations: dict[str, dict[str, Any]] = {"calibration": {}, "confirmation": {}}
+        reference_relative_certificates: dict[str, dict[str, Any]] = {}
         for partition in populations:
             for layer in ("LOCAL_ENDPOINT", "PARAMETER_GRADIENT", "EFFECTIVE_UPDATE"):
                 selected = [row for row in rows[task_id][layer] if partition in Path(row["path"]).parts]
@@ -544,6 +585,30 @@ def main() -> None:
                         "declared carrier received no measurable repair-induced effect")
                 populations[partition][layer] = certificate_row
                 populations[partition][layer + "_status"] = status
+            relative_rows = [
+                row for row in reference_relative[task_id]
+                if row["partition"] == partition
+            ]
+            try:
+                relative_certificate = certify_reference_relative([
+                    ReferenceRelativeObservation(
+                        condition_id=str(row["condition_id"]),
+                        error_reference_dot=float(row["error_reference_dot"]),
+                        error_energy=float(row["error_energy"]),
+                        reference_energy=float(row["reference_energy"]),
+                    )
+                    for row in relative_rows
+                ])
+                reference_relative_certificates[partition] = {
+                    **relative_certificate.as_dict(),
+                    "rows": relative_rows,
+                }
+            except (ValueError, ArithmeticError) as exc:
+                reference_relative_certificates[partition] = {
+                    "status": "REFERENCE_RELATIVE_UNRESOLVED",
+                    "reason": str(exc),
+                    "rows": relative_rows,
+                }
         confirmation = [populations["confirmation"][layer + "_status"]
                         for layer in ("LOCAL_ENDPOINT", "PARAMETER_GRADIENT", "EFFECTIVE_UPDATE")]
         first_observed = next((layer for layer, status in zip(
@@ -566,6 +631,9 @@ def main() -> None:
                             "confirmation_count": population_size,
                             "both_open_loop_common_state": True, "disjoint": True},
             "policy": policy.as_dict(), "populations": populations,
+            "reference_relative_parameter_gradient": (
+                reference_relative_certificates
+            ),
             "first_observed_biased_stage": first_observed,
             "first_confirmed_bias_stage": first_confirmed,
             "formation_point": "CONFIRMED" if first_confirmed else "UNRESOLVED",

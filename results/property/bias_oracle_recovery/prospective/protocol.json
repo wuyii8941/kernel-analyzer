@@ -1,0 +1,54 @@
+{
+  "decision": {
+    "miss": "UNRESOLVED_NOT_SAFE",
+    "risk": "EITHER_FROZEN_WITNESS_STRICT_HIT",
+    "scientific_case_requires": "EXACT_FB_BOUNDARY_PLUS_REPLICATED_WITNESS_PLUS_MATCHED_REPAIR",
+    "threshold_changes_after_measurement": "FORBIDDEN"
+  },
+  "frozen_witnesses": {
+    "moving_frame": {
+      "bootstrap_draws": 4000,
+      "minimum_absolute_mean_coefficient": 1e-05,
+      "statistic": "MEAN_<DELTA_G,G_REPAIR>/||G_REPAIR||^2",
+      "strict_hit": "DIRECTIONAL_RISK_IN_BOTH_PARTITIONS_WITH_SAME_MEAN_SIGN"
+    },
+    "population": {
+      "statistic": "COMPLETE_VECTOR_CROSS_STATE_U_STATISTIC",
+      "strict_hit": "BIASED_IN_CALIBRATION_AND_CONFIRMATION"
+    }
+  },
+  "measurement": {
+    "calibration_common_states": 16,
+    "candidate_and_repair_share_pre_state": true,
+    "confirmation_common_states": 16,
+    "open_loop": true,
+    "trajectory_labels_used": false,
+    "unit": "COMPLETE_FORWARD_PLUS_ACTUAL_BACKWARD_WITH_EXACT_ENDPOINT_REPAIR"
+  },
+  "schema": "kernel-analyzer-prospective-bias-witness-regression-v1",
+  "selection": {
+    "case_ids": [
+      "qwen_seq64_lm_head_dx",
+      "qwen_seq64_l27_q_norm_vjp",
+      "qwen_seq64_l23_softmax_vjp",
+      "qwen_seq64_l23_attention_dq",
+      "deepseek8b_seq64_ce_dlogits",
+      "deepseek8b_seq64_final_norm_vjp",
+      "deepseek8b_seq64_l35_softmax_vjp",
+      "deepseek8b_seq64_l35_attention_dv"
+    ],
+    "models": [
+      "qwen",
+      "deepseek8b"
+    ],
+    "principle": "TRAINING_SEMANTIC_BOTTLENECK",
+    "semantic_families": [
+      "LOSS_HEAD_OR_CE_BACKWARD",
+      "NORMALIZATION_BACKWARD",
+      "ATTENTION_SOFTMAX_BACKWARD",
+      "ATTENTION_MATRIX_BACKWARD"
+    ],
+    "uses_historical_bias_verdict": false
+  },
+  "status": "FROZEN_BEFORE_REFERENCE_RELATIVE_VALUES"
+}

@@ -21,6 +21,30 @@ The exact mechanism remains
 \int p_s(\epsilon\mid c)F_e(\epsilon,c)d\epsilon.
 \]
 
+### Prospective validation update
+
+The selective design now has a validated low-cost moving-frame witness.  Its
+same-state coefficient is
+
+\[
+\alpha_c =
+\frac{\langle g_{candidate}-g_{repair}, g_{repair}\rangle}
+{\lVert g_{repair}\rVert^2}.
+\]
+
+After freezing candidates and direction on one 32-state development bank, a
+separate 32-state natural-text confirmation found a new DeepSeek layer-35
+attention `dV` case (mean `-0.003698`, 95% CI `[-0.006637, -0.000592]`). One of
+three promoted candidates confirmed; two sign-changing controls did not fire.
+The statistic adds no model F+B once candidate and repair gradients have been
+captured.
+
+This does not turn the cascade into a flat safety oracle. Phi still requires
+complete-vector population coherence, and saved-P/SiLU require exact
+antithetic optimizer-response measurements. The validated output is therefore
+`DIRECTIONAL_RISK` from any sufficient witness, or `ABSTAIN`; no miss is
+reported as safe.
+
 The first term is transported source/event/pairing asymmetry. The second is
 response rectification. The feasibility work below changes how these terms
 are screened; it does not redefine bias or alter any existing case verdict.

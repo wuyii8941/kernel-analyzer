@@ -89,13 +89,28 @@ from .bias_formation_v22 import (
     classify_global_certificate,
 )
 from .bias_oracle_recovery import (
+    BiasRiskCertificate,
     RecoveryDisposition,
     RecoveryPrediction,
     compare_recovery,
+    combine_risk_witnesses,
     missing_screen_prediction,
     predict_conditional_source_risk,
+    predict_crossfit_projection_risk,
+    predict_population_coherence_risk,
+    predict_reference_relative_risk,
     predict_response_rectification_risk,
     predict_source_fidelity_boundary,
+)
+from .joint_event_oracle import (
+    JointEventCertificate,
+    certify_joint_event_gram,
+    gram_from_event_vectors,
+)
+from .reference_relative_oracle import (
+    ReferenceRelativeCertificate,
+    ReferenceRelativeObservation,
+    certify_reference_relative,
 )
 
 __all__ = [
@@ -176,9 +191,20 @@ __all__ = [
     "classify_global_certificate",
     "RecoveryDisposition",
     "RecoveryPrediction",
+    "BiasRiskCertificate",
     "compare_recovery",
+    "combine_risk_witnesses",
     "missing_screen_prediction",
     "predict_conditional_source_risk",
+    "predict_crossfit_projection_risk",
+    "predict_population_coherence_risk",
+    "predict_reference_relative_risk",
     "predict_response_rectification_risk",
     "predict_source_fidelity_boundary",
+    "JointEventCertificate",
+    "certify_joint_event_gram",
+    "gram_from_event_vectors",
+    "ReferenceRelativeCertificate",
+    "ReferenceRelativeObservation",
+    "certify_reference_relative",
 ]
