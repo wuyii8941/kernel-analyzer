@@ -106,6 +106,11 @@ def main() -> None:
     ]
     with gzip.open(args.inventory, "rt", encoding="utf-8") as handle:
         inventory = json.load(handle)
+    if inventory.get("status") not in {
+        "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW",
+        "COMPLETE_GENERATED_SCHEDULE_PARTIAL_POINTER_DATAFLOW",
+    }:
+        raise RuntimeError("generated runtime-call inventory is incomplete")
     rows = inventory["runtime_call_audit"]["rows"]
     kinds = {"EXTERN", "DIRECT_ATEN", "DIRECT_TORCH_OP", "DIRECT_TENSOR_METHOD"}
     expected = sum(

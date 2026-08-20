@@ -49,6 +49,11 @@ def main() -> None:
     parser.add_argument("--trace-dir", type=Path, default=TRACE)
     parser.add_argument("--capture", type=Path, default=CAPTURE)
     parser.add_argument("--output", type=Path, default=OUTPUT)
+    parser.add_argument(
+        "--allow-partial-dataflow",
+        action="store_true",
+        help="Retain a complete runtime-call census when a graph-break pointer producer is unresolved.",
+    )
     args = parser.parse_args()
     # PyTorch nightly added this value-preserving input guard after the frozen
     # audit package was archived.  It is a runtime helper, not a compute site.
@@ -87,21 +92,42 @@ def main() -> None:
         direct_runtime_inventory=direct,
     )
     validate_generated_runtime_call_completeness_audit(runtime)
-    dataflow = build_generated_compute_dataflow_audit(
-        trace_dir=args.trace_dir,
-        base_generated_inventory=wrapped,
-        direct_runtime_inventory=direct,
-        runtime_call_audit=runtime,
-    )
-    validate_generated_compute_dataflow_audit(dataflow)
+    dataflow_error = None
+    try:
+        dataflow = build_generated_compute_dataflow_audit(
+            trace_dir=args.trace_dir,
+            base_generated_inventory=wrapped,
+            direct_runtime_inventory=direct,
+            runtime_call_audit=runtime,
+        )
+        validate_generated_compute_dataflow_audit(dataflow)
+    except ValueError as error:
+        if not args.allow_partial_dataflow:
+            raise
+        dataflow_error = str(error)
+        dataflow = {
+            "status": "PARTIAL_FAIL_CLOSED_UNRESOLVED_GRAPH_BREAK_POINTER",
+            "denominator": {
+                "expected_compute_invocations": runtime["denominator"]["compute_invocations"],
+                "resolved_compute_invocations": 0,
+                "unresolved_compute_invocations": runtime["denominator"]["compute_invocations"],
+            },
+            "rows": [],
+            "error": dataflow_error,
+        }
     payload = {
         "schema": "kernel-analyzer-executed-generated-inventory-v1",
-        "status": "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW",
+        "status": (
+            "COMPLETE_GENERATED_SCHEDULE_AND_POINTER_DATAFLOW"
+            if dataflow_error is None
+            else "COMPLETE_GENERATED_SCHEDULE_PARTIAL_POINTER_DATAFLOW"
+        ),
         "architecture": capture.get("architecture", "qwen"),
         "generated_regions": wrapped,
         "direct_runtime_calls": direct,
         "runtime_call_audit": runtime,
         "compute_dataflow": dataflow,
+        "pointer_dataflow_error": dataflow_error,
         "claim_boundary": (
             "Exact current generated callsites and input/output pointer dataflow; "
             "mathematical reference dispatch and heldout values are separate gates."
