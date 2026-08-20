@@ -1,8 +1,11 @@
 import math
 
 import numpy as np
+import pytest
+import torch
 
 from kernel_analyzer.persistence_property import (
+    CompleteTreeGramPath,
     aligned_level_statistics_from_gram,
     five_level_signature,
     path_statistics_from_gram,
@@ -82,3 +85,20 @@ def test_five_level_signature_keeps_incompatible_coordinate_spaces_separate():
     assert result["independent_coordinate_spaces"]["epsilon"]["coherence_amplification"] == 0.0
     assert result["independent_coordinate_spaces"]["gradient"]["coherence_amplification"] == math.sqrt(2)
     assert result["uses_trajectory_or_seup_verdict_as_input"] is False
+
+
+def test_complete_tree_gram_path_matches_dense_statistics():
+    path = CompleteTreeGramPath(total_steps=3, max_resident_bytes=1024)
+    rows = [torch.tensor([1.0, 0.0]), torch.tensor([1.0, 1.0]), torch.tensor([0.0, 1.0])]
+    for row in rows:
+        path.add({"weight": row})
+    observed = path.finalize(sign_flip_draws=200)
+    expected = path_statistics_from_gram(_gram([row.tolist() for row in rows]), sign_flip_draws=200)
+    assert observed["gram_kind"] == "EXACT_COMPLETE_TREE_GRAM"
+    assert math.isclose(observed["coherence_amplification"], expected["coherence_amplification"])
+
+
+def test_complete_tree_gram_path_fails_before_exceeding_memory_bound():
+    path = CompleteTreeGramPath(total_steps=16, max_resident_bytes=32)
+    with pytest.raises(MemoryError):
+        path.add({"weight": torch.ones(4)})

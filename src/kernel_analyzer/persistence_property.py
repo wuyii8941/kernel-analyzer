@@ -13,6 +13,9 @@ import math
 from typing import Any, Mapping, Sequence
 
 import numpy as np
+import torch
+
+from .seup import _tree_dot
 
 
 def _gram(value: Any) -> np.ndarray:
@@ -273,3 +276,59 @@ def five_level_signature(
         ),
         "uses_trajectory_or_seup_verdict_as_input": False,
     }
+
+
+def _cpu_float_tree(value: Mapping[str, Any]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, item in value.items():
+        if not isinstance(item, torch.Tensor):
+            raise TypeError("every trajectory-vector leaf must be a tensor")
+        tensor = item.detach().to(device="cpu", dtype=torch.float32).contiguous()
+        if not bool(torch.isfinite(tensor).all()):
+            raise ValueError("trajectory vector is nonfinite")
+        result[str(key)] = tensor
+    return result
+
+
+def _tree_bytes(value: Mapping[str, Any]) -> int:
+    return sum(item.numel() * item.element_size() for item in value.values())
+
+
+class CompleteTreeGramPath:
+    """Form an exact Gram for a short tree-vector trajectory in host RAM."""
+
+    def __init__(self, *, total_steps: int, max_resident_bytes: int) -> None:
+        if total_steps < 2 or max_resident_bytes <= 0:
+            raise ValueError("invalid path size or memory bound")
+        self.total_steps = int(total_steps)
+        self.max_resident_bytes = int(max_resident_bytes)
+        self.vectors: list[dict[str, Any]] = []
+        self.bytes_per_vector: int | None = None
+        self.gram = np.zeros((total_steps, total_steps), dtype=np.float64)
+
+    def add(self, value: Mapping[str, Any]) -> None:
+        if len(self.vectors) >= self.total_steps:
+            raise RuntimeError("complete Gram path is already full")
+        tree = _cpu_float_tree(value)
+        size = _tree_bytes(tree)
+        if self.bytes_per_vector is None:
+            self.bytes_per_vector = size
+            if size * self.total_steps > self.max_resident_bytes:
+                raise MemoryError("complete Gram path exceeds the resident-memory bound")
+        elif size != self.bytes_per_vector:
+            raise ValueError("trajectory coordinate set changed")
+        index = len(self.vectors)
+        for previous, other in enumerate(self.vectors):
+            dot = _tree_dot(tree, other)
+            self.gram[index, previous] = self.gram[previous, index] = dot
+        self.gram[index, index] = _tree_dot(tree, tree)
+        self.vectors.append(tree)
+
+    def finalize(self, **kwargs: Any) -> dict[str, Any]:
+        if len(self.vectors) != self.total_steps:
+            raise RuntimeError("complete Gram path is incomplete")
+        result = path_statistics_from_gram(self.gram, **kwargs)
+        result["resident_bytes"] = int((self.bytes_per_vector or 0) * self.total_steps)
+        result["gram_kind"] = "EXACT_COMPLETE_TREE_GRAM"
+        self.vectors.clear()
+        return result
