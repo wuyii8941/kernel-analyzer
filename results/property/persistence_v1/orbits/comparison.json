@@ -1,0 +1,33 @@
+{
+  "cases": [
+    {
+      "case_id": "phi4_seq64_lmhead_dx",
+      "default_source_temporal_amplification": 1.4425661718103535,
+      "effective_update_temporal_amplification": 3.2890916370209418,
+      "orbit_mean_energy_fraction": 0.9238174516799295,
+      "orbit_mean_sign_flip_p": 0.00024993751562109475,
+      "orbit_mean_temporal_amplification": 1.2826337596068782,
+      "schedule_residual_temporal_amplification": 1.2448247548599656,
+      "source_to_update_amplification_ratio": 2.280028258872371
+    },
+    {
+      "case_id": "qwen128_vproj_mm",
+      "default_source_temporal_amplification": 1.0180489853536934,
+      "effective_update_temporal_amplification": 0.9990920610983055,
+      "orbit_mean_energy_fraction": 0.9998626887207948,
+      "orbit_mean_sign_flip_p": 0.0012496875781054736,
+      "orbit_mean_temporal_amplification": 1.0180276590292154,
+      "schedule_residual_temporal_amplification": 1.0001958815664413,
+      "source_to_update_amplification_ratio": 0.9813791629596273
+    }
+  ],
+  "claim_boundary": "Two development cases cannot establish a predictive cross-kernel property.",
+  "hypothesis_verdicts": {
+    "ORBIT_MEAN_ENERGY_FRACTION_ALONE": "COUNTEREXAMPLE_FOUND",
+    "TEMPORAL_ORBIT_MEAN_PLUS_TRANSPORT": "SURVIVES_TWO_CASE_DEVELOPMENT_ONLY",
+    "reason": "Qwen has a larger orbit-mean energy fraction than Phi but no local-effective-update persistence. Magnitude of the orbit mean is therefore not the property."
+  },
+  "next_decisive_experiment": "Deliver a different real reduction-orbit member at each Phi step. If the schedule-specific anchor matters, local-effective-update persistence must fall without changing real semantics.",
+  "schema": "kernel-analyzer-reduction-orbit-paired-analysis-v1",
+  "status": "DEVELOPMENT_PAIR_COMPLETE"
+}
