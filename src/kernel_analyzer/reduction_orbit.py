@@ -23,6 +23,23 @@ def frozen_permutations(length: int, count: int, seed: int) -> list[torch.Tensor
     return values
 
 
+def frozen_crossfit_permutations(length: int, seed: int) -> dict[str, Any]:
+    """Return one default plus the frozen 4+4 cross-fit orbit members."""
+
+    permutations = frozen_permutations(length, 9, seed)
+    variant_ids = ["default"] + [f"orbit_{index:02d}" for index in range(8)]
+    return {
+        "variant_ids": variant_ids,
+        "default_variant": "default",
+        "orbit_mean_variant_ids": variant_ids[1:],
+        "half_A_variant_ids": variant_ids[1:5],
+        "half_B_variant_ids": variant_ids[5:],
+        "permutations": permutations,
+        "model_inputs_permuted": False,
+        "application_boundary": "CAPTURED_KERNEL_OPERANDS_DURING_REPLAY",
+    }
+
+
 def gemm_reduction_orbit(
     left: torch.Tensor,
     right: torch.Tensor,

@@ -14,6 +14,9 @@ import statistics
 from typing import Any
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
 def load(path: Path) -> dict[str, Any]:
     with gzip.open(path, "rt", encoding="utf-8") as handle:
         return json.load(handle)
@@ -30,9 +33,26 @@ def main() -> None:
 
     grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
     state_rows = []
+    observed_mode = None
     for path in sorted(args.inputs):
         payload = load(path)
-        if payload["status"] != "COMPLETE_SHARD_ALL_NONTRITON_FP32_REPLAY":
+        schema = payload["schema"]
+        if schema == "kernel-analyzer-generated-nontriton-fp32-screen-v1":
+            mode, complete = "nontriton", "COMPLETE_SHARD_ALL_NONTRITON_FP32_REPLAY"
+            campaign_by_region = {}
+        elif schema in {
+            "kernel-analyzer-generated-fp32-screen-v1",
+            "kernel-analyzer-generated-typed-fp32-screen-v2",
+        }:
+            mode, complete = "triton", "COMPLETE_SHARD_ALL_TRITON_FP32_REPLAY"
+            campaign = load(ROOT / payload["campaign"])
+            campaign_by_region = {row["region_id"]: row for row in campaign["rows"]}
+        else:
+            raise RuntimeError(f"unsupported generated screen schema: {schema}")
+        observed_mode = observed_mode or mode
+        if observed_mode != mode:
+            raise RuntimeError("Triton and non-Triton screens require separate summaries")
+        if payload["status"] != complete:
             raise RuntimeError(f"incomplete screen: {path}")
         if len(payload["states"]) != 1:
             raise RuntimeError("state-specific summary requires one state per input")
@@ -41,18 +61,38 @@ def main() -> None:
         if len(repeats) != 2:
             raise RuntimeError(f"formal screen lacks two repeats: {state_id}")
         left, right = repeats[0]["summary"], repeats[1]["summary"]
-        if left["runtime_identity"] != right["runtime_identity"]:
+        left_identity = left.get("runtime_identity") or [
+            (
+                row["region_id"], row["symbol"], row.get("runtime_invocation_ordinal"),
+                row.get("callsite_execution_ordinal"), tuple(sorted(row["endpoint_metrics"])),
+            ) for row in left["records"]
+        ]
+        right_identity = right.get("runtime_identity") or [
+            (
+                row["region_id"], row["symbol"], row.get("runtime_invocation_ordinal"),
+                row.get("callsite_execution_ordinal"), tuple(sorted(row["endpoint_metrics"])),
+            ) for row in right["records"]
+        ]
+        if left_identity != right_identity:
             raise RuntimeError(f"runtime identity changed across repeats: {state_id}")
+        static_expected = (
+            left["denominator"]["static_generated_compute_calls"]
+            if mode == "nontriton" else left["denominator"]["expected_triton_invocations"]
+        )
+        static_missing = (
+            left["denominator"]["static_calls_not_executed_in_measured_step"]
+        )
         state_rows.append({
             "state_id": state_id,
             "actual_invocations": len(left["records"]),
-            "static_calls": left["denominator"]["static_generated_compute_calls"],
-            "static_calls_not_executed": left["denominator"]["static_calls_not_executed_in_measured_step"],
+            "static_calls": static_expected,
+            "static_calls_not_executed": static_missing,
         })
         for record in left["records"]:
+            campaign_row = campaign_by_region.get(str(record["region_id"]), {})
             signature = (
-                str(record["phase"]), str(record["function"]),
-                str(record["source_line_sha256"]),
+                str(record["phase"]), str(record.get("function", record.get("symbol"))),
+                str(record.get("source_line_sha256", campaign_row.get("source_line_sha256"))),
             )
             for endpoint, metric in record["endpoint_metrics"].items():
                 rms = float(metric["rms"])
@@ -98,8 +138,9 @@ def main() -> None:
         )
     ]
     output = {
-        "schema": "kernel-analyzer-state-specific-nontriton-screen-summary-v1",
+        "schema": "kernel-analyzer-state-specific-generated-screen-summary-v1",
         "status": "COMPLETE_SCREENING_SUMMARY_NO_BIAS_VERDICT",
+        "implementation_kind": observed_mode,
         "states": state_rows,
         "denominator": {
             "screening_states": len(state_rows),

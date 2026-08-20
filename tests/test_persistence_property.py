@@ -4,6 +4,8 @@ import numpy as np
 import pytest
 import torch
 
+from kernel_analyzer.reduction_orbit import frozen_crossfit_permutations
+
 from kernel_analyzer.persistence_property import (
     CompleteTreeGramPath,
     aligned_level_statistics_from_gram,
@@ -18,6 +20,14 @@ from kernel_analyzer.persistence_property import (
 def _gram(rows):
     matrix = np.asarray(rows, dtype=np.float64)
     return matrix @ matrix.T
+
+
+def test_crossfit_permutation_protocol_keeps_default_out_of_halves():
+    protocol = frozen_crossfit_permutations(17, 11)
+    assert len(protocol["permutations"]) == 9
+    assert protocol["default_variant"] not in protocol["orbit_mean_variant_ids"]
+    assert set(protocol["half_A_variant_ids"]).isdisjoint(protocol["half_B_variant_ids"])
+    assert len(protocol["half_A_variant_ids"]) == len(protocol["half_B_variant_ids"]) == 4
 
 
 def test_path_statistics_separates_coherent_and_canceling_sequences():
