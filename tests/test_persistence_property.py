@@ -10,6 +10,7 @@ from kernel_analyzer.persistence_property import (
     five_level_signature,
     path_statistics_from_gram,
     semantic_orbit_statistics_from_gram,
+    transported_orbit_certificate_from_gram,
 )
 
 
@@ -102,3 +103,27 @@ def test_complete_tree_gram_path_fails_before_exceeding_memory_bound():
     path = CompleteTreeGramPath(total_steps=16, max_resident_bytes=32)
     with pytest.raises(MemoryError):
         path.add({"weight": torch.ones(4)})
+
+
+def test_transported_orbit_certificate_never_turns_null_into_safe():
+    rows = []
+    for index in range(16):
+        sign = 1.0 if index % 2 == 0 else -1.0
+        rows.extend([[sign, 0.0], [sign, 0.0]])
+    result = transported_orbit_certificate_from_gram(
+        _gram(rows), state_ids=tuple(f"s{i}" for i in range(16)),
+        variant_ids=("identity", "permuted"), reference_variant="identity",
+        sign_flip_draws=200, seed=9,
+    )
+    assert result["status"] == "NO_DETECTABLE_PERSISTENT_MEAN_UNDER_PROTOCOL"
+    assert result["safe_verdict_emitted"] is False
+
+
+def test_transported_orbit_certificate_detects_shared_parameter_direction():
+    rows = [[1.0, 0.0], [1.0, 0.0]] * 16
+    result = transported_orbit_certificate_from_gram(
+        _gram(rows), state_ids=tuple(f"s{i}" for i in range(16)),
+        variant_ids=("identity", "permuted"), reference_variant="identity",
+        sign_flip_draws=200, seed=9,
+    )
+    assert result["status"] == "PERSISTENT_TRANSPORTED_CONDITIONAL_MEAN"

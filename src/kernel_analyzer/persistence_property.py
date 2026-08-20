@@ -200,6 +200,43 @@ def semantic_orbit_statistics_from_gram(
     }
 
 
+def transported_orbit_certificate_from_gram(
+    gram: Any,
+    *,
+    state_ids: Sequence[str],
+    variant_ids: Sequence[str],
+    reference_variant: str,
+    sign_flip_draws: int = 4000,
+    seed: int = 20260820,
+) -> dict[str, Any]:
+    """Certify persistence after every orbit residual traversed the same F+B map.
+
+    Rows must be state-major effective-update errors, not endpoint residuals.
+    The orbit mean therefore estimates ``M_t E_pi[epsilon_t,pi]`` directly.
+    A null-like result is deliberately named ``NO_DETECTABLE_PERSISTENT_MEAN``;
+    it is not a universal safety certificate.
+    """
+
+    statistics = semantic_orbit_statistics_from_gram(
+        gram, state_ids=state_ids, variant_ids=variant_ids,
+        default_variant=reference_variant, sign_flip_draws=sign_flip_draws,
+        seed=seed,
+    )
+    persistent = statistics["orbit_mean"]["above_sign_flip_95"]
+    return {
+        "schema": "kernel-analyzer-transported-orbit-certificate-v1",
+        "measurement": "M_t_EXPECTATION_OVER_SEMANTIC_ORBIT",
+        "status": (
+            "PERSISTENT_TRANSPORTED_CONDITIONAL_MEAN"
+            if persistent else "NO_DETECTABLE_PERSISTENT_MEAN_UNDER_PROTOCOL"
+        ),
+        "statistics": statistics,
+        "uses_candidate_orbit_measurements": True,
+        "uses_trajectory_or_seup_verdict_as_label": False,
+        "safe_verdict_emitted": False,
+    }
+
+
 def aligned_level_statistics_from_gram(
     gram: Any,
     *,
