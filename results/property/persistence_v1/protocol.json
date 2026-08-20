@@ -1,0 +1,79 @@
+{
+  "claim_tracks": {
+    "feedback": {
+      "candidate_predictors": [
+        "optimizer_response_evenness",
+        "moment_state_dependence",
+        "matched_residual_feedback_gain"
+      ],
+      "question": "Does closed-loop model/optimizer state amplify an otherwise diffusive local update?"
+    },
+    "source_transport": {
+      "candidate_predictors": [
+        "orbit_mean_temporal_amplification",
+        "default_schedule_residual_temporal_amplification",
+        "reference_vjp_transported_amplification"
+      ],
+      "question": "Does a local implementation residual survive as a non-canceling effective update?"
+    }
+  },
+  "hard_rules": {
+    "formation_t4_and_seup_verdicts_are_not_predictor_inputs": true,
+    "incompatible_coordinate_spaces_are_never_concatenated": true,
+    "missing_vector_or_counterfactual_arm_fails_closed": true,
+    "no_threshold_is_tuned_to_recover_a_named_case": true,
+    "not_applicable_is_not_a_negative": true,
+    "old_case_verdicts_remain_frozen": true,
+    "semantic_orbit_must_preserve_exact_real_arithmetic_semantics": true
+  },
+  "interpretation": {
+    "diffusive_or_canceling": "actual component remains within the frozen matched-null regime",
+    "feedback_sustained": "local component is null-like while feedback and actual components are coherent",
+    "source_persistent": "source/orbit or transported local component has excess coherence",
+    "unresolved": "measurement power, recurrence, or semantic-orbit validity is insufficient"
+  },
+  "max_reported_lag": 8,
+  "measurement_levels": [
+    "epsilon",
+    "gradient",
+    "local",
+    "feedback",
+    "actual"
+  ],
+  "objective": "Test whether low-cost source/orbit/transport and feedback probes predict implementation-induced effective-update persistence.",
+  "ordered_states": 16,
+  "predictor_freeze_gate": [
+    "all development cases use the same 16-state horizon",
+    "each reported statistic has an empirical matched null",
+    "at least one semantics-preserving intervention changes the proposed predictor",
+    "predictor implementation cannot read case IDs or historical verdicts"
+  ],
+  "primary_continuous_measurement": "norm(sum_t x_t) / sqrt(sum_t norm(x_t)^2)",
+  "prospective_confirmation_gate": [
+    "predictions are committed before consequence values are revealed",
+    "at least four exact new invocations",
+    "at least two model families",
+    "at least two eligible source mechanisms",
+    "at least two risk predictions and two safe/control predictions when available",
+    "no threshold changes after reveal"
+  ],
+  "protocol_freeze_parent_commit": "b2c1af2a667623acc050b0a838a610ce29323dd1",
+  "required_auxiliary_measurements": [
+    "lag_resolved_normalized_inner_product",
+    "prefix_amplification_curve",
+    "resultant_over_path",
+    "sign_flip_null_interval"
+  ],
+  "schema": "kernel-analyzer-persistence-property-protocol-v1",
+  "semantic_orbit_variants": 8,
+  "sign_flip_null": {
+    "draws": 4000,
+    "seed": 20260820
+  },
+  "status": "FROZEN_BEFORE_V1_MEASUREMENT",
+  "success_levels": {
+    "CANDIDATE_PROPERTY": "development predictor beats norm/shape baselines",
+    "MECHANISM_TAXONOMY": "five-level localization and causal intervention only",
+    "SUPPORTED_PROPERTY": "frozen predictor succeeds on prospective confirmation"
+  }
+}

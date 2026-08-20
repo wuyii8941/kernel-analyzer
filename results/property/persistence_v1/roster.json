@@ -1,0 +1,86 @@
+{
+  "development_cases": [
+    {
+      "case_id": "liger_fused_ce",
+      "endpoint": "qwen3_liger_fused_linear_ce:dW",
+      "model": "Qwen3-1.7B",
+      "orbit": "JOINT_TOKEN_PERMUTATION_OF_G_AND_H",
+      "orbit_applicability": "ELIGIBLE_REDUCTION",
+      "role": "SOURCE_PERSISTENT_ANCHOR",
+      "state_source": "results/property/seup_mainline/liger_seup.json"
+    },
+    {
+      "case_id": "phi4_seq64_lmhead_dx",
+      "endpoint": "phi4_seq64:lm_head.input_gradient.mm",
+      "model": "Phi-4-mini-instruct",
+      "orbit": "JOINT_VOCAB_PERMUTATION_OF_G_AND_W",
+      "orbit_applicability": "ELIGIBLE_REDUCTION",
+      "role": "TRANSPORT_PERSISTENT_ANCHOR",
+      "state_source": "results/coverage/phi4_seq64_input_bank.json"
+    },
+    {
+      "case_id": "qwen128_vproj_mm",
+      "endpoint": "qwen_seq128_forward_8_output",
+      "model": "Qwen3-1.7B",
+      "orbit": "SEPARATE_MM_REDUCTION_AND_OUTPUT_ROUNDING_ORBITS",
+      "orbit_applicability": "ELIGIBLE_WITH_SOURCE_SPLIT",
+      "role": "FORMATION_POSITIVE_PERSISTENCE_BOUNDARY",
+      "state_source": "results/coverage/qwen_seq128_input_bank.json"
+    },
+    {
+      "case_id": "qwen_saved_p_seq128",
+      "endpoint": "qwen_seq128_layer27_attention_softmax_saved_P",
+      "model": "Qwen3-1.7B",
+      "orbit": null,
+      "orbit_applicability": "NOT_APPLICABLE_CONTRACT_SOURCE",
+      "role": "FEEDBACK_CANDIDATE",
+      "state_source": "results/property/seup_mainline/qwen_softmax_seup.json"
+    },
+    {
+      "case_id": "qwen3vl_silu_layer0",
+      "endpoint": "qwen3vl_layer0_silu_backward",
+      "model": "Qwen3-VL-2B",
+      "orbit": null,
+      "orbit_applicability": "NOT_APPLICABLE_POINTWISE_SOURCE",
+      "role": "FEEDBACK_ANCHOR",
+      "state_source": "results/coverage/cases/qwen3vl_layer0_silu_persistence_recurrence.json"
+    },
+    {
+      "case_id": "qwen_bmm_seq64",
+      "endpoint": "qwen_bmm_seq64_seup_negative_control",
+      "model": "Qwen3-1.7B",
+      "orbit": "BOUND_REDUCTION_PERMUTATION_IF_EXACT_OPERANDS_ARE_AVAILABLE",
+      "orbit_applicability": "BLOCKED_PENDING_OPERAND_BINDING",
+      "role": "VARIANCE_ONLY_CONTROL",
+      "state_source": "results/property/seup_mainline/qwen_bmm_seq64_seup.json.gz"
+    }
+  ],
+  "prospective_selection_rule": {
+    "exclusions": [
+      "any of the six development cases",
+      "any invocation already used to define predictor fields",
+      "unresolved many-to-one boundary without an exact repair"
+    ],
+    "required": [
+      "exact F+B proof unit and executable endpoint binding",
+      "candidate/repair/sham availability",
+      "sixteen ordered states not used by development predictors",
+      "declared parameter coordinate set",
+      "semantic orbit explicitly valid or feedback probe explicitly applicable"
+    ],
+    "selection_uses_candidate_values": false,
+    "slots": [
+      "two reduction/source invocations from at least two model families",
+      "one feedback-susceptibility invocation",
+      "one source/control invocation expected to remain null-like"
+    ]
+  },
+  "retrospective_only_not_heldout": [
+    "qwen64_vproj_mm",
+    "mamba_seq64_input_proj",
+    "qwen_layer23_attention_state",
+    "deepseek_layer35_dv"
+  ],
+  "schema": "kernel-analyzer-persistence-property-roster-v1",
+  "status": "DEVELOPMENT_FROZEN_PROSPECTIVE_SELECTION_RULE_FROZEN"
+}
