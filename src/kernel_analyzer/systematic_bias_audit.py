@@ -127,10 +127,10 @@ def validate_case(case: Mapping[str, Any]) -> None:
 
     if case["case_id"] == "qwen128_vproj_mm" and case["mechanism"].get(
         "trajectory_repairs_declared_local_source"
-    ) is not False:
+    ) is not True:
         raise ValueError(
-            "qwen128_vproj_mm: accumulation trajectory must not be attributed "
-            "to the separately identified output-rounding source"
+            "qwen128_vproj_mm: the current trajectory must use the aligned "
+            "ROUNDING_ONLY conditional-mean repair"
         )
 
     for path in case["evidence"]:

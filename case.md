@@ -23,23 +23,26 @@ trajectory-local persistence witness is required for a Flash-style claim.
 | Liger fused CE | matched positive | yes | confirmed | aligned | yes |
 | Phi seq64 `lm_head dX` | matched positive | yes | confirmed | aligned | yes |
 | Qwen64 `v_proj` | matched JOINT positive | yes | confirmed for historical KERNEL_ONLY arm | mismatch | no |
-| Qwen128 `v_proj` | matched ROUNDING_ONLY positive | yes | not confirmed | mismatch | no |
+| Qwen128 `v_proj` | matched ROUNDING_ONLY positive | yes | not confirmed; aligned R32 is diffusive/canceling | aligned | no |
 | Qwen saved-P | matched positive | yes | confirmed | aligned | yes |
-| Qwen3-VL SiLU | matched optimizer-response positive | yes | not confirmed | aligned base contrast | no |
+| Qwen3-VL SiLU | matched optimizer-response positive | yes | confirmed feedback-sustained; local effect is not persistent | aligned base contrast | no |
 | Mamba `in_proj` | partial JOINT formation | yes | confirmed for KERNEL_ONLY arm | mismatch | no |
 | layer-23 attention region | semantic-region mechanism; parity follow-up unresolved | yes | confirmed | aligned semantic superset | yes |
 
 Canonical counts are therefore:
 
 - paired separation: **8/8**;
-- directional persistence: **6/8**;
+- ordered-trajectory directional persistence: **7/8**;
 - matched formation mechanism: **6/8**;
 - current formation-to-persistence same-contrast full chain: **4/8**.
 
-The six formation positives and six persistence positives are not the same
-six.  Qwen128 and SiLU form bias without a confirmed persistent direction;
-Mamba and layer-23 have persistent trajectory evidence while their current
-formation-map follow-up is partial or bounded.  The project-wide strict
+The six formation positives and seven persistence positives are not the same
+set. Qwen128 forms conditional bias but its aligned 32-step source repair is
+diffusive/canceling. SiLU has persistent trajectory drift, but the four-arm
+recurrence attributes it to closed-loop feedback after a local trigger rather
+than a persistent local source. Mamba and layer-23 have persistent trajectory
+evidence while their current formation-map follow-up is partial or bounded.
+The project-wide strict
 Flash-style registry is a separate denominator and includes Qwen `lm_head dX`,
 which is not in this eight-case formation roster.
 
@@ -147,10 +150,11 @@ conditional F+B gate.  Compact evidence is in
 ## Bias Formation Map update (2026-08-20)
 
 The denominator remains **eight unique closed F+B paired-separation
-artifacts**; it is not an eight-case persistent-bias count.  A new optimizer
-experiment on Qwen3-VL SiLU is evidence for that existing case, not a ninth
-case. Six cases have matched formation-mechanism evidence, while a different
-set of six has directional-persistence evidence:
+artifacts**; it is not an eight-case source-persistent-bias count. New
+four-counterfactual experiments on Qwen128 and Qwen3-VL SiLU resolve two old
+persistence gaps without adding cases. Six cases have matched formation-
+mechanism evidence, while seven have ordered-trajectory directional-
+persistence evidence:
 
 - Liger and Phi support **event/pairing asymmetry**: the natural schedule or
   residual--transport pairing is directional, while a semantic-orbit or
@@ -179,11 +183,16 @@ The first term is response rectification; the second is event/pairing
 asymmetry.  If the event population is antithetically closed and the complete
 F+B/optimizer response is odd, both terms vanish regardless of error variance.
 This is the current testable property; SEUP remains the downstream persistence
-condition. Qwen64/128 are now fixed-state conditional source-formation
-positives, but their new JOINT/ROUNDING_ONLY formation repairs are not joined
-to the historical KERNEL_ONLY trajectories.  SiLU remains a response-
-rectification positive and a directional-persistence negative under its frozen
-trajectory gate. Missing global 32-state carriers are not safety results. Mamba has
+condition. Qwen64/128 are fixed-state conditional source-formation positives.
+Qwen128 now also has an aligned `ROUNDING_ONLY` 32-step trajectory: with 32
+stratified repair draws per arm, local/Monte-Carlo resultant is `3.011`, but
+local and actual coherence amplifications are only `0.999` and `1.825`, so it
+is a formation-positive, persistence-negative boundary. SiLU remains a
+response-rectification positive, but is no longer persistence-unresolved: its
+local / feedback / actual coherence amplifications are `1.001` / `3.968` /
+`3.949`, which closes a **feedback-sustained** trajectory regime rather than a
+Flash-style persistent-local regime. Missing global 32-state carriers are not
+safety results. Mamba has
 a complete local conditional result but a mixed real-backward result, so it
 remains partial. Layer-23 retains its semantic-region boundary and failed
 natural-fidelity gate.

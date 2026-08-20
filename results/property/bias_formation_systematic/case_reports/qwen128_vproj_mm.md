@@ -30,19 +30,21 @@ F+B：Y=XW^T; dX=QW; dW=Q^T X at layer-0 v_proj
 
 干预：replace deterministic nearest BF16 output rounding by coordinate-wise unbiased BF16 materialization while retaining the noncoherent kernel residual。
 
-边界：this closes conditional source formation relative to the stochastic source-debiased ensemble; absolute downstream repair bias remains unidentified without an exact downstream reference, and the historical trajectory used a different repair contrast。
+边界：this closes conditional source formation relative to the stochastic source-debiased ensemble; the aligned 32-step ROUNDING_ONLY trajectory resolves as diffusive/canceling rather than persistent; absolute downstream repair bias remains unidentified without an exact reference。
 
 ## 轨迹后果
 
-separation：`TRAJECTORY_SEPARATION`；directional persistence：`NOT_CONFIRMED`。共 32 steps，drift norm `0.004516110755503178` → `0.010251143015921116`。
+separation：`TRAJECTORY_SEPARATION`；directional persistence：`NOT_CONFIRMED`。共 32 steps，drift norm `0.0037479896564036608` → `0.008157934993505478`。
 
-formation contrast：`ROUNDING_ONLY_UNBIASED_BF16`；trajectory contrast：`KERNEL_ONLY_FP32_MM_WITH_BF16_ABI`；alignment：`MISMATCH`；same-contrast full chain：`False`。
+formation contrast：`ROUNDING_ONLY_UNBIASED_BF16`；trajectory contrast：`ROUNDING_ONLY_UNBIASED_BF16_CONDITIONAL_MEAN`；alignment：`ALIGNED`；same-contrast full chain：`False`。
 
 参数距离增长只证明 causal separation，不单独证明方向性 persistence，也不提供 formation 标签。
 
+有序四反事实 recurrence：verdict `DIFFUSIVE_OR_CANCELING_SEPARATION`；local / feedback / actual coherence amplification = `0.9990919652019782` / `2.748398260865456` / `1.8245445966779892`；最大相对闭合残差 `4.770131702255533e-10`。
+
 ## 下一项决定性实验
 
-add an exact downstream reference only if claiming the repaired F+B/update itself is absolutely unbiased; use a new ROUNDING_ONLY trajectory for persistence。
+none for the current persistence question; retain as a formation-positive, persistence-negative boundary。
 
 ## 证据
 
@@ -53,3 +55,4 @@ add an exact downstream reference only if claiming the repaired F+B/update itsel
 - `results/property/conditional_debias/qwen128_vproj.json`
 - `results/coverage/cases/qwen128_vproj_repair_pilot.json`
 - `results/coverage/cases/qwen128_vproj_trajectory.json`
+- `results/coverage/cases/qwen128_vproj_rounding_persistence.json`

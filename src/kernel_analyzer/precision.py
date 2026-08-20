@@ -103,6 +103,8 @@ def stochastic_round_to_low_precision(
     dtype: torch.dtype,
     *,
     generator: torch.Generator,
+    stratum_index: int | None = None,
+    stratum_count: int | None = None,
 ) -> RoundingRepair:
     """Stochastically materialize FP32 values through the declared ABI.
 
@@ -119,6 +121,12 @@ def stochastic_round_to_low_precision(
         device=probability.device,
         generator=generator,
     )
+    if stratum_index is not None or stratum_count is not None:
+        if stratum_index is None or stratum_count is None:
+            raise ValueError("rounding stratum index and count must be supplied together")
+        if stratum_count < 1 or not 0 <= stratum_index < stratum_count:
+            raise ValueError("invalid rounding stratum")
+        draw = (draw + float(stratum_index)) / float(stratum_count)
     delivered = torch.where(draw < probability, upper, lower)
     return RoundingRepair(
         delivered=delivered,
@@ -135,6 +143,8 @@ def source_aligned_mm_output(
     mode: str,
     *,
     generator: torch.Generator | None = None,
+    rounding_stratum_index: int | None = None,
+    rounding_stratum_count: int | None = None,
 ) -> RoundingRepair:
     """Construct one MM source intervention without confusing its sources.
 
@@ -166,6 +176,8 @@ def source_aligned_mm_output(
             raise ValueError(f"{mode} requires an explicit generator")
         stochastic = stochastic_round_to_low_precision(
             high_reference, actual_low.dtype, generator=generator,
+            stratum_index=rounding_stratum_index,
+            stratum_count=rounding_stratum_count,
         )
         base = stochastic.delivered
         delivered = base if mode == "JOINT" else (

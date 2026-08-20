@@ -63,6 +63,21 @@ def test_stochastic_rounding_is_empirically_unbiased() -> None:
     assert torch.allclose(empirical, high, rtol=0.0, atol=2.5e-4)
 
 
+def test_stratified_rounding_ensemble_is_ulp_over_count_accurate() -> None:
+    high = torch.tensor([-1.003, 0.101, 2.019], dtype=torch.float32)
+    draws = []
+    for index in range(8):
+        generator = torch.Generator().manual_seed(91)
+        draws.append(stochastic_round_to_low_precision(
+            high, torch.bfloat16, generator=generator,
+            stratum_index=index, stratum_count=8,
+        ).delivered.float())
+    empirical = torch.stack(draws).mean(0)
+    lower, upper, _ = low_precision_neighbors(high, torch.bfloat16)
+    bound = (upper.float() - lower.float()) / 8 + 1e-7
+    assert torch.all((empirical - high).abs() <= bound)
+
+
 def test_source_aligned_modes_do_not_confuse_rounding_and_kernel() -> None:
     high = torch.tensor([1.003, -2.007, 0.127], dtype=torch.float32)
     rounded = high.to(torch.bfloat16)

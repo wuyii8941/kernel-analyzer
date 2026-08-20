@@ -143,8 +143,11 @@ not the persistent-bias count.  Its safeguards are deliberate:
 * parameter-distance growth cannot create a directional-persistence label;
 * formation and persistence are joined only when their repair contrasts align.
 
-The unified audit records 8/8 causal separations, 6/8 directional-persistence
-positives, 6/8 matched formation-mechanism positives, and 4/8 same-contrast
-full chains.  These sets intentionally differ.  This supports the formation
+The unified audit records 8/8 causal separations, 7/8 ordered-trajectory
+directional-persistence positives, 6/8 matched formation-mechanism positives,
+and 4/8 same-contrast source-persistent full chains. Qwen128 is an aligned
+formation-positive but diffusive/canceling persistence-negative; SiLU is
+feedback-sustained rather than local-source-persistent. These sets
+intentionally differ. This supports the formation
 map as a cross-case working property, not yet as a zero-shot predictor for
 unseen operators.

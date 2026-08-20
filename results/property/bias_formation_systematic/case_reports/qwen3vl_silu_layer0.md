@@ -34,19 +34,22 @@ F+B：y=x*sigmoid(x); dx=q*sigmoid(x)*(1+x*(1-sigmoid(x)))
 
 ## 轨迹后果
 
-separation：`TRAJECTORY_SEPARATION`；directional persistence：`NOT_CONFIRMED`。共 32 steps，drift norm `0.0020657628774642944` → `0.08343788981437683`。
+separation：`TRAJECTORY_SEPARATION`；directional persistence：`CONFIRMED`。共 32 steps，drift norm `0.0020657628774642944` → `0.0813409760594368`。
 
 formation contrast：`NATIVE_SILU_BACKWARD_PLUS_ANTITHETIC_ADAM_RESPONSE`；trajectory contrast：`NATIVE_SILU_BACKWARD`；alignment：`ALIGNED_BASE_CONTRAST`；same-contrast full chain：`False`。
 
 参数距离增长只证明 causal separation，不单独证明方向性 persistence，也不提供 formation 标签。
 
+有序四反事实 recurrence：verdict `FEEDBACK_SUSTAINED_SEPARATION`；local / feedback / actual coherence amplification = `1.0013570186547331` / `3.967687298174451` / `3.948838652969838`；最大相对闭合残差 `5.671221865053544e-10`。
+
 ## 下一项决定性实验
 
-derive a coordinate/state susceptibility predictor shared with saved-P。
+derive a predictor that distinguishes source-persistent from feedback-sustained cases。
 
 ## 证据
 
 - `results/round2/vl_silu_cause.json`
 - `results/round2/vl_silu_cause_fp32.json`
 - `results/coverage/cases/qwen3vl_layer0_silu_trajectory.json`
+- `results/coverage/cases/qwen3vl_layer0_silu_persistence_recurrence.json`
 - `results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json`

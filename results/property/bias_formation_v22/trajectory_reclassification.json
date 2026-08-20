@@ -7,6 +7,7 @@
       "contrast_alignment": "ALIGNED",
       "count_as_unique_case": true,
       "dedup_reason": null,
+      "directional_persistence_gate": true,
       "formation_contrast": "FP32_DW_ACCUMULATOR",
       "mechanism_family": "FUSED_ACCUMULATION_LOSS",
       "normalized_causal_gates": {
@@ -16,8 +17,8 @@
         "parameter_scope_closed": true,
         "repair_effect_present_every_step": true
       },
-      "old_fixed_direction_gate": true,
       "old_status": "COMPLETE_LIGER_ACCUMULATOR_REPAIR_LIVE_WEIGHT_CAUSAL_CHAIN",
+      "persistence_regime": "SOURCE_OR_TRANSPORT_PERSISTENT",
       "property_analysis_status": "MECHANISM_NOT_IDENTIFIED",
       "same_contrast_full_chain": true,
       "semantic_case_group": "liger_fused_ce",
@@ -62,6 +63,7 @@
       "contrast_alignment": "ALIGNED",
       "count_as_unique_case": true,
       "dedup_reason": null,
+      "directional_persistence_gate": true,
       "formation_contrast": "ANALYTIC_DX_MM_REPAIR",
       "mechanism_family": "LOSS_HEAD_TRANSPORT",
       "normalized_causal_gates": {
@@ -71,8 +73,8 @@
         "parameter_scope_closed": true,
         "repair_effect_present_every_step": true
       },
-      "old_fixed_direction_gate": true,
       "old_status": "COMPLETE_PAIRED_EVOLVING_FINAL_NORM_TRAJECTORY",
+      "persistence_regime": "SOURCE_OR_TRANSPORT_PERSISTENT",
       "property_analysis_status": "MECHANISM_NOT_IDENTIFIED",
       "same_contrast_full_chain": true,
       "semantic_case_group": "phi4_seq64_lmhead_dx",
@@ -117,6 +119,7 @@
       "contrast_alignment": "MISMATCH",
       "count_as_unique_case": true,
       "dedup_reason": null,
+      "directional_persistence_gate": true,
       "formation_contrast": "JOINT_KERNEL_PLUS_UNBIASED_ROUNDING",
       "mechanism_family": "MM_ACCUMULATION",
       "normalized_causal_gates": {
@@ -126,8 +129,8 @@
         "parameter_scope_closed": true,
         "repair_effect_present_every_step": true
       },
-      "old_fixed_direction_gate": true,
       "old_status": "PASS_STRICT_FLASH_STYLE_CASE",
+      "persistence_regime": "SOURCE_OR_TRANSPORT_PERSISTENT",
       "property_analysis_status": "MECHANISM_NOT_IDENTIFIED",
       "same_contrast_full_chain": false,
       "semantic_case_group": "qwen64_vproj_mm",
@@ -166,12 +169,13 @@
       "trajectory_contrast": "KERNEL_ONLY_FP32_MM_WITH_BF16_ABI"
     },
     {
-      "artifact": "results/coverage/cases/qwen128_vproj_trajectory.json",
+      "artifact": "results/coverage/cases/qwen128_vproj_rounding_persistence.json",
       "case_id": "qwen128_vproj_mm",
       "claim_boundary": "Causal trajectory separation and signed directional persistence are separate claims.  A full mechanism-to-persistence chain also requires the formation and trajectory repair contrasts to align.",
-      "contrast_alignment": "MISMATCH",
+      "contrast_alignment": "ALIGNED",
       "count_as_unique_case": true,
       "dedup_reason": null,
+      "directional_persistence_gate": false,
       "formation_contrast": "ROUNDING_ONLY_UNBIASED_BF16",
       "mechanism_family": "MM_ACCUMULATION",
       "normalized_causal_gates": {
@@ -181,25 +185,25 @@
         "parameter_scope_closed": true,
         "repair_effect_present_every_step": true
       },
-      "old_fixed_direction_gate": false,
-      "old_status": "FAIL_DIRECTIONAL_ACCUMULATION",
+      "old_status": "DIFFUSIVE_OR_CANCELING_SEPARATION",
+      "persistence_regime": "DIFFUSIVE_OR_CANCELING",
       "property_analysis_status": "MECHANISM_NOT_IDENTIFIED",
       "same_contrast_full_chain": false,
       "semantic_case_group": "qwen128_vproj_mm",
       "sham_validation": {
-        "nested_same_weight_exact": false,
-        "raw_gate_present": true
+        "nested_same_weight_exact": true,
+        "raw_gate_present": false
       },
       "trajectory_certificate": {
         "directional_persistence": "NOT_CONFIRMED",
         "directional_persistence_gate": false,
-        "final_drift_norm": 0.010251143015921116,
+        "final_drift_norm": 0.008157934993505478,
         "fixed_global_carrier_required": false,
-        "initial_drift_norm": 0.004516110755503178,
+        "initial_drift_norm": 0.0037479896564036608,
         "level": "TRAJECTORY",
-        "max_drift_norm": 0.010251143015921116,
+        "max_drift_norm": 0.008157934993505478,
         "missing_gates": [],
-        "path_length_in_norm_space": 0.005735032260417938,
+        "path_length_in_norm_space": 0.004409945337101817,
         "policy": {
           "fixed_global_carrier_required": false,
           "min_steps": 8,
@@ -218,7 +222,7 @@
         "status": "TRAJECTORY_SEPARATION",
         "step_count": 32
       },
-      "trajectory_contrast": "KERNEL_ONLY_FP32_MM_WITH_BF16_ABI"
+      "trajectory_contrast": "ROUNDING_ONLY_UNBIASED_BF16_CONDITIONAL_MEAN"
     },
     {
       "artifact": "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json",
@@ -227,6 +231,7 @@
       "contrast_alignment": "ALIGNED",
       "count_as_unique_case": true,
       "dedup_reason": null,
+      "directional_persistence_gate": true,
       "formation_contrast": "TRUE_FORWARD_P_AT_DS",
       "mechanism_family": "SAVED_STATE_SOFTMAX_TRANSPORT",
       "normalized_causal_gates": {
@@ -236,8 +241,8 @@
         "parameter_scope_closed": true,
         "repair_effect_present_every_step": true
       },
-      "old_fixed_direction_gate": true,
       "old_status": "PASS_STRICT_SEMANTIC_REGION_FLASH_STYLE_CASE",
+      "persistence_regime": "SOURCE_OR_TRANSPORT_PERSISTENT",
       "property_analysis_status": "MECHANISM_NOT_IDENTIFIED",
       "same_contrast_full_chain": true,
       "semantic_case_group": "qwen_saved_p_seq128",
@@ -276,12 +281,13 @@
       "trajectory_contrast": "TRUE_FORWARD_P_AT_DS"
     },
     {
-      "artifact": "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json",
+      "artifact": "results/coverage/cases/qwen3vl_layer0_silu_persistence_recurrence.json",
       "case_id": "qwen3vl_silu_layer0",
       "claim_boundary": "Causal trajectory separation and signed directional persistence are separate claims.  A full mechanism-to-persistence chain also requires the formation and trajectory repair contrasts to align.",
       "contrast_alignment": "ALIGNED_BASE_CONTRAST",
       "count_as_unique_case": true,
       "dedup_reason": null,
+      "directional_persistence_gate": true,
       "formation_contrast": "NATIVE_SILU_BACKWARD_PLUS_ANTITHETIC_ADAM_RESPONSE",
       "mechanism_family": "NONLINEAR_SILU_BACKWARD",
       "normalized_causal_gates": {
@@ -291,25 +297,25 @@
         "parameter_scope_closed": true,
         "repair_effect_present_every_step": true
       },
-      "old_fixed_direction_gate": false,
-      "old_status": "FAIL_DIRECTIONAL_ACCUMULATION",
+      "old_status": "FEEDBACK_SUSTAINED_SEPARATION",
+      "persistence_regime": "FEEDBACK_SUSTAINED",
       "property_analysis_status": "MECHANISM_NOT_IDENTIFIED",
       "same_contrast_full_chain": false,
       "semantic_case_group": "qwen3vl_silu_layer0",
       "sham_validation": {
-        "nested_same_weight_exact": false,
-        "raw_gate_present": true
+        "nested_same_weight_exact": true,
+        "raw_gate_present": false
       },
       "trajectory_certificate": {
-        "directional_persistence": "NOT_CONFIRMED",
-        "directional_persistence_gate": false,
-        "final_drift_norm": 0.08343788981437683,
+        "directional_persistence": "CONFIRMED",
+        "directional_persistence_gate": true,
+        "final_drift_norm": 0.0813409760594368,
         "fixed_global_carrier_required": false,
         "initial_drift_norm": 0.0020657628774642944,
         "level": "TRAJECTORY",
-        "max_drift_norm": 0.08343788981437683,
+        "max_drift_norm": 0.0813409760594368,
         "missing_gates": [],
-        "path_length_in_norm_space": 0.08137212693691254,
+        "path_length_in_norm_space": 0.0792752131819725,
         "policy": {
           "fixed_global_carrier_required": false,
           "min_steps": 8,
@@ -337,6 +343,7 @@
       "contrast_alignment": "MISMATCH",
       "count_as_unique_case": true,
       "dedup_reason": null,
+      "directional_persistence_gate": true,
       "formation_contrast": "JOINT_KERNEL_PLUS_UNBIASED_ROUNDING",
       "mechanism_family": "RECURRENT_INPUT_PROJECTION",
       "normalized_causal_gates": {
@@ -346,8 +353,8 @@
         "parameter_scope_closed": true,
         "repair_effect_present_every_step": true
       },
-      "old_fixed_direction_gate": true,
       "old_status": "PASS_STRICT_FLASH_STYLE_CASE",
+      "persistence_regime": "SOURCE_OR_TRANSPORT_PERSISTENT",
       "property_analysis_status": "MECHANISM_NOT_IDENTIFIED",
       "same_contrast_full_chain": false,
       "semantic_case_group": "mamba_seq64_input_proj",
@@ -392,6 +399,7 @@
       "contrast_alignment": "ALIGNED_SEMANTIC_SUPERSET",
       "count_as_unique_case": true,
       "dedup_reason": null,
+      "directional_persistence_gate": true,
       "formation_contrast": "S_BWD_CAUSAL_REGION",
       "mechanism_family": "ATTENTION_STATE_TRANSPORT",
       "normalized_causal_gates": {
@@ -401,8 +409,8 @@
         "parameter_scope_closed": true,
         "repair_effect_present_every_step": true
       },
-      "old_fixed_direction_gate": true,
       "old_status": "COMPLETE",
+      "persistence_regime": "SOURCE_OR_TRANSPORT_PERSISTENT",
       "property_analysis_status": "MECHANISM_NOT_IDENTIFIED",
       "same_contrast_full_chain": true,
       "semantic_case_group": "qwen_layer23_qproj_composite",
@@ -443,12 +451,12 @@
   ],
   "counts": {
     "TRAJECTORY_SEPARATION": 8,
-    "directional_persistence_confirmed": 6,
+    "directional_persistence_confirmed": 7,
+    "directional_persistence_gate_confirmed": 7,
     "excluded_artifacts": 8,
     "mechanism_family_clusters": 7,
-    "prior_fixed_direction_confirmed": 6,
     "same_contrast_full_chain": 4,
-    "separation_without_directional_persistence": 2,
+    "separation_without_directional_persistence": 1,
     "trajectory_artifacts": 8,
     "unique_semantic_cases": 8
   },

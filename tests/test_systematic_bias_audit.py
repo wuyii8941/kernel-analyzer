@@ -29,13 +29,14 @@ def test_eight_cases_are_not_relabeled_as_eight_persistent_biases():
         "phi4_seq64_lmhead_dx",
         "qwen64_vproj_mm",
         "qwen_saved_p_seq128",
+        "qwen3vl_silu_layer0",
         "mamba_seq64_input_proj",
         "qwen_layer23_attention_state",
     }
     assert {
         row["case_id"] for row in rows
         if row["trajectory"]["directional_persistence"] == "NOT_CONFIRMED"
-    } == {"qwen128_vproj_mm", "qwen3vl_silu_layer0"}
+    } == {"qwen128_vproj_mm"}
 
 
 def test_same_contrast_full_chain_is_stricter_than_either_layer():
@@ -85,9 +86,9 @@ def test_supported_mechanism_requires_intervention_and_sham():
         validate_case(row)
 
 
-def test_qwen128_does_not_join_rounding_source_to_accumulation_trajectory():
+def test_qwen128_uses_aligned_rounding_trajectory_but_does_not_persist():
     row = next(row for row in cases() if row["case_id"] == "qwen128_vproj_mm")
-    assert row["mechanism"]["trajectory_repairs_declared_local_source"] is False
+    assert row["mechanism"]["trajectory_repairs_declared_local_source"] is True
     assert row["mechanism"]["verdict"] == "SUPPORTED_CASE_SPECIFIC_SOURCE_MECHANISM"
     assert row["mechanism"]["intervention"]["full_observed_source_repaired_in_expectation"]
     assert row["bias_map"]["status"] == "MATCHED_CONDITIONAL_SOURCE_SUPPORT"
@@ -95,6 +96,19 @@ def test_qwen128_does_not_join_rounding_source_to_accumulation_trajectory():
         "local": "BIASED", "gradient": "BIASED", "update": "BIASED",
     }
     assert row["formation"]["conditional_details"]["repair_local_residual"] == "CENTERED"
+    assert row["trajectory"]["contrast_alignment"] == "ALIGNED"
+    assert row["trajectory"]["directional_persistence"] == "NOT_CONFIRMED"
+    assert row["trajectory"]["ordered_recurrence"]["verdict"] == "DIFFUSIVE_OR_CANCELING_SEPARATION"
+
+
+def test_silu_persistence_is_feedback_sustained_not_local_persistent():
+    row = next(row for row in cases() if row["case_id"] == "qwen3vl_silu_layer0")
+    recurrence = row["trajectory"]["ordered_recurrence"]
+    assert row["trajectory"]["directional_persistence"] == "CONFIRMED"
+    assert row["trajectory"]["persistence_regime"] == "FEEDBACK_SUSTAINED"
+    assert recurrence["verdict"] == "FEEDBACK_SUSTAINED_SEPARATION"
+    assert recurrence["local_coherence_amplification"] < 2.0
+    assert recurrence["feedback_coherence_amplification"] >= 2.0
 
 
 def test_qwen64_joint_source_has_independent_fixed_state_confirmation():

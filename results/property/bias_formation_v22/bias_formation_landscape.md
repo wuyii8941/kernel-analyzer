@@ -41,12 +41,13 @@ grouping by operator name or model.
 
 ## What this fixes
 
-Qwen seq128 v_proj and Qwen3-VL SiLU previously failed the fixed-direction
-gate, but their paired live parameter separation still grows under exact
-repair/sham controls.  They are retained as trajectory-only observations, not
-as fixed-carrier or mechanism positives.  Conversely, this does not make them
-source, transport, nonlinear, or optimizer properties; their causal mechanism
-remains to be decomposed.
+Qwen seq128 v_proj and Qwen3-VL SiLU previously failed a step-1 fixed-direction
+gate. Symmetric four-counterfactual recurrence now resolves them differently:
+Qwen128's aligned rounding-only local effect is diffusive/canceling, whereas
+SiLU's persistent separation is sustained by closed-loop feedback after a
+local trigger. They therefore supply a persistence-negative boundary and a
+second persistence regime, respectively; neither is silently promoted into a
+Flash-style persistent-local-source mechanism.
 
 ## What remains to be measured
 

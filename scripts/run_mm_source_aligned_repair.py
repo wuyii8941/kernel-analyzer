@@ -119,6 +119,8 @@ class SourceAlignedMMRepair:
         mode: str,
         *,
         rounding_seed: int | None = None,
+        rounding_stratum_index: int | None = None,
+        rounding_stratum_count: int | None = None,
     ) -> None:
         if mode not in {"SHAM", *ALLOWED_ARMS}:
             raise ValueError(mode)
@@ -128,6 +130,8 @@ class SourceAlignedMMRepair:
         self.target_sha = target_sha
         self.mode = mode
         self.rounding_seed = rounding_seed
+        self.rounding_stratum_index = rounding_stratum_index
+        self.rounding_stratum_count = rounding_stratum_count
         self.restores: list[tuple[Any, Any]] = []
         self.calls = 0
         self.vectors: dict[str, torch.Tensor] = {}
@@ -159,6 +163,8 @@ class SourceAlignedMMRepair:
                     generator.manual_seed(self.rounding_seed)
                 repaired = source_aligned_mm_output(
                     actual_before, high, self.mode, generator=generator,
+                    rounding_stratum_index=self.rounding_stratum_index,
+                    rounding_stratum_count=self.rounding_stratum_count,
                 )
                 actual.copy_(repaired.delivered)
 
@@ -195,6 +201,8 @@ class SourceAlignedMMRepair:
                     ),
                     "low_dtype": str(actual.dtype),
                     "rounding_seed": self.rounding_seed,
+                    "rounding_stratum_index": self.rounding_stratum_index,
+                    "rounding_stratum_count": self.rounding_stratum_count,
                 }
                 self.calls += 1
                 return result

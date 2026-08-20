@@ -130,8 +130,12 @@ the loss and the complete declared `v_proj.weight` gradient bitwise.
 Thus deterministic nearest BF16 rounding is a fixed-state conditional source
 bias whose removed effect reaches the actual backward and both declared update
 maps.  This result was missed by the former cross-state fixed-direction gate.
-It does not establish persistence under a `ROUNDING_ONLY` live trajectory, and
-the downstream repair residual remains `NOT_IDENTIFIABLE_MISSING_EXACT_REFERENCE`.
+The subsequent aligned 32-step `ROUNDING_ONLY` trajectory resolves this source
+as diffusive/canceling rather than persistent: the local coherence
+amplification is `0.999`, the actual drift amplification is `1.825`, and the
+local resultant is `3.011` times the independent split-ensemble Monte Carlo
+resultant. The downstream repair residual remains
+`NOT_IDENTIFIABLE_MISSING_EXACT_REFERENCE` in the absolute-reference sense.
 
 The compact certificate is
 `results/property/conditional_debias/qwen128_vproj.json`; the full per-condition

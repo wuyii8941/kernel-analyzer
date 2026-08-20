@@ -328,10 +328,14 @@ different model and operator region.  Energy weighting shows that `99.87%` of
 the even component lies on sign-crossing coordinates and more than `99.99%`
 is generated in steps 1--2.  This is therefore a cold-start Adam rectification
 impulse, not evidence that Adam generates the same amount of bias at every
-step.  The paired trajectory shows causal parameter separation, but its
-step-1-frozen directional projection does not grow at steps 8/16/32.  SiLU is
-therefore a response-rectification formation positive and a directional-
-persistence negative under the frozen gate, not a complete Flash-style case.
+step. The older paired trajectory showed causal parameter separation, while
+its step-1-frozen directional projection did not grow at steps 8/16/32. A new
+32-step symmetric four-counterfactual recurrence resolves that ambiguity. Its
+local / feedback / actual ordered coherence amplifications are `1.001` /
+`3.968` / `3.949`; feedback has cosine `0.9997` with final drift, while the
+local resultant has cosine only `0.0253`. SiLU is therefore a response-
+rectification formation positive with **feedback-sustained directional
+persistence**, not a Flash-style persistent-local-source case.
 
 ### Prior-art boundary for optimizer rectification
 
@@ -362,6 +366,15 @@ candidate-minus-repair effect is biased at the local output, actual parameter
 gradient, stateless-SGD update, and zero-moment AdamW-step1 update in 16/16.
 Qwen64 uses the joint kernel-plus-rounding repair; Qwen128 uses the rounding-only
 repair selected by its prior exact source decomposition.
+
+Qwen128 was also rerun for 32 live steps using that exact `ROUNDING_ONLY`
+contrast. Each repair state uses two independent 16-stratum ensembles; the
+local resultant is `3.011` times its split-ensemble Monte Carlo resultant. It
+is therefore resolved rather than noise-limited. Nevertheless local and
+actual coherence amplifications are only `0.999` and `1.825`, below the frozen
+`2.0` persistence gate. This is the required counterexample: conditional
+source bias can be real in every fixed state without becoming an ordered
+persistent trajectory bias.
 
 Mamba seq64 `in_proj` provides a cross-architecture boundary rather than a
 forced replication.  Its joint repair centers the local residual in 16/16 and

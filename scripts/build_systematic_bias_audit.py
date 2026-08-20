@@ -63,7 +63,8 @@ def trajectory(row: dict[str, Any]) -> dict[str, Any]:
         "steps": certificate["step_count"],
         "initial_drift_norm": certificate.get("initial_drift_norm"),
         "final_drift_norm": certificate.get("final_drift_norm"),
-        "fixed_global_direction_passed_old_gate": row.get("old_fixed_direction_gate"),
+        "directional_persistence_gate": row.get("directional_persistence_gate"),
+        "persistence_regime": row.get("persistence_regime", "UNCLASSIFIED"),
         "formation_contrast": row["formation_contrast"],
         "trajectory_contrast": row["trajectory_contrast"],
         "contrast_alignment": row["contrast_alignment"],
@@ -85,6 +86,26 @@ def symmetric_consequence(relative: str) -> dict[str, Any]:
         "max_recurrence_relative_residual": evaluation["max_recurrence_relative_residual"],
         "stable_fixed_carrier": source["gates"].get("stable_calibration_carrier"),
         "signed_persistence": evaluation.get("signed_persistence"),
+        "source": relative,
+    }
+
+
+def ordered_recurrence(relative: str) -> dict[str, Any]:
+    source = read_json(relative)
+    summaries = source["summaries"]
+    return {
+        "status": source["status"],
+        "verdict": source["verdict"],
+        "steps": source["protocol"]["steps"],
+        "local_coherence_amplification": summaries["local"]["coherence_amplification"],
+        "feedback_coherence_amplification": summaries["feedback"]["coherence_amplification"],
+        "actual_coherence_amplification": summaries["actual_drift_increment"]["coherence_amplification"],
+        "local_resultant_over_path": summaries["local"]["resultant_over_path"],
+        "feedback_resultant_over_path": summaries["feedback"]["resultant_over_path"],
+        "local_final_drift_cosine": summaries["local_final_drift_cosine"],
+        "feedback_final_drift_cosine": summaries["feedback_final_drift_cosine"],
+        "max_recurrence_relative": summaries["max_recurrence_relative"],
+        "local_resultant_over_mc_split": summaries.get("local_resultant_over_mc_split"),
         "source": relative,
     }
 
@@ -379,7 +400,7 @@ def cases() -> list[dict[str, Any]]:
                     "full_observed_source_repaired_in_expectation": True,
                     "downstream_global_carrier": source_repairs["qwen128_vproj_mm"]["downstream_carrier_effect"]["status"],
                 },
-                "trajectory_repairs_declared_local_source": False,
+                "trajectory_repairs_declared_local_source": True,
                 "why_directional": (
                     "at each of 16 fixed states, deterministic nearest rounding has a nonzero "
                     "candidate-minus-debiased-ensemble mean that remains directional after the "
@@ -387,9 +408,9 @@ def cases() -> list[dict[str, Any]]:
                 ),
                 "claim_boundary": (
                     "this closes conditional source formation relative to the stochastic "
-                    "source-debiased ensemble; absolute downstream repair bias remains "
-                    "unidentified without an exact downstream reference, and the historical "
-                    "trajectory used a different repair contrast"
+                    "source-debiased ensemble; the aligned 32-step ROUNDING_ONLY trajectory "
+                    "resolves as diffusive/canceling rather than persistent; absolute "
+                    "downstream repair bias remains unidentified without an exact reference"
                 ),
             },
             "bias_map": {
@@ -402,8 +423,13 @@ def cases() -> list[dict[str, Any]]:
                 ),
             },
             "source_aligned_repair": source_repairs["qwen128_vproj_mm"],
-            "trajectory": trajectory(trajectories["qwen128_vproj_mm"]),
-            "next_decisive_test": "add an exact downstream reference only if claiming the repaired F+B/update itself is absolutely unbiased; use a new ROUNDING_ONLY trajectory for persistence",
+            "trajectory": {
+                **trajectory(trajectories["qwen128_vproj_mm"]),
+                "ordered_recurrence": ordered_recurrence(
+                    "results/coverage/cases/qwen128_vproj_rounding_persistence.json"
+                ),
+            },
+            "next_decisive_test": "none for the current persistence question; retain as a formation-positive, persistence-negative boundary",
             "evidence": [
                 "results/coverage/cases/qwen128_vproj.json",
                 "results/coverage/cases/qwen128_vproj_precision_decomposition.json",
@@ -412,6 +438,7 @@ def cases() -> list[dict[str, Any]]:
                 "results/property/conditional_debias/qwen128_vproj.json",
                 "results/coverage/cases/qwen128_vproj_repair_pilot.json",
                 "results/coverage/cases/qwen128_vproj_trajectory.json",
+                "results/coverage/cases/qwen128_vproj_rounding_persistence.json",
             ],
         },
         {
@@ -517,12 +544,18 @@ def cases() -> list[dict[str, Any]]:
                 "response_even_energy_in_first_two_steps": silu_symmetry.get("response_even_energy_in_first_two_steps"),
                 "step_integrated_response_even_energy_fraction": silu_symmetry.get("step_integrated_response_even_energy_fraction"),
             },
-            "trajectory": trajectory(trajectories["qwen3vl_silu_layer0"]),
-            "next_decisive_test": "derive a coordinate/state susceptibility predictor shared with saved-P",
+            "trajectory": {
+                **trajectory(trajectories["qwen3vl_silu_layer0"]),
+                "ordered_recurrence": ordered_recurrence(
+                    "results/coverage/cases/qwen3vl_layer0_silu_persistence_recurrence.json"
+                ),
+            },
+            "next_decisive_test": "derive a predictor that distinguishes source-persistent from feedback-sustained cases",
             "evidence": [
                 "results/round2/vl_silu_cause.json",
                 "results/round2/vl_silu_cause_fp32.json",
                 "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json",
+                "results/coverage/cases/qwen3vl_layer0_silu_persistence_recurrence.json",
                 silu_symmetry_path,
             ],
         },
@@ -656,6 +689,16 @@ def report(case: dict[str, Any]) -> str:
             f"`{local_feedback['local_accumulation_l2']}`，feedback accumulation L2 "
             f"`{local_feedback['feedback_accumulation_l2']}`，最大相对闭合残差 "
             f"`{local_feedback['max_recurrence_relative_residual']}`。"
+        )
+    ordered = case["trajectory"].get("ordered_recurrence")
+    if ordered:
+        consequence += (
+            "\n\n有序四反事实 recurrence：verdict "
+            f"`{ordered['verdict']}`；local / feedback / actual coherence "
+            f"amplification = `{ordered['local_coherence_amplification']}` / "
+            f"`{ordered['feedback_coherence_amplification']}` / "
+            f"`{ordered['actual_coherence_amplification']}`；最大相对闭合残差 "
+            f"`{ordered['max_recurrence_relative']}`。"
         )
     return f"""# {case['case_id']}
 
@@ -823,13 +866,18 @@ def main() -> None:
 “8 个案例”是审计分母，不是“8 个持久性 bias”。统一口径得到四个互不替代的计数：
 
 - **8/8 causal paired separation artifacts**：都有闭合 F+B、repair/sham 和 live-weight 参数距离；这只证明 implementation contrast 会让两臂分开。
-- **6/8 directional-persistence positives**：`{', '.join(directional_cases)}` 通过了轨迹局部的预声明/冻结方向门。
+- **{len(directional_cases)}/8 ordered-trajectory directional-persistence positives**：`{', '.join(directional_cases)}` 通过了预声明有序轨迹门。
 - **6/8 matched formation-mechanism positives**：Liger、Phi、Qwen64/128 `v_proj`、saved-P、Qwen3-VL SiLU；Mamba 和 layer-23 在当前 antithetic formation protocol 下保留 partial/unresolved。
 - **4/8 same-contrast full chains**：`{', '.join(full_chain_cases)}` 将当前 formation mechanism 和 directional persistence 用同一个或闭合语义超集 repair 串起来。
 
 `{', '.join(separation_only_cases)}` 只有 causal separation，没有确认的方向性 persistence；不得称为完整 Flash-style case。
 
-这四个集合故意不相同。一个案例可以形成条件 bias 但未证明持续，也可以有旧 T1--T4 持久轨迹但当前 formation 干预使用了另一种 repair。
+这四个集合故意不相同。一个案例可以形成条件 bias 但未证明持续，也可以由局部差异触发、随后由闭环 feedback 维持，而不是局部 source 每步持续。
+
+## Persistence regime
+
+- Qwen128 `v_proj` 使用与 formation 对齐的 `ROUNDING_ONLY` 32-step trajectory。32 个分层 repair draws 将 local resultant / Monte-Carlo split 提高到 `3.011`，但 local / actual coherence amplification 只有 `0.999` / `1.825`，所以它是 formation-positive、persistence-negative 的 `DIFFUSIVE_OR_CANCELING` 边界。
+- Qwen3-VL SiLU 的四反事实 recurrence 给出 local / feedback / actual amplification `1.001` / `3.968` / `3.949`，且 feedback 与 final drift cosine 为 `0.9997`。它因此是 `FEEDBACK_SUSTAINED` persistent bias，而不是 Flash-style persistent local source。
 
 ## Formation mechanism
 
@@ -840,7 +888,7 @@ def main() -> None:
 - Qwen64：独立 16-repeat fixed-state confirmation 中，repair local residual 在 16/16 conditions centered，而 candidate-minus-repair 的 local、真实 gradient、SGD update 与 zero-moment AdamW update 均在 16/16 biased；
 - Mamba：16-condition joint-repair confirmation 得到 local 与 zero-moment AdamW 16/16 biased、repair local 16/16 centered，但真实 gradient/SGD 为 13/16 biased、3/16 unresolved；因此仍是 partial，而不是第七个 matched positive；
 - layer-23：16-condition exact projected-antithetic control 揭示 F+B 与 Adam response-even 分量，但自然 source fidelity 在部分条件未过冻结的 90% gate，因此不升级；
-- 因此严格 formation-mechanism positives 是 6/8；Qwen64/128 的 fixed-state formation、Mamba 的 JOINT formation 与各自历史 KERNEL_ONLY 轨迹不能拼接。
+- 因此严格 formation-mechanism positives 是 6/8；Qwen64 与 Mamba 的新 source formation 仍不能和历史 KERNEL_ONLY 轨迹拼接。Qwen128 已用对齐 contrast 复测，并得到不持续的边界结论。
 
 ## 为什么会出现系统性 bias
 
@@ -856,7 +904,7 @@ def main() -> None:
 
 ## 当前可以声称什么
 
-可以声称：在六个具有 matched formation 证据的独立 F+B 案例中，conditional training bias 均对应条件反对称消除失败；失败来自 source/event/transport 配对失衡或真实 optimizer 响应的偶分量。另有六个案例具有轨迹局部方向性 persistence，但只有四个把当前 formation 机制与 persistence 在相同 contrast 下闭合。error norm、raw tensor mean、BF16 dtype 与跨无关 state 的固定 global carrier 都不是统一判据。
+可以声称：在六个具有 matched formation 证据的独立 F+B 案例中，conditional training bias 均对应条件反对称消除失败；失败来自 source/event/transport 配对失衡或真实 optimizer 响应的偶分量。另有七个案例具有有序轨迹方向性 persistence，但只有四个把当前 formation 机制与 source-persistent consequence 在相同 contrast 下闭合。SiLU 单独证明了 feedback-sustained regime。error norm、raw tensor mean、BF16 dtype 与跨无关 state 的固定 global carrier 都不是统一判据。
 
 不能声称：8/8 都是持久性 bias；不能把 basis-free 参数距离增长自动叫 directional bias；不能把 local source repair 自动升级成完整 F+B/optimizer 去偏，也不能把旧 accumulation trajectory 与新的 rounding/joint repair 拼成同一条轨迹因果链。
 

@@ -47,7 +47,8 @@ Excluded from the unique count:
 The eight included rows all pass the current artifact-level v2.2 observation
 gate: complete paired F+B run, nonzero causal repair, exact sham/paired control,
 closed parameter scope, and final basis-free live parameter separation greater
-than the first-step separation. Six retain the older fixed-direction evidence;
-Qwen seq128 `v_proj` and Qwen3-VL SiLU are trajectory-only observations. This
-is an observation ledger, not eight independent mechanisms and not a P1--P6
-property result.
+than the first-step separation. Seven now have an ordered-trajectory
+persistence certificate. Qwen seq128 `v_proj` is the only aligned formation-
+positive that resolves as diffusive/canceling; Qwen3-VL SiLU resolves as
+feedback-sustained rather than local-source-persistent. This is an observation
+ledger, not eight independent mechanisms and not a P1--P6 property result.

@@ -63,15 +63,18 @@ SPECS = [
     {
         "case_id": "qwen128_vproj_mm",
         "mechanism_family": "MM_ACCUMULATION",
-        "path": "results/coverage/cases/qwen128_vproj_trajectory.json",
+        "path": "results/coverage/cases/qwen128_vproj_rounding_persistence.json",
         "row_key": "records",
-        "metric": "fp32_master_l2",
-        "old_status_key": "status",
-        "old_direction_key": "directional_live_weight_accumulation",
+        "metric": "drift_l2",
+        "old_status_key": "verdict",
+        "directional_verdicts": [],
+        "persistence_regime": "DIFFUSIVE_OR_CANCELING",
         "formation_contrast": "ROUNDING_ONLY_UNBIASED_BF16",
-        "trajectory_contrast": "KERNEL_ONLY_FP32_MM_WITH_BF16_ABI",
-        "contrast_alignment": "MISMATCH",
+        "trajectory_contrast": "ROUNDING_ONLY_UNBIASED_BF16_CONDITIONAL_MEAN",
+        "contrast_alignment": "ALIGNED",
         "same_contrast_full_chain": False,
+        "matched_sham_artifact": "results/coverage/cases/qwen128_vproj_trajectory.json",
+        "parameter_scope_closed_by_runner": True,
     },
     {
         "case_id": "qwen_saved_p_seq128",
@@ -89,15 +92,18 @@ SPECS = [
     {
         "case_id": "qwen3vl_silu_layer0",
         "mechanism_family": "NONLINEAR_SILU_BACKWARD",
-        "path": "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json",
+        "path": "results/coverage/cases/qwen3vl_layer0_silu_persistence_recurrence.json",
         "row_key": "records",
-        "metric": "fp32_master_l2",
-        "old_status_key": "status",
-        "old_direction_key": "directional_live_weight_accumulation",
+        "metric": "drift_l2",
+        "old_status_key": "verdict",
+        "directional_verdicts": ["PERSISTENT_LOCAL_BIAS", "FEEDBACK_SUSTAINED_SEPARATION"],
+        "persistence_regime": "FEEDBACK_SUSTAINED",
         "formation_contrast": "NATIVE_SILU_BACKWARD_PLUS_ANTITHETIC_ADAM_RESPONSE",
         "trajectory_contrast": "NATIVE_SILU_BACKWARD",
         "contrast_alignment": "ALIGNED_BASE_CONTRAST",
         "same_contrast_full_chain": False,
+        "matched_sham_artifact": "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json",
+        "parameter_scope_closed_by_runner": True,
     },
     {
         "case_id": "mamba_seq64_input_proj",
@@ -195,7 +201,9 @@ EXCLUDED_ARTIFACTS = [
 ]
 
 
-def normalized_gates(payload: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, bool]:
+def normalized_gates(
+    payload: dict[str, Any], rows: list[dict[str, Any]], spec: dict[str, Any],
+) -> dict[str, bool]:
     gates = payload.get("gates", {})
     # Some older live-weight runners did not emit a boolean sham field.  The
     # nested same-weight controls are sufficient only when we verify the
@@ -218,7 +226,13 @@ def normalized_gates(payload: dict[str, Any], rows: list[dict[str, Any]]) -> dic
         or gates.get("same_weight_loss_exact_every_step")
         or gates.get("all_same_weight_local_controls_pass")
         or gates.get("all_64_same_weight_local_controls_pass")
+        or payload.get("controls", {}).get("matched_sham_exact")
     )
+    if spec.get("matched_sham_artifact"):
+        prior = json.loads((ROOT / spec["matched_sham_artifact"]).read_text())
+        raw_sham_exact = raw_sham_exact or bool(
+            prior.get("gates", {}).get("matched_sham_exact")
+        )
     only_declared = bool(
         gates.get("only_declared_parameter_updated")
         or gates.get("only_declared_q_proj_live_weight_updated")
@@ -226,6 +240,7 @@ def normalized_gates(payload: dict[str, Any], rows: list[dict[str, Any]]) -> dic
         or gates.get("only_declared_qk_parameters_updated")
         or bool(payload.get("frozen_other_parameters"))
         or payload.get("other_parameters_updated") is False
+        or spec.get("parameter_scope_closed_by_runner") is True
     )
     full_step_scope = bool(
         gates.get("all_32_steps_and_both_arms_complete")
@@ -245,6 +260,7 @@ def normalized_gates(payload: dict[str, Any], rows: list[dict[str, Any]]) -> dic
                 for row in rows
             )
             or gates.get("all_64_same_weight_accumulator_deltas_nonzero")
+            or all(float(row.get("local_effect_l2", 0.0)) > 0.0 for row in rows)
         ),
         "matched_sham_exact": raw_sham_exact or nested_sham_exact,
         "only_declared_parameter_updated": only_declared,
@@ -261,9 +277,12 @@ def main() -> None:
         rows = payload.get(spec["row_key"], [])
         metric = spec["metric"]
         trajectory_rows = [{"drift_norm": float(row[metric])} for row in rows]
-        gates = normalized_gates(payload, rows)
+        gates = normalized_gates(payload, rows, spec)
         old_status = payload.get(spec["old_status_key"])
-        old_direction = payload.get("gates", {}).get(spec["old_direction_key"])
+        if "directional_verdicts" in spec:
+            old_direction = old_status in spec["directional_verdicts"]
+        else:
+            old_direction = payload.get("gates", {}).get(spec["old_direction_key"])
         cert = certify_trajectory_separation(
             trajectory_rows,
             gates=gates,
@@ -278,11 +297,15 @@ def main() -> None:
             "dedup_reason": spec.get("dedup_reason"),
             "artifact": spec["path"],
             "old_status": old_status,
-            "old_fixed_direction_gate": old_direction,
+            "directional_persistence_gate": old_direction,
             "formation_contrast": spec["formation_contrast"],
             "trajectory_contrast": spec["trajectory_contrast"],
             "contrast_alignment": spec["contrast_alignment"],
             "same_contrast_full_chain": spec["same_contrast_full_chain"],
+            "persistence_regime": spec.get(
+                "persistence_regime",
+                "SOURCE_OR_TRANSPORT_PERSISTENT" if old_direction else "NOT_CONFIRMED",
+            ),
             "normalized_causal_gates": gates,
             "sham_validation": {
                 "nested_same_weight_exact": bool(
@@ -346,15 +369,16 @@ def main() -> None:
     result["counts"]["trajectory_artifacts"] = len(cases)
     result["counts"]["unique_semantic_cases"] = len({case["semantic_case_group"] for case in cases})
     result["counts"]["mechanism_family_clusters"] = len({case["mechanism_family"].replace("KEY_MATERIALIZATION", "STATE_TRANSPORT") for case in cases})
-    result["counts"]["prior_fixed_direction_confirmed"] = sum(
-        case["old_fixed_direction_gate"] is True for case in cases
+    result["counts"]["directional_persistence_gate_confirmed"] = sum(
+        case["directional_persistence_gate"] is True for case in cases
     )
     result["counts"]["directional_persistence_confirmed"] = sum(
         case["trajectory_certificate"]["directional_persistence"] == "CONFIRMED"
         for case in cases
     )
     result["counts"]["separation_without_directional_persistence"] = sum(
-        case["old_fixed_direction_gate"] is not True for case in cases
+        case["trajectory_certificate"]["directional_persistence"] != "CONFIRMED"
+        for case in cases
     )
     result["counts"]["same_contrast_full_chain"] = sum(
         case["same_contrast_full_chain"] is True for case in cases
@@ -384,15 +408,16 @@ def main() -> None:
         "",
         "The table contains only complete artifact rows.  The strict count is",
         f"{len(cases)} complete paired trajectory artifacts and {len({case['semantic_case_group'] for case in cases})} semantic cases.",
-        f"{sum(case['old_fixed_direction_gate'] is True for case in cases)} have confirmed trajectory-local directional persistence; "
-        f"{sum(case['old_fixed_direction_gate'] is not True for case in cases)} have separation without that proof.",
+        f"{sum(case['trajectory_certificate']['directional_persistence'] == 'CONFIRMED' for case in cases)} have confirmed ordered-trajectory directional persistence; "
+        f"{sum(case['trajectory_certificate']['directional_persistence'] != 'CONFIRMED' for case in cases)} have separation without that proof.",
         f"{sum(case['same_contrast_full_chain'] is True for case in cases)} connect the current formation mechanism to persistence using an aligned repair contrast.",
         "Excluded candidates (including the incomplete layer-23 key repair) are",
         "listed in the JSON audit and are not silently counted as duplicates.",
         "",
-        "All eight are paired-separation artifacts.  Only the directional subset",
-        "may be called persistent Flash-style cases, and only an aligned-contrast",
-        "subset closes the currently identified formation mechanism to persistence.",
+        "All eight are paired-separation artifacts.  The directional subset may",
+        "be called persistent trajectory-bias cases.  Flash-style persistent-local",
+        "and feedback-sustained regimes remain distinct, and only an aligned-contrast",
+        "subset closes the identified formation mechanism to source persistence.",
     ]
     (OUT / "trajectory_reclassification.md").write_text("\n".join(lines) + "\n")
     print(json.dumps({"output": str(OUT), "counts": counts}))
