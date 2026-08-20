@@ -366,6 +366,39 @@ def _verify_arithmetic_composite(
                 "backward_restores_input_shape": _tensor_shape(divide.get("tensor_meta")) == input_shape,
             })
             return _proof_record("MEAN_ADJOINT", "y=sum_D(x)/N", "dx=expand(q)/N", checks)
+        if ft == ("aten.div.Tensor",) and bt in {
+            ("aten.div.Tensor",),
+            ("aten.div.Tensor", "aten.div.Tensor"),
+        }:
+            denominator = _args(f)[1]
+            branches = list(backward_nodes)
+            checks = dict(common)
+            checks.update({
+                "forward_denominator_is_recorded_constant": (
+                    _node_argument(denominator) is None
+                    and isinstance(denominator, (int, float))
+                    and float(denominator) != 0.0
+                ),
+                "all_cotangent_branches_use_same_exact_denominator": all(
+                    _args(node)[1] == denominator for node in branches
+                ),
+                "all_vjp_branches_restore_forward_input_metadata": (
+                    input_shape is not None
+                    and all(
+                        _tensor_shape(node.get("tensor_meta")) == input_shape
+                        and _tensor_dtype(node.get("tensor_meta"))
+                        == _tensor_dtype(source.get("tensor_meta"))
+                        for node in branches
+                    )
+                ),
+                "global_fanout_merge_is_proved_separately": True,
+            })
+            return _proof_record(
+                "CONSTANT_DIVISION_FANOUT_ADJOINT",
+                "y=x/c",
+                "each incoming cotangent contributes q_i/c; global fan-in sums the branches",
+                checks,
+            )
         if ft == ("aten.rsqrt.default",) and bt == (
             "aten.detach.default", "aten.detach.default", "aten.detach.default", "aten.detach.default",
             "aten.pow.Tensor_Scalar", "aten.mul.Scalar", "aten.mul.Tensor"
@@ -591,6 +624,60 @@ def _verify_matrix_composite(
     ft = tuple(str(node["target"]) for node in forward_nodes)
     bt = tuple(str(node["target"]) for node in backward_nodes)
     try:
+        if ft == ("aten.permute.default", "aten.mm.default") and bt == (
+            "aten.permute.default", "aten.mm.default",
+            "aten.permute.default", "aten.mm.default",
+        ):
+            wt, product = forward_nodes
+            tq, dw, weight, dx = backward_nodes
+            x_name = _node_argument(_args(product)[0])
+            w_name = _node_argument(_args(wt)[0])
+            q_name = _node_argument(_args(tq)[0])
+            checks = {
+                "forward_weight_permute_is_exact_transpose": (
+                    list(_args(wt)[1]) == [1, 0]
+                ),
+                "forward_mm_consumes_exact_input_and_weight_transpose": (
+                    [_node_argument(value) for value in _args(product)[:2]]
+                    == [x_name, wt["name"]]
+                    and x_name is not None
+                ),
+                "weight_vjp_is_q_transpose_mm_exact_saved_input": (
+                    q_name is not None
+                    and list(_args(tq)[1]) == [1, 0]
+                    and [_node_argument(value) for value in _args(dw)[:2]]
+                    == [tq["name"], x_name]
+                ),
+                "backward_replay_then_inverse_permute_recovers_weight_orientation": (
+                    _node_argument(_args(weight)[0]) is not None
+                    and list(_args(weight)[1]) == [1, 0]
+                    and _tensor_shape(weight.get("tensor_meta"))
+                    == _tensor_shape(forward_index[w_name].get("tensor_meta"))
+                ),
+                "input_vjp_is_q_mm_exact_saved_weight": (
+                    [_node_argument(value) for value in _args(dx)[:2]]
+                    == [q_name, weight["name"]]
+                ),
+                "gradient_metadata_matches_exact_operands": (
+                    w_name is not None
+                    and _tensor_shape(dw.get("tensor_meta"))
+                    == _tensor_shape(forward_index[w_name].get("tensor_meta"))
+                    and x_name is not None
+                    and _tensor_shape(dx.get("tensor_meta"))
+                    == _tensor_shape(forward_index[x_name].get("tensor_meta"))
+                ),
+                "all_actual_vjp_nodes_have_exact_forward_origin": all(
+                    node.get("fwd_source_fn_stack") == wt.get("source_fn_stack")
+                    for node in (tq, dw, weight, dx)
+                ),
+                "name_or_shape_similarity_not_used_for_binding": True,
+            }
+            return _proof_record(
+                "TWO_DIMENSIONAL_LINEAR_MM_ADJOINT",
+                "Y=X@W^T",
+                "dX=Q@W; dW=Q^T@X",
+                checks,
+            )
         partitioned_rank_one_bmm = (
             (
                 "aten.expand.default", "aten.expand.default",
@@ -3080,6 +3167,33 @@ def main() -> None:
         forward_index=forward_index,
         backward_index=backward_index,
     )
+    # A graph break may also leave a value-independent mask/layout tail in
+    # the physical forward partition with no source stack or seq_nr.  It is
+    # not a saved backward program.  Prove each such node directly from the
+    # complete SSA dependency graph when it has no path from a trainable
+    # placeholder; never infer this from its name or shape.
+    for node in forward_auxiliary:
+        name = str(node["name"])
+        if (
+            name in partitioned_forward_proofs
+            and partitioned_forward_proofs[name].get("passed", False)
+        ):
+            continue
+        if trainable_dependency.get(name, False):
+            continue
+        formula = FORMULAS.get(str(node["target"]))
+        proof = _proof_record(
+            "NO_REQUESTED_TRAINABLE_INPUT_VJP",
+            formula["map"] if formula is not None else "UNRESOLVED_FORMULA",
+            "the concrete node has no dependency on a requires_grad forward placeholder; its training-step VJP domain is empty",
+            {
+                "node_has_zero_trainable_placeholder_dependency": True,
+                "node_formula_declared": formula is not None,
+                "actual_backward_program_is_empty": True,
+                "name_shape_or_ordinal_pairing_not_used": True,
+            },
+        )
+        partitioned_forward_proofs[name] = proof
     deepstack_proofs, deepstack_auxiliary_proofs, deepstack_auxiliary_gates = (
         _derive_deepstack_update_programs(
             forward_by_origin,

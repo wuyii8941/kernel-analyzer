@@ -58,6 +58,10 @@ EXTRA_FORMULAS: dict[str, dict[str, str]] = {
         "map": "y=(x>c) elementwise for scalar c",
         "adjoint": "Boolean comparison has no differentiable output",
     },
+    "aten.ge.Scalar": {
+        "map": "y=(x>=c) elementwise for scalar c",
+        "adjoint": "Boolean comparison has no differentiable output",
+    },
     "aten.index_add.default": {
         "map": "y=x; y[index[i]] += alpha*source[i]",
         "adjoint": "dx=q; dsource=alpha*index_select(q,index)",

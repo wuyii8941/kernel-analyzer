@@ -169,6 +169,30 @@ def direct_theorem(
             "exact_forward_map": "Y[p,:]=W[index[p],:]",
             "derived_vjp": "dW[r,:]=sum_{p:index[p]=r}Q[p,:], excluding the recorded padding index",
         }
+    if (
+        forward == ("aten.index_add_.default",)
+        and backward == ("aten.index_select.default", "aten.expand.default")
+    ):
+        return {
+            "proof_kind": "INPLACE_INDEX_ADD_ADJOINT",
+            "exact_forward_map": "x[index[i]] += alpha*source[i] under the recorded functionalized mutation contract",
+            "derived_vjp": "dx=q; dsource=expand_or_identity(alpha*index_select(q,index))",
+        }
+    if (
+        forward == ("aten.topk.default",)
+        and backward == ("aten.new_zeros.default", "aten.scatter.src")
+    ):
+        return {
+            "proof_kind": "TOPK_PROGRAM_TIE_ORDER_ADJOINT",
+            "exact_forward_map": "values=P(x)x and indices record the concrete program tie order",
+            "derived_vjp": "dx=scatter(zeros,indices,q_values); the integer index output has no VJP",
+        }
+    if forward == ("aten.div.Tensor",) and backward == ("aten.div.Tensor",):
+        return {
+            "proof_kind": "CONSTANT_DIVISION_ADJOINT",
+            "exact_forward_map": "y=x/c for the recorded nonzero scalar denominator c",
+            "derived_vjp": "dx=q/c",
+        }
     if "aten._softmax.default" in fset and "aten._softmax_backward_data.default" in bset:
         return {
             "proof_kind": "SOFTMAX_ADJOINT",
