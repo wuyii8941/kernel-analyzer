@@ -75,6 +75,31 @@
       "one source/control invocation expected to remain null-like"
     ]
   },
+  "prospective_confirmation_cases": [
+    {
+      "case_id": "qwen_seq256_lm_head_dx",
+      "model": "Qwen3-1.7B",
+      "endpoint_binding": {
+        "phase": "AOT_BACKWARD",
+        "operation": "extern_kernels.mm",
+        "left_shape": [256, 151936],
+        "right_shape": [151936, 2048],
+        "expected_calls_per_step": 1
+      },
+      "state_ids": [
+        "qwen3-1p7b-0098", "qwen3-1p7b-0101", "qwen3-1p7b-0104", "qwen3-1p7b-0107",
+        "qwen3-1p7b-0110", "qwen3-1p7b-0113", "qwen3-1p7b-0116", "qwen3-1p7b-0119",
+        "qwen3-1p7b-0122", "qwen3-1p7b-0125", "qwen3-1p7b-0128", "qwen3-1p7b-0131",
+        "qwen3-1p7b-0134", "qwen3-1p7b-0137", "qwen3-1p7b-0140", "qwen3-1p7b-0143"
+      ],
+      "prediction_frozen_before_values": {
+        "orbit_mean_temporal_amplification_above_sign_flip_95": true,
+        "effective_update_temporal_amplification_above_sign_flip_95": true,
+        "transport_does_not_destroy_source_persistence": true
+      },
+      "selection_reason": "held-out sequence shape and invocation; same loss-head bottleneck as Phi but a different model implementation"
+    }
+  ],
   "retrospective_only_not_heldout": [
     "qwen64_vproj_mm",
     "mamba_seq64_input_proj",
