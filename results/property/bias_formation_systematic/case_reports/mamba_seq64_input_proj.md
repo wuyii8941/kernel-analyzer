@@ -14,11 +14,11 @@ F+B：Y=XW^T; dX=QW; dW=Q^T X at layer-0 in_proj
 
 `E[F(ε)|c] = ∫p_s(ε)F_e(ε)dε + ∫p_a(ε)F_o(ε)dε`。
 
-本例归入：`EVENT_PAIRING_ASYMMETRY`（`PARTIAL_CROSS_ARCHITECTURE_SUPPORT`）。kernel arithmetic and output rounding are each directional, but only one trajectory contrast is closed。
+本例归入：`EVENT_PAIRING_ASYMMETRY`（`MATCHED_LOCAL_SOURCE_MIXED_F_B_ADAM_DIRECTIONAL`）。repair local residual is centered 16/16 and candidate local plus zero-moment AdamW effects are biased 16/16; gradient/SGD are biased 13/16 and unresolved 3/16, so the complete conditional chain fails closed rather than being promoted。
 
 本例的物理差异是：both same-operand MM kernel arithmetic and deterministic output rounding are directional。
 
-条件化 formation（local / gradient / update）：`NOT_MEASURED / NOT_MEASURED / NOT_MEASURED`。
+条件化 formation（local / gradient / update）：`BIASED / UNRESOLVED / UNRESOLVED`。
 
 旧跨无关状态结果（local / gradient / update）：`NOT_MEASURED / NOT_MEASURED / NOT_MEASURED`。它只描述 global/state-invariant bias，不替代 conditional bias。
 
@@ -26,11 +26,11 @@ F+B：Y=XW^T; dX=QW; dW=Q^T X at layer-0 in_proj
 
 判定：`PARTIAL_SOURCE_MECHANISM`。
 
-原因：at least two additive local source terms are directional; the trajectory closes the kernel-accumulation arm but not the output-rounding arm。
+原因：the joint repair centers the declared local source in all 16 fixed conditions, while the natural local effect and zero-moment AdamW effect are biased in all 16; the actual backward/SGD effect is biased in 13 conditions and unresolved in three。
 
-干预：promote only MM accumulation to FP32, then restore the BF16 ABI。
+干预：kernel-only, rounding-only, and joint factorial arms; joint uses FP32 MM plus coordinate-wise unbiased BF16 materialization。
 
-边界：cross-architecture partial source mechanism; total observed error is not single-source。
+边界：cross-architecture conditional local-source and bounded optimizer evidence; the all-layer mechanism gate remains unresolved because three real-backward conditions do not obtain a directional verdict, and the historical trajectory closes only the KERNEL_ONLY arm。
 
 ## 轨迹后果
 
@@ -38,11 +38,14 @@ F+B：Y=XW^T; dX=QW; dW=Q^T X at layer-0 in_proj
 
 ## 下一项决定性实验
 
-run separate kernel-only and output-rounding-only conditional interventions。
+only if this partial case is revisited, use an exact gradient antithetic control in the three unresolved conditions; do not add repeats or relax the gate。
 
 ## 证据
 
 - `results/coverage/cases/mamba_seq64_input_proj.json`
 - `results/coverage/cases/mamba_seq64_input_proj_precision_decomposition.json`
+- `results/coverage/cases/mamba_seq64_input_proj_source_aligned_repair.json.gz`
+- `results/coverage/cases/mamba_seq64_input_proj_conditional_debias.json.gz`
+- `results/property/conditional_debias/mamba_seq64_input_proj.json`
 - `results/coverage/cases/mamba_seq64_input_proj_repair_pilot.json`
 - `results/coverage/cases/mamba_seq64_input_proj_trajectory.json`

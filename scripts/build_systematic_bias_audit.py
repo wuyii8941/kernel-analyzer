@@ -82,6 +82,44 @@ def symmetric_consequence(relative: str) -> dict[str, Any]:
     }
 
 
+def conditional_debias(relative: str, arm: str) -> dict[str, Any]:
+    """Load a compact fixed-state candidate-versus-debiased-ensemble result."""
+
+    source = read_json(relative)
+    if source.get("status") != "COMPLETE" or source.get(
+        "global_direction_used_as_gate"
+    ) is not False:
+        raise ValueError("conditional debias summary is incomplete or globally gated")
+    value = source["arms"][arm]
+    aggregate = value["aggregate"]
+    roles = aggregate["roles"]
+
+    def layer(role: str) -> str:
+        row = roles[role]
+        if row["all_conditions_biased"]:
+            return "BIASED"
+        if row["all_conditions_centered"]:
+            return "CENTERED"
+        return "UNRESOLVED"
+
+    sgd = layer("candidate_sgd_update_effect_removed")
+    adam = layer("candidate_adamw_zero_update_effect_removed")
+    return {
+        "local": layer("candidate_local_effect_removed"),
+        "gradient": layer("candidate_gradient_effect_removed"),
+        "update": sgd if sgd == adam else "UNRESOLVED",
+        "repair_local_residual": layer("repair_local_residual"),
+        "conditions": source["condition_count"],
+        "all_roles": roles,
+        "reference": "STOCHASTIC_SOURCE_DEBIASED_ENSEMBLE",
+        "absolute_downstream_repair_bias": aggregate[
+            "absolute_downstream_repair_bias"
+        ],
+        "update_scopes": ["STATELESS_SGD", "ADAMW_ZERO_MOMENT_STEP1"],
+        "source": relative,
+    }
+
+
 def rectification_aggregate(document: dict[str, Any]) -> dict[str, Any]:
     """Add energy-weighted geometry derivable from complete per-step records."""
 
@@ -106,6 +144,11 @@ def rectification_aggregate(document: dict[str, Any]) -> dict[str, Any]:
 
 def cases() -> list[dict[str, Any]]:
     trajectories = trajectory_index()
+    source_repairs = {
+        row["case_id"]: row for row in read_json(
+            "results/coverage/cases/source_aligned_repair_summary.json"
+        )["cases"]
+    }
     saved_p_symmetry_path = (
         "results/property/bias_property_search/saved_p_pairing_work_v2.json"
         if (ROOT / "results/property/bias_property_search/saved_p_pairing_work_v2.json").exists()
@@ -118,6 +161,27 @@ def cases() -> list[dict[str, Any]]:
     )
     saved_p_symmetry = rectification_aggregate(read_json(saved_p_symmetry_path))
     silu_symmetry = rectification_aggregate(read_json(silu_symmetry_path))
+    qwen128_conditional = conditional_debias(
+        "results/property/conditional_debias/qwen128_vproj.json",
+        "ROUNDING_ONLY",
+    )
+    qwen64_conditional = conditional_debias(
+        "results/property/conditional_debias/qwen64_vproj.json",
+        "JOINT",
+    )
+    mamba_conditional = conditional_debias(
+        "results/property/conditional_debias/mamba_seq64_input_proj.json",
+        "JOINT",
+    )
+    l23_antithetic = read_json("results/final/l23_s_bwd_antithetic.json")
+    l23_gradient_even = [
+        row["gradient_q_proj_tile"]["balanced_mean_over_natural"]
+        for row in l23_antithetic["rows"]
+    ]
+    l23_adam_even = [
+        row["adamw_zero_moment_step1_q_proj_tile"]["balanced_mean_over_natural"]
+        for row in l23_antithetic["rows"]
+    ]
     not_measured = {"local": "NOT_MEASURED", "gradient": "NOT_MEASURED", "update": "NOT_MEASURED"}
 
     result = [
@@ -228,29 +292,57 @@ def cases() -> list[dict[str, Any]]:
             "model": "Qwen3-1.7B",
             "semantic_unit": "Y=XW^T; dX=QW; dW=Q^T X at layer-0 v_proj",
             "forward_backward": {"status": "CLOSED", "scope": "one exact forward MM with actual AOT backward edges"},
-            "physical_source": "precision contrast is directional; full split into kernel, output rounding, and inherited operands is incomplete",
-            "formation": {"conditional": dict(not_measured), "global": dict(not_measured), "label_source": "NOT_MEASURED"},
+            "physical_source": "same-operand MM kernel arithmetic and deterministic output rounding are both directional",
+            "formation": {
+                "conditional": {
+                    key: qwen64_conditional[key]
+                    for key in ("local", "gradient", "update")
+                },
+                "conditional_details": qwen64_conditional,
+                "global": dict(not_measured),
+                "label_source": "FIXED_STATE_STOCHASTIC_REPAIR_ENSEMBLE",
+            },
             "mechanism": {
                 "candidate_properties": ["P1_CONDITIONAL_SOURCE_ASYMMETRY"],
-                "verdict": "PARTIAL_SOURCE_MECHANISM",
+                "verdict": "SUPPORTED_CASE_SPECIFIC_SOURCE_MECHANISM",
                 "intervention": {
-                    "description": "same-input FP32 MM accumulation followed by the original BF16 ABI",
+                    "description": "joint FP32 MM plus coordinate-wise unbiased BF16 materialization; kernel-only and rounding-only factorial controls",
                     "causal_effect": True,
                     "matched_sham_exact": True,
-                    "full_observed_source_repaired": False,
+                    "full_observed_source_repaired_in_expectation": True,
+                    "downstream_global_carrier": source_repairs["qwen64_vproj_mm"]["downstream_carrier_effect"]["status"],
                 },
-                "why_directional": "the isolated accumulation residual changes the real dW path, but its relation to the complete precision residual is not closed",
-                "claim_boundary": "trajectory-local partial source; no complete P1 attribution",
+                "why_directional": (
+                    "at each of 16 fixed states, the deterministic joint MM-kernel plus "
+                    "output-rounding residual has a nonzero candidate-minus-debiased-"
+                    "ensemble mean that remains directional after the actual backward "
+                    "and both declared optimizer mappings"
+                ),
+                "claim_boundary": (
+                    "this closes conditional source formation relative to the stochastic "
+                    "joint-source-debiased ensemble; it does not certify absolute "
+                    "downstream repair bias without an exact downstream reference"
+                ),
             },
             "bias_map": {
                 "channel": "EVENT_PAIRING_ASYMMETRY",
-                "status": "PARTIAL_SUPPORT",
-                "reason": "the accumulation arm changes the real VJP, but the complete local contrast is not decomposed",
+                "status": "MATCHED_CONDITIONAL_SOURCE_SUPPORT",
+                "reason": (
+                    "an independent 16-repeat confirmation centers the repair local "
+                    "residual in 16/16 fixed conditions, while candidate-minus-repair "
+                    "local, gradient, SGD-update, and zero-moment AdamW-update effects "
+                    "are biased in 16/16"
+                ),
             },
+            "source_aligned_repair": source_repairs["qwen64_vproj_mm"],
             "trajectory": trajectory(trajectories["qwen64_vproj_mm"]),
-            "next_decisive_test": "complete the three-way local source decomposition, then capture within-condition formation",
+            "next_decisive_test": "use a new JOINT-repair trajectory only if persistence of this exact identified source is required",
             "evidence": [
                 "results/coverage/cases/qwen64_vproj.json",
+                "results/coverage/cases/qwen64_vproj_precision_decomposition.json",
+                "results/coverage/cases/qwen64_vproj_source_aligned_repair.json.gz",
+                "results/coverage/cases/qwen64_vproj_conditional_debias_r16.json.gz",
+                "results/property/conditional_debias/qwen64_vproj.json",
                 "results/coverage/cases/qwen64_vproj_repair_pilot.json",
                 "results/coverage/cases/qwen64_vproj_trajectory.json",
             ],
@@ -261,32 +353,56 @@ def cases() -> list[dict[str, Any]]:
             "semantic_unit": "Y=XW^T; dX=QW; dW=Q^T X at layer-0 v_proj",
             "forward_backward": {"status": "CLOSED", "scope": "one exact forward MM with actual AOT backward edges"},
             "physical_source": "global local decomposition identifies deterministic FP32-to-BF16 output rounding, not MM kernel arithmetic",
-            "formation": {"conditional": dict(not_measured), "global": dict(not_measured), "label_source": "NOT_MEASURED"},
+            "formation": {
+                "conditional": {
+                    key: qwen128_conditional[key]
+                    for key in ("local", "gradient", "update")
+                },
+                "conditional_details": qwen128_conditional,
+                "global": dict(not_measured),
+                "label_source": "FIXED_STATE_STOCHASTIC_REPAIR_ENSEMBLE",
+            },
             "mechanism": {
                 "candidate_properties": ["P1_CONDITIONAL_SOURCE_ASYMMETRY", "P6_SEMANTIC_ORBIT_CENTERING"],
-                "verdict": "UNRESOLVED_CONTRAST_MISMATCH",
+                "verdict": "SUPPORTED_CASE_SPECIFIC_SOURCE_MECHANISM",
                 "intervention": {
-                    "description": "existing trajectory promotes MM accumulation but retains BF16 output rounding",
+                    "description": "replace deterministic nearest BF16 output rounding by coordinate-wise unbiased BF16 materialization while retaining the noncoherent kernel residual",
                     "causal_effect": True,
                     "matched_sham_exact": True,
+                    "full_observed_source_repaired_in_expectation": True,
+                    "downstream_global_carrier": source_repairs["qwen128_vproj_mm"]["downstream_carrier_effect"]["status"],
                 },
                 "trajectory_repairs_declared_local_source": False,
                 "why_directional": (
-                    "the source decomposition and trajectory manipulate different contrasts; "
-                    "they cannot yet be composed into one causal explanation"
+                    "at each of 16 fixed states, deterministic nearest rounding has a nonzero "
+                    "candidate-minus-debiased-ensemble mean that remains directional after the "
+                    "actual backward and both declared optimizer mappings"
                 ),
-                "claim_boundary": "do not attribute the trajectory to output rounding until an output-rounding repair is run",
+                "claim_boundary": (
+                    "this closes conditional source formation relative to the stochastic "
+                    "source-debiased ensemble; absolute downstream repair bias remains "
+                    "unidentified without an exact downstream reference, and the historical "
+                    "trajectory used a different repair contrast"
+                ),
             },
             "bias_map": {
                 "channel": "EVENT_PAIRING_ASYMMETRY",
-                "status": "SUPPORTING_SOURCE_OBSERVATION_CONTRAST_MISMATCH",
-                "reason": "output rounding is directional, but the existing trajectory repairs accumulation instead",
+                "status": "MATCHED_CONDITIONAL_SOURCE_SUPPORT",
+                "reason": (
+                    "repair local residual is centered in 16/16 fixed conditions, while "
+                    "candidate-minus-repair local, gradient, SGD-update, and zero-moment "
+                    "AdamW-update effects are biased in 16/16"
+                ),
             },
+            "source_aligned_repair": source_repairs["qwen128_vproj_mm"],
             "trajectory": trajectory(trajectories["qwen128_vproj_mm"]),
-            "next_decisive_test": "run an exact output-rounding intervention with sham at the same F+B boundary",
+            "next_decisive_test": "add an exact downstream reference only if claiming the repaired F+B/update itself is absolutely unbiased; use a new ROUNDING_ONLY trajectory for persistence",
             "evidence": [
                 "results/coverage/cases/qwen128_vproj.json",
                 "results/coverage/cases/qwen128_vproj_precision_decomposition.json",
+                "results/coverage/cases/qwen128_vproj_source_aligned_repair.json.gz",
+                "results/coverage/cases/qwen128_vproj_conditional_debias.json.gz",
+                "results/property/conditional_debias/qwen128_vproj.json",
                 "results/coverage/cases/qwen128_vproj_repair_pilot.json",
                 "results/coverage/cases/qwen128_vproj_trajectory.json",
             ],
@@ -409,32 +525,58 @@ def cases() -> list[dict[str, Any]]:
             "semantic_unit": "Y=XW^T; dX=QW; dW=Q^T X at layer-0 in_proj",
             "forward_backward": {"status": "CLOSED", "scope": "one exact recurrent input-projection MM and actual VJP edges"},
             "physical_source": "both same-operand MM kernel arithmetic and deterministic output rounding are directional",
-            "formation": {"conditional": dict(not_measured), "global": dict(not_measured), "label_source": "NOT_MEASURED"},
+            "formation": {
+                "conditional": {
+                    key: mamba_conditional[key]
+                    for key in ("local", "gradient", "update")
+                },
+                "conditional_details": mamba_conditional,
+                "global": dict(not_measured),
+                "label_source": "FIXED_STATE_STOCHASTIC_REPAIR_ENSEMBLE",
+            },
             "mechanism": {
                 "candidate_properties": ["P1_CONDITIONAL_SOURCE_ASYMMETRY"],
                 "verdict": "PARTIAL_SOURCE_MECHANISM",
                 "intervention": {
-                    "description": "promote only MM accumulation to FP32, then restore the BF16 ABI",
+                    "description": "kernel-only, rounding-only, and joint factorial arms; joint uses FP32 MM plus coordinate-wise unbiased BF16 materialization",
                     "causal_effect": True,
                     "matched_sham_exact": True,
-                    "full_observed_source_repaired": False,
+                    "full_observed_source_repaired_in_expectation": True,
+                    "evidence_scope": source_repairs["mamba_seq64_input_proj"]["evidence_scope"],
+                    "downstream_carrier": source_repairs["mamba_seq64_input_proj"]["downstream_carrier_effect"]["status"],
                 },
                 "why_directional": (
-                    "at least two additive local source terms are directional; the trajectory closes "
-                    "the kernel-accumulation arm but not the output-rounding arm"
+                    "the joint repair centers the declared local source in all 16 fixed "
+                    "conditions, while the natural local effect and zero-moment AdamW "
+                    "effect are biased in all 16; the actual backward/SGD effect is biased "
+                    "in 13 conditions and unresolved in three"
                 ),
-                "claim_boundary": "cross-architecture partial source mechanism; total observed error is not single-source",
+                "claim_boundary": (
+                    "cross-architecture conditional local-source and bounded optimizer "
+                    "evidence; the all-layer mechanism gate remains unresolved because "
+                    "three real-backward conditions do not obtain a directional verdict, "
+                    "and the historical trajectory closes only the KERNEL_ONLY arm"
+                ),
             },
             "bias_map": {
                 "channel": "EVENT_PAIRING_ASYMMETRY",
-                "status": "PARTIAL_CROSS_ARCHITECTURE_SUPPORT",
-                "reason": "kernel arithmetic and output rounding are each directional, but only one trajectory contrast is closed",
+                "status": "MATCHED_LOCAL_SOURCE_MIXED_F_B_ADAM_DIRECTIONAL",
+                "reason": (
+                    "repair local residual is centered 16/16 and candidate local plus "
+                    "zero-moment AdamW effects are biased 16/16; gradient/SGD are biased "
+                    "13/16 and unresolved 3/16, so the complete conditional chain fails "
+                    "closed rather than being promoted"
+                ),
             },
+            "source_aligned_repair": source_repairs["mamba_seq64_input_proj"],
             "trajectory": trajectory(trajectories["mamba_seq64_input_proj"]),
-            "next_decisive_test": "run separate kernel-only and output-rounding-only conditional interventions",
+            "next_decisive_test": "only if this partial case is revisited, use an exact gradient antithetic control in the three unresolved conditions; do not add repeats or relax the gate",
             "evidence": [
                 "results/coverage/cases/mamba_seq64_input_proj.json",
                 "results/coverage/cases/mamba_seq64_input_proj_precision_decomposition.json",
+                "results/coverage/cases/mamba_seq64_input_proj_source_aligned_repair.json.gz",
+                "results/coverage/cases/mamba_seq64_input_proj_conditional_debias.json.gz",
+                "results/property/conditional_debias/mamba_seq64_input_proj.json",
                 "results/coverage/cases/mamba_seq64_input_proj_repair_pilot.json",
                 "results/coverage/cases/mamba_seq64_input_proj_trajectory.json",
             ],
@@ -461,16 +603,29 @@ def cases() -> list[dict[str, Any]]:
                 "claim_boundary": "validated semantic-region mechanism, not a uniquely identified kernel instruction",
             },
             "bias_map": {
-                "channel": "EVENT_PAIRING_ASYMMETRY",
-                "status": "CONSISTENT_NOT_MARGINAL_PRESERVING",
-                "reason": "S_bwd carries the direction through Gq=S_bwd*K, but its repair removes rather than antithetically pairs the residual",
+                "channel": "UNRESOLVED_MIXED_CHANNEL",
+                "status": "PROJECTED_ANTITHETIC_RESPONSE_NATURAL_FIDELITY_FAILED",
+                "reason": (
+                    "all 16 projected BF16 +/-epsilon pairs and shams are exact, and "
+                    f"the projected F+B response-even ratio spans "
+                    f"{min(l23_gradient_even):.3f}--{max(l23_gradient_even):.3f}, while "
+                    f"zero-moment AdamW spans {min(l23_adam_even):.3f}--"
+                    f"{max(l23_adam_even):.3f}; "
+                    "however, natural-source fidelity falls below the frozen 90% gate in "
+                    "some conditions, so this cannot upgrade the natural layer-23 case to "
+                    "a marginal-preserving matched mechanism"
+                ),
+                "antithetic_status": l23_antithetic["status"],
+                "validity_gates": l23_antithetic["validity_gates"],
+                "mechanism_gates": l23_antithetic["mechanism_gates"],
             },
             "trajectory": trajectory(trajectories["qwen_layer23_attention_state"]),
-            "next_decisive_test": "capture conditional layer traces if a first-bias-stage claim is required; do not force single-kernel attribution",
+            "next_decisive_test": "retain as a bounded semantic-region mechanism; do not relax the failed natural-fidelity gate or force single-kernel attribution",
             "evidence": [
                 "results/coverage/cases/l23_qproj_attention_state_region.json",
                 "results/final/l23_attention_live_weight.json",
                 "results/property/bias_formation_final/qwen_l23_attention_mechanism.json",
+                "results/final/l23_s_bwd_antithetic.json",
             ],
         },
     ]
@@ -642,9 +797,11 @@ def main() -> None:
 - Liger、Phi：`EVENT_PAIRING_ASYMMETRY` 的 matched positives；
 - saved-P、Qwen3-VL SiLU：`RESPONSE_RECTIFICATION` 的两个独立 matched positives；
 - layer-23：semantic-region transport/contract mechanism，不是单 kernel root；
-- Qwen64 与 Mamba：partial source mechanisms；
-- Qwen128 v_proj：source decomposition 与 trajectory repair 不是同一 contrast，暂不能拼接；
-- 因此严格机制证据是 4/8；其余 4 个保留为 partial、consistent 或 unresolved，而不是重复计数。
+- Qwen128：在 16 个固定 state 中，repair local residual 全部 centered，而 candidate-minus-repair 的 local、真实 gradient、SGD update 与 zero-moment AdamW update 全部 biased；这是新的 conditional source-formation positive；
+- Qwen64：独立 16-repeat fixed-state confirmation 中，repair local residual 在 16/16 conditions centered，而 candidate-minus-repair 的 local、真实 gradient、SGD update 与 zero-moment AdamW update 均在 16/16 biased；
+- Mamba：16-condition joint-repair confirmation 得到 local 与 zero-moment AdamW 16/16 biased、repair local 16/16 centered，但真实 gradient/SGD 为 13/16 biased、3/16 unresolved；因此仍是 partial，而不是第七个 matched positive；
+- layer-23：16-condition exact projected-antithetic control 揭示 F+B 与 Adam response-even 分量，但自然 source fidelity 在部分条件未过冻结的 90% gate，因此不升级；
+- 因此严格 formation-mechanism positives 现在是 6/8；Qwen64/128 的新增结论只到 fixed-state formation，不与使用不同 repair contrast 的历史轨迹拼接。
 
 ## 为什么会出现系统性 bias
 
@@ -660,13 +817,13 @@ def main() -> None:
 
 ## 当前可以声称什么
 
-可以声称：在四个具有 matched 机制证据的独立 F+B 案例中，training bias 均对应条件反对称消除失败；失败来自事件/transport 配对失衡或真实 optimizer 响应的偶分量。error norm、raw tensor mean、BF16 dtype 与固定 global carrier 都不是统一判据。
+可以声称：在六个具有 matched 机制证据的独立 F+B 案例中，conditional training bias 均对应条件反对称消除失败；失败来自 source/event/transport 配对失衡或真实 optimizer 响应的偶分量。Qwen64/128 还直接证明：即使跨无关 state 不共享一个方向，同一 state 内的 deterministic source effect 仍可在 16/16 conditions 传到真实 gradient/update。error norm、raw tensor mean、BF16 dtype 与固定 global carrier 都不是统一判据。
 
-不能声称：该 map 已经能零样本预测所有未见算子；也不能把剩余 4 个 partial/unresolved 案例补写成 positives，或把 Qwen128 的 output-rounding source 与 accumulation repair trajectory 拼成同一因果链。
+不能声称：该 map 已经能零样本预测所有未见算子；也不能把 local source repair 自动升级成完整 F+B/optimizer 去偏，把 global noncoherence 当成安全证书，或把旧 accumulation trajectory 与新的 rounding/joint repair 拼成同一条轨迹因果链。
 
 ## 下一步
 
-主线下一步不再是重复校验，而是把两个 formation channel 变成自动特征：从 event atomization 测 joint antithetic closure，从 `(g,m,v,δg)` 测 optimizer response-even susceptibility；再用剩余四个案例做预测而非反向拟合。其余个案缺口见 `gap_plan.json`。
+这一轮 fixed-state conditional audit 已完成。结果不支持通过继续增加随机重复来强行统一 Mamba 或 layer-23；只有获得 exact downstream reference，才能签发 repair 自身的 downstream zero-bias certificate。后续若继续主线，应把两个 formation channel 自动化为 event antithetic closure 与 `(g,m,v,δg)` response-even susceptibility；个案边界见 `gap_plan.json`。
 """
     (OUT / "scientific_summary.md").write_text(summary, encoding="utf-8")
     write_json(OUT / "summary.json", {
@@ -675,12 +832,12 @@ def main() -> None:
         "mechanism_family_clusters": len({row["mechanism_family"] for row in trajectory_index().values()}),
         "mechanism_verdict_counts": counts,
         "cross_case_property": "EFFECTIVE_ANTITHETIC_SYMMETRY_WORKING_PROPERTY",
-        "matched_property_cases": 4,
+        "matched_property_cases": 6,
         "property_channels": {
-            "EVENT_PAIRING_ASYMMETRY": ["liger_fused_ce", "phi4_seq64_lmhead_dx"],
+            "EVENT_PAIRING_ASYMMETRY": ["liger_fused_ce", "phi4_seq64_lmhead_dx", "qwen64_vproj_mm", "qwen128_vproj_mm"],
             "RESPONSE_RECTIFICATION": ["qwen_saved_p_seq128", "qwen3vl_silu_layer0"],
         },
-        "next_work": "AUTOMATE_CHANNEL_FEATURES_AND_PREDICT_REMAINING_CASES",
+        "next_work": "PROPERTY_AUTOMATION_WITH_PARTIAL_CASES_PRESERVED_FAIL_CLOSED",
     })
     print(json.dumps({"output": str(OUT.relative_to(ROOT)), "cases": len(rows), "verdicts": counts}, sort_keys=True))
 

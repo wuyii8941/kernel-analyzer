@@ -1,14 +1,87 @@
 # Directional-bias cases
 
+## Source-aligned repair correction (2026-08-20)
+
+The presence of a candidate--repair trajectory is not itself evidence that the
+repair removed the source named by a separate decomposition.  The historical
+`FP32 MM -> BF16 cast` arm repairs MM kernel arithmetic but necessarily retains
+deterministic BF16 output rounding.
+
+The three affected MM cases are now handled by source identity:
+
+- Qwen seq128 `v_proj`: output rounding only, so the valid arm is
+  `ROUNDING_ONLY`;
+- Qwen seq64 `v_proj`: the completed 32-state decomposition finds both kernel
+  arithmetic and output rounding directional, so the full arm is `JOINT`;
+- Mamba seq64 `in_proj`: both sources are directional; kernel-only,
+  rounding-only, and joint arms form a factorial intervention, with `JOINT` as
+  the full observed-source arm.
+
+Rounding repair uses adjacent BF16 values with coordinate-wise probabilities
+whose conditional expectation equals the FP32 value.  It therefore removes
+deterministic rounding bias in expectation while preserving the BF16 ABI.  It
+does not claim that one BF16 realization equals FP32 or that the repaired full
+training step is end-to-end FP32-equivalent.  Nor does a noncoherent direction
+across unrelated states prove downstream centering.  The next measurement
+holds one state fixed, repeats only repair randomness, and separately tests
+the local repair residual and the candidate effect removed after backward and
+optimizer mapping.  The exact definitions and claim boundary are in
+`docs/source_aligned_repair.md`.
+
+The formal Qwen seq128 `v_proj` follow-up now holds 16 natural states fixed
+one at a time and changes only the stochastic rounding draw (8 repeats per
+state). The repair's declared local rounding residual is centered in 16/16
+conditions. Natural candidate minus repair-ensemble effects are biased in
+16/16 conditions at the local output, actual `v_proj.weight` gradient,
+stateless-SGD update, and zero-moment AdamW-step1 update. This is a new
+conditional source-formation case even though the effects do not share one
+direction across unrelated states. It does not prove absolute downstream
+repair bias is zero, and it is not joined to the historical `KERNEL_ONLY`
+trajectory. Compact evidence is in
+`results/property/conditional_debias/qwen128_vproj.md`.
+
+Qwen seq64 `v_proj` now has the same fixed-state closure under its correct
+`JOINT` repair.  The initial 8-draw campaign left one condition unresolved, so
+the threshold was not relaxed; an independent 16-draw campaign with a new seed
+bank was run over all 16 conditions.  It centers the repair local residual in
+16/16 and finds the candidate-minus-repair local, real gradient, stateless-SGD,
+and zero-moment AdamW effects biased in 16/16.  This upgrades Qwen64 from a
+local-only repair to a conditional source-formation positive.  Evidence is in
+`results/property/conditional_debias/qwen64_vproj.md`.
+
+The layer-23 `S_bwd` follow-up also exposed a real representability boundary.
+Direct reflection of a BF16 residual about the eager reference is not always
+an exact BF16 residual.  A predeclared nearest-BF16 projection produced exact
+`+epsilon/-epsilon` pairs and exact shams in 16/16 conditions, but the projected
+source missed the frozen 90% natural-source-fidelity gate in some conditions.
+The nearby exact pairs nevertheless show a 2.9--16.6% F+B response-even
+component and a 67.2--72.5% zero-moment AdamW response-even component.  These
+are bounded response-geometry results, not permission to relabel the natural
+layer-23 source as a marginal-preserving matched mechanism.
+
+Mamba seq64 `in_proj` was then run as a complete 16-condition, 16-draw
+cross-architecture confirmation under `JOINT`.  Its repair local residual is
+centered in 16/16 conditions, while the natural local effect and zero-moment
+AdamW-step1 effect are biased in 16/16.  The actual backward and stateless-SGD
+effect are biased in 13/16 and unresolved in three; none is certified centered.
+This is deliberately retained as a partial mixed case.  It proves local source
+formation and a bounded optimizer effect, but it does not pass an all-layer
+conditional F+B gate.  Compact evidence is in
+`results/property/conditional_debias/mamba_seq64_input_proj.md`.
+
 ## Bias Formation Map update (2026-08-20)
 
 The denominator remains **eight unique closed F+B trajectory cases**; a new
 optimizer experiment on Qwen3-VL SiLU is evidence for that existing case, not a
-ninth case.  Four cases now have matched formation-mechanism evidence:
+ninth case. Six cases now have matched formation-mechanism evidence:
 
 - Liger and Phi support **event/pairing asymmetry**: the natural schedule or
   residual--transport pairing is directional, while a semantic-orbit or
   marginal-preserving control restores cancellation.
+- Qwen seq64/128 `v_proj` independently support **conditional source
+  asymmetry**: the correct deterministic source is removed by a locally
+  centered stochastic repair, and the removed effect reaches real
+  gradient/update in every fixed condition.
 - Qwen saved-P and Qwen3-VL SiLU support **optimizer response rectification**:
   exact equal-norm `+delta_g/-delta_g` pairs at the same Adam state do not map
   to opposite effective updates.  Their accumulated non-oddness ratios are
@@ -29,8 +102,11 @@ The first term is response rectification; the second is event/pairing
 asymmetry.  If the event population is antithetically closed and the complete
 F+B/optimizer response is odd, both terms vanish regardless of error variance.
 This is the current testable property; SEUP remains the downstream persistence
-condition.  Qwen64, Qwen128, Mamba and layer-23 retain their partial or
-semantic-region evidence boundaries and are not promoted to matched positives.
+condition. Qwen64/128 are now fixed-state conditional source-formation
+positives. Missing global 32-state carriers are not safety results. Mamba has
+a complete local conditional result but a mixed real-backward result, so it
+remains partial. Layer-23 retains its semantic-region boundary and failed
+natural-fidelity gate.
 
 The canonical per-case audit is
 `results/property/bias_formation_systematic/scientific_summary.md`; the full
@@ -213,8 +289,9 @@ properties** are claimed.
 | FlashAttention | Qiu and Yao | attention backward / query-weight gradient | low-precision online-softmax output reused in backward | coherent weight error across tokens and steps |
 | seq128 `lm_head` MM | this project; Flash-style pass, cross-state fail | actual input VJP `dX` | BF16 GEMM reduction and arithmetic path | causal carrier and 32-step paired weight divergence; no cross-state property |
 | Phi-4 seq64 `lm_head` MM | this project; bounded complete case | actual input VJP `dX` | BF16 GEMM arithmetic path; same-dtype arm is exactly zero | coherent final-norm gradient and paired 32-step evolving-weight divergence |
-| Qwen seq128 layer-0 `v_proj` MM | this project; completed negative | forward output `Y` | deterministic FP32-to-BF16 output rounding; local MM repair is causal but cross-state carrier is noncoherent | 32-step projection grows through step 16 then falls at step 32; fails strict directional accumulation |
-| Mamba seq64 layer-0 `in_proj` MM | this project; strict Flash-style pass | forward output `Y` | local MM accumulation at fixed operands; output rounding is a separate coherent source | exact repair/sham and paired 32-step AdamW divergence |
+| Qwen seq128 layer-0 `v_proj` MM | this project; fixed-state conditional source-formation positive | forward output `Y` | deterministic FP32-to-BF16 output rounding; unbiased-rounding arm centers the local source in 16/16 fixed conditions, while candidate-minus-repair gradient/update effects are biased in 16/16 | historical accumulation trajectory is a different contrast; persistence for the rounding repair remains unmeasured |
+| Qwen seq64 layer-0 `v_proj` MM | this project; fixed-state conditional source-formation positive | forward output `Y` | kernel arithmetic and output rounding are both directional; joint source-debiased arm centers the local source and removes a biased real F+B/update effect in 16/16 fixed conditions | historical trajectory used a different contrast; persistence for the joint repair remains unmeasured |
+| Mamba seq64 layer-0 `in_proj` MM | this project; partial cross-architecture conditional result | forward output `Y` | joint repair centers kernel arithmetic plus output rounding locally in 16/16; local/Adam effects are biased 16/16, while real gradient/SGD is biased 13/16 and unresolved 3/16 | historical 32-step trajectory closes only kernel arithmetic; the joint all-layer conditional gate remains unresolved |
 | Qwen seq128 layer-27 softmax | this project; strict semantic-region pass | actual backward `dS`, then real q/k VJPs | backward reconstructs probability from BF16 logits/max/sum instead of the true FP32 forward probability | exact saved-P repair/sham; paired q/k 32-step projection grows at every checkpoint |
 | Liger fused linear CE | this project | actual `dW` | 64 chunk contributions stored and added in BF16 | tied-weight carrier and 32-step repaired trajectory |
 | layer-23 `q_proj` tile | this project; strict semantic-region pass | actual `dW_q` tile | restoring attention-backward state S_bwd alone closes the carrier; one upstream contributor is fusion-delayed BF16 materialization in key RMSNorm+RoPE | exact S-only and joint repair/sham; paired 32-step AdamW divergence uses the conservative S/K boundary |

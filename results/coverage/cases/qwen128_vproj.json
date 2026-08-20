@@ -1,0 +1,102 @@
+{
+  "bindings": {
+    "aot_capture_sha256": "f9e4dc9ba5f92c681c7d425f4648c3132c54c83edce51028692d7bc2e0ff7b0f",
+    "aot_file_sha256": "9417118f80ed68c35b216561c92700a49ce871e994a67ab14bf261d3d9067f00",
+    "cotangent_node": "view_1240",
+    "forward_root": "mm_2",
+    "generated_source_line": 1737,
+    "generated_source_line_sha256": "1847d6184bdf781a1b57531571a298c898337332aa694e47a96de633d30ed2af",
+    "generated_source_sha256": "3501b0e5cf033c37316d80d2366fc50ade613703e4635d6d8c5fd3ee574063d1",
+    "input_gradient_contribution": "view_1241",
+    "module": "model.layers.0.self_attn.v_proj",
+    "release_capture_sha256": "7cef6662da2e961c1b9bdd50bad2672fe196b56775a8fda921dba2a4e0512c36",
+    "saved_tensor_nodes": [
+      "view_14",
+      "t_2"
+    ],
+    "sequence_nr": 11194,
+    "weight_gradient_output": "t_976"
+  },
+  "candidate_id": "qwen_seq128_forward_8_output",
+  "cause_axis": "PRECISION",
+  "claim_boundary": "Complete concrete local F+B proof, T1 coherent precision bias, and exact local mechanism decomposition for seq128 v_proj. The coherent source is deterministic FP32-to-BF16 output rounding, not the generated MM's local kernel difference. The seq64 arm supplies independent same-generated-region T1 support but lacks a seq64 AOT proof. A BF16-ABI-preserving local accumulation repair is rejected. An output-rounding intervention, coherent downstream carrier, and live accumulation T2-T4 remain open.",
+  "concrete_program_proof": {
+    "analytic_derivation_sha256": "a49af14a9cadcd036a69e6ecd88365a281a47a85d7decfe8b17d34439efe9288",
+    "backward_program_matches_analytic_vjp": true,
+    "backward_program_sha256": "a858769fc6f921822c8e2a14bbb7080b5d33a4302e4a1d2917c308c736fe777f",
+    "cotangent_edge_exact": true,
+    "forward_program_sha256": "5d9c559b9cb2980fc58a267c12410bc7493c1af002c1cd55b1c0e24b4ee1e89b",
+    "non_tensor_arguments_exact": true,
+    "output_edges_exact": true,
+    "saved_tensor_origins_exact": true
+  },
+  "forward_backward_unit": {
+    "actual_aot_program": {
+      "dW": "t_976(t(t(mm_585(t_973(Q^T), view_14(X))))) = Q^T X",
+      "dX_contribution": "view_1241(mm_586(t_975(t(t_2(W^T))), view_1240(Q))) = Q W",
+      "dX_output_accumulation_path": [
+        "view_1241",
+        "add_614",
+        "add_616",
+        "mul_1489",
+        "sum_281",
+        "view_1248"
+      ],
+      "forward": "mm_2(view_14, t_2(primals_9))"
+    },
+    "backward": {
+      "dW": "Q^T X",
+      "dX_contribution": "Q W"
+    },
+    "candidate_generated_call": "extern_kernels.mm(reinterpret_tensor(buf7, (128, 2048), (2048, 1), 0), reinterpret_tensor(primals_9, (2048, 1024), (1, 2048), 0), out=buf14)",
+    "forward": "Y = X W^T",
+    "symbols": {
+      "Q=dL/dY": "[128,1024]",
+      "W": "[1024,2048]",
+      "X": "[128,2048]"
+    }
+  },
+  "numerical": {
+    "cluster_bootstrap_95": {
+      "lower_95": 5.5070841884511675e-05,
+      "median": 6.669990453528156e-05,
+      "upper_95": 7.954018949468591e-05
+    },
+    "coordinates": 131072,
+    "live_result_sha256": "66bdc2a72f5ad9ad393dacc10e9f4dbcb648dbf28414eb4af21c5f5a71bbb9a3",
+    "max_abs": 0.007292032241821289,
+    "optimization_max_abs": 0.0,
+    "repeat_exact": true,
+    "states": 32,
+    "u_statistic": 6.681331077855302e-05
+  },
+  "precision_mechanism": {
+    "coherent_source": "output_rounding",
+    "decomposition_file_sha256": "9dfd8a3e6398b817c43f34d6a0eb6d831c7071534721dfe18223dd08afbb5845",
+    "decomposition_result_sha256": "b38a779f5e3ffb50d35b2dcbbf8d2466d60042f3973141f2d29f27d8d31db9cf",
+    "identity": "actual_low - fp32_same_operands = (actual_low - bf16(fp32_same_operands)) + (bf16(fp32_same_operands) - fp32_same_operands)",
+    "kernel_difference": {
+      "cluster_bootstrap_95": {
+        "lower_95": -4.030620452902246e-11,
+        "median": 6.104253664959683e-10,
+        "upper_95": 1.2968024466510028e-08
+      },
+      "status": "FAIL_CAUSAL_NONCOHERENT",
+      "u_statistic": 2.4578135982537962e-09
+    },
+    "output_rounding": {
+      "cluster_bootstrap_95": {
+        "lower_95": 5.533830880851833e-05,
+        "median": 6.65262059999474e-05,
+        "upper_95": 7.917291742592349e-05
+      },
+      "status": "PASS",
+      "u_statistic": 6.68121511115583e-05
+    }
+  },
+  "result_sha256": "f4e2786906f97bc58f601cc7bc23bcb43c81d1aee8025440be5c76f37991d316",
+  "schema": "kernel-analyzer-concrete-fb-bias-case-v1",
+  "status": "T1_COHERENT_OUTPUT_ROUNDING_BIAS_WITH_CONCRETE_FB_PROOF",
+  "subject": "Qwen3-1.7B seq128 layer-0 self-attention v_proj forward MM",
+  "supporting_candidate_id": "qwen_seq64_forward_8_output"
+}

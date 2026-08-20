@@ -83,6 +83,8 @@ from .bias_formation_v22 import (
     ConditionalPolicy,
     TrajectoryPolicy,
     summarize_conditional_vectors,
+    summarize_conditional_gram,
+    aggregate_conditional_debias,
     certify_trajectory_separation,
     classify_global_certificate,
 )
@@ -159,6 +161,8 @@ __all__ = [
     "ConditionalPolicy",
     "TrajectoryPolicy",
     "summarize_conditional_vectors",
+    "summarize_conditional_gram",
+    "aggregate_conditional_debias",
     "certify_trajectory_separation",
     "classify_global_certificate",
 ]

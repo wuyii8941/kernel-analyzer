@@ -42,6 +42,12 @@ def main() -> None:
     assert precision["direction"]["status"] == "PASS"
     assert precision["direction"]["cluster_bootstrap_95"]["lower_95"] > 0.0
     assert optimization["max_abs"] == 0.0
+    decomposition_path = COVERAGE / "cases/qwen64_vproj_precision_decomposition.json"
+    decomposition = json.loads(decomposition_path.read_text())
+    assert decomposition["candidate_id"] == CID
+    assert decomposition["status"] == "COMPLETE_EXACT_PRECISION_MECHANISM_DECOMPOSITION"
+    assert all(decomposition["gates"].values())
+    assert decomposition["coherent_sources"] == ["kernel", "output_rounding"]
 
     release = COVERAGE / "runtime_releases/qwen_seq64_r1"
     release_capture = json.loads((release / "capture.json").read_text())
@@ -123,7 +129,7 @@ def main() -> None:
     }
     payload = {
         "schema": "kernel-analyzer-concrete-fb-bias-case-v1",
-        "status": "T1_COHERENT_PRECISION_BIAS_WITH_CONCRETE_FB_PROOF",
+        "status": "T1_COHERENT_MIXED_PRECISION_MECHANISMS_WITH_CONCRETE_FB_PROOF",
         "candidate_id": CID,
         "subject": "Qwen3-1.7B seq64 layer-0 self-attention v_proj forward MM",
         "cause_axis": "PRECISION",
@@ -151,10 +157,28 @@ def main() -> None:
             "optimization_max_abs": optimization["max_abs"],
             "live_result_sha256": live["result_sha256"],
         },
+        "precision_mechanism": {
+            "identity": decomposition["identity"],
+            "coherent_sources": decomposition["coherent_sources"],
+            "kernel_difference": {
+                "u_statistic": decomposition["direction"]["kernel"]["cross_state_inner_product_u"],
+                "cluster_bootstrap_95": decomposition["direction"]["kernel"]["cluster_bootstrap_95"],
+                "status": decomposition["direction"]["kernel"]["status"],
+            },
+            "output_rounding": {
+                "u_statistic": decomposition["direction"]["output_rounding"]["cross_state_inner_product_u"],
+                "cluster_bootstrap_95": decomposition["direction"]["output_rounding"]["cluster_bootstrap_95"],
+                "status": decomposition["direction"]["output_rounding"]["status"],
+            },
+            "decomposition_result_sha256": decomposition["result_sha256"],
+            "decomposition_file_sha256": hashlib.sha256(decomposition_path.read_bytes()).hexdigest(),
+        },
         "claim_boundary": (
             "Complete concrete local F+B proof and 32-state full-coordinate T1 coherent "
-            "precision bias for seq64 v_proj. The exact same-dtype optimization contrast is zero. "
-            "A causal intervention and live-weight accumulation remain separate gates."
+            "precision bias for seq64 v_proj. Exact same-operands decomposition identifies both "
+            "local MM kernel arithmetic and deterministic output rounding as directional sources. "
+            "The exact same-dtype optimization contrast is zero. Source-aligned repair and "
+            "live-weight consequence remain separate gates."
         ),
     }
     payload["result_sha256"] = canonical(payload)

@@ -14,23 +14,23 @@ F+B：Y=XW^T; dX=QW; dW=Q^T X at layer-0 v_proj
 
 `E[F(ε)|c] = ∫p_s(ε)F_e(ε)dε + ∫p_a(ε)F_o(ε)dε`。
 
-本例归入：`EVENT_PAIRING_ASYMMETRY`（`PARTIAL_SUPPORT`）。the accumulation arm changes the real VJP, but the complete local contrast is not decomposed。
+本例归入：`EVENT_PAIRING_ASYMMETRY`（`MATCHED_CONDITIONAL_SOURCE_SUPPORT`）。an independent 16-repeat confirmation centers the repair local residual in 16/16 fixed conditions, while candidate-minus-repair local, gradient, SGD-update, and zero-moment AdamW-update effects are biased in 16/16。
 
-本例的物理差异是：precision contrast is directional; full split into kernel, output rounding, and inherited operands is incomplete。
+本例的物理差异是：same-operand MM kernel arithmetic and deterministic output rounding are both directional。
 
-条件化 formation（local / gradient / update）：`NOT_MEASURED / NOT_MEASURED / NOT_MEASURED`。
+条件化 formation（local / gradient / update）：`BIASED / BIASED / BIASED`。
 
 旧跨无关状态结果（local / gradient / update）：`NOT_MEASURED / NOT_MEASURED / NOT_MEASURED`。它只描述 global/state-invariant bias，不替代 conditional bias。
 
 ## 机制判定
 
-判定：`PARTIAL_SOURCE_MECHANISM`。
+判定：`SUPPORTED_CASE_SPECIFIC_SOURCE_MECHANISM`。
 
-原因：the isolated accumulation residual changes the real dW path, but its relation to the complete precision residual is not closed。
+原因：at each of 16 fixed states, the deterministic joint MM-kernel plus output-rounding residual has a nonzero candidate-minus-debiased-ensemble mean that remains directional after the actual backward and both declared optimizer mappings。
 
-干预：same-input FP32 MM accumulation followed by the original BF16 ABI。
+干预：joint FP32 MM plus coordinate-wise unbiased BF16 materialization; kernel-only and rounding-only factorial controls。
 
-边界：trajectory-local partial source; no complete P1 attribution。
+边界：this closes conditional source formation relative to the stochastic joint-source-debiased ensemble; it does not certify absolute downstream repair bias without an exact downstream reference。
 
 ## 轨迹后果
 
@@ -38,10 +38,14 @@ F+B：Y=XW^T; dX=QW; dW=Q^T X at layer-0 v_proj
 
 ## 下一项决定性实验
 
-complete the three-way local source decomposition, then capture within-condition formation。
+use a new JOINT-repair trajectory only if persistence of this exact identified source is required。
 
 ## 证据
 
 - `results/coverage/cases/qwen64_vproj.json`
+- `results/coverage/cases/qwen64_vproj_precision_decomposition.json`
+- `results/coverage/cases/qwen64_vproj_source_aligned_repair.json.gz`
+- `results/coverage/cases/qwen64_vproj_conditional_debias_r16.json.gz`
+- `results/property/conditional_debias/qwen64_vproj.json`
 - `results/coverage/cases/qwen64_vproj_repair_pilot.json`
 - `results/coverage/cases/qwen64_vproj_trajectory.json`

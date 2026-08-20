@@ -1,0 +1,164 @@
+{
+  "causal_attribution": {
+    "combination_necessary": false,
+    "joint_repair_residual": {
+      "per_checkpoint_mean": {
+        "1024": -2.2746046667521114e-05,
+        "2048": 3.853795319486153e-05,
+        "256": -1.4706714637213736e-05,
+        "4096": 9.96606553549384e-06,
+        "64": -3.5266565259206573e-06
+      },
+      "positive_states": 17,
+      "state_cluster_bootstrap_95": [
+        -1.23427190114711e-05,
+        1.5716665034304356e-05
+      ],
+      "state_cluster_mean": 1.5049201799399722e-06,
+      "states": 32
+    },
+    "joint_residual_over_total": 0.004290072310998523,
+    "k_only_repair_residual": {
+      "positive_states": 26,
+      "state_cluster_bootstrap_95": [
+        0.00018719415617169944,
+        0.0004961272234766057
+      ],
+      "state_cluster_mean": 0.0003458291895213961,
+      "states": 32
+    },
+    "k_shapley": {
+      "per_checkpoint_mean": {
+        "1024": -1.0491678978041818e-05,
+        "2048": -2.19339798945839e-06,
+        "256": 2.004433852675902e-06,
+        "4096": 3.451892737871276e-06,
+        "64": 2.3869746589966212e-05
+      },
+      "positive_states": 16,
+      "state_cluster_bootstrap_95": [
+        -5.680039199518205e-06,
+        1.2502576828410385e-05
+      ],
+      "state_cluster_mean": 3.3281992426026366e-06,
+      "states": 32
+    },
+    "matched_sham_max_abs": 0.0,
+    "mechanism_class": "ATTENTION_STATE_SEMANTIC_REGION",
+    "reason": "The concrete q_proj F+B unit is exact and its final same-input GEMM is not the source. The directional carrier enters through G_q. Restoring S_bwd alone closes the direction; restoring K alone does not. The paired trajectory used the conservative S_bwd/K boundary, whose extra K contribution is independently non-directional. Deeper forward/backward contributors overlap and are not additively identifiable as one kernel. The attention-backward state S_bwd is therefore the causal root.",
+    "root_boundary": "actual bmm_76 left operand S_bwd",
+    "s_bwd_only_repair_residual": {
+      "positive_states": 17,
+      "state_cluster_bootstrap_95": [
+        -1.2321658915936953e-05,
+        1.8732652091557614e-05
+      ],
+      "state_cluster_mean": 3.1991856410229496e-06,
+      "states": 32
+    },
+    "s_bwd_shapley": {
+      "per_checkpoint_mean": {
+        "1024": 0.00034452349586189257,
+        "2048": 0.0004463327164003772,
+        "256": 0.0003267030328970577,
+        "4096": 0.00020601689823251945,
+        "64": 0.00040621486664349504
+      },
+      "positive_states": 27,
+      "state_cluster_bootstrap_95": [
+        0.00019140614129469215,
+        0.0004910881547402823
+      ],
+      "state_cluster_mean": 0.0003459582020070684,
+      "states": 32
+    },
+    "single_kernel_attribution": false,
+    "total_projection": {
+      "per_checkpoint_mean": {
+        "1024": 0.0003112858038960553,
+        "2048": 0.00048267728948303557,
+        "256": 0.00031400075312149056,
+        "4096": 0.00021943483989161905,
+        "64": 0.0004265579731281832
+      },
+      "positive_states": 27,
+      "state_cluster_bootstrap_95": [
+        0.0001907477365307386,
+        0.0005012855363133895
+      ],
+      "state_cluster_mean": 0.0003507913319040767,
+      "states": 32
+    },
+    "trajectory_repair_is_conservative_superset": true
+  },
+  "claim_boundary": "This certificate proves a concrete closed F+B semantic-region mechanism and paired directional weight accumulation. It does not identify one defective kernel and must not be used as a single-kernel property-positive training label.",
+  "classification": {
+    "cross_operator_property_claimed": false,
+    "single_kernel_property_eligible": false,
+    "strictness_level": "CLOSED_SEMANTIC_REGION",
+    "valid_flash_style_case": true
+  },
+  "closed_math": {
+    "attention_state": "S_bwd = alpha * J_softmax(P)^T * (D V^T)",
+    "attention_vjp_boundary": "G_q = S_bwd K",
+    "difference_factorization": "delta_dW=(delta_G)^T H_ref + G_ref^T(delta_H) + (delta_G)^T(delta_H)",
+    "forward": "Y = H W^T",
+    "parameter_vjp": "dW = G_q^T H"
+  },
+  "evidence_files": {
+    "results/final/l23_attention_live_weight.json": "c3f174111f04eb965a668ebc91b3218295dddf5d10081bfd96ddc155dcbf6397",
+    "results/final/l23_go_step1024.json": "ea93c5ff63b15191753901ce963c4d948e46043ad52a9b1b60b99bf91c397928",
+    "results/final/l23_go_step2048.json": "cca1d50e9636e902f4ba6a4d2c7895b7a84e8d29a7811c1508e36977013f893c",
+    "results/final/l23_go_step256.json": "4f24f89c768b31a29123f6e9b41795d16041627ec413bd77ab75d96e96fd86f8",
+    "results/final/l23_go_step4096.json": "c29c6968e92240b5ac398543cd15b805f9188cf189459324724266b3b1d91bc4",
+    "results/final/l23_go_step64.json": "53b337b14721110e67ed03b214965b5fcc2ecac5403934ff081641f24d6e6fc7",
+    "results/final/l23_go_summary.json": "f890a4ab744c0b473cb360446384caa37c9ed30afa0d667ba00a8f74ce055b3a",
+    "results/final/l23_qproj_operand_decomposition.json": "ff3b98676873b6e8287f59e069b485dcd20884b92f8a1fef0f5513fce4ec8e71",
+    "results/final/structured_carrier_confirmation.json": "f1ae21ccaddb3bb81a6f84527ed57cb2c93534b0d93297b8aa88887bd0efae6f"
+  },
+  "gates": {
+    "complete_forward_backward_math": true,
+    "joint_attention_state_repair_closes_direction": true,
+    "matched_sham_exact": true,
+    "paired_live_weight_trajectory": true,
+    "query_cotangent_is_local_carrier": true,
+    "real_directional_parameter_carrier": true,
+    "s_bwd_only_repair_closes_direction": true
+  },
+  "result_sha256": "4c971d44c11f205f20f9e6071ba44495425615a930b819de0197997b182c56d8",
+  "schema": "kernel-analyzer-l23-semantic-region-attribution-v1",
+  "status": "PASS_STRICT_SEMANTIC_REGION_FLASH_STYLE_CASE",
+  "subject": {
+    "checkpoint_step": 1024,
+    "model": "Qwen3-1.7B",
+    "parameter": "model.layers.23.self_attn.q_proj.weight",
+    "tile": {
+      "columns": [
+        1664,
+        1792
+      ],
+      "rows": [
+        1152,
+        1280
+      ]
+    }
+  },
+  "trajectory": {
+    "final_fp32_master_l2": 0.0006082479958422482,
+    "final_fp32_master_projection": 3.7518300814554095e-05,
+    "first_fp32_master_projection": 3.384866786859675e-08,
+    "optimizer": {
+      "betas": [
+        0.9,
+        0.95
+      ],
+      "epsilon": 1e-08,
+      "learning_rate": 1e-05,
+      "name": "AdamW",
+      "weight_decay": 0.0
+    },
+    "projection_strictly_increases_each_step": true,
+    "repair_boundary": "actual bmm_76: G_q = S_bwd @ K",
+    "steps": 32
+  }
+}

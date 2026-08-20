@@ -14,7 +14,7 @@ F+B：S_bwd=alpha*J_softmax(P)^T(DV^T); Gq=S_bwd*K; dWq=Gq^T H
 
 `E[F(ε)|c] = ∫p_s(ε)F_e(ε)dε + ∫p_a(ε)F_o(ε)dε`。
 
-本例归入：`EVENT_PAIRING_ASYMMETRY`（`CONSISTENT_NOT_MARGINAL_PRESERVING`）。S_bwd carries the direction through Gq=S_bwd*K, but its repair removes rather than antithetically pairs the residual。
+本例归入：`UNRESOLVED_MIXED_CHANNEL`（`PROJECTED_ANTITHETIC_RESPONSE_NATURAL_FIDELITY_FAILED`）。all 16 projected BF16 +/-epsilon pairs and shams are exact, and the projected F+B response-even ratio spans 0.029--0.166, while zero-moment AdamW spans 0.672--0.725; however, natural-source fidelity falls below the frozen 90% gate in some conditions, so this cannot upgrade the natural layer-23 case to a marginal-preserving matched mechanism。
 
 本例的物理差异是：attention-backward state S_bwd is causal; upstream contributors overlap and include delayed key materialization。
 
@@ -38,10 +38,11 @@ F+B：S_bwd=alpha*J_softmax(P)^T(DV^T); Gq=S_bwd*K; dWq=Gq^T H
 
 ## 下一项决定性实验
 
-capture conditional layer traces if a first-bias-stage claim is required; do not force single-kernel attribution。
+retain as a bounded semantic-region mechanism; do not relax the failed natural-fidelity gate or force single-kernel attribution。
 
 ## 证据
 
 - `results/coverage/cases/l23_qproj_attention_state_region.json`
 - `results/final/l23_attention_live_weight.json`
 - `results/property/bias_formation_final/qwen_l23_attention_mechanism.json`
+- `results/final/l23_s_bwd_antithetic.json`

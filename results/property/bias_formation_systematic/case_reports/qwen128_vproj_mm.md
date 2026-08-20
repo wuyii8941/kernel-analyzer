@@ -14,23 +14,23 @@ F+B：Y=XW^T; dX=QW; dW=Q^T X at layer-0 v_proj
 
 `E[F(ε)|c] = ∫p_s(ε)F_e(ε)dε + ∫p_a(ε)F_o(ε)dε`。
 
-本例归入：`EVENT_PAIRING_ASYMMETRY`（`SUPPORTING_SOURCE_OBSERVATION_CONTRAST_MISMATCH`）。output rounding is directional, but the existing trajectory repairs accumulation instead。
+本例归入：`EVENT_PAIRING_ASYMMETRY`（`MATCHED_CONDITIONAL_SOURCE_SUPPORT`）。repair local residual is centered in 16/16 fixed conditions, while candidate-minus-repair local, gradient, SGD-update, and zero-moment AdamW-update effects are biased in 16/16。
 
 本例的物理差异是：global local decomposition identifies deterministic FP32-to-BF16 output rounding, not MM kernel arithmetic。
 
-条件化 formation（local / gradient / update）：`NOT_MEASURED / NOT_MEASURED / NOT_MEASURED`。
+条件化 formation（local / gradient / update）：`BIASED / BIASED / BIASED`。
 
 旧跨无关状态结果（local / gradient / update）：`NOT_MEASURED / NOT_MEASURED / NOT_MEASURED`。它只描述 global/state-invariant bias，不替代 conditional bias。
 
 ## 机制判定
 
-判定：`UNRESOLVED_CONTRAST_MISMATCH`。
+判定：`SUPPORTED_CASE_SPECIFIC_SOURCE_MECHANISM`。
 
-原因：the source decomposition and trajectory manipulate different contrasts; they cannot yet be composed into one causal explanation。
+原因：at each of 16 fixed states, deterministic nearest rounding has a nonzero candidate-minus-debiased-ensemble mean that remains directional after the actual backward and both declared optimizer mappings。
 
-干预：existing trajectory promotes MM accumulation but retains BF16 output rounding。
+干预：replace deterministic nearest BF16 output rounding by coordinate-wise unbiased BF16 materialization while retaining the noncoherent kernel residual。
 
-边界：do not attribute the trajectory to output rounding until an output-rounding repair is run。
+边界：this closes conditional source formation relative to the stochastic source-debiased ensemble; absolute downstream repair bias remains unidentified without an exact downstream reference, and the historical trajectory used a different repair contrast。
 
 ## 轨迹后果
 
@@ -38,11 +38,14 @@ F+B：Y=XW^T; dX=QW; dW=Q^T X at layer-0 v_proj
 
 ## 下一项决定性实验
 
-run an exact output-rounding intervention with sham at the same F+B boundary。
+add an exact downstream reference only if claiming the repaired F+B/update itself is absolutely unbiased; use a new ROUNDING_ONLY trajectory for persistence。
 
 ## 证据
 
 - `results/coverage/cases/qwen128_vproj.json`
 - `results/coverage/cases/qwen128_vproj_precision_decomposition.json`
+- `results/coverage/cases/qwen128_vproj_source_aligned_repair.json.gz`
+- `results/coverage/cases/qwen128_vproj_conditional_debias.json.gz`
+- `results/property/conditional_debias/qwen128_vproj.json`
 - `results/coverage/cases/qwen128_vproj_repair_pilot.json`
 - `results/coverage/cases/qwen128_vproj_trajectory.json`

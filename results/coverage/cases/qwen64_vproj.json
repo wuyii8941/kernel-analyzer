@@ -1,0 +1,104 @@
+{
+  "bindings": {
+    "aot_capture_sha256": "5472bd4bc4d9c7a6b36881fe6d3ef637cbadf605a810e31179f6d4c425b6fa7c",
+    "aot_file_sha256": "984311697a79c9ce57e6a5c0b40a2f949ade10f9f467408e629d9a17a88d7f72",
+    "cotangent_node": "view_1240",
+    "forward_root": "mm_2",
+    "generated_source_line": 1750,
+    "generated_source_line_sha256": "59f15bca9811953b58f0e1645dea3089c2514393bd54b62333ece8f2def5f9d1",
+    "generated_source_sha256": "56a7553e289a7d71ac4b9951bad4bb25d048f120117175db14ec7dab02c3bfd5",
+    "input_gradient_contribution": "view_1241",
+    "module": "model.layers.0.self_attn.v_proj",
+    "release_capture_sha256": "1db24f76a39184c88a1dabc7278219adba31a64d8cd8bb6bd94bc0597349a2b3",
+    "saved_tensor_nodes": [
+      "view_14",
+      "t_2"
+    ],
+    "sequence_nr": 9956,
+    "weight_gradient_output": "t_976"
+  },
+  "candidate_id": "qwen_seq64_forward_8_output",
+  "cause_axis": "PRECISION",
+  "claim_boundary": "Complete concrete local F+B proof and 32-state full-coordinate T1 coherent precision bias for seq64 v_proj. Exact same-operands decomposition identifies both local MM kernel arithmetic and deterministic output rounding as directional sources. The exact same-dtype optimization contrast is zero. Source-aligned repair and live-weight consequence remain separate gates.",
+  "concrete_program_proof": {
+    "analytic_derivation_sha256": "3348718462e6dd2271fb6d4cd7399a6ccb26f3bedc248ee51c31ad71e9bc3d99",
+    "backward_program_matches_analytic_vjp": true,
+    "backward_program_sha256": "922a9649802e5694f96abf6f01ff940eb6d8a2080f5e67c3ce14dd188598c6eb",
+    "cotangent_edge_exact": true,
+    "forward_program_sha256": "922674b394c1b8fcd27d1d0cbf167fdb31042d6b41c1e45d19a9470c69595aee",
+    "non_tensor_arguments_exact": true,
+    "output_edges_exact": true,
+    "saved_tensor_origins_exact": true
+  },
+  "forward_backward_unit": {
+    "actual_aot_program": {
+      "dW": "t_976(t(t(mm_585(t_973(Q^T), view_14(X))))) = Q^T X",
+      "dX_contribution": "view_1241(mm_586(t_975(W), view_1240(Q))) = Q W",
+      "dX_output_accumulation_path": [
+        "view_1241",
+        "add_614",
+        "add_616",
+        "mul_1489",
+        "sum_281",
+        "view_1248"
+      ],
+      "forward": "mm_2(view_14(X), t_2(W^T))"
+    },
+    "backward": {
+      "dW": "Q^T X",
+      "dX_contribution": "Q W"
+    },
+    "candidate_generated_call": "extern_kernels.mm(reinterpret_tensor(buf7, (64, 2048), (2048, 1), 0), reinterpret_tensor(primals_9, (2048, 1024), (1, 2048), 0), out=buf14)",
+    "forward": "Y = X W^T",
+    "symbols": {
+      "Q=dL/dY": "[64,1024]",
+      "W": "[1024,2048]",
+      "X": "[64,2048]"
+    }
+  },
+  "numerical": {
+    "cluster_bootstrap_95": {
+      "lower_95": 1.2358589949661098e-05,
+      "median": 2.0150214014348048e-05,
+      "upper_95": 2.987227322467188e-05
+    },
+    "coordinates": 65536,
+    "live_result_sha256": "c828bb5b54ea8165a2f21b3a636999b31e3a047dee73737a4da6318b810f922a",
+    "max_abs": 0.007292032241821289,
+    "optimization_max_abs": 0.0,
+    "repeat_exact": true,
+    "states": 32,
+    "u_statistic": 2.039074493296836e-05
+  },
+  "precision_mechanism": {
+    "coherent_sources": [
+      "kernel",
+      "output_rounding"
+    ],
+    "decomposition_file_sha256": "95437a878f79c530b21fb16e3adabcd3d6aa0d4db44f7e439b92f73b080a584b",
+    "decomposition_result_sha256": "cfb6bd9b206008019f1b935727198b0735b47aea5d4e18bae201658b97bcb1b0",
+    "identity": "actual_low - fp32_same_operands = (actual_low - bf16(fp32_same_operands)) + (bf16(fp32_same_operands) - fp32_same_operands)",
+    "kernel_difference": {
+      "cluster_bootstrap_95": {
+        "lower_95": 7.421733417798699e-13,
+        "median": 6.847406740650302e-11,
+        "upper_95": 3.1674210803325213e-09
+      },
+      "status": "PASS",
+      "u_statistic": 5.464374939317771e-10
+    },
+    "output_rounding": {
+      "cluster_bootstrap_95": {
+        "lower_95": 1.2449946108008181e-05,
+        "median": 2.0174409754117955e-05,
+        "upper_95": 2.942245014787045e-05
+      },
+      "status": "PASS",
+      "u_statistic": 2.0411143657125443e-05
+    }
+  },
+  "result_sha256": "1d12da49426cb2125e600062d8f68bac6ec208381033ada3300797e4d2f4b933",
+  "schema": "kernel-analyzer-concrete-fb-bias-case-v1",
+  "status": "T1_COHERENT_MIXED_PRECISION_MECHANISMS_WITH_CONCRETE_FB_PROOF",
+  "subject": "Qwen3-1.7B seq64 layer-0 self-attention v_proj forward MM"
+}

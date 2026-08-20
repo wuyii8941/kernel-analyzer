@@ -18,11 +18,12 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 OLD_SRC = REPO / "archive" / "round1_code" / "src"
-for path in (OLD_SRC, REPO):
+for path in (OLD_SRC, REPO, REPO / "src"):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
 from scripts.long_horizon_trigger import atomic_json, build_model, load_eval_states, load_milestone, under_root
+from kernel_analyzer.seup import adamw_update
 
 
 PARAMETER = "model.layers.23.self_attn.q_proj.weight"
@@ -40,6 +41,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--state-index", type=int, action="append", default=[])
     parser.add_argument("--output", type=Path, default=Path("results/final/l23_attention_bmm_decomposition.json"))
     parser.add_argument("--device", default="cuda")
+    parser.add_argument(
+        "--antithetic-only", action="store_true",
+        help="Run only the fixed-state S_bwd +epsilon/-epsilon matched intervention.",
+    )
     return parser.parse_args()
 
 
@@ -53,7 +58,7 @@ def main() -> None:
     model_path = under_root(args.model, "model")
     direction_path = under_root(args.direction, "direction")
     output_path = under_root(args.output, "output")
-    state_indices = args.state_index or list(range(8, 40))
+    state_indices = args.state_index or list(range(8, 24 if args.antithetic_only else 40))
     if min(state_indices) < 8 or len(set(state_indices)) != len(state_indices):
         raise ValueError("requires unique held-out state indices >= 8")
 
@@ -357,6 +362,158 @@ def main() -> None:
             candidate_vt = candidate_operands["Vt"]
             candidate_go = candidate_operands["Go"]
             _, tile_rc, _ = run_candidate(inputs, replacement=(reference_s, candidate_k))
+            if args.antithetic_only:
+                natural_local_plus = candidate_s.float() - reference_s.float()
+                raw_antithetic_s = (
+                    reference_s.float().mul(2.0).sub(candidate_s.float())
+                ).to(reference_s.dtype)
+
+                # A BF16 value need not have an exactly representable reflection
+                # around another BF16 value (notably at exponent boundaries).  Do
+                # not call the rounded reflection an antithetic control.  Project
+                # each natural nonzero residual to the nearest value in a fixed,
+                # local BF16 search orbit that *does* have an exact additive inverse.
+                # The orbit and selection metric use only local representability,
+                # never the downstream gradient or trajectory.
+                natural_nonzero = natural_local_plus.ne(0)
+                best_error = torch.full_like(natural_local_plus, float("inf"))
+                matched_plus_s = reference_s.clone()
+                matched_minus_s = reference_s.clone()
+
+                def consider_exact_pair(proposal):
+                    reflected = (
+                        reference_s.float().mul(2.0).sub(proposal.float())
+                    ).to(reference_s.dtype)
+                    proposal_delta = proposal.float() - reference_s.float()
+                    reflected_delta = reflected.float() - reference_s.float()
+                    valid = natural_nonzero & proposal_delta.ne(0)
+                    valid &= reflected_delta.eq(-proposal_delta)
+                    valid &= torch.isfinite(proposal_delta)
+                    error = (proposal.float() - candidate_s.float()).abs()
+                    use = valid & error.lt(best_error)
+                    best_error.copy_(torch.where(use, error, best_error))
+                    matched_plus_s.copy_(torch.where(use, proposal, matched_plus_s))
+                    matched_minus_s.copy_(torch.where(use, reflected, matched_minus_s))
+
+                consider_exact_pair(candidate_s)
+                toward = candidate_s
+                away = candidate_s
+                away_direction = torch.where(
+                    natural_local_plus.gt(0),
+                    torch.full_like(candidate_s, float("inf")),
+                    torch.full_like(candidate_s, float("-inf")),
+                )
+                for _ in range(8):
+                    toward = torch.nextafter(toward, reference_s)
+                    away = torch.nextafter(away, away_direction)
+                    consider_exact_pair(toward)
+                    consider_exact_pair(away)
+                local_plus = matched_plus_s.float() - reference_s.float()
+                local_minus = matched_minus_s.float() - reference_s.float()
+
+                _, tile_plus, _ = run_candidate(
+                    inputs, replacement=(matched_plus_s, candidate_k)
+                )
+                _, tile_minus, _ = run_candidate(
+                    inputs, replacement=(matched_minus_s, candidate_k)
+                )
+                _, tile_sham, _ = run_candidate(
+                    inputs,
+                    replacement=(matched_plus_s.clone(), candidate_k.clone()),
+                )
+
+                natural_gradient_plus = tile_cc.float() - tile_rc.float()
+                gradient_plus = tile_plus.float() - tile_rc.float()
+                gradient_minus = tile_minus.float() - tile_rc.float()
+                parameter_tile = q_proj_parameter.detach()[ROWS, COLUMNS].float()
+                zero_moment = torch.zeros_like(parameter_tile)
+
+                def adam_value(gradient):
+                    return adamw_update(
+                        gradient.float(), zero_moment, zero_moment,
+                        parameter_tile, step=1, learning_rate=1.0e-5,
+                        betas=(0.9, 0.95), epsilon=1.0e-8,
+                        weight_decay=0.0,
+                    )["value"]
+
+                update_zero = adam_value(tile_rc)
+                update_plus = adam_value(tile_plus) - update_zero
+                update_minus = adam_value(tile_minus) - update_zero
+
+                def pair_geometry(plus, minus):
+                    even = (plus.float() + minus.float()).mul(0.5)
+                    odd = (plus.float() - minus.float()).mul(0.5)
+                    plus_l2 = float(plus.float().norm())
+                    minus_l2 = float(minus.float().norm())
+                    even_l2 = float(even.norm())
+                    odd_l2 = float(odd.norm())
+                    return {
+                        "plus_l2": plus_l2,
+                        "minus_l2": minus_l2,
+                        "even_l2": even_l2,
+                        "odd_l2": odd_l2,
+                        "balanced_mean_over_natural": even_l2 / max(plus_l2, 1.0e-30),
+                        "balanced_mean_suppression": 1.0 - even_l2 / max(plus_l2, 1.0e-30),
+                        "norm_ratio_minus_over_plus": minus_l2 / max(plus_l2, 1.0e-30),
+                        "pair_sum_max_abs": float((plus.float() + minus.float()).abs().max()),
+                    }
+
+                local_geometry = pair_geometry(local_plus, local_minus)
+                gradient_geometry = pair_geometry(gradient_plus, gradient_minus)
+                sgd_geometry = pair_geometry(
+                    gradient_plus.mul(-1.0e-5), gradient_minus.mul(-1.0e-5)
+                )
+                adam_geometry = pair_geometry(update_plus, update_minus)
+                natural_local_energy = float(natural_local_plus.square().sum())
+                matched_local_energy = float(local_plus.square().sum())
+                natural_support = int(torch.count_nonzero(natural_local_plus))
+                matched_support = int(torch.count_nonzero(local_plus))
+                local_projection_residual = float(
+                    (local_plus - natural_local_plus).norm()
+                    / natural_local_plus.norm().clamp_min(1.0e-30)
+                )
+                gradient_projection_residual = float(
+                    (gradient_plus - natural_gradient_plus).norm()
+                    / natural_gradient_plus.norm().clamp_min(1.0e-30)
+                )
+                rows.append({
+                    "state_index": state_index,
+                    "offset": evaluation["offsets"][state_index],
+                    "token_sha256": evaluation["token_sha256"][state_index],
+                    "eager_loss": float(eager_loss.detach().float().cpu()),
+                    "candidate_loss": candidate_loss,
+                    "local_s_bwd": local_geometry,
+                    "gradient_q_proj_tile": gradient_geometry,
+                    "stateless_sgd_q_proj_tile": sgd_geometry,
+                    "adamw_zero_moment_step1_q_proj_tile": adam_geometry,
+                    "natural_source_fidelity": {
+                        "natural_local_nonzero_coordinates": natural_support,
+                        "matched_local_nonzero_coordinates": matched_support,
+                        "matched_support_fraction": matched_support / max(natural_support, 1),
+                        "matched_energy_fraction": matched_local_energy / max(natural_local_energy, 1.0e-30),
+                        "matched_local_relative_residual": local_projection_residual,
+                        "matched_local_fidelity": 1.0 - local_projection_residual,
+                        "matched_gradient_relative_residual": gradient_projection_residual,
+                        "matched_gradient_fidelity": 1.0 - gradient_projection_residual,
+                    },
+                    "local_support_equal": bool(torch.equal(
+                        local_plus != 0, local_minus != 0
+                    )),
+                    "local_antithetic_exact": bool(torch.equal(local_plus, -local_minus)),
+                    "candidate_restoration_sham_max_abs": float(
+                        (tile_sham.float() - tile_plus.float()).abs().max()
+                    ),
+                    "candidate_restoration_sham_exact": bool(torch.equal(tile_sham, tile_plus)),
+                    "reference_s_candidate_k_is_zero_arm": True,
+                })
+                print(json.dumps({
+                    "event": "ANTITHETIC_STATE_COMPLETE",
+                    "state_index": state_index,
+                    "local_exact": rows[-1]["local_antithetic_exact"],
+                    "gradient_suppression": gradient_geometry["balanced_mean_suppression"],
+                    "adam_suppression": adam_geometry["balanced_mean_suppression"],
+                }, sort_keys=True), flush=True)
+                continue
             _, tile_cr, _ = run_candidate(inputs, replacement=(candidate_s, reference_k))
             _, tile_rr, _ = run_candidate(inputs, replacement=(reference_s, reference_k))
             _, tile_sham, _ = run_candidate(inputs, replacement=(candidate_s.clone(), candidate_k.clone()))
@@ -486,30 +643,136 @@ def main() -> None:
     finally:
         modeling_qwen3.eager_attention_forward = original_attention
 
-    result = {
-        "schema": "kernel-analyzer-l23-attention-bmm-decomposition-v1",
-        "status": "COMPLETE",
-        "parameter": PARAMETER,
-        "tile": {"rows": [ROWS.start, ROWS.stop], "columns": [COLUMNS.start, COLUMNS.stop]},
-        "checkpoint_step": args.step,
-        "state_indices": state_indices,
-        "binding": {
-            "actual_backward_node": "bmm_76",
-            "equation": "G_q = S_bwd @ K",
-            "left_operand": "buf192: scaled softmax-backward output",
-            "right_operand": "permute_510: repeated layer-23 post-RoPE key",
-            "backward_bmm_zero_based_ordinal": target_ordinal,
-            "attention_output_vjp_mm": "mm_262: D = Go @ Wo",
-            "attention_output_vjp_mm_zero_based_ordinal": target_d_mm_ordinal,
-            "softmax_backward_symbol": target_softmax_symbol,
-            "softmax_backward_same_symbol_zero_based_ordinal": target_softmax_ordinal,
-            "generated_source_sha256": source_sha256,
-            "candidate_values_used_to_select_boundary": False,
-        },
-        "hybrids": {"CC": "candidate S/K", "RC": "reference S, candidate K", "CR": "candidate S, reference K", "RR": "reference S/K"},
-        "rows": rows,
-        "tensor_values_saved": False,
-    }
+    if args.antithetic_only:
+        minimum_suppression = 0.90
+        minimum_natural_source_fidelity = 0.90
+        validity_gates = {
+            "sixteen_fixed_conditions": len(rows) == 16,
+            "all_local_antithetic_exact": all(
+                row["local_antithetic_exact"] for row in rows
+            ),
+            "all_local_support_equal": all(row["local_support_equal"] for row in rows),
+            "all_shams_exact": all(
+                row["candidate_restoration_sham_exact"] for row in rows
+            ),
+            "natural_source_fidelity_every_condition": all(
+                row["natural_source_fidelity"]["matched_energy_fraction"]
+                >= minimum_natural_source_fidelity
+                and row["natural_source_fidelity"]["matched_local_fidelity"]
+                >= minimum_natural_source_fidelity
+                and row["natural_source_fidelity"]["matched_gradient_fidelity"]
+                >= minimum_natural_source_fidelity
+                for row in rows
+            ),
+        }
+        mechanism_gates = {
+            "gradient_balanced_mean_suppressed_every_condition": all(
+                row["gradient_q_proj_tile"]["balanced_mean_suppression"]
+                >= minimum_suppression for row in rows
+            ),
+            "gradient_response_even_nonzero_every_condition": all(
+                row["gradient_q_proj_tile"]["even_l2"] > 0.0 for row in rows
+            ),
+            "adamw_zero_moment_response_even_nonzero_every_condition": all(
+                row["adamw_zero_moment_step1_q_proj_tile"]["even_l2"] > 0.0
+                for row in rows
+            ),
+        }
+        validity_complete = all(validity_gates.values())
+        result = {
+            "schema": "kernel-analyzer-l23-s-bwd-antithetic-v1",
+            "status": (
+                "MATCHED_ANTITHETIC_MECHANISM_DECOMPOSITION"
+                if validity_complete else "ANTITHETIC_INTERVENTION_UNRESOLVED"
+            ),
+            "parameter": PARAMETER,
+            "tile": {"rows": [ROWS.start, ROWS.stop], "columns": [COLUMNS.start, COLUMNS.stop]},
+            "checkpoint_step": args.step,
+            "state_indices": state_indices,
+            "binding": {
+                "actual_backward_node": "bmm_76",
+                "equation": "G_q = S_bwd @ K; dW_q = G_q^T H",
+                "intervention": (
+                    "S_ref +/- epsilon after a fixed nearest-BF16 projection onto "
+                    "residuals with an exact additive inverse; S_ref is the zero arm"
+                ),
+                "right_operand_fixed": "candidate K",
+                "generated_source_sha256": source_sha256,
+                "candidate_values_used_to_select_boundary": False,
+            },
+            "optimizer_probe": {
+                "name": "AdamW",
+                "learning_rate": 1.0e-5,
+                "betas": [0.9, 0.95],
+                "epsilon": 1.0e-8,
+                "weight_decay": 0.0,
+                "moments": "ZERO_STEP1",
+                "natural_mature_moments_measured": False,
+            },
+            "minimum_balanced_mean_suppression": minimum_suppression,
+            "minimum_natural_source_fidelity": minimum_natural_source_fidelity,
+            "validity_gates": validity_gates,
+            "mechanism_gates": mechanism_gates,
+            "mechanism_verdicts": {
+                "source_event_asymmetry_dominates_gradient_response": (
+                    "SUPPORTED_EVERY_CONDITION"
+                    if validity_complete and mechanism_gates[
+                        "gradient_balanced_mean_suppressed_every_condition"
+                    ] else "NOT_SUPPORTED_UNDER_FROZEN_90_PERCENT_GATE"
+                ),
+                "fb_response_rectification": (
+                    "SUPPORTED_EVERY_CONDITION"
+                    if validity_complete and mechanism_gates[
+                        "gradient_response_even_nonzero_every_condition"
+                    ] else "UNRESOLVED"
+                ),
+                "adamw_zero_moment_step1_response_rectification": (
+                    "SUPPORTED_EVERY_CONDITION"
+                    if validity_complete and mechanism_gates[
+                        "adamw_zero_moment_response_even_nonzero_every_condition"
+                    ] else "UNRESOLVED"
+                ),
+            },
+            "rows": rows,
+            "claim_boundary": (
+                "The matched source claim projects each natural residual within a fixed "
+                "eight-neighbor BF16 orbit to the nearest exactly invertible residual. "
+                "It requires at least 90% local approximation, local-energy, and natural-"
+                "gradient fidelity, exact local +/-epsilon support, "
+                "and at least 90% gradient balanced-mean suppression in every fixed "
+                "condition to call event asymmetry dominant. Exact-pair gradient and "
+                "AdamW even components separately identify response rectification; they "
+                "are not relabeled as source asymmetry. The stateless-SGD row is the "
+                "expected linear scaling and is not a duplicate gate. AdamW uses zero "
+                "moments at step 1 and does not claim mature-optimizer behavior."
+            ),
+            "tensor_values_saved": False,
+        }
+    else:
+        result = {
+            "schema": "kernel-analyzer-l23-attention-bmm-decomposition-v1",
+            "status": "COMPLETE",
+            "parameter": PARAMETER,
+            "tile": {"rows": [ROWS.start, ROWS.stop], "columns": [COLUMNS.start, COLUMNS.stop]},
+            "checkpoint_step": args.step,
+            "state_indices": state_indices,
+            "binding": {
+                "actual_backward_node": "bmm_76",
+                "equation": "G_q = S_bwd @ K",
+                "left_operand": "buf192: scaled softmax-backward output",
+                "right_operand": "permute_510: repeated layer-23 post-RoPE key",
+                "backward_bmm_zero_based_ordinal": target_ordinal,
+                "attention_output_vjp_mm": "mm_262: D = Go @ Wo",
+                "attention_output_vjp_mm_zero_based_ordinal": target_d_mm_ordinal,
+                "softmax_backward_symbol": target_softmax_symbol,
+                "softmax_backward_same_symbol_zero_based_ordinal": target_softmax_ordinal,
+                "generated_source_sha256": source_sha256,
+                "candidate_values_used_to_select_boundary": False,
+            },
+            "hybrids": {"CC": "candidate S/K", "RC": "reference S, candidate K", "CR": "candidate S, reference K", "RR": "reference S/K"},
+            "rows": rows,
+            "tensor_values_saved": False,
+        }
     result["result_sha256"] = hashlib.sha256(
         json.dumps(result, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()

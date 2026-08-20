@@ -38,7 +38,54 @@ def test_supported_mechanism_requires_intervention_and_sham():
 def test_qwen128_does_not_join_rounding_source_to_accumulation_trajectory():
     row = next(row for row in cases() if row["case_id"] == "qwen128_vproj_mm")
     assert row["mechanism"]["trajectory_repairs_declared_local_source"] is False
-    assert row["mechanism"]["verdict"] == "UNRESOLVED_CONTRAST_MISMATCH"
+    assert row["mechanism"]["verdict"] == "SUPPORTED_CASE_SPECIFIC_SOURCE_MECHANISM"
+    assert row["mechanism"]["intervention"]["full_observed_source_repaired_in_expectation"]
+    assert row["bias_map"]["status"] == "MATCHED_CONDITIONAL_SOURCE_SUPPORT"
+    assert row["formation"]["conditional"] == {
+        "local": "BIASED", "gradient": "BIASED", "update": "BIASED",
+    }
+    assert row["formation"]["conditional_details"]["repair_local_residual"] == "CENTERED"
+
+
+def test_qwen64_joint_source_has_independent_fixed_state_confirmation():
+    row = next(row for row in cases() if row["case_id"] == "qwen64_vproj_mm")
+    assert row["mechanism"]["verdict"] == "SUPPORTED_CASE_SPECIFIC_SOURCE_MECHANISM"
+    assert row["formation"]["conditional"] == {
+        "local": "BIASED", "gradient": "BIASED", "update": "BIASED",
+    }
+    details = row["formation"]["conditional_details"]
+    assert details["conditions"] == 16
+    assert details["repair_local_residual"] == "CENTERED"
+    assert row["bias_map"]["status"] == "MATCHED_CONDITIONAL_SOURCE_SUPPORT"
+
+
+def test_layer23_antithetic_followup_fails_natural_fidelity_closed():
+    row = next(
+        row for row in cases() if row["case_id"] == "qwen_layer23_attention_state"
+    )
+    assert row["bias_map"]["antithetic_status"] == "ANTITHETIC_INTERVENTION_UNRESOLVED"
+    assert row["bias_map"]["validity_gates"]["sixteen_fixed_conditions"] is True
+    assert row["bias_map"]["validity_gates"]["all_local_antithetic_exact"] is True
+    assert row["bias_map"]["validity_gates"]["natural_source_fidelity_every_condition"] is False
+
+
+def test_mamba_preserves_mixed_conditional_result_without_promotion():
+    row = next(row for row in cases() if row["case_id"] == "mamba_seq64_input_proj")
+    assert row["mechanism"]["verdict"] == "PARTIAL_SOURCE_MECHANISM"
+    assert row["formation"]["conditional"] == {
+        "local": "BIASED", "gradient": "UNRESOLVED", "update": "UNRESOLVED",
+    }
+    roles = row["formation"]["conditional_details"]["all_roles"]
+    assert roles["repair_local_residual"]["status_counts"] == {
+        "CONDITIONAL_CENTERED": 16,
+    }
+    assert roles["candidate_gradient_effect_removed"]["status_counts"] == {
+        "CONDITIONAL_BIAS": 13,
+        "CONDITIONAL_UNRESOLVED": 3,
+    }
+    assert roles["candidate_adamw_zero_update_effect_removed"]["status_counts"] == {
+        "CONDITIONAL_BIAS": 16,
+    }
 
 
 def test_variance_only_needs_all_three_conditional_nulls():

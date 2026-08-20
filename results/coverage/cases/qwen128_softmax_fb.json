@@ -1,0 +1,168 @@
+{
+  "bindings": {
+    "aot_capture_sha256": "f9e4dc9ba5f92c681c7d425f4648c3132c54c83edce51028692d7bc2e0ff7b0f",
+    "aot_file_sha256": "9417118f80ed68c35b216561c92700a49ce871e994a67ab14bf261d3d9067f00",
+    "backward_generated_source_sha256": "c59d805048c97bae50b1e6e8a1fbfe003d5afeea95ad151289dfea07610747f8",
+    "backward_source_line": 2511,
+    "formal_file_sha256": "24afa07639d683369122891f09944966cd783d8ee637ea78b8bf3c44c7eb0753",
+    "formal_result_sha256": "a8bb7707f6cde5f234dc26f3997f6858fa3cb5bd60ae3b12ba7de0f32eab560e",
+    "forward_generated_source_sha256": "3501b0e5cf033c37316d80d2366fc50ade613703e4635d6d8c5fd3ee574063d1",
+    "forward_source_line": 4154,
+    "release_capture_sha256": "7cef6662da2e961c1b9bdd50bad2672fe196b56775a8fda921dba2a4e0512c36",
+    "sequence_nr": 14308
+  },
+  "candidate_id": "qwen_seq128_layer27_attention_softmax_fb",
+  "claim_boundary": "Complete concrete local F+B mathematical and program proof for one layer-27 softmax score unit, including the lowered F-to-B saved-state transformation. The direction verdict concerns this exact invocation over 32 frozen natural states; it neither proves the whole softmax family safe nor establishes a downstream weight-accumulation mechanism.",
+  "coherent_sources": [],
+  "concrete_program_proof": {
+    "analytic_derivation_sha256": "0b9f5573ea8ae69d1a99e2bf0dfc11562934db4ae45e83e4a2f972031c8e81bd",
+    "analytic_vjp_matches_typed_aten": true,
+    "backward_program_sha256": "a858769fc6f921822c8e2a14bbb7080b5d33a4302e4a1d2917c308c736fe777f",
+    "coordinatewise_decomposition_exact": true,
+    "cotangent_edge_exact": true,
+    "cross_phase_object_identity_exact": true,
+    "forward_program_exact": true,
+    "forward_program_sha256": "5d9c559b9cb2980fc58a267c12410bc7493c1af002c1cd55b1c0e24b4ee1e89b",
+    "generated_backward_source_exact": true,
+    "generated_forward_source_exact": true,
+    "q_and_k_output_edges_exact": true,
+    "saved_tensor_origin_exact": true
+  },
+  "forward_backward_unit": {
+    "aot_program": {
+      "forward_score": "bmm_55 -> view_477 -> mul_390 -> add_249",
+      "forward_softmax": "_to_copy_279 -> _softmax_27 -> detach_138",
+      "k_vjp_output_path": [
+        "bmm_59",
+        "view_507",
+        "transpose_146",
+        "view_510",
+        "sum_6",
+        "squeeze_1",
+        "mul_416",
+        "add_259",
+        "transpose_148",
+        "mul_420",
+        "sum_7",
+        "view_513"
+      ],
+      "q_vjp_output_path": [
+        "bmm_60",
+        "view_508",
+        "mul_418",
+        "add_261",
+        "transpose_149",
+        "mul_428",
+        "sum_9",
+        "view_516"
+      ],
+      "saved_probability": "detach_138 -> exact-object bridge -> detach_145",
+      "softmax_vjp": "_softmax_backward_data -> _to_copy_292 -> mul_414",
+      "upstream": "tangents_1 -> ... -> view_505 -> _to_copy_291"
+    },
+    "backward": [
+      "dZ_ij = P_ij (G_ij - sum_k G_ik P_ik)",
+      "dS = alpha dZ",
+      "dQ = dS K",
+      "dK = dS^T Q"
+    ],
+    "forward": [
+      "S = Q K^T",
+      "Z = alpha S + M",
+      "P_ij = exp(Z_ij - m_i) / sum_k exp(Z_ik - m_i)",
+      "m_i = max_j Z_ij"
+    ],
+    "generated_backward_call": "triton_per_fused__softmax__softmax_backward_data__to_copy_mul_view_8.run(buf22, buf20, amax_27, sum_28, 2048, 128, stream=raw_stream0)",
+    "generated_forward_call": "triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_index_le_lift_fresh_mul_prepare_softmax_online_scalar_tensor_view_where_7.run(buf911, buf4, buf912, buf913, buf914, 2048, 128, stream=raw_stream0)",
+    "lowered_saved_state_transform": "Generated forward emits BF16 Z plus FP32 row max/sum; generated backward reconstructs P from those auxiliaries instead of reading the AOT-saved FP32 P.",
+    "symbols": {
+      "G": "dL/dP [1,16,128,128]",
+      "M": "[1,1,128,128] causal/token mask",
+      "Q,K": "[16,128,128] BF16 score operands",
+      "alpha": 0.08838834764831845
+    }
+  },
+  "numerical": {
+    "coordinates_per_state": 262144,
+    "max_analytic_formula_vs_typed_aten_vjp": 2.3283064365386963e-10,
+    "max_forward_generated_vs_rounded_semantic_probability": 0.00390625,
+    "max_reconstructed_probability_row_sum_error": 0.061577796936035156,
+    "max_reconstructed_vs_semantic_probability": 0.06157773733139038,
+    "sources": {
+      "forward_probability_kernel": {
+        "cluster_bootstrap_95": {
+          "lower_95": -5.215609290717434e-32,
+          "median": 1.3012138642820814e-32,
+          "upper_95": 1.7380363192092223e-25
+        },
+        "direction_status": "FAIL_CAUSAL_NONCOHERENT",
+        "max_abs": 2.6338491920796514e-07,
+        "mean_l2": 1.0157568548943913e-08,
+        "u_statistic": 2.809124776997932e-26
+      },
+      "forward_probability_rounding": {
+        "cluster_bootstrap_95": {
+          "lower_95": -2.3103651320194968e-14,
+          "median": -5.695212556397918e-16,
+          "upper_95": 2.5445952950123816e-14
+        },
+        "direction_status": "FAIL_CAUSAL_NONCOHERENT",
+        "max_abs": 2.792832674458623e-06,
+        "mean_l2": 2.924265643855506e-06,
+        "u_statistic": 1.8503011836265098e-17
+      },
+      "kernel": {
+        "cluster_bootstrap_95": {
+          "lower_95": 0.0,
+          "median": 6.683597520669659e-23,
+          "upper_95": 2.703803906255718e-21
+        },
+        "direction_status": "FAIL_CAUSAL_NONCOHERENT",
+        "max_abs": 1.4901161193847656e-08,
+        "mean_l2": 2.2348811178285943e-09,
+        "u_statistic": 4.688246245985037e-22
+      },
+      "output_rounding": {
+        "cluster_bootstrap_95": {
+          "lower_95": -3.449452736302896e-14,
+          "median": -7.169124566280954e-15,
+          "upper_95": 1.8339685267816312e-14
+        },
+        "direction_status": "FAIL_CAUSAL_NONCOHERENT",
+        "max_abs": 3.7420541048049927e-06,
+        "mean_l2": 2.8213368707952213e-06,
+        "u_statistic": -7.33521769398774e-15
+      },
+      "saved_state_reconstruction": {
+        "cluster_bootstrap_95": {
+          "lower_95": -2.6385284499993348e-12,
+          "median": 3.3052159328912757e-14,
+          "upper_95": 2.646356120222682e-12
+        },
+        "direction_status": "FAIL_CAUSAL_NONCOHERENT",
+        "max_abs": 3.515199932735413e-05,
+        "mean_l2": 2.9031680469415733e-05,
+        "u_statistic": 4.794569736877087e-14
+      },
+      "semantic_total": {
+        "cluster_bootstrap_95": {
+          "lower_95": -2.648218383457308e-12,
+          "median": 7.777025792108621e-14,
+          "upper_95": 2.752867687156514e-12
+        },
+        "direction_status": "FAIL_CAUSAL_NONCOHERENT",
+        "max_abs": 3.630803257692605e-05,
+        "mean_l2": 2.889804579808697e-05,
+        "u_statistic": 1.1273315605283658e-13
+      }
+    },
+    "states": 32,
+    "two_repeats_exact": true
+  },
+  "result_sha256": "98fbf572d577c5f1ef61798ad76eb369e9a73d9628f347ac8c6c62e0c7fb74c3",
+  "schema": "kernel-analyzer-concrete-softmax-fb-proof-v1",
+  "semantic_total_coherent": false,
+  "status": "COMPLETE_CONCRETE_FB_TYPED_PRECISION_NEGATIVE",
+  "subject": "Qwen3-1.7B seq128 layer-27 attention score softmax F+B",
+  "verdict": "NONCOHERENT_PRECISION_ERROR"
+}

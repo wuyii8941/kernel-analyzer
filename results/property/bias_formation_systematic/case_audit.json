@@ -146,28 +146,88 @@
     {
       "bias_map": {
         "channel": "EVENT_PAIRING_ASYMMETRY",
-        "reason": "the accumulation arm changes the real VJP, but the complete local contrast is not decomposed",
-        "status": "PARTIAL_SUPPORT"
+        "reason": "an independent 16-repeat confirmation centers the repair local residual in 16/16 fixed conditions, while candidate-minus-repair local, gradient, SGD-update, and zero-moment AdamW-update effects are biased in 16/16",
+        "status": "MATCHED_CONDITIONAL_SOURCE_SUPPORT"
       },
       "case_id": "qwen64_vproj_mm",
       "evidence": [
         "results/coverage/cases/qwen64_vproj.json",
+        "results/coverage/cases/qwen64_vproj_precision_decomposition.json",
+        "results/coverage/cases/qwen64_vproj_source_aligned_repair.json.gz",
+        "results/coverage/cases/qwen64_vproj_conditional_debias_r16.json.gz",
+        "results/property/conditional_debias/qwen64_vproj.json",
         "results/coverage/cases/qwen64_vproj_repair_pilot.json",
         "results/coverage/cases/qwen64_vproj_trajectory.json"
       ],
       "formation": {
         "conditional": {
-          "gradient": "NOT_MEASURED",
-          "local": "NOT_MEASURED",
-          "update": "NOT_MEASURED"
+          "gradient": "BIASED",
+          "local": "BIASED",
+          "update": "BIASED"
         },
-        "first_conditional_bias_stage": "UNRESOLVED",
+        "conditional_details": {
+          "absolute_downstream_repair_bias": "NOT_IDENTIFIABLE_MISSING_EXACT_REFERENCE",
+          "all_roles": {
+            "candidate_adamw_zero_update_effect_removed": {
+              "all_conditions_biased": true,
+              "all_conditions_centered": false,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_BIAS": 16
+              }
+            },
+            "candidate_gradient_effect_removed": {
+              "all_conditions_biased": true,
+              "all_conditions_centered": false,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_BIAS": 16
+              }
+            },
+            "candidate_local_effect_removed": {
+              "all_conditions_biased": true,
+              "all_conditions_centered": false,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_BIAS": 16
+              }
+            },
+            "candidate_sgd_update_effect_removed": {
+              "all_conditions_biased": true,
+              "all_conditions_centered": false,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_BIAS": 16
+              }
+            },
+            "repair_local_residual": {
+              "all_conditions_biased": false,
+              "all_conditions_centered": true,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_CENTERED": 16
+              }
+            }
+          },
+          "conditions": 16,
+          "gradient": "BIASED",
+          "local": "BIASED",
+          "reference": "STOCHASTIC_SOURCE_DEBIASED_ENSEMBLE",
+          "repair_local_residual": "CENTERED",
+          "source": "results/property/conditional_debias/qwen64_vproj.json",
+          "update": "BIASED",
+          "update_scopes": [
+            "STATELESS_SGD",
+            "ADAMW_ZERO_MOMENT_STEP1"
+          ]
+        },
+        "first_conditional_bias_stage": "LOCAL",
         "global": {
           "gradient": "NOT_MEASURED",
           "local": "NOT_MEASURED",
           "update": "NOT_MEASURED"
         },
-        "label_source": "NOT_MEASURED"
+        "label_source": "FIXED_STATE_STOCHASTIC_REPAIR_ENSEMBLE"
       },
       "forward_backward": {
         "scope": "one exact forward MM with actual AOT backward edges",
@@ -177,20 +237,79 @@
         "candidate_properties": [
           "P1_CONDITIONAL_SOURCE_ASYMMETRY"
         ],
-        "claim_boundary": "trajectory-local partial source; no complete P1 attribution",
+        "claim_boundary": "this closes conditional source formation relative to the stochastic joint-source-debiased ensemble; it does not certify absolute downstream repair bias without an exact downstream reference",
         "intervention": {
           "causal_effect": true,
-          "description": "same-input FP32 MM accumulation followed by the original BF16 ABI",
-          "full_observed_source_repaired": false,
+          "description": "joint FP32 MM plus coordinate-wise unbiased BF16 materialization; kernel-only and rounding-only factorial controls",
+          "downstream_global_carrier": "FAIL_CAUSAL_NONCOHERENT",
+          "full_observed_source_repaired_in_expectation": true,
           "matched_sham_exact": true
         },
-        "verdict": "PARTIAL_SOURCE_MECHANISM",
-        "why_directional": "the isolated accumulation residual changes the real dW path, but its relation to the complete precision residual is not closed"
+        "verdict": "SUPPORTED_CASE_SPECIFIC_SOURCE_MECHANISM",
+        "why_directional": "at each of 16 fixed states, the deterministic joint MM-kernel plus output-rounding residual has a nonzero candidate-minus-debiased-ensemble mean that remains directional after the actual backward and both declared optimizer mappings"
       },
       "model": "Qwen3-1.7B",
-      "next_decisive_test": "complete the three-way local source decomposition, then capture within-condition formation",
-      "physical_source": "precision contrast is directional; full split into kernel, output rounding, and inherited operands is incomplete",
+      "next_decisive_test": "use a new JOINT-repair trajectory only if persistence of this exact identified source is required",
+      "physical_source": "same-operand MM kernel arithmetic and deterministic output rounding are both directional",
       "semantic_unit": "Y=XW^T; dX=QW; dW=Q^T X at layer-0 v_proj",
+      "source_aligned_repair": {
+        "arms_run": [
+          "KERNEL_ONLY",
+          "ROUNDING_ONLY",
+          "JOINT"
+        ],
+        "candidate_id": "qwen_seq64_forward_8_output",
+        "case_id": "qwen64_vproj_mm",
+        "coherent_sources": [
+          "kernel",
+          "output_rounding"
+        ],
+        "decomposition": "qwen64_vproj_precision_decomposition.json",
+        "downstream_carrier_effect": {
+          "confidence": {
+            "lower_95": -0.0007152434003023827,
+            "median": 0.00015876256448162063,
+            "upper_95": 0.0009433091775368837
+          },
+          "status": "FAIL_CAUSAL_NONCOHERENT",
+          "u_statistic": 0.00015618591099163202
+        },
+        "evidence_scope": "POPULATION",
+        "expected_states": 32,
+        "finite_repeat_repaired_source": {
+          "confidence": {
+            "lower_95": -3.416889986811202e-07,
+            "median": 9.604214929363667e-07,
+            "upper_95": 2.505575282254285e-06
+          },
+          "status": "FAIL_CAUSAL_NONCOHERENT",
+          "u_statistic": 9.835441217055232e-07
+        },
+        "full_arm": "JOINT",
+        "full_fp32_reference_equivalence": "NOT_MEASURED",
+        "full_source_repair": {
+          "analytic_expected_repaired_source_is_zero": true,
+          "downstream_carrier_effect_directional": false,
+          "finite_repeat_repaired_source_directional": false,
+          "removed_source_directional": true,
+          "repair_status": "SOURCE_DEBIASED_IN_EXPECTATION",
+          "sham_exact": true,
+          "source_aligned": true,
+          "verdict": "SOURCE_DEBIASED_IN_EXPECTATION_LOCAL_ONLY"
+        },
+        "old_arm": "KERNEL_ONLY",
+        "old_intervention_was_full_repair": false,
+        "removed_source": {
+          "confidence": {
+            "lower_95": 1.3541282359472064e-05,
+            "median": 2.223491817232306e-05,
+            "upper_95": 3.27812372557487e-05
+          },
+          "status": "PASS",
+          "u_statistic": 2.2417435768278306e-05
+        },
+        "repair": "qwen64_vproj_source_aligned_repair.json.gz"
+      },
       "trajectory": {
         "artifact": "results/coverage/cases/qwen64_vproj_trajectory.json",
         "final_drift_norm": 0.010890079662203789,
@@ -204,29 +323,88 @@
     {
       "bias_map": {
         "channel": "EVENT_PAIRING_ASYMMETRY",
-        "reason": "output rounding is directional, but the existing trajectory repairs accumulation instead",
-        "status": "SUPPORTING_SOURCE_OBSERVATION_CONTRAST_MISMATCH"
+        "reason": "repair local residual is centered in 16/16 fixed conditions, while candidate-minus-repair local, gradient, SGD-update, and zero-moment AdamW-update effects are biased in 16/16",
+        "status": "MATCHED_CONDITIONAL_SOURCE_SUPPORT"
       },
       "case_id": "qwen128_vproj_mm",
       "evidence": [
         "results/coverage/cases/qwen128_vproj.json",
         "results/coverage/cases/qwen128_vproj_precision_decomposition.json",
+        "results/coverage/cases/qwen128_vproj_source_aligned_repair.json.gz",
+        "results/coverage/cases/qwen128_vproj_conditional_debias.json.gz",
+        "results/property/conditional_debias/qwen128_vproj.json",
         "results/coverage/cases/qwen128_vproj_repair_pilot.json",
         "results/coverage/cases/qwen128_vproj_trajectory.json"
       ],
       "formation": {
         "conditional": {
-          "gradient": "NOT_MEASURED",
-          "local": "NOT_MEASURED",
-          "update": "NOT_MEASURED"
+          "gradient": "BIASED",
+          "local": "BIASED",
+          "update": "BIASED"
         },
-        "first_conditional_bias_stage": "UNRESOLVED",
+        "conditional_details": {
+          "absolute_downstream_repair_bias": "NOT_IDENTIFIABLE_MISSING_EXACT_REFERENCE",
+          "all_roles": {
+            "candidate_adamw_zero_update_effect_removed": {
+              "all_conditions_biased": true,
+              "all_conditions_centered": false,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_BIAS": 16
+              }
+            },
+            "candidate_gradient_effect_removed": {
+              "all_conditions_biased": true,
+              "all_conditions_centered": false,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_BIAS": 16
+              }
+            },
+            "candidate_local_effect_removed": {
+              "all_conditions_biased": true,
+              "all_conditions_centered": false,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_BIAS": 16
+              }
+            },
+            "candidate_sgd_update_effect_removed": {
+              "all_conditions_biased": true,
+              "all_conditions_centered": false,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_BIAS": 16
+              }
+            },
+            "repair_local_residual": {
+              "all_conditions_biased": false,
+              "all_conditions_centered": true,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_CENTERED": 16
+              }
+            }
+          },
+          "conditions": 16,
+          "gradient": "BIASED",
+          "local": "BIASED",
+          "reference": "STOCHASTIC_SOURCE_DEBIASED_ENSEMBLE",
+          "repair_local_residual": "CENTERED",
+          "source": "results/property/conditional_debias/qwen128_vproj.json",
+          "update": "BIASED",
+          "update_scopes": [
+            "STATELESS_SGD",
+            "ADAMW_ZERO_MOMENT_STEP1"
+          ]
+        },
+        "first_conditional_bias_stage": "LOCAL",
         "global": {
           "gradient": "NOT_MEASURED",
           "local": "NOT_MEASURED",
           "update": "NOT_MEASURED"
         },
-        "label_source": "NOT_MEASURED"
+        "label_source": "FIXED_STATE_STOCHASTIC_REPAIR_ENSEMBLE"
       },
       "forward_backward": {
         "scope": "one exact forward MM with actual AOT backward edges",
@@ -237,20 +415,77 @@
           "P1_CONDITIONAL_SOURCE_ASYMMETRY",
           "P6_SEMANTIC_ORBIT_CENTERING"
         ],
-        "claim_boundary": "do not attribute the trajectory to output rounding until an output-rounding repair is run",
+        "claim_boundary": "this closes conditional source formation relative to the stochastic source-debiased ensemble; absolute downstream repair bias remains unidentified without an exact downstream reference, and the historical trajectory used a different repair contrast",
         "intervention": {
           "causal_effect": true,
-          "description": "existing trajectory promotes MM accumulation but retains BF16 output rounding",
+          "description": "replace deterministic nearest BF16 output rounding by coordinate-wise unbiased BF16 materialization while retaining the noncoherent kernel residual",
+          "downstream_global_carrier": "FAIL_CAUSAL_NONCOHERENT",
+          "full_observed_source_repaired_in_expectation": true,
           "matched_sham_exact": true
         },
         "trajectory_repairs_declared_local_source": false,
-        "verdict": "UNRESOLVED_CONTRAST_MISMATCH",
-        "why_directional": "the source decomposition and trajectory manipulate different contrasts; they cannot yet be composed into one causal explanation"
+        "verdict": "SUPPORTED_CASE_SPECIFIC_SOURCE_MECHANISM",
+        "why_directional": "at each of 16 fixed states, deterministic nearest rounding has a nonzero candidate-minus-debiased-ensemble mean that remains directional after the actual backward and both declared optimizer mappings"
       },
       "model": "Qwen3-1.7B",
-      "next_decisive_test": "run an exact output-rounding intervention with sham at the same F+B boundary",
+      "next_decisive_test": "add an exact downstream reference only if claiming the repaired F+B/update itself is absolutely unbiased; use a new ROUNDING_ONLY trajectory for persistence",
       "physical_source": "global local decomposition identifies deterministic FP32-to-BF16 output rounding, not MM kernel arithmetic",
       "semantic_unit": "Y=XW^T; dX=QW; dW=Q^T X at layer-0 v_proj",
+      "source_aligned_repair": {
+        "arms_run": [
+          "ROUNDING_ONLY"
+        ],
+        "candidate_id": "qwen_seq128_forward_8_output",
+        "case_id": "qwen128_vproj_mm",
+        "coherent_sources": [
+          "output_rounding"
+        ],
+        "decomposition": "qwen128_vproj_precision_decomposition.json",
+        "downstream_carrier_effect": {
+          "confidence": {
+            "lower_95": -0.0008916903985181999,
+            "median": 0.0005437604697848636,
+            "upper_95": 0.0055827003985068424
+          },
+          "status": "FAIL_CAUSAL_NONCOHERENT",
+          "u_statistic": 0.0009481616824303392
+        },
+        "evidence_scope": "POPULATION",
+        "expected_states": 32,
+        "finite_repeat_repaired_source": {
+          "confidence": {
+            "lower_95": -1.7057610343312993e-06,
+            "median": 1.0052969998037375e-07,
+            "upper_95": 1.993424633414848e-06
+          },
+          "status": "FAIL_CAUSAL_NONCOHERENT",
+          "u_statistic": 8.177164498385908e-08
+        },
+        "full_arm": "ROUNDING_ONLY",
+        "full_fp32_reference_equivalence": "NOT_MEASURED",
+        "full_source_repair": {
+          "analytic_expected_repaired_source_is_zero": true,
+          "downstream_carrier_effect_directional": false,
+          "finite_repeat_repaired_source_directional": false,
+          "removed_source_directional": true,
+          "repair_status": "SOURCE_DEBIASED_IN_EXPECTATION",
+          "sham_exact": true,
+          "source_aligned": true,
+          "verdict": "SOURCE_DEBIASED_IN_EXPECTATION_LOCAL_ONLY"
+        },
+        "old_arm": "KERNEL_ONLY",
+        "old_intervention_was_full_repair": false,
+        "removed_source": {
+          "confidence": {
+            "lower_95": 5.0406193894956675e-05,
+            "median": 6.313021953305718e-05,
+            "upper_95": 7.687238734232891e-05
+          },
+          "status": "PASS",
+          "u_statistic": 6.327577362974507e-05
+        },
+        "repair": "qwen128_vproj_source_aligned_repair.json.gz"
+      },
       "trajectory": {
         "artifact": "results/coverage/cases/qwen128_vproj_trajectory.json",
         "final_drift_norm": 0.010251143015921116,
@@ -416,29 +651,90 @@
     {
       "bias_map": {
         "channel": "EVENT_PAIRING_ASYMMETRY",
-        "reason": "kernel arithmetic and output rounding are each directional, but only one trajectory contrast is closed",
-        "status": "PARTIAL_CROSS_ARCHITECTURE_SUPPORT"
+        "reason": "repair local residual is centered 16/16 and candidate local plus zero-moment AdamW effects are biased 16/16; gradient/SGD are biased 13/16 and unresolved 3/16, so the complete conditional chain fails closed rather than being promoted",
+        "status": "MATCHED_LOCAL_SOURCE_MIXED_F_B_ADAM_DIRECTIONAL"
       },
       "case_id": "mamba_seq64_input_proj",
       "evidence": [
         "results/coverage/cases/mamba_seq64_input_proj.json",
         "results/coverage/cases/mamba_seq64_input_proj_precision_decomposition.json",
+        "results/coverage/cases/mamba_seq64_input_proj_source_aligned_repair.json.gz",
+        "results/coverage/cases/mamba_seq64_input_proj_conditional_debias.json.gz",
+        "results/property/conditional_debias/mamba_seq64_input_proj.json",
         "results/coverage/cases/mamba_seq64_input_proj_repair_pilot.json",
         "results/coverage/cases/mamba_seq64_input_proj_trajectory.json"
       ],
       "formation": {
         "conditional": {
-          "gradient": "NOT_MEASURED",
-          "local": "NOT_MEASURED",
-          "update": "NOT_MEASURED"
+          "gradient": "UNRESOLVED",
+          "local": "BIASED",
+          "update": "UNRESOLVED"
         },
-        "first_conditional_bias_stage": "UNRESOLVED",
+        "conditional_details": {
+          "absolute_downstream_repair_bias": "NOT_IDENTIFIABLE_MISSING_EXACT_REFERENCE",
+          "all_roles": {
+            "candidate_adamw_zero_update_effect_removed": {
+              "all_conditions_biased": true,
+              "all_conditions_centered": false,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_BIAS": 16
+              }
+            },
+            "candidate_gradient_effect_removed": {
+              "all_conditions_biased": false,
+              "all_conditions_centered": false,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_BIAS": 13,
+                "CONDITIONAL_UNRESOLVED": 3
+              }
+            },
+            "candidate_local_effect_removed": {
+              "all_conditions_biased": true,
+              "all_conditions_centered": false,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_BIAS": 16
+              }
+            },
+            "candidate_sgd_update_effect_removed": {
+              "all_conditions_biased": false,
+              "all_conditions_centered": false,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_BIAS": 13,
+                "CONDITIONAL_UNRESOLVED": 3
+              }
+            },
+            "repair_local_residual": {
+              "all_conditions_biased": false,
+              "all_conditions_centered": true,
+              "condition_count": 16,
+              "status_counts": {
+                "CONDITIONAL_CENTERED": 16
+              }
+            }
+          },
+          "conditions": 16,
+          "gradient": "UNRESOLVED",
+          "local": "BIASED",
+          "reference": "STOCHASTIC_SOURCE_DEBIASED_ENSEMBLE",
+          "repair_local_residual": "CENTERED",
+          "source": "results/property/conditional_debias/mamba_seq64_input_proj.json",
+          "update": "UNRESOLVED",
+          "update_scopes": [
+            "STATELESS_SGD",
+            "ADAMW_ZERO_MOMENT_STEP1"
+          ]
+        },
+        "first_conditional_bias_stage": "LOCAL",
         "global": {
           "gradient": "NOT_MEASURED",
           "local": "NOT_MEASURED",
           "update": "NOT_MEASURED"
         },
-        "label_source": "NOT_MEASURED"
+        "label_source": "FIXED_STATE_STOCHASTIC_REPAIR_ENSEMBLE"
       },
       "forward_backward": {
         "scope": "one exact recurrent input-projection MM and actual VJP edges",
@@ -448,20 +744,80 @@
         "candidate_properties": [
           "P1_CONDITIONAL_SOURCE_ASYMMETRY"
         ],
-        "claim_boundary": "cross-architecture partial source mechanism; total observed error is not single-source",
+        "claim_boundary": "cross-architecture conditional local-source and bounded optimizer evidence; the all-layer mechanism gate remains unresolved because three real-backward conditions do not obtain a directional verdict, and the historical trajectory closes only the KERNEL_ONLY arm",
         "intervention": {
           "causal_effect": true,
-          "description": "promote only MM accumulation to FP32, then restore the BF16 ABI",
-          "full_observed_source_repaired": false,
+          "description": "kernel-only, rounding-only, and joint factorial arms; joint uses FP32 MM plus coordinate-wise unbiased BF16 materialization",
+          "downstream_carrier": "UNRESOLVED_4_STATE_PILOT",
+          "evidence_scope": "CAUSAL_PILOT",
+          "full_observed_source_repaired_in_expectation": true,
           "matched_sham_exact": true
         },
         "verdict": "PARTIAL_SOURCE_MECHANISM",
-        "why_directional": "at least two additive local source terms are directional; the trajectory closes the kernel-accumulation arm but not the output-rounding arm"
+        "why_directional": "the joint repair centers the declared local source in all 16 fixed conditions, while the natural local effect and zero-moment AdamW effect are biased in all 16; the actual backward/SGD effect is biased in 13 conditions and unresolved in three"
       },
       "model": "Mamba-130M",
-      "next_decisive_test": "run separate kernel-only and output-rounding-only conditional interventions",
+      "next_decisive_test": "only if this partial case is revisited, use an exact gradient antithetic control in the three unresolved conditions; do not add repeats or relax the gate",
       "physical_source": "both same-operand MM kernel arithmetic and deterministic output rounding are directional",
       "semantic_unit": "Y=XW^T; dX=QW; dW=Q^T X at layer-0 in_proj",
+      "source_aligned_repair": {
+        "arms_run": [
+          "KERNEL_ONLY",
+          "ROUNDING_ONLY",
+          "JOINT"
+        ],
+        "candidate_id": "mamba_seq64_forward_1_output",
+        "case_id": "mamba_seq64_input_proj",
+        "coherent_sources": [
+          "kernel",
+          "output_rounding"
+        ],
+        "decomposition": "mamba_seq64_input_proj_precision_decomposition.json",
+        "downstream_carrier_effect": {
+          "confidence": {
+            "lower_95": -0.00010471834233699111,
+            "median": 0.00028533983221414315,
+            "upper_95": 0.0015746642465816335
+          },
+          "status": "UNRESOLVED_4_STATE_PILOT",
+          "u_statistic": 0.0003920790359956359
+        },
+        "evidence_scope": "CAUSAL_PILOT",
+        "expected_states": 4,
+        "finite_repeat_repaired_source": {
+          "confidence": {
+            "lower_95": -0.0009067127503153601,
+            "median": 0.0007115173211329151,
+            "upper_95": 0.0012686981782259465
+          },
+          "status": "FAIL_CAUSAL_NONCOHERENT",
+          "u_statistic": 0.0005463946059352057
+        },
+        "full_arm": "JOINT",
+        "full_fp32_reference_equivalence": "NOT_MEASURED",
+        "full_source_repair": {
+          "analytic_expected_repaired_source_is_zero": true,
+          "downstream_carrier_effect_directional": false,
+          "finite_repeat_repaired_source_directional": false,
+          "removed_source_directional": false,
+          "repair_status": "SOURCE_DEBIASED_IN_EXPECTATION",
+          "sham_exact": true,
+          "source_aligned": true,
+          "verdict": "SOURCE_DEBIASED_IN_EXPECTATION_DOWNSTREAM_UNRESOLVED"
+        },
+        "old_arm": "KERNEL_ONLY",
+        "old_intervention_was_full_repair": false,
+        "removed_source": {
+          "confidence": {
+            "lower_95": -0.00029645914037246257,
+            "median": 0.0019073233306698967,
+            "upper_95": 0.007852784256584755
+          },
+          "status": "FAIL_CAUSAL_NONCOHERENT",
+          "u_statistic": 0.0023301894584667284
+        },
+        "repair": "mamba_seq64_input_proj_source_aligned_repair.json.gz"
+      },
       "trajectory": {
         "artifact": "results/coverage/cases/mamba_seq64_input_proj_trajectory.json",
         "final_drift_norm": 0.008289474993944168,
@@ -474,15 +830,29 @@
     },
     {
       "bias_map": {
-        "channel": "EVENT_PAIRING_ASYMMETRY",
-        "reason": "S_bwd carries the direction through Gq=S_bwd*K, but its repair removes rather than antithetically pairs the residual",
-        "status": "CONSISTENT_NOT_MARGINAL_PRESERVING"
+        "antithetic_status": "ANTITHETIC_INTERVENTION_UNRESOLVED",
+        "channel": "UNRESOLVED_MIXED_CHANNEL",
+        "mechanism_gates": {
+          "adamw_zero_moment_response_even_nonzero_every_condition": true,
+          "gradient_balanced_mean_suppressed_every_condition": false,
+          "gradient_response_even_nonzero_every_condition": true
+        },
+        "reason": "all 16 projected BF16 +/-epsilon pairs and shams are exact, and the projected F+B response-even ratio spans 0.029--0.166, while zero-moment AdamW spans 0.672--0.725; however, natural-source fidelity falls below the frozen 90% gate in some conditions, so this cannot upgrade the natural layer-23 case to a marginal-preserving matched mechanism",
+        "status": "PROJECTED_ANTITHETIC_RESPONSE_NATURAL_FIDELITY_FAILED",
+        "validity_gates": {
+          "all_local_antithetic_exact": true,
+          "all_local_support_equal": true,
+          "all_shams_exact": true,
+          "natural_source_fidelity_every_condition": false,
+          "sixteen_fixed_conditions": true
+        }
       },
       "case_id": "qwen_layer23_attention_state",
       "evidence": [
         "results/coverage/cases/l23_qproj_attention_state_region.json",
         "results/final/l23_attention_live_weight.json",
-        "results/property/bias_formation_final/qwen_l23_attention_mechanism.json"
+        "results/property/bias_formation_final/qwen_l23_attention_mechanism.json",
+        "results/final/l23_s_bwd_antithetic.json"
       ],
       "formation": {
         "conditional": {
@@ -518,7 +888,7 @@
         "why_directional": "the changed attention state is transported through Gq=S_bwd*K into a fixed q_proj tile; S_bwd restoration removes that carrier"
       },
       "model": "Qwen3-1.7B",
-      "next_decisive_test": "capture conditional layer traces if a first-bias-stage claim is required; do not force single-kernel attribution",
+      "next_decisive_test": "retain as a bounded semantic-region mechanism; do not relax the failed natural-fidelity gate or force single-kernel attribution",
       "physical_source": "attention-backward state S_bwd is causal; upstream contributors overlap and include delayed key materialization",
       "semantic_unit": "S_bwd=alpha*J_softmax(P)^T(DV^T); Gq=S_bwd*K; dWq=Gq^T H",
       "trajectory": {

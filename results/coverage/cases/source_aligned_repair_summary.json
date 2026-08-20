@@ -1,0 +1,183 @@
+{
+  "cases": [
+    {
+      "arms_run": [
+        "KERNEL_ONLY",
+        "ROUNDING_ONLY",
+        "JOINT"
+      ],
+      "candidate_id": "qwen_seq64_forward_8_output",
+      "case_id": "qwen64_vproj_mm",
+      "coherent_sources": [
+        "kernel",
+        "output_rounding"
+      ],
+      "decomposition": "qwen64_vproj_precision_decomposition.json",
+      "downstream_carrier_effect": {
+        "confidence": {
+          "lower_95": -0.0007152434003023827,
+          "median": 0.00015876256448162063,
+          "upper_95": 0.0009433091775368837
+        },
+        "status": "FAIL_CAUSAL_NONCOHERENT",
+        "u_statistic": 0.00015618591099163202
+      },
+      "evidence_scope": "POPULATION",
+      "expected_states": 32,
+      "finite_repeat_repaired_source": {
+        "confidence": {
+          "lower_95": -3.416889986811202e-07,
+          "median": 9.604214929363667e-07,
+          "upper_95": 2.505575282254285e-06
+        },
+        "status": "FAIL_CAUSAL_NONCOHERENT",
+        "u_statistic": 9.835441217055232e-07
+      },
+      "full_arm": "JOINT",
+      "full_fp32_reference_equivalence": "NOT_MEASURED",
+      "full_source_repair": {
+        "analytic_expected_repaired_source_is_zero": true,
+        "downstream_carrier_effect_directional": false,
+        "finite_repeat_repaired_source_directional": false,
+        "removed_source_directional": true,
+        "repair_status": "SOURCE_DEBIASED_IN_EXPECTATION",
+        "sham_exact": true,
+        "source_aligned": true,
+        "verdict": "SOURCE_DEBIASED_IN_EXPECTATION_LOCAL_ONLY"
+      },
+      "old_arm": "KERNEL_ONLY",
+      "old_intervention_was_full_repair": false,
+      "removed_source": {
+        "confidence": {
+          "lower_95": 1.3541282359472064e-05,
+          "median": 2.223491817232306e-05,
+          "upper_95": 3.27812372557487e-05
+        },
+        "status": "PASS",
+        "u_statistic": 2.2417435768278306e-05
+      },
+      "repair": "qwen64_vproj_source_aligned_repair.json.gz"
+    },
+    {
+      "arms_run": [
+        "ROUNDING_ONLY"
+      ],
+      "candidate_id": "qwen_seq128_forward_8_output",
+      "case_id": "qwen128_vproj_mm",
+      "coherent_sources": [
+        "output_rounding"
+      ],
+      "decomposition": "qwen128_vproj_precision_decomposition.json",
+      "downstream_carrier_effect": {
+        "confidence": {
+          "lower_95": -0.0008916903985181999,
+          "median": 0.0005437604697848636,
+          "upper_95": 0.0055827003985068424
+        },
+        "status": "FAIL_CAUSAL_NONCOHERENT",
+        "u_statistic": 0.0009481616824303392
+      },
+      "evidence_scope": "POPULATION",
+      "expected_states": 32,
+      "finite_repeat_repaired_source": {
+        "confidence": {
+          "lower_95": -1.7057610343312993e-06,
+          "median": 1.0052969998037375e-07,
+          "upper_95": 1.993424633414848e-06
+        },
+        "status": "FAIL_CAUSAL_NONCOHERENT",
+        "u_statistic": 8.177164498385908e-08
+      },
+      "full_arm": "ROUNDING_ONLY",
+      "full_fp32_reference_equivalence": "NOT_MEASURED",
+      "full_source_repair": {
+        "analytic_expected_repaired_source_is_zero": true,
+        "downstream_carrier_effect_directional": false,
+        "finite_repeat_repaired_source_directional": false,
+        "removed_source_directional": true,
+        "repair_status": "SOURCE_DEBIASED_IN_EXPECTATION",
+        "sham_exact": true,
+        "source_aligned": true,
+        "verdict": "SOURCE_DEBIASED_IN_EXPECTATION_LOCAL_ONLY"
+      },
+      "old_arm": "KERNEL_ONLY",
+      "old_intervention_was_full_repair": false,
+      "removed_source": {
+        "confidence": {
+          "lower_95": 5.0406193894956675e-05,
+          "median": 6.313021953305718e-05,
+          "upper_95": 7.687238734232891e-05
+        },
+        "status": "PASS",
+        "u_statistic": 6.327577362974507e-05
+      },
+      "repair": "qwen128_vproj_source_aligned_repair.json.gz"
+    },
+    {
+      "arms_run": [
+        "KERNEL_ONLY",
+        "ROUNDING_ONLY",
+        "JOINT"
+      ],
+      "candidate_id": "mamba_seq64_forward_1_output",
+      "case_id": "mamba_seq64_input_proj",
+      "coherent_sources": [
+        "kernel",
+        "output_rounding"
+      ],
+      "decomposition": "mamba_seq64_input_proj_precision_decomposition.json",
+      "downstream_carrier_effect": {
+        "confidence": {
+          "lower_95": -0.00010471834233699111,
+          "median": 0.00028533983221414315,
+          "upper_95": 0.0015746642465816335
+        },
+        "status": "UNRESOLVED_4_STATE_PILOT",
+        "u_statistic": 0.0003920790359956359
+      },
+      "evidence_scope": "CAUSAL_PILOT",
+      "expected_states": 4,
+      "finite_repeat_repaired_source": {
+        "confidence": {
+          "lower_95": -0.0009067127503153601,
+          "median": 0.0007115173211329151,
+          "upper_95": 0.0012686981782259465
+        },
+        "status": "FAIL_CAUSAL_NONCOHERENT",
+        "u_statistic": 0.0005463946059352057
+      },
+      "full_arm": "JOINT",
+      "full_fp32_reference_equivalence": "NOT_MEASURED",
+      "full_source_repair": {
+        "analytic_expected_repaired_source_is_zero": true,
+        "downstream_carrier_effect_directional": false,
+        "finite_repeat_repaired_source_directional": false,
+        "removed_source_directional": false,
+        "repair_status": "SOURCE_DEBIASED_IN_EXPECTATION",
+        "sham_exact": true,
+        "source_aligned": true,
+        "verdict": "SOURCE_DEBIASED_IN_EXPECTATION_DOWNSTREAM_UNRESOLVED"
+      },
+      "old_arm": "KERNEL_ONLY",
+      "old_intervention_was_full_repair": false,
+      "removed_source": {
+        "confidence": {
+          "lower_95": -0.00029645914037246257,
+          "median": 0.0019073233306698967,
+          "upper_95": 0.007852784256584755
+        },
+        "status": "FAIL_CAUSAL_NONCOHERENT",
+        "u_statistic": 0.0023301894584667284
+      },
+      "repair": "mamba_seq64_input_proj_source_aligned_repair.json.gz"
+    }
+  ],
+  "claim_boundary": "These arms repair or debias the locally identified source. A candidate-repair difference proves that source affects real F+B. It does not prove that the repair arm equals an end-to-end FP32 training step; that comparison remains NOT_MEASURED. Rounding repair is exact in conditional expectation, not in each single low-precision materialization.",
+  "definitions": {
+    "JOINT": "FP32 MM plus coordinate-wise unbiased stochastic rounding",
+    "KERNEL_ONLY": "FP32 MM followed by the original deterministic low-dtype cast",
+    "ROUNDING_ONLY": "retain measured kernel residual and replace nearest rounding by coordinate-wise unbiased stochastic rounding"
+  },
+  "schema": "kernel-analyzer-source-aligned-repair-summary-v1",
+  "status": "COMPLETE_THREE_CASE_SOURCE_ALIGNED_REPAIR_AUDIT"
+}

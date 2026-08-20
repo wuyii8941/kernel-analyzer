@@ -1,0 +1,259 @@
+{
+  "architecture": "qwen",
+  "candidate_id": "qwen_seq64_forward_8_output",
+  "claim_boundary": "This pilot isolates only local MM accumulation from output rounding and inherited operand error. Rejection does not reject the original T1 precision bias; it rejects this local-accumulation explanation. No T4 claim.",
+  "direct_weight_carrier": {
+    "bootstrap_excludes_same_original_cluster_pairs": true,
+    "cluster_bootstrap_95": {
+      "lower_95": -0.019142058985961746,
+      "median": 0.001424502104692545,
+      "upper_95": 0.007825852207553349
+    },
+    "complete_coordinates": true,
+    "coordinates": 2097152,
+    "cross_state_inner_product_u": -0.00024037549056958132,
+    "gram": [
+      [
+        0.13041906544687437,
+        0.007825852207553332,
+        -0.019142058985961788,
+        0.0014245021046925543
+      ],
+      [
+        0.007825852207553332,
+        0.21533886803442936,
+        0.0036143137794894514,
+        0.004970680192416905
+      ],
+      [
+        -0.019142058985961788,
+        0.0036143137794894514,
+        0.39571008016201026,
+        -0.00013554224160792702
+      ],
+      [
+        0.0014245021046925543,
+        0.004970680192416905,
+        -0.00013554224160792702,
+        0.2966582327016851
+      ]
+    ],
+    "independent_states": true,
+    "parameter": "model.layers.0.self_attn.v_proj.weight",
+    "state_ids": [
+      "qwen3-1p7b-0096",
+      "qwen3-1p7b-0099",
+      "qwen3-1p7b-0102",
+      "qwen3-1p7b-0105"
+    ],
+    "state_vector_sha256": {
+      "qwen3-1p7b-0096": "dff9e5c1b9a74bef7a9b6539bb674b7daed5ec1d44263ccb5d5cfcab97816bf0",
+      "qwen3-1p7b-0099": "11f164954deb83ae018dc8871e03508ceca3b6ab8e153fd58c713c9a7c7d6164",
+      "qwen3-1p7b-0102": "f81b85d78fa0b2fe9821a361d11aad8efb671a5f08192a1edc9966c0da907818",
+      "qwen3-1p7b-0105": "852c0ebfe84c9e8c4c63396d9cbb2fd6baf1ec0692a5eb7136503c3bff85faf4"
+    },
+    "states": 4,
+    "status": "FAIL_CAUSAL_NONCOHERENT",
+    "streamed_complete_gram": true
+  },
+  "gates": {
+    "accumulation_intervention_nonnull_every_state": true,
+    "accumulation_intervention_reduces_fp32_sse_every_state": true,
+    "direct_weight_carrier_coherent": false,
+    "direct_weight_carrier_nonnull_every_state": true,
+    "restoration_sham_exact": true
+  },
+  "hypothesis_tested": "The coherent precision error is caused by the generated MM's local accumulation, holding its BF16 operands and BF16 output ABI fixed.",
+  "input_bank_sha256": "1e3091268f8301dcbe7823e9ebe498fd9467fba01f541dfa015b055929c68fdf",
+  "intervention": "Exact generated v_proj MM in FP32 followed by required BF16 ABI cast",
+  "release_capture_sha256": "1db24f76a39184c88a1dabc7278219adba31a64d8cd8bb6bd94bc0597349a2b3",
+  "result_sha256": "692eed513ffd48b156f0618964a1a006409e3eb8d2be412e98bfcb3d93d11170",
+  "schema": "kernel-analyzer-external-mm-accumulation-repair-v2",
+  "states": [
+    {
+      "carrier_changed_coordinates": 2035439,
+      "carrier_delta_l2": 0.3610735833644867,
+      "carrier_delta_max_abs": 0.01171875,
+      "repair_endpoint": {
+        "gradients": "cc4ab30aca08265bc18519d074a92d28e2add0d4c9efdeb6a6d239c71412be21",
+        "loss": "0991ad1436e0e0e54c70d55873efb3175d50203019517545a01f1176a240b424"
+      },
+      "repair_local": {
+        "candidate_vs_fp32_l2": 0.062386125326156616,
+        "candidate_vs_fp32_max_abs": 0.007292032241821289,
+        "candidate_vs_fp32_sse": 0.003892028238999837,
+        "changed_coordinates": 23,
+        "coordinates": 65536,
+        "fp32_sse_reduction": 5.6925575364630276e-11,
+        "l2_intervention": 0.0008761279750615358,
+        "max_abs_intervention": 0.00048828125,
+        "repair_vs_fp32_l2": 0.06238612160086632,
+        "repair_vs_fp32_max_abs": 0.007292032241821289,
+        "repair_vs_fp32_sse": 0.0038920281820742616
+      },
+      "repair_loss_changed": true,
+      "repair_parameter_gradients_changed": true,
+      "sham_endpoint": {
+        "gradients": "04ce7eb90dced4e90591b92512301d33b4b1d5166d65e15ad0a881088798ac1f",
+        "loss": "a60b329872058f20d3f98dc7045f4f7afe4230d9d8c0a2185fc350d38486eb93"
+      },
+      "sham_local": {
+        "candidate_vs_fp32_l2": 0.0,
+        "candidate_vs_fp32_max_abs": 0.0,
+        "candidate_vs_fp32_sse": 0.0,
+        "changed_coordinates": 0,
+        "coordinates": 65536,
+        "fp32_sse_reduction": 0.0,
+        "l2_intervention": 0.0,
+        "max_abs_intervention": 0.0,
+        "repair_vs_fp32_l2": 0.0,
+        "repair_vs_fp32_max_abs": 0.0,
+        "repair_vs_fp32_sse": 0.0
+      },
+      "standard_endpoint": {
+        "gradients": "04ce7eb90dced4e90591b92512301d33b4b1d5166d65e15ad0a881088798ac1f",
+        "loss": "a60b329872058f20d3f98dc7045f4f7afe4230d9d8c0a2185fc350d38486eb93"
+      },
+      "state_id": "qwen3-1p7b-0096"
+    },
+    {
+      "carrier_changed_coordinates": 2046614,
+      "carrier_delta_l2": 0.4639798104763031,
+      "carrier_delta_max_abs": 0.0201416015625,
+      "repair_endpoint": {
+        "gradients": "02c3d53f2815ad434441c8a97de7c5acef4689ed1a4d88b519922f00f6e01cd2",
+        "loss": "19703595890bad1a66764ae5f0b720742b7f6e154c38be404debecab5aaf81e4"
+      },
+      "repair_local": {
+        "candidate_vs_fp32_l2": 0.062567338347435,
+        "candidate_vs_fp32_max_abs": 0.006787776947021484,
+        "candidate_vs_fp32_sse": 0.003914671484124726,
+        "changed_coordinates": 24,
+        "coordinates": 65536,
+        "fp32_sse_reduction": 4.559019828320743e-12,
+        "l2_intervention": 8.37543630041182e-05,
+        "max_abs_intervention": 6.103515625e-05,
+        "repair_vs_fp32_l2": 0.062567338347435,
+        "repair_vs_fp32_max_abs": 0.006787776947021484,
+        "repair_vs_fp32_sse": 0.003914671479565706
+      },
+      "repair_loss_changed": true,
+      "repair_parameter_gradients_changed": true,
+      "sham_endpoint": {
+        "gradients": "eba314daa638702cd3d762e4f2c05ff752f9b8fbe4948670302ab8e0a669580d",
+        "loss": "4f4386e9ac71833ff0492f98242136c77d8010dc3b70f800f4257a1da59c108a"
+      },
+      "sham_local": {
+        "candidate_vs_fp32_l2": 0.0,
+        "candidate_vs_fp32_max_abs": 0.0,
+        "candidate_vs_fp32_sse": 0.0,
+        "changed_coordinates": 0,
+        "coordinates": 65536,
+        "fp32_sse_reduction": 0.0,
+        "l2_intervention": 0.0,
+        "max_abs_intervention": 0.0,
+        "repair_vs_fp32_l2": 0.0,
+        "repair_vs_fp32_max_abs": 0.0,
+        "repair_vs_fp32_sse": 0.0
+      },
+      "standard_endpoint": {
+        "gradients": "eba314daa638702cd3d762e4f2c05ff752f9b8fbe4948670302ab8e0a669580d",
+        "loss": "4f4386e9ac71833ff0492f98242136c77d8010dc3b70f800f4257a1da59c108a"
+      },
+      "state_id": "qwen3-1p7b-0099"
+    },
+    {
+      "carrier_changed_coordinates": 2024159,
+      "carrier_delta_l2": 0.6289218664169312,
+      "carrier_delta_max_abs": 0.01953125,
+      "repair_endpoint": {
+        "gradients": "fbfa9d7c7442b97f349c50593aff2e2f2606c4a05b2bfe5e8782f561ab157523",
+        "loss": "0405c4e347f36df7ccc232c56ffee1dba4f0899b9f8f860253a3bc2128b754c6"
+      },
+      "repair_local": {
+        "candidate_vs_fp32_l2": 0.06302059441804886,
+        "candidate_vs_fp32_max_abs": 0.006735563278198242,
+        "candidate_vs_fp32_sse": 0.003971595147285586,
+        "changed_coordinates": 26,
+        "coordinates": 65536,
+        "fp32_sse_reduction": 7.027493170719268e-12,
+        "l2_intervention": 0.00013866194058209658,
+        "max_abs_intervention": 0.0001220703125,
+        "repair_vs_fp32_l2": 0.06302059441804886,
+        "repair_vs_fp32_max_abs": 0.006735563278198242,
+        "repair_vs_fp32_sse": 0.003971595140258093
+      },
+      "repair_loss_changed": true,
+      "repair_parameter_gradients_changed": true,
+      "sham_endpoint": {
+        "gradients": "551627a0fa728713c65b4fce8c64d66978c9f09b6900b60c44cdc80affd19511",
+        "loss": "c47495dc0322d31affb54f8b5896dbc5d584c773e5800d5e6be310fd3771a9b4"
+      },
+      "sham_local": {
+        "candidate_vs_fp32_l2": 0.0,
+        "candidate_vs_fp32_max_abs": 0.0,
+        "candidate_vs_fp32_sse": 0.0,
+        "changed_coordinates": 0,
+        "coordinates": 65536,
+        "fp32_sse_reduction": 0.0,
+        "l2_intervention": 0.0,
+        "max_abs_intervention": 0.0,
+        "repair_vs_fp32_l2": 0.0,
+        "repair_vs_fp32_max_abs": 0.0,
+        "repair_vs_fp32_sse": 0.0
+      },
+      "standard_endpoint": {
+        "gradients": "551627a0fa728713c65b4fce8c64d66978c9f09b6900b60c44cdc80affd19511",
+        "loss": "c47495dc0322d31affb54f8b5896dbc5d584c773e5800d5e6be310fd3771a9b4"
+      },
+      "state_id": "qwen3-1p7b-0102"
+    },
+    {
+      "carrier_changed_coordinates": 2054231,
+      "carrier_delta_l2": 0.5445989966392517,
+      "carrier_delta_max_abs": 0.02325439453125,
+      "repair_endpoint": {
+        "gradients": "ec4fa6eaa1d5f625734278e66aab5e4311539213685eabb2e113ccaf7c8acb8c",
+        "loss": "6eaaee24d33cb7b5122651487d2b70a38559c2b54ccae49d6cad1b2e6f84813b"
+      },
+      "repair_local": {
+        "candidate_vs_fp32_l2": 0.06266849488019943,
+        "candidate_vs_fp32_max_abs": 0.006735563278198242,
+        "candidate_vs_fp32_sse": 0.0039273398281673335,
+        "changed_coordinates": 29,
+        "coordinates": 65536,
+        "fp32_sse_reduction": 1.0033196495840002e-11,
+        "l2_intervention": 0.0005036246730014682,
+        "max_abs_intervention": 0.00048828125,
+        "repair_vs_fp32_l2": 0.06266849488019943,
+        "repair_vs_fp32_max_abs": 0.006735563278198242,
+        "repair_vs_fp32_sse": 0.003927339818134137
+      },
+      "repair_loss_changed": true,
+      "repair_parameter_gradients_changed": true,
+      "sham_endpoint": {
+        "gradients": "378478415b4422b5bbea1e96aae21652352d807b6446729cd38091a45d507f86",
+        "loss": "63b1a2297e22d503c08beb3ad6e712045b6459552ab090f03114764adef5f8b2"
+      },
+      "sham_local": {
+        "candidate_vs_fp32_l2": 0.0,
+        "candidate_vs_fp32_max_abs": 0.0,
+        "candidate_vs_fp32_sse": 0.0,
+        "changed_coordinates": 0,
+        "coordinates": 65536,
+        "fp32_sse_reduction": 0.0,
+        "l2_intervention": 0.0,
+        "max_abs_intervention": 0.0,
+        "repair_vs_fp32_l2": 0.0,
+        "repair_vs_fp32_max_abs": 0.0,
+        "repair_vs_fp32_sse": 0.0
+      },
+      "standard_endpoint": {
+        "gradients": "378478415b4422b5bbea1e96aae21652352d807b6446729cd38091a45d507f86",
+        "loss": "63b1a2297e22d503c08beb3ad6e712045b6459552ab090f03114764adef5f8b2"
+      },
+      "state_id": "qwen3-1p7b-0105"
+    }
+  ],
+  "status": "COMPLETE_LOCAL_ACCUMULATION_CAUSAL_PILOT_REJECTED"
+}
