@@ -81,7 +81,11 @@ def write(path: Path, payload: dict[str, Any]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--architecture", choices=("qwen", "mamba", "phi", "deepseek8"), required=True)
+    parser.add_argument(
+        "--architecture",
+        choices=("qwen", "mamba", "phi", "deepseek8", "generic"),
+        required=True,
+    )
     parser.add_argument("--model", type=Path, required=True)
     parser.add_argument("--input-bank", type=Path, required=True)
     parser.add_argument("--campaign", type=Path, required=True)
@@ -90,19 +94,50 @@ def main() -> None:
     parser.add_argument("--shard-index", type=int, default=0)
     parser.add_argument("--shard-count", type=int, default=1)
     parser.add_argument("--expected-states", type=int, default=32)
+    parser.add_argument(
+        "--state-role",
+        choices=("ENGINEERING", "SCREENING", "CONFIRMATION"),
+    )
+    parser.add_argument(
+        "--state-indices",
+        help="Comma-separated original bank indices; used for state-specific dynamic schedules.",
+    )
+    parser.add_argument("--protocol", type=Path, default=PROTOCOL)
     parser.add_argument("--repeat", type=int, default=2)
     parser.add_argument("--sample-size", type=int, default=64)
     parser.add_argument("--metric-chunk-elements", type=int, default=1_048_576)
     parser.add_argument("--allow-graph-breaks", action="store_true")
     args = parser.parse_args()
-    protocol = json.loads(PROTOCOL.read_text())
+    protocol = json.loads(args.protocol.read_text())
+    protocol_sha256 = protocol.get("protocol_sha256") or hashlib.sha256(
+        json.dumps(protocol, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
     if not 0 <= args.shard_index < args.shard_count or args.repeat < 1:
         raise ValueError("invalid shard or repeat count")
     bank = json.loads(args.input_bank.read_text())
     records = bank.get("states", bank.get("records"))
     if len(records) != args.expected_states:
         raise RuntimeError("frozen input population changed")
-    selected = [row for index, row in enumerate(records) if index % args.shard_count == args.shard_index]
+    requested_indices = (
+        {int(value) for value in args.state_indices.split(",") if value}
+        if args.state_indices else None
+    )
+    if requested_indices is not None and (
+        min(requested_indices, default=0) < 0
+        or max(requested_indices, default=-1) >= len(records)
+    ):
+        raise ValueError("state index outside frozen input bank")
+    eligible = [
+        row for index, row in enumerate(records)
+        if (requested_indices is None or index in requested_indices)
+        and (args.state_role is None or row.get("role") == args.state_role)
+    ]
+    if args.state_role is not None and not eligible:
+        raise RuntimeError(f"input bank has no {args.state_role} states")
+    selected = [
+        row for index, row in enumerate(eligible)
+        if index % args.shard_count == args.shard_index
+    ]
     with gzip.open(args.campaign, "rt", encoding="utf-8") as handle:
         campaign = json.load(handle)
     if campaign["status"] != "COMPLETE_ALL_TRITON_FP32_REPLAY_PLAN":
@@ -121,7 +156,7 @@ def main() -> None:
     # the first state *inside the shard* can change Inductor's generated
     # schedule for value-sensitive model code (observed on DeepSeek), making a
     # shard silently target a different denominator from the state-0 capture.
-    warm_state = records[0]
+    warm_state = eligible[0]
     warm_tokens = warm_state.get("token_ids", warm_state.get("input_ids"))
     warm = torch.tensor([warm_tokens], dtype=torch.long, device=device)
     model.zero_grad(set_to_none=True)
@@ -139,7 +174,7 @@ def main() -> None:
             payload = json.load(handle)
         if payload["campaign_sha256"] != campaign["result_sha256"]:
             raise RuntimeError("existing shard binds another campaign")
-        if payload.get("protocol_sha256") != protocol["protocol_sha256"]:
+        if payload.get("protocol_sha256") != protocol_sha256:
             raise RuntimeError("existing shard lacks the frozen FP32 protocol binding")
     else:
         payload = {
@@ -149,7 +184,9 @@ def main() -> None:
             "model": str(args.model.resolve()),
             "input_bank_sha256": file_digest(args.input_bank),
             "campaign_sha256": campaign["result_sha256"],
-            "protocol_sha256": protocol["protocol_sha256"],
+            "protocol_sha256": protocol_sha256,
+            "state_role": args.state_role,
+            "state_indices": sorted(requested_indices) if requested_indices is not None else None,
             "campaign": str(args.campaign.resolve().relative_to(ROOT)),
             "inductor_buffer_origins": buffer_origin_certificate,
             "shard_index": args.shard_index,
@@ -157,6 +194,7 @@ def main() -> None:
             "repeat": args.repeat,
             "denominator": {
                 "frozen_states": len(records),
+                "eligible_states": len(eligible),
                 "shard_states": len(selected),
                 "triton_invocations_per_state": len(rows),
                 "planned_records": len(selected) * args.repeat * len(rows),
