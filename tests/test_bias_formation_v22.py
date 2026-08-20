@@ -95,7 +95,7 @@ def test_conditional_debias_aggregate_fails_closed_on_one_unresolved_condition()
     )
 
 
-def test_trajectory_does_not_require_fixed_global_direction():
+def test_growing_norm_is_separation_not_directional_bias():
     rows = [{"drift_norm": value} for value in [1.0, 0.7, 1.4, 1.1, 1.8, 1.5, 2.0, 2.2]]
     result = certify_trajectory_separation(
         rows,
@@ -106,8 +106,29 @@ def test_trajectory_does_not_require_fixed_global_direction():
             "directional_live_weight_accumulation": False,
         },
     )
-    assert result["status"] == BiasV22Status.TRAJECTORY_BIAS.value
+    assert result["status"] == BiasV22Status.TRAJECTORY_SEPARATION.value
     assert result["fixed_global_carrier_required"] is False
+    assert result["directional_persistence"] == "UNRESOLVED"
+    assert result["separation_is_not_bias_by_itself"] is True
+
+
+def test_directional_persistence_is_an_independent_gate():
+    rows = [{"drift_norm": 1.0 + 0.1 * i} for i in range(8)]
+    common = {
+        "repair_effect_present_every_step": True,
+        "matched_sham_exact": True,
+        "only_declared_parameter_updated": True,
+    }
+    confirmed = certify_trajectory_separation(
+        rows, gates=common, directional_persistence_gate=True,
+    )
+    rejected = certify_trajectory_separation(
+        rows, gates=common, directional_persistence_gate=False,
+    )
+    assert confirmed["status"] == BiasV22Status.TRAJECTORY_SEPARATION.value
+    assert confirmed["directional_persistence"] == "CONFIRMED"
+    assert rejected["status"] == BiasV22Status.TRAJECTORY_SEPARATION.value
+    assert rejected["directional_persistence"] == "NOT_CONFIRMED"
 
 
 def test_missing_sham_fails_closed():
@@ -134,7 +155,7 @@ def test_closed_full_step_scope_can_replace_single_parameter_scope():
             "full_step_two_arm_scope_closed": True,
         },
     )
-    assert result["status"] == BiasV22Status.TRAJECTORY_BIAS.value
+    assert result["status"] == BiasV22Status.TRAJECTORY_SEPARATION.value
 
 
 def test_scope_missing_fails_closed_even_when_drift_grows():

@@ -38,6 +38,18 @@ ALLOWED_FORMATION = {
     "NOT_MEASURED",
 }
 
+ALLOWED_SEPARATION = {
+    "TRAJECTORY_SEPARATION", "TRAJECTORY_EFFECT", "TRAJECTORY_UNRESOLVED",
+    "INVALID",
+}
+
+ALLOWED_PERSISTENCE = {"CONFIRMED", "NOT_CONFIRMED", "UNRESOLVED"}
+
+ALLOWED_ALIGNMENT = {
+    "ALIGNED", "ALIGNED_BASE_CONTRAST", "ALIGNED_SEMANTIC_SUPERSET",
+    "MISMATCH", "UNRESOLVED",
+}
+
 
 def validate_case(case: Mapping[str, Any]) -> None:
     """Fail closed on the scientific category errors found in older reports."""
@@ -63,6 +75,28 @@ def validate_case(case: Mapping[str, Any]) -> None:
     # local/gradient/update formation labels.
     if formation.get("label_source") == "TRAJECTORY":
         raise ValueError(f"{case['case_id']}: trajectory cannot label formation")
+
+    trajectory = case["trajectory"]
+    separation = trajectory.get("separation_status", trajectory.get("status"))
+    if separation not in ALLOWED_SEPARATION:
+        raise ValueError(f"{case['case_id']}: invalid trajectory separation status")
+    persistence = trajectory.get("directional_persistence")
+    if persistence not in ALLOWED_PERSISTENCE:
+        raise ValueError(f"{case['case_id']}: invalid directional persistence status")
+    alignment = trajectory.get("contrast_alignment")
+    if alignment not in ALLOWED_ALIGNMENT:
+        raise ValueError(f"{case['case_id']}: invalid contrast alignment")
+    if trajectory.get("same_contrast_full_chain") is True:
+        if persistence != "CONFIRMED" or not str(alignment).startswith("ALIGNED"):
+            raise ValueError(
+                f"{case['case_id']}: full chain lacks persistence/aligned contrast"
+            )
+    if separation == "TRAJECTORY_SEPARATION" and trajectory.get(
+        "separation_is_not_bias_by_itself"
+    ) is not True:
+        raise ValueError(
+            f"{case['case_id']}: separation must not be relabeled as bias"
+        )
 
     verdict = MechanismVerdict(case["mechanism"]["verdict"])
     if verdict == MechanismVerdict.VARIANCE_ONLY:

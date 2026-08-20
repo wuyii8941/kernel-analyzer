@@ -54,8 +54,11 @@
       "semantic_unit": "Z=HW^T; G=(softmax(Z)-onehot)/N; dH=GW; dW=G^T H",
       "trajectory": {
         "artifact": "results/trajectory/liger_trajectory.json",
+        "contrast_alignment": "ALIGNED",
+        "directional_persistence": "CONFIRMED",
         "final_drift_norm": 0.0022393549008995974,
         "fixed_global_direction_passed_old_gate": true,
+        "formation_contrast": "FP32_DW_ACCUMULATOR",
         "formation_label": false,
         "initial_drift_norm": 8.586806677537658e-06,
         "local_feedback": {
@@ -68,8 +71,12 @@
           "stable_fixed_carrier": true,
           "status": "PASS_SEUP_ANCHOR"
         },
-        "status": "TRAJECTORY_BIAS",
-        "steps": 32
+        "same_contrast_full_chain": true,
+        "separation_is_not_bias_by_itself": true,
+        "separation_status": "TRAJECTORY_SEPARATION",
+        "status": "TRAJECTORY_SEPARATION",
+        "steps": 32,
+        "trajectory_contrast": "FP32_DW_ACCUMULATOR"
       }
     },
     {
@@ -125,8 +132,11 @@
       "semantic_unit": "Y=XW^T; dX=QW; dW=Q^T X at lm_head input VJP",
       "trajectory": {
         "artifact": "results/coverage/cases/phi4_seq64_lmhead_dx_trajectory.json",
+        "contrast_alignment": "ALIGNED",
+        "directional_persistence": "CONFIRMED",
         "final_drift_norm": 9.185909584630281e-05,
         "fixed_global_direction_passed_old_gate": true,
+        "formation_contrast": "ANALYTIC_DX_MM_REPAIR",
         "formation_label": false,
         "initial_drift_norm": 2.127923607986304e-06,
         "local_feedback": {
@@ -139,8 +149,12 @@
           "stable_fixed_carrier": true,
           "status": "PASS_SEUP_POSITIVE"
         },
-        "status": "TRAJECTORY_BIAS",
-        "steps": 32
+        "same_contrast_full_chain": true,
+        "separation_is_not_bias_by_itself": true,
+        "separation_status": "TRAJECTORY_SEPARATION",
+        "status": "TRAJECTORY_SEPARATION",
+        "steps": 32,
+        "trajectory_contrast": "ANALYTIC_DX_MM_REPAIR"
       }
     },
     {
@@ -312,12 +326,19 @@
       },
       "trajectory": {
         "artifact": "results/coverage/cases/qwen64_vproj_trajectory.json",
+        "contrast_alignment": "MISMATCH",
+        "directional_persistence": "CONFIRMED",
         "final_drift_norm": 0.010890079662203789,
         "fixed_global_direction_passed_old_gate": true,
+        "formation_contrast": "JOINT_KERNEL_PLUS_UNBIASED_ROUNDING",
         "formation_label": false,
         "initial_drift_norm": 0.003998710308223963,
-        "status": "TRAJECTORY_BIAS",
-        "steps": 32
+        "same_contrast_full_chain": false,
+        "separation_is_not_bias_by_itself": true,
+        "separation_status": "TRAJECTORY_SEPARATION",
+        "status": "TRAJECTORY_SEPARATION",
+        "steps": 32,
+        "trajectory_contrast": "KERNEL_ONLY_FP32_MM_WITH_BF16_ABI"
       }
     },
     {
@@ -488,12 +509,19 @@
       },
       "trajectory": {
         "artifact": "results/coverage/cases/qwen128_vproj_trajectory.json",
+        "contrast_alignment": "MISMATCH",
+        "directional_persistence": "NOT_CONFIRMED",
         "final_drift_norm": 0.010251143015921116,
         "fixed_global_direction_passed_old_gate": false,
+        "formation_contrast": "ROUNDING_ONLY_UNBIASED_BF16",
         "formation_label": false,
         "initial_drift_norm": 0.004516110755503178,
-        "status": "TRAJECTORY_BIAS",
-        "steps": 32
+        "same_contrast_full_chain": false,
+        "separation_is_not_bias_by_itself": true,
+        "separation_status": "TRAJECTORY_SEPARATION",
+        "status": "TRAJECTORY_SEPARATION",
+        "steps": 32,
+        "trajectory_contrast": "KERNEL_ONLY_FP32_MM_WITH_BF16_ABI"
       }
     },
     {
@@ -561,8 +589,11 @@
       "semantic_unit": "p=softmax(a); da=p*(q-<p,q>) at layer-27 attention",
       "trajectory": {
         "artifact": "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json",
+        "contrast_alignment": "ALIGNED",
+        "directional_persistence": "CONFIRMED",
         "final_drift_norm": 0.008657907135784626,
         "fixed_global_direction_passed_old_gate": true,
+        "formation_contrast": "TRUE_FORWARD_P_AT_DS",
         "formation_label": false,
         "initial_drift_norm": 0.0044684866443276405,
         "local_feedback": {
@@ -575,8 +606,12 @@
           "stable_fixed_carrier": false,
           "status": "PASS_SEUP_NEGATIVE_CONTROL"
         },
-        "status": "TRAJECTORY_BIAS",
-        "steps": 32
+        "same_contrast_full_chain": true,
+        "separation_is_not_bias_by_itself": true,
+        "separation_status": "TRAJECTORY_SEPARATION",
+        "status": "TRAJECTORY_SEPARATION",
+        "steps": 32,
+        "trajectory_contrast": "TRUE_FORWARD_P_AT_DS"
       }
     },
     {
@@ -640,12 +675,19 @@
       "semantic_unit": "y=x*sigmoid(x); dx=q*sigmoid(x)*(1+x*(1-sigmoid(x)))",
       "trajectory": {
         "artifact": "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json",
+        "contrast_alignment": "ALIGNED_BASE_CONTRAST",
+        "directional_persistence": "NOT_CONFIRMED",
         "final_drift_norm": 0.08343788981437683,
         "fixed_global_direction_passed_old_gate": false,
+        "formation_contrast": "NATIVE_SILU_BACKWARD_PLUS_ANTITHETIC_ADAM_RESPONSE",
         "formation_label": false,
         "initial_drift_norm": 0.0020657628774642944,
-        "status": "TRAJECTORY_BIAS",
-        "steps": 32
+        "same_contrast_full_chain": false,
+        "separation_is_not_bias_by_itself": true,
+        "separation_status": "TRAJECTORY_SEPARATION",
+        "status": "TRAJECTORY_SEPARATION",
+        "steps": 32,
+        "trajectory_contrast": "NATIVE_SILU_BACKWARD"
       }
     },
     {
@@ -820,12 +862,19 @@
       },
       "trajectory": {
         "artifact": "results/coverage/cases/mamba_seq64_input_proj_trajectory.json",
+        "contrast_alignment": "MISMATCH",
+        "directional_persistence": "CONFIRMED",
         "final_drift_norm": 0.008289474993944168,
         "fixed_global_direction_passed_old_gate": true,
+        "formation_contrast": "JOINT_KERNEL_PLUS_UNBIASED_ROUNDING",
         "formation_label": false,
         "initial_drift_norm": 0.004031004849821329,
-        "status": "TRAJECTORY_BIAS",
-        "steps": 32
+        "same_contrast_full_chain": false,
+        "separation_is_not_bias_by_itself": true,
+        "separation_status": "TRAJECTORY_SEPARATION",
+        "status": "TRAJECTORY_SEPARATION",
+        "steps": 32,
+        "trajectory_contrast": "KERNEL_ONLY_FP32_MM_WITH_BF16_ABI"
       }
     },
     {
@@ -893,14 +942,21 @@
       "semantic_unit": "S_bwd=alpha*J_softmax(P)^T(DV^T); Gq=S_bwd*K; dWq=Gq^T H",
       "trajectory": {
         "artifact": "results/final/l23_attention_live_weight.json",
+        "contrast_alignment": "ALIGNED_SEMANTIC_SUPERSET",
+        "directional_persistence": "CONFIRMED",
         "final_drift_norm": 0.0006082479958422482,
         "fixed_global_direction_passed_old_gate": true,
+        "formation_contrast": "S_BWD_CAUSAL_REGION",
         "formation_label": false,
         "initial_drift_norm": 0.00032629986526444554,
-        "status": "TRAJECTORY_BIAS",
-        "steps": 32
+        "same_contrast_full_chain": true,
+        "separation_is_not_bias_by_itself": true,
+        "separation_status": "TRAJECTORY_SEPARATION",
+        "status": "TRAJECTORY_SEPARATION",
+        "steps": 32,
+        "trajectory_contrast": "CONSERVATIVE_S_K_REGION"
       }
     }
   ],
-  "schema": "kernel-analyzer-systematic-bias-audit-v1"
+  "schema": "kernel-analyzer-systematic-bias-audit-v2"
 }

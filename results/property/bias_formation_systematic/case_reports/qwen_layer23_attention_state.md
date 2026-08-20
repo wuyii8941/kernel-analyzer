@@ -34,7 +34,11 @@ F+B：S_bwd=alpha*J_softmax(P)^T(DV^T); Gq=S_bwd*K; dWq=Gq^T H
 
 ## 轨迹后果
 
-`TRAJECTORY_BIAS`，32 steps，drift norm `0.00032629986526444554` → `0.0006082479958422482`。轨迹不提供 formation 标签。
+separation：`TRAJECTORY_SEPARATION`；directional persistence：`CONFIRMED`。共 32 steps，drift norm `0.00032629986526444554` → `0.0006082479958422482`。
+
+formation contrast：`S_BWD_CAUSAL_REGION`；trajectory contrast：`CONSERVATIVE_S_K_REGION`；alignment：`ALIGNED_SEMANTIC_SUPERSET`；same-contrast full chain：`True`。
+
+参数距离增长只证明 causal separation，不单独证明方向性 persistence，也不提供 formation 标签。
 
 ## 下一项决定性实验
 

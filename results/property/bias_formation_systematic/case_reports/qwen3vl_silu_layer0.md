@@ -34,7 +34,11 @@ F+B：y=x*sigmoid(x); dx=q*sigmoid(x)*(1+x*(1-sigmoid(x)))
 
 ## 轨迹后果
 
-`TRAJECTORY_BIAS`，32 steps，drift norm `0.0020657628774642944` → `0.08343788981437683`。轨迹不提供 formation 标签。
+separation：`TRAJECTORY_SEPARATION`；directional persistence：`NOT_CONFIRMED`。共 32 steps，drift norm `0.0020657628774642944` → `0.08343788981437683`。
+
+formation contrast：`NATIVE_SILU_BACKWARD_PLUS_ANTITHETIC_ADAM_RESPONSE`；trajectory contrast：`NATIVE_SILU_BACKWARD`；alignment：`ALIGNED_BASE_CONTRAST`；same-contrast full chain：`False`。
+
+参数距离增长只证明 causal separation，不单独证明方向性 persistence，也不提供 formation 标签。
 
 ## 下一项决定性实验
 

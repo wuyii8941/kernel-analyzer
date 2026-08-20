@@ -58,10 +58,17 @@ def trajectory(row: dict[str, Any]) -> dict[str, Any]:
     certificate = row["trajectory_certificate"]
     return {
         "status": certificate["status"],
+        "separation_status": certificate["status"],
+        "directional_persistence": certificate["directional_persistence"],
         "steps": certificate["step_count"],
         "initial_drift_norm": certificate.get("initial_drift_norm"),
         "final_drift_norm": certificate.get("final_drift_norm"),
         "fixed_global_direction_passed_old_gate": row.get("old_fixed_direction_gate"),
+        "formation_contrast": row["formation_contrast"],
+        "trajectory_contrast": row["trajectory_contrast"],
+        "contrast_alignment": row["contrast_alignment"],
+        "same_contrast_full_chain": row["same_contrast_full_chain"],
+        "separation_is_not_bias_by_itself": True,
         "formation_label": False,
         "artifact": row["artifact"],
     }
@@ -686,7 +693,11 @@ F+B：{case['semantic_unit']}
 
 ## 轨迹后果
 
-`{case['trajectory']['status']}`，{case['trajectory']['steps']} steps，drift norm `{case['trajectory']['initial_drift_norm']}` → `{case['trajectory']['final_drift_norm']}`。轨迹不提供 formation 标签。{consequence}
+separation：`{case['trajectory']['separation_status']}`；directional persistence：`{case['trajectory']['directional_persistence']}`。共 {case['trajectory']['steps']} steps，drift norm `{case['trajectory']['initial_drift_norm']}` → `{case['trajectory']['final_drift_norm']}`。
+
+formation contrast：`{case['trajectory']['formation_contrast']}`；trajectory contrast：`{case['trajectory']['trajectory_contrast']}`；alignment：`{case['trajectory']['contrast_alignment']}`；same-contrast full chain：`{case['trajectory']['same_contrast_full_chain']}`。
+
+参数距离增长只证明 causal separation，不单独证明方向性 persistence，也不提供 formation 标签。{consequence}
 
 ## 下一项决定性实验
 
@@ -706,9 +717,9 @@ def main() -> None:
                 raise FileNotFoundError(f"{case['case_id']}: {relative}")
 
     protocol = {
-        "schema": "kernel-analyzer-systematic-bias-audit-protocol-v1",
-        "status": "FROZEN_EIGHT_CASE_EVIDENCE_AUDIT",
-        "question": "Why does each causally paired F+B implementation difference become directional training bias?",
+        "schema": "kernel-analyzer-systematic-bias-audit-protocol-v2",
+        "status": "UNIFIED_EIGHT_CASE_EVIDENCE_AUDIT",
+        "question": "Which F+B implementation differences form conditional bias, which persist directionally, and which close both claims under one repair contrast?",
         "case_denominator": 8,
         "mechanism_family_clusters": 7,
         "equations": {
@@ -724,6 +735,8 @@ def main() -> None:
             "Use conditional, trajectory, and global bias as separate claims.",
             "A global centered result is not a conditional null.",
             "A trajectory is consequence evidence and never labels formation.",
+            "A growing parameter-distance norm is causal separation, not directional persistence by itself.",
+            "Flash-style persistence requires a predeclared or calibration-frozen directional gate on the live trajectory.",
             "A supported mechanism requires a causal intervention and exact matched sham.",
             "Do not join evidence produced by different repaired contrasts.",
             "SEUP describes persistence only after formation evidence exists.",
@@ -731,7 +744,7 @@ def main() -> None:
         ],
     }
     write_json(OUT / "protocol.json", protocol)
-    write_json(OUT / "case_audit.json", {"schema": "kernel-analyzer-systematic-bias-audit-v1", "cases": rows})
+    write_json(OUT / "case_audit.json", {"schema": "kernel-analyzer-systematic-bias-audit-v2", "cases": rows})
 
     matrix_rows = []
     for case in rows:
@@ -750,7 +763,10 @@ def main() -> None:
             "mechanism_verdict": case["mechanism"]["verdict"],
             "bias_map_channel": case["bias_map"]["channel"],
             "bias_map_status": case["bias_map"]["status"],
-            "trajectory": case["trajectory"]["status"],
+            "trajectory_separation": case["trajectory"]["separation_status"],
+            "directional_persistence": case["trajectory"]["directional_persistence"],
+            "contrast_alignment": case["trajectory"]["contrast_alignment"],
+            "same_contrast_full_chain": case["trajectory"]["same_contrast_full_chain"],
             "next_decisive_test": case["next_decisive_test"],
         })
     matrix_path = OUT / "case_matrix.csv"
@@ -777,7 +793,7 @@ def main() -> None:
         "liger_fused_ce", "qwen_layer23_attention_state",
     ]
     write_json(OUT / "gap_plan.json", {
-        "schema": "kernel-analyzer-systematic-bias-gap-plan-v1",
+        "schema": "kernel-analyzer-systematic-bias-gap-plan-v2",
         "principle": "run only experiments that resolve a specific missing link in the two-channel parity equation",
         "ordered_cases": [
             {
@@ -788,11 +804,34 @@ def main() -> None:
         ],
     })
 
-    summary = f"""# 八案例 Bias Formation 系统审计
+    directional_cases = [
+        row["case_id"] for row in rows
+        if row["trajectory"]["directional_persistence"] == "CONFIRMED"
+    ]
+    separation_only_cases = [
+        row["case_id"] for row in rows
+        if row["trajectory"]["directional_persistence"] != "CONFIRMED"
+    ]
+    full_chain_cases = [
+        row["case_id"] for row in rows
+        if row["trajectory"]["same_contrast_full_chain"] is True
+    ]
+    summary = f"""# 八案例统一证据审计
 
 ## 结论
 
-8 个独立案例都具有完整或语义闭合的 F+B 边界和因果成对轨迹。它们不是同一个 kernel bug，也不应被包装成 8 个同质正例；但现在可以由同一个精确的两通道 Bias Formation Map 组织：
+“8 个案例”是审计分母，不是“8 个持久性 bias”。统一口径得到四个互不替代的计数：
+
+- **8/8 causal paired separation artifacts**：都有闭合 F+B、repair/sham 和 live-weight 参数距离；这只证明 implementation contrast 会让两臂分开。
+- **6/8 directional-persistence positives**：`{', '.join(directional_cases)}` 通过了轨迹局部的预声明/冻结方向门。
+- **6/8 matched formation-mechanism positives**：Liger、Phi、Qwen64/128 `v_proj`、saved-P、Qwen3-VL SiLU；Mamba 和 layer-23 在当前 antithetic formation protocol 下保留 partial/unresolved。
+- **4/8 same-contrast full chains**：`{', '.join(full_chain_cases)}` 将当前 formation mechanism 和 directional persistence 用同一个或闭合语义超集 repair 串起来。
+
+`{', '.join(separation_only_cases)}` 只有 causal separation，没有确认的方向性 persistence；不得称为完整 Flash-style case。
+
+这四个集合故意不相同。一个案例可以形成条件 bias 但未证明持续，也可以有旧 T1--T4 持久轨迹但当前 formation 干预使用了另一种 repair。
+
+## Formation mechanism
 
 - Liger、Phi：`EVENT_PAIRING_ASYMMETRY` 的 matched positives；
 - saved-P、Qwen3-VL SiLU：`RESPONSE_RECTIFICATION` 的两个独立 matched positives；
@@ -801,7 +840,7 @@ def main() -> None:
 - Qwen64：独立 16-repeat fixed-state confirmation 中，repair local residual 在 16/16 conditions centered，而 candidate-minus-repair 的 local、真实 gradient、SGD update 与 zero-moment AdamW update 均在 16/16 biased；
 - Mamba：16-condition joint-repair confirmation 得到 local 与 zero-moment AdamW 16/16 biased、repair local 16/16 centered，但真实 gradient/SGD 为 13/16 biased、3/16 unresolved；因此仍是 partial，而不是第七个 matched positive；
 - layer-23：16-condition exact projected-antithetic control 揭示 F+B 与 Adam response-even 分量，但自然 source fidelity 在部分条件未过冻结的 90% gate，因此不升级；
-- 因此严格 formation-mechanism positives 现在是 6/8；Qwen64/128 的新增结论只到 fixed-state formation，不与使用不同 repair contrast 的历史轨迹拼接。
+- 因此严格 formation-mechanism positives 是 6/8；Qwen64/128 的 fixed-state formation、Mamba 的 JOINT formation 与各自历史 KERNEL_ONLY 轨迹不能拼接。
 
 ## 为什么会出现系统性 bias
 
@@ -817,9 +856,9 @@ def main() -> None:
 
 ## 当前可以声称什么
 
-可以声称：在六个具有 matched 机制证据的独立 F+B 案例中，conditional training bias 均对应条件反对称消除失败；失败来自 source/event/transport 配对失衡或真实 optimizer 响应的偶分量。Qwen64/128 还直接证明：即使跨无关 state 不共享一个方向，同一 state 内的 deterministic source effect 仍可在 16/16 conditions 传到真实 gradient/update。error norm、raw tensor mean、BF16 dtype 与固定 global carrier 都不是统一判据。
+可以声称：在六个具有 matched formation 证据的独立 F+B 案例中，conditional training bias 均对应条件反对称消除失败；失败来自 source/event/transport 配对失衡或真实 optimizer 响应的偶分量。另有六个案例具有轨迹局部方向性 persistence，但只有四个把当前 formation 机制与 persistence 在相同 contrast 下闭合。error norm、raw tensor mean、BF16 dtype 与跨无关 state 的固定 global carrier 都不是统一判据。
 
-不能声称：该 map 已经能零样本预测所有未见算子；也不能把 local source repair 自动升级成完整 F+B/optimizer 去偏，把 global noncoherence 当成安全证书，或把旧 accumulation trajectory 与新的 rounding/joint repair 拼成同一条轨迹因果链。
+不能声称：8/8 都是持久性 bias；不能把 basis-free 参数距离增长自动叫 directional bias；不能把 local source repair 自动升级成完整 F+B/optimizer 去偏，也不能把旧 accumulation trajectory 与新的 rounding/joint repair 拼成同一条轨迹因果链。
 
 ## 下一步
 
@@ -827,8 +866,14 @@ def main() -> None:
 """
     (OUT / "scientific_summary.md").write_text(summary, encoding="utf-8")
     write_json(OUT / "summary.json", {
-        "status": "COMPLETE_EXISTING_EVIDENCE_SYSTEMATIC_AUDIT",
+        "status": "COMPLETE_UNIFIED_EIGHT_CASE_EVIDENCE_AUDIT",
         "cases": len(rows),
+        "paired_separation_cases": len(rows),
+        "directional_persistence_cases": len(directional_cases),
+        "directional_persistence_case_ids": directional_cases,
+        "separation_only_case_ids": separation_only_cases,
+        "same_contrast_full_chain_cases": len(full_chain_cases),
+        "same_contrast_full_chain_case_ids": full_chain_cases,
         "mechanism_family_clusters": len({row["mechanism_family"] for row in trajectory_index().values()}),
         "mechanism_verdict_counts": counts,
         "cross_case_property": "EFFECTIVE_ANTITHETIC_SYMMETRY_WORKING_PROPERTY",

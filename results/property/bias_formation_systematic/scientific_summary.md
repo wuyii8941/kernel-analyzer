@@ -1,8 +1,19 @@
-# 八案例 Bias Formation 系统审计
+# 八案例统一证据审计
 
 ## 结论
 
-8 个独立案例都具有完整或语义闭合的 F+B 边界和因果成对轨迹。它们不是同一个 kernel bug，也不应被包装成 8 个同质正例；但现在可以由同一个精确的两通道 Bias Formation Map 组织：
+“8 个案例”是审计分母，不是“8 个持久性 bias”。统一口径得到四个互不替代的计数：
+
+- **8/8 causal paired separation artifacts**：都有闭合 F+B、repair/sham 和 live-weight 参数距离；这只证明 implementation contrast 会让两臂分开。
+- **6/8 directional-persistence positives**：`liger_fused_ce, phi4_seq64_lmhead_dx, qwen64_vproj_mm, qwen_saved_p_seq128, mamba_seq64_input_proj, qwen_layer23_attention_state` 通过了轨迹局部的预声明/冻结方向门。
+- **6/8 matched formation-mechanism positives**：Liger、Phi、Qwen64/128 `v_proj`、saved-P、Qwen3-VL SiLU；Mamba 和 layer-23 在当前 antithetic formation protocol 下保留 partial/unresolved。
+- **4/8 same-contrast full chains**：`liger_fused_ce, phi4_seq64_lmhead_dx, qwen_saved_p_seq128, qwen_layer23_attention_state` 将当前 formation mechanism 和 directional persistence 用同一个或闭合语义超集 repair 串起来。
+
+`qwen128_vproj_mm, qwen3vl_silu_layer0` 只有 causal separation，没有确认的方向性 persistence；不得称为完整 Flash-style case。
+
+这四个集合故意不相同。一个案例可以形成条件 bias 但未证明持续，也可以有旧 T1--T4 持久轨迹但当前 formation 干预使用了另一种 repair。
+
+## Formation mechanism
 
 - Liger、Phi：`EVENT_PAIRING_ASYMMETRY` 的 matched positives；
 - saved-P、Qwen3-VL SiLU：`RESPONSE_RECTIFICATION` 的两个独立 matched positives；
@@ -11,7 +22,7 @@
 - Qwen64：独立 16-repeat fixed-state confirmation 中，repair local residual 在 16/16 conditions centered，而 candidate-minus-repair 的 local、真实 gradient、SGD update 与 zero-moment AdamW update 均在 16/16 biased；
 - Mamba：16-condition joint-repair confirmation 得到 local 与 zero-moment AdamW 16/16 biased、repair local 16/16 centered，但真实 gradient/SGD 为 13/16 biased、3/16 unresolved；因此仍是 partial，而不是第七个 matched positive；
 - layer-23：16-condition exact projected-antithetic control 揭示 F+B 与 Adam response-even 分量，但自然 source fidelity 在部分条件未过冻结的 90% gate，因此不升级；
-- 因此严格 formation-mechanism positives 现在是 6/8；Qwen64/128 的新增结论只到 fixed-state formation，不与使用不同 repair contrast 的历史轨迹拼接。
+- 因此严格 formation-mechanism positives 是 6/8；Qwen64/128 的 fixed-state formation、Mamba 的 JOINT formation 与各自历史 KERNEL_ONLY 轨迹不能拼接。
 
 ## 为什么会出现系统性 bias
 
@@ -27,9 +38,9 @@
 
 ## 当前可以声称什么
 
-可以声称：在六个具有 matched 机制证据的独立 F+B 案例中，conditional training bias 均对应条件反对称消除失败；失败来自 source/event/transport 配对失衡或真实 optimizer 响应的偶分量。Qwen64/128 还直接证明：即使跨无关 state 不共享一个方向，同一 state 内的 deterministic source effect 仍可在 16/16 conditions 传到真实 gradient/update。error norm、raw tensor mean、BF16 dtype 与固定 global carrier 都不是统一判据。
+可以声称：在六个具有 matched formation 证据的独立 F+B 案例中，conditional training bias 均对应条件反对称消除失败；失败来自 source/event/transport 配对失衡或真实 optimizer 响应的偶分量。另有六个案例具有轨迹局部方向性 persistence，但只有四个把当前 formation 机制与 persistence 在相同 contrast 下闭合。error norm、raw tensor mean、BF16 dtype 与跨无关 state 的固定 global carrier 都不是统一判据。
 
-不能声称：该 map 已经能零样本预测所有未见算子；也不能把 local source repair 自动升级成完整 F+B/optimizer 去偏，把 global noncoherence 当成安全证书，或把旧 accumulation trajectory 与新的 rounding/joint repair 拼成同一条轨迹因果链。
+不能声称：8/8 都是持久性 bias；不能把 basis-free 参数距离增长自动叫 directional bias；不能把 local source repair 自动升级成完整 F+B/optimizer 去偏，也不能把旧 accumulation trajectory 与新的 rounding/joint repair 拼成同一条轨迹因果链。
 
 ## 下一步
 

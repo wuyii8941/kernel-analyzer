@@ -328,7 +328,10 @@ different model and operator region.  Energy weighting shows that `99.87%` of
 the even component lies on sign-crossing coordinates and more than `99.99%`
 is generated in steps 1--2.  This is therefore a cold-start Adam rectification
 impulse, not evidence that Adam generates the same amount of bias at every
-step.  The later trajectory result asks whether training retains that impulse.
+step.  The paired trajectory shows causal parameter separation, but its
+step-1-frozen directional projection does not grow at steps 8/16/32.  SiLU is
+therefore a response-rectification formation positive and a directional-
+persistence negative under the frozen gate, not a complete Flash-style case.
 
 ### Prior-art boundary for optimizer rectification
 

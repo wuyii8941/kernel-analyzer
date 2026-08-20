@@ -34,7 +34,11 @@ F+B：p=softmax(a); da=p*(q-<p,q>) at layer-27 attention
 
 ## 轨迹后果
 
-`TRAJECTORY_BIAS`，32 steps，drift norm `0.0044684866443276405` → `0.008657907135784626`。轨迹不提供 formation 标签。
+separation：`TRAJECTORY_SEPARATION`；directional persistence：`CONFIRMED`。共 32 steps，drift norm `0.0044684866443276405` → `0.008657907135784626`。
+
+formation contrast：`TRUE_FORWARD_P_AT_DS`；trajectory contrast：`TRUE_FORWARD_P_AT_DS`；alignment：`ALIGNED`；same-contrast full chain：`True`。
+
+参数距离增长只证明 causal separation，不单独证明方向性 persistence，也不提供 formation 标签。
 
 对称四反事实 recurrence 已测：local accumulation L2 `0.004676968354223248`，feedback accumulation L2 `0.004862931525779159`，最大相对闭合残差 `3.3190557446489453e-08`。
 

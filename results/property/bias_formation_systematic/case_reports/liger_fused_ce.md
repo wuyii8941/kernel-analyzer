@@ -34,7 +34,11 @@ F+B：Z=HW^T; G=(softmax(Z)-onehot)/N; dH=GW; dW=G^T H
 
 ## 轨迹后果
 
-`TRAJECTORY_BIAS`，32 steps，drift norm `8.586806677537658e-06` → `0.0022393549008995974`。轨迹不提供 formation 标签。
+separation：`TRAJECTORY_SEPARATION`；directional persistence：`CONFIRMED`。共 32 steps，drift norm `8.586806677537658e-06` → `0.0022393549008995974`。
+
+formation contrast：`FP32_DW_ACCUMULATOR`；trajectory contrast：`FP32_DW_ACCUMULATOR`；alignment：`ALIGNED`；same-contrast full chain：`True`。
+
+参数距离增长只证明 causal separation，不单独证明方向性 persistence，也不提供 formation 标签。
 
 对称四反事实 recurrence 已测：local accumulation L2 `7.63580291049743e-05`，feedback accumulation L2 `0.0002732251622248212`，最大相对闭合残差 `3.4057641385143195e-08`。
 

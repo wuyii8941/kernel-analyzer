@@ -1,5 +1,48 @@
 # Directional-bias cases
 
+## Canonical evidence counting (2026-08-20)
+
+The eight-case Bias Formation roster is an **audit denominator**, not eight
+persistent-bias positives.  Four evidence layers are reported separately:
+
+1. `FORMATION_POSITIVE`: a matched intervention identifies a conditional
+   event/pairing asymmetry or response-even component;
+2. `TRAJECTORY_SEPARATION`: a closed candidate/repair live-weight run separates
+   above its initial distance;
+3. `DIRECTIONAL_PERSISTENCE`: a predeclared or calibration-frozen
+   trajectory-local signed component does not cancel;
+4. `SAME_CONTRAST_FULL_CHAIN`: the formation and persistence results use the
+   same repair contrast, or a declared closed semantic-region superset.
+
+Parameter-distance growth alone is not called directional bias.  A fixed
+absolute direction across unrelated natural inputs is not required, but a
+trajectory-local persistence witness is required for a Flash-style claim.
+
+| case | formation | paired separation | directional persistence | contrast alignment | same-contrast full chain |
+|---|---|---|---|---|---|
+| Liger fused CE | matched positive | yes | confirmed | aligned | yes |
+| Phi seq64 `lm_head dX` | matched positive | yes | confirmed | aligned | yes |
+| Qwen64 `v_proj` | matched JOINT positive | yes | confirmed for historical KERNEL_ONLY arm | mismatch | no |
+| Qwen128 `v_proj` | matched ROUNDING_ONLY positive | yes | not confirmed | mismatch | no |
+| Qwen saved-P | matched positive | yes | confirmed | aligned | yes |
+| Qwen3-VL SiLU | matched optimizer-response positive | yes | not confirmed | aligned base contrast | no |
+| Mamba `in_proj` | partial JOINT formation | yes | confirmed for KERNEL_ONLY arm | mismatch | no |
+| layer-23 attention region | semantic-region mechanism; parity follow-up unresolved | yes | confirmed | aligned semantic superset | yes |
+
+Canonical counts are therefore:
+
+- paired separation: **8/8**;
+- directional persistence: **6/8**;
+- matched formation mechanism: **6/8**;
+- current formation-to-persistence same-contrast full chain: **4/8**.
+
+The six formation positives and six persistence positives are not the same
+six.  Qwen128 and SiLU form bias without a confirmed persistent direction;
+Mamba and layer-23 have persistent trajectory evidence while their current
+formation-map follow-up is partial or bounded.  The project-wide strict
+Flash-style registry is a separate denominator and includes Qwen `lm_head dX`,
+which is not in this eight-case formation roster.
+
 ## Conditional moving-frame case (2026-08-20)
 
 The frozen bias-risk oracle found one new formation case outside its six-case
@@ -103,9 +146,11 @@ conditional F+B gate.  Compact evidence is in
 
 ## Bias Formation Map update (2026-08-20)
 
-The denominator remains **eight unique closed F+B trajectory cases**; a new
-optimizer experiment on Qwen3-VL SiLU is evidence for that existing case, not a
-ninth case. Six cases now have matched formation-mechanism evidence:
+The denominator remains **eight unique closed F+B paired-separation
+artifacts**; it is not an eight-case persistent-bias count.  A new optimizer
+experiment on Qwen3-VL SiLU is evidence for that existing case, not a ninth
+case. Six cases have matched formation-mechanism evidence, while a different
+set of six has directional-persistence evidence:
 
 - Liger and Phi support **event/pairing asymmetry**: the natural schedule or
   residual--transport pairing is directional, while a semantic-orbit or
@@ -135,7 +180,10 @@ asymmetry.  If the event population is antithetically closed and the complete
 F+B/optimizer response is odd, both terms vanish regardless of error variance.
 This is the current testable property; SEUP remains the downstream persistence
 condition. Qwen64/128 are now fixed-state conditional source-formation
-positives. Missing global 32-state carriers are not safety results. Mamba has
+positives, but their new JOINT/ROUNDING_ONLY formation repairs are not joined
+to the historical KERNEL_ONLY trajectories.  SiLU remains a response-
+rectification positive and a directional-persistence negative under its frozen
+trajectory gate. Missing global 32-state carriers are not safety results. Mamba has
 a complete local conditional result but a mixed real-backward result, so it
 remains partial. Layer-23 retains its semantic-region boundary and failed
 natural-fidelity gate.

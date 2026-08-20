@@ -8,7 +8,8 @@ keeps the three claims separate:
 * CONDITIONAL: a directional effect inside a predeclared comparable state
   condition.  A mixed population is never used to impute a conditional null.
 * TRAJECTORY: a causally paired candidate/repair trajectory separates in the
-  actual parameter state.  No fixed global carrier is required.
+  actual parameter state.  Separation is reported independently from signed
+  directional persistence; a growing norm alone is not called bias.
 * GLOBAL: the old cross-state population result, valid only when a
   state-comparability certificate is present.
 
@@ -42,6 +43,9 @@ class BiasV22Status(str, Enum):
     CONDITIONAL_BIAS = "CONDITIONAL_BIAS"
     CONDITIONAL_CENTERED = "CONDITIONAL_CENTERED"
     CONDITIONAL_UNRESOLVED = "CONDITIONAL_UNRESOLVED"
+    TRAJECTORY_SEPARATION = "TRAJECTORY_SEPARATION"
+    # Retained only so older serialized artifacts remain readable.  New
+    # certificates never emit this ambiguous status.
     TRAJECTORY_BIAS = "TRAJECTORY_BIAS"
     TRAJECTORY_EFFECT = "TRAJECTORY_EFFECT"
     TRAJECTORY_UNRESOLVED = "TRAJECTORY_UNRESOLVED"
@@ -348,14 +352,17 @@ def certify_trajectory_separation(
     policy: TrajectoryPolicy | None = None,
     drift_norm_key: str = "drift_norm",
     recurrence_residual_key: str | None = None,
+    directional_persistence_gate: bool | None = None,
 ) -> dict[str, Any]:
-    """Certify a paired trajectory without a fixed cross-state direction.
+    """Certify causal paired separation and report persistence separately.
 
     The input is a causal candidate/repair separation, not a population of
     unrelated states.  Existing runners may supply a declared live-weight
-    separation norm.  A matched sham and a nonzero repair effect are required;
-    the old ``directional_live_weight_accumulation`` gate is deliberately not
-    consulted.
+    separation norm.  A matched sham and a nonzero repair effect are required.
+    A growing norm proves causal trajectory separation, but does not by itself
+    distinguish signed drift from diffusion.  A separately supplied,
+    predeclared directional-persistence gate is therefore retained as an
+    independent field rather than silently discarded.
     """
 
     policy = policy or TrajectoryPolicy()
@@ -380,11 +387,14 @@ def certify_trajectory_separation(
     ]
     if len(rows) < policy.min_steps:
         return {
-            "schema": "kernel-analyzer-trajectory-bias-certificate-v1",
+            "schema": "kernel-analyzer-trajectory-separation-certificate-v2",
             "level": BiasLevel.TRAJECTORY.value,
             "status": BiasV22Status.TRAJECTORY_UNRESOLVED.value,
             "reason": "INSUFFICIENT_STEPS",
             "step_count": len(rows),
+            "directional_persistence": "UNRESOLVED",
+            "directional_persistence_gate": directional_persistence_gate,
+            "separation_is_not_bias_by_itself": True,
             "policy": policy.as_dict(),
         }
     try:
@@ -398,11 +408,14 @@ def certify_trajectory_separation(
                 raise ValueError("recurrence residual is nonfinite")
     except (KeyError, TypeError, ValueError) as exc:
         return {
-            "schema": "kernel-analyzer-trajectory-bias-certificate-v1",
+            "schema": "kernel-analyzer-trajectory-separation-certificate-v2",
             "level": BiasLevel.TRAJECTORY.value,
             "status": BiasV22Status.INVALID.value,
             "reason": str(exc),
             "step_count": len(rows),
+            "directional_persistence": "UNRESOLVED",
+            "directional_persistence_gate": directional_persistence_gate,
+            "separation_is_not_bias_by_itself": True,
             "policy": policy.as_dict(),
         }
     if missing_gates:
@@ -412,8 +425,8 @@ def certify_trajectory_separation(
         status = BiasV22Status.TRAJECTORY_UNRESOLVED.value
         reason = "RECURRENCE_NOT_CLOSED"
     elif norms[-1] > norms[0] * policy.minimum_final_over_initial:
-        status = BiasV22Status.TRAJECTORY_BIAS.value
-        reason = "PAIRED_PARAMETER_SEPARATION_WITHOUT_GLOBAL_DIRECTION"
+        status = BiasV22Status.TRAJECTORY_SEPARATION.value
+        reason = "CAUSAL_PAIRED_PARAMETER_SEPARATION"
     elif max(norms) > norms[0]:
         status = BiasV22Status.TRAJECTORY_EFFECT.value
         reason = "NONMONOTONE_PAIRED_SEPARATION"
@@ -421,7 +434,7 @@ def certify_trajectory_separation(
         status = BiasV22Status.TRAJECTORY_UNRESOLVED.value
         reason = "NO_SEPARATION_GROWTH"
     return {
-        "schema": "kernel-analyzer-trajectory-bias-certificate-v1",
+        "schema": "kernel-analyzer-trajectory-separation-certificate-v2",
         "level": BiasLevel.TRAJECTORY.value,
         "status": status,
         "reason": reason,
@@ -434,6 +447,15 @@ def certify_trajectory_separation(
         "missing_gates": missing_gates,
         "recurrence_max_abs": max(residuals) if residuals else None,
         "fixed_global_carrier_required": False,
+        "directional_persistence": (
+            "CONFIRMED"
+            if directional_persistence_gate is True
+            else "NOT_CONFIRMED"
+            if directional_persistence_gate is False
+            else "UNRESOLVED"
+        ),
+        "directional_persistence_gate": directional_persistence_gate,
+        "separation_is_not_bias_by_itself": True,
         "policy": policy.as_dict(),
     }
 

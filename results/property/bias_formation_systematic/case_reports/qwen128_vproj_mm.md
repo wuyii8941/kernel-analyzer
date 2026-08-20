@@ -34,7 +34,11 @@ F+B：Y=XW^T; dX=QW; dW=Q^T X at layer-0 v_proj
 
 ## 轨迹后果
 
-`TRAJECTORY_BIAS`，32 steps，drift norm `0.004516110755503178` → `0.010251143015921116`。轨迹不提供 formation 标签。
+separation：`TRAJECTORY_SEPARATION`；directional persistence：`NOT_CONFIRMED`。共 32 steps，drift norm `0.004516110755503178` → `0.010251143015921116`。
+
+formation contrast：`ROUNDING_ONLY_UNBIASED_BF16`；trajectory contrast：`KERNEL_ONLY_FP32_MM_WITH_BF16_ABI`；alignment：`MISMATCH`；same-contrast full chain：`False`。
+
+参数距离增长只证明 causal separation，不单独证明方向性 persistence，也不提供 formation 标签。
 
 ## 下一项决定性实验
 

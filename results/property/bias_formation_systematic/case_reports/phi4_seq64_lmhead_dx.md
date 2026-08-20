@@ -34,7 +34,11 @@ F+B：Y=XW^T; dX=QW; dW=Q^T X at lm_head input VJP
 
 ## 轨迹后果
 
-`TRAJECTORY_BIAS`，32 steps，drift norm `2.127923607986304e-06` → `9.185909584630281e-05`。轨迹不提供 formation 标签。
+separation：`TRAJECTORY_SEPARATION`；directional persistence：`CONFIRMED`。共 32 steps，drift norm `2.127923607986304e-06` → `9.185909584630281e-05`。
+
+formation contrast：`ANALYTIC_DX_MM_REPAIR`；trajectory contrast：`ANALYTIC_DX_MM_REPAIR`；alignment：`ALIGNED`；same-contrast full chain：`True`。
+
+参数距离增长只证明 causal separation，不单独证明方向性 persistence，也不提供 formation 标签。
 
 对称四反事实 recurrence 已测：local accumulation L2 `4.751236706890506e-05`，feedback accumulation L2 `2.3945317827997007e-06`，最大相对闭合残差 `7.037889645672179e-09`。
 

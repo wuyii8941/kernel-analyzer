@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Reclassify existing paired trajectories under the v2.2 bias levels.
+"""Reclassify existing paired trajectories under the unified evidence levels.
 
 This is an artifact audit only.  It does not change old verdicts and does not
-claim a mechanism property.  The old fixed-carrier gate is retained as a
-secondary field; basis-free live-weight separation is used for the trajectory
-level when the causal repair/sham gates are complete.
+claim a mechanism property.  Causal live-weight separation, directional
+persistence, and formation/trajectory contrast alignment are separate fields.
+A growing parameter-distance norm is never relabeled as directional bias.
 """
 
 from __future__ import annotations
@@ -29,6 +29,10 @@ SPECS = [
         "metric": "fp32_master_pair_l2",
         "old_status_key": "verdict",
         "old_direction_key": "all_64_frozen_carrier_projections_positive",
+        "formation_contrast": "FP32_DW_ACCUMULATOR",
+        "trajectory_contrast": "FP32_DW_ACCUMULATOR",
+        "contrast_alignment": "ALIGNED",
+        "same_contrast_full_chain": True,
     },
     {
         "case_id": "phi4_seq64_lmhead_dx",
@@ -38,6 +42,10 @@ SPECS = [
         "metric": "master_arm_distance_l2",
         "old_status_key": "status",
         "old_direction_key": "same_weight_carrier_direction_stable",
+        "formation_contrast": "ANALYTIC_DX_MM_REPAIR",
+        "trajectory_contrast": "ANALYTIC_DX_MM_REPAIR",
+        "contrast_alignment": "ALIGNED",
+        "same_contrast_full_chain": True,
     },
     {
         "case_id": "qwen64_vproj_mm",
@@ -47,6 +55,10 @@ SPECS = [
         "metric": "fp32_master_l2",
         "old_status_key": "status",
         "old_direction_key": "directional_live_weight_accumulation",
+        "formation_contrast": "JOINT_KERNEL_PLUS_UNBIASED_ROUNDING",
+        "trajectory_contrast": "KERNEL_ONLY_FP32_MM_WITH_BF16_ABI",
+        "contrast_alignment": "MISMATCH",
+        "same_contrast_full_chain": False,
     },
     {
         "case_id": "qwen128_vproj_mm",
@@ -56,6 +68,10 @@ SPECS = [
         "metric": "fp32_master_l2",
         "old_status_key": "status",
         "old_direction_key": "directional_live_weight_accumulation",
+        "formation_contrast": "ROUNDING_ONLY_UNBIASED_BF16",
+        "trajectory_contrast": "KERNEL_ONLY_FP32_MM_WITH_BF16_ABI",
+        "contrast_alignment": "MISMATCH",
+        "same_contrast_full_chain": False,
     },
     {
         "case_id": "qwen_saved_p_seq128",
@@ -65,6 +81,10 @@ SPECS = [
         "metric": "joint_master_l2",
         "old_status_key": "status",
         "old_direction_key": "directional_live_weight_accumulation",
+        "formation_contrast": "TRUE_FORWARD_P_AT_DS",
+        "trajectory_contrast": "TRUE_FORWARD_P_AT_DS",
+        "contrast_alignment": "ALIGNED",
+        "same_contrast_full_chain": True,
     },
     {
         "case_id": "qwen3vl_silu_layer0",
@@ -74,6 +94,10 @@ SPECS = [
         "metric": "fp32_master_l2",
         "old_status_key": "status",
         "old_direction_key": "directional_live_weight_accumulation",
+        "formation_contrast": "NATIVE_SILU_BACKWARD_PLUS_ANTITHETIC_ADAM_RESPONSE",
+        "trajectory_contrast": "NATIVE_SILU_BACKWARD",
+        "contrast_alignment": "ALIGNED_BASE_CONTRAST",
+        "same_contrast_full_chain": False,
     },
     {
         "case_id": "mamba_seq64_input_proj",
@@ -83,6 +107,10 @@ SPECS = [
         "metric": "fp32_master_l2",
         "old_status_key": "status",
         "old_direction_key": "directional_live_weight_accumulation",
+        "formation_contrast": "JOINT_KERNEL_PLUS_UNBIASED_ROUNDING",
+        "trajectory_contrast": "KERNEL_ONLY_FP32_MM_WITH_BF16_ABI",
+        "contrast_alignment": "MISMATCH",
+        "same_contrast_full_chain": False,
     },
     {
         "case_id": "qwen_layer23_attention_state",
@@ -95,6 +123,10 @@ SPECS = [
         "metric": "fp32_master_l2",
         "old_status_key": "status",
         "old_direction_key": "bf16_live_weight_feedback_observed",
+        "formation_contrast": "S_BWD_CAUSAL_REGION",
+        "trajectory_contrast": "CONSERVATIVE_S_K_REGION",
+        "contrast_alignment": "ALIGNED_SEMANTIC_SUPERSET",
+        "same_contrast_full_chain": True,
     },
 ]
 
@@ -230,12 +262,13 @@ def main() -> None:
         metric = spec["metric"]
         trajectory_rows = [{"drift_norm": float(row[metric])} for row in rows]
         gates = normalized_gates(payload, rows)
+        old_status = payload.get(spec["old_status_key"])
+        old_direction = payload.get("gates", {}).get(spec["old_direction_key"])
         cert = certify_trajectory_separation(
             trajectory_rows,
             gates=gates,
+            directional_persistence_gate=old_direction,
         )
-        old_status = payload.get(spec["old_status_key"])
-        old_direction = payload.get("gates", {}).get(spec["old_direction_key"])
         semantic_case_group = spec.get("semantic_case_group", spec["case_id"])
         cases.append({
             "case_id": spec["case_id"],
@@ -246,6 +279,10 @@ def main() -> None:
             "artifact": spec["path"],
             "old_status": old_status,
             "old_fixed_direction_gate": old_direction,
+            "formation_contrast": spec["formation_contrast"],
+            "trajectory_contrast": spec["trajectory_contrast"],
+            "contrast_alignment": spec["contrast_alignment"],
+            "same_contrast_full_chain": spec["same_contrast_full_chain"],
             "normalized_causal_gates": gates,
             "sham_validation": {
                 "nested_same_weight_exact": bool(
@@ -265,14 +302,16 @@ def main() -> None:
             "trajectory_certificate": cert,
             "property_analysis_status": "MECHANISM_NOT_IDENTIFIED",
             "claim_boundary": (
-                "Trajectory-level causal separation only; conditional/global bias "
-                "and P1-P6 mechanism claims require separate evidence."
+                "Causal trajectory separation and signed directional persistence "
+                "are separate claims.  A full mechanism-to-persistence chain also "
+                "requires the formation and trajectory repair contrasts to align."
             ),
         })
     result = {
-        "schema": "kernel-analyzer-bias-level-reclassification-v1",
-        "definition": "v2.2 conditional/trajectory/global observation levels",
-        "old_fixed_carrier_gate_is_not_trajectory_requirement": True,
+        "schema": "kernel-analyzer-bias-level-reclassification-v2",
+        "definition": "formation, causal separation, directional persistence, and same-contrast full chain",
+        "fixed_global_cross_state_direction_is_not_required": True,
+        "trajectory_local_directional_persistence_is_required_for_flash_style": True,
         "strict_complete_case_gate": {
             "required": [
                 "repair_effect_present_every_step",
@@ -280,9 +319,13 @@ def main() -> None:
                 "parameter_scope_closed",
                 "at_least_8_live_steps",
                 "finite_drift_norms",
-                "final_separation_greater_than_initial",
+                "final_separation_greater_than_initial_for_separation",
             ],
-            "note": "A raw trajectory artifact without an exact sham is excluded, not deduplicated.",
+            "note": (
+                "A raw trajectory artifact without an exact sham is excluded. "
+                "Growing norm certifies separation only; directional persistence "
+                "and same-contrast closure are additional gates."
+            ),
         },
         "cases": cases,
         "excluded_artifacts": EXCLUDED_ARTIFACTS,
@@ -306,42 +349,50 @@ def main() -> None:
     result["counts"]["prior_fixed_direction_confirmed"] = sum(
         case["old_fixed_direction_gate"] is True for case in cases
     )
-    result["counts"]["trajectory_only_without_fixed_direction"] = sum(
+    result["counts"]["directional_persistence_confirmed"] = sum(
+        case["trajectory_certificate"]["directional_persistence"] == "CONFIRMED"
+        for case in cases
+    )
+    result["counts"]["separation_without_directional_persistence"] = sum(
         case["old_fixed_direction_gate"] is not True for case in cases
+    )
+    result["counts"]["same_contrast_full_chain"] = sum(
+        case["same_contrast_full_chain"] is True for case in cases
     )
     result["counts"]["excluded_artifacts"] = len(EXCLUDED_ARTIFACTS)
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "trajectory_reclassification.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
     lines = [
-        "# v2.2 trajectory-level reclassification",
+        "# Unified trajectory evidence audit",
         "",
-        "This is an artifact audit, not a new formation experiment.  v2.1 fixed",
-        "carrier failures are not used as trajectory negatives.  Mechanism and",
-        "property claims remain unresolved until the original P1-P6 theory is",
-        "tested with endpoint-level interventions.",
+        "This is an artifact audit, not a new experiment.  It separates causal",
+        "paired parameter separation from signed directional persistence and from",
+        "same-contrast mechanism-to-persistence closure.",
         "",
-        "| case | semantic group | old status | old fixed-direction gate | v2.2 trajectory status | initial norm | final norm |",
-        "|---|---|---|---:|---|---:|---:|",
+        "| case | separation | directional persistence | contrast alignment | same-contrast full chain | initial norm | final norm |",
+        "|---|---|---|---|---:|---:|---:|",
     ]
     for case in cases:
         cert = case["trajectory_certificate"]
         lines.append(
-            f"| {case['case_id']} ({case['mechanism_family']}) | {case['semantic_case_group']} | {case['old_status']} | {case['old_fixed_direction_gate']} | "
-            f"{cert['status']} | {cert.get('initial_drift_norm', '—')} | {cert.get('final_drift_norm', '—')} |"
+            f"| {case['case_id']} | {cert['status']} | "
+            f"{cert['directional_persistence']} | {case['contrast_alignment']} | "
+            f"{case['same_contrast_full_chain']} | {cert.get('initial_drift_norm', '—')} | "
+            f"{cert.get('final_drift_norm', '—')} |"
         )
     lines += [
         "",
         "The table contains only complete artifact rows.  The strict count is",
         f"{len(cases)} complete paired trajectory artifacts and {len({case['semantic_case_group'] for case in cases})} semantic cases.",
-        f"{sum(case['old_fixed_direction_gate'] is True for case in cases)} retain the older fixed-direction gate; "
-        f"{sum(case['old_fixed_direction_gate'] is not True for case in cases)} are trajectory-only observations.",
+        f"{sum(case['old_fixed_direction_gate'] is True for case in cases)} have confirmed trajectory-local directional persistence; "
+        f"{sum(case['old_fixed_direction_gate'] is not True for case in cases)} have separation without that proof.",
+        f"{sum(case['same_contrast_full_chain'] is True for case in cases)} connect the current formation mechanism to persistence using an aligned repair contrast.",
         "Excluded candidates (including the incomplete layer-23 key repair) are",
         "listed in the JSON audit and are not silently counted as duplicates.",
         "",
-        "A v2.2 trajectory case means a complete causal candidate/repair run has",
-        "basis-free live parameter separation above its initial separation.  It does",
-        "not mean that the local residual is globally biased, nor that a common",
-        "property has been discovered.",
+        "All eight are paired-separation artifacts.  Only the directional subset",
+        "may be called persistent Flash-style cases, and only an aligned-contrast",
+        "subset closes the currently identified formation mechanism to persistence.",
     ]
     (OUT / "trajectory_reclassification.md").write_text("\n".join(lines) + "\n")
     print(json.dumps({"output": str(OUT), "counts": counts}))
