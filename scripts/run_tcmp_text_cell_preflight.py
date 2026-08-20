@@ -69,7 +69,9 @@ def main() -> None:
     device = torch.device(args.device)
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA unavailable")
-    torch.cuda.empty_cache(); torch.cuda.reset_peak_memory_stats(device)
+    device_index = device.index if device.index is not None else torch.cuda.current_device()
+    torch.cuda.set_device(device_index)
+    torch.cuda.empty_cache(); torch.cuda.reset_peak_memory_stats(device_index)
     torch.manual_seed(20260820); torch.cuda.manual_seed_all(20260820)
     torch.backends.cuda.matmul.allow_tf32 = False
     model = AutoModelForCausalLM.from_pretrained(
@@ -97,8 +99,8 @@ def main() -> None:
             })
             del loss
         del values
-    peak_allocated = torch.cuda.max_memory_allocated(device)
-    peak_reserved = torch.cuda.max_memory_reserved(device)
+    peak_allocated = torch.cuda.max_memory_allocated(device_index)
+    peak_reserved = torch.cuda.max_memory_reserved(device_index)
     payload = {
         "schema": "kernel-analyzer-tcmp-text-cell-preflight-v1",
         "cell_id": args.cell_id,
