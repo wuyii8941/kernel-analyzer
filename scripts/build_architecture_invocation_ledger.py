@@ -62,6 +62,10 @@ EXTRA_FORMULAS: dict[str, dict[str, str]] = {
         "map": "y=x; y[index[i]] += alpha*source[i]",
         "adjoint": "dx=q; dsource=alpha*index_select(q,index)",
     },
+    "aten.index_add_.default": {
+        "map": "x is mutated by x[index[i]] += alpha*source[i]",
+        "adjoint": "functional value map: dx=q; dsource=alpha*index_select(q,index)",
+    },
     "aten.index_select.default": {
         "map": "y[i]=x[index[i]] along dim",
         "adjoint": "dx=index_add(zeros,index,q)",
@@ -95,6 +99,10 @@ EXTRA_FORMULAS: dict[str, dict[str, str]] = {
         "map": "dx=mask*q/scale_inverse",
         "adjoint": "actual dropout VJP program",
     },
+    "aten.nonzero.default": {
+        "map": "return integer coordinates of entries x != 0 in program order",
+        "adjoint": "discrete integer output has no classical tensor VJP",
+    },
     "aten.ne.Scalar": {
         "map": "y=(x!=c)",
         "adjoint": "Boolean comparison has no differentiable output",
@@ -110,6 +118,10 @@ EXTRA_FORMULAS: dict[str, dict[str, str]] = {
     "aten.scatter.value": {
         "map": "y is x with scalar value written at index coordinates",
         "adjoint": "dx=q outside overwritten coordinates; scalar value is not a tensor edge",
+    },
+    "aten.scatter_.value": {
+        "map": "x is mutated by writing scalar value at index coordinates",
+        "adjoint": "functional value map: dx=q outside overwritten coordinates; scalar value is not a tensor edge",
     },
     "aten.silu_backward.default": {
         "map": "dx=q*sigmoid(x)*(1+x*(1-sigmoid(x)))",
@@ -265,7 +277,11 @@ def align_origin_witness(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--architecture", choices=("qwen", "mamba", "moe", "phi", "deepseek8"), required=True)
+    parser.add_argument(
+        "--architecture",
+        choices=("qwen", "mamba", "moe", "phi", "deepseek8", "generic"),
+        required=True,
+    )
     parser.add_argument("--inventory", required=True, type=Path)
     parser.add_argument("--origin-inventory", type=Path)
     parser.add_argument("--output", required=True, type=Path)
@@ -404,9 +420,10 @@ def main() -> None:
             "eager_aot_binding": {
                 "status": (
                     "EXACT_EAGER_AUTOGRAD_FB_IDENTITY_AOT_NODE_PENDING"
-                    if args.architecture == "qwen" and not fb_status.startswith("UNRESOLVED")
+                    if args.architecture in {"qwen", "generic"}
+                    and not fb_status.startswith("UNRESOLVED")
                     else "UNRESOLVED_EAGER_AUTOGRAD_FB_IDENTITY"
-                    if args.architecture == "qwen"
+                    if args.architecture in {"qwen", "generic"}
                     else "NOT_CAPTURED_EAGER_ONLY_ARCHITECTURE_ATLAS"
                 ),
                 "aot_node_ids": compact_ids([]),
