@@ -295,12 +295,24 @@ def _bind_forward_autograd_sequence_numbers(
                 if output_sequences and output_sequences != {
                     profiler_sequence_nr
                 }:
-                    raise RuntimeError(
-                        "profiler sequence counter disagrees with exact "
-                        "forward output grad_fn at "
-                        f"{event.invocation_id}: {profiler_sequence_nr} != "
-                        f"{sorted(output_sequences)}"
+                    # Composite/nested execution can expose a profiler
+                    # boundary whose sequence counter belongs to the outer
+                    # autograd node while the dispatched tensor carries the
+                    # inner node's exact grad_fn sequence.  Neither identity
+                    # may be substituted for the other.  Keep the invocation
+                    # in the denominator and fail this binding closed instead
+                    # of aborting the complete-step inventory.
+                    enriched.append(
+                        replace(
+                            event,
+                            sequence_binding_status=(
+                                "UNRESOLVED_PROFILER_COUNTER_OUTPUT_"
+                                "SEQUENCE_DISAGREEMENT"
+                            ),
+                            **audit_fields,
+                        )
                     )
+                    continue
                 enriched.append(
                     replace(
                         event,

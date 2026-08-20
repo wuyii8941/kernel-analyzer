@@ -26,8 +26,8 @@ def digest(value: Any) -> str:
 
 def unique_runtime_pairs(
     runs: list[dict[str, Any]], observation_stability: dict[str, Any],
-) -> list[tuple[dict[str, Any], list[int]]]:
-    """Collapse only exact repeat observations of the same compiled pair."""
+) -> list[tuple[dict[str, Any], list[int], bool]]:
+    """Group one compiled pair while exposing repeat-identity disagreement."""
 
     grouped: dict[tuple[int, int], list[dict[str, Any]]] = {}
     order: list[tuple[int, int]] = []
@@ -69,11 +69,21 @@ def unique_runtime_pairs(
                         unique[key] for key in sorted(unique)
                     ]
                 canonical.append(digest(value))
-            if len(set(canonical)) != 1:
-                raise RuntimeError(
-                    "repeated segmented AOT pair has nonidentical runtime identity evidence"
-                )
-        result.append((observations[0], [int(row["run_index"]) for row in observations]))
+            identity_evidence_exact = len(set(canonical)) == 1
+        else:
+            identity_evidence_exact = True
+        # Dynamic programs (notably MoE routing) can execute the same compiled
+        # graph pair more than once while exposing different runtime objects to
+        # the global identity registry.  The graph-local program is still a
+        # valid proof object, but the differing cross-segment identity evidence
+        # must remain unresolved.  Retain the first observation as the local
+        # graph witness and record the disagreement instead of either merging
+        # identities or dropping the graph from the denominator.
+        result.append((
+            observations[0],
+            [int(row["run_index"]) for row in observations],
+            identity_evidence_exact,
+        ))
     return result
 
 
@@ -164,7 +174,7 @@ def main() -> None:
     unique_pairs = unique_runtime_pairs(
         bridge["runs"], outer.get("observation_stability", {})
     )
-    for run, observed_run_indices in unique_pairs:
+    for run, observed_run_indices, repeat_identity_evidence_exact in unique_pairs:
         forward_index = int(run["forward_phase"]["graph_index"])
         backward_index = int(run["backward_phase"]["graph_index"])
         pair = f"run{run['run_index']}:forward{forward_index}:backward{backward_index}"
@@ -264,7 +274,8 @@ def main() -> None:
             "pair": pair, "forward_graph_index": forward_index,
             "backward_graph_index": backward_index,
             "observed_run_indices": observed_run_indices,
-            "repeat_observations_exact": len(observed_run_indices) > 1,
+            "repeat_observations_present": len(observed_run_indices) > 1,
+            "repeat_runtime_identity_evidence_exact": repeat_identity_evidence_exact,
             "runtime_identity_gates": run["gates"],
             "backward_placeholder_runtime_identity_aliases": dict(sorted(aliases.items())),
             "backward_placeholder_runtime_identity_equivalence_classes": dict(
@@ -365,7 +376,12 @@ def main() -> None:
                 index for phase, index in graphs if phase == "BACKWARD" and index not in backward_pair
             ),
             "pairing_uses_runtime_identity_only": True,
-            "cross_segment_unresolved_edges_remain_explicit": not all(bridge["gates"].values()),
+            "cross_segment_unresolved_edges_remain_explicit": (
+                not all(bridge["gates"].values())
+                or not all(
+                    row["repeat_runtime_identity_evidence_exact"] for row in pair_rows
+                )
+            ),
             "cross_segment_origin_bindings": cross_segment_origin_bindings,
             "cross_segment_origin_binding_rule": "unique exact seq_nr plus complete marker-free source stack",
         },

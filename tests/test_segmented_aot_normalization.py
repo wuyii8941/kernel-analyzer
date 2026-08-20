@@ -35,9 +35,10 @@ def test_exact_repeat_runtime_pairs_are_deduplicated() -> None:
     )
     assert len(rows) == 1
     assert rows[0][1] == [0, 3]
+    assert rows[0][2] is True
 
 
-def test_repeat_pair_requires_stability_and_identical_identity_evidence() -> None:
+def test_repeat_pair_requires_stability_and_fails_closed_on_identity_variation() -> None:
     with pytest.raises(RuntimeError, match="lacks exact observation stability"):
         unique_runtime_pairs([runtime_pair(0), runtime_pair(3)], {})
 
@@ -49,8 +50,10 @@ def test_repeat_pair_requires_stability_and_identical_identity_evidence() -> Non
         "source_node": "other",
         "value_kind": "FORWARD_OUTPUT",
     })
-    with pytest.raises(RuntimeError, match="nonidentical runtime identity evidence"):
-        unique_runtime_pairs(
-            [runtime_pair(0), changed],
-            {"repeat_loss_exact": True},
-        )
+    rows = unique_runtime_pairs(
+        [runtime_pair(0), changed],
+        {"repeat_loss_exact": True},
+    )
+    assert len(rows) == 1
+    assert rows[0][1] == [0, 3]
+    assert rows[0][2] is False

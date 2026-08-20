@@ -55,7 +55,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--architecture",
-        choices=("qwen", "mamba", "moe", "phi", "deepseek8"),
+        choices=("qwen", "mamba", "moe", "phi", "deepseek8", "generic"),
         required=True,
     )
     parser.add_argument("--inventory", type=Path, required=True)
@@ -73,6 +73,7 @@ def main() -> None:
     if aot["status"] not in {
         "COMPLETE_AOT_FB_CAPTURE",
         "COMPLETE_EXECUTION_PARTIAL_CROSS_SEGMENT_BRIDGE",
+        "COMPLETE_SEGMENT_LOCAL_CAPTURE_WITH_EXPLICIT_CROSS_SEGMENT_BOUNDARIES",
     }:
         raise ValueError("AOT capture invalid")
 
