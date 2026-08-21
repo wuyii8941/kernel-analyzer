@@ -92,3 +92,11 @@ reduction/lm-head family when an executable semantics-preserving orbit and
 closed VJP exist. It is not yet a universal all-operator safety oracle. The
 machine-readable search ledger is
 `results/property/tcmp_allop_v1/semantic_family_search_summary.json`.
+The follow-up candidate pool is now generated mechanically from the same
+metadata, with 791 cells reduced to 493 implementation-pattern
+representatives (485 pre-measurement candidates after the explicit existing
+case exclusions). It contains no residual values or trajectory labels and is
+stored at
+`results/property/tcmp_allop_v1/semantic_family_heldout_pool_v1.json`; dynamic
+reach/orbit/finite-residual gates remain mandatory before any experiment is
+promoted.
