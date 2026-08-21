@@ -116,9 +116,6 @@ def artifact_binding(path: Path) -> str:
 
 def load_model(architecture: str, path: Path, device: torch.device) -> torch.nn.Module:
     if architecture == "mamba":
-        modeling_mamba.selective_scan_fn = None
-        modeling_mamba.mamba_inner_fn = None
-        modeling_mamba.selective_state_update = None
         model = MambaForCausalLM.from_pretrained(path, dtype=torch.bfloat16, local_files_only=True)
     elif architecture == "gemma3":
         model = Gemma3ForConditionalGeneration.from_pretrained(

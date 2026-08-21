@@ -1,0 +1,35 @@
+{
+  "schema": "kernel-analyzer-mamba-new-implementation-search-v1",
+  "model": "mamba_130m",
+  "sequence_length": 128,
+  "runtime_release": {
+    "path": "runtime_release_v2",
+    "generated_compute_invocations": 980,
+    "triton_invocations": 592,
+    "extern_invocations": 363,
+    "direct_torch_op_invocations": 24,
+    "direct_aten_invocations": 1,
+    "unresolved": 0
+  },
+  "screen": {
+    "states": 8,
+    "phase": "forward_and_backward_local_precision_screen",
+    "nonzero_endpoint_patterns": 894,
+    "claim_boundary": "screen_only; no_parameter_bias_verdict"
+  },
+  "selected_candidate": {
+    "candidate_id": "mamba130m_seq128_backward779_conv_silu",
+    "semantic_family": "state_space_convolution_backward",
+    "region_id": "backward:779",
+    "symbol": "triton_red_fused_convolution_backward_silu_backward_slice_backward_16",
+    "endpoint": "out_ptr1",
+    "selection_reason": "new_state_space_convolution_backward_family; not_existing_gemm_or_lm_head_representative"
+  },
+  "engineering_attempt": {
+    "status": "BLOCKED_COMPILE_TIMEOUT",
+    "reason": "fresh AOT backward recompilation did not finish within bounded engineering run",
+    "artifact": "mamba_backward779_t1_4.json not produced",
+    "claim_boundary": "UNRESOLVED; not a negative and not a bias case"
+  },
+  "interpretation": "Mamba coverage and local residual screening are complete for this release, but no new strict F+B bias case is claimed until the selected Triton region can be replayed with complete parameter reach."
+}

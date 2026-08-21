@@ -29,6 +29,7 @@ from scripts.run_generated_fp32_screen import (  # noqa: E402
     file_digest, gradient_digest, load_model, tensor_digest,
 )
 from scripts.targeted_external_intervention import TargetedExternalIntervention  # noqa: E402
+from scripts.targeted_triton_intervention import TargetedTritonIntervention  # noqa: E402
 
 
 def canonical_hash(value: Any) -> str:
@@ -91,6 +92,10 @@ def main() -> None:
     parser.add_argument("--repeat", type=int, default=2)
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--bootstrap-draws", type=int, default=4000)
+    parser.add_argument(
+        "--allow-graph-breaks", action="store_true",
+        help="reuse a release frozen with graph breaks instead of forcing one full graph",
+    )
     args = parser.parse_args()
     if args.states < 2 or args.repeat != 2:
         raise ValueError("T1 requires at least two states and exactly two repeats")
@@ -114,7 +119,9 @@ def main() -> None:
     configure_candidate_runtime(24000)
     model = load_model("mamba", args.model, device)
     start = len(PyCodeCache.modules)
-    candidate = torch.compile(LossStep(model), backend="inductor", fullgraph=True, dynamic=False)
+    candidate = torch.compile(
+        LossStep(model), backend="inductor", fullgraph=not args.allow_graph_breaks, dynamic=False,
+    )
     warm_tokens = states[0].get("token_ids", states[0].get("input_ids"))
     warm = torch.tensor([warm_tokens], dtype=torch.long, device=device)
     model.zero_grad(set_to_none=True)
@@ -137,7 +144,12 @@ def main() -> None:
             torch.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
             model.zero_grad(set_to_none=True)
-            observer = TargetedExternalIntervention(
+            intervention_cls = (
+                TargetedTritonIntervention
+                if target.get("implementation_kind") == "TRITON"
+                else TargetedExternalIntervention
+            )
+            observer = intervention_cls(
                 modules=raw_modules, target=target, mode="OBSERVE",
             )
             with observer:

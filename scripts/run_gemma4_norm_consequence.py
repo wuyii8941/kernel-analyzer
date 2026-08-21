@@ -34,6 +34,11 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--steps", type=int, choices=(2, 32), default=2)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
+    parser.add_argument(
+        "--optimizer", choices=("adamw", "sgd", "adamw_reset_moments"),
+        default="adamw",
+        help="Feedback intervention; all modes use the same declared F+B arms.",
+    )
     parser.add_argument("--device", default="cuda:0")
     args = parser.parse_args()
     prediction = json.loads(args.prediction.read_text())
@@ -44,13 +49,17 @@ def main() -> None:
     if len(states) != args.steps:
         raise RuntimeError("trajectory population incomplete")
     device = torch.device(args.device)
-    configure_candidate_runtime(20260821)
+    # Match the freeze runner's seed so any initialized auxiliary buffers and
+    # compiler constants produce the same generated F+B wrapper bytes.
+    configure_candidate_runtime(24000)
     model = load_model("gemma4", args.model, device)
     carrier = dict(model.named_parameters())[args.carrier]
     start = len(PyCodeCache.modules)
     candidate = torch.compile(LossStep(model), backend="inductor", fullgraph=False, dynamic=False)
-    warm_bank = json.loads((Path(str(args.input_bank).replace("_trajectory32", ""))).read_text())
-    warm = torch.tensor([warm_bank["states"][0]["token_ids"]], dtype=torch.long, device=device)
+    # Warm with the same first trajectory state used by the frozen release.
+    # Using the base bank's first engineering state can change Gemma-4's
+    # generated graph node ordering even when tensor shapes match.
+    warm = torch.tensor([states[0]["token_ids"]], dtype=torch.long, device=device)
     model.zero_grad(set_to_none=True); candidate(warm).backward(); torch.cuda.synchronize(device)
     modules = list(PyCodeCache.modules[start:])
     capture = json.loads((args.runtime_release / "capture.json").read_text())
@@ -83,6 +92,23 @@ def main() -> None:
     energies = {name: 0.0 for name in sums}
     records = []
 
+    def update(gradient_value: torch.Tensor, first: torch.Tensor,
+               second: torch.Tensor, step: int):
+        if args.optimizer == "sgd":
+            return -args.learning_rate * gradient_value, first, second
+        if args.optimizer == "adamw_reset_moments":
+            zero_first = torch.zeros_like(first)
+            zero_second = torch.zeros_like(second)
+            delta, _, _ = adam_delta(
+                gradient_value, zero_first, zero_second, 1,
+                learning_rate=args.learning_rate,
+            )
+            return delta, zero_first, zero_second
+        return adam_delta(
+            gradient_value, first, second, step,
+            learning_rate=args.learning_rate,
+        )
+
     def gradient(master: torch.Tensor, state: dict, repair: bool) -> torch.Tensor:
         with torch.no_grad(): carrier.copy_(master.to(carrier.dtype))
         values = torch.tensor([state["token_ids"]], dtype=torch.long, device=device)
@@ -103,10 +129,10 @@ def main() -> None:
         step = index + 1
         gc_c = gradient(cmaster, state, False); gr_c = gradient(cmaster, state, True)
         gc_r = gradient(rmaster, state, False); gr_r = gradient(rmaster, state, True)
-        uc_c, ncm, ncv = adam_delta(gc_c, cm, cv, step, learning_rate=args.learning_rate)
-        ur_c, _, _ = adam_delta(gr_c, cm, cv, step, learning_rate=args.learning_rate)
-        uc_r, _, _ = adam_delta(gc_r, rm, rv, step, learning_rate=args.learning_rate)
-        ur_r, nrm, nrv = adam_delta(gr_r, rm, rv, step, learning_rate=args.learning_rate)
+        uc_c, ncm, ncv = update(gc_c, cm, cv, step)
+        ur_c, _, _ = update(gr_c, cm, cv, step)
+        uc_r, _, _ = update(gc_r, rm, rv, step)
+        ur_r, nrm, nrv = update(gr_r, rm, rv, step)
         next_c = cmaster + uc_c; next_r = rmaster + ur_r
         # Recompute realized master writes before the symmetric decomposition.
         uc_c = next_c - cmaster; ur_c = (cmaster + ur_c) - cmaster
@@ -140,6 +166,7 @@ def main() -> None:
         "schema": "kernel-analyzer-gemma4-norm-consequence-v1",
         "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
         "prediction": prediction, "steps": args.steps, "carrier": args.carrier,
+        "optimizer": {"name": args.optimizer, "learning_rate": args.learning_rate},
         "target": {"region_id": target["region_id"], "endpoint": args.endpoint,
                    "symbol": target["symbol"]},
         "carrier_coordinates": carrier.numel(), "statistics": stats,

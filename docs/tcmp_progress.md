@@ -166,6 +166,13 @@ It is deliberately separate from the earlier Qwen/Phi/Liger cases.
   case of **feedback-sustained drift**, not a Flash-style source-persistent
   carrier. It supports the split between source persistence and feedback
   persistence; it does not establish a universal source property.
+- The feedback attribution was then tested on the same frozen endpoint and
+  trajectory with two optimizer interventions. Stateless SGD reduced the
+  feedback/actual amplifications to `0.953/0.954` and final drift to
+  `6.35e-4`. Resetting Adam moments at every step reduced them to
+  `0.996/0.996` while preserving a comparable local residual scale. Thus the
+  Gemma drift is specifically sustained by cross-step Adam state, not by a
+  generic Lyapunov response to any repeated perturbation.
 - The 12-family screen-negative recall audit found ten parameter-inaccessible
   endpoints (`NOT_APPLICABLE`) and two exact parameter-reachable candidates.
   The attention-softmax backward candidate (`backward:1880`) had only one
@@ -180,3 +187,35 @@ backward-visible, feedback-sustained case and one exact canceling control;
 it does not add a second source-persistent Flash-style case. Screen-negative
 counts are not used as the denominator for bias claims because most screened
 endpoints never reached parameters.
+
+## New-architecture search: Mamba 130M
+
+Mamba was added to search a genuinely different state-space implementation
+family rather than another transformer GEMM/lm-head copy. The frozen seq128
+release contains 980 generated compute invocations (592 Triton, 363 extern,
+24 direct torch operations, and one direct Aten call), with zero unresolved
+runtime bindings. An eight-state forward/backward screen found 894 nonzero
+endpoint patterns. These are local precision differences only; they are not
+parameter-bias cases.
+
+The most relevant new region is a Triton
+`convolution_backward + silu_backward` state-space fusion (`backward:779`,
+1536-coordinate `out_ptr1`). It was bound to its exact program, source digest,
+and pointer ABI. A bounded engineering replay was attempted, but a fresh AOT
+backward recompilation did not finish; the result is therefore
+`UNRESOLVED_COMPILE`, not a negative and not a bias case. The exact binding and
+screen evidence are retained in `heldout/mamba130m_seq128_newscan/` so the
+search can resume without changing the denominator or selecting a result
+after seeing it.
+
+## Next source-search attempt: OLMoE router/expert path
+
+The OLMoE full coverage census contains a genuinely new semantic family
+(`topk`, `scatter`, `index_select`, and `index_add` routing), so it was selected
+without repeating the existing GEMM/lm-head representatives. Its 2-state
+preflight was within the 44 GiB budget (27.7 GiB peak allocated). Both an
+allow-graph-break and a strict full-graph release attempt were then rejected
+by the fail-closed direct-runtime-call inventory validator. No numerical screen
+or trajectory verdict was issued. This remains `COVERAGE_ONLY/UNRESOLVED`, not
+a negative case; the blocked artifact is recorded in
+`heldout/olmoe_1b7b_text128/router_search_status.json`.
