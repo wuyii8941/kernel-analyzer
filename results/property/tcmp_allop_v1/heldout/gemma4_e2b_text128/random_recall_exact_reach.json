@@ -1,0 +1,52 @@
+{
+  "claim_boundary": "Exact reach only; formation and persistence require independent populations.",
+  "result_sha256": "64d613af49081930397d7ce4466f2dddc69ac6482137e991f090e9d4e982f936",
+  "results": [
+    {
+      "changed_parameter_fingerprint_count": 4,
+      "changed_parameter_names": [
+        "model.language_model.embed_tokens.weight",
+        "model.language_model.layers.0.self_attn.k_norm.weight",
+        "model.language_model.layers.0.self_attn.k_proj.weight",
+        "model.language_model.layers.0.self_attn.q_proj.weight"
+      ],
+      "endpoint": "in_out_ptr0",
+      "exact_changed_parameter_gradients": [
+        "model.language_model.embed_tokens.weight",
+        "model.language_model.layers.0.self_attn.k_norm.weight",
+        "model.language_model.layers.0.self_attn.k_proj.weight",
+        "model.language_model.layers.0.self_attn.q_proj.weight"
+      ],
+      "exact_implementation_id": "e3466d6758e7a145e3c447556f833b6b77ae59f52e7e913e08a4adcebee5d28f",
+      "exact_parameter_reachable": true,
+      "implementation_pattern_id": "4f53e5020d130a7af262f928ac1ae34c6fcc5904237313fa023ef795aa07f96c",
+      "operation": "triton_per_fused__softmax__softmax_backward_data__to_copy_add_arange_bitwise_and_eq_expand_gt_index_le_lift_fresh_mul_new_ones_scalar_tensor_sub_unsqueeze_view_where",
+      "parameter_reach_screen": true,
+      "phase": "BACKWARD",
+      "region_id": "backward:1880",
+      "semantic_family_id": "2c9c24bfe3848cf28f110b50d135c36736ed3bd3f5957d72296e63927a958f89"
+    },
+    {
+      "changed_parameter_fingerprint_count": 2,
+      "changed_parameter_names": [
+        "model.language_model.embed_tokens.weight",
+        "model.language_model.per_layer_model_projection.weight"
+      ],
+      "endpoint": "out_ptr3",
+      "exact_changed_parameter_gradients": [
+        "model.language_model.embed_tokens.weight",
+        "model.language_model.per_layer_model_projection.weight"
+      ],
+      "exact_implementation_id": "334b99d5cb62758707c53f018cb0da2c122b9ccc3bc7b584f87563a74feb0c77",
+      "exact_parameter_reachable": true,
+      "implementation_pattern_id": "61b6e815dc8a7eb88ceb1827ef5e104013a7b6d1ac3d214d171f47a69e8c21ab",
+      "operation": "triton_per_fused__to_copy__unsafe_view_add_div_embedding_dense_backward_expand_gelu_mul_nll_loss_forward_pow_select_backward_sum_view",
+      "parameter_reach_screen": true,
+      "phase": "BACKWARD",
+      "region_id": "backward:1401",
+      "semantic_family_id": "dc23ce7e87ea5ad45f37cd8be0783c793d6e6d592e032978309cab95abdc95fc"
+    }
+  ],
+  "schema": "kernel-analyzer-gemma4-random-recall-exact-reach-v1",
+  "status": "COMPLETE_EXACT_PARAMETER_GRADIENT_DIGESTS"
+}

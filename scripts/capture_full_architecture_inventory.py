@@ -21,6 +21,10 @@ os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 
 import torch
 from transformers import AutoModelForCausalLM, Gemma3ForConditionalGeneration, MambaForCausalLM
+try:
+    from transformers import Gemma4ForConditionalGeneration
+except ImportError:  # Older environments can still run all non-Gemma-4 cells.
+    Gemma4ForConditionalGeneration = None
 from transformers.models.mamba import modeling_mamba
 
 
@@ -94,6 +98,16 @@ def load_model(
             attn_implementation="eager",
         )
         implementation = "transformers_eager_gemma3_conditional_generation_bfloat16"
+    elif architecture == "gemma4":
+        if Gemma4ForConditionalGeneration is None:
+            raise RuntimeError("Gemma 4 requires a Transformers build with Gemma4 support")
+        model = Gemma4ForConditionalGeneration.from_pretrained(
+            model_path,
+            dtype=torch.bfloat16,
+            local_files_only=True,
+            attn_implementation="eager",
+        )
+        implementation = "transformers_eager_gemma4_conditional_generation_bfloat16"
     else:
         load_kwargs: dict[str, Any] = {}
         if shard_gpus > 1:
@@ -126,7 +140,10 @@ def load_model(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--architecture", choices=("qwen", "mamba", "moe", "phi", "deepseek8", "generic", "gemma3"),
+        "--architecture", choices=(
+            "qwen", "mamba", "moe", "phi", "deepseek8", "generic",
+            "gemma3", "gemma4",
+        ),
         required=True,
     )
     parser.add_argument("--model", required=True, type=Path)

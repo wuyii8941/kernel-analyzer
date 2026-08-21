@@ -158,7 +158,10 @@ def freeze_or_validate_release(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--architecture", choices=("qwen", "mamba", "phi", "deepseek8", "generic", "mistral3"),
+        "--architecture", choices=(
+            "qwen", "mamba", "phi", "deepseek8", "generic", "gemma4",
+            "mistral3",
+        ),
         required=True,
     )
     parser.add_argument("--model", type=Path, required=True)

@@ -19,6 +19,10 @@ os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 import torch
 from transformers import AutoModelForCausalLM, Mistral3ForConditionalGeneration
+try:
+    from transformers import Gemma4ForConditionalGeneration
+except ImportError:  # Older environments can still preflight other models.
+    Gemma4ForConditionalGeneration = None
 
 
 VRAM_LIMIT = 44 * 1024**3
@@ -40,13 +44,21 @@ def finite_gradients(model: torch.nn.Module) -> tuple[bool, int, float]:
     present = 0
     square = 0.0
     finite = True
+    chunk_elements = 1 << 22
     for parameter in model.parameters():
         if parameter.grad is None:
             continue
         present += 1
-        value = parameter.grad.detach().float()
-        finite = finite and bool(torch.isfinite(value).all())
-        square += float(torch.sum(value.double() * value.double()).item())
+        value = parameter.grad.detach().reshape(-1)
+        # The Gemma-4 per-layer embedding gradient is several GiB.  A whole-
+        # tensor FP32/FP64 validation copy can consume more memory than F+B.
+        # Stream fixed chunks so the preflight measures the workload rather
+        # than its validator.
+        for start in range(0, value.numel(), chunk_elements):
+            chunk = value[start:start + chunk_elements]
+            finite = finite and bool(torch.isfinite(chunk).all())
+            chunk_norm = float(torch.linalg.vector_norm(chunk.float()).item())
+            square += chunk_norm * chunk_norm
     return finite, present, square**0.5
 
 
@@ -75,10 +87,15 @@ def main() -> None:
     torch.manual_seed(20260820); torch.cuda.manual_seed_all(20260820)
     torch.backends.cuda.matmul.allow_tf32 = False
     model_type = json.loads((args.model / "config.json").read_text()).get("model_type")
-    model_class = (
-        Mistral3ForConditionalGeneration if model_type == "mistral3"
-        else AutoModelForCausalLM
-    )
+    if model_type == "gemma4":
+        model_class = Gemma4ForConditionalGeneration
+    else:
+        model_class = (
+            Mistral3ForConditionalGeneration if model_type == "mistral3"
+            else AutoModelForCausalLM
+        )
+    if model_class is None:
+        raise RuntimeError("Gemma 4 requires a Transformers build with Gemma4 support")
     model = model_class.from_pretrained(
         args.model, dtype=torch.bfloat16, local_files_only=True,
         attn_implementation="eager", trust_remote_code=False,

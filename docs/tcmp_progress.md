@@ -139,3 +139,44 @@ Orbit, transport, and trajectory experiments select one value-blind
 representative per implementation pattern. Exact variants are reopened only
 when ABI, tile/reduction topology, fusion semantics, or routing discontinuity
 changes the mechanism.
+
+## Frozen new-implementation audit: Gemma 4 E2B
+
+This is the first `NEW_IMPL` audit after the development roster was frozen.
+It is deliberately separate from the earlier Qwen/Phi/Liger cases.
+
+- The model contributes 14,638 exact eager F+B events and 1,910 generated
+  compute invocations (867 Triton, 1,041 extern, two direct Aten), with zero
+  unresolved generated pointer-dataflow bindings. The eight-state screen kept
+  115 distinct pattern endpoints; 83 had nonzero residuals and 72 patterns
+  were absent from the previous implementation census. No sampled endpoint
+  passed the BH-q=0.10 local screen. This is a screen result, not a safety
+  certificate.
+- A preregistered semantic-hotspot audit found that softcapped CE and the
+  attention-softmax region had no parameter reach. They are `NOT_APPLICABLE`,
+  not negative cases. PLE/RMSNorm (`forward:2`) changed exactly the embedding
+  and per-layer projection gradients and was therefore the eligible hotspot.
+- On 16 complete-coordinate confirmation states, that PLE/RMSNorm endpoint
+  had large but cancelling source residuals: `A_L=0.99833`, odd/even cosine
+  `0.00306`. Its source prediction was frozen as
+  `NO_SOURCE_PERSISTENCE` before the separate trajectory was revealed.
+- The 32-step four-arm trajectory nevertheless produced
+  `A_L=1.00087`, `A_B=3.23535`, `A_D=3.22522`, final drift `0.10701`, and
+  maximum recurrence residual below `2.5e-10`. This is a new implementation
+  case of **feedback-sustained drift**, not a Flash-style source-persistent
+  carrier. It supports the split between source persistence and feedback
+  persistence; it does not establish a universal source property.
+- The 12-family screen-negative recall audit found ten parameter-inaccessible
+  endpoints (`NOT_APPLICABLE`) and two exact parameter-reachable candidates.
+  The attention-softmax backward candidate (`backward:1880`) had only one
+  nonzero formation state and its completed trajectory was numerical-floor
+  zero (`A_D=1.0`, final drift `1.5e-8`), so it is a genuine canceling/control
+  result under this protocol. The second candidate (`backward:1401`) is kept
+  as `UNRESOLVED_PROVENANCE` because its rerun generated wrapper hashes that
+  did not match the frozen release; it is not counted as a case or a negative.
+
+The correct current claim is therefore: Gemma 4 adds one strictly new,
+backward-visible, feedback-sustained case and one exact canceling control;
+it does not add a second source-persistent Flash-style case. Screen-negative
+counts are not used as the denominator for bias claims because most screened
+endpoints never reached parameters.

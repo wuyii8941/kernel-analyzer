@@ -1,0 +1,88 @@
+{
+  "claim_boundary": "One-state exact F+B FP32-storage repair establishes parameter reach, not bias or persistence.",
+  "result_sha256": "aeb507ff4766a202f17e464df09e4bf4df537f733d3f5209ea7c4bb68621eb7a",
+  "results": [
+    {
+      "changed_parameter_gradient_count": 0,
+      "changed_parameter_gradients": [],
+      "loss_changed": false,
+      "parameter_reachable": false,
+      "region_executions": 3,
+      "regions": [
+        {
+          "endpoints": [
+            "in_out_ptr0"
+          ],
+          "phase": "FORWARD",
+          "region_id": "forward:667",
+          "symbol": "triton_per_fused__log_softmax__to_copy__unsafe_view_div_mul_prepare_softmax_online_tanh_view_61"
+        },
+        {
+          "endpoints": [
+            "in_out_ptr0",
+            "out_ptr1"
+          ],
+          "phase": "FORWARD",
+          "region_id": "forward:668",
+          "symbol": "triton_per_fused__log_softmax__to_copy__unsafe_view_div_mul_nll_loss_forward_scalar_tensor_slice_tanh_view_62"
+        },
+        {
+          "endpoints": [
+            "in_out_ptr0"
+          ],
+          "phase": "BACKWARD",
+          "region_id": "backward:669",
+          "symbol": "triton_red_fused__log_softmax__log_softmax_backward_data__to_copy__unsafe_view_arange_div_eq_expand_mul_nll_loss_backward_nll_loss_forward_scalar_tensor_slice_tanh_tanh_backward_view_0"
+        }
+      ],
+      "target_id": "loss_softcap_ce_fb"
+    },
+    {
+      "changed_parameter_gradient_count": 2,
+      "changed_parameter_gradients": [
+        "model.language_model.embed_tokens.weight",
+        "model.language_model.per_layer_model_projection.weight"
+      ],
+      "loss_changed": false,
+      "parameter_reachable": true,
+      "region_executions": 1,
+      "regions": [
+        {
+          "endpoints": [
+            "in_out_ptr0",
+            "out_ptr0",
+            "out_ptr1"
+          ],
+          "phase": "FORWARD",
+          "region_id": "forward:2",
+          "symbol": "triton_per_fused__to_copy__unsafe_view_add_embedding_mean_mul_pow_view_1"
+        }
+      ],
+      "target_id": "normalization_ple_rms_fb"
+    },
+    {
+      "changed_parameter_gradient_count": 0,
+      "changed_parameter_gradients": [],
+      "loss_changed": false,
+      "parameter_reachable": false,
+      "region_executions": 1,
+      "regions": [
+        {
+          "endpoints": [
+            "out_ptr0",
+            "out_ptr1",
+            "out_ptr3"
+          ],
+          "phase": "FORWARD",
+          "region_id": "forward:13",
+          "symbol": "triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_expand_gt_index_le_lift_fresh_mul_new_ones_prepare_softmax_online_scalar_tensor_sub_unsqueeze_view_where_8"
+        }
+      ],
+      "target_id": "attention_softmax_fb"
+    }
+  ],
+  "runtime_release_sha256": "7b0f92062cbc96795879149c010e6ec223ebc89e92f18900b8949592cb4a6b41",
+  "schema": "kernel-analyzer-gemma4-semantic-bottleneck-reach-v1",
+  "state_id": "gemma4_e2b_text128-engineering-00",
+  "status": "COMPLETE"
+}

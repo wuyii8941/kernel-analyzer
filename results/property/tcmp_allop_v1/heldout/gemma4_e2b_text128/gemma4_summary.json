@@ -1,0 +1,48 @@
+{
+  "schema": "kernel-analyzer-gemma4-heldout-summary-v1",
+  "model": "google/gemma-4-E2B",
+  "revision": "d29ff6b45f081a49ee2733a859c9c9c2d95d1a6f",
+  "screen": {
+    "eager_fb_invocations": 14638,
+    "generated_compute_invocations": 1910,
+    "triton_definitions": 145,
+    "screen_pattern_endpoints": 115,
+    "nonzero_screen_patterns": 83,
+    "new_pattern_endpoints": 72,
+    "bh_q01_positive_count": 0
+  },
+  "eligible_deep_cases": [
+    {
+      "case": "PLE/RMSNorm forward:2",
+      "source_prediction": "NO_SOURCE_PERSISTENCE",
+      "source_amplification": 0.9983304601,
+      "local_amplification": 1.0008688710,
+      "feedback_amplification": 3.2353456884,
+      "actual_amplification": 3.2252164007,
+      "final_drift_l2": 0.1070105806,
+      "classification": "NEW_IMPL_FEEDBACK_SUSTAINED"
+    },
+    {
+      "case": "attention softmax backward:1880",
+      "source_prediction": "NO_SOURCE_PERSISTENCE",
+      "local_amplification": 0.0,
+      "feedback_amplification": 1.0,
+      "actual_amplification": 1.0,
+      "final_drift_l2": 1.4901161194e-8,
+      "classification": "NEW_IMPL_CANCELING_CONTROL"
+    },
+    {
+      "case": "PLE/embedding backward:1401",
+      "source_prediction": "NO_SOURCE_PERSISTENCE",
+      "classification": "UNRESOLVED_PROVENANCE",
+      "reason": "rerun wrapper hashes differ from frozen runtime release"
+    }
+  ],
+  "recall_audit": {
+    "screen_negative_families": 12,
+    "not_parameter_reachable": 10,
+    "exact_parameter_reachable": 2,
+    "not_applicable_is_not_negative": true
+  },
+  "claim_boundary": "Gemma 4 adds one new feedback-sustained implementation case and one canceling control; it adds no new source-persistent Flash-style case."
+}
