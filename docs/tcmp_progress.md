@@ -447,3 +447,16 @@ mechanism diagnostics, not held-out predictor confirmations.
 The compact summary is
 `results/property/tcmp_allop_v1/repeated_orbit_null_summary.json`; the full
 per-seed traces remain beside each held-out model's consequence artifacts.
+
+## Final decision checkpoint (2026-08-21)
+
+The machine-readable decision matrix is
+`results/property/tcmp_allop_v1/final_decision_matrix.json`, with the concise
+claim and remaining scope in `docs/final_conclusion.md`. The current result is
+a conditional predictor for the exact LM-head reduction/VJP family: it
+generalizes across two new operand distributions, but the frozen search found
+zero new-implementation positive cases. New semantic families contribute
+backward-visible canceling controls or explicit abstentions. The project must
+therefore not claim a universal all-operator property. Gemma feedback drift is
+reported as a separate consequence channel, and the repeated-orbit nulls are
+feedback-compatible diagnostics rather than proof of source-specific causality.

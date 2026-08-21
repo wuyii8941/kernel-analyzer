@@ -1,0 +1,81 @@
+{
+  "schema": "kernel-analyzer-tcmp-final-decision-v1",
+  "date": "2026-08-21",
+  "research_question": "When does an implementation-induced numerical difference become directional training bias and then persistent parameter drift?",
+  "headline": "A conditional transported-orbit-mean persistence signal is supported for the LM-head reduction/VJP family across two new operand distributions, but no universal all-operator property is established.",
+  "coverage": {
+    "semantic_cells_enumerated": 791,
+    "implementation_pattern_representatives": 493,
+    "pre_measurement_candidates": 485,
+    "all_actual_invocations_remain_in_denominator": true,
+    "duplicate_deep_measurements": "one representative per exact implementation pattern"
+  },
+  "formation_map": {
+    "source_orbit_mean": {
+      "status": "SUPPORTED_CONDITIONAL_FAMILY_ONLY",
+      "family": "LM_HEAD_DX_GEMM_VJP",
+      "evidence": [
+        "Phi lm_head dX: local centered, parameter-gradient biased, effective-update biased; norm-preserving residual/transport pairing removes gradient bias.",
+        "Llama 3.2 and Ministral 3: frozen transported-orbit predictor risk before consequence; retrospective strict 4+4 cross-fit retained risk on both models.",
+        "Repeated per-step semantics-preserving orbit null retains comparable drift, so schedule randomization alone is not a sufficient explanation."
+      ],
+      "scope": "exact finite semantic orbit, closed F+B/VJP boundary, complete parameter coordinates, and the measured LM-head reduction family",
+      "new_impl_positive_count": 0,
+      "universal_all_operator_claim": false
+    },
+    "backward_transport": {
+      "status": "CASE_LEVEL_MECHANISM_VALIDATED",
+      "cases": ["phi4_lm_head_dx_seq64", "qwen_layer23_attention_state"],
+      "claim": "A centered local difference can become directional after semantic backward transport or saved-state reconstruction.",
+      "boundary": "The interventions are empirical composite/semantic-region mechanisms; they do not prove a single universal transport factor."
+    },
+    "feedback_sustained": {
+      "status": "CASE_LEVEL_MECHANISM_VALIDATED",
+      "case": "gemma4_ple_rmsnorm",
+      "claim": "Adam state can sustain drift after local formation is centered.",
+      "boundary": "This is a consequence/feedback channel, not source-persistent Flash-style evidence."
+    },
+    "variance_only_or_canceling": {
+      "status": "SUPPORTED_CONTROLS",
+      "cases": [
+        "deepseek_ce_backward",
+        "deepseek_attention_projection_backward",
+        "deepseek_layer0_normalization_backward",
+        "deepseek_layer10_softmax_backward",
+        "olmoe_router_index_add",
+        "gemma4_attention_softmax_recall",
+        "gemma3_vision_layernorm",
+        "gemma3_vision_convolution"
+      ],
+      "boundary": "These are controls under the stated protocol, not universal safety proofs."
+    },
+    "unresolved": {
+      "status": "ABSTAIN",
+      "cases": ["mamba_state_space_backward", "phi4_normalization_backward", "gemma4_attention_backward_1401"],
+      "reason": "compiler/provenance/graph closure failed before a valid formation measurement"
+    }
+  },
+  "predictive_test": {
+    "predictor": "TRANSPORTED_CONDITIONAL_MEAN_PERSISTENCE",
+    "prospective_ordering": "prediction is frozen before consequence trajectories",
+    "cross_model_new_operand_positive": 2,
+    "new_implementation_positive": 0,
+    "new_semantic_controls": 7,
+    "status": "SUPPORTED_FOR_SEEN_IMPLEMENTATION_NEW_OPERANDS_ONLY",
+    "out_of_domain_is_not_negative": true
+  },
+  "null_and_persistence": {
+    "repeated_orbit_null_models": ["Llama 3.2 3B", "Ministral 3 3B"],
+    "seeds": 5,
+    "steps": 32,
+    "result": "REPEATED_ORBIT_NULL_RETAINS_DRIFT",
+    "interpretation": "one-shot noise is rejected; closed-loop feedback remains active, so source causality is not isolated by this null",
+    "effective_rank_participation": {"llama32_3b": 1.2784783055208992, "ministral3_3b": 1.5712791479265538}
+  },
+  "final_claim": "The project delivers a Bias Formation Map and a falsifiable, conditional transported-orbit-mean predictor for one mathematically defined reduction/VJP family. It does not claim that every operator has this mechanism or that every unresolved endpoint is safe.",
+  "next_if_extended": [
+    "freeze an implementation-class held-out pool that contains both predictor-positive and residual-nonzero predictor-negative cases",
+    "obtain at least one genuinely new implementation-class positive, or formally freeze the narrow family-scoped claim",
+    "separate feedback prediction from source prediction before testing feedback-sustained cases"
+  ]
+}
