@@ -53,6 +53,18 @@ def test_alternating_path_is_not_persistent() -> None:
     assert not result["lag1_positive"]
 
 
+def test_after_warmup_prefix_gate_keeps_growth_after_initial_variability() -> None:
+    screen = SharedShortPersistenceScreen(
+        projection_dim=32, projection_seed=7, expected_steps=8, null_draws=300,
+        prefix_growth_mode="after_warmup",
+    )
+    for step in range(8):
+        screen.add("warmup_then_persistent", np.array([1.0 + 0.1 * step, 0.5, 0.0, 0.0]))
+    result = screen.finalize()["cases"][0]
+    assert result["screen_rule"]["prefix_growth_mode"] == "after_warmup"
+    assert result["prefix_growth_after_short_warmup"]
+
+
 def test_shared_screen_fails_closed_on_missing_or_changing_coordinates() -> None:
     screen = SharedShortPersistenceScreen(expected_steps=4, null_draws=100)
     for step in range(3):

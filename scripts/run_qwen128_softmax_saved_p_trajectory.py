@@ -322,6 +322,7 @@ def main() -> None:
                 projection_seed=20260822,
                 expected_steps=args.short_screen_steps,
                 null_draws=args.short_screen_null_draws,
+                prefix_growth_mode="after_warmup",
             )
             if args.short_screen_output is not None else None
         )

@@ -1,0 +1,36 @@
+{
+  "schema": "kernel-analyzer-short-persistence-protocol-v2",
+  "status": "FROZEN_BEFORE_V2_REVALIDATION",
+  "supersedes": "kernel-analyzer-short-persistence-screen-v1",
+  "purpose": "low_cost_source_persistence_screen",
+  "projection": {
+    "kind": "SIGNED_COUNT_SKETCH",
+    "dimension": 64,
+    "seed": 20260822,
+    "raw_vectors_retained": false
+  },
+  "short_path": {
+    "steps": 8,
+    "maximum_steps": 16,
+    "shared_ordered_states": true,
+    "null": {
+      "kind": "PER_STATE_SIGN_FLIP",
+      "draws": 2000,
+      "seed": 20260822
+    }
+  },
+  "risk_rule": {
+    "observed_above_sign_flip_95": true,
+    "lag1_positive": true,
+    "at_least_two_positive_lags": true,
+    "prefix_growth": "final_prefix_amplification_above_four_step_warmup",
+    "is_confirmation": false,
+    "positive_requires_exact_f_and_b_confirmation": true
+  },
+  "correction_reason": "The v1 consecutive-late-prefix gate can reject a path whose amplification rises above the initial warmup and then fluctuates. v2 makes the warmup comparison explicit; v1 held-out observations are not relabeled as v2 results.",
+  "scope": {
+    "feedback_sustained_drift": "OUT_OF_DOMAIN",
+    "missing_or_unresolved_vjp": "ABSTAIN",
+    "centered_controls": "remain_in_denominator"
+  }
+}

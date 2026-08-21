@@ -16,6 +16,7 @@ from kernel_analyzer.reduction_orbit import frozen_permutations
 from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime
 from scripts.run_generated_fp32_screen import load_model
 from scripts.run_qwen256_lmhead_property_confirmation import ShapeObserver
+from kernel_analyzer.short_persistence import SharedShortPersistenceScreen
 
 
 def adam_delta(
@@ -47,23 +48,34 @@ def main() -> None:
     parser.add_argument("--model", type=Path, required=True)
     parser.add_argument("--input-bank", type=Path, required=True)
     parser.add_argument("--prediction", type=Path, required=True)
+    parser.add_argument(
+        "--state-role", choices=("TRAJECTORY", "CONFIRMATION", "SCREENING"),
+        default="TRAJECTORY",
+        help="Frozen input-bank role used for the consequence/screen run.",
+    )
     parser.add_argument("--carrier", required=True)
     parser.add_argument("--vocab-size", type=int, required=True)
     parser.add_argument("--hidden-size", type=int, required=True)
-    parser.add_argument("--steps", type=int, choices=(2, 32), default=2)
+    parser.add_argument("--steps", type=int, choices=(2, 8, 16, 32), default=2)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument("--matched-random-null", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--short-screen-output", type=Path)
+    parser.add_argument("--short-screen-steps", type=int, default=8)
+    parser.add_argument("--short-screen-projection-dim", type=int, default=64)
+    parser.add_argument("--short-screen-null-draws", type=int, default=2000)
     args = parser.parse_args()
 
     prediction = json.loads(args.prediction.read_text())
     if prediction["status"] != "PREDICTION_FROZEN":
         raise RuntimeError("held-out predictor was not frozen before consequence")
     bank = json.loads(args.input_bank.read_text())
-    states = [row for row in bank["states"] if row["role"] == "TRAJECTORY"][:args.steps]
+    states = [row for row in bank["states"] if row["role"] == args.state_role][:args.steps]
     if len(states) != args.steps:
-        raise RuntimeError("trajectory population is incomplete")
+        raise RuntimeError(f"{args.state_role} population is incomplete")
+    if args.short_screen_output is not None and not 4 <= args.short_screen_steps <= min(16, args.steps):
+        raise ValueError("short screen steps must be in [4, min(16, trajectory steps)]")
     state_ids = [str(row["state_id"]) for row in states]
     left = (bank["sequence_length"], args.vocab_size)
     right = (args.vocab_size, args.hidden_size)
@@ -86,6 +98,15 @@ def main() -> None:
     null_master = initial.clone()
     null_m = torch.zeros_like(initial); null_v = torch.zeros_like(initial)
     null_generator = torch.Generator(device=device).manual_seed(20260820)
+    short_screen = (
+        SharedShortPersistenceScreen(
+            projection_dim=args.short_screen_projection_dim,
+            projection_seed=20260822,
+            expected_steps=args.short_screen_steps,
+            null_draws=args.short_screen_null_draws,
+            prefix_growth_mode="after_warmup",
+        ) if args.short_screen_output is not None else None
+    )
 
     def gradient(master: torch.Tensor, state: dict, repair: bool) -> torch.Tensor:
         with torch.no_grad():
@@ -107,6 +128,7 @@ def main() -> None:
         return carrier.grad.detach().float().clone()
 
     vectors: list[torch.Tensor] = []
+    actual_sum = torch.zeros_like(initial)
     records = []
     initial_drift = candidate_master - repair_master
     for index, state in enumerate(states):
@@ -181,12 +203,27 @@ def main() -> None:
                 "matched_random_master_drift_l2": float(torch.linalg.vector_norm(null_drift)),
             }
             del gr_n, raw_ur_n, selected_request, realized_injection
-        vectors.extend((local.cpu(), feedback.cpu(), actual.cpu()))
+        if short_screen is not None and step <= args.short_screen_steps:
+            short_screen.add(
+                f"{resolved_carrier}::local",
+                local.detach().float().cpu().numpy().reshape(-1),
+            )
+            short_screen.add(
+                f"{resolved_carrier}::feedback",
+                feedback.detach().float().cpu().numpy().reshape(-1),
+            )
+            short_screen.add(
+                f"{resolved_carrier}::actual",
+                actual.detach().float().cpu().numpy().reshape(-1),
+            )
+        if short_screen is None:
+            vectors.extend((local.cpu(), feedback.cpu(), actual.cpu()))
         candidate_master = next_candidate_master
         repair_master = next_repair_master
         candidate_m, candidate_v = next_cm, next_cv
         repair_m, repair_v = next_rm, next_rv
         drift = drift_after
+        actual_sum.add_(actual)
         records.append({
             "step": step, "state_id": state_ids[index],
             "local_l2": float(torch.linalg.vector_norm(local)),
@@ -200,14 +237,19 @@ def main() -> None:
         del gc_c, gr_c, gc_r, gr_r, uc_c, ur_c, uc_r, ur_r, local, feedback, actual
         torch.cuda.empty_cache()
 
-    matrix = torch.stack(vectors).double()
-    statistics = aligned_level_statistics_from_gram(
-        (matrix @ matrix.T).numpy(), state_ids=state_ids,
-        level_ids=("local", "feedback", "actual"), sign_flip_draws=4000,
-        seed=20260820,
-    )
+    statistics = None
+    if vectors:
+        matrix = torch.stack(vectors).double()
+        statistics = aligned_level_statistics_from_gram(
+            (matrix @ matrix.T).numpy(), state_ids=state_ids,
+            level_ids=("local", "feedback", "actual"), sign_flip_draws=4000,
+            seed=20260820,
+        )
     final_drift = candidate_master - repair_master
-    summed_actual = matrix.reshape(args.steps, 3, -1)[:, 2].sum(0)
+    summed_actual = (
+        matrix.reshape(args.steps, 3, -1)[:, 2].sum(0)
+        if vectors else actual_sum.cpu().double()
+    )
     telescoping_residual = summed_actual - (final_drift - initial_drift).cpu().double()
     null_summary = None
     if args.matched_random_null:
@@ -238,6 +280,7 @@ def main() -> None:
         "prediction_file": str(args.prediction.resolve()),
         "prediction_revealed_before_trajectory": prediction["prediction"],
         "input_bank": str(args.input_bank.resolve()),
+        "state_role": args.state_role,
         "carrier": {"declared": args.carrier, "resolved_runtime_name": resolved_carrier},
         "carrier_coordinates": carrier.numel(), "steps": args.steps,
         "optimizer": {"name": "AdamW", "learning_rate": args.learning_rate,
@@ -257,6 +300,20 @@ def main() -> None:
     ).hexdigest()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    if short_screen is not None:
+        short_payload = short_screen.finalize()
+        short_payload["input"] = {
+            "kind": "LIVE_PAIRED_TRAJECTORY_EFFECTIVE_UPDATE",
+            "case_id": f"{args.architecture}_lmhead_dx",
+            "carrier_parameters": [resolved_carrier],
+            "evaluation_steps_used": args.short_screen_steps,
+            "raw_vectors_retained": False,
+            "source_result_sha256": payload["result_sha256"],
+        }
+        args.short_screen_output.parent.mkdir(parents=True, exist_ok=True)
+        args.short_screen_output.write_text(
+            json.dumps(short_payload, indent=2, sort_keys=True) + "\n"
+        )
 
 
 if __name__ == "__main__":

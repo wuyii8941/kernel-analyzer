@@ -130,6 +130,7 @@ class ShortPersistencePath:
     null_draws: int = 2000
     null_seed: int = 20260822
     max_lag: int = 4
+    prefix_growth_mode: str = "consecutive_late"
     _vectors: list[np.ndarray] = field(default_factory=list)
     _coordinate_count: int | None = None
 
@@ -179,13 +180,24 @@ class ShortPersistencePath:
         # sequence from passing merely because its even lags are positive.
         lag1_positive = bool(lag and lag[0]["normalized_correlation"] > 0.0)
         null_upper = float(np.quantile(null, 0.95))
-        later_prefixes = [
-            values["amplification"] for stop, values in prefixes.items()
-            if int(stop) >= min(8, self.expected_steps)
-        ]
-        prefix_growth = (
-            later_prefixes[-1] > later_prefixes[0] if len(later_prefixes) >= 2 else False
-        )
+        if self.prefix_growth_mode == "after_warmup":
+            warmup_stop = min(4, self.expected_steps)
+            prefix_growth = (
+                self.expected_steps > warmup_stop
+                and prefixes[str(self.expected_steps)]["amplification"]
+                > prefixes[str(warmup_stop)]["amplification"]
+            )
+        elif self.prefix_growth_mode == "consecutive_late":
+            later_prefixes = [
+                values["amplification"] for stop, values in prefixes.items()
+                if int(stop) >= min(8, self.expected_steps)
+            ]
+            prefix_growth = (
+                later_prefixes[-1] > later_prefixes[0]
+                if len(later_prefixes) >= 2 else False
+            )
+        else:
+            raise ValueError(f"unknown prefix growth mode: {self.prefix_growth_mode}")
         risk_candidate = bool(
             observed > null_upper
             and lag1_positive
@@ -221,6 +233,7 @@ class ShortPersistencePath:
                 "requires_observed_above_sign_flip_95": True,
                 "requires_lag1_and_at_least_two_positive_lags": True,
                 "requires_late_prefix_growth": True,
+                "prefix_growth_mode": self.prefix_growth_mode,
                 "is_confirmation": False,
             },
             "raw_vectors_retained": False,
@@ -231,13 +244,15 @@ class SharedShortPersistenceScreen:
     """Run the same sketch protocol for many endpoints on shared states."""
 
     def __init__(self, *, projection_dim: int = 64, projection_seed: int = 20260822,
-                 expected_steps: int = 8, null_draws: int = 2000) -> None:
+                 expected_steps: int = 8, null_draws: int = 2000,
+                 prefix_growth_mode: str = "consecutive_late") -> None:
         if expected_steps < 4:
             raise ValueError("short screen needs at least four ordered states")
         self.projection_dim = int(projection_dim)
         self.projection_seed = int(projection_seed)
         self.expected_steps = int(expected_steps)
         self.null_draws = int(null_draws)
+        self.prefix_growth_mode = str(prefix_growth_mode)
         self._paths: dict[str, ShortPersistencePath] = {}
 
     def add(self, case_id: str, vector: Sequence[float] | np.ndarray) -> None:
@@ -254,6 +269,7 @@ class SharedShortPersistenceScreen:
             projection_seed=self.projection_seed,
             expected_steps=self.expected_steps,
             null_draws=self.null_draws,
+            prefix_growth_mode=self.prefix_growth_mode,
         ))
         path.add_chunks(chunks)
 
@@ -266,6 +282,7 @@ class SharedShortPersistenceScreen:
                 "projection_seed": self.projection_seed,
                 "expected_steps": self.expected_steps,
                 "null_draws": self.null_draws,
+                "prefix_growth_mode": self.prefix_growth_mode,
                 "shared_reference_states": True,
                 "raw_vectors_retained": False,
                 "positive_screen_requires_exact_confirmation": True,
