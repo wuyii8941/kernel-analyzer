@@ -291,10 +291,17 @@ class GeneratedFP32Observer:
         campaign_rows: Sequence[Mapping[str, Any]],
         sample_size: int = 64,
         metric_chunk_elements: int = 1_048_576,
+        repair_targets: Mapping[str, Sequence[str]] | None = None,
+        allow_unlisted_calls: bool = False,
     ) -> None:
         self.modules = list(modules)
         self.sample_size = sample_size
         self.metric_chunk_elements = metric_chunk_elements
+        self.repair_targets = {
+            str(region_id): {str(name) for name in names}
+            for region_id, names in (repair_targets or {}).items()
+        }
+        self.allow_unlisted_calls = allow_unlisted_calls
         by_symbol: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
         for row in campaign_rows:
             by_symbol[str(row["symbol"])].append(row)
@@ -436,6 +443,8 @@ class GeneratedFP32Observer:
                     key = (_symbol, captured_path, line, source_digest)
                     row = self.rows_by_callsite.get(key)
                     if row is None:
+                        if self.allow_unlisted_calls:
+                            return _original(*args, **kwargs)
                         raise RuntimeError(f"runtime Triton call outside exact campaign: {key}")
                     callsite_index = self.callsite_counts[key]
                     self.callsite_counts[key] += 1
@@ -475,6 +484,17 @@ class GeneratedFP32Observer:
                     )
                     for name in output_names
                 }
+                repaired = []
+                target_names = self.repair_targets.get(str(row["region_id"]), set())
+                unknown_targets = target_names - set(output_names)
+                if unknown_targets:
+                    raise RuntimeError(
+                        f"repair endpoint absent from target region: {sorted(unknown_targets)}"
+                    )
+                with torch.no_grad():
+                    for name in sorted(target_names):
+                        candidate_pointers[name].copy_(promoted_pointers[name])
+                        repaired.append(name)
                 self.records.append({
                     "region_id": row["region_id"],
                     "phase": row["phase"],
@@ -494,6 +514,7 @@ class GeneratedFP32Observer:
                         "typed_program_sha256"
                     ],
                     "endpoint_metrics": metrics,
+                    "repaired_endpoints": repaired,
                 })
                 return result
 

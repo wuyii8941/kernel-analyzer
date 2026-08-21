@@ -43,7 +43,17 @@ were maximally aligned across all eight states (`A=sqrt(8)`, exact sign-flip
   2,484 Triton, 2,069 extern, two direct ATen and two direct torch-op calls.
 - This graph adds a previously uncatalogued `masked_scatter_backward` F+B
   boundary. Its exact mask-order VJP is now recorded rather than ignored.
-- Two-state engineering replay is running before the eight-state screen.
+- Two-state engineering replay and all eight screening states completed with
+  exact same-process wrapper binding. The retained denominator is 36,664
+  actual F+B invocations, 1,675 exact identities, 149 implementation patterns
+  and 99 semantic families, with zero unresolved identities.
+- Relative to the text graph, 20 ATen semantics are genuinely new, including
+  convolution/backward, average-pool/backward, native LayerNorm/backward,
+  masked-scatter/backward, cumulative sum, maximum and index operations.
+- No local endpoint passed BH q=0.10. Two new semantic bottlenecks are retained
+  for exact F+B repair probes rather than declared cases: vision LayerNorm
+  backward (`p=0.0234`, `A=1.866`) and the pooled-normalization backward path.
+  `masked_scatter_backward` is an exact-zero safe control under this protocol.
 
 ## Counting rule
 
