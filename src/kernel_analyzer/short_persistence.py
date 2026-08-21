@@ -243,7 +243,7 @@ class ShortPersistencePath:
 class SharedShortPersistenceScreen:
     """Run the same sketch protocol for many endpoints on shared states."""
 
-    def __init__(self, *, projection_dim: int = 64, projection_seed: int = 20260822,
+    def __init__(self, *, projection_dim: int = 256, projection_seed: int = 20260822,
                  expected_steps: int = 8, null_draws: int = 2000,
                  prefix_growth_mode: str = "consecutive_late") -> None:
         if expected_steps < 4:

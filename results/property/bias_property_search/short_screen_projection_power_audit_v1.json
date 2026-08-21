@@ -1,0 +1,41 @@
+{
+  "schema": "kernel-analyzer-short-screen-projection-power-audit-v1",
+  "status": "ENGINEERING_ONLY_NOT_HELDOUT",
+  "purpose": "diagnose_count_sketch_collision_power_before_v3_revalidation",
+  "records": [
+    {
+      "case_id": "llama32_3b_lmhead_dx",
+      "trajectory_steps": 16,
+      "projection_dimension": 64,
+      "path": "actual",
+      "status": "RISK_CANDIDATE",
+      "observed_amplification": 1.1438090967674848,
+      "null_upper_95": 1.140366359712875,
+      "protocol": "v2",
+      "claim": "engineering revalidation only"
+    },
+    {
+      "case_id": "ministral3_3b_lmhead_dx",
+      "trajectory_steps": 16,
+      "projection_dimension": 64,
+      "path": "actual",
+      "status": "NULL_LIKE_OR_UNRESOLVED",
+      "observed_amplification": 1.0472541216830527,
+      "null_upper_95": 1.1402715420577765,
+      "protocol": "v2",
+      "claim": "engineering power diagnostic only"
+    },
+    {
+      "case_id": "ministral3_3b_lmhead_dx",
+      "trajectory_steps": 16,
+      "projection_dimension": 256,
+      "path": "actual",
+      "status": "RISK_CANDIDATE",
+      "observed_amplification": 1.1563239402741423,
+      "null_upper_95": 1.086735676508526,
+      "protocol": "exploratory-v2-dim256",
+      "claim": "engineering power diagnostic only; v3 frozen for future validation"
+    }
+  ],
+  "interpretation": "The 64-dimensional screen can miss a weak persistent component. No held-out label is changed by this audit. Future results must use frozen v3 (dimension 256) before reveal."
+}

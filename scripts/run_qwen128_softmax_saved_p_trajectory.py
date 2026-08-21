@@ -232,7 +232,7 @@ def main() -> None:
         help="optional compact CountSketch output; requires --seup-output and avoids raw vector spooling",
     )
     parser.add_argument("--short-screen-steps", type=int, default=8)
-    parser.add_argument("--short-screen-projection-dim", type=int, default=64)
+    parser.add_argument("--short-screen-projection-dim", type=int, default=256)
     parser.add_argument("--short-screen-null-draws", type=int, default=2000)
     args = parser.parse_args()
     if not 1 <= args.steps <= 32:

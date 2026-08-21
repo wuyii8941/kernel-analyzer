@@ -63,7 +63,7 @@ def main() -> None:
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--short-screen-output", type=Path)
     parser.add_argument("--short-screen-steps", type=int, default=8)
-    parser.add_argument("--short-screen-projection-dim", type=int, default=64)
+    parser.add_argument("--short-screen-projection-dim", type=int, default=256)
     parser.add_argument("--short-screen-null-draws", type=int, default=2000)
     args = parser.parse_args()
 

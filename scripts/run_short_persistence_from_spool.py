@@ -132,7 +132,7 @@ def main() -> None:
                         choices=("effective_update", "local", "feedback", "actual", "gradient_delta"))
     parser.add_argument("--phase", default="evaluation", choices=("calibration", "evaluation", "all"))
     parser.add_argument("--steps", type=int, default=8)
-    parser.add_argument("--projection-dim", type=int, default=64)
+    parser.add_argument("--projection-dim", type=int, default=256)
     parser.add_argument("--projection-seed", type=int, default=20260822)
     parser.add_argument("--null-draws", type=int, default=2000)
     parser.add_argument("--output", type=Path, required=True)

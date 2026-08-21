@@ -1,0 +1,36 @@
+{
+  "schema": "kernel-analyzer-short-persistence-protocol-v3",
+  "status": "FROZEN_BEFORE_V3_REVALIDATION",
+  "supersedes": "kernel-analyzer-short-persistence-protocol-v2",
+  "purpose": "low_cost_source_persistence_screen",
+  "projection": {
+    "kind": "SIGNED_COUNT_SKETCH",
+    "dimension": 256,
+    "seed": 20260822,
+    "raw_vectors_retained": false
+  },
+  "short_path": {
+    "steps": 8,
+    "maximum_steps": 16,
+    "shared_ordered_states": true,
+    "null": {
+      "kind": "PER_STATE_SIGN_FLIP",
+      "draws": 2000,
+      "seed": 20260822
+    }
+  },
+  "risk_rule": {
+    "observed_above_sign_flip_95": true,
+    "lag1_positive": true,
+    "at_least_two_positive_lags": true,
+    "prefix_growth": "final_prefix_amplification_above_four_step_warmup",
+    "is_confirmation": false,
+    "positive_requires_exact_f_and_b_confirmation": true
+  },
+  "correction_reason": "A 16-step Ministral engineering revalidation was null-like at 64 dimensions but risk-positive at 256 dimensions on the same actual path; v3 reduces CountSketch collision variance while retaining a small sketch.",
+  "scope": {
+    "feedback_sustained_drift": "OUT_OF_DOMAIN",
+    "missing_or_unresolved_vjp": "ABSTAIN",
+    "centered_controls": "remain_in_denominator"
+  }
+}
