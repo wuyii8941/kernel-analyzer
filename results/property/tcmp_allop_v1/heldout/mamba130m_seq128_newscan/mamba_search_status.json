@@ -27,7 +27,9 @@
   },
   "engineering_attempt": {
     "status": "BLOCKED_COMPILE_TIMEOUT",
-    "reason": "fresh AOT backward recompilation did not finish within bounded engineering run",
+    "attempts": 3,
+    "bounded_window_minutes": 10,
+    "reason": "three fresh AOT backward recompilations (including a 10-minute cache-reuse window) did not reach runtime measurement; the last interruption was in Inductor Triton code generation",
     "artifact": "mamba_backward779_t1_4.json not produced",
     "claim_boundary": "UNRESOLVED; not a negative and not a bias case"
   },

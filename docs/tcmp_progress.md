@@ -201,8 +201,10 @@ parameter-bias cases.
 The most relevant new region is a Triton
 `convolution_backward + silu_backward` state-space fusion (`backward:779`,
 1536-coordinate `out_ptr1`). It was bound to its exact program, source digest,
-and pointer ABI. A bounded engineering replay was attempted, but a fresh AOT
-backward recompilation did not finish; the result is therefore
+and pointer ABI. Three bounded engineering replays were attempted, including
+a 10-minute run reusing the existing Inductor cache; none reached runtime
+measurement. The last interruption was in Inductor Triton code generation for
+the huge slow-Mamba backward graph. The result is therefore
 `UNRESOLVED_COMPILE`, not a negative and not a bias case. The exact binding and
 screen evidence are retained in `heldout/mamba130m_seq128_newscan/` so the
 search can resume without changing the denominator or selecting a result
