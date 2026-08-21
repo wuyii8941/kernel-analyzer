@@ -6,6 +6,7 @@ import pytest
 from kernel_analyzer.short_persistence import (
     SharedShortPersistenceScreen,
     count_sketch,
+    count_sketch_chunks,
 )
 
 
@@ -15,6 +16,18 @@ def test_count_sketch_is_deterministic_and_chunk_invariant() -> None:
     second = count_sketch(values, projection_dim=32, seed=11, chunk_size=4096)
     assert np.array_equal(first, second)
     assert not np.array_equal(first, count_sketch(values, projection_dim=32, seed=12))
+
+
+def test_streamed_count_sketch_matches_dense_vector() -> None:
+    values = np.arange(257, dtype=np.float64) - 31.0
+    dense = count_sketch(values, projection_dim=32, seed=19)
+    streamed, coordinate_count = count_sketch_chunks(
+        [values[:31], values[31:129], values[129:]],
+        projection_dim=32,
+        seed=19,
+    )
+    assert coordinate_count == values.size
+    assert np.array_equal(dense, streamed)
 
 
 def test_persistent_path_is_a_risk_candidate() -> None:

@@ -26,6 +26,40 @@ def _splitmix64(values: np.ndarray) -> np.ndarray:
     return (x ^ (x >> np.uint64(31))).astype(np.uint64)
 
 
+def count_sketch_chunks(
+    chunks: Iterable[Sequence[float] | np.ndarray],
+    *,
+    projection_dim: int,
+    seed: int,
+    chunk_size: int = 1 << 20,
+) -> tuple[np.ndarray, int]:
+    """CountSketch ordered chunks without concatenating parameter tensors."""
+
+    if projection_dim < 4 or chunk_size < 1:
+        raise ValueError("projection_dim must be >=4 and chunk_size must be positive")
+    output = np.zeros(projection_dim, dtype=np.float64)
+    coordinate_count = 0
+    saw_chunk = False
+    for chunk in chunks:
+        values = np.asarray(chunk, dtype=np.float64).reshape(-1)
+        if not np.isfinite(values).all():
+            raise ValueError("screen vector is nonfinite")
+        saw_chunk = True
+        for local_start in range(0, values.size, chunk_size):
+            local_stop = min(local_start + chunk_size, values.size)
+            start = coordinate_count + local_start
+            stop = coordinate_count + local_stop
+            indices = np.arange(start, stop, dtype=np.uint64)
+            hashed = _splitmix64(indices + np.uint64(seed))
+            buckets = (hashed % np.uint64(projection_dim)).astype(np.int64)
+            signs = np.where((hashed & np.uint64(1)) == 0, 1.0, -1.0)
+            np.add.at(output, buckets, signs * values[local_start:local_stop])
+        coordinate_count += int(values.size)
+    if not saw_chunk or coordinate_count == 0:
+        raise ValueError("screen vector has zero coordinates")
+    return output / math.sqrt(float(projection_dim)), coordinate_count
+
+
 def count_sketch(
     vector: Sequence[float] | np.ndarray,
     *,
@@ -33,29 +67,12 @@ def count_sketch(
     seed: int,
     chunk_size: int = 1 << 20,
 ) -> np.ndarray:
-    """Return a deterministic signed CountSketch of a dense vector.
+    """Return a deterministic signed CountSketch of a dense vector."""
 
-    The coordinate count and seed are part of the certificate.  Coordinates are
-    never concatenated across parameters; a caller must provide one declared
-    parameter vector per endpoint.  Chunking keeps peak memory bounded for very
-    large gradients.
-    """
-
-    values = np.asarray(vector, dtype=np.float64).reshape(-1)
-    if projection_dim < 4 or chunk_size < 1:
-        raise ValueError("projection_dim must be >=4 and chunk_size must be positive")
-    if not np.isfinite(values).all():
-        raise ValueError("screen vector is nonfinite")
-    output = np.zeros(projection_dim, dtype=np.float64)
-    coordinate_count = values.size
-    for start in range(0, coordinate_count, chunk_size):
-        stop = min(start + chunk_size, coordinate_count)
-        indices = np.arange(start, stop, dtype=np.uint64)
-        hashed = _splitmix64(indices + np.uint64(seed))
-        buckets = (hashed % np.uint64(projection_dim)).astype(np.int64)
-        signs = np.where((hashed & np.uint64(1)) == 0, 1.0, -1.0)
-        np.add.at(output, buckets, signs * values[start:stop])
-    return output / math.sqrt(float(projection_dim))
+    result, _ = count_sketch_chunks(
+        [vector], projection_dim=projection_dim, seed=seed, chunk_size=chunk_size
+    )
+    return result
 
 
 def _prefixes(steps: int) -> list[int]:
@@ -117,16 +134,17 @@ class ShortPersistencePath:
     _coordinate_count: int | None = None
 
     def add_vector(self, vector: Sequence[float] | np.ndarray) -> None:
-        values = np.asarray(vector, dtype=np.float64).reshape(-1)
+        self.add_chunks([vector])
+
+    def add_chunks(self, chunks: Iterable[Sequence[float] | np.ndarray]) -> None:
+        sketch, coordinate_count = count_sketch_chunks(
+            chunks, projection_dim=self.projection_dim, seed=self.projection_seed
+        )
         if self._coordinate_count is None:
-            self._coordinate_count = int(values.size)
-        elif values.size != self._coordinate_count:
+            self._coordinate_count = coordinate_count
+        elif coordinate_count != self._coordinate_count:
             raise ValueError(f"{self.case_id}: coordinate count changed")
-        self._vectors.append(count_sketch(
-            values,
-            projection_dim=self.projection_dim,
-            seed=self.projection_seed,
-        ))
+        self._vectors.append(sketch)
         if len(self._vectors) > self.expected_steps:
             raise ValueError(f"{self.case_id}: too many states")
 
@@ -223,6 +241,13 @@ class SharedShortPersistenceScreen:
         self._paths: dict[str, ShortPersistencePath] = {}
 
     def add(self, case_id: str, vector: Sequence[float] | np.ndarray) -> None:
+        self.add_chunks(case_id, [vector])
+
+    def add_chunks(
+        self,
+        case_id: str,
+        chunks: Iterable[Sequence[float] | np.ndarray],
+    ) -> None:
         path = self._paths.setdefault(case_id, ShortPersistencePath(
             case_id=case_id,
             projection_dim=self.projection_dim,
@@ -230,7 +255,7 @@ class SharedShortPersistenceScreen:
             expected_steps=self.expected_steps,
             null_draws=self.null_draws,
         ))
-        path.add_vector(vector)
+        path.add_chunks(chunks)
 
     def finalize(self) -> dict[str, Any]:
         return {

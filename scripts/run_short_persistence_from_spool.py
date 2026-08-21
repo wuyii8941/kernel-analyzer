@@ -41,12 +41,12 @@ def _load(path: Path) -> dict[str, Any]:
     return value
 
 
-def _flatten_tree(tree: Any, parameter_order: Iterable[str]) -> tuple[np.ndarray, int]:
-    """Flatten a declared tensor tree in a deterministic parameter order."""
+def _iter_tree_chunks(tree: Any, parameter_order: Iterable[str]) -> tuple[Iterable[np.ndarray], int]:
+    """Stream a declared tensor tree in deterministic parameter order."""
 
     if not isinstance(tree, dict):
         raise ValueError("spool field must be a parameter->tensor mapping")
-    chunks: list[np.ndarray] = []
+    arrays: list[np.ndarray] = []
     coordinate_count = 0
     for name in parameter_order:
         if name not in tree:
@@ -58,11 +58,11 @@ def _flatten_tree(tree: Any, parameter_order: Iterable[str]) -> tuple[np.ndarray
         array = value.numpy()
         if not np.isfinite(array).all():
             raise ValueError(f"spool field {name} is nonfinite")
-        chunks.append(array)
+        arrays.append(array)
         coordinate_count += int(array.size)
-    if not chunks or coordinate_count == 0:
+    if not arrays or coordinate_count == 0:
         raise ValueError("spool field has zero declared coordinates")
-    return np.concatenate(chunks), coordinate_count
+    return iter(arrays), coordinate_count
 
 
 def _rows_for_phase(rows: list[dict[str, Any]], phase: str, steps: int) -> list[dict[str, Any]]:
@@ -103,8 +103,8 @@ def screen_spools(
         for row in rows:
             if field not in row:
                 raise ValueError(f"{path}: row is missing field {field}")
-            vector, coordinate_count = _flatten_tree(row[field], parameters)
-            screen.add(screen_case, vector)
+            chunks, coordinate_count = _iter_tree_chunks(row[field], parameters)
+            screen.add_chunks(screen_case, chunks)
         source_rows.append({
             "path": str(path.relative_to(ROOT) if path.is_relative_to(ROOT) else path),
             "sha256": _sha256(path),

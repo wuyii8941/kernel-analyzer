@@ -329,13 +329,14 @@ def main() -> None:
         def add_short_screen(phase: str, tree: dict[str, torch.Tensor], step: int) -> None:
             if short_screen is None or step > args.short_screen_steps:
                 return
-            # The carrier order is fixed by CARRIERS and is part of the
-            # resulting input certificate.  Only a transient CPU vector is
-            # formed; the screen immediately replaces it with a CountSketch.
-            vector = torch.cat([
-                tree[name].detach().float().reshape(-1).cpu() for name in CARRIERS
-            ]).numpy()
-            short_screen.add(f"{CANDIDATE_ID}::{phase}", vector)
+            # The carrier order is fixed by CARRIERS and is part of the input
+            # certificate. Stream one parameter block at a time; do not
+            # concatenate a multi-billion-coordinate carrier before hashing.
+            chunks = (
+                tree[name].detach().float().reshape(-1).cpu().numpy()
+                for name in CARRIERS
+            )
+            short_screen.add_chunks(f"{CANDIDATE_ID}::{phase}", chunks)
 
         def cpu_tree(tree: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
             return {key: value.detach().float().cpu().clone() for key, value in tree.items()}
