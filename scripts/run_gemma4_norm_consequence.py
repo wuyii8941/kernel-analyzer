@@ -17,6 +17,7 @@ from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime
 from scripts.run_frozen_candidate_fp32_screen import wrapper_modules
 from scripts.run_generated_fp32_screen import load_model
 from scripts.run_heldout_lmhead_consequence import adam_delta
+from kernel_analyzer.short_persistence import SharedShortPersistenceScreen
 
 
 CARRIER = "model.language_model.per_layer_model_projection.weight"
@@ -32,7 +33,12 @@ def main() -> None:
     parser.add_argument("--region-id")
     parser.add_argument("--endpoint")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--steps", type=int, choices=(2, 32), default=2)
+    parser.add_argument("--steps", type=int, choices=(2, 16, 32), default=2)
+    parser.add_argument(
+        "--state-role", choices=("TRAJECTORY", "CONFIRMATION", "SCREENING"),
+        default="TRAJECTORY",
+        help="State-bank role used for this consequence/screen run. The frozen Gemma bank has no TRAJECTORY role; CONFIRMATION is the independent held-out population.",
+    )
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument(
         "--optimizer", choices=("adamw", "sgd", "adamw_reset_moments"),
@@ -40,14 +46,20 @@ def main() -> None:
         help="Feedback intervention; all modes use the same declared F+B arms.",
     )
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--short-screen-output", type=Path)
+    parser.add_argument("--short-screen-steps", type=int, default=8)
+    parser.add_argument("--short-screen-projection-dim", type=int, default=64)
+    parser.add_argument("--short-screen-null-draws", type=int, default=2000)
     args = parser.parse_args()
     prediction = json.loads(args.prediction.read_text())
     if prediction["status"] != "PREDICTION_FROZEN_BEFORE_TRAJECTORY":
         raise RuntimeError("prediction is not frozen")
     bank = json.loads(args.input_bank.read_text())
-    states = [row for row in bank["states"] if row["role"] == "TRAJECTORY"][:args.steps]
+    states = [row for row in bank["states"] if row["role"] == args.state_role][:args.steps]
     if len(states) != args.steps:
-        raise RuntimeError("trajectory population incomplete")
+        raise RuntimeError(f"{args.state_role} population incomplete")
+    if args.short_screen_output is not None and not 4 <= args.short_screen_steps <= min(16, args.steps):
+        raise ValueError("short screen steps must be in [4, min(16, trajectory steps)]")
     device = torch.device(args.device)
     # Match the freeze runner's seed so any initialized auxiliary buffers and
     # compiler constants produce the same generated F+B wrapper bytes.
@@ -91,6 +103,22 @@ def main() -> None:
     sums = {name: torch.zeros_like(initial) for name in ("local", "feedback", "actual")}
     energies = {name: 0.0 for name in sums}
     records = []
+    short_screen = (
+        SharedShortPersistenceScreen(
+            projection_dim=args.short_screen_projection_dim,
+            projection_seed=20260822,
+            expected_steps=args.short_screen_steps,
+            null_draws=args.short_screen_null_draws,
+        ) if args.short_screen_output is not None else None
+    )
+
+    def add_short(level: str, value: torch.Tensor, step: int) -> None:
+        if short_screen is None or step > args.short_screen_steps:
+            return
+        short_screen.add(
+            f"gemma4_e2b_ple_rmsnorm::{args.optimizer}::{level}",
+            value.detach().float().cpu().numpy().reshape(-1),
+        )
 
     def update(gradient_value: torch.Tensor, first: torch.Tensor,
                second: torch.Tensor, step: int):
@@ -143,6 +171,9 @@ def main() -> None:
         residual = actual - local - feedback
         for name, value in (("local", local), ("feedback", feedback), ("actual", actual)):
             sums[name].add_(value); energies[name] += float(torch.sum(value * value).item())
+        add_short("local", local, step)
+        add_short("feedback", feedback, step)
+        add_short("actual", actual, step)
         records.append({
             "step": step, "state_id": state["state_id"],
             "local_l2": float(torch.linalg.vector_norm(local)),
@@ -165,7 +196,8 @@ def main() -> None:
     payload = {
         "schema": "kernel-analyzer-gemma4-norm-consequence-v1",
         "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
-        "prediction": prediction, "steps": args.steps, "carrier": args.carrier,
+        "prediction": prediction, "steps": args.steps, "state_role": args.state_role,
+        "carrier": args.carrier,
         "optimizer": {"name": args.optimizer, "learning_rate": args.learning_rate},
         "target": {"region_id": target["region_id"], "endpoint": args.endpoint,
                    "symbol": target["symbol"]},
@@ -179,6 +211,22 @@ def main() -> None:
     ).hexdigest()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    if short_screen is not None:
+        short_payload = short_screen.finalize()
+        short_payload["input"] = {
+            "kind": "LIVE_PAIRED_TRAJECTORY_EFFECTIVE_UPDATE",
+            "case_id": "gemma4_e2b_ple_rmsnorm",
+            "carrier_parameters": [args.carrier],
+            "optimizer": args.optimizer,
+            "evaluation_steps_used": args.short_screen_steps,
+            "state_role": args.state_role,
+            "raw_vectors_retained": False,
+            "source_result_sha256": payload["result_sha256"],
+        }
+        args.short_screen_output.parent.mkdir(parents=True, exist_ok=True)
+        args.short_screen_output.write_text(
+            json.dumps(short_payload, indent=2, sort_keys=True) + "\n"
+        )
 
 
 if __name__ == "__main__":
