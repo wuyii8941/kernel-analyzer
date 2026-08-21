@@ -1,0 +1,68 @@
+{
+  "schema": "kernel-analyzer-tcmp-predictive-amendment-v1.2",
+  "status": "FROZEN_BEFORE_GEMMA_AND_HELDOUT_MEASUREMENT",
+  "supersedes_for_future_collection": "tcmp_allop_v1.1",
+  "existing_verdicts_changed": false,
+  "implementation_identity": {
+    "coverage_keeps_every_invocation": true,
+    "deep_measurement_representatives": "ONE_PER_EXACT_IMPLEMENTATION_IDENTITY",
+    "novelty_labels": [
+      "SEEN_EXACT_IMPL_NEW_OPERANDS",
+      "NEW_EXACT_IMPL_SEEN_PATTERN",
+      "NEW_IMPL_PATTERN",
+      "NEW_SEMANTIC_FAMILY"
+    ],
+    "required_runtime_metadata": [
+      "backend",
+      "program_or_external_implementation",
+      "operand_shape_stride_dtype_layout",
+      "phase_and_semantic_endpoint",
+      "fusion_boundary",
+      "declared_reduction_and_launch_contract"
+    ]
+  },
+  "predictor": {
+    "weight_advancement_allowed": false,
+    "allowed": [
+      "split_orbit_source_statistics",
+      "local_residual_geometry",
+      "declared_schedule_metadata",
+      "analytic_or_reference_only_fb_transport",
+      "static_semantic_structure"
+    ],
+    "forbidden": [
+      "A_L",
+      "A_B",
+      "A_D",
+      "live_weight_trajectory",
+      "trajectory_separation",
+      "T4_M6_SEUP_verdict",
+      "final_drift",
+      "historical_case_identity"
+    ],
+    "future_target": "32_STEP_DRIFT_AMPLIFICATION_ABOVE_EMPIRICAL_NULL"
+  },
+  "screen_negative_audit": {
+    "seed": 20260821,
+    "initial_units": 16,
+    "optional_total_units": 32,
+    "sampling": "STRATIFIED_FROZEN_ORDER",
+    "report": "EXACT_BINOMIAL_HIDDEN_POSITIVE_PREVALENCE_BOUND"
+  },
+  "feedback": {
+    "source_predictor_separate": true,
+    "pretrajectory_susceptibility_gate_required": true,
+    "posthoc_domain_reassignment_forbidden": true
+  },
+  "moe_routing": {
+    "record_topk_ids_and_margins": true,
+    "record_hamming_first_divergence_and_expert_load": true,
+    "same_route_smooth_transport_eligible": true,
+    "divergent_route_class": "DISCRETE_ROUTING_REGIME",
+    "routing_divergence_removed_from_denominator": false
+  },
+  "heldout_sealed_until_prediction_commit": [
+    "meta-llama/Llama-3.2-3B",
+    "mistralai/Ministral-3-3B-Base-2512"
+  ]
+}

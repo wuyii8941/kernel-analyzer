@@ -12,6 +12,19 @@ from typing import Any, Callable, Iterable, Mapping, Sequence
 
 import torch
 
+
+def tensor_runtime_contract(value: torch.Tensor) -> dict[str, Any]:
+    """Value-blind runtime metadata needed to identify an implementation ABI."""
+
+    return {
+        "shape": list(value.shape),
+        "stride": list(value.stride()),
+        "dtype": str(value.dtype),
+        "device_type": value.device.type,
+        "layout": str(value.layout),
+        "storage_offset": int(value.storage_offset()),
+    }
+
 from forkcert.directional_error_sketch import (
     SCHEMA_VERSION as DIRECTIONAL_SKETCH_SCHEMA_VERSION,
     fixed_flat_coordinate_indices,
@@ -471,6 +484,10 @@ class GeneratedFP32Observer:
                     "callsite_execution_ordinal": callsite_index,
                     "reference_role": "PRECISION_ONLY_GENERATED_PROGRAM_COUNTERFACTUAL",
                     "reference_abi": "INDEPENDENT_RECOMPILED_FLOATING_POINTER_FP32",
+                    "runtime_pointer_contracts": {
+                        name: tensor_runtime_contract(candidate_pointers[name])
+                        for name in pointer_names
+                    },
                     "typed_reference_program_sha256": self.reference_metadata[
                         (f"{_symbol}@{program_digest}" if self.exact_callsite_mode else _symbol)
                     ][

@@ -15,6 +15,7 @@ import torch
 from scripts.generated_fp32_observer import (
     nonfinite_aware_metrics,
     promoted_pointer_arguments,
+    tensor_runtime_contract,
 )
 
 
@@ -188,6 +189,7 @@ class GeneratedNonTritonFP32Observer:
     def _record(
         self, row: Mapping[str, Any], filename: str, line: int,
         metrics: Mapping[str, Any],
+        runtime_operands: Mapping[str, torch.Tensor] | None = None,
     ) -> None:
         self.records.append({
             "region_id": str(row["compute_region_id"]),
@@ -205,6 +207,10 @@ class GeneratedNonTritonFP32Observer:
             )] - 1,
             "source_line_sha256": str(row["source_line_sha256"]),
             "reference_role": "PRECISION_ONLY_SAME_DECLARED_OP_FP32_STORAGE_COUNTERFACTUAL",
+            "runtime_operand_contracts": {
+                name: tensor_runtime_contract(value)
+                for name, value in sorted((runtime_operands or {}).items())
+            },
             "endpoint_metrics": dict(metrics),
         })
 
@@ -232,7 +238,23 @@ class GeneratedNonTritonFP32Observer:
                     candidate = kwargs.get("out", result)
                     if not isinstance(candidate, torch.Tensor):
                         raise TypeError(f"external {_symbol} produced no tensor")
-                    self._record(row, filename, line, {"output": self._metric(candidate, reference)})
+                    operands = {
+                        **{
+                            f"arg{position}": value
+                            for position, value in enumerate(args)
+                            if isinstance(value, torch.Tensor)
+                        },
+                        **{
+                            f"kw:{name}": value
+                            for name, value in kwargs.items()
+                            if isinstance(value, torch.Tensor)
+                        },
+                    }
+                    self._record(
+                        row, filename, line,
+                        {"output": self._metric(candidate, reference)},
+                        runtime_operands=operands,
+                    )
                     return result
 
                 setattr(namespace, symbol, wrapped)
