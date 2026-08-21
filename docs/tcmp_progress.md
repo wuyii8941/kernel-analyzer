@@ -460,3 +460,34 @@ backward-visible canceling controls or explicit abstentions. The project must
 therefore not claim a universal all-operator property. Gemma feedback drift is
 reported as a separate consequence channel, and the repeated-orbit nulls are
 feedback-compatible diagnostics rather than proof of source-specific causality.
+
+## Post-checkpoint scope extension closeout (2026-08-22)
+
+Five mechanically selected, previously unmeasured F+B endpoints were completed
+after the final checkpoint.  Each endpoint had a nonzero implementation
+residual, reached its declared parameter carrier, and was evaluated on disjoint
+open-loop calibration and confirmation populations.  All three formation
+layers were `CENTERED` in both populations:
+
+| Model | Exact backward endpoint | Semantic role | States | Result |
+| --- | --- | --- | ---: | --- |
+| DeepSeek 8B | `backward:1665:in_out_ptr0` | attention softmax backward | 16+16 | complete centered control |
+| Phi-4 | `backward:495:out_ptr1` | cross-entropy backward | 16+16 | complete centered control |
+| Phi-4 | `backward:1031:in_out_ptr0` | attention softmax backward | 16+16 | complete centered control |
+| Qwen3 1.7B | `backward:1293:in_out_ptr0` | attention softmax backward | 32+32 | complete centered control |
+| Qwen3 1.7B | `backward:1308:output_0` | normalization backward | 16+16 | complete centered control |
+
+The Qwen attention endpoint initially had insufficient power on a 128-coordinate
+carrier at 16+16 states.  Its population was extended mechanically to 32+32;
+both parameter-gradient partitions then resolved as `CENTERED`.  The Phi-4
+measurements required the already declared graph-break execution boundary due
+to the Transformers LongRoPE control-flow branch; this affects the execution
+boundary, not the numerical verdict.
+
+No consequence trajectory was run because no formation layer was biased.  The
+extension therefore adds five genuine backward-visible canceling controls and
+zero new implementation-class positives.  An unexecuted Mamba metadata plan is
+not part of this result and is not counted as an abstention or a negative.
+
+The compact machine-readable ledger is
+`results/property/tcmp_allop_v1/scope_extension_20260822.json`.

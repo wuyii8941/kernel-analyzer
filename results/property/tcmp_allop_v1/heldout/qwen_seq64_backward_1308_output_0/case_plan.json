@@ -1,0 +1,41 @@
+{
+  "case_id": "qwen_seq64_backward_1308_output_0",
+  "cases": [
+    {
+      "carrier": "model.layers.4.input_layernorm.weight",
+      "case_id": "qwen_seq64_backward_1308_output_0",
+      "claim_boundary": "Exact NORMALIZATION_BACKWARD endpoint backward:1308:output_0; the complete F+B boundary and declared parameter reach must be validated by the runner before any formation verdict.",
+      "reference_method": "AOT_REPLAY",
+      "task_id": "backward:1308:output_0"
+    }
+  ],
+  "closure_task": "backward:1308:output_0",
+  "complete_fb_unit_required": true,
+  "implementation_kind": "EXTERN",
+  "metadata_binding": {
+    "exact_aot_endpoint_id": "backward:graph0:mm_532",
+    "has_exact_downstream_closure": true,
+    "member_count": 9,
+    "nearest_carrier": {
+      "aliases": [
+        "model.layers.4.input_layernorm.weight"
+      ],
+      "aot_distance": 6,
+      "gradient_source_node": "view_1466",
+      "name": "model.layers.4.input_layernorm.weight",
+      "shape": [
+        2048
+      ]
+    },
+    "pool_cell_id": "multishape-backward-cell-0754",
+    "pool_rank": 370,
+    "semantic_region_executable": true
+  },
+  "model": "qwen",
+  "region_symbol": "mm",
+  "schema": "kernel-analyzer-tcmp-case-plan-v2",
+  "sequence_length": 64,
+  "source_family": "NORMALIZATION_BACKWARD",
+  "source_internal_region": "backward:1308:output_0",
+  "task_id": "backward:1308:output_0"
+}

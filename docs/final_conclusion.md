@@ -53,15 +53,25 @@ harmless.
 
 ## Remaining steps if a broader claim is required
 
-1. Freeze a mechanically enumerated implementation-class held-out pool that
-   includes residual-nonzero predictor negatives, not only easy `NOT_APPLICABLE`
-   controls.
-2. Test that pool without changing the predictor or selecting cases by outcome.
-3. Either obtain a genuinely new implementation-class positive, or freeze the
-   family-scoped result as the final claim. A second positive is not logically
-   guaranteed.
-4. Add a separately frozen feedback predictor before making claims about
-   feedback-sustained cases.
+The post-checkpoint extension added five complete, residual-nonzero,
+backward-visible centered controls and no new implementation-class positive.
+The next step is therefore not another unconstrained case search.  It is to
+test a small set of predeclared structural properties on the existing positive
+and centered populations:
+
+1. source asymmetry or a nonzero conditional orbit mean;
+2. source--transport correlation under the exact VJP;
+3. concentration of transported error into a low-dimensional parameter
+   carrier;
+4. stability of that carrier across adjacent reference-trajectory states.
+
+These measurements should feed a short-horizon, candidate-aware screening
+oracle using shared reference checkpoints and fixed random update sketches.
+Only predicted risks and a random sample of predicted negatives should receive
+the expensive exact-repair trajectory.  Thresholds and input features must be
+frozen before any new implementation-class outcome is revealed.  A separate
+feedback predictor remains necessary before making claims about
+feedback-sustained cases.
 
 The machine-readable decision matrix is
 `results/property/tcmp_allop_v1/final_decision_matrix.json`.

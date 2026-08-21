@@ -1,0 +1,97 @@
+{
+  "schema": "kernel-analyzer-tcmp-scope-extension-closeout-v1",
+  "date": "2026-08-22",
+  "status": "COMPLETE",
+  "claim_boundary": "Open-loop bias formation only; no trajectory was run because every measured layer was centered.",
+  "summary": {
+    "complete_centered_controls": 5,
+    "new_implementation_class_positives": 0,
+    "trajectory_runs": 0,
+    "unexecuted_plans_counted": 0
+  },
+  "cases": [
+    {
+      "case_id": "deepseek8b_seq64_backward_1665_in_out_ptr0",
+      "semantic_role": "ATTENTION_SOFTMAX_BACKWARD",
+      "states": "16+16",
+      "calibration_ratios": {
+        "LOCAL_ENDPOINT": 0.0014515,
+        "PARAMETER_GRADIENT": -0.0157256,
+        "EFFECTIVE_UPDATE": -0.0157256
+      },
+      "confirmation_ratios": {
+        "LOCAL_ENDPOINT": 0.0009226,
+        "PARAMETER_GRADIENT": 0.0114745,
+        "EFFECTIVE_UPDATE": 0.0114745
+      },
+      "verdict": "COMPLETE_CENTERED_CONTROL"
+    },
+    {
+      "case_id": "phi4_seq64_backward_495_out_ptr1",
+      "semantic_role": "LOSS_CE_BACKWARD",
+      "states": "16+16",
+      "execution_boundary": "ALLOW_GRAPH_BREAKS_LONGROPE_CONTROL_FLOW",
+      "calibration_ratios": {
+        "LOCAL_ENDPOINT": 0.000086,
+        "PARAMETER_GRADIENT": -0.003489,
+        "EFFECTIVE_UPDATE": -0.003489
+      },
+      "confirmation_ratios": {
+        "LOCAL_ENDPOINT": 0.000967,
+        "PARAMETER_GRADIENT": -0.004211,
+        "EFFECTIVE_UPDATE": -0.004211
+      },
+      "verdict": "COMPLETE_CENTERED_CONTROL"
+    },
+    {
+      "case_id": "phi4_seq64_backward_1031_in_out_ptr0",
+      "semantic_role": "ATTENTION_SOFTMAX_BACKWARD",
+      "states": "16+16",
+      "execution_boundary": "ALLOW_GRAPH_BREAKS_LONGROPE_CONTROL_FLOW",
+      "calibration_ratios": {
+        "LOCAL_ENDPOINT": -0.001453,
+        "PARAMETER_GRADIENT": 0.009534,
+        "EFFECTIVE_UPDATE": 0.009534
+      },
+      "confirmation_ratios": {
+        "LOCAL_ENDPOINT": 0.000708,
+        "PARAMETER_GRADIENT": 0.000661,
+        "EFFECTIVE_UPDATE": 0.000661
+      },
+      "verdict": "COMPLETE_CENTERED_CONTROL"
+    },
+    {
+      "case_id": "qwen_seq64_backward_1293_in_out_ptr0",
+      "semantic_role": "ATTENTION_SOFTMAX_BACKWARD",
+      "states": "32+32",
+      "calibration_ratios": {
+        "LOCAL_ENDPOINT": 0.00242,
+        "PARAMETER_GRADIENT": -0.017479,
+        "EFFECTIVE_UPDATE": -0.017479
+      },
+      "confirmation_ratios": {
+        "LOCAL_ENDPOINT": 0.00204,
+        "PARAMETER_GRADIENT": -0.005856,
+        "EFFECTIVE_UPDATE": -0.005856
+      },
+      "verdict": "COMPLETE_CENTERED_CONTROL"
+    },
+    {
+      "case_id": "qwen_seq64_backward_1308_output_0",
+      "semantic_role": "NORMALIZATION_BACKWARD",
+      "states": "16+16",
+      "calibration_ratios": {
+        "LOCAL_ENDPOINT": -0.004679,
+        "PARAMETER_GRADIENT": -0.014361,
+        "EFFECTIVE_UPDATE": -0.014361
+      },
+      "confirmation_ratios": {
+        "LOCAL_ENDPOINT": -0.009556,
+        "PARAMETER_GRADIENT": -0.038183,
+        "EFFECTIVE_UPDATE": -0.038183
+      },
+      "verdict": "COMPLETE_CENTERED_CONTROL"
+    }
+  ],
+  "scientific_effect": "Adds five backward-visible canceling controls; does not alter the zero-new-implementation-positive conclusion."
+}

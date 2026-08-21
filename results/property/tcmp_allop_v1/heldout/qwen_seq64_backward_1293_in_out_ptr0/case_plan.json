@@ -1,0 +1,41 @@
+{
+  "case_id": "qwen_seq64_backward_1293_in_out_ptr0",
+  "cases": [
+    {
+      "carrier": "model.layers.4.self_attn.q_norm.weight",
+      "case_id": "qwen_seq64_backward_1293_in_out_ptr0",
+      "claim_boundary": "Exact ATTENTION_STATE_OR_TRANSPORT_BACKWARD endpoint backward:1293:in_out_ptr0; the complete F+B boundary and declared parameter reach must be validated by the runner before any formation verdict.",
+      "reference_method": "AOT_REPLAY",
+      "task_id": "backward:1293:in_out_ptr0"
+    }
+  ],
+  "closure_task": "backward:1293:in_out_ptr0",
+  "complete_fb_unit_required": true,
+  "implementation_kind": "TRITON",
+  "metadata_binding": {
+    "exact_aot_endpoint_id": "backward:graph0:mul_1434",
+    "has_exact_downstream_closure": true,
+    "member_count": 9,
+    "nearest_carrier": {
+      "aliases": [
+        "model.layers.4.self_attn.q_norm.weight"
+      ],
+      "aot_distance": 9,
+      "gradient_source_node": "view_1462",
+      "name": "model.layers.4.self_attn.q_norm.weight",
+      "shape": [
+        128
+      ]
+    },
+    "pool_cell_id": "multishape-backward-cell-0744",
+    "pool_rank": 135,
+    "semantic_region_executable": true
+  },
+  "model": "qwen",
+  "region_symbol": "triton_per_fused__softmax__softmax_backward_data__to_copy_mul_view_8",
+  "schema": "kernel-analyzer-tcmp-case-plan-v2",
+  "sequence_length": 64,
+  "source_family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+  "source_internal_region": "backward:1293:in_out_ptr0",
+  "task_id": "backward:1293:in_out_ptr0"
+}
