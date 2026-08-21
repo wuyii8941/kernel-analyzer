@@ -44,6 +44,43 @@ def digest(value: Any) -> str:
     ).hexdigest()
 
 
+def extend_direct_inventory_contracts(artifact: dict[str, Any]) -> None:
+    """Add derivations introduced by newer Inductor graphs to the frozen audit."""
+
+    for row in artifact["rows"]:
+        if row["symbol"] != "masked_scatter_backward":
+            continue
+        row["mathematical_derivation"] = {
+            "forward_map": (
+                "masked scatter writes the flattened source prefix into input positions "
+                "where the flattened Boolean mask is true"
+            ),
+            "backward_vjp": (
+                "dsource gathers grad_output at true mask positions in flatten order; "
+                "dinput is grad_output with overwritten positions set to zero"
+            ),
+            "candidate_subprogram": row["runtime_function"],
+            "finite_arithmetic_risk": [
+                "no reduction; mask/order binding and dtype-preserving gather"
+            ],
+            "forward_backward_unit": (
+                "masked_scatter forward and both exact input/source VJP branches; "
+                "masked_scatter_backward is the source branch"
+            ),
+        }
+    artifact["gates"]["every_direct_call_has_forward_backward_math"] = all(
+        row["mathematical_derivation"] is not None for row in artifact["rows"]
+    )
+    if all(
+        value for name, value in artifact["gates"].items()
+        if name not in {"candidate_values_used", "property_generalization_allowed"}
+    ) and not artifact["gates"]["candidate_values_used"] and not artifact["gates"]["property_generalization_allowed"]:
+        artifact["status"] = "COMPLETE_DIRECT_RUNTIME_CALL_SUPPLEMENT"
+    unsigned = dict(artifact)
+    unsigned.pop("inventory_sha256", None)
+    artifact["inventory_sha256"] = digest(unsigned)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--trace-dir", type=Path, default=TRACE)
@@ -62,6 +99,9 @@ def main() -> None:
     )
     runtime_audit_module._HELPER_ROLES.setdefault(
         "assert_alignment", "OUTPUT_ALIGNMENT_POSTCONDITION"
+    )
+    runtime_audit_module._HELPER_ROLES.setdefault(
+        "workspace_0.zero_", "REDUCTION_WORKSPACE_ZERO_INITIALIZATION"
     )
     opener = gzip.open if args.capture.suffix == ".gz" else open
     with opener(args.capture, "rt", encoding="utf-8") as handle:
@@ -89,6 +129,7 @@ def main() -> None:
     direct = build_inductor_direct_runtime_call_inventory(
         trace_dir=args.trace_dir, base_generated_inventory=wrapped
     )
+    extend_direct_inventory_contracts(direct)
     validate_inductor_direct_runtime_call_inventory(direct)
     runtime = build_generated_runtime_call_completeness_audit(
         trace_dir=args.trace_dir,

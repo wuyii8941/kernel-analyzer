@@ -106,7 +106,10 @@ class GeneratedNonTritonFP32Observer:
                 "extern_kernels.addmm", "extern_kernels.convolution",
             },
             "DIRECT_ATEN": {"aten.index_put_"},
-            "DIRECT_TORCH_OP": {"torch.ops.aten.convolution_backward.default"},
+            "DIRECT_TORCH_OP": {
+                "torch.ops.aten.convolution_backward.default",
+                "torch.ops.aten.masked_scatter_backward.default",
+            },
             "DIRECT_TENSOR_METHOD": set(),
         }
         unsupported = [
@@ -295,41 +298,48 @@ class GeneratedNonTritonFP32Observer:
             module.aten = proxy
             self.restores.append(lambda target=module, value=namespace: setattr(target, "aten", value))
 
-    def _install_convolution_backward(self) -> None:
+    def _install_direct_torch_ops(self) -> None:
         for module in self.modules:
             torch_namespace = getattr(module, "torch", None)
             if torch_namespace is None:
                 continue
             self.installed_kinds.add("DIRECT_TORCH_OP")
-            original = torch_namespace.ops.aten.convolution_backward.default
+            replacements = {}
+            for symbol in ("convolution_backward", "masked_scatter_backward"):
+                overload_namespace = getattr(torch_namespace.ops.aten, symbol)
+                original = overload_namespace.default
 
-            def wrapped(*args: Any, _original: Any = original, **kwargs: Any) -> Any:
-                filename, line, digest = _source_identity()
-                runtime_path = str(Path(filename).resolve())
-                captured_path = self.runtime_to_captured_path.get(runtime_path)
-                key = ("DIRECT_TORCH_OP", captured_path, line, digest)
-                if key not in self.rows:
-                    return _original(*args, **kwargs)
-                row = self._take("DIRECT_TORCH_OP", filename, line, digest)
-                promoted = _promote_args(args)
-                result = _original(*args, **kwargs)
-                reference = torch.ops.aten.convolution_backward.default(*promoted, **kwargs)
-                metrics = {
-                    f"output_{index}": self._metric(candidate, expected)
-                    for index, (candidate, expected) in enumerate(zip(result, reference))
-                    if isinstance(candidate, torch.Tensor)
-                }
-                self._record(row, filename, line, metrics)
-                return result
+                def wrapped(
+                    *args: Any, _symbol: str = symbol, _original: Any = original,
+                    **kwargs: Any,
+                ) -> Any:
+                    filename, line, digest = _source_identity()
+                    runtime_path = str(Path(filename).resolve())
+                    captured_path = self.runtime_to_captured_path.get(runtime_path)
+                    key = ("DIRECT_TORCH_OP", captured_path, line, digest)
+                    if key not in self.rows:
+                        return _original(*args, **kwargs)
+                    row = self._take("DIRECT_TORCH_OP", filename, line, digest)
+                    promoted = _promote_args(args)
+                    result = _original(*args, **kwargs)
+                    reference_fn = getattr(torch.ops.aten, _symbol).default
+                    reference = reference_fn(*promoted, **kwargs)
+                    if isinstance(result, torch.Tensor):
+                        metrics = {"output": self._metric(result, reference)}
+                    else:
+                        metrics = {
+                            f"output_{index}": self._metric(candidate, expected)
+                            for index, (candidate, expected) in enumerate(zip(result, reference))
+                            if isinstance(candidate, torch.Tensor)
+                        }
+                    self._record(row, filename, line, metrics)
+                    return result
 
-            default_proxy = _AttributeProxy(
-                torch_namespace.ops.aten.convolution_backward, {"default": wrapped}
-            )
-            convolution_proxy = _AttributeProxy(
-                torch_namespace.ops.aten,
-                {"convolution_backward": default_proxy},
-            )
-            ops_proxy = _AttributeProxy(torch_namespace.ops, {"aten": convolution_proxy})
+                replacements[symbol] = _AttributeProxy(
+                    overload_namespace, {"default": wrapped}
+                )
+            aten_proxy = _AttributeProxy(torch_namespace.ops.aten, replacements)
+            ops_proxy = _AttributeProxy(torch_namespace.ops, {"aten": aten_proxy})
             module.torch = _AttributeProxy(torch_namespace, {"ops": ops_proxy})
             self.restores.append(
                 lambda target=module, value=torch_namespace: setattr(target, "torch", value)
@@ -365,7 +375,7 @@ class GeneratedNonTritonFP32Observer:
     def __enter__(self) -> "GeneratedNonTritonFP32Observer":
         self._install_externals()
         self._install_direct_aten()
-        self._install_convolution_backward()
+        self._install_direct_torch_ops()
         self._install_tensor_copy()
         missing_hooks = self.expected_kinds - self.installed_kinds
         if missing_hooks:

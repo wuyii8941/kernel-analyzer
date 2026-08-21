@@ -27,9 +27,11 @@ from scripts.generated_nontriton_fp32_observer import (  # noqa: E402
     GeneratedNonTritonFP32Observer,
 )
 from scripts.run_generated_fp32_screen import (  # noqa: E402
+    Gemma3ImageLossStep,
     file_digest,
     gradient_digest,
     load_model,
+    prepare_values,
     tensor_digest,
 )
 
@@ -60,6 +62,10 @@ def main() -> None:
     parser.add_argument("--shard-count", type=int, default=1)
     parser.add_argument("--expected-states", type=int, default=32)
     parser.add_argument(
+        "--warm-state-index", type=int, default=0,
+        help="Frozen bank index used to reproduce the captured generated schedule.",
+    )
+    parser.add_argument(
         "--state-role",
         choices=("ENGINEERING", "SCREENING", "CONFIRMATION"),
         help="Run only the frozen role while retaining the complete bank binding.",
@@ -73,6 +79,8 @@ def main() -> None:
     parser.add_argument("--sample-size", type=int, default=64)
     parser.add_argument("--metric-chunk-elements", type=int, default=1_048_576)
     parser.add_argument("--allow-graph-breaks", action="store_true")
+    parser.add_argument("--modality", choices=("TEXT", "IMAGE_TEXT"), default="TEXT")
+    parser.add_argument("--gradient-checkpointing", action="store_true")
     args = parser.parse_args()
     protocol = json.loads(args.protocol.read_text())
     protocol_sha256 = protocol.get("protocol_sha256") or hashlib.sha256(
@@ -84,6 +92,8 @@ def main() -> None:
     states = bank.get("states", bank.get("records"))
     if len(states) != args.expected_states:
         raise RuntimeError("frozen input population changed")
+    if not 0 <= args.warm_state_index < len(states):
+        raise ValueError("warm-state index outside frozen input bank")
     requested_indices = (
         {int(value) for value in args.state_indices.split(",") if value}
         if args.state_indices else None
@@ -124,20 +134,33 @@ def main() -> None:
     device = torch.device(args.device)
     configure_candidate_runtime(24000)
     model = load_model(args.architecture, args.model, device)
+    if args.gradient_checkpointing:
+        model.gradient_checkpointing_enable()
+    processor = None
+    if args.modality == "IMAGE_TEXT":
+        from transformers import AutoProcessor
+        processor = AutoProcessor.from_pretrained(args.model, local_files_only=True)
     module_start = len(PyCodeCache.modules)
     candidate = torch.compile(
-        LossStep(model), backend="inductor", fullgraph=not args.allow_graph_breaks, dynamic=False
+        Gemma3ImageLossStep(model) if args.modality == "IMAGE_TEXT" else LossStep(model),
+        backend="inductor", fullgraph=not args.allow_graph_breaks, dynamic=False
     )
     # Compile every shard from the same frozen state used to capture the exact
     # generated inventory.  A shard-local warm state can select a different
     # Inductor schedule even when tensor shapes are unchanged.
-    warm_state = eligible[0]
-    warm_tokens = warm_state.get("token_ids", warm_state.get("input_ids"))
-    warm = torch.tensor([warm_tokens], dtype=torch.long, device=device)
+    warm_state = states[args.warm_state_index]
+    warm, _ = prepare_values(
+        warm_state, modality=args.modality, model_path=args.model,
+        device=device, processor=processor,
+    )
     model.zero_grad(set_to_none=True)
-    candidate(warm).backward()
+    candidate(*warm).backward()
     torch.cuda.synchronize(device)
-    modules = list(PyCodeCache.modules[module_start:])
+    modules = list(
+        PyCodeCache.modules
+        if args.modality == "IMAGE_TEXT"
+        else PyCodeCache.modules[module_start:]
+    )
     if len(modules) < 2:
         raise RuntimeError("candidate did not compile complete F+B modules")
 
@@ -181,20 +204,19 @@ def main() -> None:
         state_id = str(state.get("sequence_id", state.get("state_id", local_index)))
         if len(payload["states"].get(state_id, {}).get("repeats", [])) == args.repeat:
             continue
-        tokens = state.get("token_ids", state.get("input_ids"))
-        values = torch.tensor([tokens], dtype=torch.long, device=device)
+        values, input_digests = prepare_values(
+            state, modality=args.modality, model_path=args.model,
+            device=device, processor=processor,
+        )
         seed = 24000 + local_index * args.shard_count + args.shard_index
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         model.zero_grad(set_to_none=True)
-        baseline_loss = candidate(values)
+        baseline_loss = candidate(*values)
         baseline_loss.backward()
         torch.cuda.synchronize(device)
         baseline = {"loss": tensor_digest(baseline_loss), "gradients": gradient_digest(model)}
-        state_row = {
-            "token_ids_sha256": hashlib.sha256(json.dumps(tokens).encode()).hexdigest(),
-            "repeats": [],
-        }
+        state_row = {**input_digests, "repeats": []}
         frozen_runtime_identity = None
         frozen_missing_rows = None
         for repeat in range(args.repeat):
@@ -206,7 +228,7 @@ def main() -> None:
             )
             model.zero_grad(set_to_none=True)
             with observer:
-                loss = candidate(values)
+                loss = candidate(*values)
                 loss.backward()
             torch.cuda.synchronize(device)
             observed = {"loss": tensor_digest(loss), "gradients": gradient_digest(model)}

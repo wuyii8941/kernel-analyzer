@@ -27,7 +27,23 @@ were maximally aligned across all eight states (`A=sqrt(8)`, exact sign-flip
   separate F+B deep-measurement target.
 - Value-blind follow-up strata are the highest-ranked softmax region, backward
   reduction, and backward MM; repeated layers are excluded.
-- text512 shape capture is running. Multimodal vision coverage follows it.
+- `text512` is complete: eight states retain 16,432 actual F+B invocations,
+  1,157 exact callsite/ABI identities and 59 implementation patterns, with
+  zero unresolved identities. No endpoint passed BH q=0.10; the highest
+  value-blind follow-ups are a new rotary/bmm fusion, RMSNorm reduction and
+  backward sum patterns. These are candidates, not bias cases.
+
+## Gemma 3 multimodal coverage
+
+- The default full backward exceeds 47.4 GiB. Standard activation
+  checkpointing preserves full-model F+B and all 883 observed parameter
+  gradients at 21.30 GiB peak reserved memory; recomputation invocations are
+  retained in the denominator as a distinct implementation configuration.
+- The captured screening-state schedule contains 4,557 actual compute sites:
+  2,484 Triton, 2,069 extern, two direct ATen and two direct torch-op calls.
+- This graph adds a previously uncatalogued `masked_scatter_backward` F+B
+  boundary. Its exact mask-order VJP is now recorded rather than ignored.
+- Two-state engineering replay is running before the eight-state screen.
 
 ## Counting rule
 
