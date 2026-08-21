@@ -168,6 +168,10 @@ def main() -> None:
     parser.add_argument("--input-bank", type=Path, required=True)
     parser.add_argument("--release-dir", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument(
+        "--runtime-seed", type=int, default=24000,
+        help="Seed used for the compile-time warm-up; part of a new release's provenance.",
+    )
     parser.add_argument("--expected-states", type=int, default=32)
     parser.add_argument("--repeat", type=int, default=2)
     parser.add_argument("--sample-size", type=int, default=64)
@@ -194,7 +198,7 @@ def main() -> None:
     if not selected_states:
         raise RuntimeError(f"input bank has no states for role {args.state_role}")
     device = torch.device(args.device)
-    configure_candidate_runtime(24000)
+    configure_candidate_runtime(args.runtime_seed)
     model = load_model(args.architecture, args.model, device)
     start = len(PyCodeCache.modules)
     candidate = torch.compile(

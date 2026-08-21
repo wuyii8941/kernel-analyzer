@@ -41,6 +41,7 @@ def main() -> None:
     parser.add_argument("--runtime-release", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--runtime-seed", type=int, default=20260821)
     args = parser.parse_args()
 
     bank = json.loads(args.input_bank.read_text())
@@ -48,7 +49,7 @@ def main() -> None:
     if len(states) != 16:
         raise RuntimeError("formation requires the frozen 16 confirmation states")
     device = torch.device(args.device)
-    configure_candidate_runtime(20260821)
+    configure_candidate_runtime(args.runtime_seed)
     model = load_model("gemma4", args.model, device)
     parameters = dict(model.named_parameters())
     if any(name not in parameters for name in CARRIERS):

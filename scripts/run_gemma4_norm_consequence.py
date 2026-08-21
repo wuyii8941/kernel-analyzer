@@ -46,6 +46,7 @@ def main() -> None:
         help="Feedback intervention; all modes use the same declared F+B arms.",
     )
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--runtime-seed", type=int, default=20260821)
     parser.add_argument("--short-screen-output", type=Path)
     parser.add_argument("--short-screen-steps", type=int, default=8)
     parser.add_argument("--short-screen-projection-dim", type=int, default=256)
@@ -71,7 +72,9 @@ def main() -> None:
     device = torch.device(args.device)
     # Match the freeze runner's seed so any initialized auxiliary buffers and
     # compiler constants produce the same generated F+B wrapper bytes.
-    configure_candidate_runtime(24000)
+    # Keep the exact seed used by the frozen Gemma runtime release.  This seed
+    # is part of wrapper provenance, not an experimental randomization knob.
+    configure_candidate_runtime(args.runtime_seed)
     model = load_model("gemma4", args.model, device)
     carrier = dict(model.named_parameters())[args.carrier]
     start = len(PyCodeCache.modules)
