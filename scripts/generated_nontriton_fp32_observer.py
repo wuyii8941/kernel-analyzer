@@ -90,10 +90,15 @@ class GeneratedNonTritonFP32Observer:
         inventory_rows: Sequence[Mapping[str, Any]],
         sample_size: int = 64,
         metric_chunk_elements: int = 1_048_576,
+        repair_targets: Mapping[str, Sequence[str]] | None = None,
     ) -> None:
         self.modules = list(modules)
         self.sample_size = sample_size
         self.metric_chunk_elements = metric_chunk_elements
+        self.repair_targets = {
+            str(region_id): {str(name) for name in names}
+            for region_id, names in (repair_targets or {}).items()
+        }
         supported = {"EXTERN", "DIRECT_ATEN", "DIRECT_TORCH_OP", "DIRECT_TENSOR_METHOD"}
         rows = [
             dict(row) for row in inventory_rows
@@ -193,6 +198,7 @@ class GeneratedNonTritonFP32Observer:
         self, row: Mapping[str, Any], filename: str, line: int,
         metrics: Mapping[str, Any],
         runtime_operands: Mapping[str, torch.Tensor] | None = None,
+        repaired_endpoints: Sequence[str] = (),
     ) -> None:
         self.records.append({
             "region_id": str(row["compute_region_id"]),
@@ -215,6 +221,7 @@ class GeneratedNonTritonFP32Observer:
                 for name, value in sorted((runtime_operands or {}).items())
             },
             "endpoint_metrics": dict(metrics),
+            "repaired_endpoints": list(repaired_endpoints),
         })
 
     def _install_externals(self) -> None:
@@ -257,8 +264,19 @@ class GeneratedNonTritonFP32Observer:
                         row, filename, line,
                         {"output": self._metric(candidate, reference)},
                         runtime_operands=operands,
+                        repaired_endpoints=(
+                            ["output"]
+                            if "output" in self.repair_targets.get(str(row["compute_region_id"]), set())
+                            else []
+                        ),
                     )
-                    return result
+                    if "output" not in self.repair_targets.get(str(row["compute_region_id"]), set()):
+                        return result
+                    repaired = reference.to(dtype=candidate.dtype)
+                    if "out" in kwargs and isinstance(kwargs["out"], torch.Tensor):
+                        kwargs["out"].copy_(repaired)
+                        return result
+                    return repaired
 
                 setattr(namespace, symbol, wrapped)
                 self.restores.append(
