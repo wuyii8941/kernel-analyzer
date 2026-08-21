@@ -323,6 +323,16 @@ def crossfit_semantic_orbit_statistics_from_gram(
     default_to_b = np.take(four[:, default, :, :], b, axis=2).mean(axis=2)
     a_to_default = np.take(four[:, :, :, default], a, axis=1).mean(axis=1)
     cross_residual = default_gram - default_to_b - a_to_default + cross_mean
+    per_state_expected_error_energy = np.array([
+        np.mean([four[state, variant, state, variant] for variant in a + b])
+        for state in range(states)
+    ])
+    per_state_crossfit_mean_energy = np.diag(cross_mean).copy()
+    per_state_orbit_variance = (
+        per_state_expected_error_energy - per_state_crossfit_mean_energy
+    )
+    total_mean_energy = float(per_state_crossfit_mean_energy.sum())
+    total_variance_energy = float(per_state_orbit_variance.sum())
     return {
         "schema": "kernel-analyzer-crossfit-semantic-orbit-statistics-v1",
         "state_ids": list(state_ids),
@@ -330,6 +340,13 @@ def crossfit_semantic_orbit_statistics_from_gram(
         "default_variant": default_variant,
         "default_excluded_from_orbit_mean": True,
         "orbit_mean_halves": {"A": a_ids, "B": b_ids},
+        "per_state_expected_error_energy": per_state_expected_error_energy.tolist(),
+        "per_state_crossfit_mean_energy": per_state_crossfit_mean_energy.tolist(),
+        "per_state_orbit_variance": per_state_orbit_variance.tolist(),
+        "aggregate_crossfit_mean_to_orbit_sigma": (
+            math.sqrt(total_mean_energy / total_variance_energy)
+            if total_mean_energy >= 0.0 and total_variance_energy > 0.0 else None
+        ),
         "tiling_conditional_orbit_mean": _crossfit_path_statistics(
             cross_mean, state_ids=state_ids,
             sign_flip_draws=sign_flip_draws, seed=seed,
@@ -356,6 +373,7 @@ def transported_orbit_certificate_from_gram(
     state_ids: Sequence[str],
     variant_ids: Sequence[str],
     reference_variant: str,
+    orbit_mean_variant_ids: Sequence[str],
     sign_flip_draws: int = 4000,
     seed: int = 20260820,
 ) -> dict[str, Any]:
@@ -367,14 +385,15 @@ def transported_orbit_certificate_from_gram(
     it is not a universal safety certificate.
     """
 
-    statistics = semantic_orbit_statistics_from_gram(
+    statistics = crossfit_semantic_orbit_statistics_from_gram(
         gram, state_ids=state_ids, variant_ids=variant_ids,
-        default_variant=reference_variant, sign_flip_draws=sign_flip_draws,
-        seed=seed,
+        default_variant=reference_variant,
+        orbit_mean_variant_ids=orbit_mean_variant_ids,
+        sign_flip_draws=sign_flip_draws, seed=seed,
     )
-    persistent = statistics["orbit_mean"]["above_sign_flip_95"]
+    persistent = statistics["tiling_conditional_orbit_mean"]["above_sign_flip_95"]
     return {
-        "schema": "kernel-analyzer-transported-orbit-certificate-v1",
+        "schema": "kernel-analyzer-transported-orbit-certificate-v2-crossfit",
         "measurement": "M_t_EXPECTATION_OVER_SEMANTIC_ORBIT",
         "status": (
             "PERSISTENT_TRANSPORTED_CONDITIONAL_MEAN"

@@ -80,15 +80,26 @@ were maximally aligned across all eight states (`A=sqrt(8)`, exact sign-flip
 
 ## Frozen held-out: Llama 3.2 and Ministral 3
 
+> **Evidence amendment.** The first held-out run preserved the required
+> prediction-before-consequence ordering, but its runner used eight total
+> variants including the default and a plug-in orbit mean. The frozen protocol
+> required one separately held default plus eight non-default variants with a
+> deterministic 4+4 cross-fit. Its consequence also used a sign-flip test and
+> a one-shot perturbation rather than the frozen repeated structure-matched
+> empirical null. The numbers below are therefore a prospective pilot with a
+> pre-measurement implementation deviation, not final confirmatory evidence.
+> Corrected measurements are retrospective for these two models because their
+> consequences have now been revealed.
+
 - Both text128 cells completed eight-state all-implementation screening with
   zero unresolved identities: 10,208 actual invocations for Llama and 9,912
   for Ministral. Their seq512 schedules add no raw ATen semantics, so they are
   retained as coverage configurations without a duplicate deep screen.
-- Before trajectory states were generated, the frozen transported-orbit
+- Before trajectory states were generated, the pilot transported-orbit
   predictor marked both exact `lm_head dX` implementations as risk:
   `A_m=2.131` (Llama) and `A_m=2.183` (Ministral), both exact sign-flip
   `p=0.00025`.
-- On disjoint 32-step live-weight trajectories, both predictions matched a
+- On disjoint 32-step live-weight trajectories, both pilot predictions matched a
   persistent actual update drift: `A_D=1.221`, final norm `8.44e-6` for Llama;
   `A_D=1.229`, final norm `8.93e-6` for Ministral. Four-arm symmetric
   recurrence and telescoping residuals are exactly zero.

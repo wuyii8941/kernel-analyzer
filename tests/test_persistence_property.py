@@ -149,13 +149,15 @@ def test_complete_tree_gram_path_fails_before_exceeding_memory_bound():
 
 
 def test_transported_orbit_certificate_never_turns_null_into_safe():
+    variants = ("default",) + tuple(f"orbit_{index}" for index in range(8))
     rows = []
     for index in range(16):
         sign = 1.0 if index % 2 == 0 else -1.0
-        rows.extend([[sign, 0.0], [sign, 0.0]])
+        rows.extend([[sign, 0.0]] * len(variants))
     result = transported_orbit_certificate_from_gram(
         _gram(rows), state_ids=tuple(f"s{i}" for i in range(16)),
-        variant_ids=("identity", "permuted"), reference_variant="identity",
+        variant_ids=variants, reference_variant="default",
+        orbit_mean_variant_ids=variants[1:],
         sign_flip_draws=200, seed=9,
     )
     assert result["status"] == "NO_DETECTABLE_PERSISTENT_MEAN_UNDER_PROTOCOL"
@@ -163,10 +165,21 @@ def test_transported_orbit_certificate_never_turns_null_into_safe():
 
 
 def test_transported_orbit_certificate_detects_shared_parameter_direction():
-    rows = [[1.0, 0.0], [1.0, 0.0]] * 16
+    variants = ("default",) + tuple(f"orbit_{index}" for index in range(8))
+    rows = [[1.0, 0.0]] * (16 * len(variants))
     result = transported_orbit_certificate_from_gram(
         _gram(rows), state_ids=tuple(f"s{i}" for i in range(16)),
-        variant_ids=("identity", "permuted"), reference_variant="identity",
+        variant_ids=variants, reference_variant="default",
+        orbit_mean_variant_ids=variants[1:],
         sign_flip_draws=200, seed=9,
     )
     assert result["status"] == "PERSISTENT_TRANSPORTED_CONDITIONAL_MEAN"
+
+
+def test_transported_orbit_certificate_requires_eight_nondefault_members():
+    with pytest.raises(ValueError, match="eight non-default"):
+        transported_orbit_certificate_from_gram(
+            np.eye(4), state_ids=("s0", "s1"),
+            variant_ids=("default", "other"), reference_variant="default",
+            orbit_mean_variant_ids=("other",), sign_flip_draws=200,
+        )

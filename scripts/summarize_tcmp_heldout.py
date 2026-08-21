@@ -43,7 +43,7 @@ def main() -> None:
     softmax = json.loads((ministral / "attention_softmax_fb_repair_probe.json").read_text())
     payload = {
         "schema": "kernel-analyzer-tcmp-heldout-summary-v1",
-        "status": "COMPLETE",
+        "status": "PROSPECTIVE_PILOT_PROTOCOL_DEVIATION",
         "lmhead_heldout_predictions": rows,
         "new_semantic_representatives": [
             {
@@ -65,9 +65,10 @@ def main() -> None:
             "lmhead_two_models_count_as_one_mathematical_family": True,
         },
         "claim_boundary": (
-            "The two held-out positives validate cross-model/new-operand prediction for a seen "
-            "lm-head dX implementation family. They do not establish NEW_IMPL generalization. "
-            "The genuinely new Ministral semantic patterns are negative controls, not cases."
+            "Prediction preceded consequence, but the pilot used a plug-in eight-total-variant "
+            "mean instead of the frozen default-plus-eight 4+4 cross-fit and did not use the "
+            "frozen repeated empirical null. Corrected results on these revealed models are "
+            "retrospective. The new Ministral semantic patterns are NOT_APPLICABLE controls."
         ),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)

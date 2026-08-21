@@ -11,7 +11,7 @@ import torch
 from torch._inductor.codecache import PyCodeCache
 
 from kernel_analyzer.persistence_property import transported_orbit_certificate_from_gram
-from kernel_analyzer.reduction_orbit import frozen_permutations
+from kernel_analyzer.reduction_orbit import frozen_crossfit_permutations
 from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime
 from scripts.run_generated_fp32_screen import load_model, tensor_digest
 from scripts.run_qwen256_lmhead_property_confirmation import ShapeObserver
@@ -58,7 +58,8 @@ def main() -> None:
     warm = torch.tensor([states[0]["token_ids"]], dtype=torch.long, device=device)
     model.zero_grad(set_to_none=True); candidate(warm).backward(); torch.cuda.synchronize(device)
     modules = list(PyCodeCache.modules[start:])
-    permutations = frozen_permutations(args.vocab_size, 8, 20260820)
+    orbit_protocol = frozen_crossfit_permutations(args.vocab_size, 20260820)
+    permutations = orbit_protocol["permutations"]
     vectors: list[torch.Tensor] = []
     rows = []
 
@@ -93,7 +94,7 @@ def main() -> None:
             "state_id": ids[index], "step": index + 1,
             "fp32_endpoint_delta_l2": repaired.changed_l2,
             "orbit_mean_update_l2": float(
-                torch.linalg.vector_norm(torch.stack(state_vectors).mean(0)).item()
+                torch.linalg.vector_norm(torch.stack(state_vectors[1:]).mean(0)).item()
             ),
         })
         print(json.dumps({"event": "HELDOUT_ORBIT_STATE", **rows[-1]}), flush=True)
@@ -103,8 +104,10 @@ def main() -> None:
     matrix = torch.stack(vectors).double()
     certificate = transported_orbit_certificate_from_gram(
         (matrix @ matrix.T).numpy(), state_ids=ids,
-        variant_ids=["identity"] + [f"perm_{index:02d}" for index in range(1, 8)],
-        reference_variant="identity", sign_flip_draws=4000, seed=20260820,
+        variant_ids=orbit_protocol["variant_ids"],
+        reference_variant=orbit_protocol["default_variant"],
+        orbit_mean_variant_ids=orbit_protocol["orbit_mean_variant_ids"],
+        sign_flip_draws=4000, seed=20260820,
     )
     payload = {
         "schema": "kernel-analyzer-heldout-lmhead-transported-orbit-v1",
