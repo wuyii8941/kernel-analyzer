@@ -8,6 +8,8 @@ import json
 import os
 from pathlib import Path
 
+from huggingface_hub import get_token
+
 
 def local_path(root: Path, model_id: str) -> Path:
     owner, name = model_id.split("/", 1)
@@ -54,7 +56,7 @@ def main() -> None:
     payload = {
         "schema": "kernel-analyzer-tcmp-model-access-v1",
         "status": "READY" if all(row["status"] == "READY" for row in rows.values()) else "BLOCKED_MODEL_ACCESS",
-        "hf_token_present": bool(os.environ.get("HF_TOKEN")),
+        "hf_token_present": bool(os.environ.get("HF_TOKEN") or get_token()),
         "models": rows,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
