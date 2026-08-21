@@ -276,3 +276,29 @@ The complete probe summaries are retained under
 `results/property/tcmp_allop_v1/heldout/olmoe_1b7b_text128/` with the explicit
 claim boundary `ENGINEERING_ONLY`; the earlier partial two-batch files are
 intermediate and are not part of the retained result set.
+
+The same semantic family was then tested with a value-preserving expert-order
+orbit: only the order of the 64 expert accumulations was permuted, while the
+real-valued sum, routing decisions and routing weights were unchanged. On 16
+states and eight total orders (default plus seven non-default variants), the
+router-gate orbit-mean amplification was `1.0036` and the 4+4 cross-fit value
+was `1.0037`. The downstream layer-0 attention slice was also non-directional
+(`A=0.9832`, cross-fit `0.9635`). Thus the new MoE family does not currently
+support either source-order or transport-order formation bias under this
+protocol. These are stronger canceling controls than the BF16-vs-FP32 repair
+screen, not additional cases.
+
+The earlier official-fused Mamba screens were also checked before reopening
+any new Mamba measurement. The independently confirmed seq64, seq256 and
+seq1024 fused-scan releases all have `natural_bias_case_added=false` and fail
+their frozen direction gate; they are not missing cases. The newer seq128
+generated-convolution candidate remains a separate `UNRESOLVED_COMPILE`
+binding. The search therefore neither duplicates an old Mamba screen nor
+promotes a local residual without a directional F+B chain.
+
+The final RMSNorm slice showed a small exploratory excess (`A=1.118`,
+cross-fit `1.329`), but its frozen 4,000-draw sign-flip test gave `p=0.154`
+and did not exceed the 95% null threshold. It is therefore not promoted as a
+case. OLMoE is now closed for this search lane as a backward-visible,
+non-directional control; further layers or repeated order variants would be
+duplicate measurements rather than a new semantic family.

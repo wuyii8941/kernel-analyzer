@@ -32,7 +32,14 @@ def digest_tensor(t: torch.Tensor) -> str:
     return h.hexdigest()
 
 
-def router_forward(self, hidden_states: torch.Tensor, *, repair: bool, trace: dict[str, Any]):
+def router_forward(
+    self,
+    hidden_states: torch.Tensor,
+    *,
+    repair: bool,
+    trace: dict[str, Any],
+    expert_order: list[int] | None = None,
+):
     # This mirrors transformers.models.olmoe.modeling_olmoe exactly through
     # the target accumulation boundary.  No routing or expert computation is
     # changed by the repair arm.
@@ -60,7 +67,9 @@ def router_forward(self, hidden_states: torch.Tensor, *, repair: bool, trace: di
     expert_mask = torch.nn.functional.one_hot(
         selected_experts, num_classes=self.num_experts
     ).permute(2, 1, 0)
-    for expert_idx, expert_layer in enumerate(self.experts):
+    order = expert_order if expert_order is not None else list(range(len(self.experts)))
+    for expert_idx in order:
+        expert_layer = self.experts[expert_idx]
         idx, top_x = torch.where(expert_mask[expert_idx])
         current_state = flat[None, top_x].reshape(-1, hidden_dim)
         current_hidden_states = expert_layer(current_state) * routing_weights[top_x, idx, None]
@@ -75,11 +84,21 @@ def router_forward(self, hidden_states: torch.Tensor, *, repair: bool, trace: di
     return final_hidden_states.reshape(batch_size, sequence_length, hidden_dim), router_logits
 
 
-def patch_target(model: torch.nn.Module, layer_idx: int, repair: bool, trace: dict[str, Any]) -> None:
+def patch_target(
+    model: torch.nn.Module,
+    layer_idx: int,
+    repair: bool,
+    trace: dict[str, Any],
+    expert_order: list[int] | None = None,
+) -> None:
     block = model.model.layers[layer_idx].mlp
     block.forward = types.MethodType(
         lambda self, hidden_states: router_forward(
-            self, hidden_states, repair=repair, trace=trace
+            self,
+            hidden_states,
+            repair=repair,
+            trace=trace,
+            expert_order=expert_order,
         ),
         block,
     )
@@ -135,9 +154,15 @@ def gradient_stats(
     }, vector
 
 
-def run_arm(model: torch.nn.Module, ids: torch.Tensor, layer_idx: int, repair: bool) -> tuple[torch.Tensor, dict[str, Any]]:
+def run_arm(
+    model: torch.nn.Module,
+    ids: torch.Tensor,
+    layer_idx: int,
+    repair: bool,
+    expert_order: list[int] | None = None,
+) -> tuple[torch.Tensor, dict[str, Any]]:
     trace: dict[str, Any] = {"arm": "repair" if repair else "candidate"}
-    patch_target(model, layer_idx, repair, trace)
+    patch_target(model, layer_idx, repair, trace, expert_order=expert_order)
     model.zero_grad(set_to_none=True)
     out = model(input_ids=ids, labels=ids, use_cache=False, return_dict=False)
     loss = out[0]
