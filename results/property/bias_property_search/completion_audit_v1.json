@@ -1,0 +1,42 @@
+{
+  "schema": "kernel-analyzer-bias-property-search-completion-audit-v1",
+  "status": "COMPLETE_WITH_EXPLICIT_SCOPE",
+  "date": "2026-08-22",
+  "development_property_profile": "results/property/bias_property_search/development_property_profile.json",
+  "development_separation_audit": "results/property/bias_property_search/development_property_separation_audit_v1.json",
+  "freeze": "results/property/bias_property_search/property_freeze_v1.json",
+  "oracle": {
+    "implementation": "src/kernel_analyzer/short_persistence.py",
+    "projection_dimension": 256,
+    "projection_seed": 20260822,
+    "sign_flip_null_draws": 2000,
+    "fail_closed_selector": "scripts/select_short_screen_escalations.py",
+    "positive_requires_exact_confirmation": true
+  },
+  "heldout": {
+    "record": "results/property/bias_property_search/heldout_validation_v3_gemma_disjoint.json",
+    "new_implementation_classes": 1,
+    "new_source_persistence_positives": 0,
+    "feedback_risk_records": 1,
+    "formation_and_consequence_states_disjoint": true
+  },
+  "tests": {
+    "command_scope": [
+      "tests/test_property_hypotheses.py",
+      "tests/test_bias_predictor_v2.py",
+      "tests/test_persistence_property.py",
+      "tests/test_short_screen_selector.py",
+      "tests/test_short_persistence.py",
+      "tests/test_short_persistence_spool.py"
+    ],
+    "passed": 38
+  },
+  "property_decisions": {
+    "source_asymmetry": "RETAIN_CONDITIONAL_FORMATION_PRIOR",
+    "source_transport_coupling": "CASE_LEVEL_ONLY_NOT_ADMITTED",
+    "transport_concentration": "SUPPORTING_FEATURE_ONLY",
+    "carrier_stability": "CONSEQUENCE_SCREEN_NOT_FORMATION_LABEL"
+  },
+  "universal_property_claim": false,
+  "claim_boundary": "The phase is complete as a frozen, fail-closed prioritisation workflow; unresolved property branches and held-out limitations remain explicit."
+}
