@@ -250,3 +250,29 @@ by the fail-closed direct-runtime-call inventory validator. No numerical screen
 or trajectory verdict was issued. This remains `COVERAGE_ONLY/UNRESOLVED`, not
 a negative case; the blocked artifact is recorded in
 `heldout/olmoe_1b7b_text128/router_search_status.json`.
+
+## OLMoE router accumulation formation probe (2026-08-21)
+
+The direct runtime gate was repaired for a bounded, one-model-at-a-time eager
+probe. At layer 0, the candidate keeps native BF16 `index_add_` accumulation
+and the repair accumulates the identical BF16 expert summands in FP32 before
+one final cast. Routing indices and routing weights were identical in all 26
+states, so this is not an MoE routing-flip artifact. Each arm was a complete
+forward/loss/backward step from the same frozen weights; no optimizer step was
+taken.
+
+The repair is backward-visible: the declared router-gate gradient slice had a
+mean relative difference of about 9.1%, and the downstream layer-0 attention
+slice about 9.3%. However, the 26-state complete Gram summaries are
+cross-state canceling (`A=0.9805` for the router-gate slice and `A=0.9681` for
+the layer-0 attention slice; both have negative mean off-diagonal inner
+products). Therefore this new MoE `topk/index_add` implementation family is
+currently a **backward-visible variance/canceling control**, not a directional
+formation case and not a Flash-style persistent-bias case. It is not promoted
+to the case count because a trajectory consequence was not run after the
+formation screen failed to show a source carrier.
+
+The complete probe summaries are retained under
+`results/property/tcmp_allop_v1/heldout/olmoe_1b7b_text128/` with the explicit
+claim boundary `ENGINEERING_ONLY`; the earlier partial two-batch files are
+intermediate and are not part of the retained result set.

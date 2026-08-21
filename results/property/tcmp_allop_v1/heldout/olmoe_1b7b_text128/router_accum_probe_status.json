@@ -1,0 +1,28 @@
+{
+  "schema": "kernel-analyzer-olmoe-router-accum-status-v1",
+  "status": "FORMATION_SCREEN_CANCELING",
+  "claim_boundary": "26-state eager full F+B formation screen on declared gradient slices; no optimizer trajectory verdict",
+  "case_count_increment": 0,
+  "model": "OLMoE-1B-7B-0125",
+  "layer": 0,
+  "states": 26,
+  "routing_hamming_total": 0,
+  "routing_weights_mismatch_count": 0,
+  "candidate": "native BF16 index_add_ accumulation",
+  "repair": "FP32 accumulation of identical BF16 expert summands, one final cast",
+  "slices": {
+    "router_gate": {
+      "coherence_amplification": 0.9805009372024139,
+      "mean_relative_gradient_difference": 0.09143744155335408,
+      "mean_pair_dot": -2.9118932189202846e-06,
+      "source": "router_accum_probe_formation_00_25.json"
+    },
+    "layer0_attention": {
+      "coherence_amplification": 0.9681040727830468,
+      "mean_relative_gradient_difference": 0.09253018362464421,
+      "mean_pair_dot": -0.0005689107149136268,
+      "source": "router_accum_probe_layer_attn_00_25.json"
+    }
+  },
+  "interpretation": "Backward-visible implementation difference with cross-state canceling formation geometry; not a directional-bias case."
+}

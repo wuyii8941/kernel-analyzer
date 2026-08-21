@@ -1,0 +1,40 @@
+{
+  "candidate": "native BF16 index_add_ accumulation",
+  "claim_boundary": "Two-state full eager F+B implementation probe; no bias or trajectory verdict.",
+  "input_bank": "/data1/tzh/kernel-analyzer/results/property/tcmp_allop_v1/input_banks/olmoe_1b7b_text128.json",
+  "layer": 0,
+  "model": "/data1/tzh/models/allenai/OLMoE-1B-7B-0125",
+  "repair": "FP32 accumulation of identical BF16 expert summands, one final cast",
+  "rows": [
+    {
+      "candidate_gradient_l2": 37.586545217907094,
+      "gradient_delta_l2": 3.8093093276504453,
+      "gradient_delta_max_abs": 0.3154296875,
+      "gradient_delta_relative_to_repair": 0.10157866343177915,
+      "gradient_tensor_count": 3219,
+      "loss_candidate": 1.7616121768951416,
+      "loss_delta": 0.010186553001403809,
+      "loss_repair": 1.7514256238937378,
+      "repair_gradient_l2": 37.50107747980756,
+      "routing_hamming": 0,
+      "routing_weights_equal": true,
+      "state_id": "olmoe_1b7b_text128-engineering-00"
+    },
+    {
+      "candidate_gradient_l2": 32.76215357342909,
+      "gradient_delta_l2": 3.523241647062934,
+      "gradient_delta_max_abs": 0.28125,
+      "gradient_delta_relative_to_repair": 0.11024994711324448,
+      "gradient_tensor_count": 3219,
+      "loss_candidate": 2.86641001701355,
+      "loss_delta": 0.017974376678466797,
+      "loss_repair": 2.848435640335083,
+      "repair_gradient_l2": 31.95685566582627,
+      "routing_hamming": 0,
+      "routing_weights_equal": true,
+      "state_id": "olmoe_1b7b_text128-engineering-01"
+    }
+  ],
+  "schema": "kernel-analyzer-olmoe-router-accum-probe-v1",
+  "status": "ENGINEERING_ONLY"
+}
