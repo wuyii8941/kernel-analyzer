@@ -31,10 +31,11 @@ Its trajectory drift must not be counted as a false negative for the source
 predictor because the feedback predictor was explicitly abstained before
 trajectory execution.
 
-The attempted confirmation-population rerun is currently blocked by the
-runtime's CUDA/driver visibility after model loading. That is an execution
-block, not a scientific verdict; the existing frozen Gemma consequence record
-is retained with its original provenance.
+The attempted confirmation-population rerun is currently blocked by a
+frozen-runtime wrapper-byte mismatch: the recompiled wrappers do not match the
+captured release. That is an execution/provenance block, not a scientific
+verdict; the existing frozen Gemma consequence record is retained with its
+original provenance.
 
 ## Current claim boundary
 
@@ -42,7 +43,7 @@ The older property family has cross-model evidence within one implementation
 family and has been tested against a new implementation-class out-of-domain
 case. The **new shared short Oracle has not yet passed held-out validation**:
 there is no CountSketch result for Llama/Ministral and the Gemma rerun was
-blocked by CUDA visibility. The correct next stage is a pre-enumerated,
+blocked by the frozen wrapper mismatch. The correct next stage is a pre-enumerated,
 non-overlapping implementation pool, real short-screen captures for both
 centered controls and positives, and then exact confirmation only for screen
 positives. Controls and out-of-domain feedback cases remain in the denominator
