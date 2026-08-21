@@ -375,3 +375,37 @@ failure, not an OOM and not a numerical verdict. It remains
 `UNRESOLVED_COMPILE`, contributes zero to both positive and negative counts,
 and is not sent to trajectory. Its resumable case plan and status are retained
 under `results/property/tcmp_allop_v1/heldout/mamba_seq128_silu_state_closure/`.
+
+## Semantic-family held-out continuation (2026-08-21)
+
+The metadata-only held-out pool is frozen at 791 semantic cells and 493
+deduplicated implementation-pattern representatives. It contains 485
+pre-measurement candidates; existing deep measurements are excluded by exact
+task identity, not by post-hoc verdict. The pool is a selection ledger, not a
+bias label, and centered, not-applicable, and unresolved cells remain in its
+denominator.
+
+One new loss-path representative was selected mechanically without repeating
+the prior GEMM/lm-head cases: DeepSeek seq256 cross-entropy backward MM
+(`backward:659:output_0`). Its two-state reach preflight changed 8,276--8,409
+endpoint coordinates and reached `model.norm.weight` on both states. The
+formal 16+16 open-loop F+B measurement was nevertheless centered at all three
+layers. Local residual energy was nonzero (`7.00e-10`/`7.72e-10`), while the
+gradient/update cross-state ratios were `0.0485`/`0.0791` in both paired
+partitions and stayed inside the frozen centered margin. This is a new,
+backward-visible loss/CE variance-canceling control, not a persistent-bias
+case; no trajectory was run.
+
+A second nonduplicate semantic family was attempted: Mamba seq128
+state-space-recurrent backward MM (`backward:15101:output_0`) with the
+`x_proj` carrier. The bounded two-state engineering run produced no runtime
+observation before Inductor Triton tiling/scheduling exceeded the compile
+budget. GPU memory remained about 570 MiB, so this is `UNRESOLVED_COMPILE`, not
+an OOM and not a numerical negative. Its status and resumable case plan are
+retained under
+`results/property/tcmp_allop_v1/heldout/mamba_seq128_state_mm/`.
+
+The search therefore adds one genuine new canceling control and no new
+Flash-style positive. Further candidates should be chosen from the frozen
+pool by a deterministic family/implementation rule; repeated normalization,
+softmax, or MM representatives are not additional cases.

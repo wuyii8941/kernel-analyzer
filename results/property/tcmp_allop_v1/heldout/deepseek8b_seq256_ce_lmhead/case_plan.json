@@ -1,0 +1,18 @@
+{
+  "schema": "kernel-analyzer-tcmp-case-plan-v1",
+  "model": "deepseek8b",
+  "sequence_length": 256,
+  "source_internal_region": "backward:659:output_0",
+  "source_family": "LOSS_CE_BACKWARD",
+  "closure_task": "backward:659:output_0",
+  "complete_fb_unit_required": true,
+  "cases": [
+    {
+      "case_id": "deepseek8b_seq256_ce_lmhead",
+      "task_id": "backward:659:output_0",
+      "carrier": "model.norm.weight",
+      "reference_method": "EXTERNAL_FP32_RECOMPUTE",
+      "claim_boundary": "Exact cross-entropy-backward MM endpoint in the loss/lm_head semantic region; internal arithmetic is localized to the external MM boundary, while downstream parameter reach is measured independently."
+    }
+  ]
+}

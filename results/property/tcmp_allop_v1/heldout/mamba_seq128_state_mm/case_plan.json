@@ -1,0 +1,18 @@
+{
+  "schema": "kernel-analyzer-tcmp-case-plan-v1",
+  "model": "mamba",
+  "sequence_length": 128,
+  "source_internal_region": "backward:15101:output_0",
+  "source_family": "STATE_SPACE_RECURRENT_BACKWARD",
+  "closure_task": "backward:15101:output_0",
+  "complete_fb_unit_required": true,
+  "cases": [
+    {
+      "case_id": "mamba_seq128_state_mm",
+      "task_id": "backward:15101:output_0",
+      "carrier": "backbone.layers.4.mixer.x_proj.weight",
+      "reference_method": "EXTERNAL_FP32_RECOMPUTE",
+      "claim_boundary": "Exact state-space recurrent backward MM endpoint with a reachable x_proj carrier; internal fused recurrence arithmetic is not localized beyond the external MM boundary."
+    }
+  ]
+}
