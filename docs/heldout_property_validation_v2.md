@@ -37,3 +37,8 @@ implementation source positives. This is not enough for universal accuracy:
 the next valid step is a pre-enumerated pool with more release-matching
 captures; screen negatives and centered controls remain in the denominator.
 No universal all-operator safety claim is made.
+
+The accompanying escalation selector sends only the `feedback` and `actual`
+risk paths to exact follow-up and leaves the null-like `local` path as an
+abstention (`2` escalations, `1` non-escalation, `0` invalid). It never emits a
+SAFE verdict.

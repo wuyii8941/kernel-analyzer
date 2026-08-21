@@ -1,0 +1,48 @@
+{
+  "schema": "kernel-analyzer-shared-short-persistence-screen-v1",
+  "status": "COMPLETE",
+  "protocol": {
+    "projection_seed": 20260822,
+    "projection_dim": 256,
+    "null_draws": 2000,
+    "prefix_growth_mode": "after_warmup"
+  },
+  "cases": [
+    {
+      "case_id": "gemma4_e2b_ple_rmsnorm::local",
+      "status": "NULL_LIKE_OR_UNRESOLVED",
+      "steps": 16,
+      "projection": {"dimension": 256},
+      "screen_rule": {
+        "requires_observed_above_sign_flip_95": true,
+        "requires_lag1_and_at_least_two_positive_lags": true
+      },
+      "observed_amplification": 1.003166865334807,
+      "sign_flip_null": {"upper_95": 1.0064729477581988}
+    },
+    {
+      "case_id": "gemma4_e2b_ple_rmsnorm::feedback",
+      "status": "RISK_CANDIDATE",
+      "steps": 16,
+      "projection": {"dimension": 256},
+      "screen_rule": {
+        "requires_observed_above_sign_flip_95": true,
+        "requires_lag1_and_at_least_two_positive_lags": true
+      },
+      "observed_amplification": 2.641979017194033,
+      "sign_flip_null": {"upper_95": 1.6212128388272409}
+    },
+    {
+      "case_id": "gemma4_e2b_ple_rmsnorm::actual",
+      "status": "RISK_CANDIDATE",
+      "steps": 16,
+      "projection": {"dimension": 256},
+      "screen_rule": {
+        "requires_observed_above_sign_flip_95": true,
+        "requires_lag1_and_at_least_two_positive_lags": true
+      },
+      "observed_amplification": 2.5152047457164826,
+      "sign_flip_null": {"upper_95": 1.558251493161599}
+    }
+  ]
+}
