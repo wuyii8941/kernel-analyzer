@@ -350,8 +350,24 @@ class GeneratedNonTritonFP32Observer:
                             for index, (candidate, expected) in enumerate(zip(result, reference))
                             if isinstance(candidate, torch.Tensor)
                         }
-                    self._record(row, filename, line, metrics)
-                    return result
+                    requested = self.repair_targets.get(str(row["compute_region_id"]), set())
+                    repaired_endpoints = sorted(name for name in metrics if name in requested)
+                    self._record(
+                        row, filename, line, metrics,
+                        repaired_endpoints=repaired_endpoints,
+                    )
+                    if not repaired_endpoints:
+                        return result
+                    if isinstance(result, torch.Tensor):
+                        return reference.to(dtype=result.dtype)
+                    repaired = list(result)
+                    for index, (candidate, expected) in enumerate(zip(result, reference)):
+                        name = f"output_{index}"
+                        if name in requested:
+                            if not isinstance(candidate, torch.Tensor):
+                                raise RuntimeError(f"cannot repair non-tensor {name} of {_symbol}")
+                            repaired[index] = expected.to(dtype=candidate.dtype)
+                    return type(result)(repaired)
 
                 replacements[symbol] = _AttributeProxy(
                     overload_namespace, {"default": wrapped}

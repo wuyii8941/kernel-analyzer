@@ -1,0 +1,62 @@
+{
+  "schema": "kernel-analyzer-tcmp-source-persistence-predictor-freeze-v1",
+  "status": "ALGORITHM_FROZEN_BEFORE_HELDOUT_ENUMERATION",
+  "development_models": [
+    "allenai/OLMoE-1B-7B-0125",
+    "google/gemma-3-4b-pt"
+  ],
+  "sealed_consequence_models": [
+    "meta-llama/Llama-3.2-3B",
+    "mistralai/Ministral-3-3B-Base-2512"
+  ],
+  "applicability": {
+    "eligible": "An exact F+B-bound implementation has an exact-real-semantics-preserving finite orbit and complete declared parameter coordinates.",
+    "out_of_domain": [
+      "no exact semantics-preserving orbit",
+      "discrete routing divergence",
+      "missing exact repair or VJP transport",
+      "nonfinite or incomplete parameter coordinates"
+    ],
+    "out_of_domain_is_not_negative": true
+  },
+  "predictor": {
+    "name": "TRANSPORTED_CONDITIONAL_MEAN_PERSISTENCE",
+    "input": "state-major effective-update residuals for eight semantic-orbit variants after common-state reference VJP and optimizer mapping",
+    "orbit_variants": 8,
+    "default_variant_excluded_from_crossfit_mean": true,
+    "crossfit_partition": "deterministic 4+4",
+    "states": 16,
+    "sign_flip_draws": 4000,
+    "sign_flip_seed": 20260820,
+    "risk_rule": "orbit-mean transported amplification exceeds its frozen norm-preserving sign-flip 95th percentile",
+    "control_rule": "otherwise NO_DETECTABLE_PERSISTENT_MEAN_UNDER_PROTOCOL",
+    "safe_verdict_emitted": false
+  },
+  "forbidden_predictor_inputs": [
+    "live-weight trajectory",
+    "A_L",
+    "A_B",
+    "A_D",
+    "T4/M6/SEUP verdict",
+    "final drift",
+    "historical case identity"
+  ],
+  "consequence_target": {
+    "horizon_steps": 32,
+    "positive": "actual drift amplification exceeds the frozen structure-matched empirical-null 95th percentile",
+    "time_shuffled_natural_residual_is_primary_null": true,
+    "threshold_changes_after_reveal": false
+  },
+  "heldout_sequence": [
+    "enumerate every actual F+B invocation and deduplicate exact implementations without numerical consequence values",
+    "label SEEN_EXACT_IMPL_NEW_OPERANDS, NEW_EXACT_IMPL_SEEN_PATTERN, NEW_IMPL_PATTERN, or NEW_SEMANTIC_FAMILY",
+    "measure predictor on every eligible new representative and commit risk/control/OOD predictions",
+    "only then reveal 32-step consequence trajectories"
+  ],
+  "counting": {
+    "all_invocations_remain_in_denominator": true,
+    "deep_measurement": "one representative per exact implementation identity",
+    "primary_new-operator_credit": "NEW_IMPL_PATTERN or NEW_SEMANTIC_FAMILY"
+  },
+  "claim_boundary": "This freezes a falsifiable source-persistence predictor, not a universal all-operator safety oracle. Feedback-sustained and discrete-routing regimes are separate outputs."
+}

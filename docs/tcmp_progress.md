@@ -54,6 +54,29 @@ were maximally aligned across all eight states (`A=sqrt(8)`, exact sign-flip
   for exact F+B repair probes rather than declared cases: vision LayerNorm
   backward (`p=0.0234`, `A=1.866`) and the pooled-normalization backward path.
   `masked_scatter_backward` is an exact-zero safe control under this protocol.
+- Exact repair of the vision LayerNorm-backward endpoint changes 413 complete
+  parameter-gradient tensors, so the difference is backward-visible and not a
+  local-only artifact. Across eight independent image states, however, the
+  complete 401,614,160-coordinate parameter-gradient Gram gives `A=0.96994`
+  and exact sign-flip `p=0.91406`. It is therefore a full-F+B
+  variance-only/canceling control under this open-loop protocol, not a new
+  directional-bias case. The pooled-normalization target changes zero parameter
+  gradients and is closed without further deep measurement.
+- The genuinely new external vision convolution was then isolated separately.
+  Its FP32-storage output repair changes all 883 parameter-gradient tensors
+  (`endpoint RMS=6.02e-4`), but the complete Gram on the convolution unit's own
+  678,528 weight/bias coordinates gives `A=0.99612` and exact sign-flip
+  `p=0.515625` over the same eight images. It is another backward-visible but
+  cross-state-canceling F+B control, not a directional-bias case. This does not
+  substitute for testing the distinct generated `convolution_backward`
+  implementation.
+- The generated `convolution_backward` weight-gradient implementation was
+  therefore repaired independently. It changes exactly the patch-embedding
+  weight gradient (`endpoint RMS=3.29e-5`), as required by its output mask. Its
+  complete 677,376-coordinate eight-state Gram gives `A=0.99994` and exact
+  sign-flip `p=0.515625`. Thus both mathematical sides of this new convolution
+  F+B unit are backward-visible but canceling under the frozen population
+  protocol; neither is counted as a persistent-bias case.
 
 ## Counting rule
 
