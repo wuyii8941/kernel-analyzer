@@ -52,6 +52,7 @@ def main() -> None:
     parser.add_argument("--hidden-size", type=int, required=True)
     parser.add_argument("--steps", type=int, choices=(2, 32), default=2)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
+    parser.add_argument("--matched-random-null", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
     args = parser.parse_args()
@@ -82,6 +83,9 @@ def main() -> None:
     candidate_master = initial.clone(); repair_master = initial.clone()
     candidate_m = torch.zeros_like(initial); candidate_v = torch.zeros_like(initial)
     repair_m = torch.zeros_like(initial); repair_v = torch.zeros_like(initial)
+    null_master = initial.clone()
+    null_m = torch.zeros_like(initial); null_v = torch.zeros_like(initial)
+    null_generator = torch.Generator(device=device).manual_seed(20260820)
 
     def gradient(master: torch.Tensor, state: dict, repair: bool) -> torch.Tensor:
         with torch.no_grad():
@@ -111,31 +115,78 @@ def main() -> None:
         gr_c = gradient(candidate_master, state, True)
         gc_r = gradient(repair_master, state, False)
         gr_r = gradient(repair_master, state, True)
-        uc_c, next_cm, next_cv = adam_delta(
+        raw_uc_c, next_cm, next_cv = adam_delta(
             gc_c, candidate_m, candidate_v, step, learning_rate=args.learning_rate
         )
-        ur_c, _, _ = adam_delta(
+        raw_ur_c, _, _ = adam_delta(
             gr_c, candidate_m, candidate_v, step, learning_rate=args.learning_rate
         )
-        uc_r, _, _ = adam_delta(
+        raw_uc_r, _, _ = adam_delta(
             gc_r, repair_m, repair_v, step, learning_rate=args.learning_rate
         )
-        ur_r, next_rm, next_rv = adam_delta(
+        raw_ur_r, next_rm, next_rv = adam_delta(
             gr_r, repair_m, repair_v, step, learning_rate=args.learning_rate
         )
+        # Step means the update actually written to the FP32 master, including
+        # master-write rounding.  Pre-write Adam deltas do not telescope to the
+        # observed parameter drift and therefore are not valid consequence arms.
+        next_candidate_master = candidate_master + raw_uc_c
+        next_repair_master = repair_master + raw_ur_r
+        uc_c = next_candidate_master - candidate_master
+        ur_c = (candidate_master + raw_ur_c) - candidate_master
+        uc_r = (repair_master + raw_uc_r) - repair_master
+        ur_r = next_repair_master - repair_master
         local = 0.5 * ((uc_c - ur_c) + (uc_r - ur_r))
         feedback = 0.5 * ((uc_c - uc_r) + (ur_c - ur_r))
-        actual = uc_c - ur_r
+        drift_before = candidate_master - repair_master
+        drift_after = next_candidate_master - next_repair_master
+        actual = drift_after - drift_before
         residual = actual - local - feedback
         if float(torch.linalg.vector_norm(residual)) > 2e-6 * max(
             float(torch.linalg.vector_norm(actual)), 1e-30
         ):
             raise RuntimeError("symmetric consequence recurrence failed to close")
+        null_record = {}
+        if args.matched_random_null:
+            gr_n = gradient(null_master, state, True)
+            raw_ur_n, next_nm, next_nv = adam_delta(
+                gr_n, null_m, null_v, step, learning_rate=args.learning_rate
+            )
+            null_base = null_master + raw_ur_n
+            if step == 1:
+                signs = torch.randint(
+                    0, 2, local.shape, generator=null_generator, device=device,
+                    dtype=torch.int8,
+                ).mul_(2).sub_(1).to(local.dtype)
+                selected_request = local * signs
+                next_null_master = null_base + selected_request
+                realized_injection = next_null_master - null_base
+            else:
+                selected_request = torch.zeros_like(local)
+                next_null_master = null_base
+                realized_injection = torch.zeros_like(local)
+            requested_norm = float(torch.linalg.vector_norm(selected_request))
+            realized_norm = float(torch.linalg.vector_norm(realized_injection))
+            null_norm_relative_error = (
+                abs(realized_norm - requested_norm) / max(requested_norm, 1e-30)
+                if step == 1 else 0.0
+            )
+            null_master = next_null_master
+            null_m, null_v = next_nm, next_nv
+            null_drift = null_master - next_repair_master
+            null_record = {
+                "matched_random_requested_l2": float(torch.linalg.vector_norm(selected_request)),
+                "matched_random_realized_l2": realized_norm,
+                "matched_random_norm_relative_error": null_norm_relative_error,
+                "matched_random_master_drift_l2": float(torch.linalg.vector_norm(null_drift)),
+            }
+            del gr_n, raw_ur_n, selected_request, realized_injection
         vectors.extend((local.cpu(), feedback.cpu(), actual.cpu()))
-        candidate_master.add_(uc_c); repair_master.add_(ur_r)
+        candidate_master = next_candidate_master
+        repair_master = next_repair_master
         candidate_m, candidate_v = next_cm, next_cv
         repair_m, repair_v = next_rm, next_rv
-        drift = candidate_master - repair_master
+        drift = drift_after
         records.append({
             "step": step, "state_id": state_ids[index],
             "local_l2": float(torch.linalg.vector_norm(local)),
@@ -143,6 +194,7 @@ def main() -> None:
             "actual_increment_l2": float(torch.linalg.vector_norm(actual)),
             "master_drift_l2": float(torch.linalg.vector_norm(drift)),
             "recurrence_residual_l2": float(torch.linalg.vector_norm(residual)),
+            **null_record,
         })
         print(json.dumps({"event": "HELDOUT_CONSEQUENCE_STEP", **records[-1]}), flush=True)
         del gc_c, gr_c, gc_r, gr_r, uc_c, ur_c, uc_r, ur_r, local, feedback, actual
@@ -157,6 +209,28 @@ def main() -> None:
     final_drift = candidate_master - repair_master
     summed_actual = matrix.reshape(args.steps, 3, -1)[:, 2].sum(0)
     telescoping_residual = summed_actual - (final_drift - initial_drift).cpu().double()
+    null_summary = None
+    if args.matched_random_null:
+        final_null_drift = null_master - repair_master
+        null_summary = {
+            "kind": "ONE_SHOT_RADEMACHER_SIGN_SCRAMBLE_OF_STEP1_LOCAL_EFFECTIVE_UPDATE",
+            "same_step1_support_and_requested_l2": True,
+            "max_realized_norm_relative_error": max(
+                row["matched_random_norm_relative_error"] for row in records
+            ),
+            "realized_norm_match_within_10_percent_every_step": all(
+                row["matched_random_norm_relative_error"] <= 0.10 for row in records
+            ),
+            "final_null_drift_l2": float(torch.linalg.vector_norm(final_null_drift)),
+            "natural_null_final_drift_cosine": float(
+                torch.sum(final_drift * final_null_drift)
+                / max(
+                    float(torch.linalg.vector_norm(final_drift)
+                          * torch.linalg.vector_norm(final_null_drift)),
+                    1e-30,
+                )
+            ),
+        }
     payload = {
         "schema": "kernel-analyzer-heldout-lmhead-consequence-v1",
         "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
@@ -171,6 +245,7 @@ def main() -> None:
         "records": records, "statistics": statistics,
         "final_master_drift_l2": float(torch.linalg.vector_norm(final_drift)),
         "telescoping_residual_l2": float(torch.linalg.vector_norm(telescoping_residual)),
+        "matched_random_feedback_null": null_summary,
         "only_declared_parameter_updated": True,
         "claim_boundary": (
             "Four-arm symmetric one-parameter consequence trajectory.  COMPLETE measures "

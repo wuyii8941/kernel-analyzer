@@ -78,6 +78,37 @@ were maximally aligned across all eight states (`A=sqrt(8)`, exact sign-flip
   F+B unit are backward-visible but canceling under the frozen population
   protocol; neither is counted as a persistent-bias case.
 
+## Frozen held-out: Llama 3.2 and Ministral 3
+
+- Both text128 cells completed eight-state all-implementation screening with
+  zero unresolved identities: 10,208 actual invocations for Llama and 9,912
+  for Ministral. Their seq512 schedules add no raw ATen semantics, so they are
+  retained as coverage configurations without a duplicate deep screen.
+- Before trajectory states were generated, the frozen transported-orbit
+  predictor marked both exact `lm_head dX` implementations as risk:
+  `A_m=2.131` (Llama) and `A_m=2.183` (Ministral), both exact sign-flip
+  `p=0.00025`.
+- On disjoint 32-step live-weight trajectories, both predictions matched a
+  persistent actual update drift: `A_D=1.221`, final norm `8.44e-6` for Llama;
+  `A_D=1.229`, final norm `8.93e-6` for Ministral. Four-arm symmetric
+  recurrence and telescoping residuals are exactly zero.
+- The dynamics are not a simple fixed source carrier. Realized local
+  increments are near the diffusive boundary (`A_L=1.004/1.010`), while the
+  feedback terms are persistent (`A_B=1.345/1.209`). A norm/support-matched
+  one-shot random perturbation does not reproduce the natural direction
+  (final cosine `-0.566/-0.015`) and does not grow after the first write. Thus
+  generic Lyapunov amplification is not an adequate explanation; repeated
+  implementation injection and state feedback interact.
+- These two confirmations are `SEEN_IMPL / NEW_OPERANDS`: they validate
+  cross-model operand generalization of one `lm_head dX` mathematical family,
+  not two new operator mechanisms and not `NEW_IMPL` generalization.
+- Two genuinely new Ministral semantic representatives were independently
+  closed. YaRN `floor/log` is exact under the repair. The attention-mask /
+  softmax fusion has local endpoint differences, but repairing one of its 26
+  repeated regions changes neither loss nor any parameter gradient. All 26
+  invocations remain in the denominator; only one representative is deeply
+  measured.
+
 ## Counting rule
 
 All runtime invocations and exact ABI identities remain in the denominator.
