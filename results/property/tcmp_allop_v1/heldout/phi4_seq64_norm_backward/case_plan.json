@@ -1,0 +1,17 @@
+{
+  "schema": "kernel-analyzer-tcmp-case-plan-v1",
+  "model": "phi4",
+  "sequence_length": 64,
+  "source_internal_region": "backward:1125:in_out_ptr0",
+  "source_family": "NORMALIZATION_BACKWARD",
+  "closure_task": "backward:1125:in_out_ptr0",
+  "complete_fb_unit_required": true,
+  "cases": [
+    {
+      "case_id": "phi4_seq64_norm_backward",
+      "task_id": "backward:1125:in_out_ptr0",
+      "carrier": "model.layers.0.self_attn.o_proj.weight",
+      "claim_boundary": "Exact Phi-4 fused normalization-backward semantic endpoint with a reachable projection-weight carrier; internal reduction arithmetic is not localized beyond the compiler-bound endpoint."
+    }
+  ]
+}

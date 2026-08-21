@@ -409,3 +409,10 @@ The search therefore adds one genuine new canceling control and no new
 Flash-style positive. Further candidates should be chosen from the frozen
 pool by a deterministic family/implementation rule; repeated normalization,
 softmax, or MM representatives are not additional cases.
+
+The next nonduplicate Phi-4 normalization representative
+(`backward:1125:in_out_ptr0`) was also preflighted. Its strict fullgraph warm-up
+stopped in the Transformers LongRoPE frequency-update branch before any
+runtime observation. It is retained as `UNRESOLVED_COMPILE`, not treated as a
+negative or a case; see
+`results/property/tcmp_allop_v1/heldout/phi4_seq64_norm_backward/status.json`.
