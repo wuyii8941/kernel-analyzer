@@ -1,0 +1,17 @@
+{
+  "schema": "kernel-analyzer-tcmp-case-plan-v1",
+  "model": "deepseek8b",
+  "sequence_length": 128,
+  "source_internal_region": "backward:1667:output_0",
+  "source_family": "ATTENTION_PROJECTION_BACKWARD",
+  "closure_task": "backward:1667:output_0",
+  "complete_fb_unit_required": true,
+  "cases": [
+    {
+      "case_id": "deepseek8b_seq128_attn_proj",
+      "task_id": "backward:1667:output_0",
+      "carrier": "model.layers.6.input_layernorm.weight",
+      "claim_boundary": "Exact DeepSeek attention-projection backward MM endpoint with an input-layernorm carrier; internal GEMM arithmetic is localized only at the compiler-bound endpoint."
+    }
+  ]
+}

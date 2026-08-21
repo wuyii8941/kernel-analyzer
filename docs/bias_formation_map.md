@@ -100,3 +100,12 @@ stored at
 `results/property/tcmp_allop_v1/semantic_family_heldout_pool_v1.json`; dynamic
 reach/orbit/finite-residual gates remain mandatory before any experiment is
 promoted.
+
+The continuation of this frozen search added two more closed controls.
+DeepSeek seq256 cross-entropy backward MM reached `model.norm.weight`, but its
+nonzero local residual remained centered through gradient and update layers.
+DeepSeek seq128 attention-projection backward MM likewise reached the declared
+input-layernorm carrier and was centered in both 16-state partitions. Phi-4
+normalization and a second Mamba state-space candidate remain compile/graph
+unresolved. These outcomes are retained as backward-visible variance controls
+or abstentions; none is promoted to a persistent-bias case.

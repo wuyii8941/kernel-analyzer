@@ -416,3 +416,12 @@ stopped in the Transformers LongRoPE frequency-update branch before any
 runtime observation. It is retained as `UNRESOLVED_COMPILE`, not treated as a
 negative or a case; see
 `results/property/tcmp_allop_v1/heldout/phi4_seq64_norm_backward/status.json`.
+
+A third nonduplicate representative, DeepSeek seq128 attention-projection
+backward MM (`backward:1667:output_0`), passed the two-state reach preflight and
+completed 16+16 formation. The endpoint reached
+`model.layers.6.input_layernorm.weight` with nonzero local and gradient energy,
+but all formation layers were centered: effective-update ratios were
+`0.000811` (calibration) and `-0.008580` (confirmation). It is therefore a
+second new backward-visible variance/canceling control, not a positive case;
+no consequence trajectory was run.
