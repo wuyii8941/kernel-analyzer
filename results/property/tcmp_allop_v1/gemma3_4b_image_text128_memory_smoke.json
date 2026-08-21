@@ -1,0 +1,89 @@
+{
+  "admission": {
+    "all_finite": true,
+    "peak_reserved_below_85pct": true
+  },
+  "admitted": true,
+  "input_bank": "/data1/tzh/kernel-analyzer/results/property/tcmp_allop_v1/input_banks/gemma3_4b_image_text128.json",
+  "model": "/data1/tzh/models/google/gemma-3-4b-pt",
+  "preflight": {
+    "bad_cache_paths": {},
+    "cache_paths": {
+      "HF_HOME": "/data1/tzh/cache/huggingface",
+      "HUGGINGFACE_HUB_CACHE": "/data1/tzh/cache/huggingface/hub",
+      "PIP_CACHE_DIR": "/data1/tzh/cache/pip",
+      "TMPDIR": "/data1/tzh/cache/tmp",
+      "TORCHINDUCTOR_CACHE_DIR": "/data1/tzh/cache/tmp/torchinductor_tzh",
+      "TRANSFORMERS_CACHE": "/data1/tzh/cache/huggingface/transformers",
+      "TRITON_CACHE_DIR": "/data1/tzh/cache/triton",
+      "XDG_CACHE_HOME": "/data1/tzh/cache/xdg"
+    },
+    "data_free_gib": 858.1476593017578,
+    "data_root": "/data1/tzh",
+    "failures": [],
+    "gpus": [
+      {
+        "device": 0,
+        "free_gib": 47.274169921875,
+        "total_gib": 47.535888671875
+      }
+    ],
+    "host_memory_available_gib": 363.5379333496094,
+    "host_memory_total_gib": 376.5676498413086,
+    "launch_allowed": true,
+    "model_budget": {
+      "activation_reserve_gib": 4.0,
+      "aggregate_fp32_eager_peak_gib": 36.03749656677246,
+      "compiler_reserve_gib": 6.0,
+      "dtype_bytes": 2,
+      "fp32_reference_or_master_gib": 16.01874828338623,
+      "gradients_gib": 8.009374141693115,
+      "parameter_count": 4300000000,
+      "per_gpu_fp32_eager_peak_gib": 36.03749656677246,
+      "per_gpu_low_precision_peak_gib": 26.01874828338623,
+      "seq_len": 128,
+      "shard_gpus": 1,
+      "single_gpu_low_precision_peak_gib": 26.01874828338623,
+      "weights_gib": 8.009374141693115
+    },
+    "schema": "kernel-analyzer-resource-preflight-v1"
+  },
+  "rows": [
+    {
+      "all_gradients_finite": true,
+      "device_free_before_gib": 47.274169921875,
+      "device_total_gib": 47.535888671875,
+      "dtype": "torch.bfloat16",
+      "loss": 5.402191638946533,
+      "parameter_count": 4300079472,
+      "parameter_gradients_present": 883,
+      "peak_allocated_gib": 20.094483852386475,
+      "peak_reserved_gib": 21.296875,
+      "processed_input_shapes": {
+        "attention_mask": [
+          1,
+          268
+        ],
+        "input_ids": [
+          1,
+          268
+        ],
+        "pixel_values": [
+          1,
+          3,
+          896,
+          896
+        ],
+        "token_type_ids": [
+          1,
+          268
+        ]
+      },
+      "wall_seconds": 8.598033621907234
+    }
+  ],
+  "schema": "kernel-analyzer-model-fb-memory-smoke-v1",
+  "seq_len": 128,
+  "state_id": 0,
+  "tensor_values_saved": false
+}

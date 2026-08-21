@@ -11,12 +11,26 @@ import shutil
 from pathlib import Path
 
 import torch
+from PIL import Image
 from torch._inductor.codecache import PyCodeCache
-from transformers import AutoModelForCausalLM, Gemma3ForConditionalGeneration, MambaForCausalLM
+from transformers import AutoModelForCausalLM, AutoProcessor, Gemma3ForConditionalGeneration, MambaForCausalLM
 from transformers.models.mamba import modeling_mamba
 
 from qwen_candidate_step import LossStep, configure_candidate_runtime
 from run_qwen_current_triton_references import gradient_digest, tensor_digest
+
+
+class Gemma3ImageLossStep(torch.nn.Module):
+    def __init__(self, model: torch.nn.Module):
+        super().__init__()
+        self.model = model
+
+    def forward(self, input_ids, pixel_values, attention_mask, token_type_ids, labels):
+        return self.model(
+            input_ids=input_ids, pixel_values=pixel_values,
+            attention_mask=attention_mask, token_type_ids=token_type_ids,
+            labels=labels, use_cache=False,
+        ).loss
 
 
 def digest(value: object) -> str:
@@ -43,6 +57,8 @@ def main() -> None:
         "--repeat", type=int, default=2,
         help="Use one run for state-specific schedule capture; numerical repeat stability is measured by the replay screen.",
     )
+    parser.add_argument("--modality", choices=("TEXT", "IMAGE_TEXT"), default="TEXT")
+    parser.add_argument("--gradient-checkpointing", action="store_true")
     args = parser.parse_args()
     if args.repeat not in {1, 2}:
         raise ValueError("schedule capture repeat must be one or two")
@@ -53,7 +69,7 @@ def main() -> None:
     records = bank.get("states", bank.get("records"))
     record = records[args.state]
     token_ids = record.get("input_ids", record.get("token_ids"))
-    if token_ids is None:
+    if args.modality == "TEXT" and token_ids is None:
         raise RuntimeError("selected input record has no token IDs")
     device = torch.device("cuda:0")
     configure_candidate_runtime(24000 + args.state)
@@ -74,15 +90,49 @@ def main() -> None:
         )
     model = model.to(device).train()
     model.config.use_cache = False
+    if args.gradient_checkpointing:
+        model.gradient_checkpointing_enable()
     start = len(PyCodeCache.modules)
+    step = Gemma3ImageLossStep(model) if args.modality == "IMAGE_TEXT" else LossStep(model)
     candidate = torch.compile(
-        LossStep(model), backend="inductor", fullgraph=not args.allow_graph_breaks, dynamic=False
+        step, backend="inductor", fullgraph=not args.allow_graph_breaks, dynamic=False
     )
-    values = torch.tensor([token_ids], dtype=torch.long, device=device)
+    if args.modality == "IMAGE_TEXT":
+        image_path = Path(record["image_path"])
+        if hashlib.sha256(image_path.read_bytes()).hexdigest() != record["image_sha256"]:
+            raise RuntimeError("image digest mismatch")
+        processor = AutoProcessor.from_pretrained(args.model, local_files_only=True)
+        prepared = processor(
+            text=record["prompt"], images=Image.open(image_path).convert("RGB"), return_tensors="pt"
+        )
+        labels = prepared["input_ids"].clone()
+        labels[prepared["token_type_ids"] == 1] = -100
+        values = (
+            prepared["input_ids"].to(device),
+            prepared["pixel_values"].to(device, dtype=torch.bfloat16),
+            prepared["attention_mask"].to(device), prepared["token_type_ids"].to(device),
+            labels.to(device),
+        )
+        input_manifest = {
+            "state": args.state, "state_id": record["state_id"],
+            "sequence_length": int(prepared["input_ids"].numel()),
+            "token_ids_sha256": digest(prepared["input_ids"].tolist()),
+            "image_sha256": record["image_sha256"],
+            "processed_shapes": {name: list(value.shape) for name, value in prepared.items()},
+            "input_bank_sha256": hashlib.sha256(args.input_bank.read_bytes()).hexdigest(),
+        }
+    else:
+        values = (torch.tensor([token_ids], dtype=torch.long, device=device),)
+        input_manifest = {
+            "state": args.state,
+            "state_id": record.get("sequence_id", record.get("state_id", str(args.state))),
+            "sequence_length": len(token_ids), "token_ids_sha256": digest(token_ids),
+            "input_bank_sha256": hashlib.sha256(args.input_bank.read_bytes()).hexdigest(),
+        }
     runs = []
     for repeat in range(args.repeat):
         model.zero_grad(set_to_none=True)
-        loss = candidate(values)
+        loss = candidate(*values)
         loss.backward()
         torch.cuda.synchronize(device)
         runs.append({"loss": tensor_digest(loss), "gradients": gradient_digest(model)})
@@ -131,13 +181,9 @@ def main() -> None:
         "architecture": args.architecture,
         "backend": "inductor", "trace_enabled": False,
         "allow_graph_breaks": args.allow_graph_breaks,
-        "input": {
-            "state": args.state,
-            "state_id": record.get("sequence_id", record.get("state_id", str(args.state))),
-            "sequence_length": len(token_ids),
-            "token_ids_sha256": digest(token_ids),
-            "input_bank_sha256": hashlib.sha256(args.input_bank.read_bytes()).hexdigest(),
-        },
+        "input": input_manifest,
+        "modality": args.modality,
+        "gradient_checkpointing": args.gradient_checkpointing,
         "repeat_stable": (
             runs[0] == runs[1] if len(runs) == 2 else "DEFERRED_TO_REPLAY_SCREEN"
         ),
