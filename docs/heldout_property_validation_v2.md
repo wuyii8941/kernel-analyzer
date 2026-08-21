@@ -18,20 +18,22 @@ The results are retained in
 
 ## New implementation attempt
 
-Gemma-4 E2B is the frozen new-implementation target. Its existing source
-prediction and 32-step consequence remain valid as a source-scope negative /
-feedback-sustained out-of-domain record. A current-v3 confirmation run was
-attempted with the release's engineering warm-up state and the frozen
-transformers-5 runtime. It failed closed before measurement because the
-generated forward/backward wrapper bytes differed from the frozen release.
-The exact expected and observed digests are in
-`gemma_v3_runtime_attempt.json`. This is provenance failure, not a scientific
-negative and not a new case.
+Gemma-4 E2B is the frozen new-implementation target. Its current-v3
+confirmation was rerun in one process that froze the wrapper release before
+formation and then executed the consequence. The source prediction was
+`NO_SOURCE_PERSISTENCE_UNDER_PROTOCOL` (formation amplification 0.9983).
+The local path was null-like (1.0032 versus sign-flip null upper 1.0065), while
+feedback and actual paths were risk candidates (2.642 and 2.515 versus null
+upper bounds 1.621 and 1.558). This reproduces the existing interpretation:
+Gemma is a feedback-sustained out-of-domain case, not a source-persistence
+positive and not a new Flash-style case. The compact result is
+`heldout_validation_v2_gemma_v3.json`.
 
 ## Current claim boundary
 
-The short Oracle has passed code-level and engineering-path checks, but it has
-**zero current-v3 held-out validation records** and zero new implementation
-positives. The next valid step is a pre-enumerated pool with release-matching
+The short Oracle now has **one current-v3 held-out execution record** on a new
+implementation class, with the expected scope separation, and zero new
+implementation source positives. This is not enough for universal accuracy:
+the next valid step is a pre-enumerated pool with more release-matching
 captures; screen negatives and centered controls remain in the denominator.
 No universal all-operator safety claim is made.
