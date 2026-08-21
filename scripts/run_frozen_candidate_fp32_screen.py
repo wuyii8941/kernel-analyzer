@@ -157,7 +157,10 @@ def freeze_or_validate_release(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--architecture", choices=("qwen", "mamba", "phi", "deepseek8"), required=True)
+    parser.add_argument(
+        "--architecture", choices=("qwen", "mamba", "phi", "deepseek8", "generic", "mistral3"),
+        required=True,
+    )
     parser.add_argument("--model", type=Path, required=True)
     parser.add_argument("--input-bank", type=Path, required=True)
     parser.add_argument("--release-dir", type=Path, required=True)
@@ -167,12 +170,26 @@ def main() -> None:
     parser.add_argument("--sample-size", type=int, default=64)
     parser.add_argument("--metric-chunk-elements", type=int, default=1_048_576)
     parser.add_argument("--allow-graph-breaks", action="store_true")
+    parser.add_argument(
+        "--state-role", choices=("ENGINEERING", "SCREENING", "CONFIRMATION"),
+        help="Measure only the frozen role while retaining the full bank binding.",
+    )
+    parser.add_argument(
+        "--enumerate-only", action="store_true",
+        help="Freeze the exact F+B inventory/campaign but do not repeat numerical screens.",
+    )
     args = parser.parse_args()
     protocol = json.loads(PROTOCOL.read_text())
     bank = json.loads(args.input_bank.read_text())
     states = bank.get("states", bank.get("records"))
     if len(states) != args.expected_states:
         raise RuntimeError("frozen input population changed")
+    selected_states = [
+        (index, state) for index, state in enumerate(states)
+        if args.state_role is None or state.get("role") == args.state_role
+    ]
+    if not selected_states:
+        raise RuntimeError(f"input bank has no states for role {args.state_role}")
     device = torch.device(args.device)
     configure_candidate_runtime(24000)
     model = load_model(args.architecture, args.model, device)
@@ -197,6 +214,17 @@ def main() -> None:
         inventory = json.load(handle)
     with gzip.open(campaign_path, "rt", encoding="utf-8") as handle:
         campaign = json.load(handle)
+    if args.enumerate_only:
+        print(json.dumps({
+            "event": "ENUMERATION_COMPLETE",
+            "release": str(args.release_dir),
+            "compute_invocations": sum(
+                row.get("category") == "COMPUTE"
+                for row in inventory["runtime_call_audit"]["rows"]
+            ),
+            "triton_invocations": len(campaign["rows"]),
+        }))
+        return
     inventory_rows = inventory["runtime_call_audit"]["rows"]
     campaign_rows = campaign["rows"]
     triton_path = args.release_dir / "triton_screen.json.gz"
@@ -209,6 +237,8 @@ def main() -> None:
         "input_bank_sha256": file_digest(args.input_bank),
         "protocol_sha256": protocol["protocol_sha256"],
         "shard_index": 0, "shard_count": 1, "repeat": args.repeat,
+        "state_role": args.state_role,
+        "eligible_states": len(selected_states),
         "release_capture_sha256": json.loads((args.release_dir / "capture.json").read_text())["result_sha256"],
     }
     if joint_path.exists():
@@ -242,7 +272,7 @@ def main() -> None:
         triton_payload=triton_payload,
         nontriton_payload=nontriton_payload,
     )
-    for state_index, state in enumerate(states):
+    for state_index, state in selected_states:
         state_id = str(state.get("sequence_id", state.get("state_id", state_index)))
         left_done = len(triton_payload["states"].get(state_id, {}).get("repeats", []))
         right_done = len(nontriton_payload["states"].get(state_id, {}).get("repeats", []))

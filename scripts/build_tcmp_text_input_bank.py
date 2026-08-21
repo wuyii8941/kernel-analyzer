@@ -16,6 +16,10 @@ def main() -> None:
     parser.add_argument("--model", type=Path, required=True)
     parser.add_argument("--sequence-length", type=int, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--fix-mistral-regex", action="store_true",
+        help="Use the corrected Mistral tokenizer regex required by Mistral 3 checkpoints.",
+    )
     args = parser.parse_args()
     if args.sequence_length not in {128, 256, 512}:
         raise ValueError("TCMP v1 admits only seq128/256/512")
@@ -33,7 +37,10 @@ def main() -> None:
     from datasets import load_dataset
     from transformers import AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model, local_files_only=True, use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.model, local_files_only=True, use_fast=True,
+        fix_mistral_regex=args.fix_mistral_regex,
+    )
     dataset = load_dataset(
         "Salesforce/wikitext", "wikitext-103-raw-v1", split="train",
         download_mode="reuse_dataset_if_exists",
@@ -74,6 +81,7 @@ def main() -> None:
         "sequence_length": args.sequence_length,
         "dataset": "Salesforce/wikitext:wikitext-103-raw-v1:train",
         "nonempty_documents_consumed": documents,
+        "fix_mistral_regex": args.fix_mistral_regex,
         "states": rows,
         "splits": {"ENGINEERING": 2, "SCREENING": 8, "CONFIRMATION": 16},
     }

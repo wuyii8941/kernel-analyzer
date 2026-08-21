@@ -18,7 +18,7 @@ os.environ.setdefault("TORCHINDUCTOR_CACHE_DIR", "/data1/tzh/cache/torchinductor
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 import torch
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, Mistral3ForConditionalGeneration
 
 
 VRAM_LIMIT = 44 * 1024**3
@@ -74,7 +74,12 @@ def main() -> None:
     torch.cuda.empty_cache(); torch.cuda.reset_peak_memory_stats(device_index)
     torch.manual_seed(20260820); torch.cuda.manual_seed_all(20260820)
     torch.backends.cuda.matmul.allow_tf32 = False
-    model = AutoModelForCausalLM.from_pretrained(
+    model_type = json.loads((args.model / "config.json").read_text()).get("model_type")
+    model_class = (
+        Mistral3ForConditionalGeneration if model_type == "mistral3"
+        else AutoModelForCausalLM
+    )
+    model = model_class.from_pretrained(
         args.model, dtype=torch.bfloat16, local_files_only=True,
         attn_implementation="eager", trust_remote_code=False,
     ).to(device).train()
