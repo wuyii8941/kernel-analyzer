@@ -78,7 +78,13 @@ def main() -> None:
         modules=modules, work_dir=args.work_dir,
         manifest=args.work_dir.with_name(f"{args.work_dir.name}_manifest.json"),
         inventory=inventory_path, campaign=campaign_path, architecture="mistral3",
-        state=states[args.warm_state], input_digests={}, values=values(args.warm_state),
+        state=states[args.warm_state],
+        input_digests={
+            "token_ids_sha256": hashlib.sha256(
+                json.dumps(states[args.warm_state]["token_ids"]).encode()
+            ).hexdigest()
+        },
+        values=values(args.warm_state),
         modality="TEXT", gradient_checkpointing=False, allow_graph_breaks=True,
     )
     with gzip.open(campaign_path, "rt", encoding="utf-8") as handle:
