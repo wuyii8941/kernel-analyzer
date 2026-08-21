@@ -1,4 +1,8 @@
-# Held-out property validation v2
+# Held-out property validation v2 (superseded for the Gemma result)
+
+The disjoint-state result in `docs/heldout_property_validation_v3.md` is now
+authoritative. This v2 record remains as the engineering/provenance history
+of the first same-state attempt.
 
 This is the current audit after the v3 short-screen engineering revalidation.
 It supersedes neither the frozen development protocol nor the v1 provenance

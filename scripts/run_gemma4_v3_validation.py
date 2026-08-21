@@ -60,6 +60,10 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=Path, required=True)
     parser.add_argument("--input-bank", type=Path, required=True)
+    parser.add_argument(
+        "--consequence-bank", type=Path,
+        help="Optional disjoint bank for the closed trajectory; if omitted, the formation states are reused only for engineering dry runs.",
+    )
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--runtime-seed", type=int, default=24000)
@@ -75,6 +79,15 @@ def main() -> None:
     states = [row for row in all_states if row.get("role") == "CONFIRMATION"][:args.steps]
     if not warm_states or len(states) != args.steps:
         raise RuntimeError("Gemma bank lacks the required engineering/confirmation states")
+    consequence_bank_path = args.consequence_bank or args.input_bank
+    consequence_bank = json.loads(consequence_bank_path.read_text())
+    consequence_states = [
+        row for row in consequence_bank["states"]
+        if row.get("role") == "TRAJECTORY"
+    ] if args.consequence_bank else states
+    if len(consequence_states) < args.steps:
+        raise RuntimeError("consequence bank lacks the requested disjoint trajectory states")
+    consequence_states = consequence_states[:args.steps]
 
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=False)
@@ -214,7 +227,7 @@ def main() -> None:
         ) if args.steps >= 4 else None
     )
     records = []
-    for index, state in enumerate(states):
+    for index, state in enumerate(consequence_states):
         step = index + 1
         gc_c = gradient(cmaster, state, False, carrier_name)
         gr_c = gradient(cmaster, state, True, carrier_name)
@@ -269,6 +282,10 @@ def main() -> None:
         "final_drift_l2": l2(cmaster - rmaster),
         "records": records,
         "runtime_release": str(release_dir),
+        "formation_bank": str(args.input_bank),
+        "consequence_bank": str(consequence_bank_path),
+        "formation_state_role": "CONFIRMATION",
+        "consequence_state_role": "TRAJECTORY" if args.consequence_bank else "CONFIRMATION_ENGINEERING_REUSE",
         "claim_boundary": "Same-process current wrapper release; source prediction and consequence are separated, and feedback remains out of source scope.",
     }
     (output_dir / "consequence.json").write_text(json.dumps(consequence, indent=2, sort_keys=True) + "\n")
