@@ -1,0 +1,30 @@
+{
+  "schema": "tcmp-semantic-family-search-summary-v1",
+  "coverage_source": "results/property/bias_formation/hotspot_search/semantic_region_gap.json",
+  "compiler_bound_region_representatives": 67,
+  "corrected_semantic_cells": 791,
+  "blocked_internal_regions_with_exact_downstream_closure": 59,
+  "blocked_regions_with_screened_downstream_closure": 40,
+  "new_measurements": [
+    {
+      "case": "deepseek8b_seq256_layer0_norm_closure",
+      "family": "NORMALIZATION_BACKWARD",
+      "status": "BACKWARD_VISIBLE_VARIANCE_CANCELING_CONTROL",
+      "case_increment": 0
+    },
+    {
+      "case": "deepseek8b_seq128_l10_softmax",
+      "family": "ATTENTION_SOFTMAX_SAVED_STATE_BACKWARD",
+      "status": "EXACT_SAFE_UNDER_PROTOCOL",
+      "case_increment": 0
+    },
+    {
+      "case": "mamba_seq128_layer4_silu_state_closure",
+      "family": "STATE_SPACE_RECURRENT_BACKWARD",
+      "status": "UNRESOLVED_COMPILE",
+      "case_increment": 0
+    }
+  ],
+  "claim_boundary": "The search expanded semantic-family coverage without duplicating existing GEMM/lm-head representatives. Only a closed, directional F+B formation plus consequence can add a positive case.",
+  "next_action": "Freeze this search ledger and use a mechanically enumerated, non-duplicate held-out pool for predictor confirmation; do not relabel unresolved compile or centered controls."
+}

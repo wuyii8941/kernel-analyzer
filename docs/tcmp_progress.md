@@ -361,3 +361,17 @@ not a zero-residual or parameter-inaccessible negative. Since formation did
 not produce a directional signal, no 32-step trajectory was run. The compact
 status and complete certificate are retained in
 `results/property/tcmp_allop_v1/heldout/deepseek8b_seq256_norm_l0/`.
+
+## Mamba state-space closure feasibility boundary (2026-08-21)
+
+To avoid treating the previous Mamba internal compile failure as a missing
+negative, we attempted one exact downstream closure from the new
+state-space-recurrent family: `backward:15107` at layer 4, with
+`backbone.layers.4.mixer.in_proj.weight` as carrier. The frozen AOT binding is
+valid, but the runner failed before any numerical observation during Inductor
+joint-graph `bmm_to_mm` compilation. GPU memory was only about 570 MiB at the
+bounded interruption, so this is a compiler/code-generation feasibility
+failure, not an OOM and not a numerical verdict. It remains
+`UNRESOLVED_COMPILE`, contributes zero to both positive and negative counts,
+and is not sent to trajectory. Its resumable case plan and status are retained
+under `results/property/tcmp_allop_v1/heldout/mamba_seq128_silu_state_closure/`.
