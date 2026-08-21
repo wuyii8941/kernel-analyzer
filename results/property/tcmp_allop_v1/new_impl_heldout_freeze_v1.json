@@ -1,0 +1,55 @@
+{
+  "schema": "kernel-analyzer-new-impl-heldout-freeze-v1",
+  "status": "FROZEN_BEFORE_MODEL_DOWNLOAD_OR_EXECUTION",
+  "frozen_at_utc": "2026-08-21T08:16:05Z",
+  "model": {
+    "model_id": "google/gemma-4-E2B",
+    "revision": "d29ff6b45f081a49ee2733a859c9c9c2d95d1a6f",
+    "architecture": "Gemma4ForConditionalGeneration",
+    "modality_for_primary_campaign": "TEXT",
+    "sequence_length": 128
+  },
+  "scientific_role": "HELDOUT_NEW_IMPLEMENTATION_AND_NEW_OPERAND_POPULATION",
+  "selection_rule": [
+    "enumerate every actually executed full-step F+B invocation before reading candidate residual values",
+    "retain every invocation in the coverage denominator",
+    "group by exact implementation pattern and semantic F+B region",
+    "deep-measure one deterministic representative per pattern unless ABI, reduction topology, or materialization differs",
+    "an item is predictor-eligible only when candidate-versus-reference residual is finite and nonzero, the complete declared parameter coordinates are reachable, and an exact-real-semantics-preserving orbit exists",
+    "zero residual is NOT_APPLICABLE_NO_RESIDUAL and not a negative prediction",
+    "no parameter reach is NOT_APPLICABLE_NO_PARAMETER_REACH and not a negative prediction",
+    "predict every eligible representative before any live-weight consequence is executed",
+    "retain both predictor-positive and predictor-negative eligible representatives"
+  ],
+  "predictor_input_whitelist": [
+    "captured reference operands",
+    "declared arithmetic and reduction orbit",
+    "analytic or exact-replay F+B transport",
+    "strict default-excluded 4+4 cross-fit orbit statistics"
+  ],
+  "predictor_input_blacklist": [
+    "trajectory drift",
+    "T4 verdict",
+    "SEUP verdict",
+    "A_L",
+    "A_B",
+    "A_D",
+    "historical case name"
+  ],
+  "trajectory_protocol": {
+    "steps": 32,
+    "only_after_prediction_commit": true,
+    "consequence_null": "five fixed seeds; a new non-default exact reduction orbit at every step",
+    "report": [
+      "natural and null drift norm",
+      "natural-null drift cosine distribution",
+      "local error norm ratio",
+      "joint drift Gram and participation-ratio effective rank"
+    ]
+  },
+  "routing_policy": {
+    "record_route_hamming_distance_when_discrete_routing_exists": true,
+    "route-diverged_steps": "SEPARATE_DISCONTINUOUS_REGIME"
+  },
+  "claim_boundary": "This freeze creates a genuinely unseen implementation pool. Llama and Ministral are revealed retrospective diagnostics and cannot provide confirmation credit. Gemma-4 E2B must not be replaced or subset based on measured outcomes."
+}

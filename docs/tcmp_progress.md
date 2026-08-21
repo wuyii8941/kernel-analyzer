@@ -103,13 +103,25 @@ were maximally aligned across all eight states (`A=sqrt(8)`, exact sign-flip
   persistent actual update drift: `A_D=1.221`, final norm `8.44e-6` for Llama;
   `A_D=1.229`, final norm `8.93e-6` for Ministral. Four-arm symmetric
   recurrence and telescoping residuals are exactly zero.
+- The corrected, retrospective default-plus-eight 4+4 cross-fit retains the
+  signal: `A_m=2.150`, mean/orbit-sigma `2.076` for Llama and `A_m=2.220`,
+  mean/orbit-sigma `2.160` for Ministral (both sign-flip `p=0.00025`). Thus the
+  pilot signal was not created by the plug-in estimator, although these
+  corrected values are no longer prospective evidence.
 - The dynamics are not a simple fixed source carrier. Realized local
   increments are near the diffusive boundary (`A_L=1.004/1.010`), while the
   feedback terms are persistent (`A_B=1.345/1.209`). A norm/support-matched
   one-shot random perturbation does not reproduce the natural direction
   (final cosine `-0.566/-0.015`) and does not grow after the first write. Thus
-  generic Lyapunov amplification is not an adequate explanation; repeated
-  implementation injection and state feedback interact.
+  generic Lyapunov amplification is not established by that one-shot control.
+  A stronger retrospective control changes to a different real, semantics-
+  preserving reduction orbit on every one of 32 steps for five frozen seeds.
+  It retains `94.5%/93.8%` of natural drift norm and mean natural-drift cosine
+  `0.816/0.738` (Llama/Ministral), while its local error norm is `88.2%/86.7%`
+  of natural. The joint trajectory effective rank is `1.28/1.47`. Therefore a
+  fixed reduction order is not the temporal anchor in these cases. The data
+  instead support a tiling-conditional common orbit mean plus low-dimensional
+  training feedback; schedule randomization weakens but does not remove drift.
 - These two confirmations are `SEEN_IMPL / NEW_OPERANDS`: they validate
   cross-model operand generalization of one `lm_head dX` mathematical family,
   not two new operator mechanisms and not `NEW_IMPL` generalization.
