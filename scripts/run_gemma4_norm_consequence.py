@@ -58,6 +58,14 @@ def main() -> None:
     states = [row for row in bank["states"] if row["role"] == args.state_role][:args.steps]
     if len(states) != args.steps:
         raise RuntimeError(f"{args.state_role} population incomplete")
+    # The compiled wrapper is part of the frozen runtime release.  Compile
+    # against the exact engineering state used by that release, then consume
+    # the requested confirmation/trajectory states for the measurement.  Using
+    # the first evaluation state as the warm-up input can change generated
+    # constants and makes an otherwise valid release appear mismatched.
+    warm_states = [row for row in bank["states"] if row["role"] == "ENGINEERING"]
+    if not warm_states:
+        raise RuntimeError("frozen runtime release requires an ENGINEERING warm-up state")
     if args.short_screen_output is not None and not 4 <= args.short_screen_steps <= min(16, args.steps):
         raise ValueError("short screen steps must be in [4, min(16, trajectory steps)]")
     device = torch.device(args.device)
@@ -71,7 +79,7 @@ def main() -> None:
     # Warm with the same first trajectory state used by the frozen release.
     # Using the base bank's first engineering state can change Gemma-4's
     # generated graph node ordering even when tensor shapes match.
-    warm = torch.tensor([states[0]["token_ids"]], dtype=torch.long, device=device)
+    warm = torch.tensor([warm_states[0]["token_ids"]], dtype=torch.long, device=device)
     model.zero_grad(set_to_none=True); candidate(warm).backward(); torch.cuda.synchronize(device)
     modules = list(PyCodeCache.modules[start:])
     capture = json.loads((args.runtime_release / "capture.json").read_text())
