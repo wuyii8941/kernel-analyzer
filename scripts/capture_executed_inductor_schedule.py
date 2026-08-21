@@ -12,7 +12,7 @@ from pathlib import Path
 
 import torch
 from torch._inductor.codecache import PyCodeCache
-from transformers import AutoModelForCausalLM, MambaForCausalLM
+from transformers import AutoModelForCausalLM, Gemma3ForConditionalGeneration, MambaForCausalLM
 from transformers.models.mamba import modeling_mamba
 
 from qwen_candidate_step import LossStep, configure_candidate_runtime
@@ -28,7 +28,7 @@ def digest(value: object) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--architecture", choices=("qwen", "mamba", "phi", "deepseek8", "generic"), default="qwen"
+        "--architecture", choices=("qwen", "mamba", "phi", "deepseek8", "generic", "gemma3"), default="qwen"
     )
     parser.add_argument("--model", type=Path, required=True)
     parser.add_argument("--input-bank", type=Path, required=True)
@@ -63,6 +63,10 @@ def main() -> None:
         modeling_mamba.selective_state_update = None
         model = MambaForCausalLM.from_pretrained(
             args.model, dtype=torch.bfloat16, local_files_only=True
+        )
+    elif args.architecture == "gemma3":
+        model = Gemma3ForConditionalGeneration.from_pretrained(
+            args.model, dtype=torch.bfloat16, attn_implementation="eager", local_files_only=True
         )
     else:
         model = AutoModelForCausalLM.from_pretrained(

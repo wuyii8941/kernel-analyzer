@@ -48,7 +48,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--architecture",
-        choices=("qwen", "mamba", "phi", "deepseek8", "generic"),
+        choices=("qwen", "mamba", "phi", "deepseek8", "generic", "gemma3"),
         required=True,
     )
     parser.add_argument("--model", type=Path, required=True)

@@ -20,7 +20,7 @@ from typing import Any
 os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 
 import torch
-from transformers import AutoModelForCausalLM, MambaForCausalLM
+from transformers import AutoModelForCausalLM, Gemma3ForConditionalGeneration, MambaForCausalLM
 from transformers.models.mamba import modeling_mamba
 
 
@@ -86,6 +86,14 @@ def load_model(
             model_path, dtype=torch.bfloat16, local_files_only=True
         )
         implementation = "transformers_explicit_recurrence_bfloat16"
+    elif architecture == "gemma3":
+        model = Gemma3ForConditionalGeneration.from_pretrained(
+            model_path,
+            dtype=torch.bfloat16,
+            local_files_only=True,
+            attn_implementation="eager",
+        )
+        implementation = "transformers_eager_gemma3_conditional_generation_bfloat16"
     else:
         load_kwargs: dict[str, Any] = {}
         if shard_gpus > 1:
@@ -118,7 +126,7 @@ def load_model(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--architecture", choices=("qwen", "mamba", "moe", "phi", "deepseek8", "generic"),
+        "--architecture", choices=("qwen", "mamba", "moe", "phi", "deepseek8", "generic", "gemma3"),
         required=True,
     )
     parser.add_argument("--model", required=True, type=Path)

@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 import torch
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, Gemma3ForConditionalGeneration
 
 from resource_preflight import resource_report
 
@@ -26,7 +26,7 @@ def require_data_paths(*paths: Path) -> None:
 
 def run_arm(
     model_path: Path, ids_cpu: torch.Tensor, dtype: torch.dtype,
-    device: str, shard_gpus: int,
+    device: str, shard_gpus: int, architecture: str,
 ) -> dict[str, object]:
     devices = [f"cuda:{index}" for index in range(shard_gpus)]
     torch.cuda.empty_cache()
@@ -41,7 +41,11 @@ def run_arm(
             index: f"{int(0.9 * memory_before[index][1] / 2**30)}GiB"
             for index in range(shard_gpus)
         }
-    model = AutoModelForCausalLM.from_pretrained(
+    model_class = (
+        Gemma3ForConditionalGeneration if architecture == "gemma3"
+        else AutoModelForCausalLM
+    )
+    model = model_class.from_pretrained(
         model_path,
         dtype=dtype,
         local_files_only=True,
@@ -103,6 +107,11 @@ def main() -> None:
     parser.add_argument("--parameter-estimate", type=int, required=True)
     parser.add_argument("--state", type=int, default=0)
     parser.add_argument("--shard-gpus", type=int, default=1)
+    parser.add_argument("--architecture", choices=("causal_lm", "gemma3"), default="causal_lm")
+    parser.add_argument(
+        "--bf16-only", action="store_true",
+        help="Admission preflight for optimized full F+B when a full FP32 model arm is not required.",
+    )
     args = parser.parse_args()
     require_data_paths(args.model, args.input_bank, args.output)
     bank = json.loads(args.input_bank.read_text())
@@ -118,9 +127,10 @@ def main() -> None:
     torch.manual_seed(41000 + args.state)
     torch.cuda.manual_seed_all(41000 + args.state)
     torch.backends.cuda.matmul.allow_tf32 = False
+    dtypes = [torch.bfloat16] if args.bf16_only else [torch.float32, torch.bfloat16]
     rows = [
-        run_arm(args.model, ids_cpu, torch.float32, args.device, args.shard_gpus),
-        run_arm(args.model, ids_cpu, torch.bfloat16, args.device, args.shard_gpus),
+        run_arm(args.model, ids_cpu, dtype, args.device, args.shard_gpus, args.architecture)
+        for dtype in dtypes
     ]
     payload = {
         "schema": "kernel-analyzer-model-fb-memory-smoke-v1",

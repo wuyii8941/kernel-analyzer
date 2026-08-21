@@ -16,7 +16,7 @@ os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 
 import torch
 from torch._inductor.codecache import PyCodeCache
-from transformers import AutoModelForCausalLM, MambaForCausalLM
+from transformers import AutoModelForCausalLM, Gemma3ForConditionalGeneration, MambaForCausalLM
 from transformers.models.mamba import modeling_mamba
 
 from qwen_candidate_step import LossStep, configure_candidate_runtime
@@ -58,6 +58,10 @@ def load_model(architecture: str, path: Path, device: torch.device) -> torch.nn.
         modeling_mamba.mamba_inner_fn = None
         modeling_mamba.selective_state_update = None
         model = MambaForCausalLM.from_pretrained(path, dtype=torch.bfloat16, local_files_only=True)
+    elif architecture == "gemma3":
+        model = Gemma3ForConditionalGeneration.from_pretrained(
+            path, dtype=torch.bfloat16, attn_implementation="eager", local_files_only=True
+        )
     else:
         model = AutoModelForCausalLM.from_pretrained(
             path, dtype=torch.bfloat16, attn_implementation="eager", local_files_only=True
@@ -83,7 +87,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--architecture",
-        choices=("qwen", "mamba", "phi", "deepseek8", "generic"),
+        choices=("qwen", "mamba", "phi", "deepseek8", "generic", "gemma3"),
         required=True,
     )
     parser.add_argument("--model", type=Path, required=True)
