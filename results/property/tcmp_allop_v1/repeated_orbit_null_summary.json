@@ -1,0 +1,27 @@
+{
+  "schema": "kernel-analyzer-repeated-orbit-null-summary-v1",
+  "protocol": {
+    "steps": 32,
+    "seeds": [20260821, 20260822, 20260823, 20260824, 20260825],
+    "injection": "one captured semantics-preserving reduction orbit variant at every step",
+    "weights_and_optimizer": "same paired initial state and AdamW-style mapping",
+    "status": "RETROSPECTIVE_MECHANISM_DIAGNOSTIC"
+  },
+  "models": {
+    "llama32_3b": {
+      "natural_final_drift_l2": 8.439762495981995e-06,
+      "null_final_norm_over_natural": [0.9402949496730307, 0.9455557271383075, 0.9336651501888494, 0.9596514597531343, 0.944859793243622],
+      "null_final_cosine_with_natural": [0.8096819519996643, 0.8205424547195435, 0.8079391717910767, 0.8173284530639648, 0.8230592012405396],
+      "drift_effective_rank_participation_ratio": 1.2784783055208992,
+      "result": "REPEATED_ORBIT_NULL_RETAINS_DRIFT"
+    },
+    "ministral3_3b": {
+      "natural_final_drift_l2": 8.186692866729572e-06,
+      "null_final_norm_over_natural": [0.9825674197821574, 0.9899842957134052, 1.0184879758223309, 0.984292269482714, 0.9941519974083928],
+      "null_final_cosine_with_natural": [0.688439130783081, 0.7018077969551086, 0.6966356635093689, 0.6995115280151367, 0.7006785869598389],
+      "drift_effective_rank_participation_ratio": 1.5712791479265538,
+      "result": "REPEATED_ORBIT_NULL_RETAINS_DRIFT"
+    }
+  },
+  "interpretation": "Repeated matched orbit perturbations produce drift of comparable norm and a consistently aligned low-dimensional direction. This rejects a one-shot-noise explanation, but because the randomized orbit still receives the closed-loop optimizer dynamics, it does not isolate a fixed source carrier or prove operator-specific causality."
+}

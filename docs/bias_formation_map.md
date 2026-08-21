@@ -101,6 +101,15 @@ stored at
 reach/orbit/finite-residual gates remain mandatory before any experiment is
 promoted.
 
+The repeated-orbit null was strengthened from a one-step perturbation to
+32-step per-step injection with five frozen seeds on the two held-out lm-head
+trajectories. Null drift remained comparable to natural drift and aligned with
+it in both models. This rejects the narrow “one random kick” explanation, but
+because the null still traverses the same optimizer feedback loop it is not
+evidence that the source orbit alone determines the drift. The map therefore
+records a separate `FEEDBACK_COMPATIBLE` outcome rather than upgrading the
+null to a source-persistent positive.
+
 The continuation of this frozen search added two more closed controls.
 DeepSeek seq256 cross-entropy backward MM reached `model.norm.weight`, but its
 nonzero local residual remained centered through gradient and update layers.

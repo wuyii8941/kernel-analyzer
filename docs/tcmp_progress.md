@@ -425,3 +425,25 @@ but all formation layers were centered: effective-update ratios were
 `0.000811` (calibration) and `-0.008580` (confirmation). It is therefore a
 second new backward-visible variance/canceling control, not a positive case;
 no consequence trajectory was run.
+
+## Repeated orbit nulls for held-out lm-head trajectories (2026-08-21)
+
+The earlier one-step random perturbation control was insufficient to test the
+null hypothesis that repeated noise injections could create the same drift. A
+new five-seed, 32-step control injects one captured, semantics-preserving
+reduction-orbit variant at every step while keeping the same paired initial
+state and optimizer mapping.
+
+For Llama 3.2, null final drift is `0.934--0.960` times natural drift and its
+cosine with natural drift is `0.808--0.823`; the drift-subspace participation
+ratio is `1.278`. For Ministral 3, the corresponding ranges are
+`0.983--1.018`, `0.688--0.702`, and participation ratio `1.571`. Thus a single
+random kick is not sufficient to explain the observed separation, but
+per-step orbit randomization also does not remove the drift. These controls
+support a low-dimensional closed-loop feedback interpretation and do not
+by themselves prove a fixed operator source carrier. They remain retrospective
+mechanism diagnostics, not held-out predictor confirmations.
+
+The compact summary is
+`results/property/tcmp_allop_v1/repeated_orbit_null_summary.json`; the full
+per-seed traces remain beside each held-out model's consequence artifacts.
