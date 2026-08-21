@@ -148,3 +148,23 @@ The oracle is general for endpoints with a valid semantics-preserving orbit and
 an executable F+B boundary. It must abstain for operators without such an orbit
 or without a closed transport. This is broad across reduction implementations,
 but it is not yet an all-operator universal oracle.
+
+## DeepSeek layer-10 softmax control
+
+We added a distinct DeepSeek-R1-0528-Qwen3-8B layer-10 attention-softmax
+saved-logit/backward-VJP region to the search. Its 32-state strict F+B
+formation certificate (16 calibration plus 16 confirmation states) has zero
+forward residual on the declared carrier and only numerical-floor backward
+roundoff. The typed repair is ABI-safe, the matched sham is exact, and all
+formation layers are `CENTERED`; no parameter carrier is reached. It is
+therefore an `EXACT_SAFE_UNDER_PROTOCOL` control, not a positive case and not
+evidence that the existing layer-35 conditional-alpha result is a complete
+Flash-style trajectory case.
+
+The same boundary applies to the existing DeepSeek layer-35 `dV` record. Its
+strict 16+16 formation certificate is centered at local, parameter-gradient,
+and effective-update layers. The separately reported moving-frame alpha is a
+conditional gradient-scaling observation, not a fixed-carrier or live-weight
+consequence. It remains `PARTIAL_CONDITIONAL_BIAS_NO_FLASH_STYLE_PERSISTENCE`
+with zero case-count increment until an independently bound trajectory is
+actually run.

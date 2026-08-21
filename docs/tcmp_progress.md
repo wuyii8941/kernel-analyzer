@@ -17,17 +17,18 @@
   coverage and a bound backward candidate, but strict deep F+B replay is
   `UNRESOLVED_COMPILE` after three bounded compiler attempts. OLMoE has
   complete screening and exact mathematical F+B witnesses for router/top-k/
-  index-add semantics, but its new implementation replay is still
-  `COVERAGE_ONLY/UNRESOLVED` because the direct runtime inventory did not close.
-  Neither is a new bias case yet.
+  index-add semantics; the repaired eager probe is now a backward-visible,
+  cross-state-canceling control. Neither is a new bias case. A separate
+  DeepSeek layer-10 saved-softmax/backward-VJP region was fully measured and
+  is an exact safe-under-protocol control.
 
-The next search therefore does not repeat already measured GEMM/lm-head
-representatives. It first closes (or explicitly retires) the Mamba and OLMoE
-new-family bindings under a bounded budget, then selects one feasible,
-previously unmeasured semantic family from the existing four-model census for
-the full chain: exact F+B binding, repair/sham, formation measurement, and a
-32-step consequence. No screen statistic is promoted to a case without that
-chain.
+The next search must not repeat already measured GEMM/lm-head
+representatives. OLMoE is now closed for this lane; Mamba remains explicitly
+blocked at compiler generation and should not be relabeled as a negative. Any
+new semantic family selected from the existing census must first pass exact
+F+B binding, repair/sham, and formation measurement; only a directional
+formation result earns a 32-step consequence. No screen statistic is promoted
+to a case without that chain.
 
 ## OLMoE complete screening cells
 
@@ -302,3 +303,40 @@ and did not exceed the 95% null threshold. It is therefore not promoted as a
 case. OLMoE is now closed for this search lane as a backward-visible,
 non-directional control; further layers or repeated order variants would be
 duplicate measurements rather than a new semantic family.
+
+## DeepSeek layer-10 attention-softmax formation control (2026-08-21)
+
+A new DeepSeek-R1-0528-Qwen3-8B seq128 semantic region was tested without
+reusing the existing layer-35 `dV` candidate: layer-10 saved attention logits
+(`forward:191`) together with their exact softmax backward VJP
+(`backward:1529`). The experiment used 16 calibration and 16 disjoint
+confirmation common states, with candidate, typed forward repair, typed
+backward repair, joint repair, and matched sham arms. All arms were complete
+forward/loss/backward executions from identical state components; no weights
+were advanced.
+
+The repair was ABI-safe and the sham was exact on the declared parameter
+carrier (`model.layers.10.self_attn.q_norm.weight`). Forward local residuals
+were zero and backward residuals stayed at numerical floor (the few
+carrier-reachable events were isolated roundoff-level values); all three
+formation layers were `CENTERED` in both state partitions and no parameter
+carrier was reached. This is an **exact safe-under-protocol control**, not a
+bias case. It contributes zero to the case count and no trajectory consequence
+was run. The full certificate and compact status are retained in
+`results/property/tcmp_allop_v1/heldout/deepseek8b_seq128_l10_softmax/`.
+
+## DeepSeek layer-35 dV boundary audit (2026-08-21)
+
+The existing DeepSeek seq64 layer-35 attention `dV` record was audited before
+counting it as another case. Its strict 16+16 common-state F+B certificate
+classifies the local endpoint, parameter-gradient, and effective-update
+populations as `CENTERED`; the certificate did not include a live-weight
+trajectory. A separate 32-state moving-frame analysis reports a conditional
+gradient-scale alpha mean of `-0.003698` with 95% interval
+`[-0.006637,-0.000592]`, but that is not a fixed-carrier or live-weight
+persistence certificate. The record is therefore
+`PARTIAL_CONDITIONAL_BIAS_NO_FLASH_STYLE_PERSISTENCE` and contributes zero to
+the strict Flash-style case count. Its status is retained in
+`results/property/persistence_v1/deepseek_l35_dv_status.json`; a future upgrade
+would require a separately bound live-weight F+B consequence campaign, not a
+reinterpretation of the existing alpha statistic.

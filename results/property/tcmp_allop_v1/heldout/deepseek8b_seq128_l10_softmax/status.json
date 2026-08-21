@@ -1,0 +1,29 @@
+{
+  "schema": "tcmp-deepseek-softmax-formation-status-v1",
+  "model": "DeepSeek-R1-0528-Qwen3-8B",
+  "semantic_region": "layer10 attention softmax saved-logit plus backward VJP",
+  "targets": {
+    "forward_saved": "forward:191",
+    "backward_vjp": "backward:1529"
+  },
+  "carrier": "model.layers.10.self_attn.q_norm.weight",
+  "state_count": 32,
+  "calibration_states": 16,
+  "confirmation_states": 16,
+  "measurement": "complete forward/loss/backward common-state formation",
+  "formation": {
+    "forward_repair": "CENTERED",
+    "backward_repair": "CENTERED",
+    "joint_repair": "CENTERED"
+  },
+  "sham_exact_on_carrier": true,
+  "parameter_gradient_error": "numerical_floor_or_zero",
+  "carrier_reached": false,
+  "status": "EXACT_SAFE_UNDER_PROTOCOL",
+  "case_count_increment": 0,
+  "trajectory_run": false,
+  "claim_boundary": "A strict F+B formation control; no directional formation and therefore no trajectory consequence was run.",
+  "source_artifact": "formation.json",
+  "release": "results/coverage/runtime_releases/deepseek8b_seq128_r1",
+  "frozen_cache": "/data1/tzh/cache/torchinductor/frozen/deepseek8b_seq128_r1"
+}
