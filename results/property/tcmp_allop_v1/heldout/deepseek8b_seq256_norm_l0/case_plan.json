@@ -1,0 +1,18 @@
+{
+  "schema": "tcmp-new-semantic-family-case-plan-v1",
+  "model": "deepseek8b",
+  "sequence_length": 256,
+  "source_internal_region": "backward:1952:out_ptr0",
+  "source_family": "NORMALIZATION_BACKWARD",
+  "closure_task": "backward:1957:out_ptr0",
+  "complete_fb_unit_required": true,
+  "cases": [
+    {
+      "case_id": "deepseek8b_seq256_layer0_norm_closure",
+      "task_id": "backward:1957:out_ptr0",
+      "carrier": "model.layers.0.post_attention_layernorm.weight",
+      "reference_method": "AOT_REPLAY",
+      "claim_boundary": "Exact downstream closure of the layer-0 fused normalization-backward region; internal arithmetic source is not separately localized."
+    }
+  ]
+}

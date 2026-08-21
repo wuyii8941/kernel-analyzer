@@ -1,0 +1,38 @@
+{
+  "schema": "tcmp-new-semantic-family-formation-status-v1",
+  "model": "DeepSeek-R1-0528-Qwen3-8B",
+  "sequence_length": 256,
+  "source_internal_region": "backward:1952:out_ptr0",
+  "measured_closure": "backward:1957:out_ptr0",
+  "semantic_family": "NORMALIZATION_BACKWARD",
+  "carrier": "model.layers.0.post_attention_layernorm.weight",
+  "states": 32,
+  "calibration_states": 16,
+  "confirmation_states": 16,
+  "formation": {
+    "calibration": {
+      "local_endpoint": "CENTERED",
+      "parameter_gradient": "CENTERED",
+      "effective_update": "CENTERED",
+      "cross_state_ratio": 0.001881254033212203
+    },
+    "confirmation": {
+      "local_endpoint": "CENTERED",
+      "parameter_gradient": "CENTERED",
+      "effective_update": "CENTERED",
+      "cross_state_ratio": -0.002821984988898115
+    }
+  },
+  "backward_visible": true,
+  "local_error_energy": {
+    "calibration_mean": 0.07889242636127794,
+    "confirmation_mean": 0.024594519766496
+  },
+  "status": "BACKWARD_VISIBLE_VARIANCE_CANCELING_CONTROL",
+  "case_count_increment": 0,
+  "trajectory_run": false,
+  "claim_boundary": "Exact downstream closure of a fused normalization-backward region; internal arithmetic source is not separately localized.",
+  "formation_artifact": "deepseek8b_seq256_layer0_norm_closure.json",
+  "case_plan": "case_plan.json",
+  "release": "results/coverage/runtime_releases/deepseek8b_seq256_r1"
+}

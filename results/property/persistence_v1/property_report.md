@@ -168,3 +168,14 @@ conditional gradient-scaling observation, not a fixed-carrier or live-weight
 consequence. It remains `PARTIAL_CONDITIONAL_BIAS_NO_FLASH_STYLE_PERSISTENCE`
 with zero case-count increment until an independently bound trajectory is
 actually run.
+
+## New normalization control
+
+The next non-duplicate semantic-family probe was DeepSeek seq256 layer-0
+normalization backward. Its exact downstream closure reaches
+`model.layers.0.post_attention_layernorm.weight` and carries a measurable
+local residual into the full parameter gradient, but both 16-state partitions
+are centered (`0.001881` and `-0.002822` effective-update cross-state ratios).
+This is a backward-visible variance/canceling control. It is retained as a
+real negative for the formation map, contributes no positive case, and does
+not receive a trajectory run because formation failed first.

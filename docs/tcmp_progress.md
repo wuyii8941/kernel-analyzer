@@ -340,3 +340,24 @@ the strict Flash-style case count. Its status is retained in
 `results/property/persistence_v1/deepseek_l35_dv_status.json`; a future upgrade
 would require a separately bound live-weight F+B consequence campaign, not a
 reinterpretation of the existing alpha statistic.
+
+## DeepSeek layer-0 normalization closure (2026-08-21)
+
+The first genuinely new semantic-family candidate after the OLMoE and
+layer-10 controls was the DeepSeek seq256 layer-0 fused normalization-backward
+region (`backward:1952`). Its exact downstream closure (`backward:1957`) was
+measured with the corresponding LayerNorm weight as the declared carrier.
+The two-state reach preflight passed, and the formal campaign used 16
+calibration plus 16 confirmation common states with complete candidate,
+reference, sham, and repair F+B executions.
+
+This endpoint is backward-visible: the local residual reaches the complete
+LayerNorm gradient (mean state energy `0.07889` in calibration and `0.02459`
+in confirmation). Nevertheless, the formation is centered in every layer.
+The effective-update cross-state ratios are `0.001881` and `-0.002822`, far
+inside the frozen centered margin. It is therefore a genuine
+**backward-visible variance/canceling control**, not a positive bias case and
+not a zero-residual or parameter-inaccessible negative. Since formation did
+not produce a directional signal, no 32-step trajectory was run. The compact
+status and complete certificate are retained in
+`results/property/tcmp_allop_v1/heldout/deepseek8b_seq256_norm_l0/`.
