@@ -29,11 +29,13 @@ from scripts.generated_nontriton_fp32_observer import (  # noqa: E402
 from scripts.run_generated_fp32_screen import (  # noqa: E402
     Gemma3ImageLossStep,
     file_digest,
+    artifact_binding,
     gradient_digest,
     load_model,
     prepare_values,
     tensor_digest,
 )
+from scripts.runtime_schedule_binding import bind_runtime_schedule  # noqa: E402
 
 
 def write(path: Path, payload: dict[str, Any]) -> None:
@@ -81,6 +83,7 @@ def main() -> None:
     parser.add_argument("--allow-graph-breaks", action="store_true")
     parser.add_argument("--modality", choices=("TEXT", "IMAGE_TEXT"), default="TEXT")
     parser.add_argument("--gradient-checkpointing", action="store_true")
+    parser.add_argument("--runtime-bind-dir", type=Path)
     args = parser.parse_args()
     protocol = json.loads(args.protocol.read_text())
     protocol_sha256 = protocol.get("protocol_sha256") or hashlib.sha256(
@@ -149,7 +152,7 @@ def main() -> None:
     # generated inventory.  A shard-local warm state can select a different
     # Inductor schedule even when tensor shapes are unchanged.
     warm_state = states[args.warm_state_index]
-    warm, _ = prepare_values(
+    warm, warm_digests = prepare_values(
         warm_state, modality=args.modality, model_path=args.model,
         device=device, processor=processor,
     )
@@ -163,6 +166,24 @@ def main() -> None:
     )
     if len(modules) < 2:
         raise RuntimeError("candidate did not compile complete F+B modules")
+    if args.runtime_bind_dir is not None:
+        bind_runtime_schedule(
+            modules=modules, work_dir=args.runtime_bind_dir,
+            manifest=args.runtime_bind_dir.with_name(f"{args.runtime_bind_dir.name}_manifest.json"),
+            inventory=args.inventory, campaign=None,
+            architecture=args.architecture, state=warm_state,
+            input_digests=warm_digests, values=warm, modality=args.modality,
+            gradient_checkpointing=args.gradient_checkpointing,
+            allow_graph_breaks=args.allow_graph_breaks,
+        )
+        with gzip.open(args.inventory, "rt", encoding="utf-8") as handle:
+            inventory = json.load(handle)
+        rows = inventory["runtime_call_audit"]["rows"]
+        expected = sum(
+            row.get("category") == "COMPUTE"
+            and row.get("implementation_kind_or_helper_role") in kinds
+            for row in rows
+        )
 
     if args.output.exists():
         with gzip.open(args.output, "rt", encoding="utf-8") as handle:
@@ -182,7 +203,7 @@ def main() -> None:
             "protocol_sha256": protocol_sha256,
             "state_role": args.state_role,
             "state_indices": sorted(requested_indices) if requested_indices is not None else None,
-            "inventory": str(args.inventory.resolve().relative_to(ROOT)),
+            "inventory": artifact_binding(args.inventory),
             "shard_index": args.shard_index,
             "shard_count": args.shard_count,
             "repeat": args.repeat,

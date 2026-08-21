@@ -76,6 +76,10 @@ def main() -> None:
         }
         row["row_sha256"] = digest(row)
         rows.append(row)
+    try:
+        inventory_binding = str(args.inventory.resolve().relative_to(ROOT))
+    except ValueError:
+        inventory_binding = str(args.inventory.resolve())
     payload = {
         "schema": "kernel-analyzer-generated-fp32-replay-campaign-v1",
         "status": "COMPLETE_ALL_TRITON_FP32_REPLAY_PLAN",
@@ -87,7 +91,7 @@ def main() -> None:
             "unresolved": 0,
         },
         "bindings": {
-            "executed_inventory": str(args.inventory.resolve().relative_to(ROOT)),
+            "executed_inventory": inventory_binding,
             "executed_inventory_sha256": inventory["result_sha256"],
         },
         "gates": {

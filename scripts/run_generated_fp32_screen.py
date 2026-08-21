@@ -30,6 +30,7 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.generated_fp32_observer import GeneratedFP32Observer  # noqa: E402
 from scripts.inductor_buffer_origins import InductorBufferOriginRecorder  # noqa: E402
+from scripts.runtime_schedule_binding import bind_runtime_schedule  # noqa: E402
 
 
 class Gemma3ImageLossStep(torch.nn.Module):
@@ -99,6 +100,13 @@ def file_digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def artifact_binding(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(ROOT))
+    except ValueError:
+        return str(path.resolve())
+
+
 def load_model(architecture: str, path: Path, device: torch.device) -> torch.nn.Module:
     if architecture == "mamba":
         modeling_mamba.selective_scan_fn = None
@@ -164,6 +172,8 @@ def main() -> None:
     parser.add_argument("--allow-graph-breaks", action="store_true")
     parser.add_argument("--modality", choices=("TEXT", "IMAGE_TEXT"), default="TEXT")
     parser.add_argument("--gradient-checkpointing", action="store_true")
+    parser.add_argument("--runtime-bind-dir", type=Path)
+    parser.add_argument("--runtime-inventory", type=Path)
     args = parser.parse_args()
     protocol = json.loads(args.protocol.read_text())
     protocol_sha256 = protocol.get("protocol_sha256") or hashlib.sha256(
@@ -223,7 +233,7 @@ def main() -> None:
     # schedule for value-sensitive model code (observed on DeepSeek), making a
     # shard silently target a different denominator from the state-0 capture.
     warm_state = records[args.warm_state_index]
-    warm, _ = prepare_values(
+    warm, warm_digests = prepare_values(
         warm_state, modality=args.modality, model_path=args.model,
         device=device, processor=processor,
     )
@@ -240,6 +250,21 @@ def main() -> None:
     )
     if len(modules) < 2:
         raise RuntimeError("candidate did not compile complete F+B modules")
+    if args.runtime_bind_dir is not None:
+        if args.runtime_inventory is None:
+            raise ValueError("runtime inventory path is required with runtime binding")
+        bind_runtime_schedule(
+            modules=modules, work_dir=args.runtime_bind_dir,
+            manifest=args.runtime_bind_dir.with_name(f"{args.runtime_bind_dir.name}_manifest.json"),
+            inventory=args.runtime_inventory, campaign=args.campaign,
+            architecture=args.architecture, state=warm_state,
+            input_digests=warm_digests, values=warm, modality=args.modality,
+            gradient_checkpointing=args.gradient_checkpointing,
+            allow_graph_breaks=args.allow_graph_breaks,
+        )
+        with gzip.open(args.campaign, "rt", encoding="utf-8") as handle:
+            campaign = json.load(handle)
+        rows = campaign["rows"]
 
     if args.output.exists():
         with gzip.open(args.output, "rt", encoding="utf-8") as handle:
@@ -259,7 +284,7 @@ def main() -> None:
             "protocol_sha256": protocol_sha256,
             "state_role": args.state_role,
             "state_indices": sorted(requested_indices) if requested_indices is not None else None,
-            "campaign": str(args.campaign.resolve().relative_to(ROOT)),
+            "campaign": artifact_binding(args.campaign),
             "inductor_buffer_origins": buffer_origin_certificate,
             "shard_index": args.shard_index,
             "shard_count": args.shard_count,
