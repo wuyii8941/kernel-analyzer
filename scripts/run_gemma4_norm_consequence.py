@@ -33,7 +33,7 @@ def main() -> None:
     parser.add_argument("--region-id")
     parser.add_argument("--endpoint")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--steps", type=int, choices=(2, 16, 32), default=2)
+    parser.add_argument("--steps", type=int, choices=(2, 8, 16, 32), default=2)
     parser.add_argument(
         "--state-role", choices=("TRAJECTORY", "CONFIRMATION", "SCREENING"),
         default="TRAJECTORY",
