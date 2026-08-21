@@ -73,6 +73,31 @@ Not yet supported:
 * feedback-sustained bias as a distinct mechanism;
 * long-horizon loss failure (M7).
 
+## New-architecture stress control: OLMoE MoE routing
+
+The OLMoE router/expert path was not used to select or tune the predictor. It
+was measured afterwards as a genuinely different semantic family. A strict
+expert-order orbit (default plus seven non-default orders) preserves the
+real-valued expert sum and the exact routing decisions. Across 16 states, the
+transported orbit mean was not directional in the router-gate slice
+(`A=1.0036`, 4+4 cross-fit `A=1.0037`) or in the layer-0 attention slice
+(`A=0.9832`, cross-fit `0.9635`). A small final-RMSNorm excess did not survive
+the frozen 4,000-draw sign-flip null (`p=0.154`).
+
+This is a new-architecture formation control, not a new positive case. It is
+consistent with the property's abstention boundary: an implementation can
+produce a measurable backward difference while its transported conditional
+mean is not persistent. A live-weight consequence was intentionally not run
+after the source/transport formation screen failed; feedback-sustained drift
+remains a separate out-of-domain mechanism.
+
+The official fused Mamba seq64/seq256/seq1024 confirmations were also
+reconciled against this boundary: all have `natural_bias_case_added=false`
+and fail the frozen direction gate. The separate seq128 generated
+convolution-backward binding remains `UNRESOLVED_COMPILE`, so it contributes
+neither a positive nor a negative verdict. These outcomes are retained as
+coverage/provenance, not silently counted as missing cases.
+
 ## Frozen confirmation
 
 The confirmation did not reuse Phi or Qwen128 for threshold selection. It bound

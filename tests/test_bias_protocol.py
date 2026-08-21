@@ -126,6 +126,6 @@ def test_current_nontriton_disposition_reconciles_all_83_candidates():
     assert current["counts"]["REJECTED_FULL_COORDINATE_PILOT_NOT_DIRECTIONAL"] == 2
     assert current["counts"]["REJECTED_T1_SAMPLED_COORDINATE_FALSE_POSITIVE"] == 1
     assert current["counts"].get("PENDING_LIVE_FULL_COORDINATE_FOLLOWUP", 0) == 0
-    assert current["counts"]["T1_POSITIVE_PENDING_COMPLETE_CASE_GATES"] == 1
-    assert current["counts"]["COMPLETE_BOUNDED_FLASH_STYLE_FB_BIAS_CASE"] == 2
+    assert current["counts"].get("T1_POSITIVE_PENDING_COMPLETE_CASE_GATES", 0) == 0
+    assert current["counts"]["COMPLETE_BOUNDED_FLASH_STYLE_FB_BIAS_CASE"] == 3
     assert current["counts"]["COMPLETE_FB_CASE_REJECTED_DIRECTIONAL_ACCUMULATION"] == 1
