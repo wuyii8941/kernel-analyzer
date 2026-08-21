@@ -16,14 +16,18 @@ deep-measurement registry: a fused rotary/bmm forward region whose two outputs
 were maximally aligned across all eight states (`A=sqrt(8)`, exact sign-flip
 `p=0.0078125`). This is a screening candidate, not yet a complete F+B bias case.
 
-## Gemma 3 status
+## Gemma 3 text128 complete screening
 
 - Real BF16 full F+B admitted at 18.85 GiB peak reserved memory; all 444
   parameter gradients were finite.
-- First text128 state: 1,886 actual compute sites, 989 exact identities, 56
-  deduplicated implementation patterns, zero unresolved identities.
-- Remaining seven text128 screening states are running on the same frozen
-  static implementation graph; no static graph recapture is performed.
+- Eight text128 states: 15,088 actual F+B implementation invocations, 989 exact
+  identities, 56 deduplicated implementation patterns, zero unresolved.
+- No sampled-coordinate local precision endpoint passed BH q=0.10. This is not
+  a no-bias verdict: local-centered to gradient-biased transport remains a
+  separate F+B deep-measurement target.
+- Value-blind follow-up strata are the highest-ranked softmax region, backward
+  reduction, and backward MM; repeated layers are excluded.
+- text512 shape capture is running. Multimodal vision coverage follows it.
 
 ## Counting rule
 
