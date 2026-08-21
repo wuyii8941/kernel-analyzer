@@ -66,3 +66,29 @@ Liger/Phi give matched evidence for event/pairing asymmetry; saved-P/SiLU give
 matched evidence for optimizer response rectification.  The remaining four
 cases retain partial or unresolved boundaries.  This is a cross-case working
 property, not yet a zero-shot predictor for unseen operators.
+
+## 2026-08-21 semantic-family search addendum
+
+The current non-duplicate search was extended from the four-model census rather
+than repeating the existing GEMM/lm-head representatives. The corrected audit
+contains 67 compiler-bound semantic-region representatives across 791 semantic
+cells; 59 internal regions have exact downstream closures and 40 of those had
+already passed a screening reach. Three new outcomes were added to the map:
+
+* DeepSeek layer-10 saved-softmax/backward VJP: exact safe-under-protocol
+  control; no parameter carrier was reached.
+* DeepSeek layer-0 normalization-backward closure: measurable local error
+  reached the complete LayerNorm gradient, but both 16-state partitions were
+  centered (`0.001881` and `-0.002822` effective-update ratios). This is a
+  genuine backward-visible variance/canceling control.
+* Mamba layer-4 state-space recurrent closure: exact AOT binding exists, but
+  Inductor failed before runtime observation in `joint_graph bmm_to_mm`; it is
+  `UNRESOLVED_COMPILE`, not a negative.
+
+These results strengthen the map's negative and abstention boundaries without
+adding a new positive case. The supported headline remains conditional:
+transported conditional-mean persistence predicts persistent drift for the
+reduction/lm-head family when an executable semantics-preserving orbit and
+closed VJP exist. It is not yet a universal all-operator safety oracle. The
+machine-readable search ledger is
+`results/property/tcmp_allop_v1/semantic_family_search_summary.json`.
