@@ -31,6 +31,32 @@ The current implementation is in
 `scripts/run_short_persistence_screen.py`.  Development property profiling is
 reported separately in `results/property/bias_property_search/`.
 
+## Runtime adapter
+
+Existing paired-trajectory runners can write a temporary geometry spool with
+one tensor tree per state (for example, `--geometry-spool`).  The shared
+adapter consumes that exact interface:
+
+```bash
+PYTHONPATH=src python scripts/run_short_persistence_from_spool.py \
+  --spool /data1/tzh/tmp/case_geometry.pt \
+  --phase evaluation --steps 8 --field effective_update \
+  --output results/property/bias_property_search/short_screen_case.json
+```
+
+The declared `carrier_parameters` order is part of the input certificate and
+must be identical across all selected states.  The adapter rejects scalar-only
+trajectory JSON, missing parameters, coordinate changes, and nonfinite
+tensors.  It stores only CountSketch paths, state IDs, parameter order, and
+source digests; the temporary spool may then be removed under the project
+resource policy.
+
+The pre-held-out property scope is frozen in
+`results/property/bias_property_search/property_freeze_v1.json`.  Source
+asymmetry and source--transport coupling are conditional formation branches;
+transport concentration is supporting-only because it overlaps centered
+controls; carrier stability is the short-trajectory confirmation gate.
+
 ## Cost boundary
 
 The intended production path is one shared 8--16-state reference capture for

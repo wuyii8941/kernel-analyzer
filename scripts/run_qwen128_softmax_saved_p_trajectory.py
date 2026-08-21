@@ -39,6 +39,7 @@ from kernel_analyzer.seup import (  # noqa: E402
     adamw_update,
     adamw_effective_update_delta,
 )
+from kernel_analyzer.short_persistence import SharedShortPersistenceScreen  # noqa: E402
 
 CANDIDATE_ID = "qwen_seq128_layer27_attention_softmax_fb"
 CARRIERS = (
@@ -226,9 +227,21 @@ def main() -> None:
     parser.add_argument("--seup-output", type=Path)
     parser.add_argument("--geometry-spool", type=Path,
                         help="optional CPU vector spool for exploratory SEUP geometry")
+    parser.add_argument(
+        "--short-screen-output", type=Path,
+        help="optional compact CountSketch output; requires --seup-output and avoids raw vector spooling",
+    )
+    parser.add_argument("--short-screen-steps", type=int, default=8)
+    parser.add_argument("--short-screen-projection-dim", type=int, default=64)
+    parser.add_argument("--short-screen-null-draws", type=int, default=2000)
     args = parser.parse_args()
     if not 1 <= args.steps <= 32:
         raise ValueError("steps must be in [1, 32]")
+    if args.short_screen_output is not None:
+        if args.seup_output is None:
+            raise ValueError("--short-screen-output requires --seup-output")
+        if not 4 <= args.short_screen_steps <= 16:
+            raise ValueError("--short-screen-steps must be in [4, 16]")
 
     proof_path = ROOT / "results/coverage/cases/qwen128_softmax_fb.json"
     proof = json.loads(proof_path.read_text())
@@ -303,6 +316,26 @@ def main() -> None:
         calibration_v = {name: torch.zeros_like(value) for name, value in initial.items()}
         calibration_rows = []
         geometry_rows = []
+        short_screen = (
+            SharedShortPersistenceScreen(
+                projection_dim=args.short_screen_projection_dim,
+                projection_seed=20260822,
+                expected_steps=args.short_screen_steps,
+                null_draws=args.short_screen_null_draws,
+            )
+            if args.short_screen_output is not None else None
+        )
+
+        def add_short_screen(phase: str, tree: dict[str, torch.Tensor], step: int) -> None:
+            if short_screen is None or step > args.short_screen_steps:
+                return
+            # The carrier order is fixed by CARRIERS and is part of the
+            # resulting input certificate.  Only a transient CPU vector is
+            # formed; the screen immediately replaces it with a CountSketch.
+            vector = torch.cat([
+                tree[name].detach().float().reshape(-1).cpu() for name in CARRIERS
+            ]).numpy()
+            short_screen.add(f"{CANDIDATE_ID}::{phase}", vector)
 
         def cpu_tree(tree: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
             return {key: value.detach().float().cpu().clone() for key, value in tree.items()}
@@ -337,6 +370,7 @@ def main() -> None:
                     "gradient_delta": cpu_tree({name: grad_c[name] - grad_r[name] for name in CARRIERS}),
                     "effective_update": cpu_tree(delta),
                 })
+            add_short_screen("calibration", delta, index + 1)
             for name in CARRIERS:
                 adam_step(calibration_master[name], grad_c[name], calibration_m[name], calibration_v[name], index + 1, args.learning_rate)
             calibration_rows.append({"step": index + 1, "state_id": str(state.get("sequence_id", index)),
@@ -379,8 +413,8 @@ def main() -> None:
             after = {name: candidate_master[name] - repair_master[name] for name in CARRIERS}
             evaluator.add(str(state.get("sequence_id", 16 + offset)), uc_sc, ur_sc, uc_sr, ur_sr, before, after,
                            endpoint_repair_nonzero=bool(boundary_cr["changed_coordinates"] > 0 and boundary_rr["changed_coordinates"] > 0))
+            local_candidate = tree_sub(uc_sc, ur_sc)
             if args.geometry_spool is not None:
-                local_candidate = tree_sub(uc_sc, ur_sc)
                 local_symmetric = tree_avg(tree_sub(uc_sc, ur_sc), tree_sub(uc_sr, ur_sr))
                 feedback_symmetric = tree_avg(tree_sub(uc_sc, uc_sr), tree_sub(ur_sc, ur_sr))
                 geometry_rows.append({
@@ -394,6 +428,7 @@ def main() -> None:
                     "gradient_delta": cpu_tree({name: grad_cc[name] - grad_cr[name] for name in CARRIERS}),
                     "effective_update": cpu_tree(local_candidate),
                 })
+            add_short_screen("evaluation", local_candidate, index)
             rows.append({"step": index, "state_id": str(state.get("sequence_id", 16 + offset)),
                          "forward_repair_exact": bool(candidate_forward_repair_exact),
                          "repair_arm_forward_repair_exact": bool(repair_forward_repair_exact),
@@ -455,6 +490,21 @@ def main() -> None:
                 "protocol": "carrier-local-feedback-only",
                 "rows": geometry_rows,
             }, args.geometry_spool)
+        if short_screen is not None:
+            short_payload = short_screen.finalize()
+            short_payload["input"] = {
+                "kind": "LIVE_PAIRED_TRAJECTORY_EFFECTIVE_UPDATE",
+                "case_id": CANDIDATE_ID,
+                "carrier_parameters": list(CARRIERS),
+                "calibration_steps_used": args.short_screen_steps,
+                "evaluation_steps_used": args.short_screen_steps,
+                "raw_vectors_retained": False,
+                "source_result_sha256": payload["result_sha256"],
+            }
+            args.short_screen_output.parent.mkdir(parents=True, exist_ok=True)
+            args.short_screen_output.write_text(
+                json.dumps(short_payload, indent=2, sort_keys=True) + "\n"
+            )
         print(json.dumps({"event": "SEUP_COMPLETE", "status": payload["status"], "gates": gates}, sort_keys=True))
         return
 
