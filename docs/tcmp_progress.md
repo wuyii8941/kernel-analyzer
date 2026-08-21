@@ -1,5 +1,34 @@
 # TCMP experiment checkpoint
 
+## Current decision (2026-08-21)
+
+- The existing systematic ledger contains **8 complete paired F+B trajectory
+  separation observations**. Of these, 7 pass the trajectory-local directional
+  persistence gate and 4 pass the stricter same-contrast formation-plus-
+  persistence chain. The number 8 is therefore an audit denominator, not a
+  count of eight identical Flash-style mechanisms.
+- The canonical source-persistent evidence remains mechanism-specific (the
+  Liger accumulation case and the Phi lm-head transport case are the cleanest
+  examples). The other retained trajectories include response-rectification,
+  feedback, or mixed/partial mechanisms and must keep those labels.
+- Gemma 4 adds one **new implementation, backward-visible,
+  feedback-sustained** case. It is not a second Flash-style source carrier.
+- The new Mamba state-space search has complete 980-invocation runtime
+  coverage and a bound backward candidate, but strict deep F+B replay is
+  `UNRESOLVED_COMPILE` after three bounded compiler attempts. OLMoE has
+  complete screening and exact mathematical F+B witnesses for router/top-k/
+  index-add semantics, but its new implementation replay is still
+  `COVERAGE_ONLY/UNRESOLVED` because the direct runtime inventory did not close.
+  Neither is a new bias case yet.
+
+The next search therefore does not repeat already measured GEMM/lm-head
+representatives. It first closes (or explicitly retires) the Mamba and OLMoE
+new-family bindings under a bounded budget, then selects one feasible,
+previously unmeasured semantic family from the existing four-model census for
+the full chain: exact F+B binding, repair/sham, formation measurement, and a
+32-step consequence. No screen statistic is promoted to a case without that
+chain.
+
 ## OLMoE complete screening cells
 
 - `text128`: 8/8 screening states, 25,882 actual F+B implementation invocations.
