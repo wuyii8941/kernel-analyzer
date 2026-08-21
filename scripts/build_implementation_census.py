@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Build a value-blind implementation census from all-op screen artifacts.
 
-Every runtime invocation remains in the coverage denominator.  Deep follow-up is
-deduplicated only at the exact implementation identity level.
+Every runtime invocation and exact callsite/ABI identity remains in the coverage
+denominator.  Deep follow-up is deduplicated by implementation pattern so that
+the same generated/library operation repeated across layers is measured once.
 """
 
 from __future__ import annotations
@@ -46,17 +47,28 @@ def _campaign_rows(screen_path: Path, screen: dict[str, Any]) -> dict[str, dict[
 
 
 def _identity(record: dict[str, Any], campaign: dict[str, Any]) -> dict[str, Any] | None:
-    contracts = record.get("runtime_pointer_contracts") or record.get("runtime_operand_contracts")
-    if not contracts:
+    if "runtime_pointer_contracts" in record:
+        contracts = record["runtime_pointer_contracts"]
+    elif "runtime_operand_contracts" in record:
+        contracts = record["runtime_operand_contracts"]
+    else:
         return None
     phase = str(record.get("phase", campaign.get("phase", "UNRESOLVED")))
-    symbol = str(record.get("symbol") or record.get("operation") or campaign.get("symbol") or "UNRESOLVED")
+    symbol = str(
+        record.get("symbol") or record.get("operation") or record.get("function")
+        or campaign.get("symbol") or "UNRESOLVED"
+    )
     semantic = campaign.get("original_aten") or record.get("semantic_operations") or []
     program_digest = (
         campaign.get("embedded_program_sha256")
         or record.get("implementation_sha256")
         or record.get("typed_reference_program_sha256")
     )
+    # A direct op with no tensor ABI still needs a stable call identity.  For
+    # library calls with tensor contracts, the generated callsite line is not
+    # the implementation and would falsely count every layer as novel.
+    if not contracts and program_digest is None:
+        program_digest = record.get("source_line_sha256")
     kind = "TRITON_GENERATED" if "runtime_pointer_contracts" in record else "EXTERNAL_OR_LIBRARY"
     return build_implementation_identity(
         backend="inductor",
@@ -65,7 +77,9 @@ def _identity(record: dict[str, Any], campaign: dict[str, Any]) -> dict[str, Any
         operation=symbol,
         operand_contracts=contracts,
         program_digest=program_digest,
-        structural_program_digest=campaign.get("source_line_sha256"),
+        # A generated source line is a callsite, not an implementation class;
+        # using it here would relabel every transformer layer as a new kernel.
+        structural_program_digest=None,
         semantic_operations=semantic,
         fusion_boundary=campaign.get("source_nodes", []),
         launch_contract=record.get("launch_contract", {}),
@@ -108,7 +122,7 @@ def build(paths: list[Path]) -> dict[str, Any]:
     return {
         "schema": "kernel-analyzer-implementation-census-v1",
         "status": "COMPLETE" if unresolved == 0 else "PARTIAL_LEGACY_ABI_UNRESOLVED",
-        "counting_rule": "Every invocation remains in coverage; deep measurement selects one representative per exact implementation identity.",
+        "counting_rule": "Every invocation and exact identity remains in coverage; deep measurement selects one representative per implementation pattern, with exact variants reopened only for a declared ABI or reduction-topology contrast.",
         "denominator": {
             "runtime_invocations": invocations,
             "identity_resolved_invocations": invocations - unresolved,

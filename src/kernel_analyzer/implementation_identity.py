@@ -82,7 +82,7 @@ def build_implementation_identity(
         "operation_pattern": _symbol_pattern(operation),
         "structural_program_digest": structural_program_digest,
         "semantic_operations": sorted(map(str, semantic_operations)),
-        "fusion_boundary": sorted(map(str, fusion_boundary)),
+        "fusion_boundary": sorted({_symbol_pattern(str(value)) for value in fusion_boundary}),
         "operand_patterns": {
             name: _rank_layout_pattern(value)
             for name, value in _canonical_contracts(operand_contracts).items()

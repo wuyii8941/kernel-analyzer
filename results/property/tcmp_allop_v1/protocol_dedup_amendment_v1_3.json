@@ -1,0 +1,27 @@
+{
+  "schema": "kernel-analyzer-tcmp-dedup-amendment-v1.3",
+  "status": "FROZEN_BEFORE_DEEP_SELECTION",
+  "supersedes_for_deep_measurement_selection": "kernel-analyzer-tcmp-predictive-amendment-v1.2",
+  "coverage": {
+    "retain_every_runtime_invocation": true,
+    "retain_every_exact_callsite_abi_identity": true
+  },
+  "deep_measurement": {
+    "default_unit": "ONE_REPRESENTATIVE_PER_IMPLEMENTATION_PATTERN_ID",
+    "do_not_repeat_same_pattern_across_layers_or_states": true,
+    "exact_variant_reopened_only_if": [
+      "OPERAND_ABI_CHANGES_REDUCTION_TOPOLOGY",
+      "LAUNCH_OR_TILE_CONTRACT_CHANGES",
+      "FUSION_SEMANTICS_CHANGE",
+      "DISCRETE_ROUTING_REGIME"
+    ],
+    "selection_uses_candidate_values": false
+  },
+  "reporting_levels": [
+    "RUNTIME_INVOCATION_DENOMINATOR",
+    "EXACT_CALLSITE_ABI_DENOMINATOR",
+    "IMPLEMENTATION_PATTERN_DEEP_DENOMINATOR",
+    "SEMANTIC_FAMILY_SUMMARY"
+  ],
+  "reason": "Layer and state repetition is population evidence, not a new operator implementation case."
+}

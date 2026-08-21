@@ -71,3 +71,19 @@ def test_missing_runtime_abi_is_unresolved_not_assumed_duplicate(monkeypatch):
     result = _MODULE.build([Path("screen.json")])
     assert result["status"] == "PARTIAL_LEGACY_ABI_UNRESOLVED"
     assert result["denominator"]["identity_unresolved_invocations"] == 1
+
+
+def test_explicit_empty_contract_for_direct_op_is_resolved(monkeypatch):
+    record = _record([8], 0)
+    record.pop("runtime_pointer_contracts")
+    record.update({
+        "implementation_kind": "DIRECT_ATEN",
+        "function": "aten.index_put_",
+        "runtime_operand_contracts": {},
+        "source_line_sha256": "b" * 64,
+    })
+    document = {"states": {"s0": {"repeats": [{"summary": {"records": [record]}}]}}}
+    monkeypatch.setattr(_MODULE, "_read", lambda _: document)
+    result = _MODULE.build([Path("screen.json")])
+    assert result["status"] == "COMPLETE"
+    assert result["denominator"]["identity_resolved_invocations"] == 1
