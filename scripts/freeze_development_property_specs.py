@@ -61,6 +61,21 @@ def build(profile: dict[str, Any]) -> dict[str, Any]:
     positive_ids = [
         row["case_id"] for row in cases if row.get("development_role") in positive_roles
     ]
+    centered_control_count = len(controls)
+    source_control_count = sum(
+        row.get("source_asymmetry", {}).get("status") == "CENTERED_LOCAL_CONTROL"
+        for row in controls
+    )
+    transport_control_count = sum(
+        row.get("source_transport_coupling", {}).get("status")
+        not in {None, "UNMEASURED", "UNMEASURED_OR_NOT_APPLICABLE"}
+        for row in controls
+    )
+    stability_control_count = sum(
+        row.get("carrier_stability", {}).get("status")
+        in {"MEASURED_TRAJECTORY_STABLE", "MEASURED_TRAJECTORY_NOT_STABLE"}
+        for row in controls
+    )
     return {
         "schema": "kernel-analyzer-development-property-freeze-v1",
         "status": "FROZEN_BEFORE_HELDOUT",
@@ -78,6 +93,37 @@ def build(profile: dict[str, Any]) -> dict[str, Any]:
             "centered_control_count": len(controls),
             "centered_control_ids": [row["case_id"] for row in controls],
             "concentration_measurement_count": len(concentration),
+        },
+        "development_separation_audit": {
+            "source_asymmetry": {
+                "known_positive_count": sum(
+                    str(row.get("source_asymmetry", {}).get("status", "")).startswith("SUPPORTED")
+                    for row in cases if row.get("development_role") != "CENTERED_CONTROL"
+                ),
+                "centered_control_count": source_control_count,
+                "centered_control_total": centered_control_count,
+                "admitted_to_formation_predictor": (
+                    source_control_count == centered_control_count
+                ),
+            },
+            "source_transport_coupling": {
+                "measured_control_count": transport_control_count,
+                "centered_control_total": centered_control_count,
+                "admitted_to_formation_predictor": (
+                    transport_control_count == centered_control_count
+                ),
+            },
+            "transport_concentration": {
+                "admitted_to_standalone_predictor": False,
+                "reason": "overlapping known/control ranges",
+            },
+            "carrier_stability": {
+                "measured_control_count": stability_control_count,
+                "centered_control_total": centered_control_count,
+                "admitted_to_short_screen_confirmation": (
+                    stability_control_count == centered_control_count
+                ),
+            },
         },
         "properties": {
             "source_asymmetry": {
@@ -178,6 +224,8 @@ def main() -> None:
     lines += [
         "",
         "Concentration is explicitly supporting-only because its development ranges overlap centered controls.",
+        "Source asymmetry is the only formation candidate currently admitted by a complete centered-control comparison.",
+        "Source--transport has no measured control intervention, and carrier stability has no measured control trajectory; both remain explicitly unvalidated.",
         "Carrier stability is measured by the shared short ordered-vector screen and is not inferred from formation labels.",
         "Feedback-sustained and unresolved boundaries abstain rather than becoming negative examples.",
     ]

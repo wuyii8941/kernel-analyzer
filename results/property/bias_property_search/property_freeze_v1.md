@@ -10,5 +10,7 @@ Status: `FROZEN_BEFORE_HELDOUT`. This freezes scope and measurement rules; it do
 | `carrier_stability` | `RETAIN_AS_SHORT_TRAJECTORY_CONFIRMATION` | persistence_consequence_gate |
 
 Concentration is explicitly supporting-only because its development ranges overlap centered controls.
+Source asymmetry is the only formation candidate currently admitted by a complete centered-control comparison.
+Source--transport has no measured control intervention, and carrier stability has no measured control trajectory; both remain explicitly unvalidated.
 Carrier stability is measured by the shared short ordered-vector screen and is not inferred from formation labels.
 Feedback-sustained and unresolved boundaries abstain rather than becoming negative examples.
