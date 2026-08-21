@@ -12,11 +12,11 @@ This is a retrospective development artifact. It does not freeze a held-out pred
 | mamba_seq64_input_proj | PARTIAL_CROSS_ARCHITECTURE_FORMATION | SUPPORTED_CONDITIONAL_SOURCE_OBSERVATION | NOT_MEASURED_OR_NOT_APPLICABLE | UNMEASURED | MEASURED_TRAJECTORY_STABLE |
 | qwen_layer23_attention_state | SEMANTIC_REGION_PERSISTENCE | UNMEASURED_OR_NOT_APPLICABLE | BOUNDARY_NOT_MARGINAL_PRESERVING | UNMEASURED | MEASURED_TRAJECTORY_STABLE |
 | qwen3vl_silu | OPTIMIZER_RECTIFICATION_BOUNDARY | UNMEASURED_OR_NOT_APPLICABLE | NOT_MEASURED_OR_NOT_APPLICABLE | UNMEASURED | MEASURED_TRAJECTORY_NOT_STABLE |
-| deepseek8b_seq64_backward_1665_in_out_ptr0 | CENTERED_CONTROL | UNMEASURED | UNMEASURED | MEASURED | UNMEASURED |
-| phi4_seq64_backward_495_out_ptr1 | CENTERED_CONTROL | UNMEASURED | UNMEASURED | MEASURED | UNMEASURED |
-| phi4_seq64_backward_1031_in_out_ptr0 | CENTERED_CONTROL | UNMEASURED | UNMEASURED | MEASURED | UNMEASURED |
-| qwen_seq64_backward_1293_in_out_ptr0 | CENTERED_CONTROL | UNMEASURED | UNMEASURED | MEASURED | UNMEASURED |
-| qwen_seq64_backward_1308_output_0 | CENTERED_CONTROL | UNMEASURED | UNMEASURED | MEASURED | UNMEASURED |
+| deepseek8b_seq64_backward_1665_in_out_ptr0 | CENTERED_CONTROL | CENTERED_LOCAL_CONTROL | UNMEASURED | MEASURED | UNMEASURED |
+| phi4_seq64_backward_495_out_ptr1 | CENTERED_CONTROL | CENTERED_LOCAL_CONTROL | UNMEASURED | MEASURED | UNMEASURED |
+| phi4_seq64_backward_1031_in_out_ptr0 | CENTERED_CONTROL | CENTERED_LOCAL_CONTROL | UNMEASURED | MEASURED | UNMEASURED |
+| qwen_seq64_backward_1293_in_out_ptr0 | CENTERED_CONTROL | CENTERED_LOCAL_CONTROL | UNMEASURED | MEASURED | UNMEASURED |
+| qwen_seq64_backward_1308_output_0 | CENTERED_CONTROL | CENTERED_LOCAL_CONTROL | UNMEASURED | MEASURED | UNMEASURED |
 
 Current decision: retain source asymmetry and source-transport coupling as candidate formation properties; use concentration as a supporting feature; measure carrier stability with the shared short trajectory.
 Missing data are reported as UNMEASURED and are not interpreted as safe or negative.

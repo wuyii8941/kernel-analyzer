@@ -96,7 +96,41 @@ def formation_profile(path: Path | None) -> dict[str, Any]:
     return result
 
 
-def source_asymmetry(case_id: str, evidence: dict[str, Any]) -> dict[str, Any]:
+def _formation_transition(formation: dict[str, Any]) -> dict[str, Any]:
+    """Return the measured stage statuses without imputing missing layers."""
+
+    confirmation = formation.get("confirmation", {}) if formation else {}
+    result: dict[str, Any] = {}
+    for layer in ("LOCAL_ENDPOINT", "PARAMETER_GRADIENT", "EFFECTIVE_UPDATE"):
+        value = confirmation.get(layer)
+        if isinstance(value, dict):
+            result[layer] = value.get("status", "UNRESOLVED")
+        else:
+            result[layer] = "UNMEASURED"
+    return result
+
+
+def source_asymmetry(
+    case_id: str,
+    evidence: dict[str, Any],
+    formation: dict[str, Any] | None = None,
+    development_role: str | None = None,
+) -> dict[str, Any]:
+    # Scope-extension controls have no source-atom decomposition, but their
+    # complete formation certificates do provide a pre-trajectory local stage
+    # status.  Handle this before consulting the mechanism-evidence registry,
+    # which intentionally contains only the older mechanism cases.
+    if development_role == "CENTERED_CONTROL" and formation:
+        transition = _formation_transition(formation)
+        return {
+            "status": (
+                "CENTERED_LOCAL_CONTROL"
+                if transition["LOCAL_ENDPOINT"] == "CENTERED"
+                else "UNRESOLVED_LOCAL_CONTROL"
+            ),
+            "formation_transition": transition,
+            "evidence_kind": "complete_open_loop_formation_certificate",
+        }
     case = next((row for row in evidence.get("cases", []) if row.get("case") == case_id), None)
     if case is None:
         return {"status": "UNMEASURED"}
@@ -129,7 +163,7 @@ def source_asymmetry(case_id: str, evidence: dict[str, Any]) -> dict[str, Any]:
             "output_rounding_u": case.get("output_rounding_u"),
         }
     if natural.get("verdict") == "CENTERED":
-        return {"status": "CENTERED_LOCAL_CONTROL"}
+        return {"status": "CENTERED_LOCAL_CONTROL", "evidence_kind": "local_effect"}
     return {"status": "UNMEASURED_OR_NOT_APPLICABLE"}
 
 
@@ -246,7 +280,9 @@ def main() -> None:
         cases.append({
             "case_id": case_id,
             "development_role": role,
-            "source_asymmetry": source_asymmetry(case_id, evidence),
+            "source_asymmetry": source_asymmetry(
+                case_id, evidence, formation=formation, development_role=role
+            ),
             "source_transport_coupling": source_transport(case_id, evidence),
             "transport_concentration": formation,
             "carrier_stability": carrier_stability(trajectory_paths.get(case_id), case_id, evidence),
