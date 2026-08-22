@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MAP = ROOT / "results/property/joint_bias_formation_v1/joint_bias_formation_map.json"
 SAVED_P = ROOT / "results/property/bias_property_search/saved_p_pairing_work_v2.json"
 SAVED_P_RESPONSE = ROOT / "results/property/joint_bias_formation_v1/qwen_saved_p_pairing_response_vectors.json"
+SAVED_P_FORMATION_RESPONSE = ROOT / "results/property/joint_bias_formation_v1/qwen_saved_p_formation_response_v21.json"
 SILU = ROOT / "results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json"
 PHI = ROOT / "results/property/bias_formation/interventions/phi4_mm_transport_pairing.json"
 PHI_FIXED = ROOT / "results/property/joint_bias_formation_v1/phi_fixed_update_propagation.json"
@@ -72,6 +73,28 @@ def main() -> None:
             "response_odd_status": response.get("response_odd_population", {}).get("status"),
             "response_odd_cross_state_ratio": response.get("response_odd_population", {}).get("cross_state_ratio"),
             "claim_boundary": "Trajectory-conditioned response decomposition; not a common-state formation label.",
+        }
+    if SAVED_P_FORMATION_RESPONSE.exists():
+        response = load(SAVED_P_FORMATION_RESPONSE)
+        saved_p_case["common_state_response_capture"] = {
+            "artifact": str(SAVED_P_FORMATION_RESPONSE.relative_to(ROOT)),
+            "status": response.get("status"),
+            "state_split": response.get("state_split"),
+            "formation_status": {
+                partition: {
+                    layer: response.get("populations", {}).get(partition, {}).get(layer, {}).get("status")
+                    for layer in ("LOCAL_ENDPOINT", "PARAMETER_GRADIENT", "EFFECTIVE_UPDATE")
+                }
+                for partition in ("calibration", "confirmation")
+            },
+            "response_status": {
+                partition: {
+                    layer: response.get("response_populations", {}).get(partition, {}).get(layer, {}).get("status")
+                    for layer in ("RESPONSE_EVEN", "RESPONSE_ODD")
+                }
+                for partition in ("calibration", "confirmation")
+            },
+            "claim_boundary": response.get("response_measurement_boundary"),
         }
     cases.append(saved_p_case)
     cases.append(summarize_antithetic(SILU, "qwen3vl_silu_seq160"))

@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "src"), str(ROOT / "archive/round1_code/src")]
 
 from kernel_analyzer.bias_formation_v21 import FormationPolicy, summarize_streamed_state_vector_files  # noqa: E402
+from kernel_analyzer.seup import adamw_effective_update_delta  # noqa: E402
 from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime  # noqa: E402
 from scripts.run_frozen_candidate_fp32_screen import wrapper_modules  # noqa: E402
 from scripts.run_generated_fp32_screen import load_model, tensor_digest  # noqa: E402
@@ -123,7 +124,7 @@ def _population(rows: dict[str, dict[str, list[dict[str, Any]]]], layer: str,
     return certificate.as_dict()
 
 
-def capture(states: list[dict[str, Any]], device_name: str, spool_root: Path) -> dict[str, Any]:
+def capture(states: list[dict[str, Any]], device_name: str, spool_root: Path, release: Path = RELEASE) -> dict[str, Any]:
     if len(states) != 32:
         raise ValueError("Qwen saved-P v2.1 formation requires exactly 32 frozen states")
     device = torch.device(device_name)
@@ -136,7 +137,7 @@ def capture(states: list[dict[str, Any]], device_name: str, spool_root: Path) ->
     candidate(warm).backward()
     torch.cuda.synchronize(device)
     modules = list(PyCodeCache.modules[start:])
-    capture_payload = json.loads((RELEASE / "capture.json").read_text(encoding="utf-8"))
+    capture_payload = json.loads((release / "capture.json").read_text(encoding="utf-8"))
     validate_release(wrapper_modules(modules), capture_payload)
     weights_digest = _file_digest(MODEL / "model.safetensors.index.json")
     state_ids = [str(row.get("sequence_id", row.get("state_id", i))) for i, row in enumerate(states)]
@@ -145,6 +146,10 @@ def capture(states: list[dict[str, Any]], device_name: str, spool_root: Path) ->
     policy = FormationPolicy(min_states=16, bootstrap_samples=2000)
     rows: dict[str, dict[str, list[dict[str, Any]]]] = {
         partition: {layer: [] for layer in ("LOCAL_ENDPOINT", "PARAMETER_GRADIENT", "EFFECTIVE_UPDATE")}
+        for partition in ("calibration", "confirmation")
+    }
+    response_rows: dict[str, dict[str, list[dict[str, Any]]]] = {
+        partition: {layer: [] for layer in ("RESPONSE_EVEN", "RESPONSE_ODD")}
         for partition in ("calibration", "confirmation")
     }
     row_metadata: list[dict[str, Any]] = []
@@ -163,10 +168,45 @@ def capture(states: list[dict[str, Any]], device_name: str, spool_root: Path) ->
             raise RuntimeError(f"saved-P repair did not change the exact endpoint at {state_id}")
         gradient_delta = np.concatenate([standard_grad[name] - repair_grad[name] for name in CARRIERS])
         update_delta = -LR * gradient_delta
+        # Measure the optimizer response factor from the same common-state
+        # gradients without pretending that a BF16 source reflection was
+        # physically re-executed.  The reflected gradient is an offline
+        # response probe and is explicitly not a source intervention.
+        standard_tree = {name: torch.from_numpy(standard_grad[name]) for name in CARRIERS}
+        repair_tree = {name: torch.from_numpy(repair_grad[name]) for name in CARRIERS}
+        anti_tree = {name: 2.0 * repair_tree[name] - standard_tree[name] for name in CARRIERS}
+        zero_first = {name: torch.zeros_like(repair_tree[name]) for name in CARRIERS}
+        zero_second = {name: torch.zeros_like(repair_tree[name]) for name in CARRIERS}
+        parameter_tree = {
+            name: dict(model.named_parameters())[name].detach().float().cpu().reshape(-1)
+            for name in CARRIERS
+        }
+        plus_tree = adamw_effective_update_delta(
+            standard_tree, repair_tree, zero_first, zero_second, parameter_tree,
+            step=1, learning_rate=LR, betas=(0.9, 0.95), epsilon=1e-8, weight_decay=0.0,
+        )
+        minus_tree = adamw_effective_update_delta(
+            anti_tree, repair_tree, zero_first, zero_second, parameter_tree,
+            step=1, learning_rate=LR, betas=(0.9, 0.95), epsilon=1e-8, weight_decay=0.0,
+        )
+        response_even = np.concatenate([
+            (0.5 * (plus_tree[name] + minus_tree[name])).numpy().reshape(-1)
+            for name in CARRIERS
+        ])
+        response_odd = np.concatenate([
+            (0.5 * (plus_tree[name] - minus_tree[name])).numpy().reshape(-1)
+            for name in CARRIERS
+        ])
         partition = "calibration" if index < 16 else "confirmation"
         rows[partition]["LOCAL_ENDPOINT"].append(_write_vector(spool_root, "local", state_id, local_vector))
         rows[partition]["PARAMETER_GRADIENT"].append(_write_vector(spool_root, "gradient", state_id, gradient_delta))
         rows[partition]["EFFECTIVE_UPDATE"].append(_write_vector(spool_root, "update", state_id, update_delta))
+        response_rows[partition]["RESPONSE_EVEN"].append(
+            _write_vector(spool_root, "response_even", state_id, response_even)
+        )
+        response_rows[partition]["RESPONSE_ODD"].append(
+            _write_vector(spool_root, "response_odd", state_id, response_odd)
+        )
         row_metadata.append({
             "state_id": state_id,
             "partition": partition,
@@ -178,6 +218,8 @@ def capture(states: list[dict[str, Any]], device_name: str, spool_root: Path) ->
             "raw_vectors_retained": False,
         })
         del values, standard_grad, sham_grad, repair_grad, gradient_delta, update_delta
+        del standard_tree, repair_tree, anti_tree, zero_first, zero_second, parameter_tree
+        del plus_tree, minus_tree, response_even, response_odd
         torch.cuda.empty_cache()
         print(json.dumps({"event": "FORMATION_STATE_COMPLETE", "state": index, "state_id": state_id}, sort_keys=True), flush=True)
     populations = {}
@@ -187,6 +229,13 @@ def capture(states: list[dict[str, Any]], device_name: str, spool_root: Path) ->
             certificate = _population(rows, layer, partition, policy)
             populations[partition][layer] = certificate
             populations[partition][layer + "_status"] = certificate["status"]
+    response_populations = {}
+    for partition in response_rows:
+        response_populations[partition] = {}
+        for layer in response_rows[partition]:
+            certificate = _population(response_rows, layer, partition, policy)
+            response_populations[partition][layer] = certificate
+            response_populations[partition][layer + "_status"] = certificate["status"]
     layer_names = ("LOCAL_ENDPOINT", "PARAMETER_GRADIENT", "EFFECTIVE_UPDATE")
     statuses = {partition: {layer: populations[partition][layer]["status"] for layer in layer_names}
                 for partition in populations}
@@ -215,6 +264,8 @@ def capture(states: list[dict[str, Any]], device_name: str, spool_root: Path) ->
         },
         "policy": policy.as_dict(),
         "populations": populations,
+        "response_populations": response_populations,
+        "response_measurement_boundary": "Offline AdamW zero-moment response to a reflected gradient residual; source +/- endpoint representability and source causality are not claimed.",
         "first_confirmed_bias_stage": first_confirmed,
         "first_observed_biased_stage": first_observed,
         "formation_point": "CONFIRMED" if first_confirmed else "UNRESOLVED",
@@ -222,8 +273,8 @@ def capture(states: list[dict[str, Any]], device_name: str, spool_root: Path) ->
         "missing_rows": [], "unexpected_rows": [],
         "rows": row_metadata,
         "capture_provenance": {
-            "runtime_environment": "results/coverage/runtime_releases/qwen_seq128_r1/environment.json",
-            "release_capture": "results/coverage/runtime_releases/qwen_seq128_r1/capture.json",
+            "runtime_environment": str(release / "environment.json"),
+            "release_capture": str(release / "capture.json"),
             "input_bank": "results/coverage/qwen_seq128_input_bank.json",
             "runner": "scripts/capture_qwen_saved_p_bias_formation_v21.py",
             "device": device_name, "raw_vectors_retained": False,
@@ -240,13 +291,14 @@ def main() -> None:
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--output", type=Path, default=OUTPUT)
     parser.add_argument("--spool-root", type=Path, default=SPOOL_ROOT)
+    parser.add_argument("--release", type=Path, default=RELEASE)
     args = parser.parse_args()
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is unavailable; formation capture is not run")
     bank = json.loads(BANK.read_text(encoding="utf-8"))
     states = bank.get("states", bank.get("records"))
     args.spool_root.mkdir(parents=True, exist_ok=True)
-    result = capture(states, args.device, args.spool_root)
+    result = capture(states, args.device, args.spool_root, args.release)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_name("." + args.output.name + ".tmp")
     temporary.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
