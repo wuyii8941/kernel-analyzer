@@ -10,9 +10,11 @@
         "mean_step_response_even_energy_fraction": 0.055295180874953824,
         "mean_step_response_even_energy_on_sign_crossings": 0.8149280563841769,
         "mean_step_response_oddness_ratio": 0.19977158722745042,
+        "response_even_energy_in_first_two_steps": null,
         "response_even_resultant_l2": 0.006346141453832388,
         "response_even_resultant_ratio": 0.6816873220999589,
         "stateless_sgd_resultant_l2": 1.1621246486902238e-06,
+        "step_integrated_response_even_energy_fraction": null,
         "steps": 32
       },
       "common_state_response_capture": {
@@ -84,36 +86,50 @@
         },
         "status": "COMPLETE"
       },
-      "generic_even_odd": "UNRESOLVED_MISSING_RAW_VECTORS",
+      "generic_even_odd": "RAW_RESPONSE_READY_EVENT_DISTRIBUTION_UNRESOLVED",
       "prefix_to_32_backtest": "UNAVAILABLE_FROM_SAVED_SUMMARY",
-      "raw_vectors_retained": false,
+      "raw_vectors_retained": true,
+      "response_vector_capture": {
+        "spool": null,
+        "state_count": 0,
+        "status": "NOT_RETAINED"
+      },
       "trajectory_response_capture": {
-        "artifact": "results/property/joint_bias_formation_v1/qwen_saved_p_pairing_response_vectors.json",
+        "artifact": "results/property/joint_bias_formation_v1/qwen_saved_p_pairing_response_vectors_v3.json",
         "claim_boundary": "Trajectory-conditioned response decomposition; not a common-state formation label.",
+        "raw_vectors_retained": true,
         "response_even_cross_state_ratio": 0.000971859269495465,
         "response_even_status": "CENTERED",
         "response_odd_cross_state_ratio": -0.0001465564660696216,
         "response_odd_status": "CENTERED",
+        "spool": "/data1/tzh/cache/bias_replay/qwen_saved_p_response_v3",
         "state_count": 32,
         "status": "COMPLETE"
       }
     },
     {
-      "artifact": "results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json",
+      "artifact": "results/property/joint_bias_formation_v1/vl_silu_optimizer_oddness_vectors_v3.json",
       "case_id": "qwen3vl_silu_seq160",
       "case_specific_response": {
         "forward_losses_equal": true,
-        "mean_step_response_even_energy_fraction": 0.018838001559784406,
-        "mean_step_response_even_energy_on_sign_crossings": 0.06378480843159491,
-        "mean_step_response_oddness_ratio": 0.03543076592310364,
-        "response_even_resultant_l2": 0.002871247474104166,
-        "response_even_resultant_ratio": 0.695579794224944,
-        "stateless_sgd_resultant_l2": 1.3519802689552307e-06,
+        "mean_step_response_even_energy_fraction": 0.018497333179041432,
+        "mean_step_response_even_energy_on_sign_crossings": 0.06665073723893566,
+        "mean_step_response_oddness_ratio": 0.034994200664789005,
+        "response_even_energy_in_first_two_steps": 0.9999990095568534,
+        "response_even_resultant_l2": 0.0028859409503638744,
+        "response_even_resultant_ratio": 0.6948095325568558,
+        "stateless_sgd_resultant_l2": 1.4229024946689607e-06,
+        "step_integrated_response_even_energy_fraction": 0.4840313923299382,
         "steps": 32
       },
-      "generic_even_odd": "UNRESOLVED_MISSING_RAW_VECTORS",
+      "generic_even_odd": "RAW_RESPONSE_READY_EVENT_DISTRIBUTION_UNRESOLVED",
       "prefix_to_32_backtest": "UNAVAILABLE_FROM_SAVED_SUMMARY",
-      "raw_vectors_retained": false
+      "raw_vectors_retained": true,
+      "response_vector_capture": {
+        "spool": "/data1/tzh/cache/bias_replay/vl_silu_response_v3",
+        "state_count": 32,
+        "status": "COMPLETE"
+      }
     },
     {
       "antithetic_response_capture": {
@@ -215,7 +231,7 @@
       "raw_vectors_retained": false
     }
   ],
-  "claim_boundary": "Case-specific response summaries are reported where saved. Missing raw epsilon and +/- response vectors are unresolved; no generic predictor or zero vector is imputed.",
+  "claim_boundary": "Exact raw +/- response vectors are retained for Saved-P and SiLU. DeepSeek BF16 endpoint reflections fail exact representability and remain unresolved. A generic event-distribution decomposition is not imputed from response vectors alone.",
   "generic_even_odd_formula": {
     "closure": "mu = sum(event_even*response_even) + sum(event_odd*response_odd)",
     "event_even": "(w_plus+w_minus)/2",
@@ -223,7 +239,8 @@
     "response_even": "(F(+epsilon)+F(-epsilon))/2",
     "response_odd": "(F(+epsilon)-F(-epsilon))/2"
   },
-  "generic_ready_count": 0,
+  "generic_event_response_decomposition_ready_count": 0,
+  "response_even_odd_raw_ready_count": 2,
   "schema": "kernel-analyzer-three-factor-offline-summary-v1",
   "status": "PARTIAL_BOUNDED"
 }

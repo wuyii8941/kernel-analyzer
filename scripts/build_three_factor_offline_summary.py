@@ -18,9 +18,9 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 MAP = ROOT / "results/property/joint_bias_formation_v1/joint_bias_formation_map.json"
 SAVED_P = ROOT / "results/property/bias_property_search/saved_p_pairing_work_v2.json"
-SAVED_P_RESPONSE = ROOT / "results/property/joint_bias_formation_v1/qwen_saved_p_pairing_response_vectors.json"
+SAVED_P_RESPONSE = ROOT / "results/property/joint_bias_formation_v1/qwen_saved_p_pairing_response_vectors_v3.json"
 SAVED_P_FORMATION_RESPONSE = ROOT / "results/property/joint_bias_formation_v1/qwen_saved_p_formation_response_v21.json"
-SILU = ROOT / "results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json"
+SILU = ROOT / "results/property/joint_bias_formation_v1/vl_silu_optimizer_oddness_vectors_v3.json"
 PHI = ROOT / "results/property/bias_formation/interventions/phi4_mm_transport_pairing.json"
 PHI_FIXED = ROOT / "results/property/joint_bias_formation_v1/phi_fixed_update_propagation.json"
 PHI_ANTITHETIC = ROOT / "results/property/joint_bias_formation_v1/phi_antithetic_response_capture.json"
@@ -35,10 +35,15 @@ def summarize_antithetic(path: Path, case_id: str) -> dict[str, Any]:
     data = load(path)
     aggregate = data["aggregate"]
     records = data.get("records", [])
+    capture = data.get("response_vector_capture", {})
     return {
         "case_id": case_id,
         "artifact": str(path.relative_to(ROOT)),
-        "generic_even_odd": "UNRESOLVED_MISSING_RAW_VECTORS",
+        "generic_even_odd": (
+            "RAW_RESPONSE_READY_EVENT_DISTRIBUTION_UNRESOLVED"
+            if capture.get("raw_vectors_retained", False)
+            else "UNRESOLVED_MISSING_RAW_VECTORS"
+        ),
         "case_specific_response": {
             "forward_losses_equal": aggregate.get("all_forward_losses_equal"),
             "response_even_resultant_l2": aggregate.get("optimizer_oddness_resultant_l2"),
@@ -46,10 +51,17 @@ def summarize_antithetic(path: Path, case_id: str) -> dict[str, Any]:
             "mean_step_response_even_energy_fraction": aggregate.get("mean_step_response_even_energy_fraction"),
             "mean_step_response_even_energy_on_sign_crossings": aggregate.get("mean_step_response_even_energy_on_sign_crossings"),
             "mean_step_response_oddness_ratio": aggregate.get("mean_step_optimizer_oddness_ratio"),
+            "response_even_energy_in_first_two_steps": aggregate.get("response_even_energy_in_first_two_steps"),
+            "step_integrated_response_even_energy_fraction": aggregate.get("step_integrated_response_even_energy_fraction"),
             "stateless_sgd_resultant_l2": aggregate.get("stateless_sgd_natural_resultant_l2", aggregate.get("stateless_sgd_resultant_l2")),
             "steps": len(records),
         },
-        "raw_vectors_retained": False,
+        "raw_vectors_retained": bool(capture.get("raw_vectors_retained", False)),
+        "response_vector_capture": {
+            "status": capture.get("status", "NOT_RETAINED"),
+            "spool": capture.get("spool"),
+            "state_count": capture.get("state_count", len(capture.get("rows", []))),
+        },
         "prefix_to_32_backtest": "UNAVAILABLE_FROM_SAVED_SUMMARY",
     }
 
@@ -64,10 +76,20 @@ def main() -> None:
     saved_p_case = summarize_antithetic(SAVED_P, "qwen_saved_p_seq128")
     if SAVED_P_RESPONSE.exists():
         response = load(SAVED_P_RESPONSE)
+        response_capture = response.get("response_vector_capture", {})
+        saved_p_case["raw_vectors_retained"] = bool(
+            response_capture.get("raw_vectors_retained", False)
+        )
+        if saved_p_case["raw_vectors_retained"]:
+            saved_p_case["generic_even_odd"] = (
+                "RAW_RESPONSE_READY_EVENT_DISTRIBUTION_UNRESOLVED"
+            )
         saved_p_case["trajectory_response_capture"] = {
             "artifact": str(SAVED_P_RESPONSE.relative_to(ROOT)),
-            "status": response.get("response_vector_capture", {}).get("status"),
-            "state_count": response.get("response_vector_capture", {}).get("state_count"),
+            "status": response_capture.get("status"),
+            "state_count": response_capture.get("state_count"),
+            "spool": response_capture.get("spool"),
+            "raw_vectors_retained": response_capture.get("raw_vectors_retained"),
             "response_even_status": response.get("response_even_population", {}).get("status"),
             "response_even_cross_state_ratio": response.get("response_even_population", {}).get("cross_state_ratio"),
             "response_odd_status": response.get("response_odd_population", {}).get("status"),
@@ -172,14 +194,17 @@ def main() -> None:
             "closure": "mu = sum(event_even*response_even) + sum(event_odd*response_odd)",
         },
         "case_count": len(cases),
-        "generic_ready_count": 0,
+        "response_even_odd_raw_ready_count": sum(
+            bool(case.get("raw_vectors_retained")) for case in cases
+        ),
+        "generic_event_response_decomposition_ready_count": 0,
         "case_specific_summary_count": 4 if phi_antithetic is not None else 3,
         "cases": cases,
-        "claim_boundary": "Case-specific response summaries are reported where saved. Missing raw epsilon and +/- response vectors are unresolved; no generic predictor or zero vector is imputed.",
+        "claim_boundary": "Exact raw +/- response vectors are retained for Saved-P and SiLU. DeepSeek BF16 endpoint reflections fail exact representability and remain unresolved. A generic event-distribution decomposition is not imputed from response vectors alone.",
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(json.dumps({"output": str(args.output), "status": payload["status"], "generic_ready_count": 0, "case_specific_summary_count": payload["case_specific_summary_count"]}, sort_keys=True))
+    print(json.dumps({"output": str(args.output), "status": payload["status"], "response_even_odd_raw_ready_count": payload["response_even_odd_raw_ready_count"], "case_specific_summary_count": payload["case_specific_summary_count"]}, sort_keys=True))
 
 
 if __name__ == "__main__":

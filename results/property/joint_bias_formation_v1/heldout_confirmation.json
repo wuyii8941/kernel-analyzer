@@ -1,0 +1,55 @@
+{
+  "claim_boundary": "Gemma-4 is a genuine frozen NEW_IMPL held-out population. It confirms two source-negative predictions and independently reveals an optimizer-moment feedback mechanism. Because the feedback predictor abstained, this is not confirmation of the full three-factor joint predictor.",
+  "feedback_discovery": {
+    "observed_actual_amplification": 3.225216400746068,
+    "observed_feedback_amplification": 3.2353456884450775,
+    "optimizer_intervention": {
+      "adamw": {
+        "actual_amplification": 3.2252164007,
+        "feedback_amplification": 3.2353456884,
+        "final_drift_l2": 0.1070105806
+      },
+      "adamw_reset_moments": {
+        "actual_amplification": 0.9960331122,
+        "feedback_amplification": 0.9961065813,
+        "final_drift_l2": 0.1155420393
+      },
+      "interpretation": "cross-step Adam moments sustain the coherent feedback component; removing moments removes persistence amplification",
+      "sgd": {
+        "actual_amplification": 0.9539070779,
+        "feedback_amplification": 0.9534621659,
+        "final_drift_l2": 0.0006347565
+      }
+    },
+    "prediction": "ABSTAIN_NO_FROZEN_FEEDBACK_PREDICTOR",
+    "result": "HELDOUT_NEW_IMPL_FEEDBACK_SUSTAINED_BUT_NOT_PREDICTED"
+  },
+  "model": {
+    "architecture": "Gemma4ForConditionalGeneration",
+    "modality_for_primary_campaign": "TEXT",
+    "model_id": "google/gemma-4-E2B",
+    "revision": "d29ff6b45f081a49ee2733a859c9c9c2d95d1a6f",
+    "sequence_length": 128
+  },
+  "schema": "kernel-analyzer-joint-heldout-confirmation-v1",
+  "scientific_role": "HELDOUT_NEW_IMPLEMENTATION_AND_NEW_OPERAND_POPULATION",
+  "source_factor_confirmation": {
+    "attention_new_impl": {
+      "local_amplification": 0.0,
+      "prediction": "NO_SOURCE_PERSISTENCE_UNDER_PROTOCOL",
+      "result": "CONFIRMED_CANCELING_OR_ZERO_LOCAL_EFFECT_UNDER_PROTOCOL"
+    },
+    "norm_new_impl": {
+      "local_amplification": 1.0008688709752824,
+      "prediction": "NO_SOURCE_PERSISTENCE_UNDER_PROTOCOL",
+      "result": "CONFIRMED_NO_SOURCE_PERSISTENCE"
+    }
+  },
+  "status": "PARTIAL_SOURCE_FACTOR_CONFIRMATION_FULL_JOINT_PREDICTOR_UNRESOLVED",
+  "unresolved": [
+    {
+      "case": "PLE/embedding backward:1401",
+      "reason": "wrapper hashes differ from frozen runtime release"
+    }
+  ]
+}

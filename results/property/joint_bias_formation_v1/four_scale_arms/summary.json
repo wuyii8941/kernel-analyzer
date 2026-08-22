@@ -1,0 +1,52 @@
+{
+  "arms": {
+    "A_operator": {
+      "coherence_amplification": 4.487687419828846,
+      "distance_over_initial_parameter_l2": 1.7214400428697014e-06,
+      "final_distance_l2": 9.185909895207353e-05,
+      "interpretation": "STRONGLY_COHERENT_OPERATOR_DIFFERENCE"
+    },
+    "B_rng": {
+      "coherence_amplification": 0.0,
+      "distance_over_initial_parameter_l2": 0.0,
+      "final_distance_l2": 0.0,
+      "interpretation": "NOT_INFORMATIVE_ZERO_RNG_SENSITIVITY"
+    },
+    "C_data_order": {
+      "coherence_amplification": 0.006657093060358567,
+      "distance_over_initial_parameter_l2": 6.648681858052602e-07,
+      "final_distance_l2": 3.547854758168526e-05,
+      "interpretation": "ORDER_EFFECT_CANCELS_AFTER_COMPLETE_MULTISET"
+    },
+    "D_precision": {
+      "coherence_amplification": 1.8569606810975339,
+      "distance_over_initial_parameter_l2": 6.0404936230033876e-06,
+      "final_distance_l2": 0.0003223314711036013,
+      "interpretation": "PRECISION_DIFFERENCE_HAS_NONDIFFUSIVE_LATE_GROWTH"
+    }
+  },
+  "claim_boundary": "All arms use the same initial checkpoint and frozen batch multiset, and are compared on the same final-norm carrier. Only that carrier evolves. Therefore this is a controlled carrier-scale comparison, not full-parameter training.",
+  "conclusion": "On the closed Phi final-norm carrier, the endpoint implementation contrast is much more temporally coherent than data-order sensitivity and more coherent than the BF16-vs-FP32 contrast. The precision contrast is larger at step 32 and is not purely diffusive, so a universal linear-versus-sqrt(T) crossover claim is not supported. The RNG arm is inapplicable because this Phi graph has zero dropout.",
+  "crossover_status": "EXPLORATORY_PREFIX_FIT",
+  "operator_precision_crossover_steps": 703.0378804239341,
+  "power_law_fits": {
+    "A_operator": {
+      "coefficient": 2.5141395663486556e-06,
+      "log_space_r2": 0.9992336810395978,
+      "power_exponent": 1.0340819114992659
+    },
+    "C_data_order": {
+      "coefficient": 0.007261025405869445,
+      "log_space_r2": 0.32338224154672757,
+      "power_exponent": -0.972981771118439
+    },
+    "D_precision": {
+      "coefficient": 2.402990137969742e-05,
+      "log_space_r2": 0.9533856351323076,
+      "power_exponent": 0.6897299861775003
+    }
+  },
+  "schema": "kernel-analyzer-four-scale-summary-v1",
+  "source": "results/property/joint_bias_formation_v1/four_scale_arms/phi_lmhead.json",
+  "status": "COMPLETE_BOUNDED_CARRIER_SCALE_COMPARISON"
+}

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -73,6 +74,10 @@ def main() -> None:
     parser.add_argument("--width", type=int, default=448)
     parser.add_argument("--height", type=int, default=224)
     parser.add_argument(
+        "--response-spool", type=Path,
+        help="optional /data1 directory retaining exact per-step even/odd vectors",
+    )
+    parser.add_argument(
         "--output", type=Path,
         default=ROOT / "results/property/bias_property_search/vl_silu_optimizer_oddness.json",
     )
@@ -87,6 +92,9 @@ def main() -> None:
     torch.backends.cudnn.allow_tf32 = False
     torch.backends.cudnn.benchmark = False
     device = torch.device(args.device)
+    if args.response_spool is not None:
+        args.response_spool.mkdir(parents=True, exist_ok=True)
+    response_vector_rows = []
 
     processor = AutoProcessor.from_pretrained(args.model, trust_remote_code=True)
     prepared = []
@@ -179,6 +187,22 @@ def main() -> None:
         oddness = plus + minus
         response_even = oddness * 0.5
         response_odd = (plus - minus) * 0.5
+        if args.response_spool is not None:
+            vector_path = args.response_spool / f"step-{offset + 1:02d}.pt"
+            temporary = vector_path.with_name("." + vector_path.name + ".tmp")
+            torch.save({
+                "step": offset + 1,
+                "response_even": response_even.detach().cpu(),
+                "response_odd": response_odd.detach().cpu(),
+                "natural_update": plus.detach().cpu(),
+                "antithetic_update": minus.detach().cpu(),
+            }, temporary)
+            temporary.replace(vector_path)
+            digest = hashlib.sha256(vector_path.read_bytes()).hexdigest()
+            response_vector_rows.append({
+                "step": offset + 1, "path": str(vector_path), "sha256": digest,
+                "coordinate_count": int(response_even.numel()),
+            })
         active_mask = delta != 0
         crossing_mask = active_mask & (candidate_grad * anti_grad <= 0)
         active_coordinates = int(active_mask.sum().item())
@@ -306,6 +330,12 @@ def main() -> None:
         "steps": args.steps,
         "records": rows,
         "aggregate": aggregate,
+        "response_vector_capture": {
+            "status": "COMPLETE" if args.response_spool is not None else "NOT_REQUESTED",
+            "raw_vectors_retained": args.response_spool is not None,
+            "spool": str(args.response_spool) if args.response_spool is not None else None,
+            "rows": response_vector_rows,
+        },
         "interpretation": (
             "Nonzero oddness is optimizer rectification of an exactly sign-symmetric "
             "gradient residual pair; stateless SGD is the exact linear null."

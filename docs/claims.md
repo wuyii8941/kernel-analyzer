@@ -1,6 +1,8 @@
 # Scientific claim ledger
 
-Evidence snapshot: `75a3fba` (2026-08-22).
+Evidence snapshot: working tree after the completed joint-bias round
+(2026-08-22).  Bind this line to the resulting commit when the round is
+committed.
 
 This file is organized by paper claim, not experiment chronology.  Each row
 states the evidence threshold, the authoritative artifact, and what may be
@@ -47,7 +49,7 @@ Flash-style persistent-local-source cases.
 | Every actual invocation remains in the denominator. | Actual forward/backward invocations, unresolved rows, and fused many-to-one bindings are retained rather than sampled away. | `docs/denominator.md`; `results/coverage/cases/full_coordinate_audit.json.gz` | `SUPPORTED` for the frozen four-model × three-shape discovery scope: 1,562/1,562 directional endpoints have a T1 disposition. This is not an all-model or all-backend claim. |
 | One forward plus its actual backward is the mathematical unit. | Exact saved values, cotangent, output edge, shapes/dtypes, non-tensor arguments, and executed VJP arithmetic are bound. | `docs/method.md`; `results/coverage/cases/directional_candidate_math_registry.json.gz` | `SUPPORTED` for the frozen registry. Analytic closure does not substitute for T1–T4 numerical evidence. |
 | Repeated layers may be represented by one deep measurement without losing coverage. | Exact callsite/ABI, tile/reduction topology, fusion semantics, routing behavior, and repair boundary are identical; all sibling invocations stay in the denominator. | `docs/tcmp_progress.md` (“Counting rule”) | `SUPPORTED_WITH_SCOPE`. Report `deeply_tested` and `represented_by_same_pattern` separately. The Ministral 26-layer region is one repeated implementation pattern; Qwen layer-23 is a different closed semantic region and remains an independent case. |
-| Screening has measured recall. | A random screen-negative sample must contain residual-nonzero, parameter-reachable rows and receive the complete downstream protocol. | `results/property/joint_bias_formation_v1/screen_negative_control_audit.json`; `docs/tcmp_progress.md` (“Frozen new-implementation audit”) | `BOUNDED`. The existing backward rescreen contains 32 reachable nonzero screen-negative rows; a deterministic 12-row audit sample is now frozen. It is screen-level only, not yet a 32-step consequence recall estimate. |
+| Screening has measured recall. | A random screen-negative sample must contain residual-nonzero, parameter-reachable rows and receive the complete downstream protocol. | `results/property/joint_bias_formation_v1/screen_negative_control_audit.json`; `results/property/joint_bias_formation_v1/consequence_summary.json` | `SUPPORTED_FOR_THE_FROZEN_12_ROW_SAMPLE`. All 12 residual-nonzero, parameter-reachable rows completed 32-step consequence. Eleven have diffusive local increments with feedback-sustained actual drift; one is mixed. This estimates behavior in the frozen sample, not universal recall. |
 | Matched repair isolates the declared F+B boundary. | Candidate/repair share state; repair is type/ABI compatible; sham and non-target controls pass; the declared carrier is reached. | `docs/bias_protocol.md`; per-case gates in `results/coverage/existing_case_reaudit.json` | `SUPPORTED` for the six strict cases and explicitly named bounded controls. It is not inherited by sibling endpoints without a bound repair. |
 
 ## Measurement claims
@@ -66,7 +68,7 @@ Flash-style persistent-local-source cases.
 | Six strict Flash-style project cases exist. | Complete F+B, causal repair/sham, real carrier, and paired directional trajectory. | `results/coverage/existing_case_reaudit.json`; `case.md` | `SUPPORTED`: four root-arithmetic cases plus two closed semantic-region cases. The literature FlashAttention anchor is excluded from the six. |
 | Source-persistent and feedback-sustained drift are distinct regimes. | Four-arm local/feedback recurrence closes; optimizer ablation changes feedback without relabeling the source. | Gemma section of `docs/tcmp_progress.md`; `results/property/bias_property_search/heldout_validation_v3_gemma_disjoint.json` | `SUPPORTED_CASE_LEVEL`. Gemma local is null-like while feedback/actual persist; stateless SGD and moment reset collapse the feedback. A general feedback predictor is still `OPEN`. |
 | Negative evidence is nontrivial and correctly classified. | Nonzero local residual, parameter reach, complete F+B, and centered/canceling gradient/update population. | `results/property/tcmp_allop_v1/final_decision_matrix.json`; `results/property/tcmp_allop_v1/scope_extension_20260822.json` | `SUPPORTED`. YaRN exact-zero and parameter-inaccessible softmax/mask regions are `NOT_APPLICABLE`; compiler/provenance failures are `UNRESOLVED`; neither group is counted as a negative. |
-| Error magnitude alone does not predict source persistence. | Compare backward-visible residuals with different persistence outcomes under a common statistic and control boundary. | Liger and Qwen128/vision-control records in `case.md` and `docs/tcmp_progress.md` | `BOUNDED`. The qualitative separation is supported, but no frozen cross-case regression establishes a universal magnitude-independent law. SiLU cannot be described as “no drift”: its local source cancels while feedback persists. |
+| Error magnitude alone does not predict source persistence. | Compare backward-visible residuals with different persistence outcomes under a common statistic and control boundary. | `results/property/joint_bias_formation_v1/rms_persistence/rms_persistence.json` | `SUPPORTED_FOR_FORMATION_POPULATION`. Across 32 reachable nonzero rows, Pearson correlation between log10 local RMS and open-loop directional ratio is `0.018` (Spearman `0.243`). The selected 12-row live sample is feedback-confounded and is reported separately. |
 
 ## Mechanism and causal claims
 
@@ -107,12 +109,13 @@ Flash-style persistent-local-source cases.
 
 ## Highest-priority open evidence
 
-1. A residual-nonzero, parameter-reachable screen-negative recall sample large
-   enough to estimate recall.
-2. Triage efficiency and frozen simple-baseline comparisons.
-3. Liger RN→SR and per-step chunk/order randomization on the real kernel.
-4. A prospective, protocol-conforming `NEW_IMPL` source-positive confirmation,
+1. Triage efficiency and frozen simple-baseline comparisons beyond RMS.
+2. A positive-baseline source intervention on a bound contrast; the existing
+   Liger RN arm is diffusive and cannot support the planned suppression claim.
+3. A prospective, protocol-conforming `NEW_IMPL` source-positive confirmation,
    or an explicit decision to publish the narrower family-scoped result.
+4. Full-parameter RNG/data-order/precision scale controls.  The current Phi
+   four-arm campaign is explicitly carrier-scale.
 
 ## Three-factor formation follow-up
 
@@ -152,6 +155,10 @@ intervention.  A fixed real 16-step Phi error sequence injected into an
 alternate checkpoint gives drift/direct-sum ratio `1.0104`, with no extra
 feedback amplification in that probe.  This is a positive propagation-closure
 result: direct accumulated error predicts the observed drift to within 1.04%.
-The generic raw-vector even/odd response decomposition, 16→32 prefix backtest,
-and full consequence recall audit remain open.  The held-out predictor campaign
-also remains open.
+The raw-vector even/odd response decomposition is complete for the two cases
+with exact replay artifacts.  Both saved-P and SiLU contain material even and
+odd contributions rather than a single dominant channel; SiLU's even-response
+energy is almost entirely concentrated in its first two steps.  The 16→32
+backtest and the 12-row full consequence audit are also complete.  Held-out
+Gemma source-negative confirmation is complete, while a universal joint
+predictor remains unresolved.
