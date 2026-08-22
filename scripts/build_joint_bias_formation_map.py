@@ -189,6 +189,39 @@ def build() -> dict[str, Any]:
             "event_rounding_vs_contribution": event.get("event_rounding_vs_chunk_contribution"),
         })
 
+    # Host-GPU rerun and same-semantics chunk intervention are recorded as
+    # separate evidence.  The rerun validates the exact F+B execution path;
+    # it does not override the frozen confirmation gate when its confirmation
+    # population remains unresolved.
+    liger_rerun = ROOT / "results/property/bias_formation/formation/liger_fused_ce_t128_host_rerun.json"
+    if liger_key in cases and liger_rerun.exists():
+        rerun = load(liger_rerun)
+        cases[liger_key]["source"].update({
+            "host_gpu_rerun_status": rerun.get("status"),
+            "host_gpu_rerun_artifact": str(liger_rerun.relative_to(ROOT)),
+            "host_gpu_confirmation_statuses": {
+                layer: rerun.get("populations", {}).get("confirmation", {}).get(layer + "_status")
+                for layer in ("LOCAL_ENDPOINT", "PARAMETER_GRADIENT", "EFFECTIVE_UPDATE")
+            },
+            "host_gpu_first_confirmed_bias_stage": rerun.get("first_confirmed_bias_stage"),
+            "host_gpu_claim_boundary": "宿主机 RTX A6000 重跑；confirmation 区间未越过冻结门槛，不升级 formation verdict",
+        })
+    liger_chunk = ROOT / "results/property/joint_bias_formation_v1/liger_chunk_host_certificate.json"
+    if liger_key in cases and liger_chunk.exists():
+        chunk = load(liger_chunk)
+        cases[liger_key]["source"].update({
+            "chunk_geometry_intervention_status": chunk.get("verdict"),
+            "chunk_geometry_intervention_artifact": str(liger_chunk.relative_to(ROOT)),
+            "chunk_bf16_signs": next((row.get("positive"), row.get("negative"), row.get("tied"))
+                                      for row in chunk.get("directional_results", [])
+                                      if row.get("accumulator") == "bf16"),
+            "chunk_fp32_signs": next((row.get("positive"), row.get("negative"), row.get("tied"))
+                                      for row in chunk.get("directional_results", [])
+                                      if row.get("accumulator") == "fp32"),
+            "chunk_bf16_over_fp32_mean_rms": chunk.get("accumulator_amplification", {}).get("ratio_of_mean_rms"),
+            "chunk_claim_boundary": chunk.get("claim_boundary"),
+        })
+
     propagation = propagation_summary()
     propagation_aliases = {
         "phi4_lm_head_dx_seq64": "phi4_lm_head_dx_seq64",
@@ -240,7 +273,7 @@ def render_md(data: dict[str, Any]) -> str:
         "",
         "## Current interpretation",
         "",
-        "The existing repository has exact antithetic response replays for saved-P and SiLU, a composite transport intervention for Phi, and source-event evidence for Liger. The remaining cases lack the raw +/- replay inputs required for a new response claim.",
+        "The existing repository has exact antithetic response replays for saved-P and SiLU, a composite transport intervention for Phi, and source-event/chunk-geometry evidence for Liger. A host-GPU Liger 32-state rerun completed, but its confirmation population remained unresolved under the frozen gate; the chunk intervention itself confirmed BF16-specific directional geometry (24/24 versus FP32 13/11).",
         "",
         "The next causal measurements are therefore: real Liger SR/order-breaking, a generic response replay for Liger/Phi, and fixed-update propagation probes. No missing vector is imputed.",
     ]

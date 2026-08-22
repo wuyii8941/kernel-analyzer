@@ -1,0 +1,360 @@
+{
+  "accumulator_amplification": {
+    "bf16": {
+      "max": 4.785207767575816e-06,
+      "mean": 2.7120616076382787e-06,
+      "min": 1.2615697766561858e-06
+    },
+    "bf16_accumulator_amplifies_geometry_residual": true,
+    "bf16_larger_states": 24,
+    "bf16_over_fp32_per_state": {
+      "max": 3.6704613223879208,
+      "mean": 2.6023422560183103,
+      "min": 1.8552820263720173
+    },
+    "equal_states": 0,
+    "fp32": {
+      "max": 1.5025210856798468e-06,
+      "mean": 1.0296986476201788e-06,
+      "min": 6.79988141276381e-07
+    },
+    "fp32_larger_states": 0,
+    "geometry_effect_directional_with_bf16_accumulator": true,
+    "geometry_effect_directional_with_fp32_accumulator": false,
+    "inference": "The same-semantics physical-token/chunk intervention produces a deterministic dW residual in both accumulator strata, but only the BF16 stratum has a stable cross-state direction. The mean-RMS amplification identifies a chunk-geometry by accumulation-precision interaction, not a geometry-only directional mechanism.",
+    "ratio_of_mean_rms": 2.633840118083429
+  },
+  "artifact_sha256": "b2566097a735cc2abc2de79dec13de76a4f130cd3bee1842e8e325edebbb7177",
+  "bf16_minus_fp32_accumulator_by_geometry": {
+    "128": {
+      "max_abs": {
+        "max": 0.046875,
+        "mean": 0.0191650390625,
+        "min": 0.0078125
+      },
+      "nonzero_states": 24,
+      "rms": {
+        "max": 6.080854539162052e-06,
+        "mean": 3.795170685741777e-06,
+        "min": 2.1917518407624496e-06
+      }
+    },
+    "256": {
+      "max_abs": {
+        "max": 0.03125,
+        "mean": 0.01434326171875,
+        "min": 0.0078125
+      },
+      "nonzero_states": 24,
+      "rms": {
+        "max": 3.860689837386615e-06,
+        "mean": 2.904594979373434e-06,
+        "min": 1.9193220419812625e-06
+      }
+    }
+  },
+  "bindings": {
+    "carriers": {
+      "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger.fused_ce.chunk.carriers.json.gz",
+      "sha256": "eb20abc3f593490e142e958ee1226b40bdbf568bc0f690d3f72d118ef59d343f"
+    },
+    "confirmation_states": [
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0217.json.gz",
+        "sha256": "f6d5f4d02c0118ae11c4ea4ee242c9704700270af49e4a1c3d6889d87c2d3db9"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0220.json.gz",
+        "sha256": "538f0b13714ed10bb3bd3300466a78eb1229368ef515a9f23d6d00f617703abb"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0223.json.gz",
+        "sha256": "779ff023e47cb96f132afd5b50327596f07f9cb084051dc77a361f1be32067bf"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0226.json.gz",
+        "sha256": "2df4849e7a3fe79926d3e328bdf5e50d45bb989bbdcbc071dc82ec0fe351031d"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0229.json.gz",
+        "sha256": "dafa201ae652ab27c50e9f156f57a823471b54a1fd715d223a6d1bf45e8ce059"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0232.json.gz",
+        "sha256": "6e364437d5e74f157e7fdd975cedea5b78cedfeddf5ecf93352e32d23d8cf0ae"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0235.json.gz",
+        "sha256": "99f39c0580b41227f4a8614f10d129f9c4d1bd7c91e8d833c4157646e8738e74"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0238.json.gz",
+        "sha256": "fa4ee388c5bc9dd97c11f0ae285142874171e1f77858dfc3c002be2aeb86bc45"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0241.json.gz",
+        "sha256": "9bbd5b3a04fca9dc082a4dd38ac0b0884cfbaa80e64258e501f17b975ec245c4"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0244.json.gz",
+        "sha256": "1a0ee8fb3cdb1544820555a52a67e987c033c049a42be58fe7647369de5f7ce3"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0247.json.gz",
+        "sha256": "67892f85986694004614ec864d5d970bb77f18a9165431ceef7e2243861fc2b0"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0250.json.gz",
+        "sha256": "c4e02d559484f005d4b3c4f2911edb88e68a349d8d1122ade9032c64a0665160"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0253.json.gz",
+        "sha256": "216029fff5a979ee9373b44c2a4247682aabcf17eb32ac2da0072a4a6a97d9ff"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0256.json.gz",
+        "sha256": "9a0729383f9fabb1d023cf9eff99bcf13343065b87956000a6b2db634608001a"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0259.json.gz",
+        "sha256": "1fdc092ef9581a890e135c64e59f4e920c6ed5a6e830504ee7e6bd760b78d94a"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0262.json.gz",
+        "sha256": "c9bbc1b157eafe93745ebd4e6884717ac9dc201ca0d7a2923335529589d88125"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0265.json.gz",
+        "sha256": "95349c63c1e98761c4c366133e53dc04e33698ac970c1770cf0b62ccd21eda58"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0268.json.gz",
+        "sha256": "08d52e5bd1cb9f6770c81ce01052a4e772993a5b90ec1b15af9e9ec21f43ede1"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0271.json.gz",
+        "sha256": "c08e37f0e7b7585fa5b36e2460c3dc67c1a3b5db5c05fd292ee8c6dbb3f1cc48"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0274.json.gz",
+        "sha256": "1a5216e381a7d157e47efedd30999eeaac880ab6ab879280b8debc7a81a11c2e"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0277.json.gz",
+        "sha256": "85494043d76dc1db5e1b7bec87aeda1735b1fa981ed19d954c14a4ac3531d313"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0280.json.gz",
+        "sha256": "86d4e9ee87958ccdc973c48774ce72ea0178a633bf08956b905d319457309454"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0283.json.gz",
+        "sha256": "c2a92f45469e8e6a0ab880cedaf90c0ffa75310c2326f099600f7a45dde34458"
+      },
+      {
+        "path": "/data1/tzh/kernel-analyzer/results/property/joint_bias_formation_v1/liger_chunk_host/qwen3-1p7b-0286.json.gz",
+        "sha256": "db431608587503b5e5e4a56bd5132d24d35dbcedb16f2aaa616d4e520fca38a8"
+      }
+    ],
+    "protocol": {
+      "path": "/data1/tzh/kernel-analyzer/archive/nonprecision_v1/runs/liger.fused_ce.chunk.protocol.json",
+      "sha256": "1a784ab7692d0d905be2c6e6f7d5fa8b4ada27ea0ad711d12150082f44d5b4d2"
+    }
+  },
+  "causal_gates": {
+    "active_inputs_weights_labels_fixed": true,
+    "bf16_accumulator_amplifies_effect": true,
+    "bf16_accumulator_dW_directional": true,
+    "complete_local_interaction_case": true,
+    "fp32_accumulator_dW_directional": false,
+    "loss_and_active_dH_bitwise_exact_controls": true,
+    "padded_rows_and_their_vjp_exactly_zero": true,
+    "same_real_number_forward_vjp_semantics": true
+  },
+  "claim_boundary": {
+    "factor_interaction": "Physical token/chunk geometry is varied at fixed external and accumulator dtype. It produces a stable direction only with BF16 accumulation; the FP32 accumulator has a smaller but directionally incoherent residual.",
+    "not_claimed": "multi-step optimizer behavior or cross-model generalization",
+    "not_independent_case": "This is a causal refinement of the existing Liger fused-CE dW case, not a new operator or an additional property-positive mechanism.",
+    "supported": "At fixed external BF16 inputs and within each fixed accumulator-dtype stratum, mathematically ignored zero rows alter the realized Liger dW through physical token cardinality and chunk grouping; the frozen direction confirms on 24 states."
+  },
+  "denominators": {
+    "accumulator_strata": 2,
+    "all_padding_contrast_endpoint_cells": 6,
+    "closed_forward_actual_vjp_units": 124,
+    "confirmation_states": 24,
+    "directional_candidate_cells": 2,
+    "discovery_states": 7,
+    "pilot_states_excluded": 1,
+    "structural_zero_control_cells": 4
+  },
+  "directional_results": [
+    {
+      "accumulator": "bf16",
+      "bh_fdr_qvalue": 1.1920928955078125e-07,
+      "carrier_projections": [
+        0.1697825580895606,
+        0.09202157595563848,
+        0.09079682940317567,
+        0.05507555046128819,
+        0.07130998425769736,
+        0.13662087985354665,
+        0.0753823533088741,
+        0.10391785825027135,
+        0.09415382053763821,
+        0.09214570087031691,
+        0.04539106468080046,
+        0.056182405212823125,
+        0.0333646782567763,
+        0.05633175389189153,
+        0.04076340662975206,
+        0.02894548347734757,
+        0.0215617205049015,
+        0.07197025867252879,
+        0.05666066266270006,
+        0.09525733948378538,
+        0.045739409514932,
+        0.11960674385713702,
+        0.07067095542196915,
+        0.05690820662299833
+      ],
+      "cluster_bootstrap_95ci": [
+        0.061070188503539784,
+        0.08839872605891756
+      ],
+      "directional_confirmed": true,
+      "endpoint": "dW",
+      "mean_projection": 0.07419004999493128,
+      "negative": 0,
+      "nonzero_states": 24,
+      "one_sided_exact_sign_pvalue": 5.960464477539063e-08,
+      "orientation": "physical-BT256/chunk4 minus physical-BT128/chunk2",
+      "positive": 24,
+      "residual_max_abs": {
+        "max": 0.03125,
+        "mean": 0.0155029296875,
+        "min": 0.00390625
+      },
+      "residual_rms": {
+        "max": 4.785207767575816e-06,
+        "mean": 2.7120616076382787e-06,
+        "min": 1.2615697766561858e-06
+      },
+      "residual_signed_mean": {
+        "max": -1.066053528862922e-10,
+        "mean": -5.206966273527538e-10,
+        "min": -1.0950848445115212e-09
+      },
+      "tied": 0
+    },
+    {
+      "accumulator": "fp32",
+      "bh_fdr_qvalue": 0.4194098711013794,
+      "carrier_projections": [
+        -0.002406108516129394,
+        -1.2070717667538445e-05,
+        0.0001651450528031579,
+        -0.0007823709089060671,
+        0.00014451354886451447,
+        0.00918104349169324,
+        -0.0013866116595855709,
+        0.003667212992880245,
+        -0.002747222442488745,
+        0.0020496140474049983,
+        -0.001516031342079873,
+        0.0013661060145805477,
+        0.00099642082804446,
+        0.00021977818930474764,
+        0.002673388689404978,
+        0.00030333970365061923,
+        0.001781149205559056,
+        -0.0015523979442212121,
+        0.001349362883968404,
+        0.0006112471287053887,
+        -0.003819016236854311,
+        -0.001378850083417411,
+        -0.00018102365194860057,
+        -0.00435871654964688
+      ],
+      "cluster_bootstrap_95ci": [
+        -0.0008266762867469485,
+        0.0013163193857872917
+      ],
+      "directional_confirmed": false,
+      "endpoint": "dW",
+      "mean_projection": 0.00018199590516328139,
+      "negative": 11,
+      "nonzero_states": 24,
+      "one_sided_exact_sign_pvalue": 0.4194098711013794,
+      "orientation": "physical-BT256/chunk4 minus physical-BT128/chunk2",
+      "positive": 13,
+      "residual_max_abs": {
+        "max": 0.015625,
+        "mean": 0.005696614583333333,
+        "min": 0.001953125
+      },
+      "residual_rms": {
+        "max": 1.5025210856798468e-06,
+        "mean": 1.0296986476201788e-06,
+        "min": 6.79988141276381e-07
+      },
+      "residual_signed_mean": {
+        "max": 1.7308794771581703e-10,
+        "mean": 1.9956539881380847e-11,
+        "min": -1.1915659047415811e-10
+      },
+      "tied": 0
+    }
+  ],
+  "factor": {
+    "base": "128 actual hidden rows with 127 active shifted labels; physical BT=128, chunk_size=2",
+    "fixed": "actual H/W/labels, active support, Liger source, external BF16 dtype, accumulator dtype within each stratum, TF32=false",
+    "intervention": "append 128 exactly-zero hidden rows and 128 ignore_index labels; physical BT=256, chunk_size=4",
+    "name": "PHYSICAL_TOKEN_CARDINALITY_AND_CHUNK_GEOMETRY",
+    "real_number_invariant": "zero ignored rows contribute exactly zero loss, dH and dW, so active loss, active dH and dW are unchanged"
+  },
+  "mathematical_unit": {
+    "actual_vjp": [
+      "G[t,v]=(softmax(Z)[t,v]-1[v=a_t])/N",
+      "dH=G W",
+      "dW=G^T H"
+    ],
+    "candidate": "LigerFusedLinearCrossEntropyLoss custom forward and saved actual backward",
+    "closed_endpoints": [
+      "loss",
+      "dH",
+      "dW"
+    ],
+    "forward": [
+      "Z=H W^T",
+      "L=-(1/N) sum_t log(exp(Z[t,a_t])/sum_v exp(Z[t,v]))"
+    ],
+    "interpretive_reference": "FP32 evaluation of the displayed region using the exact BF16 H and W values",
+    "same_precision_reference": "BF16 eager lm_head followed by Transformers FP32 cross entropy and actual autograd",
+    "symbols": "H in R^(T x D), W in R^(V x D), targets a_t, scalar upstream q=1"
+  },
+  "schema_version": "kernel-analyzer.liger-fused-ce-chunk-certificate.v1",
+  "status": "COMPLETE",
+  "verdict": "FUSED_CE_CHUNK_GEOMETRY_BY_BF16_ACCUMULATION_DIRECTIONAL_DW_BIAS_CONFIRMED",
+  "zero_controls": {
+    "bf16.active_dH": {
+      "exact_states": 24,
+      "max_abs_across_states": 0.0,
+      "states": 24
+    },
+    "bf16.loss": {
+      "exact_states": 24,
+      "max_abs_across_states": 0.0,
+      "states": 24
+    },
+    "fp32.active_dH": {
+      "exact_states": 24,
+      "max_abs_across_states": 0.0,
+      "states": 24
+    },
+    "fp32.loss": {
+      "exact_states": 24,
+      "max_abs_across_states": 0.0,
+      "states": 24
+    }
+  }
+}

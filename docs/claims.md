@@ -74,7 +74,7 @@ Flash-style persistent-local-source cases.
 |---|---|---|---|
 | Repeated drift is not explained by a single random kick. | Repeated, support/norm-matched perturbations at every step, multiple frozen seeds, and drift-subspace analysis. | `results/property/tcmp_allop_v1/repeated_orbit_null_summary.json`; `docs/tcmp_progress.md` | `SUPPORTED`, but the result is not source-specific: repeated orbit variants retain 93.4–101.8% of natural drift with high cosine and effective rank 1.28/1.57. It supports low-dimensional closed-loop feedback and rejects “fixed schedule alone is the anchor.” |
 | The final drift direction is operator-specific. | Natural drift must separate from multiple matched perturbation directions beyond the shared low-dimensional feedback subspace. | same repeated-orbit artifacts | `NOT_SUPPORTED`. The five-seed cosine/effective-rank result shows strong shared structure; current evidence does not isolate an operator-unique direction. |
-| Liger persistence is caused by a step-invariant rounding/schedule anchor rather than error magnitude. | On the real kernel, preserve or increase error energy while removing rounding bias (RN→SR), and independently randomize chunk/order across steps. | current FP32-accumulator and chunk-geometry results in `case.md` | `OPEN`. FP32 accumulation and chunk geometry show a precision × schedule interaction, but the norm-matched SR and per-step anchor-breaking interventions have not been completed. |
+| Liger persistence is caused by a step-invariant rounding/schedule anchor rather than error magnitude. | On the real kernel, preserve or increase error energy while removing rounding bias (RN→SR), and independently randomize chunk/order across steps. | `results/property/joint_bias_formation_v1/liger_chunk_host_certificate.json`; `results/property/joint_bias_formation_v1/phi_sr_intervention.json` | `BOUNDED`. The real 24-state chunk-geometry intervention confirms BF16 24/24 directional versus FP32 13/11 and RMS ratio 2.63384. A true Liger RN→SR or per-step order-randomization intervention is still open; Phi SR is not a substitute. |
 | Feedback is a separate causal channel. | Local source is null-like; feedback recurrence is persistent; stateless/moment-reset optimizer controls remove it. | Gemma artifacts in `docs/tcmp_progress.md` | `SUPPORTED_CASE_LEVEL`. Predictor F is not frozen; feedback remains outside the source Oracle’s domain. |
 | OLMoE routing flips do not contaminate its control. | Record route indices/weights in both arms for every measured state. | OLMoE section of `docs/tcmp_progress.md` | `SUPPORTED`: routing indices and weights matched in all 26 states. The result is a backward-visible canceling control, not a case. |
 
@@ -130,5 +130,10 @@ Phi SR intervention is now complete: RN has amplification `3.325`, while four
 SR repeats have mean amplification `0.956` and carrier capture below `0.02`.
 The endpoint noise is not smaller, but effective-update energy is not exactly
 norm-matched, so this is causal source evidence with an explicit boundary,
-not a perfect matched-norm proof.  The real Liger SR/order-breaking and the
-held-out predictor campaign remain open.
+not a perfect matched-norm proof.  A host-GPU 32-state Liger formation rerun
+also completed; its calibration local population was directional but the
+confirmation population stayed unresolved under the frozen gate.  Separately,
+the real 24-state Liger chunk-geometry intervention confirmed BF16 `24/24`
+same-sign projections versus FP32 `13/11` and a BF16/FP32 residual-RMS ratio
+of `2.63384`.  A true Liger SR and per-step order-randomization intervention,
+plus the held-out predictor campaign, remain open.
