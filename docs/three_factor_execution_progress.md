@@ -9,6 +9,7 @@ This document records the execution state after the metric and replay audit. It 
 - Phi was recaptured on 16 states. The response-odd population is directionally biased (`cross_state_ratio=0.7747391992`), while response-even is centered (`-0.0056745431`). The reflected BF16 endpoint is not exactly representable (relative error `0.03856–0.07613`), so the run is `UNRESOLVED_REPRESENTABILITY`, not a causal intervention.
 - Saved-P response vectors were streamed over 32 repair-trajectory steps. Both even and odd response populations are centered across that trajectory; this is a trajectory-conditioned response certificate, not a common-state formation verdict.
 - Saved-P was then recaptured on the frozen 16+16 open-loop common-state split. Local, gradient, and effective-update layers are centered in both partitions; the offline zero-moment AdamW reflected-gradient even/odd response is also centered in both partitions. This is a bounded response measurement, not an exact source antithetic intervention.
+- The existing Phi row-permutation intervention remains a case-level transport result: natural gradient cross-state ratio `0.67535` versus shuffled `0.10834`. It supports the importance of residual/transport pairing for this Phi boundary, but does not close a universal VJP decomposition.
 
 ## What this changes
 
