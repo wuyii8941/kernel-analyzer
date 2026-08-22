@@ -1,0 +1,99 @@
+{
+  "complete_artifact_count": 9,
+  "decision": "The current plan covers every experiment needed for the bounded bias+operator+Oracle mainline. It must report the four boundaries above instead of promoting them to a universal property.",
+  "items": [
+    {
+      "artifact": "results/property/joint_bias_formation_v1/phi_three_stage_reference.json",
+      "note": "Phi: output error, parameter-gradient error, and effective-update error on one ordered 32-state reference trajectory.",
+      "sha256": "4a69f028bece1832f520a44f3b7b8d27a387527f8662875ca587b3132739800d",
+      "status": "COMPLETE"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/liger_three_stage_reference.json",
+      "note": "Liger: the same three stages on one tied-embedding carrier.",
+      "sha256": "3d62ebc5e6fb4a6295bfdebf30730d88c73eb7c1285426eb3233bb1b889ce289",
+      "status": "COMPLETE"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/qwen_three_stage_reference.json",
+      "note": "Qwen: local output error is near diffusive while directionality appears after backward transport.",
+      "sha256": "8260d3580fae4fd4b4e771f4c8bfc21bd0e8a39600bb7824117afe75afb04bce",
+      "status": "COMPLETE"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/three_stage_summary.json",
+      "note": "Unified table for the three-stage operator -> gradient -> update comparison.",
+      "sha256": "31fb00f4c2751a505e0e6bba908922ead248a6f30fb7d56ff866c092f2ef9347",
+      "status": "COMPLETE"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/carrier_distribution/merged_v2/distribution.json",
+      "note": "Phi parameter-carrier distribution: one declared anchor plus eleven outcome-blind positions.",
+      "sha256": "12a6e414586650e266b8bd0a4234640abf7b34b5b69e45bd6ac9ec3ae66c1727",
+      "status": "COMPLETE"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/carrier_distribution/merged_v2/loss_unseen_fp32.json",
+      "note": "Unseen-data common FP32 loss for carrier candidate/repair pairs.",
+      "sha256": "3fbf9ee2540587849a5a22475b5aee62e5e44bd6430c5550763bf735041a5800",
+      "status": "COMPLETE"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/four_scale_arms/phi_lmhead_with_masters.json",
+      "note": "Four-arm 32-step reference: operator, seed, data order, and precision.",
+      "sha256": "16d3344e2770446fa0906b35003adec6c81562512a86d646475d6184eae7f016",
+      "status": "COMPLETE"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/four_scale_arms/loss_unseen_fp32.json",
+      "note": "Common unseen-data FP32 loss for the four-arm final weights.",
+      "sha256": "5ccc17fcd4af5ae7c44347c3ac9434dc569be1cc7e0442723a7c640e154ee3b3",
+      "status": "COMPLETE"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/oracle_baselines/comparison.json",
+      "note": "Frozen 12-row Oracle versus RMS, dtype, and reduction baselines; one local positive.",
+      "sha256": "4fd75e184f19d603312549cba5a3571f7c8ddd25171092ae9abadb3e6883c8b6",
+      "status": "COMPLETE_RETROSPECTIVE"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/oracle_baselines/efficiency.json",
+      "note": "Measured flag rate, recall, false-positive rate, and AUROC; runtime savings remain explicitly unresolved.",
+      "sha256": "5e0580db350ed9180190da6e02210358519a398560775a6eed4cf52660c32874",
+      "status": "COMPLETE_RETROSPECTIVE"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/consequence_summary.json",
+      "note": "Twelve screen-negative live consequence runs; this separates common feedback drift from local source persistence.",
+      "sha256": "b037cad3ffe7d66243f05dbc551f55caea6aafa7fa606c08df4ea3213640fff0",
+      "status": "COMPLETE"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/heldout_confirmation.json",
+      "note": "Held-out source-negative confirmation exists, but the full joint predictor remains unresolved.",
+      "sha256": "2c105a4877953fbae43bd44257515d5a0167a29d4d4e1e4a105d63d0fe7515b3",
+      "status": "PARTIAL_BOUNDED"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/mu_parity_decomposition.json",
+      "note": "Saved-P and SiLU response replay exists; generic raw-vector even/odd coverage is not available for every case.",
+      "sha256": "6102df3a5b8ab1b8a81dcdae04b69619176753d4ad7d5aefcb1aa26c92419606",
+      "status": "PARTIAL_BOUNDED"
+    },
+    {
+      "artifact": "results/property/joint_bias_formation_v1/execution_status.json",
+      "note": "Legacy status still lists older open items; this audit does not silently relabel those items as complete.",
+      "sha256": "8bd77c1872a773be24ba652175ca77d5a45dadd5b53233d2a4c2def8844d161d",
+      "status": "STALE_LEGACY_STATUS"
+    }
+  ],
+  "remaining_boundaries": [
+    "The generic raw epsilon/+epsilon/-epsilon replay is not complete for every historical case; missing replay inputs remain UNRESOLVED.",
+    "The held-out full joint predictor is unresolved; held-out source-negative evidence is bounded, not universal confirmation.",
+    "GPU-hour savings are not claimed because wall-clock accounting was not frozen for every screen row.",
+    "All three-stage and four-arm results are carrier-scale or declared-parameter results, not full-parameter training."
+  ],
+  "schema": "kernel-analyzer-joint-bias-plan-audit-v2",
+  "scope": "bias formation, operator-level error transport, persistence screening, and Oracle efficiency; no new property search",
+  "status": "COMPLETE_WITH_EXPLICIT_BOUNDARIES"
+}

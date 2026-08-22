@@ -69,6 +69,14 @@ def main() -> None:
         ),
         "input_layernorm_depths": input_depths,
         "post_attention_layernorm_depths": post_depths,
+        # The final norm is a previously studied positive anchor.  It is kept
+        # in the distribution for calibration, but must never be described as
+        # outcome-blind.  The other eleven locations are selected without
+        # reading candidate measurements or historical verdicts.
+        "known_anchor_carriers": ["model.norm.weight"],
+        "outcome_blind_carriers": [row["carrier"] for row in rows if row["carrier"] != "model.norm.weight"],
+        "known_anchor_count": 1,
+        "outcome_blind_count": 11,
         "uses_candidate_values": False,
         "uses_historical_persistence": False,
         "uses_case_names_to_select_depth": False,
@@ -78,11 +86,16 @@ def main() -> None:
     ).hexdigest()
     payload = {
         "schema": "kernel-analyzer-phi-carrier-distribution-manifest-v1",
-        "status": "FROZEN_BEFORE_GPU_MEASUREMENT",
+        "status": "FROZEN_BEFORE_GPU_MEASUREMENT_WITH_ANCHOR_DECLARED",
         "selection": selection,
         "carrier_count": len(rows),
         "carriers": rows,
         "selection_sha256": digest,
+        "premeasurement_correction": {
+            "supersedes": "carrier_distribution/manifest.json",
+            "reason": "The previous manifest called all twelve rows outcome-blind even though model.norm.weight was a known historical anchor.",
+            "gpu_science_results_before_correction": False,
+        },
         "protocol": {
             "steps": 32,
             "optimizer": "SGD_FP32_MASTER",

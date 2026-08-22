@@ -10,6 +10,7 @@ not full-parameter training.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -60,11 +61,23 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--release-dir",
+        type=Path,
+        default=ROOT / "results/coverage/runtime_releases/phi4_seq64_r1",
+        help="runtime release produced in the same environment as this run",
+    )
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--shard", type=int, required=True)
     parser.add_argument("--shard-count", type=int, default=4)
     parser.add_argument("--steps", type=int, choices=(2, 32), default=32)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
+    parser.add_argument(
+        "--final-dir",
+        type=Path,
+        default=None,
+        help="optional /data1 directory for final candidate/repair carrier masters",
+    )
     args = parser.parse_args()
 
     manifest = json.loads(args.manifest.read_text())
@@ -94,9 +107,7 @@ def main() -> None:
     step(warm).backward()
     torch.cuda.synchronize(device)
     modules = list(PyCodeCache.modules[start:])
-    capture = json.loads((
-        ROOT / "results/coverage/runtime_releases/phi4_seq64_r1/capture.json"
-    ).read_text())
+    capture = json.loads((args.release_dir / "capture.json").read_text())
     validate_release(wrapper_modules(modules), capture)
     parameters = dict(model.named_parameters())
     missing = [row["carrier"] for row in selected if row["carrier"] not in parameters]
@@ -104,6 +115,8 @@ def main() -> None:
         raise RuntimeError(f"frozen carriers are absent: {missing}")
 
     records = []
+    if args.final_dir is not None:
+        args.final_dir.mkdir(parents=True, exist_ok=True)
     for item in selected:
         name = item["carrier"]
         parameter = parameters[name]
@@ -147,12 +160,26 @@ def main() -> None:
             parameter.copy_(original.to(parameter.dtype))
         torch.cuda.synchronize(device)
         elapsed = time.monotonic() - carrier_start
+        final_masters = None
+        if args.final_dir is not None and args.steps == 32:
+            safe_name = name.replace(".", "__")
+            candidate_path = args.final_dir / f"{safe_name}.candidate.pt"
+            repair_path = args.final_dir / f"{safe_name}.repair.pt"
+            torch.save(candidate_master.cpu(), candidate_path)
+            torch.save(repair_master.cpu(), repair_path)
+            final_masters = {
+                "candidate_path": str(candidate_path),
+                "repair_path": str(repair_path),
+                "candidate_sha256": hashlib.sha256(candidate_path.read_bytes()).hexdigest(),
+                "repair_sha256": hashlib.sha256(repair_path.read_bytes()).hexdigest(),
+            }
         result = {
             **item,
             "coordinates": parameter.numel(),
             "measurement": summarize(increments) if args.steps == 32 else None,
             "elapsed_seconds": elapsed,
             "f_and_b_calls": 2 * args.steps,
+            "final_masters": final_masters,
             "records": step_rows,
         }
         records.append(result)
@@ -167,6 +194,7 @@ def main() -> None:
         "schema": "kernel-analyzer-phi-carrier-distribution-shard-v1",
         "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
         "manifest": str(args.manifest),
+        "runtime_release": str(args.release_dir),
         "selection_sha256": manifest["selection_sha256"],
         "shard": args.shard,
         "shard_count": args.shard_count,

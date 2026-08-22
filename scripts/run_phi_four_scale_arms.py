@@ -9,6 +9,7 @@ through one evolving parameter, not a claim about full-parameter training.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -90,7 +91,11 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=(
         ROOT / "results/property/joint_bias_formation_v1/four_scale_arms/phi_lmhead.json"
     ))
+    parser.add_argument("--final-dir", type=Path, default=None)
+    parser.add_argument("--release-dir", type=Path, default=ROOT / "results/coverage/runtime_releases/phi4_seq64_r1")
     args = parser.parse_args()
+    if args.final_dir is not None:
+        args.final_dir.mkdir(parents=True, exist_ok=True)
     bank = json.loads((ROOT / "results/coverage/phi4_seq64_input_bank.json").read_text())
     states = list(bank.get("states", bank.get("records")))[:args.steps]
     if len(states) != args.steps:
@@ -112,9 +117,7 @@ def main() -> None:
     bf16_model.zero_grad(set_to_none=True); bf16_step(warm).backward()
     torch.cuda.synchronize(bf16_device)
     modules = list(PyCodeCache.modules[start:])
-    capture = json.loads((
-        ROOT / "results/coverage/runtime_releases/phi4_seq64_r1/capture.json"
-    ).read_text())
+    capture = json.loads((args.release_dir / "capture.json").read_text())
     validate_release(wrapper_modules(modules), capture)
     bf16_parameter = resolve_parameter(bf16_model, args.carrier)
 
@@ -222,6 +225,13 @@ def main() -> None:
         "NOT_INFORMATIVE_ZERO_RNG_SENSITIVITY" if metrics["B"]["zero_perturbation"]
         else "MEASURED_RNG_SENSITIVITY"
     )
+    final_masters = None
+    if args.final_dir is not None and args.steps == 32:
+        final_masters = {}
+        for name, value in masters.items():
+            path = args.final_dir / f"{name}.pt"
+            torch.save(value.cpu(), path)
+            final_masters[name] = {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
     payload = {
         "schema": "kernel-analyzer-four-scale-arms-v1",
         "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
@@ -234,6 +244,7 @@ def main() -> None:
             "C_data_order": metrics["C"], "D_precision": metrics["D"],
         },
         "records": rows,
+        "final_masters": final_masters,
         "protocol": {
             "optimizer": "SGD_FP32_MASTER", "learning_rate": args.learning_rate,
             "data_order_permutation": alternate_order,

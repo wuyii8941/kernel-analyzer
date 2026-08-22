@@ -1,0 +1,146 @@
+{
+  "carrier_count": 12,
+  "carriers": [
+    {
+      "carrier": "model.norm.weight",
+      "index": 0,
+      "layer_index": null,
+      "shard": 0,
+      "stratum": "FINAL_NORM"
+    },
+    {
+      "carrier": "model.layers.0.input_layernorm.weight",
+      "index": 1,
+      "layer_index": 0,
+      "shard": 1,
+      "stratum": "INPUT_LAYERNORM"
+    },
+    {
+      "carrier": "model.layers.6.input_layernorm.weight",
+      "index": 2,
+      "layer_index": 6,
+      "shard": 2,
+      "stratum": "INPUT_LAYERNORM"
+    },
+    {
+      "carrier": "model.layers.12.input_layernorm.weight",
+      "index": 3,
+      "layer_index": 12,
+      "shard": 3,
+      "stratum": "INPUT_LAYERNORM"
+    },
+    {
+      "carrier": "model.layers.19.input_layernorm.weight",
+      "index": 4,
+      "layer_index": 19,
+      "shard": 0,
+      "stratum": "INPUT_LAYERNORM"
+    },
+    {
+      "carrier": "model.layers.25.input_layernorm.weight",
+      "index": 5,
+      "layer_index": 25,
+      "shard": 1,
+      "stratum": "INPUT_LAYERNORM"
+    },
+    {
+      "carrier": "model.layers.31.input_layernorm.weight",
+      "index": 6,
+      "layer_index": 31,
+      "shard": 2,
+      "stratum": "INPUT_LAYERNORM"
+    },
+    {
+      "carrier": "model.layers.0.post_attention_layernorm.weight",
+      "index": 7,
+      "layer_index": 0,
+      "shard": 3,
+      "stratum": "POST_ATTENTION_LAYERNORM"
+    },
+    {
+      "carrier": "model.layers.8.post_attention_layernorm.weight",
+      "index": 8,
+      "layer_index": 8,
+      "shard": 0,
+      "stratum": "POST_ATTENTION_LAYERNORM"
+    },
+    {
+      "carrier": "model.layers.16.post_attention_layernorm.weight",
+      "index": 9,
+      "layer_index": 16,
+      "shard": 1,
+      "stratum": "POST_ATTENTION_LAYERNORM"
+    },
+    {
+      "carrier": "model.layers.23.post_attention_layernorm.weight",
+      "index": 10,
+      "layer_index": 23,
+      "shard": 2,
+      "stratum": "POST_ATTENTION_LAYERNORM"
+    },
+    {
+      "carrier": "model.layers.31.post_attention_layernorm.weight",
+      "index": 11,
+      "layer_index": 31,
+      "shard": 3,
+      "stratum": "POST_ATTENTION_LAYERNORM"
+    }
+  ],
+  "premeasurement_correction": {
+    "gpu_science_results_before_correction": false,
+    "reason": "The previous manifest called all twelve rows outcome-blind even though model.norm.weight was a known historical anchor.",
+    "supersedes": "carrier_distribution/manifest.json"
+  },
+  "protocol": {
+    "all_other_parameters_frozen": true,
+    "contrast": "candidate lm_head dX MM versus matched FP32-accumulation repair",
+    "learning_rate": 0.001,
+    "only_one_declared_carrier_evolves_per_trajectory": true,
+    "optimizer": "SGD_FP32_MASTER",
+    "steps": 32
+  },
+  "schema": "kernel-analyzer-phi-carrier-distribution-manifest-v1",
+  "selection": {
+    "endpoint": "phi4_seq64_lmhead_dx_mm",
+    "input_layernorm_depths": [
+      0,
+      6,
+      12,
+      19,
+      25,
+      31
+    ],
+    "known_anchor_carriers": [
+      "model.norm.weight"
+    ],
+    "known_anchor_count": 1,
+    "model": "microsoft/Phi-4-mini-instruct",
+    "outcome_blind_carriers": [
+      "model.layers.0.input_layernorm.weight",
+      "model.layers.6.input_layernorm.weight",
+      "model.layers.12.input_layernorm.weight",
+      "model.layers.19.input_layernorm.weight",
+      "model.layers.25.input_layernorm.weight",
+      "model.layers.31.input_layernorm.weight",
+      "model.layers.0.post_attention_layernorm.weight",
+      "model.layers.8.post_attention_layernorm.weight",
+      "model.layers.16.post_attention_layernorm.weight",
+      "model.layers.23.post_attention_layernorm.weight",
+      "model.layers.31.post_attention_layernorm.weight"
+    ],
+    "outcome_blind_count": 11,
+    "post_attention_layernorm_depths": [
+      0,
+      8,
+      16,
+      23,
+      31
+    ],
+    "rule": "final norm plus six input-layernorm depths round(linspace(0,31,6)) and five post-attention-layernorm depths round(linspace(0,31,5))",
+    "uses_candidate_values": false,
+    "uses_case_names_to_select_depth": false,
+    "uses_historical_persistence": false
+  },
+  "selection_sha256": "6a68a5bba7bc298b030790bf3daeaaaecaa83ec675f05d47537c27a5dd9930be",
+  "status": "FROZEN_BEFORE_GPU_MEASUREMENT_WITH_ANCHOR_DECLARED"
+}

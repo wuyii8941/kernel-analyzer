@@ -59,3 +59,27 @@ This round strengthens three bounded claims:
 
 It does **not** establish a universal all-operator property, a universal joint
 predictor, or a full-parameter Golden-style BF16/FP32 training comparison.
+
+## Three-stage operator-to-update check
+
+The current round also measures the same 32-step ordered reference trajectory
+at three separate points: operator output error, parameter-gradient error, and
+effective parameter-update error.  The final coherence values are:
+
+| case | operator output | parameter gradient | effective update |
+|---|---:|---:|---:|
+| Liger fused CE | 2.984 | 2.931 | 2.931 |
+| Phi lm_head dX | 2.074 | 4.701 | 4.701 |
+| Qwen lm_head dX | 1.008 | 1.698 | 1.698 |
+
+This separates two claims that were previously easy to confuse.  Liger is
+already directional at the local operator boundary.  Phi and Qwen are much
+less directional at that boundary, but the difference becomes directional
+after the backward pass reaches the parameter gradient.  These are carrier-
+scale measurements, not full-model training claims.
+
+The four-arm final weights were also evaluated on a common unseen FP32 loss
+path.  The operator, data-order, and precision arms have absolute loss gaps of
+`3.74e-6`, `5.59e-8`, and `1.26e-5`, respectively; the seed arm is zero because
+the tested Phi configuration has no dropout.  This is a downstream consequence
+check, not a new case label.
