@@ -23,6 +23,8 @@ def test_four_counterfactual_recurrence_is_computed_by_library():
     assert result["rows"][0]["feedback_effect"]["signed_value"] == 0.0
     assert result["rows"][0]["actual_drift_increment"]["signed_value"] == 1.0
     assert result["rows"][0]["recurrence_residual"]["norm"] == 0.0
+    assert result["rows"][0]["local_effect"]["vector_digest"]
+    assert result["rows"][0]["feedback_effect"]["vector_digest"]
     assert result["first_confirmed_bias_stage"] is None
 
 
@@ -57,3 +59,18 @@ def test_fake_recurrence_residual_is_not_an_input():
         pass
     else:
         raise AssertionError("recurrence_residual must not be accepted by v2.1 API")
+
+
+def test_counterfactual_digest_mismatch_fails_closed():
+    trace = BiasConsequenceTrace("toy", ["0"])
+    bad = {"vector": [1.0, 0.0], "signed_value": 1.0, "vector_digest": "wrong"}
+    trace.add(
+        "0",
+        candidate_at_candidate_state=bad,
+        repair_at_candidate_state=arm(0.0),
+        candidate_at_repair_state=arm(1.0),
+        repair_at_repair_state=arm(0.0),
+        drift_before=arm(0.0),
+        drift_after=arm(1.0),
+    )
+    assert trace.finalize()["status"] == ConsequenceStatus.INVALID_MALFORMED

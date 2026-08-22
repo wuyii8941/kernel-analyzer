@@ -35,6 +35,7 @@ from kernel_analyzer.bias_formation_v21 import (  # noqa: E402
     FormationStatus,
     summarize_streamed_state_vector_files,
 )
+from kernel_analyzer.antithetic import reflected_endpoint  # noqa: E402
 from kernel_analyzer.reference_relative_oracle import (  # noqa: E402
     ReferenceRelativeObservation,
     certify_reference_relative,
@@ -216,6 +217,18 @@ def main() -> None:
     parser.add_argument("--screening-gram", action="store_true")
     parser.add_argument("--extended-confirmation", action="store_true")
     parser.add_argument("--allow-graph-breaks", action="store_true")
+    parser.add_argument(
+        "--capture-antithetic-response", action="store_true",
+        help="Run an additional reflected-endpoint arm and summarize F(+epsilon)/F(-epsilon).",
+    )
+    parser.add_argument(
+        "--retain-replay-dir", type=Path,
+        help="Optional /data1 directory for endpoint candidate/reference/residual replay tensors.",
+    )
+    parser.add_argument(
+        "--antithetic-dry-run", action="store_true",
+        help="Two-state engineering run; validates replay/repair but emits no population verdict.",
+    )
     args = parser.parse_args()
     # Inventory/build scripts use the descriptive model key ``deepseek8b``;
     # the shared model loader historically used ``deepseek8``.  Normalize the
@@ -224,9 +237,16 @@ def main() -> None:
         args.architecture = "deepseek8"
     if args.engineering_reach_only and args.screening_gram:
         raise ValueError("engineering reach and screening Gram are distinct modes")
+    if args.capture_antithetic_response and (
+            args.engineering_reach_only or args.screening_gram):
+        raise ValueError("antithetic response capture requires a formal formation run")
     if (not args.engineering_reach_only and not args.screening_gram
+            and not args.antithetic_dry_run
             and not args.extended_confirmation and args.states != 32):
         raise ValueError("v2.1 formation requires frozen 16+16 states")
+    if args.antithetic_dry_run and (
+            not args.capture_antithetic_response or args.states != 2):
+        raise ValueError("antithetic dry run requires response capture and exactly two states")
     if args.extended_confirmation and (
             args.engineering_reach_only or args.screening_gram or args.states < 64
             or args.states % 2):
@@ -348,12 +368,22 @@ def main() -> None:
     reference_relative: dict[str, list[dict[str, Any]]] = {
         task_id: [] for task_id in task_ids
     }
+    response_rows: dict[str, dict[str, list[dict[str, Any]]]] = {
+        task_id: {layer: [] for layer in ("RESPONSE_EVEN", "RESPONSE_ODD")}
+        for task_id in task_ids
+    }
+    response_representability: dict[str, list[dict[str, Any]]] = {
+        task_id: [] for task_id in task_ids
+    }
     reach_rows: dict[str, list[dict[str, Any]]] = {task_id: [] for task_id in task_ids}
     args.spool_dir.mkdir(parents=True, exist_ok=True)
 
     for state_index, state in enumerate(states[:args.states]):
         state_id = str(state.get("state_id", state.get("sequence_id", state_index)))
-        split_index = args.states // 2 if args.extended_confirmation else 16
+        split_index = (
+            1 if args.antithetic_dry_run
+            else args.states // 2 if args.extended_confirmation else 16
+        )
         partition = "calibration" if state_index < split_index else "confirmation"
         tokens = state.get("input_ids", state.get("token_ids"))
         values = torch.tensor([tokens], dtype=torch.long, device=device)
@@ -449,6 +479,91 @@ def main() -> None:
             repair_gradient = parameters[carrier].grad.detach().float().cpu().clone()
             gradient_delta = baseline_gradients[carrier] - repair_gradient
             update_delta = -LR * gradient_delta
+            if args.capture_antithetic_response:
+                reflected: dict[str, Any] = {}
+
+                def reflected_sink(observed_id: str, tensor: torch.Tensor,
+                                   _metadata: Any) -> None:
+                    if observed_id != task_id or reflected:
+                        raise RuntimeError("antithetic endpoint identity drifted")
+                    reference_value = align_reference_to_candidate(
+                        references[observed_id], tensor
+                    )
+                    candidate_value = tensor.detach().clone()
+                    realized, exact, representation_error = reflected_endpoint(
+                        candidate_value, reference_value
+                    )
+                    epsilon = (
+                        candidate_value.detach().double()
+                        - reference_value.detach().double()
+                    )
+                    tensor.copy_(realized)
+                    reflected.update({
+                        "relative_error": representation_error,
+                        "exact": exact,
+                        "candidate": candidate_value.detach().cpu(),
+                        "reference": reference_value.detach().cpu(),
+                        "epsilon": epsilon.detach().cpu(),
+                        "realized_minus": realized.detach().cpu(),
+                    })
+
+                torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
+                model.zero_grad(set_to_none=True)
+                antithetic = SameDtypeSemanticCandidateObserver(
+                    modules=modules, campaign_rows=campaign["rows"],
+                    inventory_rows=inventory["runtime_call_audit"]["rows"],
+                    task_rows=[task], sink=reflected_sink,
+                    include_unresolved_tasks=True)
+                with antithetic:
+                    antithetic_loss = candidate(values); antithetic_loss.backward()
+                torch.cuda.synchronize(device); antithetic.validate()
+                if parameters[carrier].grad is None or not reflected:
+                    raise RuntimeError("antithetic arm did not reach the carrier")
+                minus_gradient = parameters[carrier].grad.detach().float().cpu().clone()
+                plus_response = baseline_gradients[carrier] - repair_gradient
+                minus_response = minus_gradient - repair_gradient
+                response_even = 0.5 * (plus_response + minus_response)
+                response_odd = 0.5 * (plus_response - minus_response)
+                response_rows[task_id]["RESPONSE_EVEN"].append(spool_vector(
+                    args.spool_dir, str(case.get("case_id", task_id.replace(":", "_"))),
+                    "response_even", partition, state_id, response_even,
+                ))
+                response_rows[task_id]["RESPONSE_ODD"].append(spool_vector(
+                    args.spool_dir, str(case.get("case_id", task_id.replace(":", "_"))),
+                    "response_odd", partition, state_id, response_odd,
+                ))
+                response_representability[task_id].append({
+                    "state_id": state_id,
+                    "partition": partition,
+                    "exact": reflected["exact"],
+                    "relative_error": reflected["relative_error"],
+                })
+                if args.retain_replay_dir is not None:
+                    replay_target = (
+                        args.retain_replay_dir
+                        / str(case.get("case_id", task_id.replace(":", "_")))
+                        / f"{state_id}.pt"
+                    )
+                    replay_target.parent.mkdir(parents=True, exist_ok=True)
+                    temporary = replay_target.with_name("." + replay_target.name + ".tmp")
+                    torch.save({
+                        "schema": "kernel-analyzer-endpoint-antithetic-replay-v1",
+                        "case_id": str(case.get("case_id", task_id.replace(":", "_"))),
+                        "task_id": task_id, "state_id": state_id,
+                        "candidate": reflected["candidate"],
+                        "reference": reflected["reference"],
+                        "epsilon": reflected["epsilon"],
+                        "realized_minus": reflected["realized_minus"],
+                        "plus_gradient_response": plus_response,
+                        "minus_gradient_response": minus_response,
+                        "representability": {
+                            "exact": reflected["exact"],
+                            "relative_error": reflected["relative_error"],
+                        },
+                    }, temporary)
+                    temporary.replace(replay_target)
+                del minus_gradient, plus_response, minus_response
+                del response_even, response_odd
             gradient_delta_flat = gradient_delta.double().reshape(-1)
             repair_gradient_flat = repair_gradient.double().reshape(-1)
             reference_relative[task_id].append({
@@ -500,6 +615,40 @@ def main() -> None:
                           "cases": len(cases)}), flush=True)
         del values, baseline_gradients, references
         torch.cuda.empty_cache()
+
+    if args.antithetic_dry_run:
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema": "kernel-analyzer-antithetic-engineering-dry-run-v1",
+            "status": "ENGINEERING_ONLY_NO_BIAS_VERDICT",
+            "architecture": args.architecture,
+            "state_count": args.states,
+            "cases": [{
+                "case_id": str(case.get("case_id", str(case["task_id"]).replace(":", "_"))),
+                "task_id": str(case["task_id"]),
+                "carrier": str(case["carrier"]),
+                "formation_vector_counts": {
+                    layer: len(rows[str(case["task_id"])][layer])
+                    for layer in ("LOCAL_ENDPOINT", "PARAMETER_GRADIENT", "EFFECTIVE_UPDATE")
+                },
+                "response_vector_counts": {
+                    layer: len(response_rows[str(case["task_id"])][layer])
+                    for layer in ("RESPONSE_EVEN", "RESPONSE_ODD")
+                },
+                "representability": response_representability[str(case["task_id"])],
+            } for case in cases],
+            "replay_tensors_retained": args.retain_replay_dir is not None,
+            "replay_dir": None if args.retain_replay_dir is None else str(args.retain_replay_dir),
+            "claim_boundary": "Engineering validation only; no centered/biased/persistence verdict.",
+        }
+        target = args.output_dir / "antithetic_engineering.json"
+        target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        shutil.rmtree(args.spool_dir)
+        print(json.dumps({
+            "event": "ANTITHETIC_ENGINEERING_COMPLETE", "output": str(target),
+            "cases": len(cases),
+        }), flush=True)
+        return
 
     if args.engineering_reach_only:
         args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -610,6 +759,29 @@ def main() -> None:
                     "reason": str(exc),
                     "rows": relative_rows,
                 }
+        response_populations: dict[str, dict[str, Any]] = {
+            "calibration": {}, "confirmation": {},
+        }
+        representability_rows = response_representability[task_id]
+        if args.capture_antithetic_response:
+            for partition in response_populations:
+                for layer in ("RESPONSE_EVEN", "RESPONSE_ODD"):
+                    selected = [
+                        row for row in response_rows[task_id][layer]
+                        if partition in Path(row["path"]).parts
+                    ]
+                    certificate = summarize_streamed_state_vector_files(
+                        selected, layer=layer, partition=partition, policy=policy,
+                    )
+                    response_populations[partition][layer] = certificate.as_dict()
+                    response_populations[partition][layer + "_status"] = certificate.status
+            antithetic_status = (
+                "COMPLETE_EXACT_ANTITHETIC"
+                if representability_rows and all(row["exact"] for row in representability_rows)
+                else "UNRESOLVED_REPRESENTABILITY"
+            )
+        else:
+            antithetic_status = "NOT_REQUESTED"
         confirmation = [populations["confirmation"][layer + "_status"]
                         for layer in ("LOCAL_ENDPOINT", "PARAMETER_GRADIENT", "EFFECTIVE_UPDATE")]
         first_observed = next((layer for layer, status in zip(
@@ -651,6 +823,31 @@ def main() -> None:
             "reference_relative_parameter_gradient": (
                 reference_relative_certificates
             ),
+            "antithetic_response": {
+                "status": antithetic_status,
+                "populations": response_populations,
+                "representability": {
+                    "state_count": len(representability_rows),
+                    "exact_all_states": bool(
+                        representability_rows
+                        and all(row["exact"] for row in representability_rows)
+                    ),
+                    "relative_error_min": (
+                        min(row["relative_error"] for row in representability_rows)
+                        if representability_rows else None
+                    ),
+                    "relative_error_max": (
+                        max(row["relative_error"] for row in representability_rows)
+                        if representability_rows else None
+                    ),
+                    "rows": representability_rows,
+                },
+                "claim_boundary": (
+                    "F(+epsilon)/F(-epsilon) uses the same full backward and "
+                    "declared carrier. A non-exact reflected endpoint remains "
+                    "diagnostic and cannot be promoted to a matched causal arm."
+                ),
+            },
             "first_observed_biased_stage": first_observed,
             "first_confirmed_bias_stage": first_confirmed,
             "formation_point": "CONFIRMED" if first_confirmed and top_status == FormationStatus.COMPLETE.value else "UNRESOLVED",
@@ -664,7 +861,10 @@ def main() -> None:
             },
             "capture_provenance": {"runner": "scripts/capture_bound_endpoint_bias_formation_v21.py",
                                    "device": args.device, "raw_vectors_retained": False,
-                                   "optimizer": "STATELESS_SGD_FP32_MASTER", "learning_rate": LR},
+                                   "optimizer": "STATELESS_SGD_FP32_MASTER", "learning_rate": LR,
+                                   "antithetic_response_requested": args.capture_antithetic_response,
+                                   "replay_tensors_retained": args.retain_replay_dir is not None,
+                                   "replay_dir": None if args.retain_replay_dir is None else str(args.retain_replay_dir)},
         }
         target = args.output_dir / f"{case_id}.json"
         target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")

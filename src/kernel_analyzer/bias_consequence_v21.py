@@ -42,7 +42,17 @@ class UpdateValue:
             raise ValueError("counterfactual signed projection is nonfinite")
         digest = hashlib.sha256(json.dumps(vector, separators=(",", ":")).encode()).hexdigest()
         supplied = str(value.get("vector_digest", digest))
-        return cls(vector, signed, supplied)
+        if supplied != digest:
+            raise ValueError("counterfactual vector digest does not match the vector")
+        return cls(vector, signed, digest)
+
+    @classmethod
+    def from_vector(cls, vector: Sequence[float], signed_value: float) -> "UpdateValue":
+        values = tuple(float(x) for x in vector)
+        digest = hashlib.sha256(
+            json.dumps(values, separators=(",", ":")).encode()
+        ).hexdigest()
+        return cls(values, float(signed_value), digest)
 
     @property
     def norm(self) -> float:
@@ -52,20 +62,16 @@ class UpdateValue:
         if len(self.vector) != len(other.vector):
             raise ValueError("counterfactual coordinate sets differ")
         vector = tuple(a - b for a, b in zip(self.vector, other.vector))
-        return UpdateValue(
-            vector=vector,
-            signed_value=self.signed_value - other.signed_value,
-            vector_digest=hashlib.sha256(json.dumps(vector, separators=(",", ":")).encode()).hexdigest(),
+        return UpdateValue.from_vector(
+            vector, self.signed_value - other.signed_value
         )
 
     def plus(self, other: "UpdateValue") -> "UpdateValue":
         if len(self.vector) != len(other.vector):
             raise ValueError("counterfactual coordinate sets differ")
         vector = tuple(a + b for a, b in zip(self.vector, other.vector))
-        return UpdateValue(
-            vector=vector,
-            signed_value=self.signed_value + other.signed_value,
-            vector_digest=hashlib.sha256(json.dumps(vector, separators=(",", ":")).encode()).hexdigest(),
+        return UpdateValue.from_vector(
+            vector, self.signed_value + other.signed_value
         )
 
     def as_dict(self, include_vector: bool = False) -> Dict[str, Any]:
@@ -138,15 +144,13 @@ class BiasConsequenceTrace:
             feedback_repair = rc.difference(rr)
             # Symmetric decomposition makes the source/feedback convention
             # explicit while preserving D = L + B exactly.
-            local = UpdateValue(
+            local = UpdateValue.from_vector(
                 tuple((a + b) / 2.0 for a, b in zip(local.vector, local_repair.vector)),
                 (local.signed_value + local_repair.signed_value) / 2.0,
-                "",
             )
-            feedback = UpdateValue(
+            feedback = UpdateValue.from_vector(
                 tuple((a + b) / 2.0 for a, b in zip(feedback_candidate.vector, feedback_repair.vector)),
                 (feedback_candidate.signed_value + feedback_repair.signed_value) / 2.0,
-                "",
             )
             expected = cc.difference(rr)
             actual = after.difference(before)
@@ -234,4 +238,3 @@ class BiasConsequenceTrace:
             "recurrence_residual": row.recurrence_residual.as_dict(),
             "metadata": dict(row.global_metadata),
         }
-
