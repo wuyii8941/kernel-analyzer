@@ -18,6 +18,6 @@ Missing replay vectors are unresolved; no formation label is inferred from SEUP 
 
 ## Current interpretation
 
-The existing repository has exact antithetic response replays for saved-P and SiLU, a composite transport intervention for Phi, and source-event/chunk-geometry evidence for Liger. A host-GPU Liger 32-state rerun completed, but its confirmation population remained unresolved under the frozen gate; the chunk intervention itself confirmed BF16-specific directional geometry (24/24 versus FP32 13/11).
+The existing repository has exact antithetic response replays for saved-P and SiLU, a composite transport intervention for Phi, and source-event/chunk-geometry evidence for Liger. A host-GPU Liger 32-state rerun completed, but its confirmation population remained unresolved under the frozen gate. The 24-state chunk intervention confirmed BF16-specific directional geometry (24/24 versus FP32 13/11), while the separate RN→SR default residual screen was diffusive (A=0.942 versus SR=0.975/1.001) and is retained as a negative/diagnostic result.
 
 The next causal measurements are therefore: real Liger SR/order-breaking, a generic response replay for Liger/Phi, and fixed-update propagation probes. No missing vector is imputed.

@@ -221,6 +221,18 @@ def build() -> dict[str, Any]:
             "chunk_bf16_over_fp32_mean_rms": chunk.get("accumulator_amplification", {}).get("ratio_of_mean_rms"),
             "chunk_claim_boundary": chunk.get("claim_boundary"),
         })
+    liger_sr = ROOT / "results/property/joint_bias_formation_v1/liger_sr_intervention.json"
+    if liger_key in cases and liger_sr.exists():
+        sr = load(liger_sr)
+        cases[liger_key]["source"].update({
+            "sr_intervention_status": sr.get("status"),
+            "sr_intervention_artifact": str(liger_sr.relative_to(ROOT)),
+            "sr_natural_coherence_amplification": sr.get("natural_rn", {}).get("coherence_amplification"),
+            "sr_coherence_amplification": [row.get("coherence_amplification") for row in sr.get("sr", [])],
+            "sr_to_natural_amplification": sr.get("sr_to_rn_amplification"),
+            "sr_claim_boundary": sr.get("claim_boundary"),
+            "sr_interpretation": "RN residual is already diffusive on this confirmation split; SR is a completed negative/diagnostic intervention, not evidence of removing a confirmed persistent source",
+        })
 
     propagation = propagation_summary()
     propagation_aliases = {
@@ -273,7 +285,7 @@ def render_md(data: dict[str, Any]) -> str:
         "",
         "## Current interpretation",
         "",
-        "The existing repository has exact antithetic response replays for saved-P and SiLU, a composite transport intervention for Phi, and source-event/chunk-geometry evidence for Liger. A host-GPU Liger 32-state rerun completed, but its confirmation population remained unresolved under the frozen gate; the chunk intervention itself confirmed BF16-specific directional geometry (24/24 versus FP32 13/11).",
+        "The existing repository has exact antithetic response replays for saved-P and SiLU, a composite transport intervention for Phi, and source-event/chunk-geometry evidence for Liger. A host-GPU Liger 32-state rerun completed, but its confirmation population remained unresolved under the frozen gate. The 24-state chunk intervention confirmed BF16-specific directional geometry (24/24 versus FP32 13/11), while the separate RN→SR default residual screen was diffusive (A=0.942 versus SR=0.975/1.001) and is retained as a negative/diagnostic result.",
         "",
         "The next causal measurements are therefore: real Liger SR/order-breaking, a generic response replay for Liger/Phi, and fixed-update propagation probes. No missing vector is imputed.",
     ]
