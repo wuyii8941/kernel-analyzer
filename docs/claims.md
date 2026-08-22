@@ -125,8 +125,10 @@ antithetic-response replays; Phi has a case-level transport-pairing
 intervention; Liger has a source-event feasibility screen.  Missing raw
 `epsilon`/`+epsilon`/`-epsilon` vectors are explicitly `UNRESOLVED`.
 
-The synthetic parity tests pass (`41` targeted tests total).  The real SR
-intervention was not scientifically completed because the current runtime has
-no usable NVIDIA driver/GPU; this is recorded as `BLOCKED_ENVIRONMENT` in
-`execution_status.json`, not as a negative result.  The joint map therefore
-does not yet support a universal low-cost predictor claim.
+The synthetic parity tests pass (`41` targeted tests total).  A real 16-step
+Phi SR intervention is now complete: RN has amplification `3.325`, while four
+SR repeats have mean amplification `0.956` and carrier capture below `0.02`.
+The endpoint noise is not smaller, but effective-update energy is not exactly
+norm-matched, so this is causal source evidence with an explicit boundary,
+not a perfect matched-norm proof.  The real Liger SR/order-breaking and the
+held-out predictor campaign remain open.

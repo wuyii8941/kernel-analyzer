@@ -16,11 +16,22 @@
     "claim_boundary": "Existing development witnesses only; not held-out accuracy or universal safety."
   },
   "gpu_stage": {
-    "status": "BLOCKED_ENVIRONMENT",
-    "attempted": "scripts/run_phi_mm_sr_intervention.py --device cuda:0 --steps 2",
-    "environment": "NVIDIA driver unavailable; torch reports No CUDA GPUs are available",
-    "not_a_scientific_verdict": true,
-    "required_to_resume": "GPU-enabled runtime"
+    "status": "COMPLETE_PHI_SR",
+    "initial_sandbox_attempt": {
+      "status": "BLOCKED_SANDBOX",
+      "error": "No CUDA GPUs are available inside the sandbox",
+      "not_a_scientific_verdict": true
+    },
+    "completed": "scripts/run_phi_mm_sr_intervention.py --device cuda:0 --steps 16",
+    "artifact": "phi_sr_intervention.json",
+    "hardware": "NVIDIA RTX A6000, host GPU 0",
+    "result": "RN coherent (A=3.325); SR mean A=0.956 with carrier capture below 0.02",
+    "remaining": [
+      "real Liger SR/order-breaking",
+      "fixed-update Phi/checkpoint propagation intervention",
+      "10-15 residual-nonzero screen-negative audit",
+      "new prospective held-out campaign"
+    ]
   },
   "not_started": [
     "real Liger RN-to-SR intervention",

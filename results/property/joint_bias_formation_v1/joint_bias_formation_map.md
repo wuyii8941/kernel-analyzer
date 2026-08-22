@@ -18,6 +18,6 @@ Missing replay vectors are unresolved; no formation label is inferred from SEUP 
 
 ## Current interpretation
 
-The existing repository has exact antithetic response replays for saved-P and SiLU, a composite transport intervention for Phi, and source-event evidence for Liger. The remaining cases lack the raw +/- replay inputs required for a new response claim.
+The existing repository has exact antithetic response replays for saved-P and SiLU, a composite transport intervention for Phi, and source-event evidence for Liger. The new real Phi SR intervention reduces coherence from 3.325 to 0.956 while increasing stochastic materialization noise; its effective-update energy is not exactly norm-matched, so it is causal source evidence with a stated boundary, not a perfect matched-norm proof. The remaining cases lack the raw +/- replay inputs required for a new response claim.
 
 The next causal measurements are therefore: real Liger SR/order-breaking, a generic response replay for Liger/Phi, and fixed-update propagation probes. No missing vector is imputed.
