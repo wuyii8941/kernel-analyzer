@@ -12,7 +12,7 @@ This document records the execution state after the metric and replay audit. It 
 - The existing Phi row-permutation intervention remains a case-level transport result: natural gradient cross-state ratio `0.67535` versus shuffled `0.10834`. It supports the importance of residual/transport pairing for this Phi boundary, but does not close a universal VJP decomposition.
 - The first pre-registered screen-negative group (DeepSeek-8B, seq64) has now been captured with 32 open-loop states per exact case. Two cases are CENTERED in all three formation layers; one is `UNRESOLVED_INCONCLUSIVE` because its 16-state confirmation interval crosses the frozen margin. It is not a positive and is not called a safe negative.
 - The v2.1 status vocabulary now distinguishes genuinely short populations (`UNRESOLVED_INSUFFICIENT_STATES`) from a complete population that is statistically inconclusive (`UNRESOLVED_INCONCLUSIVE`). The existing artifact was migrated without changing any Gram statistic.
-- DeepSeek seq128 and Mamba seq64 were attempted on the host GPU but remained in AOT/Inductor warm-up and were interrupted without writing a formation artifact. They are `BLOCKED_AOT_WARMUP_INTERRUPTED`, not negative controls and not missing-data imputations.
+- DeepSeek seq128, Mamba seq64, and Qwen seq64 were attempted on the host GPU but remained in AOT/Inductor warm-up and were interrupted without writing a formation artifact. They are `BLOCKED_AOT_WARMUP_INTERRUPTED`, not negative controls and not missing-data imputations.
 
 ## What this changes
 
