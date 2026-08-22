@@ -25,6 +25,8 @@ EVIDENCE = ROOT / "results/property/bias_property_search/property_evidence.json"
 SAVED_P = ROOT / "results/property/bias_property_search/saved_p_pairing_work_v2.json"
 SILU = ROOT / "results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json"
 PHI_TRAJ = ROOT / "results/property/bias_formation/consequence/phi4_lm_head_dx_trajectory.json"
+PHI_LR_TRAJ = ROOT / "results/property/joint_bias_formation_v1/phi_lr5e4_trajectory.json"
+PHI_LR_SEUP = ROOT / "results/property/joint_bias_formation_v1/phi_lr5e4_seup.json"
 SEUP_SUMMARY = ROOT / "results/property/bias_formation_final/seup_consequence_summary.json"
 ROSTER = ROOT / "results/property/bias_formation_v2_1/roster_bound.json"
 
@@ -67,6 +69,25 @@ def propagation_summary() -> dict[str, Any]:
             "prefix": prefix_resultant(data.get("steps", []), "drift_l2"),
             "claim_boundary": data.get("claim_boundary"),
         }
+    if PHI_LR_TRAJ.exists() and PHI_LR_SEUP.exists():
+        data = load(PHI_LR_TRAJ)
+        seup = load(PHI_LR_SEUP)
+        certificate = seup.get("certificate", {})
+        lr_row = {
+            "status": "MEASURED_LR_PROPAGATION_INTERVENTION",
+            "artifact": str(PHI_LR_TRAJ.relative_to(ROOT)),
+            "seup_artifact": str(PHI_LR_SEUP.relative_to(ROOT)),
+            "steps": len(data.get("steps", [])),
+            "signed_persistence": certificate.get("signed_persistence"),
+            "local_accumulation_l2": certificate.get("local_accumulation_l2"),
+            "feedback_accumulation_l2": certificate.get("feedback_accumulation_l2"),
+            "local_fraction_of_projected_accumulation": certificate.get("local_fraction_of_projected_accumulation"),
+            "max_recurrence_relative_residual": certificate.get("max_recurrence_relative_residual"),
+            "claim_boundary": "learning-rate propagation intervention; optimizer/state and source are not independently held fixed",
+        }
+        result["phi4_lm_head_dx_seq64_lr5e4"] = lr_row
+        if "phi4_lm_head_dx_seq64" in result:
+            result["phi4_lm_head_dx_seq64"]["learning_rate_intervention"] = lr_row
     if SEUP_SUMMARY.exists():
         data = load(SEUP_SUMMARY)
         for case_id, value in data.get("cases", {}).items():
@@ -285,7 +306,7 @@ def render_md(data: dict[str, Any]) -> str:
         "",
         "## Current interpretation",
         "",
-        "The existing repository has exact antithetic response replays for saved-P and SiLU, a composite transport intervention for Phi, and source-event/chunk-geometry evidence for Liger. A host-GPU Liger 32-state rerun completed, but its confirmation population remained unresolved under the frozen gate. The 24-state chunk intervention confirmed BF16-specific directional geometry (24/24 versus FP32 13/11), while the separate RN→SR default residual screen was diffusive (A=0.942 versus SR=0.975/1.001) and is retained as a negative/diagnostic result.",
+        "The existing repository has exact antithetic response replays for saved-P and SiLU, a composite transport intervention for Phi, and source-event/chunk-geometry evidence for Liger. A host-GPU Liger 32-state rerun completed, but its confirmation population remained unresolved under the frozen gate. The 24-state chunk intervention confirmed BF16-specific directional geometry (24/24 versus FP32 13/11), while the separate RN→SR default residual screen was diffusive (A=0.942 versus SR=0.975/1.001) and is retained as a negative/diagnostic result. A half-learning-rate Phi trajectory still passed SEUP with local accumulation 2.37477e-5, feedback 2.04859e-6, and recurrence residual 1.01e-8. The deterministic 12-row screen-negative audit is screen-level only; no full trajectory label is imputed.",
         "",
         "The next causal measurements are therefore: real Liger SR/order-breaking, a generic response replay for Liger/Phi, and fixed-update propagation probes. No missing vector is imputed.",
     ]

@@ -138,4 +138,9 @@ same-sign projections versus FP32 `13/11` and a BF16/FP32 residual-RMS ratio
 of `2.63384`.  A separate real 16-state RN→SR screen on the default
 residual was completed: RN `A=0.9419`, SR repeats `0.9750/1.0010`, so it is a
 diagnostic negative rather than a causal suppression of a persistent default
-residual.  The held-out predictor campaign remains open.
+residual.  Existing Phi schedule randomization reduces amplification from
+`3.3253` to `3.1123` (ratio `0.936`), so schedule changes alone do not remove
+persistence.  A half-learning-rate Phi trajectory still passes SEUP with
+local accumulation `2.37477e-5`, feedback `2.04859e-6`, and recurrence error
+`1.01e-8`; this is a propagation sensitivity result, not a pure fixed-update
+intervention.  The held-out predictor campaign remains open.
