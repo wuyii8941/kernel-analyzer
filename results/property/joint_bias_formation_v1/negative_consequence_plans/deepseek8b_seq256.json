@@ -1,0 +1,23 @@
+{
+  "cases": [
+    {
+      "carrier": "model.layers.18.input_layernorm.weight",
+      "case_id": "multishape-backward-cell-0103",
+      "depth_stratum": "MIDDLE",
+      "family": "NORMALIZATION_BACKWARD",
+      "member_count": 12,
+      "task_id": "backward:1303:output_0"
+    }
+  ],
+  "claim_boundary": "Plan binding only; full 32-step consequence must still be run before any negative verdict.",
+  "model": "deepseek8b",
+  "sample_rule": {
+    "rule": "confirmation_local_ratio>0, confirmation_available=true, non-promoted outcome; sort by SHA256(task_id); take first 12",
+    "sample_size": 12,
+    "uses_case_names": false,
+    "uses_t4_or_seup": false
+  },
+  "schema": "kernel-analyzer-screen-negative-consequence-plan-v1",
+  "sequence_length": 256,
+  "uses_t4_or_seup": false
+}

@@ -21,4 +21,6 @@ The earlier zero-response Phi dry-run was an implementation error: it replayed B
 2. The Liger RN→SR result cannot be interpreted until the RN metric is reconciled with the historical `A≈2.315` artifact.
 3. The 16-step prefix→32-step predictor backtest, 12 screen-negative consequence reruns, and held-out confirmation remain unstarted.
 
+The 12 screen-negative rows are now mechanically bound to eight exact model/shape plan files under `results/property/joint_bias_formation_v1/negative_consequence_plans/`; this binding is not a consequence result. The generic open-loop capture runner cannot be relabeled as a live optimizer trajectory runner.
+
 The current scientific boundary is a partial, case-specific attribution map. It is not yet a cheap universal oracle.

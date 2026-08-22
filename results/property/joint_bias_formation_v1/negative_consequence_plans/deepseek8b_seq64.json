@@ -1,0 +1,39 @@
+{
+  "cases": [
+    {
+      "carrier": "model.layers.18.self_attn.q_norm.weight",
+      "case_id": "multishape-backward-cell-0191",
+      "depth_stratum": "MIDDLE",
+      "family": "NORMALIZATION_BACKWARD",
+      "member_count": 24,
+      "task_id": "backward:1276:out_ptr0"
+    },
+    {
+      "carrier": "model.layers.30.self_attn.q_norm.weight",
+      "case_id": "multishape-backward-cell-0190",
+      "depth_stratum": "LATE",
+      "family": "NORMALIZATION_BACKWARD",
+      "member_count": 24,
+      "task_id": "backward:868:out_ptr0"
+    },
+    {
+      "carrier": "model.layers.0.self_attn.k_norm.weight",
+      "case_id": "multishape-backward-cell-0153",
+      "depth_stratum": "MIDDLE",
+      "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+      "member_count": 36,
+      "task_id": "backward:1874:out_ptr0"
+    }
+  ],
+  "claim_boundary": "Plan binding only; full 32-step consequence must still be run before any negative verdict.",
+  "model": "deepseek8b",
+  "sample_rule": {
+    "rule": "confirmation_local_ratio>0, confirmation_available=true, non-promoted outcome; sort by SHA256(task_id); take first 12",
+    "sample_size": 12,
+    "uses_case_names": false,
+    "uses_t4_or_seup": false
+  },
+  "schema": "kernel-analyzer-screen-negative-consequence-plan-v1",
+  "sequence_length": 64,
+  "uses_t4_or_seup": false
+}
