@@ -114,3 +114,19 @@ Flash-style persistent-local-source cases.
 4. A prospective, protocol-conforming `NEW_IMPL` source-positive confirmation,
    or an explicit decision to publish the narrower family-scoped result.
 
+## Three-factor formation follow-up
+
+The current follow-up keeps the source distribution, conditional F+B/optimizer
+response, and closed-loop propagation as separate factors.  The auditable
+inventory is in `results/property/joint_bias_formation_v1/`.  It reports ten
+records: eight formal v2.1 roster entries plus two previously measured
+exploratory semantic records.  Saved-P and Qwen3-VL SiLU have exact
+antithetic-response replays; Phi has a case-level transport-pairing
+intervention; Liger has a source-event feasibility screen.  Missing raw
+`epsilon`/`+epsilon`/`-epsilon` vectors are explicitly `UNRESOLVED`.
+
+The synthetic parity tests pass (`41` targeted tests total).  The real SR
+intervention was not scientifically completed because the current runtime has
+no usable NVIDIA driver/GPU; this is recorded as `BLOCKED_ENVIRONMENT` in
+`execution_status.json`, not as a negative result.  The joint map therefore
+does not yet support a universal low-cost predictor claim.
