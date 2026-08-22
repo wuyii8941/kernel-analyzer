@@ -38,11 +38,10 @@ def main() -> None:
             row["distance_l2"] > 0 for row in arm["prefix_curve"]
         ):
             fits[name] = fit(arm["prefix_curve"])
+    # A five-point prefix fit is descriptive.  In particular, the precision
+    # arm is not guaranteed to follow sqrt(T), so extrapolating a crossing is
+    # not a preregistered or scientifically identified operation.
     crossing = None
-    a_fit, d_fit = fits["A_operator"], fits["D_precision"]
-    denominator = a_fit["power_exponent"] - d_fit["power_exponent"]
-    if denominator > 0 and min(a_fit["log_space_r2"], d_fit["log_space_r2"]) >= 0.95:
-        crossing = math.exp(math.log(d_fit["coefficient"] / a_fit["coefficient"]) / denominator)
     payload = {
         "schema": "kernel-analyzer-four-scale-summary-v1",
         "status": "COMPLETE_BOUNDED_CARRIER_SCALE_COMPARISON",
@@ -52,24 +51,28 @@ def main() -> None:
             "coherence_amplification": arm["coherence_amplification"],
             "distance_over_initial_parameter_l2": arm["distance_over_initial_parameter_l2"],
             "interpretation": (
-                "STRONGLY_COHERENT_OPERATOR_DIFFERENCE" if name == "A_operator" else
+                ("STRONGLY_COHERENT_OPERATOR_DIFFERENCE" if arm["coherence_amplification"] >= 2.0
+                 else "DIFFUSIVE_OR_WEAK_OPERATOR_DIFFERENCE") if name == "A_operator" else
                 "NOT_INFORMATIVE_ZERO_RNG_SENSITIVITY" if name == "B_rng" else
                 "ORDER_EFFECT_CANCELS_AFTER_COMPLETE_MULTISET" if name == "C_data_order" else
-                "PRECISION_DIFFERENCE_HAS_NONDIFFUSIVE_LATE_GROWTH"
+                ("PRECISION_DIFFERENCE_HAS_NONDIFFUSIVE_LATE_GROWTH"
+                 if arm["coherence_amplification"] > 1.25 else "DIFFUSIVE_PRECISION_DIFFERENCE")
             ),
         } for name, arm in arms.items()},
         "power_law_fits": fits,
         "operator_precision_crossover_steps": crossing,
-        "crossover_status": (
-            "EXPLORATORY_PREFIX_FIT" if crossing is not None else
-            "NOT_REPORTED_SCALING_MODEL_NOT_ESTABLISHED"
-        ),
+        "crossover_status": "NOT_REPORTED_SCALING_MODEL_NOT_ESTABLISHED",
         "conclusion": (
-            "On the closed Phi final-norm carrier, the endpoint implementation contrast is "
-            "much more temporally coherent than data-order sensitivity and more coherent than "
-            "the BF16-vs-FP32 contrast. The precision contrast is larger at step 32 and is not "
-            "purely diffusive, so a universal linear-versus-sqrt(T) crossover claim is not "
-            "supported. The RNG arm is inapplicable because this Phi graph has zero dropout."
+            "The operator contrast is strongly coherent on this carrier. "
+            if arms["A_operator"]["coherence_amplification"] >= 2.0 else
+            "The operator contrast is diffusive or weak on this carrier. "
+        ) + (
+            "The BF16-vs-FP32 contrast is also non-diffusive. "
+            if arms["D_precision"]["coherence_amplification"] > 1.25 else
+            "The BF16-vs-FP32 contrast is diffusive under the measured horizon. "
+        ) + (
+            "Data-order effects cancel after the complete multiset, and the RNG arm is "
+            "inapplicable because this Phi graph has zero dropout."
         ),
         "claim_boundary": source["claim_boundary"],
     }

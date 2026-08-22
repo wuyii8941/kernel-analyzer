@@ -1,5 +1,29 @@
 # Directional-bias cases
 
+## Source-persistence headline correction (2026-08-22)
+
+The paper headline now separates persistent endpoint-mediated local effects
+from generic closed-loop feedback.  The previous strict Flash-style registry
+is retained as an audit history, but its six entries are not six confirmed
+persistent-local-source cases.
+
+| role | count | cases |
+|---|---:|---|
+| source/transport-persistent headline | 3 | Qwen seq128 `lm_head dX`, Liger fused CE, Phi seq64 `lm_head dX` |
+| local versus feedback attribution unresolved | 2 | saved-P, layer-23 attention region |
+| formation/trajectory contrast mismatch | 2 | Mamba `in_proj`, Qwen64 `v_proj` |
+| aligned local source diffusive/canceling | 1 | Qwen128 `v_proj` |
+| feedback-sustained controls | 2 | Qwen3-VL SiLU, Gemma norm |
+
+SiLU and Gemma retain real paired trajectory effects, but they are not counted
+as operator-local persistent-source positives.  In the mechanically sampled
+12-row residual-nonzero, parameter-reachable screen-negative audit, `11/12`
+rows are feedback-sustained and one is mixed.  This makes feedback a common
+background **within that selected sample**; it is not a population-wide rate.
+Unresolved and mismatched cases remain in the denominator.  The authoritative
+classification is
+`results/property/joint_bias_formation_v1/source_persistence_reclassification.json`.
+
 ## Canonical evidence counting (2026-08-20)
 
 The eight-case Bias Formation roster is an **audit denominator**, not eight

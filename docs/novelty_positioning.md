@@ -24,7 +24,8 @@ The corresponding claim must remain two-part:
    only when the measured prefix curves support linear versus square-root
    scaling; it is never inferred from a single endpoint value.
 
-The current Phi four-arm experiment updates one causally closed final-norm
-carrier while running full-model F+B.  It is a controlled carrier-scale
-comparison, not a full-parameter replication of Golden et al.  A full-training
+The current Phi four-arm experiments update one declared carrier at a time
+while running full-model F+B.  Final norm is strongly coherent; layer-26
+post-attention norm is diffusive.  They are controlled carrier-scale
+comparisons, not a full-parameter replication of Golden et al.  A full-training
 precision comparison remains a separate, substantially more expensive claim.

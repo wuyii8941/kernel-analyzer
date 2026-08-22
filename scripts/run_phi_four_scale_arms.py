@@ -73,12 +73,20 @@ def prefix_curve(increments: list[torch.Tensor]) -> list[dict[str, float | int]]
     return rows
 
 
+def resolve_parameter(model: torch.nn.Module, name: str) -> torch.nn.Parameter:
+    parameters = dict(model.named_parameters())
+    if name not in parameters:
+        raise RuntimeError(f"carrier parameter is absent: {name}")
+    return parameters[name]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--steps", type=int, choices=(2, 8, 16, 32), default=32)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--bf16-device", default="cuda:0")
     parser.add_argument("--fp32-device", default="cuda:1")
+    parser.add_argument("--carrier", default="model.norm.weight")
     parser.add_argument("--output", type=Path, default=(
         ROOT / "results/property/joint_bias_formation_v1/four_scale_arms/phi_lmhead.json"
     ))
@@ -108,7 +116,7 @@ def main() -> None:
         ROOT / "results/coverage/runtime_releases/phi4_seq64_r1/capture.json"
     ).read_text())
     validate_release(wrapper_modules(modules), capture)
-    bf16_parameter = bf16_model.model.norm.weight
+    bf16_parameter = resolve_parameter(bf16_model, args.carrier)
 
     # The FP32 arm uses the same stored checkpoint and eager F+B.  Copy the
     # BF16-materialised carrier into it so both carrier masters start bitwise
@@ -119,7 +127,7 @@ def main() -> None:
     ).to(fp32_device).train()
     fp32_model.config.use_cache = False
     fp32_step = LossStep(fp32_model)
-    fp32_parameter = fp32_model.model.norm.weight
+    fp32_parameter = resolve_parameter(fp32_model, args.carrier)
     initial = bf16_parameter.detach().float().cpu().clone()
     with torch.no_grad():
         fp32_parameter.copy_(initial.to(fp32_device))
@@ -219,7 +227,7 @@ def main() -> None:
         "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
         "case": "phi4_seq64_lmhead_dx",
         "steps": args.steps,
-        "updated_parameter": "model.norm.weight",
+        "updated_parameter": args.carrier,
         "only_declared_parameter_updated": True,
         "arms": {
             "A_operator": metrics["A"], "B_rng": metrics["B"],
@@ -234,7 +242,7 @@ def main() -> None:
         },
         "claim_boundary": (
             "All arms use the same initial checkpoint and frozen batch multiset, and are "
-            "compared on the same final-norm carrier. Only that carrier evolves. Therefore "
+            f"compared on the same declared carrier ({args.carrier}). Only that carrier evolves. Therefore "
             "this is a controlled carrier-scale comparison, not full-parameter training."
         ),
     }

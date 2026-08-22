@@ -7,6 +7,7 @@ import argparse
 import csv
 import json
 import math
+import random
 from pathlib import Path
 from typing import Any
 
@@ -51,10 +52,34 @@ def correlations(rows: list[dict[str, Any]], y_key: str) -> dict[str, Any]:
     finite = [row for row in rows if row.get("local_rms", 0) > 0 and math.isfinite(float(row[y_key]))]
     x = [math.log10(float(row["local_rms"])) for row in finite]
     y = [float(row[y_key]) for row in finite]
+    pearson_value = pearson(x, y)
+    spearman_value = pearson(ranks(x), ranks(y))
+
+    def permutation_pvalue(left: list[float], right: list[float], observed: float | None,
+                           seed: int) -> float | None:
+        if observed is None:
+            return None
+        generator = random.Random(seed)
+        shuffled = list(right)
+        exceed = 0
+        draws = 10_000
+        for _ in range(draws):
+            generator.shuffle(shuffled)
+            statistic = pearson(left, shuffled)
+            if statistic is not None and abs(statistic) >= abs(observed):
+                exceed += 1
+        return (exceed + 1) / (draws + 1)
+
+    ranked_x, ranked_y = ranks(x), ranks(y)
     return {
         "count": len(finite),
-        "pearson_log10_rms": pearson(x, y),
-        "spearman_log10_rms": pearson(ranks(x), ranks(y)),
+        "pearson_log10_rms": pearson_value,
+        "pearson_two_sided_permutation_p": permutation_pvalue(x, y, pearson_value, 20260822),
+        "spearman_log10_rms": spearman_value,
+        "spearman_two_sided_permutation_p": permutation_pvalue(
+            ranked_x, ranked_y, spearman_value, 20260823
+        ),
+        "permutation_draws": 10_000,
     }
 
 

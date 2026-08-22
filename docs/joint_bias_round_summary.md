@@ -8,15 +8,16 @@
 | 16-step prefix versus 32-step consequence | local side-of-1 agrees for 11/12; actual and feedback agree for 12/12 | same summary |
 | exact response parity replay | saved-P and SiLU both have mixed even/odd contributions; SiLU even energy is concentrated in steps 1--2 | `results/property/joint_bias_formation_v1/mu_parity_decomposition.json` |
 | held-out confirmation | Gemma NEW_IMPL source-negative confirmed; full joint predictor unresolved | `results/property/joint_bias_formation_v1/heldout_confirmation.json` |
-| RMS versus directionality | 32 rows: Pearson `0.018`, Spearman `0.243`; local RMS is not a useful linear predictor of open-loop directionality | `results/property/joint_bias_formation_v1/rms_persistence/rms_persistence.json` |
+| RMS versus directionality | 32 rows: Pearson `0.018` (`p=0.921`), Spearman `0.243` (`p=0.178`); neither differs significantly from zero | `results/property/joint_bias_formation_v1/rms_persistence/rms_persistence.json` |
 | Liger `0.9419` versus historical `2.315` | not the same bound measurement; `2.315` has no canonical state/contrast/estimator binding and is retired | `results/property/joint_bias_formation_v1/metric_binding.json` |
 | four comparable Phi carrier arms | complete 32-step run; details below | `results/property/joint_bias_formation_v1/four_scale_arms/summary.json` |
 
 ## Four-arm result
 
-All four arms start from the same checkpoint and are measured on the same
-evolving final-norm carrier.  Only that carrier is updated, so this is not a
-full-parameter training comparison.
+All four arms start from the same checkpoint and are measured on one declared
+evolving carrier at a time.  Only that carrier is updated, so this is not a
+full-parameter training comparison.  The table below is the final-norm run;
+the layer-26 carrier is reported separately.
 
 | arm | final distance | coherence `A` | distance / initial parameter |
 |---|---:|---:|---:|
@@ -28,10 +29,21 @@ full-parameter training comparison.
 The operator difference is smaller than the precision difference at step 32,
 but is substantially more coherent.  Its distance follows an almost linear
 prefix fit (exponent `1.034`, log-space R² `0.999`).  Precision is not a pure
-square-root baseline (exponent `0.690`, R² `0.953`), so the extrapolated
-crossing near step `703` is exploratory and must not be stated as a universal
-prediction.  The data-order arm cancels when the complete batch multiset has
-been consumed.  The RNG arm is inapplicable because Phi uses zero dropout.
+square-root baseline (exponent `0.690`, R² `0.953`), so no long-horizon
+crossover is claimed.  The data-order arm cancels when the complete batch
+multiset has been consumed.  The RNG arm is inapplicable because Phi uses zero
+dropout.
+
+The repeated-random control injects an independently sign-scrambled residual
+with exactly the same per-step support and RMS on every step.  Across five
+frozen seeds its `A` ranges from `0.870` to `1.037` (mean `0.959`), while the
+natural common-state operator effect has `A=4.701`.  This supplies the missing
+empirical diffusion scale.
+
+A second parameter carrier, layer-26 post-attention norm, does **not** repeat
+the final-norm result: operator `A=1.114`, precision `A=0.914`, and data-order
+`A=0.0158`.  Persistence is therefore carrier-selective within Phi; it is not
+a model-wide property of every parameter touched by the endpoint.
 
 ## Scientific boundary
 
@@ -42,6 +54,8 @@ This round strengthens three bounded claims:
    than data-order variation on identical coordinates;
 3. closed-loop feedback persistence is common even when the local operator
    increment is diffusive.
+4. source persistence can be concentrated in one parameter carrier rather
+   than inherited by every reachable parameter.
 
 It does **not** establish a universal all-operator property, a universal joint
 predictor, or a full-parameter Golden-style BF16/FP32 training comparison.

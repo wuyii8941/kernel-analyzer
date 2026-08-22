@@ -1,0 +1,52 @@
+{
+  "arms": {
+    "A_operator": {
+      "coherence_amplification": 1.1140441580210303,
+      "distance_over_initial_parameter_l2": 5.661071959446242e-07,
+      "final_distance_l2": 1.3622670864911679e-05,
+      "interpretation": "DIFFUSIVE_OR_WEAK_OPERATOR_DIFFERENCE"
+    },
+    "B_rng": {
+      "coherence_amplification": 0.0,
+      "distance_over_initial_parameter_l2": 0.0,
+      "final_distance_l2": 0.0,
+      "interpretation": "NOT_INFORMATIVE_ZERO_RNG_SENSITIVITY"
+    },
+    "C_data_order": {
+      "coherence_amplification": 0.015826778234337337,
+      "distance_over_initial_parameter_l2": 9.506955171744309e-07,
+      "final_distance_l2": 2.2877314077599375e-05,
+      "interpretation": "ORDER_EFFECT_CANCELS_AFTER_COMPLETE_MULTISET"
+    },
+    "D_precision": {
+      "coherence_amplification": 0.9137617397666885,
+      "distance_over_initial_parameter_l2": 8.607392350360482e-06,
+      "final_distance_l2": 0.00020712627190414514,
+      "interpretation": "DIFFUSIVE_PRECISION_DIFFERENCE"
+    }
+  },
+  "claim_boundary": "All arms use the same initial checkpoint and frozen batch multiset, and are compared on the same declared carrier (model.layers.26.post_attention_layernorm.weight). Only that carrier evolves. Therefore this is a controlled carrier-scale comparison, not full-parameter training.",
+  "conclusion": "The operator contrast is diffusive or weak on this carrier. The BF16-vs-FP32 contrast is diffusive under the measured horizon. Data-order effects cancel after the complete multiset, and the RNG arm is inapplicable because this Phi graph has zero dropout.",
+  "crossover_status": "NOT_REPORTED_SCALING_MODEL_NOT_ESTABLISHED",
+  "operator_precision_crossover_steps": null,
+  "power_law_fits": {
+    "A_operator": {
+      "coefficient": 1.5382693987893643e-06,
+      "log_space_r2": 0.9926741436479943,
+      "power_exponent": 0.6224639746964611
+    },
+    "C_data_order": {
+      "coefficient": 0.0010377042347366906,
+      "log_space_r2": 0.2069120516052102,
+      "power_exponent": -0.6182282878422964
+    },
+    "D_precision": {
+      "coefficient": 2.4636171084581004e-05,
+      "log_space_r2": 0.6764162856807281,
+      "power_exponent": 0.5290687173005757
+    }
+  },
+  "schema": "kernel-analyzer-four-scale-summary-v1",
+  "source": "results/property/joint_bias_formation_v1/four_scale_arms/phi_layer26_post_attention_norm.json",
+  "status": "COMPLETE_BOUNDED_CARRIER_SCALE_COMPARISON"
+}
