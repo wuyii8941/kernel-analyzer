@@ -1,0 +1,35 @@
+{
+  "schema": "kernel-analyzer-three-factor-intervention-status-v1",
+  "status": "PARTIAL_BOUNDED",
+  "p_I_source": {
+    "liger_rn_to_sr": {
+      "artifact": "results/property/joint_bias_formation_v1/liger_sr_intervention.json",
+      "status": "INCONCLUSIVE_NO_POSITIVE_BASELINE",
+      "reason": "RN A=0.9418938921 is diffusive on this split; suppression cannot be tested against a confirmed positive baseline."
+    },
+    "liger_chunk_geometry": {
+      "artifact": "results/property/joint_bias_formation_v1/liger_chunk_host_certificate.json",
+      "status": "MEASURED_CASE_SOURCE_INTERACTION",
+      "reason": "BF16 24/24 same-sign versus FP32 13/11, with residual RMS ratio 2.63384; not a completed norm-matched multi-step intervention."
+    }
+  },
+  "F_response": {
+    "phi_antithetic": {
+      "artifact": "results/property/joint_bias_formation_v1/phi_antithetic_response_capture.json",
+      "status": "UNRESOLVED_REPRESENTABILITY",
+      "reason": "The BF16 reflected endpoint is not exactly representable; odd response is biased but the arm is not an exact intervention."
+    },
+    "saved_p_and_silu": {
+      "artifacts": ["results/property/bias_property_search/saved_p_pairing_work_v2.json", "results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json"],
+      "status": "CASE_SPECIFIC_SUMMARY_ONLY",
+      "reason": "Existing antithetic response summaries do not retain a common-state raw-vector certificate."
+    }
+  },
+  "Phi_propagation": {
+    "artifact": "results/property/joint_bias_formation_v1/phi_fixed_update_propagation.json",
+    "status": "POSITIVE_PROPAGATION_CLOSURE",
+    "ratio": 1.0104399627027283,
+    "interpretation": "A fixed real update-error sequence propagates almost identically; no extra feedback amplification is observed in this probe."
+  },
+  "claim_boundary": "No universal three-factor causal property is promoted. The interventions are bounded by exact replay and representability contracts."
+}

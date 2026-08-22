@@ -1,0 +1,38 @@
+{
+  "schema": "kernel-analyzer-three-factor-predictor-spec-v1",
+  "status": "FROZEN_SPEC_NOT_EVALUATED",
+  "scope": "A source-layer screening predictor, not a formation or persistence verdict",
+  "source_factor": {
+    "required": ["raw implementation-orbit residuals", "FP64 reference", "cross-fit orbit halves"],
+    "formula": "mu_t = mean_pi[(F_s(+epsilon_pi,t)+F_s(-epsilon_pi,t))/2] + mean_pi[(F_s(+epsilon_pi,t)-F_s(-epsilon_pi,t))/2]",
+    "estimator": "The two orbit halves are disjoint; a held-out reference orbit is excluded from both halves. Missing raw vectors or nonrepresentable +/- arms produce UNRESOLVED."
+  },
+  "response_factor": {
+    "required": ["repair-state gradient", "optimizer response map", "same pre-step moments"],
+    "formula": "F_s(epsilon) = Step(repair_gradient + epsilon, state_s) - Step(repair_gradient, state_s)",
+    "even_odd": "F_even=(F(+epsilon)+F(-epsilon))/2; F_odd=(F(+epsilon)-F(-epsilon))/2",
+    "boundary": "Optimizer type and moments belong to F; they must not be treated as a pure propagation intervention."
+  },
+  "propagation_factor": {
+    "required": ["frozen source update sequence", "independent checkpoint or state", "closed recurrence"],
+    "formula": "D_H_hat = sum_t Phi_hat(H,t) mu_t_hat",
+    "boundary": "Phi is estimated only after source and response measurements are frozen; live trajectory drift cannot be used as predictor input."
+  },
+  "prediction_protocol": {
+    "calibration": "16 states or 4+4 orbit cross-fit, depending on the declared source adapter",
+    "evaluation": "disjoint 32-step consequence trajectory",
+    "input_whitelist": ["reference operands", "declared orbit residuals", "analytic or offline F response", "frozen optimizer configuration"],
+    "forbidden_inputs": ["T1-T4 verdict", "SEUP verdict", "final drift", "A_D", "A_L", "feedback-after-trajectory", "case name"],
+    "baseline_comparisons": ["local RMS", "dtype", "reduction length", "source-only", "response-only"],
+    "unresolved_rule": "No generic score is emitted unless every required factor and provenance certificate is present."
+  },
+  "current_evaluation": {
+    "generic_ready_cases": 0,
+    "case_specific_response_artifacts": [
+      "results/property/joint_bias_formation_v1/phi_antithetic_response_capture.json",
+      "results/property/joint_bias_formation_v1/qwen_saved_p_pairing_response_vectors.json"
+    ],
+    "heldout_confirmation": "NOT_STARTED",
+    "claim_boundary": "This frozen formula is a preregistered measurement specification; it is not evidence that the predictor is accurate."
+  }
+}
