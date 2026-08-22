@@ -158,6 +158,17 @@ def build() -> dict[str, Any]:
         "generic_antithetic_response": "UNRESOLVED",
         "claim_boundary": "case-level composite transport intervention; no closed universal response law",
     }
+    phi_sr = ROOT / "results/property/joint_bias_formation_v1/phi_sr_intervention.json"
+    if phi_sr.exists():
+        sr = load(phi_sr)
+        cases[phi_key]["source"].update({
+            "sr_intervention_status": sr.get("status"),
+            "sr_artifact": str(phi_sr.relative_to(ROOT)),
+            "natural_coherence_amplification": sr.get("natural_vs_fp32", {}).get("coherence_amplification"),
+            "sr_coherence_amplification_mean": sr.get("sr_amplification_mean"),
+            "sr_to_natural_amplification_ratio": sr.get("sr_to_natural_amplification_ratio"),
+            "sr_claim_boundary": "real backward SR intervention; effective-update energy is not exactly norm-matched",
+        })
     liger_key = "liger_fused_ce_t128" if "liger_fused_ce_t128" in cases else "liger_fused_ce"
     cases[liger_key]["response"] = {
         "status": "UNRESOLVED_MISSING_ANTITHETIC_REPLAY",
