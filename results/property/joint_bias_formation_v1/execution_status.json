@@ -1,0 +1,26 @@
+{
+  "schema": "kernel-analyzer-joint-bias-execution-status-v1",
+  "offline_stage": {
+    "status": "COMPLETE",
+    "artifact": "joint_bias_formation_map.json",
+    "notes": "Existing antithetic replay/intervention artifacts were aggregated. Missing raw epsilon or response vectors remain UNRESOLVED."
+  },
+  "synthetic_controls": {
+    "status": "PASS",
+    "tests": "tests/test_joint_bias.py"
+  },
+  "gpu_stage": {
+    "status": "BLOCKED_ENVIRONMENT",
+    "attempted": "scripts/run_phi_mm_sr_intervention.py --device cuda:0 --steps 2",
+    "environment": "NVIDIA driver unavailable; torch reports No CUDA GPUs are available",
+    "not_a_scientific_verdict": true,
+    "required_to_resume": "GPU-enabled runtime"
+  },
+  "not_started": [
+    "real Liger RN-to-SR intervention",
+    "real Liger per-step chunk/order breaking",
+    "fixed-update Phi/checkpoint propagation intervention",
+    "10-15 residual-nonzero screen-negative audit",
+    "new prospective held-out campaign"
+  ]
+}
