@@ -1,0 +1,120 @@
+{
+  "schema": "kernel-analyzer-replay-feasibility-v1",
+  "status": "COMPLETE_BOUNDED",
+  "generic_even_odd_ready_count": 0,
+  "case_specific_replay_count": 3,
+  "rules": {
+    "generic_ready_requires": [
+      "repair boundary value",
+      "raw epsilon event vectors",
+      "exact representable +epsilon and -epsilon replay or a predeclared semantic antithetic operation",
+      "complete backward-visible parameter-gradient coordinates",
+      "optimizer state for the response arm",
+      "state IDs and common-state digest"
+    ],
+    "missing_raw_vectors": "UNRESOLVED; never impute zero or reconstruct from scalar trajectory summaries"
+  },
+  "cases": [
+    {
+      "case_id": "liger_fused_ce_t128",
+      "case_specific_replay": "SOURCE_EVENT_SCREEN_ONLY",
+      "raw_epsilon": false,
+      "plus_minus_response": false,
+      "optimizer_state": false,
+      "generic_even_odd": "NEEDS_MINIMAL_RECAPTURE",
+      "artifacts": ["archive/nonprecision_v1/runs/liger.fused_ce.chunk.certificate.json", "results/property/joint_bias_formation_v1/liger_sr_intervention.json"],
+      "action": "recapture endpoint event vectors and complete F+B response before source/response decomposition"
+    },
+    {
+      "case_id": "phi4_lm_head_dx_seq64",
+      "case_specific_replay": "TRANSPORT_PAIRING_AND_FIXED_UPDATE_PROPAGATION",
+      "raw_epsilon": false,
+      "plus_minus_response": false,
+      "optimizer_state": true,
+      "generic_even_odd": "NEEDS_MINIMAL_RECAPTURE",
+      "artifacts": ["results/property/bias_formation/interventions/phi4_mm_transport_pairing.json", "results/property/joint_bias_formation_v1/phi_fixed_update_propagation.json"],
+      "action": "retain existing positive propagation closure; recapture paired +/- response vectors for generic parity budget"
+    },
+    {
+      "case_id": "qwen_saved_p_seq128",
+      "case_specific_replay": "EXACT_ANTITHETIC_RESPONSE_SUMMARY",
+      "raw_epsilon": false,
+      "plus_minus_response": "summary_only",
+      "optimizer_state": true,
+      "generic_even_odd": "NEEDS_VECTOR_RECAPTURE",
+      "artifacts": ["results/property/bias_property_search/saved_p_pairing_work_v2.json"],
+      "action": "replay existing exact antithetic boundary while retaining raw gradient/update vectors"
+    },
+    {
+      "case_id": "qwen3vl_silu_seq160",
+      "case_specific_replay": "EXACT_ANTITHETIC_RESPONSE_SUMMARY",
+      "raw_epsilon": false,
+      "plus_minus_response": "summary_only",
+      "optimizer_state": true,
+      "generic_even_odd": "NEEDS_VECTOR_RECAPTURE",
+      "artifacts": ["results/property/bias_property_search/vl_silu_optimizer_oddness_v2.json"],
+      "action": "replay exact sign-symmetric gradient residual while retaining raw response vectors"
+    },
+    {
+      "case_id": "qwen_layer23_attention_state",
+      "case_specific_replay": "SEMANTIC_REGION_TRAJECTORY_ONLY",
+      "raw_epsilon": false,
+      "plus_minus_response": false,
+      "optimizer_state": false,
+      "generic_even_odd": "NEEDS_MINIMAL_RECAPTURE",
+      "artifacts": ["results/coverage/cases/l23_qproj_attention_state_region.json"],
+      "action": "replay only if exact antithetic BF16 representation and natural-fidelity gate both pass"
+    },
+    {
+      "case_id": "mamba_seq64_input_proj",
+      "case_specific_replay": "PARTIAL_SOURCE_CONFIRMATION",
+      "raw_epsilon": false,
+      "plus_minus_response": false,
+      "optimizer_state": false,
+      "generic_even_odd": "NEEDS_MINIMAL_RECAPTURE",
+      "artifacts": ["results/coverage/cases/mamba_seq64_input_proj_precision_decomposition.json"],
+      "action": "do not promote mixed real-backward result; recapture only after exact source arms are bound"
+    },
+    {
+      "case_id": "qwen_vproj_seq128",
+      "case_specific_replay": "CONDITIONAL_SOURCE_FORMATION_SUMMARY",
+      "raw_epsilon": false,
+      "plus_minus_response": false,
+      "optimizer_state": true,
+      "generic_even_odd": "NEEDS_VECTOR_RECAPTURE",
+      "artifacts": ["results/coverage/cases/qwen128_vproj_precision_decomposition.json"],
+      "action": "retain as formation/persistence boundary; recapture vectors if used in joint predictor"
+    },
+    {
+      "case_id": "qwen_bmm_seq64",
+      "case_specific_replay": "NONE",
+      "raw_epsilon": false,
+      "plus_minus_response": false,
+      "optimizer_state": false,
+      "generic_even_odd": "INELIGIBLE_UNTIL_BOUND",
+      "artifacts": [],
+      "action": "bind exact repair and reachable parameter coordinates before any parity experiment"
+    },
+    {
+      "case_id": "qwen_rsqrt_seq128",
+      "case_specific_replay": "NONE",
+      "raw_epsilon": false,
+      "plus_minus_response": false,
+      "optimizer_state": false,
+      "generic_even_odd": "INELIGIBLE_UNTIL_BOUND",
+      "artifacts": [],
+      "action": "bind exact semantic region and response reach before any parity experiment"
+    },
+    {
+      "case_id": "qwen_l23_key_materialization_seq1024",
+      "case_specific_replay": "NONE",
+      "raw_epsilon": false,
+      "plus_minus_response": false,
+      "optimizer_state": false,
+      "generic_even_odd": "INELIGIBLE_UNTIL_BOUND",
+      "artifacts": [],
+      "action": "do not infer formation from historical trajectory separation"
+    }
+  ],
+  "next_gate": "Only cases with a valid exact replay contract may enter generic even/odd decomposition; missing cases require minimal GPU recapture and remain unresolved until then."
+}

@@ -18,6 +18,7 @@ not a cross-state raw residual mean.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -33,6 +34,7 @@ os.environ.setdefault("XDG_CACHE_HOME", "/data1/tzh/cache/xdg")
 os.environ.setdefault("TORCHINDUCTOR_CACHE_DIR", "/data1/tzh/cache/torchinductor")
 
 import torch
+import numpy as np
 from torch._inductor.codecache import PyCodeCache
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,6 +43,7 @@ for path in (ROOT, ROOT / "src", ROOT / "archive/round1_code/src"):
         sys.path.insert(0, str(path))
 
 from kernel_analyzer.seup import adamw_effective_update_delta  # noqa: E402
+from kernel_analyzer.bias_formation_v21 import FormationPolicy, summarize_streamed_state_vector_files  # noqa: E402
 from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime  # noqa: E402
 from scripts.run_generated_fp32_screen import file_digest, load_model  # noqa: E402
 from scripts.run_qwen128_softmax_saved_p_trajectory import (  # noqa: E402
@@ -124,6 +127,10 @@ def main() -> None:
     parser.add_argument("--steps", type=int, default=32)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument(
+        "--response-spool", type=Path, default=None,
+        help="optional temporary directory for per-step even/odd update vectors",
+    )
     parser.add_argument(
         "--output",
         type=Path,
@@ -209,6 +216,22 @@ def main() -> None:
     natural_gradient_path = 0.0
     shuffled_gradient_path = 0.0
     rows: list[dict[str, Any]] = []
+    response_even_rows: list[dict[str, Any]] = []
+    response_odd_rows: list[dict[str, Any]] = []
+    if args.response_spool is not None:
+        args.response_spool.mkdir(parents=True, exist_ok=True)
+
+    def write_response_vector(kind: str, step: int, values: dict[str, torch.Tensor]) -> dict[str, Any]:
+        vector = torch.cat([values[name].detach().float().reshape(-1).cpu() for name in CARRIERS]).numpy()
+        path = args.response_spool / f"{kind}_{step:04d}.f32"
+        vector.tofile(path)
+        return {
+            "state_id": str(step),
+            "path": str(path),
+            "coordinate_count": int(vector.size),
+            "vector_digest": hashlib.sha256(vector.tobytes(order="C")).hexdigest(),
+            "storage_dtype": "float32",
+        }
 
     for offset, state in enumerate(states[:args.steps]):
         step = offset + 1
@@ -246,6 +269,17 @@ def main() -> None:
             name: update_delta_n[name] + update_delta_minus[name]
             for name in CARRIERS
         }
+        response_even = {
+            name: 0.5 * (update_delta_n[name] + update_delta_minus[name])
+            for name in CARRIERS
+        }
+        response_odd = {
+            name: 0.5 * (update_delta_n[name] - update_delta_minus[name])
+            for name in CARRIERS
+        }
+        if args.response_spool is not None:
+            response_even_rows.append(write_response_vector("even", step, response_even))
+            response_odd_rows.append(write_response_vector("odd", step, response_odd))
 
         gn = float(joint_norm(grad_delta_n).item())
         gs = float(joint_norm(grad_delta_s).item())
@@ -421,6 +455,25 @@ def main() -> None:
             "semantic region. It does not by itself prove a universal operator property."
         ),
     }
+    if args.response_spool is not None:
+        if len(response_even_rows) < 16:
+            raise RuntimeError("response spool requires at least 16 states")
+        policy = FormationPolicy(min_states=16, bootstrap_samples=2000)
+        payload["response_even_population"] = summarize_streamed_state_vector_files(
+            response_even_rows, layer="EFFECTIVE_RESPONSE_EVEN", partition="trajectory",
+            policy=policy,
+        ).as_dict()
+        payload["response_odd_population"] = summarize_streamed_state_vector_files(
+            response_odd_rows, layer="EFFECTIVE_RESPONSE_ODD", partition="trajectory",
+            policy=policy,
+        ).as_dict()
+        payload["response_vector_capture"] = {
+            "status": "COMPLETE",
+            "state_count": len(response_even_rows),
+            "raw_vectors_retained": True,
+            "spool": str(args.response_spool),
+            "claim_boundary": "Trajectory-conditioned response decomposition; not a common-state formation label.",
+        }
     if not all(math.isfinite(value) for value in (
         natural_update_resultant, shuffled_update_resultant,
         natural_gradient_resultant, shuffled_gradient_resultant,

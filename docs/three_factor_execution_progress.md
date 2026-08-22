@@ -1,0 +1,22 @@
+# Three-factor experiment progress
+
+This document records the execution state after the metric and replay audit. It is intentionally conservative: a missing raw vector or an unrepresentable antithetic arm is reported as unresolved, never reconstructed from a scalar trajectory summary.
+
+## Completed
+
+- `metric_binding.json` separates the Liger RN→SR screen (`A=0.9418938921`) from the historical, unbound `A≈2.315` number and from the Phi fixed-update propagation probe (`1.0104399627`).
+- `replay_feasibility.json` audits which cases have the artifacts required for a generic even/odd response decomposition. At present, none is generically ready.
+- Phi was recaptured on 16 states. The response-odd population is directionally biased (`cross_state_ratio=0.7747391992`), while response-even is centered (`-0.0056745431`). The reflected BF16 endpoint is not exactly representable (relative error `0.03856–0.07613`), so the run is `UNRESOLVED_REPRESENTABILITY`, not a causal intervention.
+- Saved-P response vectors were streamed over 32 repair-trajectory steps. Both even and odd response populations are centered across that trajectory; this is a trajectory-conditioned response certificate, not a common-state formation verdict.
+
+## What this changes
+
+The earlier zero-response Phi dry-run was an implementation error: it replayed BF16 MM instead of the frozen FP32 external reference. The corrected run reaches the target endpoint and exposes the representability boundary. No new strict persistent-bias case is promoted.
+
+## Remaining blockers
+
+1. Most cases do not retain raw endpoint residuals and exact `+epsilon/-epsilon` response arms; generic attribution therefore remains unresolved.
+2. The Liger RN→SR result cannot be interpreted until the RN metric is reconciled with the historical `A≈2.315` artifact.
+3. The 16-step prefix→32-step predictor backtest, 12 screen-negative consequence reruns, and held-out confirmation remain unstarted.
+
+The current scientific boundary is a partial, case-specific attribution map. It is not yet a cheap universal oracle.

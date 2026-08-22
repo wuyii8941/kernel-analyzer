@@ -43,6 +43,8 @@ def main() -> None:
     parser.add_argument("--old-release", type=Path, required=True)
     parser.add_argument("--new-release", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--allow-graph-breaks", action="store_true",
+                        help="rebind a release using the repository's graph-break-compatible runner")
     parser.add_argument("--reuse-existing", action="store_true",
                         help="validate a release already created by a prior warm compile")
     args = parser.parse_args()
@@ -64,7 +66,10 @@ def main() -> None:
         device = torch.device(args.device)
         model = load_model(args.architecture, args.model, device)
         start = len(PyCodeCache.modules)
-        candidate = torch.compile(LossStep(model), backend="inductor", fullgraph=True, dynamic=False)
+        candidate = torch.compile(
+            LossStep(model), backend="inductor",
+            fullgraph=not args.allow_graph_breaks, dynamic=False,
+        )
         tokens = states[0].get("input_ids", states[0].get("token_ids"))
         warm = torch.tensor([tokens], dtype=torch.long, device=device)
         model.zero_grad(set_to_none=True)
@@ -74,7 +79,7 @@ def main() -> None:
         inventory, campaign = freeze_or_validate_release(
             modules=wrappers, release=args.new_release,
             architecture=args.architecture, input_bank=args.input_bank,
-            state=states[0], allow_graph_breaks=False,
+            state=states[0], allow_graph_breaks=args.allow_graph_breaks,
         )
 
     old_plan = args.old_release / "same_dtype_tasks.json.gz"

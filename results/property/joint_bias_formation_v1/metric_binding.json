@@ -1,0 +1,68 @@
+{
+  "schema": "kernel-analyzer-metric-binding-v1",
+  "status": "COMPLETE_BOUNDED",
+  "purpose": "Bind every quoted amplification value to its exact object, contrast, horizon, state bank, and estimator before any new intervention.",
+  "comparisons": [
+    {
+      "id": "liger_rn_sr_default_screen",
+      "artifact": "results/property/joint_bias_formation_v1/liger_sr_intervention.json",
+      "case_id": "liger_fused_ce_t128",
+      "metric_name": "coherence_amplification",
+      "metric_formula": "||sum_t x_t||_2 / sqrt(sum_t ||x_t||_2^2)",
+      "measured_object": "default Liger candidate-minus-repair source residual path",
+      "horizon_steps": 16,
+      "state_count": 16,
+      "state_bank": "artifact records state IDs qwen3-1p7b-0241 onward",
+      "natural_value": 0.941893892133207,
+      "sr_values": [0.9749723104279834, 1.0010329325235743],
+      "claim_status": "INCONCLUSIVE_NO_POSITIVE_BASELINE",
+      "reason": "The RN arm is already at the diffusive boundary on this state/contrast split; SR cannot be interpreted as suppressing a confirmed persistent baseline."
+    },
+    {
+      "id": "liger_chunk_geometry",
+      "artifact": "results/property/joint_bias_formation_v1/liger_chunk_host_certificate.json",
+      "case_id": "liger_fused_ce_t128",
+      "metric_name": "cross_state_signed_projection_and_residual_rms_ratio",
+      "metric_formula": "BF16/FP32 accumulator contrast with 24 confirmation states; not the 16-step A statistic above",
+      "measured_object": "local dW source residual under BF16 versus FP32 accumulation and physical chunk geometry",
+      "horizon_steps": null,
+      "state_count": 24,
+      "natural_values": {
+        "bf16_same_sign_count": 24,
+        "fp32_same_sign_count": 13,
+        "fp32_opposite_sign_count": 11,
+        "bf16_over_fp32_residual_rms": 2.633840118083429
+      },
+      "claim_status": "LOCAL_SOURCE_INTERACTION_ONLY",
+      "reason": "This is a distinct local formation/geometry contrast and cannot be compared numerically with the RN/SR 16-step coherence amplification."
+    },
+    {
+      "id": "phi_fixed_update_propagation",
+      "artifact": "results/property/joint_bias_formation_v1/phi_fixed_update_propagation.json",
+      "case_id": "phi4_lm_head_dx_seq64",
+      "metric_name": "drift_over_direct_fixed_update_sum",
+      "metric_formula": "alternate_checkpoint final drift L2 / direct accumulated fixed update-error sum L2",
+      "measured_object": "same real 16-step post-optimizer candidate-minus-repair update-error sequence injected into an alternate checkpoint",
+      "horizon_steps": 16,
+      "state_count": 16,
+      "direct_sum_l2": 4.4677257392322645e-05,
+      "drift_l2": 4.514368629315868e-05,
+      "ratio": 1.0104399627027283,
+      "claim_status": "POSITIVE_PROPAGATION_CLOSURE",
+      "reason": "Direct error accumulation predicts observed alternate-checkpoint drift within 1.04%; this is not an amplification-null failure."
+    },
+    {
+      "id": "historical_liger_a_approx_2_315",
+      "artifact": null,
+      "case_id": "liger_fused_ce_t128",
+      "metric_name": "UNBOUND",
+      "metric_formula": null,
+      "measured_object": "Historical value quoted outside a currently bound canonical artifact",
+      "horizon_steps": null,
+      "state_count": null,
+      "claim_status": "STALE_UNBOUND",
+      "reason": "The current repository does not bind this value to a state bank, endpoint contrast, horizon, or estimator. It must not be compared with 0.9418938921 until its source artifact is recovered."
+    }
+  ],
+  "gate": "No new Liger RN-to-SR causal claim may be made until a positive RN baseline is reproduced under one fully bound metric definition."
+}
