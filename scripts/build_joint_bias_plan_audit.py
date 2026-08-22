@@ -75,14 +75,29 @@ def main() -> None:
             "Common unseen-data FP32 loss for the four-arm final weights.",
         ),
         check(
+            "results/property/joint_bias_formation_v1/four_scale_arms/phi_layer26_summary.json",
+            "COMPLETE",
+            "Second declared Phi parameter carrier; it is reported separately and does not reproduce the final-norm result.",
+        ),
+        check(
+            "results/property/joint_bias_formation_v1/four_scale_arms/phi_repeated_random_null.json",
+            "COMPLETE",
+            "Five-seed repeated RMS/support-matched random injection used as the empirical diffusion scale.",
+        ),
+        check(
             "results/property/joint_bias_formation_v1/oracle_baselines/comparison.json",
             "COMPLETE_RETROSPECTIVE",
             "Frozen 12-row Oracle versus RMS, dtype, and reduction baselines; one local positive.",
         ),
         check(
             "results/property/joint_bias_formation_v1/oracle_baselines/efficiency.json",
-            "COMPLETE_RETROSPECTIVE",
+            "COMPLETE_RETROSPECTIVE_RUNTIME_UNRECORDED",
             "Measured flag rate, recall, false-positive rate, and AUROC; runtime savings remain explicitly unresolved.",
+        ),
+        check(
+            "results/property/joint_bias_formation_v1/mainline_closure.json",
+            "COMPLETE_BOUNDED",
+            "Bounded conclusion tying the operator, random-null, second-carrier, and RMS baseline results together.",
         ),
         check(
             "results/property/joint_bias_formation_v1/consequence_summary.json",
