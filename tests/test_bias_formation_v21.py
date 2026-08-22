@@ -62,6 +62,21 @@ def test_alternating_vectors_record_cancellation_not_positive_bias():
     assert cert.status != FormationStatus.BIASED.value
 
 
+def test_complete_population_can_be_inconclusive_without_being_short():
+    rng = random.Random(1)
+    rho = 0.20
+    vectors = []
+    for _ in range(16):
+        signs = [-1.0 if rng.randrange(2) else 1.0 for _ in range(64)]
+        vectors.append([
+            rho ** 0.5 + (1.0 - rho) ** 0.5 * value
+            for value in signs
+        ])
+    cert = summarize_state_vectors(vectors, policy=POLICY)
+    assert cert.status == FormationStatus.UNRESOLVED_INCONCLUSIVE.value
+    assert len(cert.state_ids) == POLICY.min_states
+
+
 def test_streamed_and_dense_population_are_identical_and_order_invariant():
     vectors = _independent_vectors(seed=4)
     dense = summarize_state_vectors(vectors, state_ids=[str(i) for i in range(16)], policy=POLICY)

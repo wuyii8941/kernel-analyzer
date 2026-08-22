@@ -46,13 +46,15 @@
       "liger_chunk": "BF16 24/24 same-sign, FP32 13/11; BF16/FP32 residual RMS ratio 2.63384; frozen chunk interaction verdict confirmed",
       "liger_sr": "INCONCLUSIVE_NO_POSITIVE_BASELINE: default RN residual A=0.9419 and two SR repeats A=0.9750/1.0010; the RN arm is itself diffusive on this split, so this run cannot test suppression of a confirmed persistent baseline",
       "phi_lr5e4": "16-step SEUP PASS; local accumulation 2.37477e-5, feedback 2.04859e-6, recurrence residual 1.01e-8",
-      "phi_fixed_update": "POSITIVE_PROPAGATION_CLOSURE: fixed real 16-step error sequence into alternate checkpoint; direct sum 4.46773e-5, drift 4.51437e-5, ratio 1.01044, showing nearly identity propagation rather than an additional feedback amplification"
+    "phi_fixed_update": "POSITIVE_PROPAGATION_CLOSURE: fixed real 16-step error sequence into alternate checkpoint; direct sum 4.46773e-5, drift 4.51437e-5, ratio 1.01044, showing nearly identity propagation rather than an additional feedback amplification",
+    "negative_openloop_deepseek_seq64": "3 exact pre-registered cases captured over 16 calibration + 16 confirmation states; two confirmation populations are CENTERED across all layers and one is UNRESOLVED_INCONCLUSIVE under the frozen margin. Formation-only; no persistence verdict."
     },
     "remaining": [
     "the RN→SR result is diagnostic and not a positive persistence intervention",
     "generic even/odd response decomposition from raw epsilon,+epsilon,-epsilon replay vectors",
     "16-step prefix versus 32-step backtest and frozen joint predictor formula",
     "full 32-step consequence rerun for the 12 sampled screen negatives",
+    "remaining screen-negative open-loop groups and live consequence recurrence",
       "new three-factor held-out campaign; existing Gemma/Llama/Ministral held-out records remain bounded evidence"
     ]
   },
@@ -61,6 +63,18 @@
     "16-step prefix versus 32-step backtest and frozen joint predictor formula",
     "full 32-step consequence rerun for the 12 sampled screen negatives",
     "new three-factor held-out campaign; existing Gemma/Llama/Ministral held-out records remain bounded evidence"
+  ],
+  "attempted_but_blocked": [
+    {
+      "group": "deepseek8b_seq128",
+      "status": "BLOCKED_AOT_WARMUP_INTERRUPTED",
+      "reason": "Host GPU run remained in Inductor/AOT warm-up without producing a capture artifact; no scientific verdict was emitted."
+    },
+    {
+      "group": "mamba_seq64",
+      "status": "BLOCKED_AOT_WARMUP_INTERRUPTED",
+      "reason": "Host GPU run remained in sequential Mamba AOT warm-up; no scientific verdict was emitted."
+    }
   ],
   "scientific_conclusion": "No new strict persistent-bias case was promoted. The strongest new evidence is a BF16 chunk-geometry source interaction in Liger and Phi fixed-update propagation that is almost identity (ratio 1.0104), so Phi drift is explained by direct local-error accumulation in that probe. The default Liger RN→SR run is inconclusive because its RN arm is diffusive on that split. The generic three-factor even/odd decomposition and screen-negative consequence recall remain open; the map is a bounded mechanism framework, not a universal oracle."
 }

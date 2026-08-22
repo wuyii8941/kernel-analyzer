@@ -32,6 +32,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "src"), str(ROOT / "scripts"),
 
 from kernel_analyzer.bias_formation_v21 import (  # noqa: E402
     FormationPolicy,
+    FormationStatus,
     summarize_streamed_state_vector_files,
 )
 from kernel_analyzer.reference_relative_oracle import (  # noqa: E402
@@ -621,9 +622,25 @@ def main() -> None:
                 first_confirmed = layer
             if status != "CENTERED":
                 prior_centered = False
+        all_population_statuses = [
+            populations[partition][layer + "_status"]
+            for partition in populations
+            for layer in ("LOCAL_ENDPOINT", "PARAMETER_GRADIENT", "EFFECTIVE_UPDATE")
+        ]
+        if any(status.startswith("INVALID") for status in all_population_statuses):
+            top_status = next(status for status in all_population_statuses if status.startswith("INVALID"))
+        elif "UNRESOLVED_ZERO_CARRIER_EFFECT" in all_population_statuses:
+            top_status = "UNRESOLVED_ZERO_CARRIER_EFFECT"
+        elif any(status in {
+            FormationStatus.UNRESOLVED_INSUFFICIENT_STATES.value,
+            FormationStatus.UNRESOLVED_INCONCLUSIVE.value,
+        } for status in all_population_statuses):
+            top_status = FormationStatus.UNRESOLVED_INCONCLUSIVE.value
+        else:
+            top_status = FormationStatus.COMPLETE.value
         payload = {
             "schema": "kernel-analyzer-bias-formation-certificate-v2_1",
-            "case_id": case_id, "status": "COMPLETE",
+            "case_id": case_id, "status": top_status,
             "measurement_kind": "candidate_repair_ground_truth",
             "uses_candidate_measurements": True, "uses_historical_verdicts": False,
             "verdict_blind": True, "trajectory_drift_in_formation": False,
@@ -636,7 +653,7 @@ def main() -> None:
             ),
             "first_observed_biased_stage": first_observed,
             "first_confirmed_bias_stage": first_confirmed,
-            "formation_point": "CONFIRMED" if first_confirmed else "UNRESOLVED",
+            "formation_point": "CONFIRMED" if first_confirmed and top_status == FormationStatus.COMPLETE.value else "UNRESOLVED",
             "rows": metadata[task_id],
             "binding": {
                 "task_id": task_id, "exact_aot_endpoint_id": tasks[task_id]["exact_aot_endpoint_id"],

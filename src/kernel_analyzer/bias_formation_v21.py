@@ -39,6 +39,11 @@ class FormationStatus(str, Enum):
     CANCELING_STRUCTURE = "CANCELING_STRUCTURE"
     UNRESOLVED_MISSING_LAYER = "UNRESOLVED_MISSING_LAYER"
     UNRESOLVED_INSUFFICIENT_STATES = "UNRESOLVED_INSUFFICIENT_STATES"
+    # Enough states were collected, but the frozen equivalence/bias margins
+    # do not separate the population from zero.  This is not a missing-state
+    # error; keep it explicit so reports cannot misread an inconclusive result
+    # as an incomplete capture.
+    UNRESOLVED_INCONCLUSIVE = "UNRESOLVED_INCONCLUSIVE"
     INVALID_NONFINITE = "INVALID_NONFINITE"
     INVALID_PROJECTION = "INVALID_PROJECTION"
     INVALID_COMMON_STATE = "INVALID_COMMON_STATE"
@@ -407,7 +412,7 @@ def _certificate_from_gram(
     elif upper <= -policy.canceling_margin:
         status = FormationStatus.CANCELING_STRUCTURE.value
     else:
-        status = FormationStatus.UNRESOLVED_INSUFFICIENT_STATES.value
+        status = FormationStatus.UNRESOLVED_INCONCLUSIVE.value
     return LayerPopulationCertificate(
         layer=str(layer), partition=str(partition), state_ids=tuple(str(x) for x in state_ids),
         coordinate_count=int(coordinate_count), complete_gram=tuple(tuple(float(x) for x in row) for row in complete),
@@ -633,8 +638,11 @@ class BiasFormationTrace:
             overall = FormationStatus.INVALID_MALFORMED.value
         elif FormationStatus.INVALID_PROJECTION.value in statuses:
             overall = FormationStatus.INVALID_PROJECTION.value
-        elif any(s == FormationStatus.UNRESOLVED_INSUFFICIENT_STATES.value for s in statuses):
-            overall = FormationStatus.UNRESOLVED_INSUFFICIENT_STATES.value
+        elif any(s in {
+            FormationStatus.UNRESOLVED_INSUFFICIENT_STATES.value,
+            FormationStatus.UNRESOLVED_INCONCLUSIVE.value,
+        } for s in statuses):
+            overall = FormationStatus.UNRESOLVED_INCONCLUSIVE.value
         else:
             overall = FormationStatus.COMPLETE.value
         confirmation_statuses = [populations["confirmation"][layer.value + "_status"] for layer in _LAYER_ORDER]
