@@ -14,8 +14,14 @@ accumulation.  A T1 screen or a carrier alone is not a case.
 - Four models × three shapes: 12 cells.
 - Full-coordinate directional endpoints: 1,562 / 1,562 audited.
 - T1: 1,390 pass, 172 reject, 0 pending.
-- Existing strict endpoint-level case registry: 48 before mechanism
-  deduplication (41 newly joined endpoint instances plus seven retained cases).
+- Current strict Flash-style registry: 6 project cases after complete gate
+  re-audit (4 root-arithmetic cases and 2 closed semantic regions).
+- Bias Formation roster: 8 paired-separation records, of which 7 pass ordered
+  directional persistence, 6 have matched formation evidence, and 4 close the
+  same formation contrast through persistence.
+- The historical 48-endpoint pre-deduplication snapshot is superseded as a
+  strict-case count; endpoint instances never substitute for independent
+  mechanisms or complete current gates.
 - Mamba seq64 T2: 43 complete (9 pass, 34 reject); T3: 0 carrier survivors.
 - Mamba seq256 T2: the 58-row small shard is complete (57 pass, 1 reject).
   The 524-row large shard is still pending; therefore the seq256 cell has no
@@ -23,6 +29,14 @@ accumulation.  A T1 screen or a carrier alone is not a case.
 
 These numbers are intentionally conservative.  Pending rows remain in the
 denominator and are not called normal controls or cases.
+
+The completed property profile contains 8 known/partial development records
+and 5 residual-nonzero centered controls.  Source asymmetry is the only
+formation candidate admitted by a complete centered-control comparison;
+source–transport remains case-level, concentration is supporting-only, and
+carrier stability is used only as a fail-closed short consequence screen.  The
+current `NEW_IMPL` Gemma validation is source-null/feedback-sustained and adds
+no new strict Flash-style source case.
 
 ## Directory map
 
@@ -33,6 +47,7 @@ denominator and are not called normal controls or cases.
 | `tests/` | unit tests | keep |
 | `case.md`, `cases_flash_style.md` | case registry and Flash-style logic | keep |
 | `docs/coverage.md`, `docs/denominator.md`, `docs/bias_protocol.md` | compact protocol/status references | keep |
+| `docs/claims.md`, `docs/gate_history.md` | paper claim ledger and gate/count provenance | keep |
 | `docs/bias_properties.md` | candidate bias-formation tournament | keep |
 | `docs/l23_qproj_tile.md` | detailed mathematical case derivation | keep |
 | `results/coverage/` | frozen inputs, releases, ledgers, T1--T4 evidence | keep; remove only validated intermediates |

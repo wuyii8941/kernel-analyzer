@@ -11,14 +11,22 @@ The Flash-style evidence chain is:
 local same-dtype implementation difference
   -> exact endpoint repair
   -> real parameter-gradient carrier
-  -> cross-state coherent direction
+  -> trajectory-local directional persistence
   -> paired weight accumulation
 ```
 
+Independent-state coherence is reported on the separate generalizable-bias
+track.  Failing that stronger gate does not revoke a complete trajectory-local
+Flash-style case.
+
 See [PROJECT.md](PROJECT.md) for the live status and retention map,
 [cases_flash_style.md](cases_flash_style.md) for the case standard, and
-[case.md](case.md) for the current case registry.  The next formation-layer
-experiment is frozen in [docs/bias_properties.md](docs/bias_properties.md).
+[case.md](case.md) for the current case registry.  Paper-facing claims and
+their exact evidence boundaries are tracked in
+[docs/claims.md](docs/claims.md); count and gate changes are recorded in
+[docs/gate_history.md](docs/gate_history.md).  The completed property-search
+scope is summarized in
+[docs/bias_property_search_completion.md](docs/bias_property_search_completion.md).
 
 The main code is in `src/` and `scripts/`.  Scientific artifacts are kept
 under `results/coverage/` and compact derivations under `results/final/`.
