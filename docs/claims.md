@@ -143,4 +143,7 @@ residual.  Existing Phi schedule randomization reduces amplification from
 persistence.  A half-learning-rate Phi trajectory still passes SEUP with
 local accumulation `2.37477e-5`, feedback `2.04859e-6`, and recurrence error
 `1.01e-8`; this is a propagation sensitivity result, not a pure fixed-update
-intervention.  The held-out predictor campaign remains open.
+intervention.  A fixed real 16-step Phi error sequence injected into an
+alternate checkpoint gives drift/direct-sum ratio `1.0104`, with no extra
+feedback amplification in that probe.  The held-out predictor campaign remains
+open.

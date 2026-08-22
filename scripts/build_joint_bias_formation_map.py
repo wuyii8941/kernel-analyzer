@@ -27,6 +27,7 @@ SILU = ROOT / "results/property/bias_property_search/vl_silu_optimizer_oddness_v
 PHI_TRAJ = ROOT / "results/property/bias_formation/consequence/phi4_lm_head_dx_trajectory.json"
 PHI_LR_TRAJ = ROOT / "results/property/joint_bias_formation_v1/phi_lr5e4_trajectory.json"
 PHI_LR_SEUP = ROOT / "results/property/joint_bias_formation_v1/phi_lr5e4_seup.json"
+PHI_FIXED = ROOT / "results/property/joint_bias_formation_v1/phi_fixed_update_propagation.json"
 SEUP_SUMMARY = ROOT / "results/property/bias_formation_final/seup_consequence_summary.json"
 ROSTER = ROOT / "results/property/bias_formation_v2_1/roster_bound.json"
 
@@ -88,6 +89,20 @@ def propagation_summary() -> dict[str, Any]:
         result["phi4_lm_head_dx_seq64_lr5e4"] = lr_row
         if "phi4_lm_head_dx_seq64" in result:
             result["phi4_lm_head_dx_seq64"]["learning_rate_intervention"] = lr_row
+    if PHI_FIXED.exists():
+        fixed = load(PHI_FIXED)
+        fixed_row = {
+            "status": "MEASURED_FIXED_UPDATE_PROPAGATION",
+            "artifact": str(PHI_FIXED.relative_to(ROOT)),
+            "steps": fixed.get("steps"),
+            "fixed_sum_l2": fixed.get("final", {}).get("fixed_sum_l2"),
+            "alternate_feedback_drift_l2": fixed.get("final", {}).get("alternate_feedback_drift_l2"),
+            "feedback_over_direct_ratio": fixed.get("final", {}).get("feedback_over_direct_ratio"),
+            "claim_boundary": fixed.get("claim_boundary"),
+        }
+        result["phi4_lm_head_dx_seq64_fixed_update"] = fixed_row
+        if "phi4_lm_head_dx_seq64" in result:
+            result["phi4_lm_head_dx_seq64"]["fixed_update_intervention"] = fixed_row
     if SEUP_SUMMARY.exists():
         data = load(SEUP_SUMMARY)
         for case_id, value in data.get("cases", {}).items():
@@ -306,7 +321,7 @@ def render_md(data: dict[str, Any]) -> str:
         "",
         "## Current interpretation",
         "",
-        "The existing repository has exact antithetic response replays for saved-P and SiLU, a composite transport intervention for Phi, and source-event/chunk-geometry evidence for Liger. A host-GPU Liger 32-state rerun completed, but its confirmation population remained unresolved under the frozen gate. The 24-state chunk intervention confirmed BF16-specific directional geometry (24/24 versus FP32 13/11), while the separate RN→SR default residual screen was diffusive (A=0.942 versus SR=0.975/1.001) and is retained as a negative/diagnostic result. A half-learning-rate Phi trajectory still passed SEUP with local accumulation 2.37477e-5, feedback 2.04859e-6, and recurrence residual 1.01e-8. The deterministic 12-row screen-negative audit is screen-level only; no full trajectory label is imputed.",
+        "The existing repository has exact antithetic response replays for saved-P and SiLU, a composite transport intervention for Phi, and source-event/chunk-geometry evidence for Liger. A host-GPU Liger 32-state rerun completed, but its confirmation population remained unresolved under the frozen gate. The 24-state chunk intervention confirmed BF16-specific directional geometry (24/24 versus FP32 13/11), while the separate RN→SR default residual screen was diffusive (A=0.942 versus SR=0.975/1.001) and is retained as a negative/diagnostic result. A half-learning-rate Phi trajectory still passed SEUP with local accumulation 2.37477e-5, feedback 2.04859e-6, and recurrence residual 1.01e-8; a fixed-error alternate-checkpoint probe gave drift/direct-sum ratio 1.0104. The deterministic 12-row screen-negative audit is screen-level only; no full trajectory label is imputed.",
         "",
         "The next causal measurements are therefore: real Liger SR/order-breaking, a generic response replay for Liger/Phi, and fixed-update propagation probes. No missing vector is imputed.",
     ]
