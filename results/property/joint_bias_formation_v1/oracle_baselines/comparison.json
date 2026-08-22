@@ -1,0 +1,239 @@
+{
+  "claim_boundary": "This is a retrospective AUROC on the frozen 12-row audit, with only one local positive. It tests prefix ranking and miss rate, not universal Oracle accuracy. The dtype feature is constant by design. Reduction extent is bound to each exact executed kernel call.",
+  "cohort": {
+    "label": "independent 32-step local level above its complete sign-flip 95% null",
+    "negatives": 11,
+    "positives": 1,
+    "rows": 12,
+    "selection": "frozen residual-nonzero parameter-reachable screen-negative sample"
+  },
+  "comparisons": {
+    "compiled_reduction_extent": {
+      "auroc": 0.18181818181818182,
+      "danger_orientation": "larger_score_is_riskier",
+      "stratified_bootstrap_95": [
+        0.0,
+        0.45454545454545453
+      ]
+    },
+    "dtype_is_bfloat16": {
+      "auroc": 0.5,
+      "danger_orientation": "larger_score_is_riskier",
+      "stratified_bootstrap_95": [
+        0.5,
+        0.5
+      ]
+    },
+    "local_effective_update_rms": {
+      "auroc": 0.0,
+      "danger_orientation": "larger_score_is_riskier",
+      "stratified_bootstrap_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "prefix16_local_persistence_oracle": {
+      "auroc": 0.9090909090909091,
+      "danger_orientation": "larger_score_is_riskier",
+      "stratified_bootstrap_95": [
+        0.7272727272727273,
+        1.0
+      ]
+    }
+  },
+  "historical_headline_sensitivity": {
+    "case_id": "phi4_seq64_lmhead_dx",
+    "full32_operator_A": 4.487687419828846,
+    "passes_A_gt_1_triage": true,
+    "pooled_into_primary_auroc": false,
+    "prefix16_operator_A": 3.1839773160203646,
+    "reason": "different SGD carrier-scale protocol; retained as external sensitivity only"
+  },
+  "operating_point": {
+    "false_negative": 0,
+    "false_positive": 2,
+    "false_positive_rate": 0.18181818181818182,
+    "flag_rate": 0.25,
+    "flagged": 3,
+    "miss_rate": 0.0,
+    "name": "DIFFUSIVE_BOUNDARY_A_GT_1",
+    "precision": 0.3333333333333333,
+    "recall": 1.0,
+    "threshold_rule": "score>1.0",
+    "total": 12,
+    "true_negative": 9,
+    "true_positive": 1
+  },
+  "rows": [
+    {
+      "architecture": "deepseek8b",
+      "candidate_dtype_is_bfloat16": 1.0,
+      "case_id": "multishape-backward-cell-0057",
+      "family": "NORMALIZATION_BACKWARD",
+      "implementation_kind": "TRITON",
+      "label_32step_local_persistent": false,
+      "local_effective_update_rms": 5.911223127545187e-06,
+      "oracle_prefix16_local_A": 0.9901458994633713,
+      "reduction_binding_method": "TRITON_RNUMEL_FROM_EXACT_EXECUTED_CALL",
+      "reduction_extent": 128,
+      "source": "results/coverage/runtime_releases/deepseek8b_seq128_r1/trace/model__1_backward_segment0_executed/output_code.py",
+      "symbol": "triton_red_fused__to_copy_add_mul_sum_view_6"
+    },
+    {
+      "architecture": "deepseek8b",
+      "candidate_dtype_is_bfloat16": 1.0,
+      "case_id": "multishape-backward-cell-0103",
+      "family": "NORMALIZATION_BACKWARD",
+      "implementation_kind": "EXTERN",
+      "label_32step_local_persistent": false,
+      "local_effective_update_rms": 6.709884234669866e-06,
+      "oracle_prefix16_local_A": 0.9918294870496396,
+      "reduction_binding_method": "EXTERNAL_MM_K_FROM_EXACT_EXECUTED_CALL",
+      "reduction_extent": 4096,
+      "source": "results/coverage/runtime_releases/deepseek8b_seq256_r1/trace/model__1_backward_segment0_executed/output_code.py",
+      "symbol": "mm"
+    },
+    {
+      "architecture": "deepseek8b",
+      "candidate_dtype_is_bfloat16": 1.0,
+      "case_id": "multishape-backward-cell-0153",
+      "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+      "implementation_kind": "TRITON",
+      "label_32step_local_persistent": false,
+      "local_effective_update_rms": 7.996716482306362e-06,
+      "oracle_prefix16_local_A": 0.9522229768866934,
+      "reduction_binding_method": "TRITON_RNUMEL_FROM_EXACT_EXECUTED_CALL",
+      "reduction_extent": 1,
+      "source": "results/coverage/runtime_releases/deepseek8b_seq64_r1/trace/model__1_backward_segment0_executed/output_code.py",
+      "symbol": "triton_poi_fused__to_copy_add_arange_bmm_cat_cos_expand_mul_neg_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view_10"
+    },
+    {
+      "architecture": "deepseek8b",
+      "candidate_dtype_is_bfloat16": 1.0,
+      "case_id": "multishape-backward-cell-0190",
+      "family": "NORMALIZATION_BACKWARD",
+      "implementation_kind": "TRITON",
+      "label_32step_local_persistent": false,
+      "local_effective_update_rms": 6.357402594093498e-06,
+      "oracle_prefix16_local_A": 1.031362522749719,
+      "reduction_binding_method": "TRITON_RNUMEL_FROM_EXACT_EXECUTED_CALL",
+      "reduction_extent": 16,
+      "source": "results/coverage/runtime_releases/deepseek8b_seq64_r1/trace/model__1_backward_segment0_executed/output_code.py",
+      "symbol": "triton_per_fused_sum_19"
+    },
+    {
+      "architecture": "deepseek8b",
+      "candidate_dtype_is_bfloat16": 1.0,
+      "case_id": "multishape-backward-cell-0191",
+      "family": "NORMALIZATION_BACKWARD",
+      "implementation_kind": "TRITON",
+      "label_32step_local_persistent": false,
+      "local_effective_update_rms": 9.337161674793667e-06,
+      "oracle_prefix16_local_A": 0.969157193983975,
+      "reduction_binding_method": "TRITON_RNUMEL_FROM_EXACT_EXECUTED_CALL",
+      "reduction_extent": 16,
+      "source": "results/coverage/runtime_releases/deepseek8b_seq64_r1/trace/model__1_backward_segment0_executed/output_code.py",
+      "symbol": "triton_per_fused_sum_19"
+    },
+    {
+      "architecture": "mamba",
+      "candidate_dtype_is_bfloat16": 1.0,
+      "case_id": "multishape-backward-cell-0450",
+      "family": "STATE_SPACE_RECURRENT_BACKWARD",
+      "implementation_kind": "TRITON",
+      "label_32step_local_persistent": false,
+      "local_effective_update_rms": 5.221790768070529e-06,
+      "oracle_prefix16_local_A": 0.9767200909694583,
+      "reduction_binding_method": "TRITON_RNUMEL_FROM_EXACT_EXECUTED_CALL",
+      "reduction_extent": 64,
+      "source": "results/coverage/runtime_releases/mamba_seq64_r1/trace/model__1_backward_segment0_executed/output_code.py",
+      "symbol": "triton_per_fused__to_copy__unsafe_view_add_softplus_softplus_backward_squeeze_sum_transpose_76"
+    },
+    {
+      "architecture": "phi",
+      "candidate_dtype_is_bfloat16": 1.0,
+      "case_id": "multishape-backward-cell-0501",
+      "family": "NORMALIZATION_BACKWARD",
+      "implementation_kind": "TRITON",
+      "label_32step_local_persistent": false,
+      "local_effective_update_rms": 4.83639016674214e-06,
+      "oracle_prefix16_local_A": 0.9975948573099218,
+      "reduction_binding_method": "TRITON_RNUMEL_FROM_EXACT_EXECUTED_CALL",
+      "reduction_extent": 128,
+      "source": "results/coverage/runtime_releases/phi4_seq128_r1/trace/model__7_backward_segment1_executed/output_code.py",
+      "symbol": "triton_red_fused__to_copy__unsafe_view_add_mul_sum_view_8"
+    },
+    {
+      "architecture": "phi",
+      "candidate_dtype_is_bfloat16": 1.0,
+      "case_id": "multishape-backward-cell-0508",
+      "family": "NORMALIZATION_BACKWARD",
+      "implementation_kind": "TRITON",
+      "label_32step_local_persistent": false,
+      "local_effective_update_rms": 4.646227631321271e-06,
+      "oracle_prefix16_local_A": 0.9912535046616785,
+      "reduction_binding_method": "TRITON_RNUMEL_FROM_EXACT_EXECUTED_CALL",
+      "reduction_extent": 128,
+      "source": "results/coverage/runtime_releases/phi4_seq128_r1/trace/model__7_backward_segment1_executed/output_code.py",
+      "symbol": "triton_red_fused__to_copy_mul_sum_0"
+    },
+    {
+      "architecture": "phi",
+      "candidate_dtype_is_bfloat16": 1.0,
+      "case_id": "multishape-backward-cell-0543",
+      "family": "NORMALIZATION_BACKWARD",
+      "implementation_kind": "TRITON",
+      "label_32step_local_persistent": true,
+      "local_effective_update_rms": 3.6279779430242264e-06,
+      "oracle_prefix16_local_A": 1.0069439579690107,
+      "reduction_binding_method": "TRITON_RNUMEL_FROM_EXACT_EXECUTED_CALL",
+      "reduction_extent": 2,
+      "source": "results/coverage/runtime_releases/phi4_seq256_r1/trace/model__7_backward_segment1_executed/output_code.py",
+      "symbol": "triton_per_fused__to_copy_mul_sum_2"
+    },
+    {
+      "architecture": "qwen",
+      "candidate_dtype_is_bfloat16": 1.0,
+      "case_id": "multishape-backward-cell-0654",
+      "family": "ATTENTION_PROJECTION_BACKWARD",
+      "implementation_kind": "EXTERN",
+      "label_32step_local_persistent": false,
+      "local_effective_update_rms": 5.424681632658048e-06,
+      "oracle_prefix16_local_A": 0.9963965272886287,
+      "reduction_binding_method": "EXTERNAL_MM_K_FROM_EXACT_EXECUTED_CALL",
+      "reduction_extent": 1024,
+      "source": "results/coverage/runtime_releases/qwen_seq256_r2/trace/model__1_backward_segment0_executed/output_code.py",
+      "symbol": "mm"
+    },
+    {
+      "architecture": "qwen",
+      "candidate_dtype_is_bfloat16": 1.0,
+      "case_id": "multishape-backward-cell-0745",
+      "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+      "implementation_kind": "TRITON",
+      "label_32step_local_persistent": false,
+      "local_effective_update_rms": 6.493654988749512e-06,
+      "oracle_prefix16_local_A": 0.9972039997168488,
+      "reduction_binding_method": "TRITON_RNUMEL_FROM_EXACT_EXECUTED_CALL",
+      "reduction_extent": 64,
+      "source": "results/coverage/runtime_releases/qwen_seq64_r2/trace/model__1_backward_segment0_executed/output_code.py",
+      "symbol": "triton_per_fused__softmax__softmax_backward_data__to_copy_mul_view_8"
+    },
+    {
+      "architecture": "qwen",
+      "candidate_dtype_is_bfloat16": 1.0,
+      "case_id": "multishape-backward-cell-0747",
+      "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+      "implementation_kind": "TRITON",
+      "label_32step_local_persistent": false,
+      "local_effective_update_rms": 1.1765745755478331e-05,
+      "oracle_prefix16_local_A": 1.0033034995278058,
+      "reduction_binding_method": "TRITON_RNUMEL_FROM_EXACT_EXECUTED_CALL",
+      "reduction_extent": 1,
+      "source": "results/coverage/runtime_releases/qwen_seq64_r2/trace/model__1_backward_segment0_executed/output_code.py",
+      "symbol": "triton_poi_fused__to_copy_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view_9"
+    }
+  ],
+  "schema": "kernel-analyzer-oracle-baseline-comparison-v1",
+  "status": "COMPLETE_RETROSPECTIVE_FROZEN_12_ROW_COMPARISON"
+}
