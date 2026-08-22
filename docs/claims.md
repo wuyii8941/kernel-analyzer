@@ -74,7 +74,7 @@ Flash-style persistent-local-source cases.
 |---|---|---|---|
 | Repeated drift is not explained by a single random kick. | Repeated, support/norm-matched perturbations at every step, multiple frozen seeds, and drift-subspace analysis. | `results/property/tcmp_allop_v1/repeated_orbit_null_summary.json`; `docs/tcmp_progress.md` | `SUPPORTED`, but the result is not source-specific: repeated orbit variants retain 93.4–101.8% of natural drift with high cosine and effective rank 1.28/1.57. It supports low-dimensional closed-loop feedback and rejects “fixed schedule alone is the anchor.” |
 | The final drift direction is operator-specific. | Natural drift must separate from multiple matched perturbation directions beyond the shared low-dimensional feedback subspace. | same repeated-orbit artifacts | `NOT_SUPPORTED`. The five-seed cosine/effective-rank result shows strong shared structure; current evidence does not isolate an operator-unique direction. |
-| Liger persistence is caused by a step-invariant rounding/schedule anchor rather than error magnitude. | On the real kernel, preserve or increase error energy while removing rounding bias (RN→SR), and independently randomize chunk/order across steps. | `results/property/joint_bias_formation_v1/liger_chunk_host_certificate.json`; `results/property/joint_bias_formation_v1/liger_sr_intervention.json` | `BOUNDED`. The real 24-state chunk-geometry intervention confirms BF16 24/24 directional versus FP32 13/11 and RMS ratio 2.63384. The separate 16-state RN→SR default-residual screen is diffusive (RN `A=0.942`, SR `0.975/1.001`), so it does not show source-persistence suppression; the tested effect is specific to the chunk-geometry contrast. |
+| Liger persistence is caused by a step-invariant rounding/schedule anchor rather than error magnitude. | On the real kernel, preserve or increase error energy while removing rounding bias (RN→SR), and independently randomize chunk/order across steps. | `results/property/joint_bias_formation_v1/liger_chunk_host_certificate.json`; `results/property/joint_bias_formation_v1/liger_sr_intervention.json` | `BOUNDED`. The real 24-state chunk-geometry intervention confirms BF16 24/24 directional versus FP32 13/11 and RMS ratio 2.63384. The separate 16-state RN→SR default-residual run is `INCONCLUSIVE_NO_POSITIVE_BASELINE`: RN `A=0.942` is already diffusive, while SR is `0.975/1.001`. It cannot establish suppression of a confirmed persistent baseline. |
 | Feedback is a separate causal channel. | Local source is null-like; feedback recurrence is persistent; stateless/moment-reset optimizer controls remove it. | Gemma artifacts in `docs/tcmp_progress.md` | `SUPPORTED_CASE_LEVEL`. Predictor F is not frozen; feedback remains outside the source Oracle’s domain. |
 | OLMoE routing flips do not contaminate its control. | Record route indices/weights in both arms for every measured state. | OLMoE section of `docs/tcmp_progress.md` | `SUPPORTED`: routing indices and weights matched in all 26 states. The result is a backward-visible canceling control, not a case. |
 
@@ -128,6 +128,8 @@ intervention; Liger has a source-event feasibility screen.  Missing raw
 The synthetic parity tests pass (`41` targeted tests total).  A real 16-step
 Phi SR intervention is now complete: RN has amplification `3.325`, while four
 SR repeats have mean amplification `0.956` and carrier capture below `0.02`.
+This Phi run has a confirmed coherent RN baseline; it must not be conflated
+with the separate Liger RN→SR screen below.
 The endpoint noise is not smaller, but effective-update energy is not exactly
 norm-matched, so this is causal source evidence with an explicit boundary,
 not a perfect matched-norm proof.  A host-GPU 32-state Liger formation rerun
@@ -135,15 +137,21 @@ also completed; its calibration local population was directional but the
 confirmation population stayed unresolved under the frozen gate.  Separately,
 the real 24-state Liger chunk-geometry intervention confirmed BF16 `24/24`
 same-sign projections versus FP32 `13/11` and a BF16/FP32 residual-RMS ratio
-of `2.63384`.  A separate real 16-state RN→SR screen on the default
-residual was completed: RN `A=0.9419`, SR repeats `0.9750/1.0010`, so it is a
-diagnostic negative rather than a causal suppression of a persistent default
-residual.  Existing Phi schedule randomization reduces amplification from
+of `2.63384`.  A separate real 16-state RN→SR run on the default residual was
+completed: RN `A=0.9419`, SR repeats `0.9750/1.0010`.  Because the RN arm is
+already at the diffusive boundary on this state/contrast split, this is
+`INCONCLUSIVE_NO_POSITIVE_BASELINE`, not a failed suppression result.  It
+cannot be compared to a historical Liger amplification unless horizon, state
+bank, endpoint contrast, and denominator are proven identical.  Existing Phi
+schedule randomization reduces amplification from
 `3.3253` to `3.1123` (ratio `0.936`), so schedule changes alone do not remove
 persistence.  A half-learning-rate Phi trajectory still passes SEUP with
 local accumulation `2.37477e-5`, feedback `2.04859e-6`, and recurrence error
 `1.01e-8`; this is a propagation sensitivity result, not a pure fixed-update
 intervention.  A fixed real 16-step Phi error sequence injected into an
 alternate checkpoint gives drift/direct-sum ratio `1.0104`, with no extra
-feedback amplification in that probe.  The held-out predictor campaign remains
-open.
+feedback amplification in that probe.  This is a positive propagation-closure
+result: direct accumulated error predicts the observed drift to within 1.04%.
+The generic raw-vector even/odd response decomposition, 16→32 prefix backtest,
+and full consequence recall audit remain open.  The held-out predictor campaign
+also remains open.
