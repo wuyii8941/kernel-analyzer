@@ -95,15 +95,26 @@ the entire final separation a direct operator effect.
 
 ## Phi equal-energy intervention
 
-For Phi, deterministic BF16 rounding gives `A=3.325`. Four stochastic-rounding
-repeats average `A=0.956`. After each stochastic update error is rescaled to
-have exactly the same per-step L2 norm as the deterministic error, the mean is
-still only `A=0.984`; the maximum relative norm mismatch is below `1.4e-7`.
+This is a separate 16-state, stateless-SGD source experiment. It is not the
+32-step zero-moment AdamW result `A=1.029` in the table above, and it cannot be
+used as the mechanism intervention for that AdamW result.
+
+Under this stateless-SGD mapping, deterministic BF16 rounding gives
+`A=3.325`. Four stochastic-rounding repeats average `A=0.956`. After each
+stochastic update error is rescaled to have exactly the same per-step L2 norm
+as the deterministic error, the mean is still only `A=0.984`; the maximum
+relative norm mismatch is below `1.4e-7`.
 
 The real stochastic-rounding endpoint is the causal intervention. The exact
 norm match is an update-space analysis rather than a second executable kernel.
 Together they show that the drop is about repeated direction, not simply less
-error energy.
+error energy, within this 16-state stateless-SGD protocol. The corresponding
+matched intervention under zero-moment AdamW has not been run.
+
+This is not evidence that the Phi defect originates in the optimizer. The
+gradient is already strongly directional before optimization, and AdamW
+removes most of that directionality. The remaining AdamW signal is currently
+an observation with a small margin, not a mechanism-localized result.
 
 ## Result boundary
 

@@ -149,9 +149,19 @@ def main() -> None:
         error for row in rows for error in row["matched_update_norm_relative_errors"]
     )
     payload = {
-        "schema": "kernel-analyzer-phi-real-sr-intervention-v1",
+        "schema": "kernel-analyzer-phi-real-sr-intervention-v2",
         "status": "COMPLETE" if args.steps == 16 else "ENGINEERING_DRY_RUN",
         "case_id": "phi4_seq64_lmhead_dx", "steps": args.steps, "sr_repeats": args.sr_repeats,
+        "update_mapping": {
+            "name": "STATELESS_SGD_FP32_MASTER",
+            "learning_rate": learning_rate,
+            "moment_state": "NONE",
+        },
+        "state_protocol": {
+            "kind": "ORDERED_COMMON_STATE_SOURCE_INTERVENTION",
+            "state_bank": "phi4_seq64_input_bank states 16..31",
+            "master_advance": "natural deterministic-BF16 gradient with stateless SGD",
+        },
         "natural_vs_fp32": natural, "sr_vs_fp32": repeats,
         "sr_norm_matched_to_natural_update": matched_repeats,
         "sr_amplification_mean": sum(sr_a) / len(sr_a),
@@ -160,7 +170,7 @@ def main() -> None:
         "sr_to_natural_amplification_ratio": (sum(sr_a) / len(sr_a)) / max(natural["coherence_amplification"], 1e-30),
         "matched_sr_to_natural_amplification_ratio": (sum(matched_a) / len(matched_a)) / max(natural["coherence_amplification"], 1e-30),
         "rows": rows,
-        "claim_boundary": "The natural and stochastic arms use the real backward endpoint. The norm-matched arm rescales each stochastic effective-update error to the natural per-step L2 norm after measurement; it is an exact update-space matched analysis, not a separately executable kernel.",
+        "claim_boundary": "This is a 16-state stateless-SGD source intervention, not the 32-step zero-moment AdamW local-persistence measurement. The natural and stochastic arms use the real backward endpoint. The norm-matched arm rescales each stochastic effective-update error to the natural per-step L2 norm after measurement; it is an exact update-space matched analysis, not a separately executable kernel.",
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")

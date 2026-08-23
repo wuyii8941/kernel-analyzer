@@ -32,8 +32,12 @@
   "phi_matched_intervention": {
     "source_arm": "stochastic BF16 materialization",
     "comparison_arm": "natural deterministic BF16 materialization",
+    "update_mapping": "STATELESS_SGD_FP32_MASTER, learning_rate=0.001, no moments",
+    "steps": 16,
+    "scope_note": "This intervention is separate from the 32-step zero-moment AdamW Oracle remeasurement and cannot be used as its mechanism intervention.",
     "matching": "rescale each stochastic effective-update error to the natural arm's per-step L2 norm",
     "interpretation": "an update-space matched analysis, not a second executable kernel"
   },
+  "metadata_clarification": "The top-level AdamW configuration applies to the 15-row Oracle comparison and the three 32-step case remeasurements. The Phi stochastic-rounding source intervention uses the explicit stateless-SGD mapping above. This clarification changes no measurement, threshold, or verdict.",
   "claim_boundary": "This is a bounded carrier-scale retrospective repair. It is not a universal all-operator accuracy estimate."
 }

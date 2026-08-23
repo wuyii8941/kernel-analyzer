@@ -1,6 +1,6 @@
 {
   "case_id": "phi4_seq64_lmhead_dx",
-  "claim_boundary": "The natural and stochastic arms use the real backward endpoint. The norm-matched arm rescales each stochastic effective-update error to the natural per-step L2 norm after measurement; it is an exact update-space matched analysis, not a separately executable kernel.",
+  "claim_boundary": "This is a 16-state stateless-SGD source intervention, not the 32-step zero-moment AdamW local-persistence measurement. The natural and stochastic arms use the real backward endpoint. The norm-matched arm rescales each stochastic effective-update error to the natural per-step L2 norm after measurement; it is an exact update-space matched analysis, not a separately executable kernel.",
   "matched_sr_amplification_mean": 0.9838517603585172,
   "matched_sr_to_natural_amplification_ratio": 0.29586890848490927,
   "matched_update_norm_max_relative_error": 1.392870952177726e-07,
@@ -316,7 +316,12 @@
       "step": 16
     }
   ],
-  "schema": "kernel-analyzer-phi-real-sr-intervention-v1",
+  "schema": "kernel-analyzer-phi-real-sr-intervention-v2",
+  "state_protocol": {
+    "kind": "ORDERED_COMMON_STATE_SOURCE_INTERVENTION",
+    "master_advance": "natural deterministic-BF16 gradient with stateless SGD",
+    "state_bank": "phi4_seq64_input_bank states 16..31"
+  },
   "sr_amplification_mean": 0.955515309618486,
   "sr_norm_matched_to_natural_update": [
     {
@@ -629,5 +634,10 @@
     }
   ],
   "status": "COMPLETE",
-  "steps": 16
+  "steps": 16,
+  "update_mapping": {
+    "learning_rate": 0.001,
+    "moment_state": "NONE",
+    "name": "STATELESS_SGD_FP32_MASTER"
+  }
 }

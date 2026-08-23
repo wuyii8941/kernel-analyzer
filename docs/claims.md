@@ -127,11 +127,14 @@ Flash-style persistent-local-source cases.
 1. Complete wall-clock cost accounting after the Mamba and uncontended
    headline timing runs.
 2. An executable source intervention with exactly matched update energy remains
-   optional strengthening. Phi already provides a positive deterministic
-   baseline and causal suppression with stochastic rounding. A new analysis
+   optional strengthening. Under a separate 16-state stateless-SGD protocol,
+   Phi provides a positive deterministic baseline and causal suppression with
+   stochastic rounding. A new analysis
    matches every stochastic update norm to the deterministic update within
    `1.4e-7` relative error and still reduces mean `A` from `3.325` to `0.984`,
    but that exact rescaling is an update analysis rather than a second kernel.
+   It does not explain the separate zero-moment AdamW `A=1.029` result; a
+   matched AdamW source intervention remains open.
    The Liger RN arm is diffusive and cannot support a suppression claim.
 3. A prospective, protocol-conforming `NEW_IMPL` source-positive confirmation,
    or an explicit decision to publish the narrower family-scoped result.
@@ -150,7 +153,7 @@ intervention; Liger has a source-event feasibility screen.  Missing raw
 `epsilon`/`+epsilon`/`-epsilon` vectors are explicitly `UNRESOLVED`.
 
 The synthetic parity tests pass (`41` targeted tests total).  A real 16-step
-Phi SR intervention is now complete: RN has amplification `3.325`, while four
+stateless-SGD Phi SR intervention is now complete: RN has amplification `3.325`, while four
 SR repeats have mean amplification `0.956` and carrier capture below `0.02`.
 This Phi run has a confirmed coherent RN baseline; it must not be conflated
 with the separate Liger RN→SR screen below.
@@ -192,5 +195,7 @@ AUROC `0.528`. Liger remains directly persistent (`A=1.720`), Phi is a
 small-margin direct positive (`A=1.029`), and exact Qwen seq128 direct updates
 cancel (`A=0.957`) even though its gradient differences are more aligned
 (`A=1.343`). Liger, Phi, and Qwen now all have 32-step direct/feedback/actual
-exports. The exact Phi norm-matched analysis gives mean stochastic `A=0.984`
-at the deterministic arm's per-step update norm.
+exports. In a separate 16-state stateless-SGD experiment, the exact Phi
+norm-matched analysis gives mean stochastic `A=0.984` at the deterministic
+arm's per-step update norm. It is not the intervention for the AdamW
+`A=1.029` result.

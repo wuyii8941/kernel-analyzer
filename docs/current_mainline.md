@@ -96,6 +96,19 @@ differences under the historical SGD measurement, but the direct update
 differences cancel after AdamW. The optimizer is therefore part of the
 measured training behavior, not an interchangeable final step.
 
+The separate Phi stochastic-rounding experiment must not be attached to the
+Phi AdamW row in this table. Its `A=3.325 -> 0.956` result uses 16 common
+states and stateless SGD with no moments; the `A=1.029` result here uses a
+32-step zero-moment AdamW trajectory. The former supports a source-level
+intervention under SGD. A matched source intervention for the AdamW result
+has not been run.
+
+These data do not locate the defect inside AdamW. Directionality is already
+strong at the Phi gradient before the optimizer, while AdamW suppresses most
+of it. The supported conclusion is that the optimizer changes whether an
+existing gradient bias reaches the parameter update; the small remaining
+AdamW signal has not yet been assigned to a mechanism.
+
 The new exact Qwen seq128 three-stage result is `A=1.005` at the operator
 output, `A=1.343` at the parameter gradient, and `A=0.961` after AdamW. Its
 live direct update has `A=0.957`; feedback has `A=1.191`, and actual parameter
