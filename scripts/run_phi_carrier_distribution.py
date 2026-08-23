@@ -78,6 +78,14 @@ def main() -> None:
         default=None,
         help="optional /data1 directory for final candidate/repair carrier masters",
     )
+    parser.add_argument(
+        "--random-seeds", type=int, nargs="+", default=None,
+        help="also run repeated RMS/support-matched Rademacher nulls for every carrier",
+    )
+    parser.add_argument(
+        "--random-final-dir", type=Path, default=None,
+        help="optional /data1 directory for final random-null masters",
+    )
     args = parser.parse_args()
 
     manifest = json.loads(args.manifest.read_text())
@@ -117,6 +125,10 @@ def main() -> None:
     records = []
     if args.final_dir is not None:
         args.final_dir.mkdir(parents=True, exist_ok=True)
+    if args.random_seeds and args.steps != 32:
+        raise ValueError("random nulls require the complete 32-step run")
+    if args.random_final_dir is not None:
+        args.random_final_dir.mkdir(parents=True, exist_ok=True)
     for item in selected:
         name = item["carrier"]
         parameter = parameters[name]
@@ -124,6 +136,13 @@ def main() -> None:
         candidate_master = original.clone()
         repair_master = original.clone()
         increments: list[torch.Tensor] = []
+        random_masters = [original.clone() for _ in (args.random_seeds or [])]
+        random_previous_drifts = [torch.zeros_like(original) for _ in (args.random_seeds or [])]
+        random_generators = [
+            torch.Generator(device=device).manual_seed(seed)
+            for seed in (args.random_seeds or [])
+        ]
+        random_increments = [[] for _ in (args.random_seeds or [])]
         step_rows = []
         carrier_start = time.monotonic()
 
@@ -150,6 +169,23 @@ def main() -> None:
             next_repair = repair_master - args.learning_rate * gr
             increment = (next_candidate - candidate_master) - (next_repair - repair_master)
             increments.append(increment.detach().cpu())
+            for random_index, generator in enumerate(random_generators):
+                random_gradient = gradient(random_masters[random_index], state, True)
+                signs = torch.randint(
+                    0, 2, increment.shape, generator=generator, device=device,
+                    dtype=torch.int8,
+                ).mul_(2).sub_(1).to(increment.dtype)
+                injection = increment * signs
+                next_random = (
+                    random_masters[random_index]
+                    - args.learning_rate * random_gradient
+                    + injection
+                )
+                drift = next_random - next_repair
+                random_increment = drift - random_previous_drifts[random_index]
+                random_increments[random_index].append(random_increment.detach().cpu())
+                random_masters[random_index] = next_random
+                random_previous_drifts[random_index] = drift
             candidate_master, repair_master = next_candidate, next_repair
             step_rows.append({
                 "step": index + 1,
@@ -173,6 +209,20 @@ def main() -> None:
                 "candidate_sha256": hashlib.sha256(candidate_path.read_bytes()).hexdigest(),
                 "repair_sha256": hashlib.sha256(repair_path.read_bytes()).hexdigest(),
             }
+        random_nulls = None
+        if args.random_seeds:
+            random_nulls = []
+            safe_name = name.replace(".", "__")
+            for seed, vectors, master in zip(args.random_seeds, random_increments, random_masters):
+                item_null = {"seed": seed, **summarize(vectors)}
+                if args.random_final_dir is not None:
+                    path = args.random_final_dir / f"{safe_name}.random_{seed}.pt"
+                    torch.save(master.cpu(), path)
+                    item_null["final_master"] = {
+                        "path": str(path),
+                        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                    }
+                random_nulls.append(item_null)
         result = {
             **item,
             "coordinates": parameter.numel(),
@@ -181,6 +231,7 @@ def main() -> None:
             "f_and_b_calls": 2 * args.steps,
             "final_masters": final_masters,
             "records": step_rows,
+            "random_nulls": random_nulls,
         }
         records.append(result)
         print(json.dumps({

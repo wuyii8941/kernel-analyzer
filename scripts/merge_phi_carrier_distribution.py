@@ -29,6 +29,21 @@ def main() -> None:
     if [row["carrier"] for row in rows] != [row["carrier"] for row in manifest["carriers"]]:
         raise RuntimeError("merged carriers do not exactly match the frozen manifest")
     amplitudes = [float(row["measurement"]["coherence_amplification"]) for row in rows]
+    random_by_seed = {}
+    for row in rows:
+        for item in row.get("random_nulls") or []:
+            random_by_seed.setdefault(str(item["seed"]), []).append(
+                float(item["coherence_amplification"])
+            )
+    random_summary = {
+        seed: {
+            "carrier_count": len(values),
+            "minimum_A": min(values),
+            "mean_A": sum(values) / len(values),
+            "maximum_A": max(values),
+        }
+        for seed, values in sorted(random_by_seed.items(), key=lambda item: int(item[0]))
+    }
     payload = {
         "schema": "kernel-analyzer-phi-carrier-distribution-v1",
         "status": "COMPLETE_FROZEN_12_CARRIER_DISTRIBUTION",
@@ -42,6 +57,7 @@ def main() -> None:
             "above_diffusive_one": sum(value > 1.0 for value in amplitudes),
             "above_historical_two": sum(value >= 2.0 for value in amplitudes),
         },
+        "random_null_summary": random_summary,
         "rows": rows,
         "timing": {
             "sum_carrier_elapsed_seconds": sum(float(row["elapsed_seconds"]) for row in rows),
