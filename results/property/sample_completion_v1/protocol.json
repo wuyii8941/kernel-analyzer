@@ -1,0 +1,120 @@
+{
+  "causal_interventions": [
+    "accumulator_precision_or_legal_reduction_order",
+    "saved_state_or_exact_recompute_with_matched_sham",
+    "SGD_AdamW_moment_precision_or_reset"
+  ],
+  "completion_gate": [
+    "at_least_20_uniform_complete_cases",
+    "at_least_15_valid_nonzero_parameter_reachable_controls",
+    "three_positive_families_or_real_kernel_causal_construct",
+    "frozen_heldout_validation",
+    "oracle_vs_baselines",
+    "recall_false_positive_abstain_and_gpu_cost"
+  ],
+  "freeze_commit": "0dc89bb03b2392012770730e0fc7655e8c2bbdc6",
+  "label_policy": {
+    "historical_verdicts_are_not_reused_as_labels": true,
+    "no_case_or_threshold_changes_after_measurement": true,
+    "out_of_domain_is_not_negative": true,
+    "unresolved_is_retained_in_denominator": true
+  },
+  "measurement_stages": {
+    "feedback_decomposition": {
+      "required": true,
+      "steps": [
+        32
+      ]
+    },
+    "operator_output_error": {
+      "required": true,
+      "steps": [
+        8,
+        16,
+        32
+      ]
+    },
+    "optimizer_update_error": {
+      "optimizers": [
+        "SGD",
+        "AdamW"
+      ],
+      "required": true,
+      "steps": [
+        8,
+        16,
+        32
+      ]
+    },
+    "paired_parameter_drift": {
+      "required": true,
+      "steps": [
+        32
+      ]
+    },
+    "parameter_gradient_error": {
+      "required": true,
+      "steps": [
+        8,
+        16,
+        32
+      ]
+    }
+  },
+  "oracle": {
+    "baselines": [
+      "local_rms",
+      "dtype",
+      "reduction_length",
+      "8_or_16_step_magnitude"
+    ],
+    "forbidden_inputs": [
+      "32_step_label",
+      "final_drift",
+      "historical_case_name",
+      "T4_verdict",
+      "SEUP_verdict",
+      "post_step_16_measurements"
+    ],
+    "input_steps": [
+      1,
+      16
+    ],
+    "outputs": [
+      "ESCALATE_TO_32_STEP",
+      "NO_ESCALATION_UNDER_PROTOCOL",
+      "ABSTAIN_MISSING_REQUIRED_MEASUREMENT"
+    ],
+    "safe_label_forbidden": true
+  },
+  "protocol_id": "sample_completion_v1",
+  "schema": "kernel-analyzer-sample-completion-protocol-v1",
+  "scientific_goal": {
+    "heldout_models_minimum": 2,
+    "heldout_new_implementation_classes_minimum": 2,
+    "heldout_units_minimum": 8,
+    "independent_positive_families_minimum": 3,
+    "uniform_cases_minimum": 20,
+    "valid_nonzero_reachable_controls_minimum": 15
+  },
+  "screening_schedule": {
+    "engineering": 2,
+    "final_label": 32,
+    "final_label_rule": "only_32_step_complete_trace_can_assign_case_label",
+    "prescreen": 8,
+    "random_unflagged_32_step_controls": {
+      "max": 10,
+      "min": 8
+    },
+    "short_prediction": 16
+  },
+  "status": "FROZEN_BEFORE_NEW_MEASUREMENT",
+  "valid_case_requirements": [
+    "candidate_and_repair_bind_one_exact_operator_or_closed_semantic_region",
+    "repair_changes_only_declared_target_implementation",
+    "candidate_and_repair_share_weights_batch_rng_and_optimizer_state",
+    "nonzero_candidate_repair_difference",
+    "difference_reaches_declared_parameter_gradient",
+    "forward_and_actual_backward_are_bound"
+  ]
+}

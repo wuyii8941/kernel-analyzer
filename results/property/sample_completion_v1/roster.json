@@ -1,0 +1,536 @@
+{
+  "base_case_count": 8,
+  "base_cases": [
+    {
+      "case_id": "liger_fused_ce_t128",
+      "historical_artifacts": [
+        {
+          "exists": true,
+          "path": "results/coverage/existing_case_reaudit.json",
+          "sha256": "1a19e1da97b79b85d29f6895ec7c9dbcb1dd6f317ff6957f4b003bd36449c59b"
+        },
+        {
+          "exists": true,
+          "path": "results/property/joint_bias_formation_v1/three_stage_summary.json",
+          "sha256": "fc71fb88c7dbdbd4056201440b0faccf5b475b1a5bccfb0cfe81aa82be394ed7"
+        }
+      ],
+      "implementation_family": "fused_reduction_accumulation",
+      "model": "qwen3_1p7b",
+      "role": "POSITIVE",
+      "scientific_label": null,
+      "selection_rule": "predeclared_base_case_from_sample_completion_plan",
+      "sequence_length": 128,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "case_id": "phi4_lm_head_dx_seq64",
+      "historical_artifacts": [
+        {
+          "exists": true,
+          "path": "results/coverage/cases/phi4_seq64_lmhead_dx.json",
+          "sha256": "e6227acd983b75f7606712c944e08ab327e7e07ba1d90dc68500d13a931e00e4"
+        },
+        {
+          "exists": true,
+          "path": "results/coverage/cases/phi4_seq64_lmhead_dx_trajectory.json",
+          "sha256": "71c8f0c76a52de3d248c2a53b1ce986427d6b60fda515c244adbb291db1bcde4"
+        }
+      ],
+      "implementation_family": "lm_head_vjp_gemm",
+      "model": "phi4",
+      "role": "POSITIVE",
+      "scientific_label": null,
+      "selection_rule": "predeclared_base_case_from_sample_completion_plan",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "case_id": "qwen_seq256_lm_head_dx",
+      "historical_artifacts": [
+        {
+          "exists": true,
+          "path": "results/property/persistence_v1/confirmation/qwen256_lmhead.json",
+          "sha256": "b504cea60f7a193f13e5f1c70a7bb9e1b66c3d3caa9de9d09974a7bc83fc4f26"
+        }
+      ],
+      "implementation_family": "lm_head_vjp_gemm",
+      "model": "qwen3_1p7b",
+      "role": "POSITIVE",
+      "scientific_label": null,
+      "selection_rule": "predeclared_base_case_from_sample_completion_plan",
+      "sequence_length": 256,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "case_id": "qwen128_layer0_vproj_output",
+      "historical_artifacts": [
+        {
+          "exists": true,
+          "path": "results/coverage/cases/qwen128_vproj.json",
+          "sha256": "e56159074436879ed5dea395e04fe3f6631288766c6990cde1e6881ff40b286d"
+        },
+        {
+          "exists": true,
+          "path": "results/coverage/cases/qwen128_vproj_trajectory.json",
+          "sha256": "fafd25a7a68f94e68de112fe2c2e6037bd1be35d2b80f12a252c25d4469e5f70"
+        }
+      ],
+      "implementation_family": "projection_rounding",
+      "model": "qwen3_1p7b",
+      "role": "CONTROL",
+      "scientific_label": null,
+      "selection_rule": "predeclared_base_case_from_sample_completion_plan",
+      "sequence_length": 128,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "case_id": "qwen_saved_p_seq128",
+      "historical_artifacts": [
+        {
+          "exists": true,
+          "path": "results/coverage/cases/qwen128_softmax_fb.json",
+          "sha256": "7475cbf29e2707b15c2358cca3f83dbc364e646774895083594f4ad49bc03ec5"
+        },
+        {
+          "exists": true,
+          "path": "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json",
+          "sha256": "079ea5f72c7b14d96e20158307786115c2ebb7782358a446d03b7115c1976dec"
+        }
+      ],
+      "implementation_family": "saved_state_reconstruction",
+      "model": "qwen3_1p7b",
+      "role": "CONTROL",
+      "scientific_label": null,
+      "selection_rule": "predeclared_base_case_from_sample_completion_plan",
+      "sequence_length": 128,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "case_id": "qwen3vl_silu_backward",
+      "historical_artifacts": [
+        {
+          "exists": true,
+          "path": "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json",
+          "sha256": "6ef17e30c61168cfd0d3692d042743e1a0ddc9029e868b839135430e6028217d"
+        },
+        {
+          "exists": true,
+          "path": "results/round2/vl_bias.json",
+          "sha256": "f8fc5db2a5435c0faa7e2973c4cfcc451573693897883794e00b874be0e54c0a"
+        }
+      ],
+      "implementation_family": "pointwise_backward",
+      "model": "qwen3_vl_reranker_2b",
+      "role": "CONTROL",
+      "scientific_label": null,
+      "selection_rule": "predeclared_base_case_from_sample_completion_plan",
+      "sequence_length": 160,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "case_id": "gemma4_e2b_ple_rmsnorm",
+      "historical_artifacts": [
+        {
+          "exists": true,
+          "path": "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/norm_formation16.json",
+          "sha256": "ad4764ffe89dbf85580d54adb83f7e6c8f7ce6d22e69e3c6c3755f3203d130d6"
+        },
+        {
+          "exists": true,
+          "path": "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/norm_consequence32.json",
+          "sha256": "d0409dab700d11766127f78379a56a5e3fa085d747d3a292126349965209e63b"
+        }
+      ],
+      "implementation_family": "normalization_backward",
+      "model": "gemma4_e2b",
+      "role": "CONTROL",
+      "scientific_label": null,
+      "selection_rule": "predeclared_base_case_from_sample_completion_plan",
+      "sequence_length": 128,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "case_id": "qwen_bmm_seq64",
+      "historical_artifacts": [
+        {
+          "exists": true,
+          "path": "results/property/seup_geometry_followup/qwen_bmm_seq64_geometry.json",
+          "sha256": "b1722e9d492d8a27964dc807dde8b67788ff8223eb2f9779e351ce789c7dfdf7"
+        },
+        {
+          "exists": true,
+          "path": "results/property/seup_mainline/qwen_bmm_seq64_seup.json.gz",
+          "sha256": "0ca560b961a9029ed104026759a3c65ee1d43d56ee526fb9a1b86fa1a9408922"
+        }
+      ],
+      "implementation_family": "attention_bmm",
+      "model": "qwen3_1p7b",
+      "role": "CONTROL",
+      "scientific_label": null,
+      "selection_rule": "predeclared_base_case_from_sample_completion_plan",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    }
+  ],
+  "case_count": 24,
+  "claim_boundary": "The roster is a measurement plan. It assigns no new scientific labels.",
+  "freeze_commit": "0dc89bb03b2392012770730e0fc7655e8c2bbdc6",
+  "schema": "kernel-analyzer-sample-completion-roster-v1",
+  "search_unit_count": 16,
+  "search_units": [
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/qwen_seq64_matrix.json",
+      "binding_artifact_exists": true,
+      "case_id": "qwen_seq64_ce_dlogits",
+      "implementation_family": "LOSS_BACKWARD",
+      "model": "qwen3_1p7b",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/qwen_seq64_matrix.json",
+      "binding_artifact_exists": true,
+      "case_id": "qwen_seq64_l27_q_norm_vjp",
+      "implementation_family": "NORMALIZATION_BACKWARD",
+      "model": "qwen3_1p7b",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/qwen_seq64_matrix.json",
+      "binding_artifact_exists": true,
+      "case_id": "qwen_seq64_l27_k_norm_vjp",
+      "implementation_family": "NORMALIZATION_BACKWARD",
+      "model": "qwen3_1p7b",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/qwen_seq64_matrix.json",
+      "binding_artifact_exists": true,
+      "case_id": "qwen_seq64_l23_softmax_vjp",
+      "implementation_family": "ATTENTION_BACKWARD",
+      "model": "qwen3_1p7b",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/deepseek8b_seq64_rescreen/deepseek8b_seq64_ce_dlogits.json",
+      "binding_artifact_exists": true,
+      "case_id": "deepseek8b_seq64_ce_dlogits",
+      "implementation_family": "LOSS_BACKWARD",
+      "model": "deepseek8b",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/deepseek8b_seq64_rescreen/deepseek8b_seq64_final_norm_vjp.json",
+      "binding_artifact_exists": true,
+      "case_id": "deepseek8b_seq64_final_norm_vjp",
+      "implementation_family": "NORMALIZATION_BACKWARD",
+      "model": "deepseek8b",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/deepseek8b_seq64_rescreen/deepseek8b_seq64_l35_attention_dv.json",
+      "binding_artifact_exists": true,
+      "case_id": "deepseek8b_seq64_l35_attention_dv",
+      "implementation_family": "ATTENTION_BACKWARD",
+      "model": "deepseek8b",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/deepseek8b_seq64_rescreen/deepseek8b_seq64_l35_softmax_vjp.json",
+      "binding_artifact_exists": true,
+      "case_id": "deepseek8b_seq64_l35_softmax_vjp",
+      "implementation_family": "ATTENTION_BACKWARD",
+      "model": "deepseek8b",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/phi4_seq64_rescreen/phi4_seq64_ce_dlogits.json",
+      "binding_artifact_exists": true,
+      "case_id": "phi4_seq64_ce_dlogits",
+      "implementation_family": "LOSS_BACKWARD",
+      "model": "phi4",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/phi4_seq64_rescreen/phi4_seq64_final_norm_vjp.json",
+      "binding_artifact_exists": true,
+      "case_id": "phi4_seq64_final_norm_vjp",
+      "implementation_family": "NORMALIZATION_BACKWARD",
+      "model": "phi4",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/phi4_seq64_rescreen/phi4_seq64_l31_attention_dv.json",
+      "binding_artifact_exists": true,
+      "case_id": "phi4_seq64_l31_attention_dv",
+      "implementation_family": "ATTENTION_BACKWARD",
+      "model": "phi4",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/phi4_seq64_rescreen/phi4_seq64_l31_softmax_vjp.json",
+      "binding_artifact_exists": true,
+      "case_id": "phi4_seq64_l31_softmax_vjp",
+      "implementation_family": "ATTENTION_BACKWARD",
+      "model": "phi4",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/mamba_seq64_capture_plan.json",
+      "binding_artifact_exists": true,
+      "case_id": "mamba_seq64_ce_dlogits",
+      "implementation_family": "LOSS_BACKWARD",
+      "model": "mamba",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/mamba_seq64_capture_plan.json",
+      "binding_artifact_exists": true,
+      "case_id": "mamba_seq64_final_norm_vjp",
+      "implementation_family": "NORMALIZATION_BACKWARD",
+      "model": "mamba",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/mamba_seq64_capture_plan.json",
+      "binding_artifact_exists": true,
+      "case_id": "mamba_seq64_scan_recurrence",
+      "implementation_family": "STATE_SPACE_BACKWARD",
+      "model": "mamba",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    },
+    {
+      "binding_artifact": "results/property/bias_formation/hotspot_search/mamba_seq64_capture_plan.json",
+      "binding_artifact_exists": true,
+      "case_id": "mamba_seq64_scan_reduction",
+      "implementation_family": "STATE_SPACE_BACKWARD",
+      "model": "mamba",
+      "role": "SEARCH_UNIT",
+      "scientific_label": null,
+      "screen_status": "NOT_STARTED",
+      "selection_inputs_excluded": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "SEUP",
+        "trajectory_drift",
+        "error_magnitude"
+      ],
+      "selection_rule": "semantic_bottleneck_and_model_family_before_outcome_reveal",
+      "sequence_length": 64,
+      "uniform_measurement_status": "NOT_YET_UNIFIED"
+    }
+  ],
+  "status": "FROZEN_BEFORE_NEW_MEASUREMENT"
+}

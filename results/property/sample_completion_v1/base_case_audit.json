@@ -1,0 +1,291 @@
+{
+  "claim_boundary": "Existing artifacts are not silently promoted; all eight cases need a schema-normalized trace before they enter the new uniform denominator.",
+  "layer_artifacts_complete_count": 4,
+  "required_layers": [
+    "operator_output",
+    "parameter_gradient",
+    "optimizer_update",
+    "trajectory_32",
+    "feedback"
+  ],
+  "rows": [
+    {
+      "case_id": "liger_fused_ce_t128",
+      "evidence": {
+        "feedback": [
+          "results/property/joint_bias_formation_v1/three_stage_summary.json"
+        ],
+        "operator_output": [
+          "results/property/joint_bias_formation_v1/liger_three_stage_summary.json"
+        ],
+        "optimizer_update": [
+          "results/property/joint_bias_formation_v1/liger_three_stage_summary.json"
+        ],
+        "parameter_gradient": [
+          "results/property/joint_bias_formation_v1/liger_three_stage_summary.json"
+        ],
+        "trajectory_32": [
+          "results/trajectory/liger_trajectory.json"
+        ]
+      },
+      "implementation_family": "fused_reduction_accumulation",
+      "layer_artifact_present": {
+        "feedback": true,
+        "operator_output": false,
+        "optimizer_update": false,
+        "parameter_gradient": false,
+        "trajectory_32": true
+      },
+      "layer_artifacts_complete": false,
+      "missing_layers": [
+        "operator_output",
+        "parameter_gradient",
+        "optimizer_update"
+      ],
+      "note": "Existing strict case; a uniform export still needs to be generated.",
+      "role": "POSITIVE",
+      "scientific_label": null,
+      "uniform_trace_ready": false
+    },
+    {
+      "case_id": "phi4_lm_head_dx_seq64",
+      "evidence": {
+        "feedback": [
+          "results/property/joint_bias_formation_v1/phi_fixed_update_propagation.json"
+        ],
+        "operator_output": [
+          "results/coverage/cases/phi4_seq64_lmhead_dx.json"
+        ],
+        "optimizer_update": [
+          "results/property/joint_bias_formation_v1/phi_three_stage_reference.json"
+        ],
+        "parameter_gradient": [
+          "results/coverage/cases/phi4_seq64_lmhead_dx.json"
+        ],
+        "trajectory_32": [
+          "results/coverage/cases/phi4_seq64_lmhead_dx_trajectory.json"
+        ]
+      },
+      "implementation_family": "lm_head_vjp_gemm",
+      "layer_artifact_present": {
+        "feedback": true,
+        "operator_output": true,
+        "optimizer_update": true,
+        "parameter_gradient": true,
+        "trajectory_32": true
+      },
+      "layer_artifacts_complete": true,
+      "missing_layers": [],
+      "note": "Existing strict case; optimizer and feedback artifacts use older schemas.",
+      "role": "POSITIVE",
+      "scientific_label": null,
+      "uniform_trace_ready": false
+    },
+    {
+      "case_id": "qwen_seq256_lm_head_dx",
+      "evidence": {
+        "feedback": [],
+        "operator_output": [
+          "results/property/persistence_v1/confirmation/qwen256_lmhead.json"
+        ],
+        "optimizer_update": [
+          "results/property/persistence_v1/confirmation/qwen256_lmhead.json"
+        ],
+        "parameter_gradient": [
+          "results/property/bias_oracle_recovery/confirmation/qwen/qwen_seq64_lm_head_dx.json"
+        ],
+        "trajectory_32": [
+          "results/property/persistence_v1/confirmation/qwen256_lmhead.json"
+        ]
+      },
+      "implementation_family": "lm_head_vjp_gemm",
+      "layer_artifact_present": {
+        "feedback": false,
+        "operator_output": true,
+        "optimizer_update": true,
+        "parameter_gradient": true,
+        "trajectory_32": true
+      },
+      "layer_artifacts_complete": false,
+      "missing_layers": [
+        "feedback"
+      ],
+      "note": "Historical Qwen evidence lacks a separate feedback recurrence export.",
+      "role": "POSITIVE",
+      "scientific_label": null,
+      "uniform_trace_ready": false
+    },
+    {
+      "case_id": "qwen128_layer0_vproj_output",
+      "evidence": {
+        "feedback": [
+          "results/coverage/cases/qwen128_vproj_trajectory.json"
+        ],
+        "operator_output": [
+          "results/coverage/cases/qwen128_vproj.json"
+        ],
+        "optimizer_update": [],
+        "parameter_gradient": [],
+        "trajectory_32": [
+          "results/coverage/cases/qwen128_vproj_trajectory.json"
+        ]
+      },
+      "implementation_family": "projection_rounding",
+      "layer_artifact_present": {
+        "feedback": true,
+        "operator_output": true,
+        "optimizer_update": false,
+        "parameter_gradient": false,
+        "trajectory_32": true
+      },
+      "layer_artifacts_complete": false,
+      "missing_layers": [
+        "parameter_gradient",
+        "optimizer_update"
+      ],
+      "note": "Trajectory exists, but the three update layers are not exported in the uniform format.",
+      "role": "CONTROL",
+      "scientific_label": null,
+      "uniform_trace_ready": false
+    },
+    {
+      "case_id": "qwen_saved_p_seq128",
+      "evidence": {
+        "feedback": [
+          "results/property/joint_bias_formation_v1/qwen_three_stage_reference.json"
+        ],
+        "operator_output": [
+          "results/property/joint_bias_formation_v1/qwen_three_stage_reference.json"
+        ],
+        "optimizer_update": [
+          "results/property/joint_bias_formation_v1/qwen_three_stage_reference.json"
+        ],
+        "parameter_gradient": [
+          "results/property/joint_bias_formation_v1/qwen_three_stage_reference.json"
+        ],
+        "trajectory_32": [
+          "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json"
+        ]
+      },
+      "implementation_family": "saved_state_reconstruction",
+      "layer_artifact_present": {
+        "feedback": true,
+        "operator_output": true,
+        "optimizer_update": true,
+        "parameter_gradient": true,
+        "trajectory_32": true
+      },
+      "layer_artifacts_complete": true,
+      "missing_layers": [],
+      "note": "All layers exist in older artifacts, but require schema-normalized export.",
+      "role": "CONTROL",
+      "scientific_label": null,
+      "uniform_trace_ready": false
+    },
+    {
+      "case_id": "qwen3vl_silu_backward",
+      "evidence": {
+        "feedback": [
+          "results/property/joint_bias_formation_v1/vl_silu_optimizer_oddness_vectors_v3.json"
+        ],
+        "operator_output": [
+          "results/round2/vl_bias.json"
+        ],
+        "optimizer_update": [
+          "results/property/joint_bias_formation_v1/vl_silu_optimizer_oddness_vectors_v3.json"
+        ],
+        "parameter_gradient": [
+          "results/round2/vl_bias.json"
+        ],
+        "trajectory_32": [
+          "results/coverage/cases/qwen3vl_layer0_silu_trajectory.json"
+        ]
+      },
+      "implementation_family": "pointwise_backward",
+      "layer_artifact_present": {
+        "feedback": true,
+        "operator_output": true,
+        "optimizer_update": true,
+        "parameter_gradient": true,
+        "trajectory_32": true
+      },
+      "layer_artifacts_complete": true,
+      "missing_layers": [],
+      "note": "The historical natural trajectory has fewer than the new protocol's 32 uniform states.",
+      "role": "CONTROL",
+      "scientific_label": null,
+      "uniform_trace_ready": false
+    },
+    {
+      "case_id": "gemma4_e2b_ple_rmsnorm",
+      "evidence": {
+        "feedback": [
+          "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/norm_consequence32.json"
+        ],
+        "operator_output": [
+          "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/norm_formation16.json"
+        ],
+        "optimizer_update": [
+          "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/norm_consequence32.json"
+        ],
+        "parameter_gradient": [
+          "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/norm_formation16.json"
+        ],
+        "trajectory_32": [
+          "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/norm_consequence32.json"
+        ]
+      },
+      "implementation_family": "normalization_backward",
+      "layer_artifact_present": {
+        "feedback": true,
+        "operator_output": true,
+        "optimizer_update": true,
+        "parameter_gradient": true,
+        "trajectory_32": true
+      },
+      "layer_artifacts_complete": true,
+      "missing_layers": [],
+      "note": "Complete targeted control, not yet schema-normalized.",
+      "role": "CONTROL",
+      "scientific_label": null,
+      "uniform_trace_ready": false
+    },
+    {
+      "case_id": "qwen_bmm_seq64",
+      "evidence": {
+        "feedback": [],
+        "operator_output": [
+          "results/property/seup_geometry_followup/qwen_bmm_seq64_geometry.json"
+        ],
+        "optimizer_update": [
+          "results/property/seup_mainline/qwen_bmm_seq64_seup.json.gz"
+        ],
+        "parameter_gradient": [],
+        "trajectory_32": [
+          "results/property/seup_mainline/qwen_bmm_seq64_seup.json.gz"
+        ]
+      },
+      "implementation_family": "attention_bmm",
+      "layer_artifact_present": {
+        "feedback": false,
+        "operator_output": true,
+        "optimizer_update": true,
+        "parameter_gradient": false,
+        "trajectory_32": true
+      },
+      "layer_artifacts_complete": false,
+      "missing_layers": [
+        "parameter_gradient",
+        "feedback"
+      ],
+      "note": "Existing geometry artifact does not prove the new uniform repair/sham chain.",
+      "role": "CONTROL",
+      "scientific_label": null,
+      "uniform_trace_ready": false
+    }
+  ],
+  "schema": "kernel-analyzer-sample-completion-base-case-audit-v1",
+  "status": "PRE_UNIFORM_REEXPORT_AUDIT",
+  "uniform_control_count": 0,
+  "uniform_trace_ready_count": 0
+}
