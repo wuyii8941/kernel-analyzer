@@ -11,28 +11,28 @@
       "model_id": "Qwen/Qwen3-1.7B",
       "sequence_lengths": [64, 128, 256],
       "scope": "execution census, F+B origin accounting, analytic witnesses, T1 full-coordinate audit",
-      "status": "CENSUS_COMPLETE_CAUSAL_CHAIN_PARTIAL"
+      "status": "FULL_OPERATOR_COVERAGE_GATES_COMPLETE_TIMING_OPEN"
     },
     {
       "model": "Phi-4-mini 3.8B",
       "model_id": "microsoft/Phi-4-mini-instruct",
       "sequence_lengths": [64, 128, 256],
       "scope": "execution census, F+B origin accounting, analytic witnesses, T1 full-coordinate audit",
-      "status": "CENSUS_COMPLETE_CAUSAL_CHAIN_PARTIAL"
+      "status": "FULL_OPERATOR_COVERAGE_GATES_COMPLETE_TIMING_OPEN"
     },
     {
       "model": "DeepSeek-R1-Qwen3-8B",
       "model_id": "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
       "sequence_lengths": [64, 128, 256],
       "scope": "execution census, F+B origin accounting, analytic witnesses, T1 full-coordinate audit",
-      "status": "CENSUS_COMPLETE_CAUSAL_CHAIN_PARTIAL"
+      "status": "FULL_OPERATOR_COVERAGE_GATES_COMPLETE_TIMING_OPEN"
     },
     {
       "model": "Mamba-130M",
       "model_id": "state-spaces/mamba-130m-hf",
       "sequence_lengths": [64, 128, 256],
       "scope": "execution census, F+B origin accounting, analytic witnesses, T1 full-coordinate audit",
-      "status": "CENSUS_COMPLETE_CAUSAL_CHAIN_PARTIAL",
+      "status": "FULL_OPERATOR_COVERAGE_GATES_COMPLETE_TIMING_OPEN",
       "open_items": [
         "seq256 large T2 shard is pending",
         "fresh timed consequence is blocked by AOT compilation after step 10"
@@ -99,10 +99,11 @@
     "execution_and_origin_accounting": "COMPLETE",
     "analytic_fb_proof": "COMPLETE",
     "full_coordinate_t1_audit": "1562_OF_1562",
-    "candidate_fb_binding_closed_cells": 3,
-    "same_dtype_optimization_oracle_closed_cells": 0,
-    "valid_triton_numerical_oracle": false,
-    "fully_closed_core_cells": 0,
+    "candidate_fb_binding_closed_cells": 12,
+    "same_dtype_optimization_oracle_closed_cells": 12,
+    "valid_typed_triton_numerical_oracle_closed_cells": 12,
+    "fully_closed_core_cells": 12,
+    "fresh_mamba_timing_row": "UNRESOLVED_BLOCKED",
     "universal_property_claim": false
   },
   "authoritative_sources": [
@@ -112,5 +113,5 @@
     "docs/coverage.md",
     "docs/tcmp_progress.md"
   ],
-  "claim_boundary": "Model inventory and execution-census coverage are broad, but full causal F+B/repair/trajectory closure is not complete for every model. The conservative campaign-level gates above take precedence over any stale summary wording that says all 12 cells are fully closed."
+  "claim_boundary": "Ten model families have actual artifacts. The four-model x three-shape core has 12/12 declared execution, F+B-origin, candidate-binding, typed numerical-reference, and same-dtype gates closed. Mamba fresh timing remains independently unresolved; directed models are not full censuses. No universal bias property is claimed."
 }

@@ -92,14 +92,14 @@ def test_typed_triton_replacements_supersede_only_their_historical_invalid_cells
     status = json.loads((ROOT / "results/coverage/four_model_full_operator_status.json").read_text())
     abi = json.loads((ROOT / "results/coverage/triton_reference_abi_audit.json").read_text())
     assert abi["status"] == "INVALID_REFERENCE_ABI"
-    assert status["status"] == "PARTIAL_FAIL_CLOSED"
+    assert status["status"] == "COMPLETE"
     assert status["counts"]["triton_execution_censuses_closed"] == 12
     closed = [
         row for row in status["cells"]
         if row["gates"]["triton_numeric_reference_valid"]
     ]
     assert status["counts"]["triton_precision_oracles_closed"] == len(closed)
-    assert closed
+    assert len(closed) == 12
     assert all(
         row["triton_precision_oracle"]["path"].endswith("typed_triton_oracle.json.gz")
         and row["triton_precision_oracle"]["gates"]["typed_triton_pointer_abi_valid"] is True

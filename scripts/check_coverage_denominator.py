@@ -149,24 +149,45 @@ def verify() -> dict[str, int]:
     counts = status["counts"]
     if counts["declared_cells"] != 12 or counts["fb_origin_bound"] != 12:
         raise ValueError("active 12-cell execution/origin denominator is incomplete")
-    if counts["fully_closed_cells"] != 0 or status["status"] != "PARTIAL_FAIL_CLOSED":
-        raise ValueError("invalid or unresolved scientific gates were promoted")
+    active_complete = (
+        status["status"] == "COMPLETE"
+        and counts["fully_closed_cells"] == 12
+    )
+    active_partial = (
+        status["status"] == "PARTIAL_FAIL_CLOSED"
+        and counts["fully_closed_cells"] == 0
+    )
+    if not (active_complete or active_partial):
+        raise ValueError("active scientific gates have an inconsistent status")
     if abi["status"] != "INVALID_REFERENCE_ABI":
         raise ValueError("Triton ABI invalidation unexpectedly disappeared")
     if counts["triton_execution_censuses_closed"] != 12:
         raise ValueError("Triton execution census was lost during invalidation")
-    if counts["triton_precision_oracles_closed"] != 0:
+    if active_complete and counts["triton_precision_oracles_closed"] != 12:
+        raise ValueError("complete status lacks twelve typed Triton replacements")
+    if active_partial and counts["triton_precision_oracles_closed"] != 0:
         raise ValueError("invalid Triton numerical references were promoted")
     for cell in status["cells"]:
         gates = cell["gates"]
         if not gates["execution_census"] or not gates["fb_origin_bound"]:
             raise ValueError("captured cell lost execution/origin accounting")
-        if gates["triton_numeric_reference_valid"]:
-            raise ValueError("invalid Triton reference passed a cell gate")
-        if cell["status"] != "PENDING_FAIL_CLOSED":
-            raise ValueError("incomplete cell did not fail closed")
-    if audit["status"] != "COMPLETE_EXECUTION_AUDIT_PARTIAL_SCIENTIFIC_GATES":
-        raise ValueError("four-model audit obscures partial scientific gates")
+        if active_complete:
+            if not gates["triton_numeric_reference_valid"]:
+                raise ValueError("complete cell lacks a valid typed Triton reference")
+            if cell["status"] != "COMPLETE_ALL_DECLARED_GATES":
+                raise ValueError("complete cell has a non-complete status")
+        else:
+            if gates["triton_numeric_reference_valid"]:
+                raise ValueError("invalid Triton reference passed a cell gate")
+            if cell["status"] != "PENDING_FAIL_CLOSED":
+                raise ValueError("incomplete cell did not fail closed")
+    expected_audit = (
+        "COMPLETE_EXECUTION_AUDIT_WITH_HOUSEKEEPING_GAPS"
+        if active_complete
+        else "COMPLETE_EXECUTION_AUDIT_PARTIAL_SCIENTIFIC_GATES"
+    )
+    if audit["status"] != expected_audit:
+        raise ValueError("four-model audit status disagrees with active scientific gates")
 
     return {
         **{"legacy_" + key: value for key, value in legacy_counts.items()},

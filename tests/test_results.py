@@ -640,10 +640,10 @@ class FinalResultsTest(unittest.TestCase):
 
         overview = json.loads((root / "results/coverage/summary.json").read_text())
         self.assertTrue(overview["global_gates"]["execution_and_origin_accounting_complete"])
-        self.assertFalse(overview["global_gates"]["analytic_fb_proof_complete"])
-        self.assertFalse(overview["global_gates"]["candidate_fb_binding_complete"])
-        self.assertFalse(overview["global_gates"]["valid_triton_numerical_oracle_complete"])
-        self.assertFalse(overview["global_gates"]["same_dtype_optimization_oracle_complete"])
+        self.assertTrue(overview["global_gates"]["canonical_eager_fb_proof_complete"])
+        self.assertTrue(overview["global_gates"]["candidate_fb_binding_complete"])
+        self.assertTrue(overview["global_gates"]["valid_triton_numerical_oracle_complete"])
+        self.assertTrue(overview["global_gates"]["same_dtype_optimization_oracle_complete"])
         self.assertFalse(overview["global_gates"]["property_induction_allowed"])
 
         completion = json.loads(

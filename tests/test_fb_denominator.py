@@ -151,5 +151,5 @@ def test_standalone_denominator_verifier():
         "active_execution_census_invocations": 466419,
         "active_primary_fb_accounting_units": 186807,
         "active_analytic_fb_proof_units": 186807,
-        "active_fully_closed_cells": 0,
+        "active_fully_closed_cells": 12,
     }

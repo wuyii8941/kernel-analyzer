@@ -2394,8 +2394,13 @@ def _verify_elementary_unit(
     forward_nodes: Sequence[Mapping[str, Any]],
     backward_nodes: Sequence[Mapping[str, Any]],
     forward_index: Mapping[str, Mapping[str, Any]],
-    backward_index: Mapping[str, Mapping[str, Any]],
+    backward_index: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any] | None:
+    # Older structural-verifier callers only needed the forward index for
+    # elementary transpose/reshape checks.  Keep that narrow API compatible;
+    # branches that inspect saved backward values still receive the explicit
+    # index from the full verifier.
+    backward_index = {} if backward_index is None else backward_index
     signature = (
         tuple(str(node["target"]) for node in forward_nodes),
         tuple(str(node["target"]) for node in backward_nodes),
