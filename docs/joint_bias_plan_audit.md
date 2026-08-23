@@ -56,7 +56,7 @@
 
 这是回溯性、小阳性样本的工程结果，不是通用准确率。GPU 小时节省没有记录完整，因此不声称具体节省倍数。
 
-把筛选数字单独保存为 [`efficiency.json`](../results/property/joint_bias_formation_v1/oracle_baselines/efficiency.json)：当前规则只需要把 12 个候选中的 3 个送入完整 32 步检查，表面上可避免 75% 的完整运行；但这不是 GPU 小时节省，因为每个候选的运行时间没有完整记录。
+把筛选数字单独保存为 [`timed_efficiency_partial_v1.json`](../results/property/joint_bias_formation_v1/timed_efficiency_partial_v1.json)：当前实际有 11/12 行的完整 32 步 wall-time 记录，共 4.927 GPU-hours（按一 GPU/每 case 计）。Mamba 行经过四次真实配置/恢复尝试仍未获得可用 wall-time，因此这里只报告已测子集，不把它写成完整 GPU 节省或完整 recall 结论。
 
 ## 仍然明确保留的边界
 
@@ -81,7 +81,7 @@
 | 四臂最终权重的共同 FP32 未见数据 loss | 是 | 4 行、32 步最终权重，统一评估路径 | 只作为下游后果，不重新定义 bias |
 | RMS / dtype / 归约长度基线 | 是 | 冻结的 12 行回溯比较 | 只支持“当前样本中 RMS 不是有效筛选器”，不声称通用准确率 |
 | 12 个有真实差异且参数可达的负例 consequence | 是 | 12/12 完成，16 步到 32 步回测已生成 | 反馈漂移与局部 source persistence 分开报告 |
-| 分诊效率的真实 GPU 时间 | 是 | 正在用独立计时 runner 重跑，旧的未计时数字不作结论 | 完成前只报告 flag/recall，不报告节省 GPU 小时 |
+| 分诊效率的真实 GPU 时间 | 是 | [`timed_efficiency_partial_v1.json`](../results/property/joint_bias_formation_v1/timed_efficiency_partial_v1.json)：11/12 screen-negative rows 有真实 32 步 wall time，共 4.927 GPU-hours（按一 GPU/每 case 计）；缺失的 Mamba 行经过 4 次真实配置/恢复尝试仍卡在兼容性 AOT 编译 | 只报告这 11 行的原始 wall time；不声称完整 12 行或完整 Oracle cohort 的 GPU 节省 |
 | held-out 联合 predictor | 是，但属于收口验证 | 目前只有有界 source-negative 确认 | 未完成前不称为通用 predictor |
 | 全量 raw epsilon 的 (+ε/-ε) 重放 | 否，属于加固 | 只有部分可重放案例 | 缺少保存输入的案例保持 UNRESOLVED，不补造数据 |
 | SR、全参数训练、继续盲搜新正例 | 否 | 不作为本轮停止条件 | 它们不能替代三段 A、matched repair 和 Oracle 基线 |

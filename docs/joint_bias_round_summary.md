@@ -60,12 +60,17 @@ label.
 
 The fresh wall-clock rerun has 11 of the 12 screen-negative rows with a real
 32-step timed output.  The Mamba scientific consequence certificate is also
-complete, but two independent timing attempts hit the same missing-CUDA-
-extension fallback (one reached step 4 after about 28 minutes; the graph-break
-retry produced no step).  They were stopped and recorded as a real
-`BLOCKED_AOT_WARMUP` result.  Therefore no 12-row GPU-time saving number is
-claimed.  This affects timing only, not the already complete 12/12 scientific
-consequence results.
+complete, but four real timing configurations (including a resume from a
+checkpoint containing nine completed steps) hit the same missing-CUDA-
+extension/sequential-fallback AOT boundary.  They were stopped and recorded as
+`BLOCKED_AOT_WARMUP` with their actual elapsed times and preserved checkpoint.
+Therefore no complete 12-row GPU-time saving number is claimed.  This affects
+timing only, not the already complete 12/12 scientific consequence results.
+The measured subset is recorded in
+`results/property/joint_bias_formation_v1/timed_efficiency_partial_v1.json`:
+11 timed rows total 4.927 one-GPU-equivalent hours.  Four active headline
+rows (the three positives and Mamba) have no time, so recall and full-cohort
+savings remain unavailable.
 
 ## Scientific boundary
 
