@@ -30,9 +30,16 @@
 
 现有 Phi 随机舍入结果只是 stateless SGD 的 development demonstration，不能冒充 AdamW `A=1.029` 的修复实验。
 
+### 4. 当前 GPU 复跑阻塞
+
+一次 Phi 2-step 工程复跑没有产生科学结果：严格编译模式遇到动态
+RoPE 分支，允许 graph break 后又找不到冻结 release 中的 Triton 符号。
+这被记录为 `ABSTAIN_RUNTIME_MISMATCH`，不是 negative，也没有改变任何
+已有标签。详细记录见
+`results/property/direct_persistence_v4/gpu_preflight.json`。
+
 ## 最终允许的结论
 
 - 跨未见实现仍有效：可以升级为更通用的训练算子 Oracle；
 - 只在特定 optimizer 或实现范围有效：明确声明适用域；
 - 能解释现象但短筛不能稳定泛化：保留为分析方法，不继续无限寻找 positive。
-

@@ -1,0 +1,29 @@
+{
+  "schema": "kernel-analyzer-direct-persistence-v4-gpu-preflight-v1",
+  "status": "ABSTAIN_RUNTIME_MISMATCH",
+  "case_id": "phi4_seq64_lmhead_dx",
+  "requested_steps": 2,
+  "requested_protocol": "Cold-start AdamW Direct Persistence Screen",
+  "attempts": [
+    {
+      "environment": "/data1/tzh/miniconda3/envs/pt_nightly",
+      "runner": "scripts/run_bound_endpoint_consequence_v21.py",
+      "result": "ABSTAIN",
+      "reason": "strict compilation hit data-dependent branching in transformers.modeling_rope_utils.longrope_frequency_update"
+    },
+    {
+      "environment": "/data1/tzh/envs/pt271_alias_bug",
+      "runner": "scripts/run_bound_endpoint_consequence_v21.py",
+      "result": "ABSTAIN",
+      "reason": "strict compilation hit the same data-dependent RoPE branch"
+    },
+    {
+      "environment": "/data1/tzh/envs/pt271_alias_bug",
+      "runner": "scripts/run_bound_endpoint_consequence_v21.py --allow-graph-breaks",
+      "result": "ABSTAIN",
+      "reason": "the replay observer could not find the frozen candidate Triton symbols after graph-break compilation"
+    }
+  ],
+  "scientific_interpretation": "No formation, persistence, optimizer, or negative result is produced. The run cannot be used to update any label.",
+  "required_followup": "Recreate the exact runtime release environment and compiler graph before attempting optimizer-state or held-out measurements."
+}

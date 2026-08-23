@@ -518,6 +518,11 @@ def main() -> None:
         "qwen": "not direct-persistent under cold-start AdamW",
         "phi_sr_scope": "16-state stateless-SGD source intervention; not evidence for Phi AdamW A=1.029",
         "raw_vector_limitation": "Per-step vectors and full sequence cross-Grams were not saved in v3; no vectors were imputed.",
+        "gpu_preflight": {
+            "status": "ABSTAIN_RUNTIME_MISMATCH",
+            "artifact": "results/property/direct_persistence_v4/gpu_preflight.json",
+            "scientific_result": False,
+        },
         "next_required": [
             "freeze v4 protocol and tolerance/severity definitions",
             "same-state optimizer ablation with real captured moments",
