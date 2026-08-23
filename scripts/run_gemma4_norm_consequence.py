@@ -18,6 +18,7 @@ from scripts.run_frozen_candidate_fp32_screen import wrapper_modules
 from scripts.run_generated_fp32_screen import load_model
 from scripts.run_heldout_lmhead_consequence import adam_delta
 from kernel_analyzer.short_persistence import SharedShortPersistenceScreen
+from kernel_analyzer.trajectory_persistence import OrderedVectorPath
 
 
 CARRIER = "model.language_model.per_layer_model_projection.weight"
@@ -55,6 +56,10 @@ def main() -> None:
     parser.add_argument("--short-screen-steps", type=int, default=8)
     parser.add_argument("--short-screen-projection-dim", type=int, default=256)
     parser.add_argument("--short-screen-null-draws", type=int, default=2000)
+    parser.add_argument(
+        "--optimizer-ablation-output", type=Path,
+        help="stream same-state gradient/SGD/AdamW/moment-reset scores without raw vectors",
+    )
     args = parser.parse_args()
     prediction = json.loads(args.prediction.read_text())
     if prediction["status"] != "PREDICTION_FROZEN_BEFORE_TRAJECTORY":
@@ -74,7 +79,15 @@ def main() -> None:
     # constants and makes an otherwise valid release appear mismatched.
     warm_states = [row for row in bank["states"] if row["role"] == "ENGINEERING"]
     if not warm_states:
-        raise RuntimeError("frozen runtime release requires an ENGINEERING warm-up state")
+        # Some older, separately frozen feedback releases were compiled from
+        # the trajectory bank itself.  Accept that path only when the release
+        # capture explicitly names the same bank; never guess a warm-up state.
+        capture_probe = json.loads((args.runtime_release / "capture.json").read_text())
+        expected_bank = capture_probe["input"]["input_bank_sha256"]
+        observed_bank = hashlib.sha256(args.input_bank.read_bytes()).hexdigest()
+        if expected_bank != observed_bank or not states:
+            raise RuntimeError("frozen runtime release requires a declared ENGINEERING warm-up state")
+        warm_states = [states[0]]
     if args.short_screen_output is not None and not 4 <= args.short_screen_steps <= min(16, args.steps):
         raise ValueError("short screen steps must be in [4, min(16, trajectory steps)]")
     device = torch.device(args.device)
@@ -121,6 +134,15 @@ def main() -> None:
     rm = torch.zeros_like(initial); rv = torch.zeros_like(initial)
     sums = {name: torch.zeros_like(initial) for name in ("local", "feedback", "actual")}
     energies = {name: 0.0 for name in sums}
+    ablation_paths = None
+    if args.optimizer_ablation_output is not None:
+        ablation_paths = {
+            name: OrderedVectorPath(total_steps=args.steps, calibration_steps=max(1, args.steps // 2))
+            for name in (
+                "gradient_difference", "stateless_sgd",
+                "captured_adamw_moments", "moment_reset_each_step",
+            )
+        }
     records = []
     short_screen = (
         SharedShortPersistenceScreen(
@@ -185,6 +207,23 @@ def main() -> None:
         # Recompute realized master writes before the symmetric decomposition.
         uc_c = next_c - cmaster; ur_c = (cmaster + ur_c) - cmaster
         uc_r = (rmaster + uc_r) - rmaster; ur_r = next_r - rmaster
+        if ablation_paths is not None:
+            gradient_difference = gc_c - gr_c
+            stateless_sgd = -args.learning_rate * gradient_difference
+            captured_adamw = uc_c - ur_c
+            zero_first = torch.zeros_like(cm)
+            zero_second = torch.zeros_like(cv)
+            reset_uc, _, _ = adam_delta(
+                gc_c, zero_first, zero_second, 1, learning_rate=args.learning_rate,
+            )
+            reset_ur, _, _ = adam_delta(
+                gr_c, zero_first, zero_second, 1, learning_rate=args.learning_rate,
+            )
+            ablation_paths["gradient_difference"].add(gradient_difference)
+            ablation_paths["stateless_sgd"].add(stateless_sgd)
+            ablation_paths["captured_adamw_moments"].add(captured_adamw)
+            ablation_paths["moment_reset_each_step"].add(reset_uc - reset_ur)
+            del gradient_difference, stateless_sgd, captured_adamw, zero_first, zero_second, reset_uc, reset_ur
         local = 0.5 * ((uc_c - ur_c) + (uc_r - ur_r))
         feedback = 0.5 * ((uc_c - uc_r) + (ur_c - ur_r))
         actual = (next_c - next_r) - (cmaster - rmaster)
@@ -213,6 +252,10 @@ def main() -> None:
             "path_energy": energies[name], "resultant_l2": resultant,
             "coherence_amplification": resultant / max(energies[name]**0.5, 1e-30),
         }
+    if ablation_paths is not None:
+        stats["optimizer_ablation"] = {
+            name: path.finalize() for name, path in ablation_paths.items()
+        }
     payload = {
         "schema": "kernel-analyzer-gemma4-norm-consequence-v1",
         "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
@@ -231,6 +274,21 @@ def main() -> None:
     ).hexdigest()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    if args.optimizer_ablation_output is not None:
+        ablation_payload = {
+            "schema": "kernel-analyzer-direct-persistence-v4-optimizer-state-result-v1",
+            "status": "COMPLETE_SAME_STATE_OPTIMIZER_ABLATION" if args.steps == 32 else "ENGINEERING_DRY_RUN",
+            "case_id": "gemma4_e2b_ple_rmsnorm_feedback",
+            "state_ids": [row["state_id"] for row in states],
+            "optimizer": {"name": "AdamW", "learning_rate": args.learning_rate, "betas": [0.9, 0.95], "epsilon": 1e-8},
+            "arms": {
+                name: {"A32": values["coherence_amplification"]}
+                for name, values in stats["optimizer_ablation"].items()
+            },
+            "claim_boundary": "Same-state optimizer response comparison for a feedback-dominated control. It does not relabel the direct source screen.",
+        }
+        args.optimizer_ablation_output.parent.mkdir(parents=True, exist_ok=True)
+        args.optimizer_ablation_output.write_text(json.dumps(ablation_payload, indent=2, sort_keys=True) + "\n")
     if short_screen is not None:
         short_payload = short_screen.finalize()
         short_payload["input"] = {

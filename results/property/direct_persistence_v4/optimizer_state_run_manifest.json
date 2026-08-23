@@ -14,13 +14,20 @@
   ],
   "schema": "kernel-analyzer-direct-persistence-v4-optimizer-state-run-manifest-v1",
   "status": "PARTIAL_SAME_STATE_ABLATION",
-  "completed_cases": ["liger_fused_ce_t128", "phi4_seq64_lmhead_dx", "qwen_seq128_lmhead_dx"],
+  "completed_cases": ["liger_fused_ce_t128", "phi4_seq64_lmhead_dx", "qwen_seq128_lmhead_dx", "gemma4_e2b_ple_rmsnorm_feedback"],
   "completed_artifacts": [
     "optimizer_state/liger_t128_same_state_ablation.json",
     "optimizer_state/phi_seq64_same_state_ablation.json",
-    "optimizer_state/qwen_seq128_same_state_ablation.json"
+    "optimizer_state/qwen_seq128_same_state_ablation.json",
+    "optimizer_state/gemma4_feedback_same_state_ablation.json"
   ],
-  "pending_cases": ["feedback_dominated_control", "multishape-backward-cell-0543"],
+  "additional_completed_feedback_control": {
+    "case_id": "gemma4_e2b_ple_rmsnorm_feedback",
+    "artifact": "optimizer_state/gemma4_feedback_same_state_ablation.json",
+    "runtime_release": "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/runtime_release_feedback_v3",
+    "direct_screen_role": "FEEDBACK_CONTROL_NOT_DIRECT_POSITIVE"
+  },
+  "pending_cases": ["multishape-backward-cell-0543"],
   "phase_conditioned_natural": {
     "status": "ABSTAIN_MISSING_PHASE_CAPTURE",
     "artifact": "optimizer_state/phase_conditioned_natural.json",

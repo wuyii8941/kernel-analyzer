@@ -79,9 +79,23 @@ in the artifact.
 
 The Gemma feedback experiment gives a second, different result: replacing the
 normal optimizer behavior with stateless SGD or resetting moments reduces the
-later feedback separation. This shows that optimizer state can maintain a
-trajectory split even when the direct local effect is close to diffusive. It
-does not prove that every observed split is an optimizer bug.
+later feedback separation in the previously frozen four-arm run. We also ran a
+same-state response replay for that NEW_IMPL feedback control. Its direct
+gradient difference was near the diffusive range, and the response arms were:
+
+| same-state response arm | `A32` |
+|---|---:|
+| gradient difference | `1.0192` |
+| stateless SGD | `1.0192` |
+| captured AdamW moments | `0.9995` |
+| moments reset at every step | `1.0001` |
+
+Artifact:
+`results/property/direct_persistence_v4/optimizer_state/gemma4_feedback_same_state_ablation.json`.
+This is a response/feedback control, not a direct-persistence positive. It
+shows that the local gradient difference itself is not directionally persistent
+under this replay, while the separate live trajectory can still be maintained
+by feedback. It does not prove that every observed split is an optimizer bug.
 
 The two Phi numbers must not be combined as one experiment:
 

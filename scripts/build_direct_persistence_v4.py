@@ -549,7 +549,7 @@ def main() -> None:
             "claim_boundary": "One independently frozen NEW_IMPL negative is complete; recall/AUROC remain undefined until more rows exist.",
         },
         "next_required": [
-            "same-state optimizer ablation for the remaining feedback control and 0543 when exact raw captures exist",
+            "same-state optimizer ablation for 0543 when exact raw captures exist",
             "phase-conditioned natural optimizer evaluation with real early/middle/late moments",
             "expand the independently frozen NEW_IMPL pool beyond the one completed Gemma negative",
             "complete tolerance metrics on a common held-out pool",
