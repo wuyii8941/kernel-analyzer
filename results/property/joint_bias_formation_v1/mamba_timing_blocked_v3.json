@@ -1,0 +1,50 @@
+{
+  "schema": "kernel-analyzer-mamba-timing-blocked-v3",
+  "status": "PARTIAL_TIMING_HOST_RETRIES_BLOCKED_BEFORE_RESULT",
+  "case_id": "multishape-backward-cell-0450",
+  "steps_requested": 32,
+  "scientific_result_unchanged": true,
+  "host": {
+    "gpu_query": "NVIDIA RTX A6000 available through host execution",
+    "environment": "/data1/tzh/miniconda3/envs/pt_nightly",
+    "model": "/data1/tzh/models/state-spaces/mamba-130m-hf",
+    "release": "results/coverage/runtime_releases/mamba_seq64_r1"
+  },
+  "attempts": [
+    {
+      "name": "allow_graph_breaks_host_preflight",
+      "steps": 2,
+      "status": "INTERRUPTED_NO_OUTPUT",
+      "observed_minutes": 4,
+      "reason": "Inductor first compilation produced no checkpoint or result; this configuration does not match the frozen fullgraph release"
+    },
+    {
+      "name": "fullgraph_parent_cache_host_preflight",
+      "steps": 2,
+      "status": "INTERRUPTED_NO_OUTPUT",
+      "observed_minutes": 2,
+      "reason": "The parent cache root triggered a fresh compilation and produced no checkpoint or result"
+    },
+    {
+      "name": "fullgraph_single_compile_thread_isolated_cache",
+      "steps": 2,
+      "status": "INTERRUPTED_NO_OUTPUT",
+      "observed_minutes": 3,
+      "reason": "CPU compilation remained active with GPU idle and no cache/result output"
+    },
+    {
+      "name": "fullgraph_exact_release_cache_root",
+      "steps": 2,
+      "status": "EXITED_137_NO_OUTPUT",
+      "exit_code": 137,
+      "observed_minutes": 7,
+      "reason": "The process retained GPU memory but produced no checkpoint/result; no scientific step completed before termination"
+    }
+  ],
+  "cleanup": {
+    "current_attempts_stopped": true,
+    "old_orphan_inductor_workers_removed": true,
+    "home_writes": 0
+  },
+  "claim_boundary": "These are genuine host execution attempts, but none produced a valid new timing row. The existing scientific 32-step Mamba consequence artifact remains valid; timing remains unresolved and no wall-time is imputed."
+}
