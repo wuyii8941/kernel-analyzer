@@ -126,6 +126,8 @@ def main() -> None:
     result = {
         "schema": "kernel-analyzer-sample-completion-execution-manifest-v1",
         "status": "READY_FOR_GPU_BUT_NOT_EXECUTED",
+        "heldout_roster": "results/property/sample_completion_v1/heldout_roster.json",
+        "heldout_case_count": 8,
         "groups": groups,
         "total_search_units_with_exact_command": sum(g["case_count"] for g in groups.values()),
         "gpu_observation": "nvidia-smi currently cannot communicate with the driver; no scientific run was started by this manifest.",

@@ -10,6 +10,8 @@ def test_execution_manifest_has_four_model_groups_and_no_claimed_results():
     assert result["status"] == "READY_FOR_GPU_BUT_NOT_EXECUTED"
     assert set(result["groups"]) == {"qwen", "phi4", "deepseek8b", "mamba"}
     assert result["total_search_units_with_exact_command"] == 16
+    assert result["heldout_roster"].endswith("heldout_roster.json")
+    assert result["heldout_case_count"] == 8
     for group in result["groups"].values():
         assert group["status"] in {"READY_FOR_GPU", "BLOCKED_MODEL_PATH"}
         assert "--states" in group["commands"]["formal"]
