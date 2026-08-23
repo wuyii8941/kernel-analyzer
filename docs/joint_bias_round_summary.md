@@ -1,5 +1,9 @@
 # Joint bias round: final status
 
+> Historical round note. Its 14-row Oracle table mixes stateless-SGD headline
+> rows with AdamW controls and is superseded by `docs/oracle_repair_v3.md` for
+> all screening-performance claims.
+
 ## Completed work
 
 | item | result | artifact |
@@ -92,7 +96,7 @@ The current round also measures the same 32-step ordered reference trajectory
 at three separate points: operator output error, parameter-gradient error, and
 effective parameter-update error.  The final coherence values are:
 
-| case | operator output | parameter gradient | effective update |
+| case | operator output | parameter gradient | stateless SGD parameter update |
 |---|---:|---:|---:|
 | Liger fused CE | 2.984 | 2.931 | 2.931 |
 | Phi lm_head dX | 2.074 | 4.701 | 4.701 |

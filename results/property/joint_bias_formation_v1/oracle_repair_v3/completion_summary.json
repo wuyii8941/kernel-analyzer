@@ -1,0 +1,42 @@
+{
+  "schema": "kernel-analyzer-oracle-repair-v3-completion-v1",
+  "status": "COMPLETE",
+  "completed_items": {
+    "same_optimizer_oracle": {
+      "rows": 15,
+      "optimizer": "AdamW",
+      "adamw_positive_rows": 3,
+      "historical_sgd_rows_remaining_positive_under_adamw": 2,
+      "prefix16_directionality_auroc": 0.9444444444444444,
+      "prefix16_update_rms_auroc": 0.5277777777777778,
+      "recall": 1.0,
+      "precision": 0.6
+    },
+    "qwen_exact_seq128": {
+      "operator_output_A32": 1.0045695240088646,
+      "parameter_gradient_A32": 1.343043664332337,
+      "adamw_update_A32": 0.9611152494987204,
+      "local_A32": 0.957021059313828,
+      "feedback_A32": 1.1906203871931378,
+      "actual_A32": 1.5082233054622372,
+      "local_persistent": false
+    },
+    "liger_four_arm_adamw": {
+      "local_A32": 1.7199830206413163,
+      "local_sign_flip_upper95": 1.1161363205388175,
+      "feedback_A32": 3.4942205978566405,
+      "actual_A32": 3.489051690483752,
+      "max_recurrence_relative": 8.490541095244009e-08,
+      "local_persistent": true
+    },
+    "phi_norm_matched_source_test": {
+      "natural_A16": 3.3252962110707838,
+      "raw_stochastic_mean_A16": 0.955515309618486,
+      "norm_matched_stochastic_mean_A16": 0.9838517603585172,
+      "max_update_norm_relative_error": 1.392870952177726e-07,
+      "exact_match_kind": "update-space analysis after a real stochastic-rounding endpoint intervention"
+    }
+  },
+  "withdrawn_claim": "The legacy 14-row mixed-SGD/AdamW AUROC is not an Oracle performance estimate.",
+  "current_claim": "The 16-step local-update directionality score is a retrospective fail-closed prioritization tool under one declared optimizer; it is not a universal safety classifier."
+}

@@ -46,6 +46,26 @@ from scripts.generated_nontriton_fp32_observer import fp32_external_reference  #
 from scripts.same_dtype_semantic_observer import SameDtypeSemanticCandidateObserver  # noqa: E402
 
 
+def coherence_curve(vectors: list[torch.Tensor]) -> list[dict[str, float | int]]:
+    """Summarize an ordered vector path without fitting a direction."""
+    total = torch.zeros_like(vectors[0], dtype=torch.float64)
+    energy = 0.0
+    rows: list[dict[str, float | int]] = []
+    for index, vector in enumerate(vectors, 1):
+        value = vector.detach().double().reshape(-1)
+        total.add_(value)
+        energy += float(torch.dot(value, value))
+        if index in (2, 4, 8, 16, 32):
+            scale = math.sqrt(max(energy, 0.0))
+            rows.append({
+                "horizon": index,
+                "resultant_l2": float(torch.linalg.vector_norm(total)),
+                "diffusive_scale_l2": scale,
+                "coherence_amplification": float(torch.linalg.vector_norm(total)) / max(scale, 1e-30),
+            })
+    return rows
+
+
 def atomic_torch_save(payload: dict[str, Any], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name("." + path.name + ".tmp")
@@ -78,7 +98,16 @@ def main() -> None:
     parser.add_argument("--allow-graph-breaks", action="store_true")
     parser.add_argument("--recurrence-tolerance", type=float, default=1e-6)
     parser.add_argument("--recurrence-relative-tolerance", type=float, default=1e-5)
+    parser.add_argument(
+        "--three-stage-output", type=Path,
+        help="Optional same-run operator-output, gradient, and AdamW-update summary.",
+    )
     args = parser.parse_args()
+    if args.resume and args.three_stage_output is not None:
+        raise ValueError(
+            "--resume cannot be combined with --three-stage-output because the "
+            "checkpoint does not store the full stage vectors"
+        )
 
     architecture = "deepseek8" if args.architecture == "deepseek8b" else args.architecture
     cases = json.loads(args.case_plan.read_text(encoding="utf-8"))["cases"]
@@ -185,7 +214,7 @@ def main() -> None:
     expected_length = int(capture["input"]["sequence_length"])
 
     def gradient(master: torch.Tensor, state: dict[str, Any], repair_arm: bool,
-                 seed: int) -> tuple[torch.Tensor, int]:
+                 seed: int) -> tuple[torch.Tensor, int, torch.Tensor | None]:
         with torch.no_grad():
             carrier.copy_(master.to(carrier.dtype))
         tokens = state.get("input_ids", state.get("token_ids"))
@@ -198,7 +227,7 @@ def main() -> None:
             torch.cuda.synchronize(device)
             if carrier.grad is None:
                 raise RuntimeError("candidate carrier gradient is absent")
-            return carrier.grad.detach().float().clone(), 0
+            return carrier.grad.detach().float().clone(), 0, None
 
         references: dict[str, torch.Tensor] = {}
         if reference is not None and reference_capture is not None:
@@ -218,7 +247,7 @@ def main() -> None:
             torch.cuda.synchronize(device)
             active["sink"] = None
 
-        delivered: dict[str, int] = {}
+        delivered: dict[str, Any] = {}
 
         def repair_sink(observed_id: str, tensor: torch.Tensor, metadata: Any) -> None:
             if observed_id != task_id or delivered:
@@ -241,6 +270,10 @@ def main() -> None:
             before = tensor.detach().clone()
             tensor.copy_(target)
             delivered["changed"] = int(torch.count_nonzero(before != target))
+            if args.three_stage_output is not None:
+                delivered["endpoint_delta"] = (
+                    before.detach().float() - target.detach().float()
+                ).cpu().reshape(-1).clone()
 
         model.zero_grad(set_to_none=True)
         observer = SameDtypeSemanticCandidateObserver(
@@ -255,7 +288,10 @@ def main() -> None:
         observer.validate()
         if carrier.grad is None or "changed" not in delivered:
             raise RuntimeError("repair did not reach the endpoint/carrier")
-        return carrier.grad.detach().float().clone(), delivered["changed"]
+        return (
+            carrier.grad.detach().float().clone(), delivered["changed"],
+            delivered.get("endpoint_delta"),
+        )
 
     initial = carrier.detach().float().clone()
     candidate_master = initial.clone()
@@ -284,6 +320,9 @@ def main() -> None:
     local_vectors: list[torch.Tensor] = []
     feedback_vectors: list[torch.Tensor] = []
     actual_vectors: list[torch.Tensor] = []
+    endpoint_vectors: list[torch.Tensor] = []
+    candidate_state_gradient_vectors: list[torch.Tensor] = []
+    candidate_state_update_vectors: list[torch.Tensor] = []
 
     def arm(value: torch.Tensor) -> dict[str, Any]:
         flat = value.detach().double().reshape(-1)
@@ -309,10 +348,10 @@ def main() -> None:
         step = index + 1
         seed = 51000 + index
         drift_before = candidate_master - repair_master
-        gc_c, changed_cc = gradient(candidate_master, state, False, seed)
-        gr_c, changed_rc = gradient(candidate_master, state, True, seed)
-        gc_r, changed_cr = gradient(repair_master, state, False, seed)
-        gr_r, changed_rr = gradient(repair_master, state, True, seed)
+        gc_c, changed_cc, _ = gradient(candidate_master, state, False, seed)
+        gr_c, changed_rc, endpoint_c = gradient(candidate_master, state, True, seed)
+        gc_r, changed_cr, _ = gradient(repair_master, state, False, seed)
+        gr_r, changed_rr, endpoint_r = gradient(repair_master, state, True, seed)
         raw_uc_c, next_cm, next_cv = adam_delta(
             gc_c, candidate_m, candidate_v, step,
             learning_rate=args.learning_rate,
@@ -375,6 +414,12 @@ def main() -> None:
         local_vectors.append(local.detach().double().cpu().reshape(-1))
         feedback_vectors.append(feedback.detach().double().cpu().reshape(-1))
         actual_vectors.append(actual.detach().double().cpu().reshape(-1))
+        if args.three_stage_output is not None:
+            if endpoint_c is None or endpoint_r is None:
+                raise RuntimeError("three-stage capture requested but endpoint residual is absent")
+            endpoint_vectors.append(endpoint_c)
+            candidate_state_gradient_vectors.append((gc_c - gr_c).detach().cpu().reshape(-1))
+            candidate_state_update_vectors.append((raw_uc_c - raw_ur_c).detach().cpu().reshape(-1))
         candidate_master = next_candidate_master
         repair_master = next_repair_master
         candidate_m, candidate_v = next_cm, next_cv
@@ -444,6 +489,29 @@ def main() -> None:
     temporary = args.output.with_name("." + args.output.name + ".tmp")
     temporary.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     temporary.replace(args.output)
+    if args.three_stage_output is not None:
+        three_stage = {
+            "schema": "kernel-analyzer-bound-endpoint-three-stage-v1",
+            "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
+            "case_id": args.case_id,
+            "state_ids": state_ids,
+            "sequence_length": expected_length,
+            "optimizer": {
+                "name": "AdamW", "learning_rate": args.learning_rate,
+                "betas": [0.9, 0.95], "epsilon": 1e-8, "weight_decay": 0.0,
+            },
+            "state_path": "live candidate state; candidate and repair evaluated at the identical pre-step state and moments",
+            "stages": {
+                "operator_output_error": {"coherence_curve": coherence_curve(endpoint_vectors)},
+                "parameter_gradient_error": {"coherence_curve": coherence_curve(candidate_state_gradient_vectors)},
+                "adamw_effective_update_error": {"coherence_curve": coherence_curve(candidate_state_update_vectors)},
+            },
+            "claim_boundary": "All three stages come from the same exact endpoint and live candidate-state path. This remains a one-carrier, not full-parameter, result.",
+        }
+        args.three_stage_output.parent.mkdir(parents=True, exist_ok=True)
+        staged_temporary = args.three_stage_output.with_name("." + args.three_stage_output.name + ".tmp")
+        staged_temporary.write_text(json.dumps(three_stage, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        staged_temporary.replace(args.three_stage_output)
     args.checkpoint.unlink(missing_ok=True)
     print(json.dumps({
         "event": "BOUND_CONSEQUENCE_COMPLETE", "case_id": args.case_id,

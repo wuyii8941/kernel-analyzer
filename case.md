@@ -1,6 +1,6 @@
 # Directional-bias cases
 
-## Source-persistence headline correction (2026-08-22)
+## Historical stateless-SGD source-persistence headline (2026-08-22)
 
 The paper headline now separates persistent endpoint-mediated local effects
 from generic closed-loop feedback.  The previous strict Flash-style registry
@@ -9,7 +9,7 @@ persistent-local-source cases.
 
 | role | count | cases |
 |---|---:|---|
-| source/transport-persistent headline | 3 | Qwen seq128 `lm_head dX`, Liger fused CE, Phi seq64 `lm_head dX` |
+| stateless-SGD source/backward-persistent headline | 3 | Qwen seq128 `lm_head dX`, Liger fused CE, Phi seq64 `lm_head dX` |
 | local versus feedback attribution unresolved | 2 | saved-P, layer-23 attention region |
 | formation/trajectory contrast mismatch | 2 | Mamba `in_proj`, Qwen64 `v_proj` |
 | aligned local source diffusive/canceling | 1 | Qwen128 `v_proj` |
@@ -23,6 +23,11 @@ background **within that selected sample**; it is not a population-wide rate.
 Unresolved and mismatched cases remain in the denominator.  The authoritative
 classification is
 `results/property/joint_bias_formation_v1/source_persistence_reclassification.json`.
+
+The common-AdamW correction on 2026-08-23 must be kept separate from this
+historical count. Liger and Phi remain directly persistent under AdamW; Qwen
+seq128 does not, while one result-blind sampled Phi row is a small-margin
+positive. See `docs/oracle_repair_v3.md`.
 
 ## Canonical evidence counting (2026-08-20)
 

@@ -1,8 +1,11 @@
 # Scientific claim ledger
 
-Evidence snapshot: current organized mainline (2026-08-23). The paper
-headline count is three operator-local source/transport persistence cases.
-Historical six- and eight-row registries are retained only as audit history.
+Evidence snapshot: current organized mainline (2026-08-23). The historical
+stateless-SGD headline contains three operator/backward persistence records.
+Under the corrected common-AdamW comparison, Liger and Phi remain locally
+persistent, Qwen does not, and one result-blind sampled Phi row is a
+small-margin positive. Historical six- and eight-row registries are retained
+only as audit history.
 
 This file is organized by paper claim, not experiment chronology.  Each row
 states the evidence threshold, the authoritative artifact, and what may be
@@ -20,8 +23,10 @@ negative labels.
 
 ## Historical counting resolution
 
-The current paper headline is three cases. The counts below explain old audit
-artifacts and must not be used as alternate headline counts.
+The historical stateless-SGD headline is three cases. The corrected AdamW
+comparison has its own measured labels and must not inherit that count. The
+counts below explain old audit artifacts and must not be used as alternate
+headline counts.
 
 The repository contains several legitimate counts with different denominators:
 
@@ -68,8 +73,8 @@ Flash-style persistent-local-source cases.
 
 | claim | evidence threshold | supporting artifact | status |
 |---|---|---|---|
-| Six historical M0--M6 project records exist. | Complete F+B, causal repair/sham, real carrier, and paired directional trajectory. | `results/coverage/existing_case_reaudit.json`; `case.md` | `SUPPORTED_AS_AUDIT_HISTORY`: four root-arithmetic records plus two closed semantic-region records. Only three enter the current persistent operator-local bias headline. |
-| Three bounded records currently support the direct operator/backward persistence headline. | A valid one-operator repair reaches a real parameter and the resulting update difference persists on an ordered trajectory. | `results/property/joint_bias_formation_v1/source_persistence_reclassification.json`; `results/property/joint_bias_formation_v1/headline_case_evidence_scope_v1.json`; `case.md` | `SUPPORTED_WITH_SCOPE`: Liger fused CE, Phi `lm_head dX`, and the Qwen `lm_head dX` family. The Qwen strict live trajectory is seq128, while its three-stage companion measurement is seq256; do not present them as one exact endpoint certificate. Only Phi currently has an exported symmetric direct-effect/feedback split. Saved-P/layer-23 remain attribution-unresolved; Mamba/Qwen64 have contrast mismatch; SiLU/Gemma are feedback controls. |
+| Six historical M0--M6 project records exist. | Complete F+B, causal repair/sham, real carrier, and paired directional trajectory. | `results/coverage/existing_case_reaudit.json`; `case.md` | `SUPPORTED_AS_AUDIT_HISTORY`: four root-arithmetic records plus two closed semantic-region records. Only three enter the historical stateless-SGD operator/backward headline. |
+| Three bounded records support the historical stateless-SGD direct operator/backward persistence headline. | A valid one-operator repair reaches a real parameter and the resulting SGD update difference persists on an ordered trajectory. | `results/property/joint_bias_formation_v1/source_persistence_reclassification.json`; `results/property/joint_bias_formation_v1/headline_case_evidence_scope_v1.json`; `case.md` | `SUPPORTED_WITH_SCOPE`: Liger fused CE, Phi `lm_head dX`, and the Qwen `lm_head dX` family. The new exact seq128 Qwen rerun closes its output/gradient/update/live-run identity under AdamW and finds canceling direct AdamW updates. All three historical rows now have an AdamW direct/feedback/actual split; do not transfer the historical SGD label across optimizers. |
 | Source-persistent and feedback-sustained drift are distinct regimes. | Four-arm local/feedback recurrence closes; optimizer ablation changes feedback without relabeling the source. | Gemma section of `docs/tcmp_progress.md`; `results/property/bias_property_search/heldout_validation_v3_gemma_disjoint.json` | `SUPPORTED_CASE_LEVEL`. Gemma local is null-like while feedback/actual persist; stateless SGD and moment reset collapse the feedback. A general feedback predictor is still `OPEN`. |
 | Negative evidence is nontrivial and correctly classified. | Nonzero local residual, parameter reach, complete F+B, and centered/canceling gradient/update population. | `results/property/tcmp_allop_v1/final_decision_matrix.json`; `results/property/tcmp_allop_v1/scope_extension_20260822.json` | `SUPPORTED`. YaRN exact-zero and parameter-inaccessible softmax/mask regions are `NOT_APPLICABLE`; compiler/provenance failures are `UNRESOLVED`; neither group is counted as a negative. |
 | Error magnitude alone does not predict source persistence. | Compare backward-visible residuals with different persistence outcomes under a common statistic and control boundary. | `results/property/joint_bias_formation_v1/rms_persistence/rms_persistence.json` | `SUPPORTED_FOR_FORMATION_POPULATION`. Across 32 reachable nonzero rows, Pearson is `0.018` (`p=0.921`) and Spearman is `0.243` (`p=0.178`) under 10,000 two-sided permutations. RMS explains essentially none of the linear variation, and neither association is distinguishable from zero at this sample size. |
@@ -93,8 +98,8 @@ Flash-style persistent-local-source cases.
 | Transported conditional mean predicts persistence. | Predictor frozen before consequence, protocol-conforming orbit estimate, and disjoint states. | Llama/Ministral records in `docs/tcmp_progress.md`; `results/property/tcmp_allop_v1/final_decision_matrix.json` | `BOUNDED`: prediction ordering was prospective, but the first orbit roster deviated from the frozen 4+4 protocol; corrected values are retrospective. Evidence supports one `lm_head dX` family on new operands, not confirmatory cross-implementation generalization. |
 | Held-out axes are reported honestly. | Label each row `SEEN_IMPL / NEW_OPERANDS` or `NEW_IMPL`. | `docs/heldout_property_validation.md`; `docs/heldout_property_validation_v3.md` | `SUPPORTED`. Llama/Ministral are `SEEN_IMPL / NEW_OPERANDS`; Gemma is `NEW_IMPL` but source-negative and feedback-sustained. New-implementation source-positive count is zero. |
 | The low-cost Oracle safely triages exact trajectories. | Fixed 256-dimensional CountSketch, empirical null, fail-closed selector, and exact confirmation only for risks. | `docs/short_persistence_oracle_v3.md`; `scripts/select_short_screen_escalations.py`; `results/property/bias_property_search/gemma_v3_disjoint_escalation_manifest.json` | `SUPPORTED_AS_WORKFLOW`. It is not yet an accuracy or safety certificate. |
-| The Oracle has measured screening behavior. | Report flagged fraction, eligible denominator, exact-confirmation recall, and false escalations on the frozen evaluation set. | `results/property/joint_bias_formation_v1/oracle_baselines/frozen_evaluation_v2/comparison_v2.json` | `SUPPORTED_FOR_FROZEN_14_ROWS`: 5/14 flagged, recall 3/3, false positives 2/11, precision 3/5. Complete GPU-time savings remain open until Mamba and uncontended headline timing runs finish. |
-| The predictor beats simple baselines. | Frozen comparison against local RMS and dtype on positive and residual-nonzero control rows. | same frozen 14-row comparison | `SUPPORTED_FOR_FROZEN_14_ROWS`: prefix persistence AUROC `1.00`, local RMS `0.242`, dtype `0.50`. Reduction length is unavailable for three headline rows and is not given a complete AUROC. |
+| The Oracle has measured screening behavior. | Report flagged fraction, eligible denominator, exact-confirmation recall, and false escalations under one optimizer. | `results/property/joint_bias_formation_v1/oracle_repair_v3/same_optimizer_oracle_v3.json`; `docs/oracle_repair_v3.md` | `SUPPORTED_FOR_RETROSPECTIVE_15_ROWS`: all rows use AdamW; 5/15 are flagged, recall is 3/3, false positives are 2/12, and precision is 3/5. The old 14-row metrics are withdrawn because they mixed optimizers and dropped a sampled mixed-positive row. |
+| The predictor beats a same-level energy baseline. | Compare 16-step local-update directionality with 16-step local-update RMS under the same AdamW protocol. | same corrected 15-row comparison | `SUPPORTED_FOR_RETROSPECTIVE_15_ROWS`: prefix directionality AUROC `0.944`; prefix local-update RMS AUROC `0.528`. This is not unseen-implementation accuracy. |
 | Four candidate properties were tested. | Positive and centered-control measurements under the same property definition. | `development_property_profile.json`; `development_property_separation_audit_v1.json`; `property_freeze_v1.json` under `results/property/bias_property_search/` | `SUPPORTED_WITH_DECISIONS`: source asymmetry separates 3 known rows from 5 centered controls and is retained as a conditional prior; source–transport has one positive and no valid controls, so remains case-level; concentration overlaps controls and is supporting-only; carrier stability has no measured centered-control trajectories and is only a consequence screen. |
 | A universal all-operator property has been established. | Prospective positives and residual-nonzero negatives across unseen implementation classes, with frozen thresholds and baselines. | `docs/final_conclusion.md`; `docs/bias_property_search_completion.md` | `NOT_SUPPORTED`. The correct result is a family-scoped transported-mean hypothesis plus a fail-closed persistence screen and a separate feedback taxonomy. |
 
@@ -103,13 +108,15 @@ Flash-style persistent-local-source cases.
 1. Kernel Analyzer provides an auditable F+B/repair/trajectory chain for a
    frozen multi-model denominator and retains unresolved rows.
 2. Six project cases pass the historical strict F+B/repair/carrier/trajectory
-   registry, but only three currently support the narrower persistent-local-
-   source headline.  Feedback-only, mismatch, and unresolved rows are reported
-   separately.
+   registry. Three support the historical stateless-SGD headline. Under one
+   common AdamW protocol, two of those three remain locally persistent and one
+   result-blind sampled row is a small-margin positive. Feedback-only,
+   mismatch, and unresolved rows are reported separately.
 3. Backward-visible implementation residuals often cancel; nonzero local error
    and low-dimensional concentration are insufficient by themselves.
-4. A short sequence of effective parameter-update errors is a useful,
-   fail-closed persistence screen on the frozen 14-row evaluation set.
+4. A short sequence of local parameter-update differences is a useful,
+   fail-closed persistence screen on the corrected 15-row same-AdamW
+   evaluation set.
 5. Feedback-sustained drift is a distinct case-level regime demonstrated by
    Gemma’s Adam-state intervention.
 6. The short Oracle is a fail-closed prioritization workflow, not a safety
@@ -119,8 +126,13 @@ Flash-style persistent-local-source cases.
 
 1. Complete wall-clock cost accounting after the Mamba and uncontended
    headline timing runs.
-2. A positive-baseline source intervention on a bound contrast; the existing
-   Liger RN arm is diffusive and cannot support the planned suppression claim.
+2. An executable source intervention with exactly matched update energy remains
+   optional strengthening. Phi already provides a positive deterministic
+   baseline and causal suppression with stochastic rounding. A new analysis
+   matches every stochastic update norm to the deterministic update within
+   `1.4e-7` relative error and still reduces mean `A` from `3.325` to `0.984`,
+   but that exact rescaling is an update analysis rather than a second kernel.
+   The Liger RN arm is diffusive and cannot support a suppression claim.
 3. A prospective, protocol-conforming `NEW_IMPL` source-positive confirmation,
    or an explicit decision to publish the narrower family-scoped result.
 4. Full-parameter RNG/data-order/precision scale controls.  The current Phi
@@ -173,3 +185,12 @@ Gemma source-negative confirmation is complete. The generic three-part
 predictor was evaluated for input eligibility on five cases; none had all
 required inputs, so it correctly abstained on all five and has no accuracy
 claim.
+
+The same-optimizer Oracle correction is now complete. All 15 rows use AdamW;
+16-step directionality has AUROC `0.944`, while 16-step local-update RMS has
+AUROC `0.528`. Liger remains directly persistent (`A=1.720`), Phi is a
+small-margin direct positive (`A=1.029`), and exact Qwen seq128 direct updates
+cancel (`A=0.957`) even though its gradient differences are more aligned
+(`A=1.343`). Liger, Phi, and Qwen now all have 32-step direct/feedback/actual
+exports. The exact Phi norm-matched analysis gives mean stochastic `A=0.984`
+at the deterministic arm's per-step update norm.

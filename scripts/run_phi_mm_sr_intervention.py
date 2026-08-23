@@ -30,6 +30,16 @@ from scripts.run_generated_fp32_screen import load_model, tensor_digest  # noqa:
 from scripts.run_phi64_lmhead_dx_repair import MMRepair, TARGET_LEFT_SHAPE  # noqa: E402
 
 
+def norm_match_update(value: torch.Tensor, target_norm: float) -> torch.Tensor:
+    """Preserve direction while matching one measured update-error norm."""
+    value_norm = float(torch.linalg.vector_norm(value).item())
+    if value_norm == 0.0:
+        if target_norm != 0.0:
+            raise ValueError("cannot norm-match a zero vector to nonzero energy")
+        return value.clone()
+    return value.mul(target_norm / value_norm)
+
+
 class StochasticMM:
     def __init__(self, modules: list[Any], seed: int) -> None:
         self.modules = modules; self.seed = seed; self.restores: list[tuple[Any, Any]] = []
@@ -87,6 +97,7 @@ def main() -> None:
     master = parameter.detach().float().clone(); learning_rate = 1e-3
     natural_path = OrderedVectorPath(total_steps=args.steps, calibration_steps=max(1, args.steps // 2))
     sr_paths = [OrderedVectorPath(total_steps=args.steps, calibration_steps=max(1, args.steps // 2)) for _ in range(args.sr_repeats)]
+    matched_paths = [OrderedVectorPath(total_steps=args.steps, calibration_steps=max(1, args.steps // 2)) for _ in range(args.sr_repeats)]
     rows = []
 
     def evaluate(state: dict[str, Any], index: int, mode: str, repeat: int = 0) -> tuple[str, torch.Tensor, float]:
@@ -108,32 +119,48 @@ def main() -> None:
         loss_default, grad_default, _ = evaluate(state, index, "default")
         loss_fp32, grad_fp32, _ = evaluate(state, index, "fp32")
         natural = (grad_default - grad_fp32).mul(-learning_rate); natural_path.add(natural)
+        natural_norm = float(torch.linalg.vector_norm(natural).item())
         sr_l2 = []
+        matched_relative_errors = []
         for repeat in range(args.sr_repeats):
             loss_sr, grad_sr, source_l2 = evaluate(state, index, "sr", repeat)
             if loss_sr != loss_default or loss_fp32 != loss_default:
                 raise RuntimeError("backward-only SR intervention changed forward loss")
             delta = (grad_sr - grad_fp32).mul(-learning_rate)
             sr_paths[repeat].add(delta); sr_l2.append(source_l2)
-            del grad_sr, delta
+            matched = norm_match_update(delta, natural_norm)
+            matched_paths[repeat].add(matched)
+            matched_norm = float(torch.linalg.vector_norm(matched).item())
+            matched_relative_errors.append(abs(matched_norm - natural_norm) / max(natural_norm, 1e-30))
+            del grad_sr, delta, matched
         master.add_(grad_default, alpha=-learning_rate)
         rows.append({"step": index + 1, "state_id": str(state.get("state_id", index)),
-                     "natural_update_error_l2": float(torch.linalg.vector_norm(natural).item()),
-                     "sr_source_l2": sr_l2})
+                     "natural_update_error_l2": natural_norm,
+                     "sr_source_l2": sr_l2,
+                     "matched_update_norm_relative_errors": matched_relative_errors})
         print(json.dumps({"event": "PHI_SR_STEP", **rows[-1]}), flush=True)
         del grad_default, grad_fp32, natural
         torch.cuda.empty_cache()
     natural = natural_path.finalize(); repeats = [path.finalize() for path in sr_paths]
+    matched_repeats = [path.finalize() for path in matched_paths]
     sr_a = [row["coherence_amplification"] for row in repeats]
+    matched_a = [row["coherence_amplification"] for row in matched_repeats]
+    max_norm_error = max(
+        error for row in rows for error in row["matched_update_norm_relative_errors"]
+    )
     payload = {
         "schema": "kernel-analyzer-phi-real-sr-intervention-v1",
         "status": "COMPLETE" if args.steps == 16 else "ENGINEERING_DRY_RUN",
         "case_id": "phi4_seq64_lmhead_dx", "steps": args.steps, "sr_repeats": args.sr_repeats,
         "natural_vs_fp32": natural, "sr_vs_fp32": repeats,
+        "sr_norm_matched_to_natural_update": matched_repeats,
         "sr_amplification_mean": sum(sr_a) / len(sr_a),
+        "matched_sr_amplification_mean": sum(matched_a) / len(matched_a),
+        "matched_update_norm_max_relative_error": max_norm_error,
         "sr_to_natural_amplification_ratio": (sum(sr_a) / len(sr_a)) / max(natural["coherence_amplification"], 1e-30),
+        "matched_sr_to_natural_amplification_ratio": (sum(matched_a) / len(matched_a)) / max(natural["coherence_amplification"], 1e-30),
         "rows": rows,
-        "claim_boundary": "Real backward endpoint, unbiased stochastic BF16 materialization relative to FP32 MM.",
+        "claim_boundary": "The natural and stochastic arms use the real backward endpoint. The norm-matched arm rescales each stochastic effective-update error to the natural per-step L2 norm after measurement; it is an exact update-space matched analysis, not a separately executable kernel.",
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")

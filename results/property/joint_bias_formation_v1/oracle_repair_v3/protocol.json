@@ -1,0 +1,39 @@
+{
+  "schema": "kernel-analyzer-oracle-repair-protocol-v3",
+  "status": "FROZEN_BEFORE_V3_MEASUREMENT",
+  "objective": "Remove the optimizer mismatch from the 14-row retrospective Oracle and close the Qwen seq128 and Liger evidence boundaries.",
+  "optimizer": {
+    "name": "AdamW",
+    "learning_rate": 0.0001,
+    "betas": [0.9, 0.95],
+    "epsilon": 1e-08,
+    "weight_decay": 0.0,
+    "moment_initialization": "zero",
+    "common_state_rule": "candidate and repair use identical pre-step moments for each same-state comparison"
+  },
+  "trajectory": {
+    "steps": 32,
+    "prefix_steps": 16,
+    "candidate_and_repair_advance_separately": true,
+    "required_effects": ["local", "feedback", "actual"],
+    "recurrence": "actual = local + feedback"
+  },
+  "oracle": {
+    "score": "prefix16 local effective-update coherence under the frozen AdamW protocol",
+    "confirmation": "full32 local effective-update persistence under the same AdamW protocol",
+    "no_safe_verdict": true,
+    "old_mixed_optimizer_metrics_may_not_be_reused": true
+  },
+  "positive_remeasurements": [
+    "liger_fused_ce_t128",
+    "phi4_seq64_lmhead_dx",
+    "qwen_seq128_lmhead_dx"
+  ],
+  "phi_matched_intervention": {
+    "source_arm": "stochastic BF16 materialization",
+    "comparison_arm": "natural deterministic BF16 materialization",
+    "matching": "rescale each stochastic effective-update error to the natural arm's per-step L2 norm",
+    "interpretation": "an update-space matched analysis, not a second executable kernel"
+  },
+  "claim_boundary": "This is a bounded carrier-scale retrospective repair. It is not a universal all-operator accuracy estimate."
+}

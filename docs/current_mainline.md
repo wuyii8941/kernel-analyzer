@@ -45,10 +45,10 @@ to describe how much a sequence cancels. At 32 steps its maximum is
 mean that the step differences reinforce one another. `A` is a continuous
 measurement, not a universal pass/fail constant.
 
-## Current headline
+## Historical stateless-SGD result
 
-Three bounded records support the narrow claim that the direct operator or
-backward effect can keep adding up:
+Three bounded records show that the direct operator or backward gradient
+difference can keep adding up when parameter updates use stateless SGD:
 
 - Liger fused cross entropy;
 - Phi-4 `lm_head dX`;
@@ -60,7 +60,7 @@ accumulation example. Phi and Qwen are two models using the same mathematical
 
 The 32-state measurements at three points are:
 
-| measured record | operator output | parameter gradient | parameter update |
+| measured record | operator output | parameter gradient | stateless SGD parameter update |
 |---|---:|---:|---:|
 | Liger fused CE, seq128 | 2.984 | 2.931 | 2.931 |
 | Phi-4 `lm_head dX`, seq64 | 2.074 | 4.701 | 4.701 |
@@ -72,19 +72,41 @@ gradient. Stateless SGD preserves it. The optimizer is not always passive:
 on Phi, a gradient sequence with `A=4.665` becomes an AdamW update sequence
 with `A=1.031` when both arms use the same stored moments.
 
-The Qwen row needs an explicit boundary. The historical strict live trajectory
-is seq128, while the three-stage row above and the short-screen evaluation are
-seq256. They use the same mathematical repair family but are not one exact
-endpoint instance. Until a single sequence length is rerun end to end, slides
-and papers must say `Qwen lm_head dX family`, not attach the seq256 three-stage
-numbers to the seq128 strict certificate.
+The old Qwen row still remains a valid historical SGD-family result. A new
+seq128 run now closes the exact endpoint, parameter and state order under
+AdamW; its different result is reported below instead of being attached to
+the seq256 SGD numbers.
 
-Phi currently has the cleanest direct-effect/feedback separation. In its
-16-state live evaluation following 16 calibration states, the direct operator
-effect explains `0.9992` of the accumulated projection and the recurrence
-residual is below `7.1e-9`. Liger and Qwen do not yet have the same exported
-direct/feedback/actual certificate, so that result is not claimed for all
-three cases.
+## Same-optimizer correction
+
+The earlier 14-row Oracle comparison was not fair: the three historical rows
+above used stateless SGD, while the controls used AdamW. We therefore reran
+all three historical rows with the same AdamW settings as the controls and
+kept all twelve mechanically sampled controls. The corrected set has 15 rows.
+
+| row | local update `A16` | local update `A32` | random-sign 95% bound | AdamW result |
+|---|---:|---:|---:|---|
+| Liger fused CE | 1.338 | 1.720 | 1.116 | persistent |
+| Phi-4 `lm_head dX` | 1.013 | 1.029 | 1.004 | persistent, small margin |
+| Qwen seq128 `lm_head dX` | 0.971 | 0.957 | 1.045 | canceling |
+| sampled Phi seq256 row `0543` | 1.007 | 1.014 | 1.011 | persistent, small margin |
+
+This changes the scientific interpretation. Qwen has aligned gradient
+differences under the historical SGD measurement, but the direct update
+differences cancel after AdamW. The optimizer is therefore part of the
+measured training behavior, not an interchangeable final step.
+
+The new exact Qwen seq128 three-stage result is `A=1.005` at the operator
+output, `A=1.343` at the parameter gradient, and `A=0.961` after AdamW. Its
+live direct update has `A=0.957`; feedback has `A=1.191`, and actual parameter
+separation has `A=1.508`.
+
+All three historical rows now have an exported direct/feedback/actual split
+under AdamW. Liger has direct `A=1.720`, feedback `A=3.494`, and actual
+`A=3.489`, with recurrence error below `8.5e-8`. Phi has direct `A=1.029`,
+feedback `A=5.075`, and actual `A=1.711`. Thus a persistent direct effect can
+exist while later training feedback is much larger; final distance must not
+be attributed entirely to the operator.
 
 ## Two Phi measurements that must stay separate
 
@@ -135,7 +157,8 @@ deduplicated into 493 distinct implementation patterns. The numbers 804 and
 Only rows that also have a valid one-operator repair, a reachable parameter,
 and the required trajectory data enter deeper tests. Six historical records
 pass the older strict repair/carrier/trajectory checklist. Three records enter
-the narrower current headline above.
+the narrower historical stateless-SGD headline above. The common-AdamW
+comparison is counted separately.
 
 ## Other forms of parameter separation
 
@@ -156,18 +179,24 @@ direct operator-persistence measurement.
 
 ## Short screening result
 
-The frozen retrospective evaluation has 14 rows: three known positives and
-11 nonzero controls. Using only the first 16 parameter-update differences:
+The corrected retrospective evaluation has 15 rows and one optimizer:
+AdamW. It contains all twelve result-blind sampled rows plus the three
+historical rows. The full 32-step test finds three positives: Liger, Phi, and
+sampled row `0543`. Qwen is not positive under AdamW.
 
-- all three positives are selected;
-- two of 11 controls are also selected;
-- five of 14 rows are sent to the full test;
-- precision is `3/5` and recall on this small set is `3/3`.
+Using only the first 16 local parameter-update differences:
 
-On the same set, the short persistence score has AUROC `1.00`; local error RMS
-has AUROC `0.242`, and BF16 dtype alone has AUROC `0.50`. Across a separate 32-row
-formation population, local RMS has Pearson correlation `0.018` (`p=0.921`)
-and Spearman correlation `0.243` (`p=0.178`) with directionality.
+- all three AdamW positives are selected;
+- two of 12 negatives are also selected;
+- precision is `3/5` and recall on this small set is `3/3`;
+- the short score has AUROC `0.944`;
+- short-horizon update RMS has AUROC `0.528`.
+
+The old 14-row AUROC `1.00` is withdrawn because it mixed SGD positives with
+AdamW controls and omitted sampled row `0543` after its full result was known.
+Across a separate 32-row formation population, local RMS still has Pearson
+correlation `0.018` (`p=0.921`) and Spearman correlation `0.243` (`p=0.178`)
+with directionality.
 
 This supports a cheap, fail-closed prioritization step: selected rows receive
 the full test, while unselected rows are not declared safe. It is not a
@@ -187,10 +216,13 @@ operator output difference
 -> additional separation caused by changed training state
 ```
 
-The repository supports this measured workflow and three bounded headline
-records. It does not yet support a universal rule for unseen implementations,
-full-parameter training failure, or a claim that every observed parameter
-separation is caused by a persistent direct operator effect.
+The repository supports this measured workflow, three bounded historical SGD
+records, and a corrected same-AdamW evaluation with three confirmed rows. Two
+of the historical rows remain positive under AdamW; Qwen does not, while one
+result-blind sampled row becomes a small-margin positive. It does not yet
+support a universal rule for unseen implementations, full-parameter training
+failure, or a claim that every observed parameter separation is caused by a
+persistent direct operator effect.
 
 Machine-readable sources:
 
@@ -198,5 +230,6 @@ Machine-readable sources:
 - `results/property/joint_bias_formation_v1/three_stage_summary.json`
 - `results/property/bias_formation/consequence/phi4_lm_head_dx_seup.json`
 - `results/property/joint_bias_formation_v1/source_persistence_reclassification.json`
-- `results/property/joint_bias_formation_v1/oracle_baselines/frozen_evaluation_v2/comparison_v2.json`
+- `results/property/joint_bias_formation_v1/oracle_repair_v3/same_optimizer_oracle_v3.json`
+- `docs/oracle_repair_v3.md`
 - `results/coverage/coverage_table_v1.json`

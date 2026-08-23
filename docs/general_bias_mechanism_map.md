@@ -12,12 +12,11 @@ It separates three places in the real training step:
 
 Within each row, all three values use one ordered 32-state reference
 trajectory. They are measurements on one declared parameter, not
-full-parameter training results. The Qwen row is a seq256 companion
-measurement; its historical strict live trajectory is seq128, so the two must
-be described as the `Qwen lm_head dX` family rather than one exact endpoint
-certificate.
+full-parameter training results. This table is the historical stateless-SGD
+comparison. The later exact Qwen seq128 run and common-AdamW correction are
+reported in `docs/oracle_repair_v3.md`.
 
-| case | operator-output `A` | parameter-gradient `A` | effective-update `A` |
+| case | operator-output `A` | parameter-gradient `A` | stateless-SGD-update `A` |
 |---|---:|---:|---:|
 | Liger fused CE | 2.984 | 2.931 | 2.931 |
 | Phi-4 `lm_head dX` | 2.074 | 4.701 | 4.701 |
@@ -32,6 +31,11 @@ directionality almost exactly.
 The optimizer is not always passive.  On the same Phi gradient sequence,
 stateless SGD preserves `A=4.701`, while the frozen AdamW response maps it to
 `A=1.031`.  In this probe, AdamW suppresses the directional gradient error.
+
+The exact Qwen seq128 rerun shows the same boundary in one invocation:
+operator output `A=1.005` becomes gradient `A=1.343`, then falls to AdamW
+update `A=0.961`. A gradient difference must not be reported as a persistent
+parameter-update difference without checking the actual optimizer.
 
 Exact replay of both the measured error and its negative is available for
 saved-P and SiLU. Both contain one response component that stays the same when

@@ -7,27 +7,30 @@ operator becomes a parameter-update error that keeps accumulating.
 
 1. Four core models were audited systematically at sequence lengths 64, 128,
    and 256. Six additional models were used for targeted or held-out checks.
-2. The current paper headline contains three bounded records where the direct
-   operator or backward effect keeps adding up: Liger fused CE, Phi
-   `lm_head dX`, and the Qwen `lm_head dX` family.
-3. On ordered 32-state measurements, Liger is already directional at the
-   operator output. Phi and Qwen become more directional after the real
-   backward pass reaches a parameter gradient. The Qwen three-stage
-   measurement is seq256, while its historical strict live trajectory is
-   seq128; they are one mathematical family, not one exact endpoint instance.
+2. Three bounded historical records show persistent direct operator or
+   backward differences under stateless SGD: Liger fused CE, Phi
+   `lm_head dX`, and the Qwen `lm_head dX` family. They must be described as
+   optimizer-specific results.
+3. A corrected same-AdamW evaluation contains all twelve mechanically sampled
+   rows plus the three historical rows. Liger and Phi remain locally
+   persistent; Qwen does not, while one sampled Phi row is a small-margin
+   positive. The exact Qwen seq128 rerun measures output, gradient, AdamW
+   update and the live 32-step result in one invocation.
 4. Error size alone does not identify these cases. Across 32 reachable,
    nonzero rows, local RMS has Pearson correlation `0.018` with persistence.
-5. On the frozen 14-row Oracle evaluation, the 16-step effective-update score
-   has AUROC `1.00`, recall `3/3`, and false positives `2/11`. Local RMS has
-   AUROC `0.242`; BF16 dtype alone has AUROC `0.50`.
+5. On the corrected 15-row same-AdamW evaluation, the 16-step local-update
+   score has AUROC `0.944`, recall `3/3`, and false positives `2/12`.
+   Same-level local-update RMS has AUROC `0.528`. The old 14-row AUROC is
+   withdrawn because it mixed optimizers and omitted a sampled positive row.
 
 ## What is not established
 
-- The three cases do not prove one universal property for every operator.
-- Only Phi currently has an exported symmetric split of the direct operator
-  effect, later-state feedback, and actual parameter separation. That split is
-  not imputed for Liger or Qwen.
-- The 14-row result is retrospective and measured on declared parameter
+- The three historical SGD cases and the three AdamW-positive rows do not
+  prove one universal property for every operator.
+- Liger, Phi and Qwen now all have exported direct-operator, later-state
+  feedback, and actual parameter-separation sequences under AdamW. They remain
+  one-parameter controlled training runs, not full-parameter training.
+- The 15-row result is retrospective and measured on declared parameter
   carriers, not full-parameter training.
 - Training feedback is common in the sampled controls: 11/12 have locally
   canceling operator updates but persistent later feedback. Those rows are
