@@ -1,8 +1,8 @@
 # Scientific claim ledger
 
-Evidence snapshot: working tree after the completed joint-bias round
-(2026-08-22).  Bind this line to the resulting commit when the round is
-committed.
+Evidence snapshot: current organized mainline (2026-08-23). The paper
+headline count is three operator-local source/transport persistence cases.
+Historical six- and eight-row registries are retained only as audit history.
 
 This file is organized by paper claim, not experiment chronology.  Each row
 states the evidence threshold, the authoritative artifact, and what may be
@@ -18,7 +18,10 @@ negative labels.
 - `NOT_APPLICABLE`: the implementation has no nonzero, parameter-reachable
   contrast under the declared boundary.
 
-## Counting resolution
+## Historical counting resolution
+
+The current paper headline is three cases. The counts below explain old audit
+artifacts and must not be used as alternate headline counts.
 
 The repository contains several legitimate counts with different denominators:
 
@@ -30,13 +33,13 @@ The repository contains several legitimate counts with different denominators:
 | 6/8 | those roster records with a matched formation mechanism | `case.md` |
 | 4/8 | those roster records whose formation and persistence use the same contrast or declared closed semantic-region superset | `case.md` |
 
-Therefore `4/8 -> 6` is not a gate relaxation or a promotion.  `4/8` is the
+Therefore the historical `4/8 -> 6` change was not a gate relaxation or a promotion. `4/8` is the
 same-contrast subset of one eight-record formation roster.  `6` is the
 project-wide strict Flash-style registry; it includes Qwen `lm_head dX`, which
 is not in that formation roster, and it admits two causally closed semantic
 regions while keeping them ineligible for single-kernel property claims.
 
-The six strict cases are Qwen seq128 `lm_head dX`, Liger fused CE, Phi-4 seq64
+The six historical records are Qwen seq128 `lm_head dX`, Liger fused CE, Phi-4 seq64
 `lm_head dX`, Mamba seq64 `in_proj`, Qwen layer-27 saved-P, and the layer-23
 q-projection semantic region.  Gemma-4 feedback drift and Qwen3-VL SiLU
 feedback persistence are real trajectory phenomena but are not additional
@@ -65,7 +68,7 @@ Flash-style persistent-local-source cases.
 
 | claim | evidence threshold | supporting artifact | status |
 |---|---|---|---|
-| Six strict Flash-style project cases exist. | Complete F+B, causal repair/sham, real carrier, and paired directional trajectory. | `results/coverage/existing_case_reaudit.json`; `case.md` | `SUPPORTED`: four root-arithmetic cases plus two closed semantic-region cases. The literature FlashAttention anchor is excluded from the six. |
+| Six historical M0--M6 project records exist. | Complete F+B, causal repair/sham, real carrier, and paired directional trajectory. | `results/coverage/existing_case_reaudit.json`; `case.md` | `SUPPORTED_AS_AUDIT_HISTORY`: four root-arithmetic records plus two closed semantic-region records. Only three enter the current persistent operator-local bias headline. |
 | Three cases currently support the persistent-local-source headline. | The formation and trajectory contrasts align, and persistence is attributed to the endpoint-mediated local/transport effect rather than feedback alone. | `results/property/joint_bias_formation_v1/source_persistence_reclassification.json`; `case.md` | `SUPPORTED_WITH_SCOPE`: Qwen `lm_head dX`, Liger fused CE, and Phi `lm_head dX`. Saved-P/layer-23 remain attribution-unresolved; Mamba/Qwen64 have contrast mismatch; SiLU/Gemma are feedback controls. This does not delete the six-entry strict historical registry. |
 | Source-persistent and feedback-sustained drift are distinct regimes. | Four-arm local/feedback recurrence closes; optimizer ablation changes feedback without relabeling the source. | Gemma section of `docs/tcmp_progress.md`; `results/property/bias_property_search/heldout_validation_v3_gemma_disjoint.json` | `SUPPORTED_CASE_LEVEL`. Gemma local is null-like while feedback/actual persist; stateless SGD and moment reset collapse the feedback. A general feedback predictor is still `OPEN`. |
 | Negative evidence is nontrivial and correctly classified. | Nonzero local residual, parameter reach, complete F+B, and centered/canceling gradient/update population. | `results/property/tcmp_allop_v1/final_decision_matrix.json`; `results/property/tcmp_allop_v1/scope_extension_20260822.json` | `SUPPORTED`. YaRN exact-zero and parameter-inaccessible softmax/mask regions are `NOT_APPLICABLE`; compiler/provenance failures are `UNRESOLVED`; neither group is counted as a negative. |
@@ -90,8 +93,8 @@ Flash-style persistent-local-source cases.
 | Transported conditional mean predicts persistence. | Predictor frozen before consequence, protocol-conforming orbit estimate, and disjoint states. | Llama/Ministral records in `docs/tcmp_progress.md`; `results/property/tcmp_allop_v1/final_decision_matrix.json` | `BOUNDED`: prediction ordering was prospective, but the first orbit roster deviated from the frozen 4+4 protocol; corrected values are retrospective. Evidence supports one `lm_head dX` family on new operands, not confirmatory cross-implementation generalization. |
 | Held-out axes are reported honestly. | Label each row `SEEN_IMPL / NEW_OPERANDS` or `NEW_IMPL`. | `docs/heldout_property_validation.md`; `docs/heldout_property_validation_v3.md` | `SUPPORTED`. Llama/Ministral are `SEEN_IMPL / NEW_OPERANDS`; Gemma is `NEW_IMPL` but source-negative and feedback-sustained. New-implementation source-positive count is zero. |
 | The low-cost Oracle safely triages exact trajectories. | Fixed 256-dimensional CountSketch, empirical null, fail-closed selector, and exact confirmation only for risks. | `docs/short_persistence_oracle_v3.md`; `scripts/select_short_screen_escalations.py`; `results/property/bias_property_search/gemma_v3_disjoint_escalation_manifest.json` | `SUPPORTED_AS_WORKFLOW`. It is not yet an accuracy or safety certificate. |
-| The Oracle has measured engineering efficiency. | Report flagged fraction, eligible denominator, exact-confirmation recall, false escalations, GPU time, and memory versus full trajectories. | — | `OPEN`. The current Gemma manifest is one validation record, not a stable efficiency estimate. |
-| The predictor beats simple baselines. | Frozen comparison against local RMS, reduction extent, dtype, and transport/concentration-only rules on positive and residual-nonzero negative rows. | `results/property/bias_property_search/development_property_separation_audit_v1.json` | `OPEN`. Concentration is already shown not to separate; the complete baseline comparison is not yet available. |
+| The Oracle has measured screening behavior. | Report flagged fraction, eligible denominator, exact-confirmation recall, and false escalations on the frozen evaluation set. | `results/property/joint_bias_formation_v1/oracle_baselines/frozen_evaluation_v2/comparison_v2.json` | `SUPPORTED_FOR_FROZEN_14_ROWS`: 5/14 flagged, recall 3/3, false positives 2/11, precision 3/5. Complete GPU-time savings remain open until Mamba and uncontended headline timing runs finish. |
+| The predictor beats simple baselines. | Frozen comparison against local RMS and dtype on positive and residual-nonzero control rows. | same frozen 14-row comparison | `SUPPORTED_FOR_FROZEN_14_ROWS`: prefix persistence AUROC `1.00`, local RMS `0.242`, dtype `0.50`. Reduction length is unavailable for three headline rows and is not given a complete AUROC. |
 | Four candidate properties were tested. | Positive and centered-control measurements under the same property definition. | `development_property_profile.json`; `development_property_separation_audit_v1.json`; `property_freeze_v1.json` under `results/property/bias_property_search/` | `SUPPORTED_WITH_DECISIONS`: source asymmetry separates 3 known rows from 5 centered controls and is retained as a conditional prior; source–transport has one positive and no valid controls, so remains case-level; concentration overlaps controls and is supporting-only; carrier stability has no measured centered-control trajectories and is only a consequence screen. |
 | A universal all-operator property has been established. | Prospective positives and residual-nonzero negatives across unseen implementation classes, with frozen thresholds and baselines. | `docs/final_conclusion.md`; `docs/bias_property_search_completion.md` | `NOT_SUPPORTED`. The correct result is a family-scoped transported-mean hypothesis plus a fail-closed persistence screen and a separate feedback taxonomy. |
 
@@ -105,8 +108,8 @@ Flash-style persistent-local-source cases.
    separately.
 3. Backward-visible implementation residuals often cancel; nonzero local error
    and low-dimensional concentration are insufficient by themselves.
-4. A transported conditional orbit mean is a falsifiable, family-scoped
-   persistence predictor for the measured `lm_head dX` reduction/VJP family.
+4. A short sequence of effective parameter-update errors is a useful,
+   fail-closed persistence screen on the frozen 14-row evaluation set.
 5. Feedback-sustained drift is a distinct case-level regime demonstrated by
    Gemma’s Adam-state intervention.
 6. The short Oracle is a fail-closed prioritization workflow, not a safety
@@ -114,7 +117,8 @@ Flash-style persistent-local-source cases.
 
 ## Highest-priority open evidence
 
-1. Triage efficiency and frozen simple-baseline comparisons beyond RMS.
+1. Complete wall-clock cost accounting after the Mamba and uncontended
+   headline timing runs.
 2. A positive-baseline source intervention on a bound contrast; the existing
    Liger RN arm is diffusive and cannot support the planned suppression claim.
 3. A prospective, protocol-conforming `NEW_IMPL` source-positive confirmation,
@@ -124,12 +128,12 @@ Flash-style persistent-local-source cases.
 
 ## Three-factor formation follow-up
 
-The current follow-up keeps the source distribution, conditional F+B/optimizer
-response, and closed-loop propagation as separate factors.  The auditable
+The current follow-up keeps the operator-output error, backward/optimizer
+response, and later training-state propagation as separate steps. The auditable
 inventory is in `results/property/joint_bias_formation_v1/`.  It reports ten
 records: eight formal v2.1 roster entries plus two previously measured
-exploratory semantic records.  Saved-P and Qwen3-VL SiLU have exact
-antithetic-response replays; Phi has a case-level transport-pairing
+exploratory semantic records. Saved-P and Qwen3-VL SiLU have exact
+positive/negative error-response replays; Phi has a case-level backward-pairing
 intervention; Liger has a source-event feasibility screen.  Missing raw
 `epsilon`/`+epsilon`/`-epsilon` vectors are explicitly `UNRESOLVED`.
 
@@ -160,10 +164,12 @@ intervention.  A fixed real 16-step Phi error sequence injected into an
 alternate checkpoint gives drift/direct-sum ratio `1.0104`, with no extra
 feedback amplification in that probe.  This is a positive propagation-closure
 result: direct accumulated error predicts the observed drift to within 1.04%.
-The raw-vector even/odd response decomposition is complete for the two cases
-with exact replay artifacts.  Both saved-P and SiLU contain material even and
-odd contributions rather than a single dominant channel; SiLU's even-response
+The positive/negative error-response decomposition is complete for the two
+cases with exact replay artifacts. Both saved-P and SiLU contain material
+symmetric and sign-changing contributions rather than a single dominant channel; SiLU's symmetric-response
 energy is almost entirely concentrated in its first two steps.  The 16→32
 backtest and the 12-row full consequence audit are also complete.  Held-out
-Gemma source-negative confirmation is complete, while a universal joint
-predictor remains unresolved.
+Gemma source-negative confirmation is complete. The generic three-part
+predictor was evaluated for input eligibility on five cases; none had all
+required inputs, so it correctly abstained on all five and has no accuracy
+claim.

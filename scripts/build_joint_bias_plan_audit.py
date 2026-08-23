@@ -115,9 +115,9 @@ def main() -> None:
             "Saved-P and SiLU response replay exists; generic raw-vector even/odd coverage is not available for every case.",
         ),
         check(
-            "results/property/joint_bias_formation_v1/execution_status.json",
-            "STALE_LEGACY_STATUS",
-            "Legacy status still lists older open items; this audit does not silently relabel those items as complete.",
+            "results/property/joint_bias_formation_v1/current_status.json",
+            "COMPLETE_CURRENT_STATUS",
+            "Current headline, Oracle evaluation, abstentions, and the pending timing-only boundary.",
         ),
     ]
 

@@ -59,18 +59,17 @@ update `A=4.701`; this is a response-map measurement, not a new formation
 label.
 
 The fresh wall-clock rerun has 11 of the 12 screen-negative rows with a real
-32-step timed output.  The Mamba scientific consequence certificate is also
-complete, but four real timing configurations (including a resume from a
-checkpoint containing nine completed steps) hit the same missing-CUDA-
-extension/sequential-fallback AOT boundary.  They were stopped and recorded as
-`BLOCKED_AOT_WARMUP` with their actual elapsed times and preserved checkpoint.
-Therefore no complete 12-row GPU-time saving number is claimed.  This affects
-timing only, not the already complete 12/12 scientific consequence results.
+32-step timed output. The Mamba scientific consequence certificate is already
+complete; a separate timing-only rerun is being resumed in the background with
+the slow sequential implementation because the optional fast CUDA path is not
+installed. Therefore no complete 12-row GPU-time saving number is claimed yet.
+This affects timing only, not the already complete 12/12 scientific results.
 The measured subset is recorded in
 `results/property/joint_bias_formation_v1/timed_efficiency_partial_v1.json`:
-11 timed rows total 4.927 one-GPU-equivalent hours.  Four active headline
-rows (the three positives and Mamba) have no time, so recall and full-cohort
-savings remain unavailable.
+11 timed rows total 4.927 one-GPU-equivalent hours. The three headline
+positives have scientifically reproduced timing runs, but the final combined
+14-row cost table remains pending until Mamba finishes and the positive timings
+are consolidated without background CPU contention.
 
 ## Scientific boundary
 

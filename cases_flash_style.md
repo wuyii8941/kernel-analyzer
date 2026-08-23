@@ -1,5 +1,10 @@
 # Flash-style case 机制报告
 
+> Historical evidence report. Its 7/48 invocation counts are not the current
+> persistent-bias headline. The current paper count is 3 operator-local
+> source/transport persistence cases; see `docs/current_mainline.md` and
+> `results/property/joint_bias_formation_v1/source_persistence_reclassification.json`.
+
 更新时间：2026-08-17。
 
 本文只整理已有证据，不提出共同 property。参照方法是 Qiu 和 Yao 的

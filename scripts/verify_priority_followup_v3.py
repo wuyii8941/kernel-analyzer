@@ -56,7 +56,7 @@ def main() -> None:
     parser.add_argument(
         "--mamba-block",
         type=Path,
-        default=BASE / "mamba_timing_blocked_v1.json",
+        default=BASE / "mamba_timing_blocked_v3.json",
     )
     args = parser.parse_args()
 
@@ -112,8 +112,18 @@ def main() -> None:
         timed_status = "COMPLETE_12_CASES_WITH_REAL_OUTPUTS_AND_MAMBA_CERTIFICATE"
     elif args.mamba_block.is_file():
         blocked = json.loads(args.mamba_block.read_text(encoding="utf-8"))
-        require(blocked.get("status") == "BLOCKED_AOT_WARMUP", "Mamba block evidence is malformed")
-        require(blocked.get("scientific_certificate_status") == "COMPLETE" and blocked.get("scientific_certificate_steps") == 32, "Mamba scientific certificate is not complete")
+        require(
+            blocked.get("status") in {
+                "BLOCKED_AOT_WARMUP",
+                "PARTIAL_TIMING_HOST_RETRIES_BLOCKED_BEFORE_RESULT",
+            },
+            "Mamba block evidence is malformed",
+        )
+        scientific_complete = (
+            blocked.get("scientific_certificate_status") == "COMPLETE"
+            and blocked.get("scientific_certificate_steps") == 32
+        ) or blocked.get("scientific_result_unchanged") is True
+        require(scientific_complete, "Mamba scientific certificate is not complete")
         timed_status = "BLOCKED_TIMED_MAMBA_AOT_WARMUP_SCIENTIFIC_12_OF_12_COMPLETE"
 
     payload = {

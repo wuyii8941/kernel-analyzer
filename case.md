@@ -272,14 +272,15 @@ The audit now separates trajectory-local `FLASH_STYLE_CASE` from cross-state
 revoke a complete causal F+B mechanism that accumulates along a paired
 training trajectory.
 
-There are **six strict Flash-style cases**: four root-arithmetic cases—Qwen
+The historical M0--M6 audit contains **six records**: four root-arithmetic cases—Qwen
 seq128 `lm_head dX`, Liger fused linear CE, Phi-4 seq64 `lm_head dX`, and
 Mamba seq64 layer-0 `in_proj`—plus two causally closed semantic-region cases:
 the layer-23 q-projection tile and layer-27 softmax saved-state `dS` region.
 Phi's trajectory is bounded to an evolving final-norm weight; both semantic
-regions are closed boundaries, not unique single-kernel attributions. Only
-Liger and Phi pass the separate cross-state concrete-
-mechanism gate.  This is still not a cross-operator property claim.
+regions are closed boundaries, not unique single-kernel attributions. This is
+an evidence-provenance count, not the current persistent operator-local bias
+headline. Only the three rows listed at the top of this file enter that
+headline.
 
 The old Qwen `lm_head` 32-state all-parameter interval crosses zero.  That
 measurement remains valid and now means `GENERALIZABLE_BIAS=FAIL`, while its

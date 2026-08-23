@@ -141,9 +141,13 @@ def main() -> None:
                 failed.append((job["case_id"], str(log)))
         if failed:
             raise RuntimeError("timed consequence failures: " + ", ".join(f"{case} ({log})" for case, log in failed))
+    complete_selection = len(results) == 12
     payload = {
         "schema": "kernel-analyzer-timed-negative-consequence-audit-v1",
-        "status": "COMPLETE_12_CASES_WITH_WALL_TIMES",
+        "status": (
+            "COMPLETE_12_CASES_WITH_WALL_TIMES"
+            if complete_selection else "COMPLETE_SELECTED_CASES_WITH_WALL_TIMES"
+        ),
         "selection_source": str(args.comparison),
         "selection_rule": "The exact frozen 12-row residual-nonzero, parameter-reachable sample from the Oracle comparison.",
         "steps": 32,

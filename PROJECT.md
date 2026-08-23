@@ -14,11 +14,11 @@ accumulation.  A T1 screen or a carrier alone is not a case.
 - Four models × three shapes: 12 cells.
 - Full-coordinate directional endpoints: 1,562 / 1,562 audited.
 - T1: 1,390 pass, 172 reject, 0 pending.
-- Current strict Flash-style registry: 6 project cases after complete gate
-  re-audit (4 root-arithmetic cases and 2 closed semantic regions).
-- Bias Formation roster: 8 paired-separation records, of which 7 pass ordered
-  directional persistence, 6 have matched formation evidence, and 4 close the
-  same formation contrast through persistence.
+- Current paper headline: **3 operator-local source/transport persistence
+  cases** (Liger fused CE, Phi `lm_head dX`, and Qwen `lm_head dX`).
+- Historical audit registries contain 6 strict F+B/repair/carrier/trajectory
+  records and 8 paired-separation records. Those are provenance counts, not
+  counts of confirmed persistent operator-local bias.
 - The historical 48-endpoint pre-deduplication snapshot is superseded as a
   strict-case count; endpoint instances never substitute for independent
   mechanisms or complete current gates.
@@ -30,13 +30,12 @@ accumulation.  A T1 screen or a carrier alone is not a case.
 These numbers are intentionally conservative.  Pending rows remain in the
 denominator and are not called normal controls or cases.
 
-The completed property profile contains 8 known/partial development records
-and 5 residual-nonzero centered controls.  Source asymmetry is the only
-formation candidate admitted by a complete centered-control comparison;
-source–transport remains case-level, concentration is supporting-only, and
-carrier stability is used only as a fail-closed short consequence screen.  The
-current `NEW_IMPL` Gemma validation is source-null/feedback-sustained and adds
-no new strict Flash-style source case.
+The current Oracle evaluation contains 14 declared rows: 3 headline positives
+and 11 residual-nonzero controls. A 16-step parameter-update persistence score
+separates this frozen set with AUROC 1.00, recall 3/3, and 2/11 false positives.
+This is a retrospective, carrier-scale result, not universal accuracy. The
+current `NEW_IMPL` Gemma validation is source-negative with Adam-state feedback
+and adds no operator-local source-persistence case.
 
 ## Directory map
 
@@ -47,7 +46,7 @@ no new strict Flash-style source case.
 | `tests/` | unit tests | keep |
 | `case.md`, `cases_flash_style.md` | case registry and Flash-style logic | keep |
 | `docs/coverage.md`, `docs/denominator.md`, `docs/bias_protocol.md` | compact protocol/status references | keep |
-| `docs/claims.md`, `docs/gate_history.md` | paper claim ledger and gate/count provenance | keep |
+| `docs/current_mainline.md`, `docs/claims.md`, `docs/gate_history.md` | current result, claim ledger, and gate/count provenance | keep |
 | `docs/bias_properties.md` | candidate bias-formation tournament | keep |
 | `docs/l23_qproj_tile.md` | detailed mathematical case derivation | keep |
 | `results/coverage/` | frozen inputs, releases, ledgers, T1--T4 evidence | keep; remove only validated intermediates |

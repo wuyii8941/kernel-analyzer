@@ -147,7 +147,13 @@ def _write_vector(root: Path, layer: str, state_id: str, values: np.ndarray) -> 
             "storage_dtype": "float32"}
 
 
-def capture(states: list[dict[str, Any]], device_name: str, spool_root: Path) -> dict[str, Any]:
+def capture(
+    states: list[dict[str, Any]],
+    device_name: str,
+    spool_root: Path,
+    *,
+    retain_spool: bool = False,
+) -> dict[str, Any]:
     if len(states) != 32:
         raise ValueError("Liger v2.1 formation requires exactly 32 frozen states")
     from liger_kernel.transformers import LigerFusedLinearCrossEntropyLoss
@@ -192,7 +198,7 @@ def capture(states: list[dict[str, Any]], device_name: str, spool_root: Path) ->
         rows[partition]["EFFECTIVE_UPDATE"].append(_write_vector(spool_root, "update", state_id, update))
         metadata.append({"state_id": state_id, "partition": partition, "common_state": _common(state, _file_digest(MODEL / "model.safetensors.index.json")),
                          "local_coordinates": int(local.size), "parameter_coordinates": TIED,
-                         "raw_vectors_retained": False})
+                         "raw_vectors_retained": retain_spool})
         del values, standard, sham, repair, local, gradient, update
         torch.cuda.empty_cache()
         print(json.dumps({"event": "FORMATION_STATE_COMPLETE", "state": index, "state_id": state_id}, sort_keys=True), flush=True)
@@ -220,7 +226,18 @@ def capture(states: list[dict[str, Any]], device_name: str, spool_root: Path) ->
               "policy": policy.as_dict(), "populations": populations, "first_confirmed_bias_stage": first_confirmed,
               "first_observed_biased_stage": first_observed, "formation_point": "CONFIRMED" if first_confirmed else "UNRESOLVED",
               "trajectory_drift_in_formation": False, "missing_rows": [], "unexpected_rows": [], "rows": metadata,
-              "capture_provenance": {"runner": "scripts/capture_liger_bias_formation_v21.py", "model": str(MODEL), "device": device_name, "raw_vectors_retained": False, "weights_digest_scope": "checkpoint_index_manifest", "trajectory_drift_in_formation": False}}
+              "capture_provenance": {"runner": "scripts/capture_liger_bias_formation_v21.py", "model": str(MODEL), "device": device_name, "raw_vectors_retained": retain_spool, "weights_digest_scope": "checkpoint_index_manifest", "trajectory_drift_in_formation": False}}
+    if retain_spool:
+        result["raw_vector_capture"] = {
+            "status": "COMPLETE_32_STATE_THREE_STAGE_VECTORS_RETAINED",
+            "spool_root": str(spool_root),
+            "state_count": 32,
+            "layers": {
+                "LOCAL_ENDPOINT": rows["calibration"]["LOCAL_ENDPOINT"] + rows["confirmation"]["LOCAL_ENDPOINT"],
+                "PARAMETER_GRADIENT": rows["calibration"]["PARAMETER_GRADIENT"] + rows["confirmation"]["PARAMETER_GRADIENT"],
+                "EFFECTIVE_UPDATE": rows["calibration"]["EFFECTIVE_UPDATE"] + rows["confirmation"]["EFFECTIVE_UPDATE"],
+            },
+        }
     result["result_sha256"] = _digest(result)
     return result
 
@@ -230,6 +247,11 @@ def main() -> None:
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--output", type=Path, default=OUTPUT)
     parser.add_argument("--spool-root", type=Path, default=SPOOL_ROOT)
+    parser.add_argument(
+        "--retain-spool",
+        action="store_true",
+        help="retain raw three-stage float32 vectors after certificate generation",
+    )
     args = parser.parse_args()
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is unavailable; formation capture is not run")
@@ -238,12 +260,18 @@ def main() -> None:
     records = {row["sequence_id"]: row for row in design["records"]}
     states = [records[state_id] for state_id in protocol["trajectory"]["state_order"]]
     args.spool_root.mkdir(parents=True, exist_ok=True)
-    result = capture(states, args.device, args.spool_root)
+    result = capture(
+        states,
+        args.device,
+        args.spool_root,
+        retain_spool=args.retain_spool,
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_name("." + args.output.name + ".tmp")
     temporary.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     temporary.replace(args.output)
-    shutil.rmtree(args.spool_root, ignore_errors=True)
+    if not args.retain_spool:
+        shutil.rmtree(args.spool_root, ignore_errors=True)
     print(json.dumps({"output": str(args.output), "status": result["status"], "first_confirmed_bias_stage": result["first_confirmed_bias_stage"]}, sort_keys=True))
 
 
