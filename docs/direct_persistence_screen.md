@@ -77,3 +77,4 @@ Gemma 4 是事前冻结的新实现。它的局部 direct 分数在 16 步为 `0
 - [回溯统计](../results/property/direct_persistence_v4/retrospective_metrics.json)
 - [多重比较](../results/property/direct_persistence_v4/multiplicity.json)
 - [direct/feedback/actual 贡献表](../results/property/direct_persistence_v4/contribution_table.csv)
+- [逐项完成审计](../results/property/direct_persistence_v4/completion_audit.json)
