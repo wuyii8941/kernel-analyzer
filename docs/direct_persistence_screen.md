@@ -44,6 +44,28 @@ v3 没有保存 prefix-16 的 sign-flip Gram。
 
 Phi 的 `A=3.325→0.956` 是 16 个共同状态、无 moments 的 stateless SGD 源干预；Phi 的 `A=1.029` 是 32 步 cold-start AdamW 结果。两者不是同一个测量，前者不能解释后者。AdamW 下的 matched source intervention 仍未完成。
 
+## 优化器不是统一根因
+
+同状态重放显示，优化器会改变误差进入有效更新的方式，但三例的方向不同：
+
+| 案例 | 梯度差异 A32 | captured AdamW A32 | 每步重置 moments A32 |
+|---|---:|---:|---:|
+| Liger | 2.838 | 1.681 | 1.828 |
+| Phi | 4.683 | 1.030 | 1.014 |
+| Qwen | 1.343 | 0.961 | 1.000 |
+
+所以可以说“优化器会抑制或保留方向性”，不能说“优化器就是数值误差的来源”。
+这些结果仍限定在 moments 从零开始、之后正常演化的 AdamW 设置。
+
+## 第一个未见实现的前瞻检查
+
+Gemma 4 是事前冻结的新实现。它的局部 direct 分数在 16 步为 `0.986`、在
+32 步为 `1.0003`，因此没有通过 direct persistence；但 actual trajectory
+为 `3.231`，主要由 feedback 维持。这是一个有效的 `NEW_IMPL` 负例，而不是
+“整个训练安全”的证明。当前只有这一个未见实现，不能计算 recall 或 AUROC。
+
+详见 [Gemma held-out 记录](direct_persistence_heldout.md)。
+
 ## 结果位置
 
 - [v4 protocol](../results/property/direct_persistence_v4/protocol.json)

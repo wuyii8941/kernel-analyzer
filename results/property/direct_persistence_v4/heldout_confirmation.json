@@ -1,6 +1,6 @@
 {
   "schema": "kernel-analyzer-direct-persistence-v4-heldout-confirmation-v1",
-  "status": "NOT_STARTED",
+  "status": "PARTIAL_EXTERNAL_NEW_IMPL_COMPLETE",
   "rows": [],
   "metrics": {
     "recall": null,
@@ -8,7 +8,13 @@
     "escalation_rate": null,
     "false_escalation_rate": null,
     "abstention_rate": null,
-    "gpu_cost": null
+    "gpu_cost": null,
+    "external_campaign": "heldout_gemma_confirmation.json",
+    "external_eligible_rows": 1,
+    "external_confirmed_positive": 0,
+    "external_confirmed_negative": 1,
+    "external_escalation_rate": 0.0
   },
-  "all_negative_policy": "If no confirmed positive exists, recall and AUROC remain null."
+  "all_negative_policy": "The independent Gemma pool is all-negative for direct persistence, so its recall and AUROC remain null. The atlas-derived pool is still invalid and contributes no labels.",
+  "claim_boundary": "Prospective validation is partial: one valid NEW_IMPL negative is complete; more frozen rows are required for recall, AUROC, or universal generalization."
 }

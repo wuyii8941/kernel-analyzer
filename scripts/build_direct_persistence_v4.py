@@ -517,6 +517,10 @@ def main() -> None:
         "completed_cases": [],
     }
     optimizer_run_progress = load(optimizer_run_manifest_path) if optimizer_run_manifest_path.exists() else {}
+    external_heldout_path = args.output / "heldout_gemma_confirmation.json"
+    external_heldout_validation_path = args.output / "heldout_gemma_validation.json"
+    external_heldout = load(external_heldout_path) if external_heldout_path.exists() else None
+    external_heldout_validation = load(external_heldout_validation_path) if external_heldout_validation_path.exists() else None
     summary = {
         "schema": "kernel-analyzer-direct-persistence-v4-summary-v1",
         "status": "DEVELOPMENT_REANALYSIS_COMPLETE_HELDOUT_AND_OPTIMIZER_PHASES_PENDING",
@@ -536,11 +540,19 @@ def main() -> None:
             "natural_phase_status": optimizer_run_progress.get("phase_conditioned_natural", "NOT_STARTED"),
             "claim_boundary": optimizer_progress.get("claim_boundary"),
         },
+        "heldout_external_progress": {
+            "status": external_heldout.get("status", "NOT_STARTED") if external_heldout else "NOT_STARTED",
+            "validation": external_heldout_validation.get("status", "NOT_STARTED") if external_heldout_validation else "NOT_STARTED",
+            "eligible_rows": external_heldout.get("metrics", {}).get("eligible_rows") if external_heldout else 0,
+            "confirmed_positive": external_heldout.get("metrics", {}).get("confirmed_positive") if external_heldout else 0,
+            "confirmed_negative": external_heldout.get("metrics", {}).get("confirmed_negative") if external_heldout else 0,
+            "claim_boundary": "One independently frozen NEW_IMPL negative is complete; recall/AUROC remain undefined until more rows exist.",
+        },
         "next_required": [
-            "freeze v4 protocol and tolerance/severity definitions",
-            "same-state optimizer ablation with real captured moments",
-            "phase-conditioned natural optimizer evaluation",
-            "mechanically frozen NEW_IMPL held-out pool and full 16+32 run",
+            "same-state optimizer ablation for the remaining feedback control and 0543 when exact raw captures exist",
+            "phase-conditioned natural optimizer evaluation with real early/middle/late moments",
+            "expand the independently frozen NEW_IMPL pool beyond the one completed Gemma negative",
+            "complete tolerance metrics on a common held-out pool",
             "prospective executable catch-and-fix if a candidate escalates",
         ],
     }

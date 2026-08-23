@@ -1,6 +1,20 @@
 {
-  "schema": "kernel-analyzer-direct-persistence-v4-tolerance-comparison-v1",
-  "status": "SPEC_FROZEN_HELDOUT_MEASUREMENT_PENDING",
+  "available_retrospective_baselines": {
+    "frozen_fail_closed_threshold_score_gt_1": {
+      "false_negative": 0,
+      "false_positive": 2,
+      "precision": 0.6,
+      "recall": 1.0,
+      "true_negative": 10,
+      "true_positive": 3
+    },
+    "prefix16_local_A": {
+      "auroc": 0.9444444444444444
+    },
+    "prefix16_local_rms": {
+      "auroc": 0.5277777777777778
+    }
+  },
   "baselines": [
     "max absolute error",
     "relative L2",
@@ -10,7 +24,29 @@
     "gradient RMS",
     "update RMS"
   ],
-  "required_outputs": ["confusion matrix", "AUROC/PR when both classes exist", "false-negative curve over tolerance sweep"],
+  "claim_boundary": "The current evidence compares persistence directionality with the old local RMS retrospective baseline. A complete tolerance comparison still requires the same frozen held-out pool to provide all listed metrics.",
+  "external_new_impl": {
+    "case_id": "gemma4_e2b_ple_rmsnorm_fb",
+    "direct_persistence_verdict": "NO_DETECTED_DIRECT_PERSISTENCE_AFTER_CONFIRMATION",
+    "local_A16": 0.986018051199745,
+    "local_A32": 1.0003153413370705,
+    "result": "negative_for_direct_persistence"
+  },
+  "missing_baselines": [
+    "max absolute error",
+    "relative L2",
+    "ULP",
+    "rtol/atol sweep",
+    "output RMS",
+    "gradient RMS",
+    "update RMS on the independent Gemma row"
+  ],
+  "required_outputs": [
+    "confusion matrix",
+    "AUROC/PR when both classes exist",
+    "false-negative curve over tolerance sweep"
+  ],
   "rows": [],
-  "claim_boundary": "No tolerance baseline is declared superior or inferior until the same frozen heldout rows receive full 32-step labels."
+  "schema": "kernel-analyzer-direct-persistence-v4-tolerance-comparison-v1",
+  "status": "PARTIAL_AVAILABLE_RMS_BASELINE"
 }

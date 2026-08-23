@@ -27,6 +27,10 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=Path, required=True)
     parser.add_argument("--input-bank", type=Path, required=True)
+    parser.add_argument(
+        "--trajectory-input-bank", type=Path,
+        help="optional separate frozen trajectory bank; the primary bank remains the compile/warm-up identity",
+    )
     parser.add_argument("--runtime-release", type=Path, required=True)
     parser.add_argument("--prediction", type=Path, required=True)
     parser.add_argument("--carrier", default=CARRIER)
@@ -56,7 +60,11 @@ def main() -> None:
     if prediction["status"] != "PREDICTION_FROZEN_BEFORE_TRAJECTORY":
         raise RuntimeError("prediction is not frozen")
     bank = json.loads(args.input_bank.read_text())
-    states = [row for row in bank["states"] if row["role"] == args.state_role][:args.steps]
+    trajectory_bank = (
+        json.loads(args.trajectory_input_bank.read_text())
+        if args.trajectory_input_bank is not None else bank
+    )
+    states = [row for row in trajectory_bank["states"] if row["role"] == args.state_role][:args.steps]
     if len(states) != args.steps:
         raise RuntimeError(f"{args.state_role} population incomplete")
     # The compiled wrapper is part of the frozen runtime release.  Compile
