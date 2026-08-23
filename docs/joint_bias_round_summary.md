@@ -12,6 +12,11 @@
 | Liger `0.9419` versus historical `2.315` | not the same bound measurement; `2.315` has no canonical state/contrast/estimator binding and is retired | `results/property/joint_bias_formation_v1/metric_binding.json` |
 | four comparable Phi carrier arms | complete 32-step run; details below | `results/property/joint_bias_formation_v1/four_scale_arms/summary.json` |
 
+The frozen Oracle evaluation set contains **14 rows: 3 declared positives and
+11 controls**.  The three positives are Liger fused CE, Phi `lm_head dX`, and
+Qwen `lm_head dX`; they were in the frozen set before comparison, rather than
+added after seeing the scores.
+
 ## Four-arm result
 
 All four arms start from the same checkpoint and are measured on one declared
@@ -44,6 +49,14 @@ A second parameter carrier, layer-26 post-attention norm, does **not** repeat
 the final-norm result: operator `A=1.114`, precision `A=0.914`, and data-order
 `A=0.0158`.  Persistence is therefore carrier-selective within Phi; it is not
 a model-wide property of every parameter touched by the endpoint.
+
+The five-seed random null was evaluated on all 12 declared carriers.  Its
+per-seed carrier means are `0.884--1.029`, while the natural final-norm carrier
+reaches `A=4.488`.  The repeated-random unseen-loss arm is complete
+(`A=1.028`, random-minus-repair loss gap `8.20e-8`).  The separate AdamW replay
+gives gradient `A=4.665` but effective-update `A=1.031`, compared with SGD
+update `A=4.701`; this is a response-map measurement, not a new formation
+label.
 
 ## Scientific boundary
 

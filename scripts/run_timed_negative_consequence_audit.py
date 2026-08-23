@@ -56,6 +56,12 @@ def main() -> None:
     parser.add_argument("--gpu-list", default="0,1,2,3")
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--max-parallel", type=int, default=4)
+    parser.add_argument(
+        "--only-case",
+        action="append",
+        default=None,
+        help="Run only the named frozen case id; may be supplied more than once.",
+    )
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
     logs = args.output_dir / "logs"
@@ -63,6 +69,14 @@ def main() -> None:
     checkpoint_dir = args.output_dir / "checkpoints"
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     jobs = build_jobs(args.comparison)
+    if args.only_case:
+        requested = set(args.only_case)
+        jobs = [job for job in jobs if job["case_id"] in requested]
+        missing = requested.difference(job["case_id"] for job in jobs)
+        if missing:
+            raise ValueError("unknown case id(s): " + ", ".join(sorted(missing)))
+    if not jobs:
+        raise ValueError("no cases selected")
     gpus = [item.strip() for item in args.gpu_list.split(",") if item.strip()]
     if not gpus:
         raise ValueError("gpu-list cannot be empty")
