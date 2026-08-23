@@ -1,0 +1,34 @@
+{
+  "schema": "kernel-analyzer-mamba-timing-block-v1",
+  "status": "BLOCKED_AOT_WARMUP",
+  "case_id": "multishape-backward-cell-0450",
+  "scientific_consequence_certificate": "results/property/joint_bias_formation_v1/consequence/mamba_seq64_multishape-backward-cell-0450.json",
+  "scientific_certificate_status": "COMPLETE",
+  "scientific_certificate_steps": 32,
+  "attempts": [
+    {
+      "path": "full_graph",
+      "device": "physical_gpu_0",
+      "elapsed_before_stop_seconds": 1690,
+      "steps_written": 4,
+      "last_step": 4,
+      "log": "/data1/tzh/cache/joint_consequence_timed/mamba_v1/logs/multishape-backward-cell-0450.log",
+      "observed_problem": "Transformers sequential Mamba fallback; no CUDA scan extension; full graph compilation did not reach step 5."
+    },
+    {
+      "path": "allow_graph_breaks",
+      "device": "physical_gpu_3",
+      "elapsed_before_stop_seconds": 595,
+      "steps_written": 0,
+      "last_step": 0,
+      "log": "/data1/tzh/cache/joint_consequence_timed/mamba_gb2/session_stdout",
+      "observed_problem": "The same sequential fallback spent the whole attempt compiling; no checkpoint or step output was produced."
+    }
+  ],
+  "environment_evidence": {
+    "mamba_ssm": "unavailable: installed extension requires glibc 2.32, host provides an older glibc",
+    "causal_conv1d": "unavailable: installed extension requires glibc 2.32, host provides an older glibc",
+    "fallback_message": "The fast path is not available ... Falling back to the sequential implementation of Mamba"
+  },
+  "claim_boundary": "The Mamba scientific 32-step consequence result is real and complete. A portable wall-clock number for this one row is not claimed; both timing attempts were stopped after recording the actual blocker."
+}

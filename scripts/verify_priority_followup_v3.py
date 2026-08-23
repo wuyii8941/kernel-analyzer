@@ -53,6 +53,11 @@ def main() -> None:
         type=Path,
         default=Path("/data1/tzh/cache/joint_consequence_timed/mamba_v1/timed_audit.json"),
     )
+    parser.add_argument(
+        "--mamba-block",
+        type=Path,
+        default=BASE / "mamba_timing_blocked_v1.json",
+    )
     args = parser.parse_args()
 
     oracle = load("results/property/joint_bias_formation_v1/oracle_baselines/frozen_evaluation_v2/comparison_v2.json")
@@ -105,6 +110,11 @@ def main() -> None:
         timed_case_ids.add(mamba_rows[0]["case_id"])
         require(len(timed_case_ids) == 12, f"timed consequence coverage is {len(timed_case_ids)}, expected 12")
         timed_status = "COMPLETE_12_CASES_WITH_REAL_OUTPUTS_AND_MAMBA_CERTIFICATE"
+    elif args.mamba_block.is_file():
+        blocked = json.loads(args.mamba_block.read_text(encoding="utf-8"))
+        require(blocked.get("status") == "BLOCKED_AOT_WARMUP", "Mamba block evidence is malformed")
+        require(blocked.get("scientific_certificate_status") == "COMPLETE" and blocked.get("scientific_certificate_steps") == 32, "Mamba scientific certificate is not complete")
+        timed_status = "BLOCKED_TIMED_MAMBA_AOT_WARMUP_SCIENTIFIC_12_OF_12_COMPLETE"
 
     payload = {
         "schema": "kernel-analyzer-priority-followup-audit-v3",

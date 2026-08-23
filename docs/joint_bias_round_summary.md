@@ -58,11 +58,14 @@ gives gradient `A=4.665` but effective-update `A=1.031`, compared with SGD
 update `A=4.701`; this is a response-map measurement, not a new formation
 label.
 
-The fresh wall-clock rerun currently has 11 of the 12 screen-negative rows
-with a real 32-step timed output.  The scientific Mamba consequence certificate
-is already complete in the repository, but its separate timing process is
-still running in the slow CPU fallback; until that process writes its own
-timed row, no 12-row GPU-time saving number is claimed.
+The fresh wall-clock rerun has 11 of the 12 screen-negative rows with a real
+32-step timed output.  The Mamba scientific consequence certificate is also
+complete, but two independent timing attempts hit the same missing-CUDA-
+extension fallback (one reached step 4 after about 28 minutes; the graph-break
+retry produced no step).  They were stopped and recorded as a real
+`BLOCKED_AOT_WARMUP` result.  Therefore no 12-row GPU-time saving number is
+claimed.  This affects timing only, not the already complete 12/12 scientific
+consequence results.
 
 ## Scientific boundary
 
