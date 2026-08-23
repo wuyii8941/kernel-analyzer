@@ -102,11 +102,24 @@ def main() -> None:
         "--three-stage-output", type=Path,
         help="Optional same-run operator-output, gradient, and AdamW-update summary.",
     )
+    parser.add_argument(
+        "--raw-stage-output", type=Path,
+        help=(
+            "Optional raw replay capture for optimizer-state ablations. This "
+            "stores per-step endpoint/gradient/update vectors and pre-step "
+            "AdamW moments; it is intentionally opt-in."
+        ),
+    )
     args = parser.parse_args()
     if args.resume and args.three_stage_output is not None:
         raise ValueError(
             "--resume cannot be combined with --three-stage-output because the "
             "checkpoint does not store the full stage vectors"
+        )
+    if args.resume and args.raw_stage_output is not None:
+        raise ValueError(
+            "--resume cannot be combined with --raw-stage-output because the "
+            "checkpoint does not store the complete raw optimizer capture"
         )
 
     architecture = "deepseek8" if args.architecture == "deepseek8b" else args.architecture
@@ -323,6 +336,15 @@ def main() -> None:
     endpoint_vectors: list[torch.Tensor] = []
     candidate_state_gradient_vectors: list[torch.Tensor] = []
     candidate_state_update_vectors: list[torch.Tensor] = []
+    raw_candidate_gradient_vectors: list[torch.Tensor] = []
+    raw_repair_gradient_vectors: list[torch.Tensor] = []
+    raw_candidate_update_vectors: list[torch.Tensor] = []
+    raw_repair_update_vectors: list[torch.Tensor] = []
+    raw_endpoint_vectors: list[torch.Tensor] = []
+    raw_candidate_moments: list[torch.Tensor] = []
+    raw_candidate_second_moments: list[torch.Tensor] = []
+    raw_repair_moments: list[torch.Tensor] = []
+    raw_repair_second_moments: list[torch.Tensor] = []
 
     def arm(value: torch.Tensor) -> dict[str, Any]:
         flat = value.detach().double().reshape(-1)
@@ -401,6 +423,18 @@ def main() -> None:
                 "recurrence_relative": relative,
             },
         }
+        if args.raw_stage_output is not None:
+            raw_candidate_gradient_vectors.append(gc_c.detach().float().cpu().reshape(-1))
+            raw_repair_gradient_vectors.append(gr_c.detach().float().cpu().reshape(-1))
+            raw_candidate_update_vectors.append(raw_uc_c.detach().float().cpu().reshape(-1))
+            raw_repair_update_vectors.append(raw_ur_c.detach().float().cpu().reshape(-1))
+            if endpoint_c is None:
+                raise RuntimeError("raw-stage capture requested but endpoint residual is absent")
+            raw_endpoint_vectors.append(endpoint_c.detach().float().cpu().reshape(-1))
+            raw_candidate_moments.append(candidate_m.detach().float().cpu().reshape(-1))
+            raw_candidate_second_moments.append(candidate_v.detach().float().cpu().reshape(-1))
+            raw_repair_moments.append(repair_m.detach().float().cpu().reshape(-1))
+            raw_repair_second_moments.append(repair_v.detach().float().cpu().reshape(-1))
         trace.add(
             raw_row["step_id"],
             candidate_at_candidate_state=raw_row["candidate_at_candidate_state"],
@@ -512,6 +546,38 @@ def main() -> None:
         staged_temporary = args.three_stage_output.with_name("." + args.three_stage_output.name + ".tmp")
         staged_temporary.write_text(json.dumps(three_stage, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         staged_temporary.replace(args.three_stage_output)
+    if args.raw_stage_output is not None:
+        raw_stage = {
+            "schema": "kernel-analyzer-bound-endpoint-raw-stage-v1",
+            "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
+            "case_id": args.case_id,
+            "state_ids": state_ids,
+            "sequence_length": expected_length,
+            "optimizer": {
+                "name": "AdamW", "learning_rate": args.learning_rate,
+                "betas": [0.9, 0.95], "epsilon": 1e-8, "weight_decay": 0.0,
+            },
+            "state_path": "live candidate state; all vectors are same-state counterfactuals",
+            "vectors": {
+                "operator_output_error": [v.tolist() for v in raw_endpoint_vectors],
+                "candidate_gradient": [v.tolist() for v in raw_candidate_gradient_vectors],
+                "repair_gradient": [v.tolist() for v in raw_repair_gradient_vectors],
+                "candidate_update": [v.tolist() for v in raw_candidate_update_vectors],
+                "repair_update": [v.tolist() for v in raw_repair_update_vectors],
+                "candidate_first_moment_before_step": [v.tolist() for v in raw_candidate_moments],
+                "candidate_second_moment_before_step": [v.tolist() for v in raw_candidate_second_moments],
+                "repair_first_moment_before_step": [v.tolist() for v in raw_repair_moments],
+                "repair_second_moment_before_step": [v.tolist() for v in raw_repair_second_moments],
+            },
+            "claim_boundary": (
+                "Raw same-state replay data for optimizer ablations. It does not "
+                "by itself establish a natural warm-phase result."
+            ),
+        }
+        args.raw_stage_output.parent.mkdir(parents=True, exist_ok=True)
+        raw_temporary = args.raw_stage_output.with_name("." + args.raw_stage_output.name + ".tmp")
+        raw_temporary.write_text(json.dumps(raw_stage, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        raw_temporary.replace(args.raw_stage_output)
     args.checkpoint.unlink(missing_ok=True)
     print(json.dumps({
         "event": "BOUND_CONSEQUENCE_COMPLETE", "case_id": args.case_id,

@@ -510,6 +510,13 @@ def main() -> None:
             "unresolved_candidates": [UNREPLICATED_CANDIDATE],
         }, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
+    optimizer_manifest_path = args.output / "optimizer_state" / "manifest.json"
+    optimizer_run_manifest_path = args.output / "optimizer_state_run_manifest.json"
+    optimizer_progress = load(optimizer_manifest_path) if optimizer_manifest_path.exists() else {
+        "status": "NOT_STARTED",
+        "completed_cases": [],
+    }
+    optimizer_run_progress = load(optimizer_run_manifest_path) if optimizer_run_manifest_path.exists() else {}
     summary = {
         "schema": "kernel-analyzer-direct-persistence-v4-summary-v1",
         "status": "DEVELOPMENT_REANALYSIS_COMPLETE_HELDOUT_AND_OPTIMIZER_PHASES_PENDING",
@@ -522,6 +529,12 @@ def main() -> None:
             "status": "ABSTAIN_RUNTIME_MISMATCH",
             "artifact": "results/property/direct_persistence_v4/gpu_preflight.json",
             "scientific_result": False,
+        },
+        "optimizer_state_progress": {
+            "status": optimizer_progress.get("status", "NOT_STARTED"),
+            "completed_cases": optimizer_progress.get("same_state_ablation", {}).get("completed_cases", []),
+            "natural_phase_status": optimizer_run_progress.get("phase_conditioned_natural", "NOT_STARTED"),
+            "claim_boundary": optimizer_progress.get("claim_boundary"),
         },
         "next_required": [
             "freeze v4 protocol and tolerance/severity definitions",

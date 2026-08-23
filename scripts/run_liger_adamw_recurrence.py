@@ -49,6 +49,10 @@ def main() -> None:
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--steps", type=int, choices=(2, 32), default=32)
+    parser.add_argument(
+        "--optimizer-ablation-output", type=Path,
+        help="also stream gradient/SGD/captured-moment/moment-reset directionality",
+    )
     args = parser.parse_args()
     if not torch.cuda.is_available():
         raise RuntimeError("host GPU required")
@@ -110,6 +114,22 @@ def main() -> None:
     local_path = OrderedVectorPath(total_steps=args.steps, calibration_steps=max(1, args.steps // 2))
     feedback_path = OrderedVectorPath(total_steps=args.steps, calibration_steps=max(1, args.steps // 2))
     actual_path = OrderedVectorPath(total_steps=args.steps, calibration_steps=max(1, args.steps // 2))
+    ablation_paths = None
+    if args.optimizer_ablation_output is not None:
+        ablation_paths = {
+            "gradient_difference": OrderedVectorPath(
+                total_steps=args.steps, calibration_steps=max(1, args.steps // 2)
+            ),
+            "stateless_sgd": OrderedVectorPath(
+                total_steps=args.steps, calibration_steps=max(1, args.steps // 2)
+            ),
+            "captured_adamw_moments": OrderedVectorPath(
+                total_steps=args.steps, calibration_steps=max(1, args.steps // 2)
+            ),
+            "moment_reset_each_step": OrderedVectorPath(
+                total_steps=args.steps, calibration_steps=max(1, args.steps // 2)
+            ),
+        }
     local_gram = None
     if args.steps == 32:
         local_gram = CompleteTreeGramPath(total_steps=32, max_resident_bytes=64 * 1024**3)
@@ -133,6 +153,19 @@ def main() -> None:
         uc_r = (repair_master + raw_uc_r) - repair_master
         ur_r = next_repair - repair_master
         after = next_candidate - next_repair
+        if ablation_paths is not None:
+            gradient_difference = gc_c - gr_c
+            stateless_sgd = -args.learning_rate * gradient_difference
+            captured_adamw = raw_uc_c - raw_ur_c
+            zero_m = torch.zeros_like(gc_c)
+            zero_v = torch.zeros_like(gc_c)
+            reset_uc, _, _ = adam_delta(gc_c, zero_m, zero_v, step, learning_rate=args.learning_rate)
+            reset_ur, _, _ = adam_delta(gr_c, zero_m, zero_v, step, learning_rate=args.learning_rate)
+            ablation_paths["gradient_difference"].add(gradient_difference)
+            ablation_paths["stateless_sgd"].add(stateless_sgd)
+            ablation_paths["captured_adamw_moments"].add(captured_adamw)
+            ablation_paths["moment_reset_each_step"].add(reset_uc - reset_ur)
+            del gradient_difference, stateless_sgd, captured_adamw, zero_m, zero_v, reset_uc, reset_ur
         local = 0.5 * ((uc_c - ur_c) + (uc_r - ur_r))
         feedback = 0.5 * ((uc_c - uc_r) + (ur_c - ur_r))
         actual = after - before
@@ -162,6 +195,10 @@ def main() -> None:
         statistics["local_complete_gram"] = local_gram.finalize(
             state_ids=state_ids, sign_flip_draws=4000, seed=20260831,
         )
+    if ablation_paths is not None:
+        statistics["optimizer_ablation"] = {
+            name: path.finalize() for name, path in ablation_paths.items()
+        }
     payload = {
         "schema": "kernel-analyzer-liger-adamw-four-arm-recurrence-v1",
         "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
@@ -174,6 +211,24 @@ def main() -> None:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if args.optimizer_ablation_output is not None:
+        ablation_payload = {
+            "schema": "kernel-analyzer-direct-persistence-v4-optimizer-state-result-v1",
+            "status": "COMPLETE_SAME_STATE_OPTIMIZER_ABLATION" if args.steps == 32 else "ENGINEERING_DRY_RUN",
+            "case_id": "liger_fused_ce_t128",
+            "state_ids": state_ids,
+            "optimizer": payload["optimizer"],
+            "arms": {
+                name: {"A32": values["coherence_amplification"]}
+                for name, values in statistics["optimizer_ablation"].items()
+            },
+            "claim_boundary": payload["claim_boundary"],
+            "source_recurrence_output": str(args.output),
+        }
+        args.optimizer_ablation_output.parent.mkdir(parents=True, exist_ok=True)
+        args.optimizer_ablation_output.write_text(
+            json.dumps(ablation_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
     print(json.dumps({"event": "LIGER_ADAMW_RECURRENCE_COMPLETE", "status": payload["status"], "output": str(args.output)}), flush=True)
 
 
