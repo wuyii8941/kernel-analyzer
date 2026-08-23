@@ -194,8 +194,10 @@ direct operator-persistence measurement.
 
 The corrected retrospective evaluation has 15 rows and one optimizer:
 AdamW. It contains all twelve result-blind sampled rows plus the three
-historical rows. The full 32-step test finds three positives: Liger, Phi, and
-sampled row `0543`. Qwen is not positive under AdamW.
+historical rows. Nominally, the full 32-step test finds three rows above their
+row-level null: Liger, Phi, and sampled row `0543`; Qwen is not positive under
+AdamW. After the predeclared twelve-row Holm correction, `0543` is an
+unresolved candidate rather than a confirmed positive.
 
 Using only the first 16 local parameter-update differences:
 
@@ -246,3 +248,22 @@ Machine-readable sources:
 - `results/property/joint_bias_formation_v1/oracle_repair_v3/same_optimizer_oracle_v3.json`
 - `docs/oracle_repair_v3.md`
 - `results/coverage/coverage_table_v1.json`
+
+## Direct Persistence Screen v4
+
+The current short selector is named the **Cold-start AdamW Direct Persistence
+Screen**. It is a follow-up selector, not a safety classifier. The v4 package
+separates the three predeclared rows from the twelve result-blind rows, keeps
+`0543` as an unresolved candidate after Holm correction, and reports signed
+direct/feedback/actual contributions.
+
+See [`docs/direct_persistence_screen.md`](direct_persistence_screen.md), the
+[v4 summary](../results/property/direct_persistence_v4/summary.json), and the
+[evidence table](direct_persistence_evidence.md).
+The optimizer boundary is stated separately in
+[`docs/direct_persistence_optimizer.md`](direct_persistence_optimizer.md).
+
+The old v3 records do not contain complete per-step vectors. The v4 package
+therefore derives only the three-resultant inner-product matrix and explicitly
+marks per-step cross-Grams unavailable. New measurements must save those
+statistics or return `ABSTAIN`.

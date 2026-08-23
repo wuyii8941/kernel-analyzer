@@ -1,0 +1,22 @@
+{
+  "schema": "kernel-analyzer-direct-persistence-v4-optimizer-state-manifest-v1",
+  "status": "NOT_STARTED",
+  "representative_cases": [
+    "liger_fused_ce_t128",
+    "phi4_seq64_lmhead_dx",
+    "qwen_seq128_lmhead_dx",
+    "feedback_dominated_control",
+    "multishape-backward-cell-0543"
+  ],
+  "same_state_ablation": {
+    "required_inputs": ["same weights", "same input", "same gradient residual", "captured moment state"],
+    "arms": ["captured AdamW moments", "moment reset", "stateless SGD"],
+    "missing_inputs_are": "ABSTAIN"
+  },
+  "phase_conditioned_natural": {
+    "phases": ["early", "middle", "late"],
+    "required_capture": ["weights", "input", "gradient", "moments"],
+    "synthetic_cross_phase_mixing": false
+  },
+  "claim_boundary": "No optimizer-state sensitivity result exists until each arm is measured with a self-consistent state."
+}

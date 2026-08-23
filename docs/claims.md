@@ -199,3 +199,18 @@ exports. In a separate 16-state stateless-SGD experiment, the exact Phi
 norm-matched analysis gives mean stochastic `A=0.984` at the deterministic
 arm's per-step update norm. It is not the intervention for the AdamW
 `A=1.029` result.
+
+The v4 reanalysis now calls the short workflow the `Cold-start AdamW Direct
+Persistence Screen`. It applies Holm as the primary correction separately to
+the three predeclared rows and the twelve result-blind rows. The small-margin
+`0543` row is retained as `UNRESOLVED_CANDIDATE`, not relabeled negative. The
+signed direct/feedback/actual contribution table is derived from exported
+resultants and explicitly records that complete per-step cross-Grams were not
+saved. Prospective heldout, real moment-state sensitivity, and an executable
+catch-and-fix are still pending; the v4 package is not a universal safety
+classifier.
+
+The optimizer boundary is explicit: current data show that AdamW can suppress
+the Phi gradient directionality and that optimizer state can maintain Gemma
+feedback, but they do not identify the optimizer as the universal root cause.
+See `docs/direct_persistence_optimizer.md`.

@@ -1,0 +1,98 @@
+{
+  "schema": "kernel-analyzer-direct-persistence-v4-protocol-v1",
+  "status": "FROZEN_BEFORE_HELDOUT_REVEAL",
+  "name": "Cold-start AdamW Direct Persistence Screen",
+  "objective": "Use a short sequence of effective-update differences to prioritize cases for exact 32-step confirmation; never issue a safety verdict from the short screen.",
+  "optimizer": {
+    "name": "AdamW",
+    "learning_rate": 0.0001,
+    "betas": [0.9, 0.95],
+    "epsilon": 1e-08,
+    "weight_decay": 0.0,
+    "moment_initialization": "zero at the start, then evolved normally",
+    "moment_reset_every_step": false
+  },
+  "trajectory": {
+    "short_steps": 16,
+    "confirmation_steps": 32,
+    "required_levels": ["local", "feedback", "actual"],
+    "same_state_counterfactuals": [
+      "candidate_at_candidate_state",
+      "repair_at_candidate_state",
+      "candidate_at_repair_state",
+      "repair_at_repair_state"
+    ],
+    "recurrence_must_be_computed": true
+  },
+  "short_screen": {
+    "primary_score": "prefix16_local_A",
+    "primary_rule": "prefix16_local_A > 1.0",
+    "calibrated_null_score": "not available until prefix sign-flip Gram is saved",
+    "outputs": ["ESCALATE", "NO_ESCALATION_UNDER_SHORT_SCREEN", "ABSTAIN"],
+    "no_safe_verdict": true,
+    "short_negative_is_not_safe": true,
+    "screen_is_optimizer_conditioned": true
+  },
+  "confirmation": {
+    "direct_persistence_label": "full32 local effective-update coherence exceeds its own sign-flip 95% bound",
+    "multiple_testing_primary": "Holm",
+    "multiple_testing_secondary": "Benjamini-Hochberg exploratory only",
+    "families": {
+      "PREDECLARED_3": [
+        "liger_fused_ce_t128",
+        "phi4_seq64_lmhead_dx",
+        "qwen_seq128_lmhead_dx"
+      ],
+      "RESULT_BLIND_DISCOVERY_12": "mechanically selected 12 rows, including unresolved candidates",
+      "ALL_15_SENSITIVITY": "all rows"
+    },
+    "unresolved_candidate_rule": "A row that fails multiplicity correction remains unresolved and is excluded from confirmed-only performance metrics; it is never relabeled negative."
+  },
+  "required_identity": [
+    "model",
+    "exact endpoint or region",
+    "sequence length",
+    "state order and state-bank digest",
+    "parameter coordinate digest",
+    "optimizer configuration",
+    "moment-state digest",
+    "measurement horizon",
+    "repair identity",
+    "runner source digest"
+  ],
+  "required_saved_statistics": {
+    "per_level": ["resultant_l2", "path_l2", "path_energy", "A16", "A32"],
+    "cross_level": ["resultant 3x3 inner-product matrix", "cosine with actual", "signed projection shares"],
+    "raw_vectors": "required for future per-step cross-Grams; if absent, output ABSTAIN and do not impute",
+    "null": ["seed", "draw count", "upper 95", "one-sided p", "prefix null when available"]
+  },
+  "severity": {
+    "persistence_evidence": ["A", "null comparison", "corrected p", "direct resultant"],
+    "severity_proxy": ["direct resultant / parameter norm", "direct resultant / normal update", "first-order loss-gradient projection"],
+    "observed_consequence": ["paired final parameter distance", "evaluation loss difference", "repair consequence", "runtime"],
+    "proxy_is_not_observed_loss": true
+  },
+  "tolerance_baselines": [
+    "max absolute error",
+    "relative L2",
+    "ULP",
+    "rtol/atol sweep",
+    "output RMS",
+    "gradient RMS",
+    "update RMS"
+  ],
+  "heldout": {
+    "status": "NOT_STARTED",
+    "selection": "mechanical pool freeze before any heldout reveal",
+    "labels": "all eligible rows receive 16-step screen and 32-step confirmation regardless of short result",
+    "seen_impl_new_operands_separate_from_new_impl": true,
+    "all_negative_rule": "report escalation, false escalation, abstention and cost; do not report recall or AUROC"
+  },
+  "optimizer_state_sensitivity": {
+    "status": "NOT_STARTED",
+    "same_state_ablation": ["captured moments", "moment reset", "stateless SGD"],
+    "phase_conditioned_natural": ["early", "middle", "late"],
+    "late_moments_must_not_be_installed_on_early_gradient": true
+  },
+  "claim_boundary": "This protocol defines a fail-closed, cold-start AdamW direct-persistence screen. It is not a universal safety classifier and does not treat a short negative as proof of safety."
+}
