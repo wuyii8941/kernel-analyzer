@@ -13,7 +13,7 @@
 
 ### 1. 把一处差异拆成三段
 
-对 Liger、Phi 和 Qwen，各用同一条有顺序的 32 步参考轨迹，分别量：
+对 Liger、Phi 和 Qwen，各自使用一条有顺序的 32 步参考轨迹，分别量：
 
 1. 算子输出的差异；
 2. 反向传播后的参数梯度差异；
@@ -25,9 +25,9 @@
 |---|---:|---:|---:|---|
 | Liger fused CE | 2.984 | 2.931 | 2.931 | 差异在算子输出阶段已经有方向 |
 | Phi lm_head dX | 2.074 | 4.701 | 4.701 | 反向传播把原本较弱的方向放大 |
-| Qwen lm_head dX | 1.008 | 1.698 | 1.698 | 输出阶段近似扩散，方向在反向传播后出现 |
+| Qwen lm_head dX（seq256 配套测量） | 1.008 | 1.698 | 1.698 | 输出阶段近似扩散，方向在反向传播后出现 |
 
-这三段是同一把尺子，避免把“算子误差”与“反向传播/优化器造成的误差”混为一谈。详细原始结果见 [`three_stage_summary.json`](../results/property/joint_bias_formation_v1/three_stage_summary.json)。
+这三段在每个案例内部使用同一把尺子，避免把“算子输出差异”与“反向传播或优化器造成的差异”混为一谈。Qwen 的历史 strict live trajectory 是 seq128，而这里的三段测量是 seq256；二者属于同一个 `lm_head dX` 数学家族，但不能写成一个完全相同的 endpoint 实验。详细原始结果见 [`three_stage_summary.json`](../results/property/joint_bias_formation_v1/three_stage_summary.json)。
 
 ### 2. 检查 Phi 的不同参数位置
 
@@ -52,9 +52,9 @@
 
 ### 5. Oracle 与简单指标的比较
 
-在冻结的 12 个“有真实差异且参数可达”的案例上，16 步的方向性筛选 AUROC 为 0.909；局部更新 RMS 为 0，dtype 为 0.5，归约长度为 0.182。规则 `A16 > 1` 标记 3/12，找到了唯一一个已标记的 32 步局部持续案例，召回率 100%，假阳性率 18.2%。
+当前冻结的回溯评估集有 14 行：3 个已知正例和 11 个有真实差异的控制项。规则 `A16 > 1` 标记 5/14，找到了 3/3 个已知正例，同时多标记了 2/11 个控制项。该集合上，16 步方向性分数的 AUROC 为 1.00，局部 RMS 为 0.242，dtype 为 0.50。
 
-这是回溯性、小阳性样本的工程结果，不是通用准确率。GPU 小时节省没有记录完整，因此不声称具体节省倍数。
+这是回溯性、小阳性样本的分诊结果：被标记的记录继续做完整实验，未标记的记录也不能直接宣布安全。它不是通用准确率。GPU 小时节省没有记录完整，因此不声称具体节省倍数。
 
 把筛选数字单独保存为 [`timed_efficiency_partial_v1.json`](../results/property/joint_bias_formation_v1/timed_efficiency_partial_v1.json)：当前实际有 11/12 行的完整 32 步 wall-time 记录，共 4.927 GPU-hours（按一 GPU/每 case 计）。Mamba 行在宿主机 GPU 上又按四种真实配置尝试，仍未产生有效 timing row；详见 [`mamba_timing_blocked_v3.json`](../results/property/joint_bias_formation_v1/mamba_timing_blocked_v3.json)。这里只报告已测子集，不把它写成完整 GPU 节省或完整 recall 结论。
 
@@ -79,7 +79,7 @@
 | 四臂同尺（算子、随机种子、数据顺序、精度） | 是 | 32 步最终权重已保存并做 digest 校验 | Phi 配置没有 dropout，因此随机种子臂记为不适用，不伪造差异 |
 | 重复注入的随机残差刻度 | 是 | 5 个固定种子，A=0.870–1.037 | 它是扩散基线，不是新的算子 case |
 | 四臂最终权重的共同 FP32 未见数据 loss | 是 | 4 行、32 步最终权重，统一评估路径 | 只作为下游后果，不重新定义 bias |
-| RMS / dtype / 归约长度基线 | 是 | 冻结的 12 行回溯比较 | 只支持“当前样本中 RMS 不是有效筛选器”，不声称通用准确率 |
+| RMS / dtype 基线 | 是 | 冻结的 14 行回溯比较 | 只支持“当前样本中 RMS 和 dtype 不如短轨迹方向性”，不声称通用准确率；归约长度在三个主案例上没有完整绑定，因此不报完整 AUROC |
 | 12 个有真实差异且参数可达的负例 consequence | 是 | 12/12 完成，16 步到 32 步回测已生成 | 反馈漂移与局部 source persistence 分开报告 |
 | 分诊效率的真实 GPU 时间 | 是 | [`timed_efficiency_partial_v1.json`](../results/property/joint_bias_formation_v1/timed_efficiency_partial_v1.json)：11/12 screen-negative rows 有真实 32 步 wall time，共 4.927 GPU-hours（按一 GPU/每 case 计）；缺失的 Mamba 行在宿主机上又做了四次真实配置尝试，仍无有效 timing row，见 `mamba_timing_blocked_v3.json` | 只报告这 11 行的原始 wall time；不声称完整 12 行或完整 Oracle cohort 的 GPU 节省 |
 | held-out 联合 predictor | 是，但属于收口验证 | 目前只有有界 source-negative 确认 | 未完成前不称为通用 predictor |

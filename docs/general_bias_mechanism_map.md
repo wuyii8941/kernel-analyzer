@@ -10,15 +10,18 @@ It separates three places in the real training step:
 2. the resulting parameter-gradient difference after backward;
 3. the effective parameter-update difference after the optimizer mapping.
 
-All three values below use the same ordered 32-state reference trajectory for
-each case.  They are measurements on the declared parameter carrier, not
-full-model training results.
+Within each row, all three values use one ordered 32-state reference
+trajectory. They are measurements on one declared parameter, not
+full-parameter training results. The Qwen row is a seq256 companion
+measurement; its historical strict live trajectory is seq128, so the two must
+be described as the `Qwen lm_head dX` family rather than one exact endpoint
+certificate.
 
 | case | operator-output `A` | parameter-gradient `A` | effective-update `A` |
 |---|---:|---:|---:|
 | Liger fused CE | 2.984 | 2.931 | 2.931 |
 | Phi-4 `lm_head dX` | 2.074 | 4.701 | 4.701 |
-| Qwen `lm_head dX` | 1.008 | 1.698 | 1.698 |
+| Qwen `lm_head dX`, seq256 companion | 1.008 | 1.698 | 1.698 |
 
 The three cases do not form bias in exactly the same place.  Liger is already
 directional at its fused operator boundary.  Phi and Qwen become more

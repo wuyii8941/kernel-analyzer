@@ -1,0 +1,89 @@
+{
+  "claim_boundary": "The three headline records are bounded operator/backward persistence results. Only Phi currently has an exported symmetric direct-effect/feedback recurrence. Qwen seq128 strict trajectory evidence and seq256 three-stage evidence belong to one mathematical family but are not one exact endpoint instance.",
+  "headline_count": 3,
+  "rows": [
+    {
+      "actual_32step": {
+        "final_fp32_master_pair_l2": 0.0022393549008995974,
+        "status": "AVAILABLE_WITHOUT_EXPORTED_A_ACTUAL"
+      },
+      "case_id": "liger_fused_ce_t128",
+      "exact_endpoint": "Liger fused cross-entropy tied-weight dW accumulation",
+      "feedback_recurrence": "MISSING_SYMMETRIC_EXPORT",
+      "model": "Qwen3-1.7B with Liger fused cross entropy",
+      "optimizer": "stateless SGD with FP32 master, learning_rate=1e-4",
+      "parameter": "tied embedding/lm_head weight",
+      "repair": "replace the BF16 dW accumulator with an FP32 accumulator while retaining the external BF16 contract",
+      "sequence_length": 128,
+      "sources": [
+        "results/property/joint_bias_formation_v1/liger_three_stage_reference.json",
+        "results/trajectory/liger_trajectory.json"
+      ],
+      "three_stage_A_32": {
+        "operator_output": 2.984079095711507,
+        "parameter_gradient": 2.931471919665106,
+        "parameter_update": 2.931471917748877
+      },
+      "unified_direct_feedback_actual_32": false
+    },
+    {
+      "actual_32step": {
+        "A_actual": 4.487687419828846,
+        "final_parameter_distance_l2": 9.185909895207353e-05,
+        "status": "AVAILABLE_IN_SEPARATE_FOUR_ARM_PROTOCOL"
+      },
+      "case_id": "phi4_seq64_lmhead_dx",
+      "exact_endpoint": "compiled lm_head input-gradient MM",
+      "feedback_recurrence": {
+        "evaluation_steps": 16,
+        "local_fraction_of_projected_accumulation": 0.9991653265017305,
+        "max_recurrence_relative_residual": 7.037117998500739e-09,
+        "status": "AVAILABLE_AFTER_16_CALIBRATION_STATES"
+      },
+      "model": "Phi-4-mini",
+      "optimizer": "stateless SGD with FP32 master, learning_rate=1e-3",
+      "parameter": "model.norm.weight",
+      "repair": "recompute the target MM in FP32 and cast back to the original BF16 output type",
+      "sequence_length": 64,
+      "sources": [
+        "results/property/joint_bias_formation_v1/phi_three_stage_reference.json",
+        "results/property/bias_formation/consequence/phi4_lm_head_dx_seup.json",
+        "results/property/joint_bias_formation_v1/four_scale_arms/summary.json"
+      ],
+      "three_stage_A_32": {
+        "operator_output": 2.0740019951980324,
+        "parameter_gradient": 4.701023416434929,
+        "parameter_update": 4.70102341377404
+      },
+      "unified_direct_feedback_actual_32": false
+    },
+    {
+      "actual_32step": {
+        "sequence_length": 128,
+        "status": "STRICT_TRAJECTORY_AVAILABLE_AT_A_DIFFERENT_SEQUENCE_LENGTH"
+      },
+      "case_id": "qwen_lmhead_dx_family",
+      "exact_endpoint": "lm_head input-gradient MM family",
+      "feedback_recurrence": "MISSING_SYMMETRIC_EXPORT",
+      "model": "Qwen3-1.7B",
+      "optimizer": "stateless SGD with FP32 master",
+      "parameter": "model.norm.weight in the seq256 companion measurement",
+      "repair": "recompute the target MM in FP32 and cast back to the original BF16 output type",
+      "sources": [
+        "results/coverage/existing_case_reaudit.json",
+        "results/property/joint_bias_formation_v1/qwen_three_stage_reference.json",
+        "results/property/persistence_v1/confirmation/qwen256_lmhead.json"
+      ],
+      "strict_trajectory_sequence_length": 128,
+      "three_stage_A_32": {
+        "operator_output": 1.007536605142592,
+        "parameter_gradient": 1.6976533769317872,
+        "parameter_update": 1.6976533768531519,
+        "sequence_length": 256
+      },
+      "unified_direct_feedback_actual_32": false
+    }
+  ],
+  "schema": "kernel-analyzer-headline-case-evidence-scope-v1",
+  "status": "COMPLETE_SCOPE_AUDIT_WITH_OPEN_UNIFIED_EXPORTS"
+}
