@@ -1,0 +1,90 @@
+{
+  "cases": [
+    {
+      "binding": {
+        "aot_target": "prims.convert_element_type.default",
+        "candidate_region_id": "backward:515",
+        "carrier": "model.norm.weight",
+        "case_id": "qwen_seq64_ce_dlogits",
+        "exact_aot_endpoint_id": "backward:graph0:convert_element_type_849",
+        "hotspot_family": "loss_head",
+        "implementation_kind": "TRITON",
+        "module_paths": [
+          "L['self'].subject"
+        ],
+        "selection_uses_historical_verdict": false,
+        "task_id": "backward:515:in_out_ptr0"
+      },
+      "carrier": "model.norm.weight",
+      "case_id": "qwen_seq64_ce_dlogits",
+      "task_id": "backward:515:in_out_ptr0"
+    },
+    {
+      "binding": {
+        "aot_target": "aten.clone.default",
+        "candidate_region_id": "backward:540",
+        "carrier": "model.layers.27.self_attn.q_proj.weight",
+        "case_id": "qwen_seq64_l27_q_norm_vjp",
+        "exact_aot_endpoint_id": "backward:graph0:clone_116",
+        "hotspot_family": "normalization",
+        "implementation_kind": "TRITON",
+        "module_paths": [
+          "L['self'].subject.model.layers.27",
+          "L['self'].subject.model.layers.27.self_attn",
+          "L['self'].subject.model",
+          "L['self'].subject"
+        ],
+        "selection_uses_historical_verdict": false,
+        "task_id": "backward:540:out_ptr3"
+      },
+      "carrier": "model.layers.27.self_attn.q_proj.weight",
+      "case_id": "qwen_seq64_l27_q_norm_vjp",
+      "task_id": "backward:540:out_ptr3"
+    },
+    {
+      "binding": {
+        "aot_target": "aten.clone.default",
+        "candidate_region_id": "backward:543",
+        "carrier": "model.layers.27.self_attn.k_proj.weight",
+        "case_id": "qwen_seq64_l27_k_norm_vjp",
+        "exact_aot_endpoint_id": "backward:graph0:clone_115",
+        "hotspot_family": "normalization",
+        "implementation_kind": "TRITON",
+        "module_paths": [
+          "L['self'].subject.model.layers.27",
+          "L['self'].subject.model.layers.27.self_attn",
+          "L['self'].subject.model",
+          "L['self'].subject"
+        ],
+        "selection_uses_historical_verdict": false,
+        "task_id": "backward:543:in_out_ptr0"
+      },
+      "carrier": "model.layers.27.self_attn.k_proj.weight",
+      "case_id": "qwen_seq64_l27_k_norm_vjp",
+      "task_id": "backward:543:in_out_ptr0"
+    },
+    {
+      "binding": {
+        "aot_target": "aten.mul.Tensor",
+        "candidate_region_id": "backward:666",
+        "carrier": "model.layers.23.self_attn.q_proj.weight",
+        "case_id": "qwen_seq64_l23_softmax_vjp",
+        "exact_aot_endpoint_id": "backward:graph0:mul_598",
+        "hotspot_family": "attention",
+        "implementation_kind": "TRITON",
+        "module_paths": [
+          "L['self'].subject.model.layers.23",
+          "L['self'].subject.model.layers.23.self_attn",
+          "L['self'].subject.model",
+          "L['self'].subject"
+        ],
+        "selection_uses_historical_verdict": false,
+        "task_id": "backward:666:in_out_ptr0"
+      },
+      "carrier": "model.layers.23.self_attn.q_proj.weight",
+      "case_id": "qwen_seq64_l23_softmax_vjp",
+      "task_id": "backward:666:in_out_ptr0"
+    }
+  ],
+  "schema": "kernel-analyzer-sample-completion-case-plan-v1"
+}

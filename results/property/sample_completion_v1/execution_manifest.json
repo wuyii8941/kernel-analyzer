@@ -1,0 +1,578 @@
+{
+  "claim_boundary": "Commands and exact bindings are frozen; generated commands do not imply that any 8/16/32-step measurement has completed.",
+  "gpu_observation": "nvidia-smi currently cannot communicate with the driver; no scientific run was started by this manifest.",
+  "groups": {
+    "deepseek8b": {
+      "architecture": "deepseek8b",
+      "case_count": 4,
+      "case_plan": "results/property/sample_completion_v1/case_plans/deepseek8b.json",
+      "cases": [
+        {
+          "binding": {
+            "binding_artifact": "results/property/bias_formation/hotspot_search/deepseek8b_seq64_rescreen/deepseek8b_seq64_ce_dlogits.json",
+            "carrier_parameter": "model.norm.weight",
+            "case_id": "deepseek8b_seq64_ce_dlogits",
+            "exact_aot_endpoint_id": "backward:graph0:convert_element_type_1089",
+            "input_bank_sha256": "5a6a13badacab978d4ad70026041bdd28c8192d5c71d9c5d805c8c274bb537d0",
+            "release_capture_sha256": "0bfdd4d559d50c9385b1459b3cff7fececb782501ac6f52544aec3c4082d4663",
+            "task_id": "backward:659:in_out_ptr0",
+            "task_plan_sha256": "fb11e464167b7da18433817d2ba998077bcf47a652222e9e6130dc1a99735fd5"
+          },
+          "carrier": "model.norm.weight",
+          "case_id": "deepseek8b_seq64_ce_dlogits",
+          "task_id": "backward:659:in_out_ptr0"
+        },
+        {
+          "binding": {
+            "binding_artifact": "results/property/bias_formation/hotspot_search/deepseek8b_seq64_rescreen/deepseek8b_seq64_final_norm_vjp.json",
+            "carrier_parameter": "model.layers.35.self_attn.o_proj.weight",
+            "case_id": "deepseek8b_seq64_final_norm_vjp",
+            "exact_aot_endpoint_id": "backward:graph0:add_367",
+            "input_bank_sha256": "5a6a13badacab978d4ad70026041bdd28c8192d5c71d9c5d805c8c274bb537d0",
+            "release_capture_sha256": "0bfdd4d559d50c9385b1459b3cff7fececb782501ac6f52544aec3c4082d4663",
+            "task_id": "backward:672:in_out_ptr0",
+            "task_plan_sha256": "fb11e464167b7da18433817d2ba998077bcf47a652222e9e6130dc1a99735fd5"
+          },
+          "carrier": "model.layers.35.self_attn.o_proj.weight",
+          "case_id": "deepseek8b_seq64_final_norm_vjp",
+          "task_id": "backward:672:in_out_ptr0"
+        },
+        {
+          "binding": {
+            "binding_artifact": "results/property/bias_formation/hotspot_search/deepseek8b_seq64_rescreen/deepseek8b_seq64_l35_attention_dv.json",
+            "carrier_parameter": "model.layers.35.self_attn.v_proj.weight",
+            "case_id": "deepseek8b_seq64_l35_attention_dv",
+            "exact_aot_endpoint_id": "backward:graph0:bmm_72",
+            "input_bank_sha256": "5a6a13badacab978d4ad70026041bdd28c8192d5c71d9c5d805c8c274bb537d0",
+            "release_capture_sha256": "0bfdd4d559d50c9385b1459b3cff7fececb782501ac6f52544aec3c4082d4663",
+            "task_id": "backward:676:output_0",
+            "task_plan_sha256": "fb11e464167b7da18433817d2ba998077bcf47a652222e9e6130dc1a99735fd5"
+          },
+          "carrier": "model.layers.35.self_attn.v_proj.weight",
+          "case_id": "deepseek8b_seq64_l35_attention_dv",
+          "task_id": "backward:676:output_0"
+        },
+        {
+          "binding": {
+            "binding_artifact": "results/property/bias_formation/hotspot_search/deepseek8b_seq64_rescreen/deepseek8b_seq64_l35_softmax_vjp.json",
+            "carrier_parameter": "model.layers.35.self_attn.q_proj.weight",
+            "case_id": "deepseek8b_seq64_l35_softmax_vjp",
+            "exact_aot_endpoint_id": "backward:graph0:mul_534",
+            "input_bank_sha256": "5a6a13badacab978d4ad70026041bdd28c8192d5c71d9c5d805c8c274bb537d0",
+            "release_capture_sha256": "0bfdd4d559d50c9385b1459b3cff7fececb782501ac6f52544aec3c4082d4663",
+            "task_id": "backward:679:in_out_ptr0",
+            "task_plan_sha256": "fb11e464167b7da18433817d2ba998077bcf47a652222e9e6130dc1a99735fd5"
+          },
+          "carrier": "model.layers.35.self_attn.q_proj.weight",
+          "case_id": "deepseek8b_seq64_l35_softmax_vjp",
+          "task_id": "backward:679:in_out_ptr0"
+        }
+      ],
+      "commands": {
+        "engineering": [
+          "python",
+          "scripts/capture_bound_endpoint_bias_formation_v21.py",
+          "--architecture",
+          "deepseek8b",
+          "--model",
+          "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+          "--input-bank",
+          "results/coverage/deepseek8b_seq64_input_bank.json",
+          "--release-dir",
+          "results/coverage/runtime_releases/deepseek8b_seq64_r1",
+          "--case-plan",
+          "results/property/sample_completion_v1/case_plans/deepseek8b.json",
+          "--output-dir",
+          "/data1/tzh/cache/sample_completion_v1/deepseek8b/engineering",
+          "--spool-dir",
+          "/data1/tzh/cache/sample_completion_v1/deepseek8b/engineering/spool",
+          "--device",
+          "cuda:0",
+          "--engineering-reach-only",
+          "--states",
+          "2"
+        ],
+        "formal": [
+          "python",
+          "scripts/capture_bound_endpoint_bias_formation_v21.py",
+          "--architecture",
+          "deepseek8b",
+          "--model",
+          "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+          "--input-bank",
+          "results/coverage/deepseek8b_seq64_input_bank.json",
+          "--release-dir",
+          "results/coverage/runtime_releases/deepseek8b_seq64_r1",
+          "--case-plan",
+          "results/property/sample_completion_v1/case_plans/deepseek8b.json",
+          "--output-dir",
+          "/data1/tzh/cache/sample_completion_v1/deepseek8b/formal",
+          "--spool-dir",
+          "/data1/tzh/cache/sample_completion_v1/deepseek8b/formal/spool",
+          "--device",
+          "cuda:0",
+          "--states",
+          "32"
+        ],
+        "screen": [
+          "python",
+          "scripts/capture_bound_endpoint_bias_formation_v21.py",
+          "--architecture",
+          "deepseek8b",
+          "--model",
+          "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+          "--input-bank",
+          "results/coverage/deepseek8b_seq64_input_bank.json",
+          "--release-dir",
+          "results/coverage/runtime_releases/deepseek8b_seq64_r1",
+          "--case-plan",
+          "results/property/sample_completion_v1/case_plans/deepseek8b.json",
+          "--output-dir",
+          "/data1/tzh/cache/sample_completion_v1/deepseek8b/screen",
+          "--spool-dir",
+          "/data1/tzh/cache/sample_completion_v1/deepseek8b/screen/spool",
+          "--device",
+          "cuda:0",
+          "--screening-gram",
+          "--states",
+          "8"
+        ]
+      },
+      "input_bank": "results/coverage/deepseek8b_seq64_input_bank.json",
+      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+      "release_dir": "results/coverage/runtime_releases/deepseek8b_seq64_r1",
+      "status": "READY_FOR_GPU"
+    },
+    "mamba": {
+      "architecture": "mamba",
+      "case_count": 4,
+      "case_plan": "results/property/sample_completion_v1/case_plans/mamba.json",
+      "cases": [
+        {
+          "binding": {
+            "carrier": "backbone.norm_f.weight",
+            "case_id": "mamba_seq64_ce_dlogits",
+            "task_id": "backward:4856:out_ptr1"
+          },
+          "carrier": "backbone.norm_f.weight",
+          "case_id": "mamba_seq64_ce_dlogits",
+          "task_id": "backward:4856:out_ptr1"
+        },
+        {
+          "binding": {
+            "carrier": "backbone.layers.23.mixer.out_proj.weight",
+            "case_id": "mamba_seq64_final_norm_vjp",
+            "task_id": "backward:4859:in_out_ptr0"
+          },
+          "carrier": "backbone.layers.23.mixer.out_proj.weight",
+          "case_id": "mamba_seq64_final_norm_vjp",
+          "task_id": "backward:4859:in_out_ptr0"
+        },
+        {
+          "binding": {
+            "carrier": "backbone.layers.23.mixer.in_proj.weight",
+            "case_id": "mamba_seq64_scan_recurrence",
+            "task_id": "backward:4929:out_ptr0"
+          },
+          "carrier": "backbone.layers.23.mixer.in_proj.weight",
+          "case_id": "mamba_seq64_scan_recurrence",
+          "task_id": "backward:4929:out_ptr0"
+        },
+        {
+          "binding": {
+            "carrier": "backbone.layers.23.mixer.conv1d.weight",
+            "case_id": "mamba_seq64_scan_reduction",
+            "task_id": "backward:4862:out_ptr0"
+          },
+          "carrier": "backbone.layers.23.mixer.conv1d.weight",
+          "case_id": "mamba_seq64_scan_reduction",
+          "task_id": "backward:4862:out_ptr0"
+        }
+      ],
+      "commands": {
+        "engineering": [
+          "python",
+          "scripts/capture_bound_endpoint_bias_formation_v21.py",
+          "--architecture",
+          "mamba",
+          "--model",
+          "/data1/tzh/models/state-spaces/mamba-130m-hf",
+          "--input-bank",
+          "results/coverage/mamba_seq64_input_bank.json",
+          "--release-dir",
+          "results/coverage/runtime_releases/mamba_seq64_r1",
+          "--case-plan",
+          "results/property/sample_completion_v1/case_plans/mamba.json",
+          "--output-dir",
+          "/data1/tzh/cache/sample_completion_v1/mamba/engineering",
+          "--spool-dir",
+          "/data1/tzh/cache/sample_completion_v1/mamba/engineering/spool",
+          "--device",
+          "cuda:0",
+          "--engineering-reach-only",
+          "--states",
+          "2"
+        ],
+        "formal": [
+          "python",
+          "scripts/capture_bound_endpoint_bias_formation_v21.py",
+          "--architecture",
+          "mamba",
+          "--model",
+          "/data1/tzh/models/state-spaces/mamba-130m-hf",
+          "--input-bank",
+          "results/coverage/mamba_seq64_input_bank.json",
+          "--release-dir",
+          "results/coverage/runtime_releases/mamba_seq64_r1",
+          "--case-plan",
+          "results/property/sample_completion_v1/case_plans/mamba.json",
+          "--output-dir",
+          "/data1/tzh/cache/sample_completion_v1/mamba/formal",
+          "--spool-dir",
+          "/data1/tzh/cache/sample_completion_v1/mamba/formal/spool",
+          "--device",
+          "cuda:0",
+          "--states",
+          "32"
+        ],
+        "screen": [
+          "python",
+          "scripts/capture_bound_endpoint_bias_formation_v21.py",
+          "--architecture",
+          "mamba",
+          "--model",
+          "/data1/tzh/models/state-spaces/mamba-130m-hf",
+          "--input-bank",
+          "results/coverage/mamba_seq64_input_bank.json",
+          "--release-dir",
+          "results/coverage/runtime_releases/mamba_seq64_r1",
+          "--case-plan",
+          "results/property/sample_completion_v1/case_plans/mamba.json",
+          "--output-dir",
+          "/data1/tzh/cache/sample_completion_v1/mamba/screen",
+          "--spool-dir",
+          "/data1/tzh/cache/sample_completion_v1/mamba/screen/spool",
+          "--device",
+          "cuda:0",
+          "--screening-gram",
+          "--states",
+          "8"
+        ]
+      },
+      "input_bank": "results/coverage/mamba_seq64_input_bank.json",
+      "model": "/data1/tzh/models/state-spaces/mamba-130m-hf",
+      "release_dir": "results/coverage/runtime_releases/mamba_seq64_r1",
+      "status": "READY_FOR_GPU"
+    },
+    "phi4": {
+      "architecture": "phi",
+      "case_count": 4,
+      "case_plan": "results/property/sample_completion_v1/case_plans/phi4.json",
+      "cases": [
+        {
+          "binding": {
+            "binding_artifact": "results/property/bias_formation/hotspot_search/phi4_seq64_rescreen/phi4_seq64_ce_dlogits.json",
+            "carrier_parameter": "model.norm.weight",
+            "case_id": "phi4_seq64_ce_dlogits",
+            "exact_aot_endpoint_id": "backward:graph0:backward_g0__add",
+            "input_bank_sha256": "001e1620a5bf88941e0ba207855ecec00bedc75a26fc2e78be07b796c5af31a9",
+            "release_capture_sha256": "714a7235eb4b94b94889766d42f8841aa4288eb85e59bc2bb3ce8f6813855737",
+            "task_id": "backward:495:out_ptr1",
+            "task_plan_sha256": "1bbed5bf41609fc798e52215d864ce3c78ae46da1cb30525438f619fd266ee52"
+          },
+          "carrier": "model.norm.weight",
+          "case_id": "phi4_seq64_ce_dlogits",
+          "task_id": "backward:495:out_ptr1"
+        },
+        {
+          "binding": {
+            "binding_artifact": "results/property/bias_formation/hotspot_search/phi4_seq64_rescreen/phi4_seq64_final_norm_vjp.json",
+            "carrier_parameter": "model.layers.31.self_attn.o_proj.weight",
+            "case_id": "phi4_seq64_final_norm_vjp",
+            "exact_aot_endpoint_id": "backward:graph0:backward_g1__add_261",
+            "input_bank_sha256": "001e1620a5bf88941e0ba207855ecec00bedc75a26fc2e78be07b796c5af31a9",
+            "release_capture_sha256": "714a7235eb4b94b94889766d42f8841aa4288eb85e59bc2bb3ce8f6813855737",
+            "task_id": "backward:505:in_out_ptr0",
+            "task_plan_sha256": "1bbed5bf41609fc798e52215d864ce3c78ae46da1cb30525438f619fd266ee52"
+          },
+          "carrier": "model.layers.31.self_attn.o_proj.weight",
+          "case_id": "phi4_seq64_final_norm_vjp",
+          "task_id": "backward:505:in_out_ptr0"
+        },
+        {
+          "binding": {
+            "binding_artifact": "results/property/bias_formation/hotspot_search/phi4_seq64_rescreen/phi4_seq64_l31_attention_dv.json",
+            "carrier_parameter": "model.layers.31.self_attn.qkv_proj.weight",
+            "case_id": "phi4_seq64_l31_attention_dv",
+            "exact_aot_endpoint_id": "backward:graph0:backward_g1__bmm_64",
+            "input_bank_sha256": "001e1620a5bf88941e0ba207855ecec00bedc75a26fc2e78be07b796c5af31a9",
+            "release_capture_sha256": "714a7235eb4b94b94889766d42f8841aa4288eb85e59bc2bb3ce8f6813855737",
+            "task_id": "backward:509:output_0",
+            "task_plan_sha256": "1bbed5bf41609fc798e52215d864ce3c78ae46da1cb30525438f619fd266ee52"
+          },
+          "carrier": "model.layers.31.self_attn.qkv_proj.weight",
+          "case_id": "phi4_seq64_l31_attention_dv",
+          "task_id": "backward:509:output_0"
+        },
+        {
+          "binding": {
+            "binding_artifact": "results/property/bias_formation/hotspot_search/phi4_seq64_rescreen/phi4_seq64_l31_softmax_vjp.json",
+            "carrier_parameter": "model.layers.31.self_attn.qkv_proj.weight",
+            "case_id": "phi4_seq64_l31_softmax_vjp",
+            "exact_aot_endpoint_id": "backward:graph0:backward_g1__mul_345",
+            "input_bank_sha256": "001e1620a5bf88941e0ba207855ecec00bedc75a26fc2e78be07b796c5af31a9",
+            "release_capture_sha256": "714a7235eb4b94b94889766d42f8841aa4288eb85e59bc2bb3ce8f6813855737",
+            "task_id": "backward:511:in_out_ptr0",
+            "task_plan_sha256": "1bbed5bf41609fc798e52215d864ce3c78ae46da1cb30525438f619fd266ee52"
+          },
+          "carrier": "model.layers.31.self_attn.qkv_proj.weight",
+          "case_id": "phi4_seq64_l31_softmax_vjp",
+          "task_id": "backward:511:in_out_ptr0"
+        }
+      ],
+      "commands": {
+        "engineering": [
+          "python",
+          "scripts/capture_bound_endpoint_bias_formation_v21.py",
+          "--architecture",
+          "phi",
+          "--model",
+          "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+          "--input-bank",
+          "results/coverage/phi4_seq64_input_bank.json",
+          "--release-dir",
+          "results/coverage/runtime_releases/phi4_seq64_r1",
+          "--case-plan",
+          "results/property/sample_completion_v1/case_plans/phi4.json",
+          "--output-dir",
+          "/data1/tzh/cache/sample_completion_v1/phi/engineering",
+          "--spool-dir",
+          "/data1/tzh/cache/sample_completion_v1/phi/engineering/spool",
+          "--device",
+          "cuda:0",
+          "--engineering-reach-only",
+          "--states",
+          "2"
+        ],
+        "formal": [
+          "python",
+          "scripts/capture_bound_endpoint_bias_formation_v21.py",
+          "--architecture",
+          "phi",
+          "--model",
+          "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+          "--input-bank",
+          "results/coverage/phi4_seq64_input_bank.json",
+          "--release-dir",
+          "results/coverage/runtime_releases/phi4_seq64_r1",
+          "--case-plan",
+          "results/property/sample_completion_v1/case_plans/phi4.json",
+          "--output-dir",
+          "/data1/tzh/cache/sample_completion_v1/phi/formal",
+          "--spool-dir",
+          "/data1/tzh/cache/sample_completion_v1/phi/formal/spool",
+          "--device",
+          "cuda:0",
+          "--states",
+          "32"
+        ],
+        "screen": [
+          "python",
+          "scripts/capture_bound_endpoint_bias_formation_v21.py",
+          "--architecture",
+          "phi",
+          "--model",
+          "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+          "--input-bank",
+          "results/coverage/phi4_seq64_input_bank.json",
+          "--release-dir",
+          "results/coverage/runtime_releases/phi4_seq64_r1",
+          "--case-plan",
+          "results/property/sample_completion_v1/case_plans/phi4.json",
+          "--output-dir",
+          "/data1/tzh/cache/sample_completion_v1/phi/screen",
+          "--spool-dir",
+          "/data1/tzh/cache/sample_completion_v1/phi/screen/spool",
+          "--device",
+          "cuda:0",
+          "--screening-gram",
+          "--states",
+          "8"
+        ]
+      },
+      "input_bank": "results/coverage/phi4_seq64_input_bank.json",
+      "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+      "release_dir": "results/coverage/runtime_releases/phi4_seq64_r1",
+      "status": "READY_FOR_GPU"
+    },
+    "qwen": {
+      "architecture": "qwen",
+      "case_count": 4,
+      "case_plan": "results/property/sample_completion_v1/case_plans/qwen.json",
+      "cases": [
+        {
+          "binding": {
+            "aot_target": "prims.convert_element_type.default",
+            "candidate_region_id": "backward:515",
+            "carrier": "model.norm.weight",
+            "case_id": "qwen_seq64_ce_dlogits",
+            "exact_aot_endpoint_id": "backward:graph0:convert_element_type_849",
+            "hotspot_family": "loss_head",
+            "implementation_kind": "TRITON",
+            "module_paths": [
+              "L['self'].subject"
+            ],
+            "selection_uses_historical_verdict": false,
+            "task_id": "backward:515:in_out_ptr0"
+          },
+          "carrier": "model.norm.weight",
+          "case_id": "qwen_seq64_ce_dlogits",
+          "task_id": "backward:515:in_out_ptr0"
+        },
+        {
+          "binding": {
+            "aot_target": "aten.clone.default",
+            "candidate_region_id": "backward:540",
+            "carrier": "model.layers.27.self_attn.q_proj.weight",
+            "case_id": "qwen_seq64_l27_q_norm_vjp",
+            "exact_aot_endpoint_id": "backward:graph0:clone_116",
+            "hotspot_family": "normalization",
+            "implementation_kind": "TRITON",
+            "module_paths": [
+              "L['self'].subject.model.layers.27",
+              "L['self'].subject.model.layers.27.self_attn",
+              "L['self'].subject.model",
+              "L['self'].subject"
+            ],
+            "selection_uses_historical_verdict": false,
+            "task_id": "backward:540:out_ptr3"
+          },
+          "carrier": "model.layers.27.self_attn.q_proj.weight",
+          "case_id": "qwen_seq64_l27_q_norm_vjp",
+          "task_id": "backward:540:out_ptr3"
+        },
+        {
+          "binding": {
+            "aot_target": "aten.clone.default",
+            "candidate_region_id": "backward:543",
+            "carrier": "model.layers.27.self_attn.k_proj.weight",
+            "case_id": "qwen_seq64_l27_k_norm_vjp",
+            "exact_aot_endpoint_id": "backward:graph0:clone_115",
+            "hotspot_family": "normalization",
+            "implementation_kind": "TRITON",
+            "module_paths": [
+              "L['self'].subject.model.layers.27",
+              "L['self'].subject.model.layers.27.self_attn",
+              "L['self'].subject.model",
+              "L['self'].subject"
+            ],
+            "selection_uses_historical_verdict": false,
+            "task_id": "backward:543:in_out_ptr0"
+          },
+          "carrier": "model.layers.27.self_attn.k_proj.weight",
+          "case_id": "qwen_seq64_l27_k_norm_vjp",
+          "task_id": "backward:543:in_out_ptr0"
+        },
+        {
+          "binding": {
+            "aot_target": "aten.mul.Tensor",
+            "candidate_region_id": "backward:666",
+            "carrier": "model.layers.23.self_attn.q_proj.weight",
+            "case_id": "qwen_seq64_l23_softmax_vjp",
+            "exact_aot_endpoint_id": "backward:graph0:mul_598",
+            "hotspot_family": "attention",
+            "implementation_kind": "TRITON",
+            "module_paths": [
+              "L['self'].subject.model.layers.23",
+              "L['self'].subject.model.layers.23.self_attn",
+              "L['self'].subject.model",
+              "L['self'].subject"
+            ],
+            "selection_uses_historical_verdict": false,
+            "task_id": "backward:666:in_out_ptr0"
+          },
+          "carrier": "model.layers.23.self_attn.q_proj.weight",
+          "case_id": "qwen_seq64_l23_softmax_vjp",
+          "task_id": "backward:666:in_out_ptr0"
+        }
+      ],
+      "commands": {
+        "engineering": [
+          "python",
+          "scripts/capture_bound_endpoint_bias_formation_v21.py",
+          "--architecture",
+          "qwen",
+          "--model",
+          "/data1/tzh/models/Qwen/Qwen3-1.7B",
+          "--input-bank",
+          "results/coverage/qwen_seq64_input_bank.json",
+          "--release-dir",
+          "results/coverage/runtime_releases/qwen_seq64_r1",
+          "--case-plan",
+          "results/property/sample_completion_v1/case_plans/qwen.json",
+          "--output-dir",
+          "/data1/tzh/cache/sample_completion_v1/qwen/engineering",
+          "--spool-dir",
+          "/data1/tzh/cache/sample_completion_v1/qwen/engineering/spool",
+          "--device",
+          "cuda:0",
+          "--engineering-reach-only",
+          "--states",
+          "2"
+        ],
+        "formal": [
+          "python",
+          "scripts/capture_bound_endpoint_bias_formation_v21.py",
+          "--architecture",
+          "qwen",
+          "--model",
+          "/data1/tzh/models/Qwen/Qwen3-1.7B",
+          "--input-bank",
+          "results/coverage/qwen_seq64_input_bank.json",
+          "--release-dir",
+          "results/coverage/runtime_releases/qwen_seq64_r1",
+          "--case-plan",
+          "results/property/sample_completion_v1/case_plans/qwen.json",
+          "--output-dir",
+          "/data1/tzh/cache/sample_completion_v1/qwen/formal",
+          "--spool-dir",
+          "/data1/tzh/cache/sample_completion_v1/qwen/formal/spool",
+          "--device",
+          "cuda:0",
+          "--states",
+          "32"
+        ],
+        "screen": [
+          "python",
+          "scripts/capture_bound_endpoint_bias_formation_v21.py",
+          "--architecture",
+          "qwen",
+          "--model",
+          "/data1/tzh/models/Qwen/Qwen3-1.7B",
+          "--input-bank",
+          "results/coverage/qwen_seq64_input_bank.json",
+          "--release-dir",
+          "results/coverage/runtime_releases/qwen_seq64_r1",
+          "--case-plan",
+          "results/property/sample_completion_v1/case_plans/qwen.json",
+          "--output-dir",
+          "/data1/tzh/cache/sample_completion_v1/qwen/screen",
+          "--spool-dir",
+          "/data1/tzh/cache/sample_completion_v1/qwen/screen/spool",
+          "--device",
+          "cuda:0",
+          "--screening-gram",
+          "--states",
+          "8"
+        ]
+      },
+      "input_bank": "results/coverage/qwen_seq64_input_bank.json",
+      "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+      "release_dir": "results/coverage/runtime_releases/qwen_seq64_r1",
+      "status": "READY_FOR_GPU"
+    }
+  },
+  "schema": "kernel-analyzer-sample-completion-execution-manifest-v1",
+  "status": "READY_FOR_GPU_BUT_NOT_EXECUTED",
+  "total_search_units_with_exact_command": 16
+}
