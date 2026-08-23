@@ -58,6 +58,12 @@ gives gradient `A=4.665` but effective-update `A=1.031`, compared with SGD
 update `A=4.701`; this is a response-map measurement, not a new formation
 label.
 
+The fresh wall-clock rerun currently has 11 of the 12 screen-negative rows
+with a real 32-step timed output.  The scientific Mamba consequence certificate
+is already complete in the repository, but its separate timing process is
+still running in the slow CPU fallback; until that process writes its own
+timed row, no 12-row GPU-time saving number is claimed.
+
 ## Scientific boundary
 
 This round strengthens three bounded claims:
