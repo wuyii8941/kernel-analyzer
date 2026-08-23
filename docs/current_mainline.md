@@ -232,9 +232,10 @@ operator output difference
 ```
 
 The repository supports this measured workflow, three bounded historical SGD
-records, and a corrected same-AdamW evaluation with three confirmed rows. Two
-of the historical rows remain positive under AdamW; Qwen does not, while one
-result-blind sampled row becomes a small-margin positive. It does not yet
+records, and a corrected same-AdamW evaluation with two confirmed rows plus
+one unresolved candidate. Two of the historical rows remain positive under
+AdamW; Qwen does not, while one result-blind sampled row is nominally a
+small-margin positive but does not survive the predeclared Holm correction. It does not yet
 support a universal rule for unseen implementations, full-parameter training
 failure, or a claim that every observed parameter separation is caused by a
 persistent direct operator effect.
