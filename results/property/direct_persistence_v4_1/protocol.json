@@ -1,0 +1,151 @@
+{
+  "claim_boundary": "This protocol defines a fail-closed, cold-start AdamW direct-persistence screen. It is not a universal safety classifier and does not treat a short negative as proof of safety.",
+  "confirmation": {
+    "direct_persistence_label": "full32 local effective-update coherence exceeds its own sign-flip 95% bound",
+    "families": {
+      "ALL_15_SENSITIVITY": "all rows",
+      "PREDECLARED_3": [
+        "liger_fused_ce_t128",
+        "phi4_seq64_lmhead_dx",
+        "qwen_seq128_lmhead_dx"
+      ],
+      "RESULT_BLIND_DISCOVERY_12": "mechanically selected 12 rows, including unresolved candidates"
+    },
+    "multiple_testing_primary": "Holm",
+    "multiple_testing_secondary": "Benjamini-Hochberg exploratory only",
+    "unresolved_candidate_rule": "A row that fails multiplicity correction remains unresolved and is excluded from confirmed-only performance metrics; it is never relabeled negative."
+  },
+  "heldout": {
+    "all_negative_rule": "report escalation, false escalation, abstention and cost; do not report recall or AUROC",
+    "labels": "all eligible rows receive 16-step screen and 32-step confirmation regardless of short result",
+    "observed_status_artifact": "execution_status.json",
+    "seen_impl_new_operands_separate_from_new_impl": true,
+    "selection": "mechanical pool freeze before any heldout reveal",
+    "status": "FROZEN_POOL_RULES"
+  },
+  "name": "Cold-start AdamW Direct Persistence Screen",
+  "objective": "Use a short sequence of effective-update differences to prioritize cases for exact 32-step confirmation; never issue a safety verdict from the short screen.",
+  "optimizer": {
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "epsilon": 1e-08,
+    "learning_rate": 0.0001,
+    "moment_initialization": "zero at the start, then evolved normally",
+    "moment_reset_every_step": false,
+    "name": "AdamW",
+    "weight_decay": 0.0
+  },
+  "optimizer_state_sensitivity": {
+    "late_moments_must_not_be_installed_on_early_gradient": true,
+    "observed_status_artifact": "execution_status.json",
+    "phase_conditioned_natural": [
+      "early",
+      "middle",
+      "late"
+    ],
+    "same_state_ablation": [
+      "captured moments",
+      "moment reset",
+      "stateless SGD"
+    ],
+    "status": "FROZEN_EXPERIMENT_DESIGN"
+  },
+  "required_identity": [
+    "model",
+    "exact endpoint or region",
+    "sequence length",
+    "state order and state-bank digest",
+    "parameter coordinate digest",
+    "optimizer configuration",
+    "moment-state digest",
+    "measurement horizon",
+    "repair identity",
+    "runner source digest"
+  ],
+  "required_saved_statistics": {
+    "cross_level": [
+      "resultant 3x3 inner-product matrix",
+      "cosine with actual",
+      "signed projection shares"
+    ],
+    "null": [
+      "seed",
+      "draw count",
+      "upper 95",
+      "one-sided p",
+      "prefix null when available"
+    ],
+    "per_level": [
+      "resultant_l2",
+      "path_l2",
+      "path_energy",
+      "A16",
+      "A32"
+    ],
+    "raw_vectors": "required for future per-step cross-Grams; if absent, output ABSTAIN and do not impute"
+  },
+  "schema": "kernel-analyzer-direct-persistence-v4_1-protocol-v1",
+  "severity": {
+    "observed_consequence": [
+      "paired final parameter distance",
+      "evaluation loss difference",
+      "repair consequence",
+      "runtime"
+    ],
+    "persistence_evidence": [
+      "A",
+      "null comparison",
+      "corrected p",
+      "direct resultant"
+    ],
+    "proxy_is_not_observed_loss": true,
+    "severity_proxy": [
+      "direct resultant / parameter norm",
+      "direct resultant / normal update",
+      "first-order loss-gradient projection"
+    ]
+  },
+  "short_screen": {
+    "calibrated_null_score": "available only for rows with preserved raw prefix update vectors; see prefix_null_reanalysis.json; missing rows remain ABSTAIN",
+    "no_safe_verdict": true,
+    "outputs": [
+      "ESCALATE",
+      "NO_ESCALATION_UNDER_SHORT_SCREEN",
+      "ABSTAIN"
+    ],
+    "primary_rule": "prefix16_local_A > 1.0",
+    "primary_score": "prefix16_local_A",
+    "screen_is_optimizer_conditioned": true,
+    "short_negative_is_not_safe": true
+  },
+  "status": "FROZEN_BEFORE_NEW_RUN",
+  "supersedes": "results/property/direct_persistence_v4",
+  "tolerance_baselines": [
+    "max absolute error",
+    "relative L2",
+    "ULP",
+    "rtol/atol sweep",
+    "output RMS",
+    "gradient RMS",
+    "update RMS"
+  ],
+  "trajectory": {
+    "confirmation_steps": 32,
+    "recurrence_must_be_computed": true,
+    "required_levels": [
+      "local",
+      "feedback",
+      "actual"
+    ],
+    "same_state_counterfactuals": [
+      "candidate_at_candidate_state",
+      "repair_at_candidate_state",
+      "candidate_at_repair_state",
+      "repair_at_repair_state"
+    ],
+    "short_steps": 16
+  },
+  "v4_1_rule": "Only complete experiment identities enter the executable roster; old missing fields are never inferred."
+}

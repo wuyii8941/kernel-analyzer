@@ -32,3 +32,11 @@
 - `results/property/direct_persistence_v4/completion_audit.json`
 - `results/property/direct_persistence_v4/identity_audit.json`
 - `results/property/direct_persistence_v4/execution_status.json`
+
+## v4.1 的下一轮冻结入口
+
+`results/property/direct_persistence_v4_1/` 是一个新的、未开始测量的冻结清单。它只允许实验身份完整的行进入下一轮运行；旧 v4 中缺少原始字段的行被列在 `feasibility_report.json` 中，不会被补填或重新解释。
+
+当前 v4.1 只有 1 行可运行模板，另外 3 行因缺少参数坐标、moment、repair 或 runner 身份而明确排除。v4.1 的文件是实验入口，不是新的科学结果。
+
+已有的 Mamba 32 步结果另存为 `v4_1/development/mamba_0450_summary.json`，只作为跨架构的开发证据；它没有被冒充成 v4.1 的前瞻 held-out 结果。
