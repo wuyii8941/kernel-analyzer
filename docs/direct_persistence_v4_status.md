@@ -13,6 +13,8 @@
 
 协议文件保持揭示结果前的冻结状态；实际执行状态单独记录在 `results/property/direct_persistence_v4/execution_status.json`。其中未见实现检查已完成 3 行、0 个 direct positive，四个同状态优化器对照和早/中/晚阶段响应也已完成。这里的“完成”只表示相应范围的运行已结束，不表示所有误差指标或所有后续实验都完成。
 
+实验身份审计见 `results/property/direct_persistence_v4/identity_audit.json`。它对历史 v3 行明确标出缺少 moment-state digest 的地方；没有用相近运行补填这些字段，因此这些行在需要完整身份的复算中仍保持 `PARTIAL_IDENTITY`。
+
 ## 当前能说什么
 
 - 优化器会改变数值差异进入有效更新的方式，但当前数据不能把优化器认定为数值误差的根源。它是“传递差异的环节”，不是已经被证明的“误差来源”。

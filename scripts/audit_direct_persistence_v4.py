@@ -85,6 +85,7 @@ def main() -> None:
     prefix_null = load(out / "prefix_null_reanalysis.json") if (out / "prefix_null_reanalysis.json").exists() else {}
     catch_fix = load(out / "catch_and_fix/manifest.json")
     execution_status = load(out / "execution_status.json") if (out / "execution_status.json").exists() else {}
+    identity = load(out / "identity_audit.json") if (out / "identity_audit.json").exists() else {}
 
     rows = contribution.get("rows", [])
     audit = {
@@ -114,6 +115,11 @@ def main() -> None:
                 {"PARTIAL_COMPLETE_FAIL_CLOSED"},
             ),
             "result_digest_manifest": verify_sha256(out),
+            "identity_audit": {
+                "status": identity.get("status", "ABSTAIN_MISSING_IDENTITY_AUDIT"),
+                "rows": len(identity.get("rows", [])),
+                "partial_rows": sum(row.get("status") != "COMPLETE" for row in identity.get("rows", [])),
+            },
             "raw_prefix_null_reanalysis": {
                 "status": prefix_null.get("status", "ABSTAIN_MISSING_ARTIFACT"),
                 "rows": len(prefix_null.get("rows", [])),
