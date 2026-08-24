@@ -47,6 +47,7 @@ def main() -> None:
             "gradient": raw["gradient"],
             "update": raw["update"],
             "update_pair": raw.get("update_pair"),
+            "persistence": raw.get("persistence"),
             "rtol_atol": raw["rtol_atol"],
             "claim_boundary": raw["claim_boundary"],
         })

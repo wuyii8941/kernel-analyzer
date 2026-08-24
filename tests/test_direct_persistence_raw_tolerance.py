@@ -1,6 +1,11 @@
 import torch
 
-from scripts.analyze_direct_persistence_raw_tolerance import aggregate_rows, magnitude_row, metric_row
+from scripts.analyze_direct_persistence_raw_tolerance import (
+    _coherence_summary,
+    aggregate_rows,
+    magnitude_row,
+    metric_row,
+)
 
 
 def test_raw_tolerance_metrics_keep_exact_gradient_pair_and_ulp():
@@ -22,3 +27,17 @@ def test_update_magnitude_does_not_invent_relative_or_ulp():
     summary = aggregate_rows([row], "local_effective_update_magnitude")
     assert summary["relative_l2_mean"] is None
     assert summary["ulp_mean"] is None
+
+
+def test_coherence_summary_is_streamable_and_uses_path_energy():
+    total = torch.tensor([3.0, 4.0])
+    result = _coherence_summary(total, 25.0, 4, "toy")
+    assert result["status"] == "COMPLETE"
+    assert result["resultant_l2"] == 5.0
+    assert result["path_l2"] == 5.0
+    assert result["A"] == 1.0
+
+
+def test_coherence_summary_missing_sequence_fails_closed():
+    result = _coherence_summary(torch.tensor([0.0]), 0.0, 0, "toy")
+    assert result["status"] == "ABSTAIN_MISSING_RAW_VECTORS"

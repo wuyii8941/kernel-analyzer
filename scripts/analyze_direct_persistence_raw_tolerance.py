@@ -116,6 +116,23 @@ def aggregate_rows(rows: list[dict[str, Any]], label: str) -> dict[str, Any]:
     }
 
 
+def _coherence_summary(total: torch.Tensor, energy: float, steps: int, label: str) -> dict[str, Any]:
+    """Summarize a stored step-vector sequence without retaining all vectors."""
+
+    if steps <= 0:
+        return {"status": "ABSTAIN_MISSING_RAW_VECTORS", "label": label, "steps": 0}
+    resultant = float(torch.linalg.vector_norm(total).item())
+    return {
+        "status": "COMPLETE",
+        "label": label,
+        "steps": steps,
+        "resultant_l2": resultant,
+        "path_energy": energy,
+        "path_l2": energy ** 0.5,
+        "A": resultant / max(energy ** 0.5, 1e-30),
+    }
+
+
 def magnitude_row(value: torch.Tensor) -> dict[str, Any]:
     value = value.detach().reshape(-1).float()
     finite = value[torch.isfinite(value)]
@@ -178,6 +195,15 @@ def main() -> None:
     gradient_metrics = aggregate_rows(gradient_rows, "parameter_gradient")
     update_rows = []
     update_pair_rows = []
+    local_sum = None
+    local_energy = 0.0
+    local_prefix_sum = None
+    local_prefix_energy = 0.0
+    pair_sum = None
+    pair_energy = 0.0
+    pair_prefix_sum = None
+    pair_prefix_energy = 0.0
+    trajectory_steps = 0
     update_pair_pass_rates: dict[tuple[float, float], list[float]] = {
         (rtol, atol): [] for rtol in RTOL_VALUES for atol in ATOL_VALUES
     }
@@ -185,6 +211,16 @@ def main() -> None:
         payload = torch.load(record["path"], map_location="cpu", weights_only=True)
         candidate = payload["local_update"]
         update_rows.append(magnitude_row(candidate))
+        local_value = candidate.detach().float().reshape(-1)
+        if local_sum is None:
+            local_sum = torch.zeros_like(local_value)
+            local_prefix_sum = torch.zeros_like(local_value)
+        local_sum.add_(local_value)
+        local_energy += float(torch.sum(local_value * local_value).item())
+        if trajectory_steps < 16:
+            local_prefix_sum.add_(local_value)
+            local_prefix_energy += float(torch.sum(local_value * local_value).item())
+        trajectory_steps += 1
         if {
             "candidate_update_at_candidate_state",
             "repair_update_at_candidate_state",
@@ -192,6 +228,15 @@ def main() -> None:
             candidate_update = payload["candidate_update_at_candidate_state"]
             repair_update = payload["repair_update_at_candidate_state"]
             update_pair_rows.append(metric_row(candidate_update, repair_update))
+            pair_value = (candidate_update - repair_update).detach().float().reshape(-1)
+            if pair_sum is None:
+                pair_sum = torch.zeros_like(pair_value)
+                pair_prefix_sum = torch.zeros_like(pair_value)
+            pair_sum.add_(pair_value)
+            pair_energy += float(torch.sum(pair_value * pair_value).item())
+            if trajectory_steps <= 16:
+                pair_prefix_sum.add_(pair_value)
+                pair_prefix_energy += float(torch.sum(pair_value * pair_value).item())
             candidate_float = candidate_update.float()
             repair_float = repair_update.float()
             finite = torch.isfinite(candidate_float) & torch.isfinite(repair_float)
@@ -214,6 +259,19 @@ def main() -> None:
             pass_rates = update_pair_pass_rates[(rtol, atol)]
             sweep_rows.append({"rtol": rtol, "atol": atol, "state_pass_rate_mean": sum(pass_rates) / len(pass_rates)})
         update_pair_metrics["rtol_atol"] = {"status": "COMPLETE", "rows": sweep_rows}
+    persistence = {
+        "status": "COMPLETE" if trajectory_steps >= 32 else "ABSTAIN_INCOMPLETE_TRAJECTORY",
+        "local": {
+            "prefix16": _coherence_summary(local_prefix_sum, local_prefix_energy, min(trajectory_steps, 16), "local_update_prefix16"),
+            "full32": _coherence_summary(local_sum, local_energy, trajectory_steps, "local_update_full32"),
+        },
+        "update_pair_difference": {
+            "prefix16": _coherence_summary(pair_prefix_sum, pair_prefix_energy, min(trajectory_steps, 16), "candidate_minus_repair_update_prefix16")
+            if pair_sum is not None else {"status": "ABSTAIN_MISSING_UPDATE_PAIRS"},
+            "full32": _coherence_summary(pair_sum, pair_energy, trajectory_steps, "candidate_minus_repair_update_full32")
+            if pair_sum is not None else {"status": "ABSTAIN_MISSING_UPDATE_PAIRS"},
+        },
+    }
     result = {
         "schema": "kernel-analyzer-direct-persistence-v4-raw-tolerance-v1",
         "status": "PARTIAL_RAW_TOLERANCE_COMPLETE",
@@ -228,6 +286,7 @@ def main() -> None:
         "gradient": gradient_metrics,
         "update": update_metrics,
         "update_pair": update_pair_metrics,
+        "persistence": persistence,
         "rtol_atol": rtol_atol_sweep(output_pairs),
         "claim_boundary": "Output, gradient, and same-state effective-update candidate/reference pairs are stored for this replay. Historical rows without these raw pairs remain outside the complete tolerance family.",
     }
