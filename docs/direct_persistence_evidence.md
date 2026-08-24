@@ -1,5 +1,7 @@
 # Direct Persistence 证据表
 
+> 本表是 cold-start 32 步的 direct/feedback/actual 归因表，用来解释短程参数分离由哪一部分组成。它不分配当前长程标签；长程结果见 `results/property/declared_persistent_4096/summary.md`。
+
 ## Direct、feedback 和 actual 必须分开
 
 记：
@@ -16,7 +18,7 @@ D_t = L_t + B_t + recurrence_residual_t
 
 仅仅看到 feedback 的 `A` 较高，不能说 feedback 贡献较大。当前贡献表固定使用最终实际分离方向做带符号投影，并同时保存累计长度、路径能量、`A` 和 cosine。
 
-## 当前可重算的三条记录
+## 当前可重算的三条 32 步记录
 
 | 案例 | direct result | feedback result | actual result | direct share | feedback share | 当前分类 |
 |---|---:|---:|---:|---:|---:|---|
@@ -41,8 +43,8 @@ D_t = L_t + B_t + recurrence_residual_t
 
 回溯结果分为两种视图：
 
-1. 名义视图：3 个 positive、12 个 negative；
-2. confirmed-only 视图：2 个 confirmed positive、12 个已解决 negative，`0543` 单独列为 unresolved candidate。
+1. 名义短程视图：3 个 positive、12 个 negative；
+2. confirmed-only 短程视图：2 个 confirmed positive、12 个已解决 negative，`0543` 单独列为 unresolved candidate。
 
 Holm/BH 的逐行结果和三个 family 的完整成员清单见
 `results/property/direct_persistence_v4/multiplicity.json`。`0543` 仍属于

@@ -1,5 +1,11 @@
 # Oracle correction: one optimizer, one measurement rule
 
+> Historical short-screen record. All `A16/A32` labels below describe the
+> declared cold-start window. They are retained for screening calibration and
+> mechanism localization, not as current long-horizon labels. The authoritative
+> 4096-step review is `results/property/declared_persistent_4096/summary.md`;
+> notably, Qwen is robustly directional in that newer warm-state protocol.
+
 The earlier 14-row Oracle comparison was not a fair accuracy test. Its three
 known positive rows used stateless SGD, while its eleven control rows used
 AdamW. Phi already showed that the same gradient differences can have
@@ -23,21 +29,23 @@ the corrected denominator is therefore 15, not 14.
 
 ## Same-optimizer case results
 
-`A16` is the short-screen value. `A32` is the full value. A row is confirmed
-only when its `A32` exceeds its own random-sign 95% bound.
+`A16` is the short-screen value. `A32` is the complete value for this historical
+short protocol. A row passes this 32-step confirmation only when its `A32`
+exceeds its own random-sign 95% bound; that does not assign a 4096-step label.
 
 | row | `A16` local update | `A32` local update | random-sign 95% bound | AdamW result |
 |---|---:|---:|---:|---|
-| Liger fused CE | 1.338 | 1.720 | 1.116 | persistent |
-| Phi-4 `lm_head dX` | 1.013 | 1.029 | 1.004 | persistent, small margin |
-| Qwen seq128 `lm_head dX` | 0.971 | 0.957 | 1.045 | canceling |
-| sampled Phi seq256 row `0543` | 1.007 | 1.014 | 1.011 | persistent, small margin |
+| Liger fused CE | 1.338 | 1.720 | 1.116 | 32-step directional |
+| Phi-4 `lm_head dX` | 1.013 | 1.029 | 1.004 | 32-step directional, small margin |
+| Qwen seq128 `lm_head dX` | 0.971 | 0.957 | 1.045 | canceling in this cold-start window |
+| sampled Phi seq256 row `0543` | 1.007 | 1.014 | 1.011 | 32-step candidate, small margin |
 
-The important correction is not merely a smaller score. Qwen changes class:
-it is a persistent gradient-difference example under stateless SGD, but its
-direct AdamW update differences cancel under this protocol. An Oracle that
-claims to predict parameter updates must therefore include the actual
-optimizer.
+The important correction is not merely a smaller score. Qwen changes class
+inside this short protocol: it is directional at the gradient layer under
+stateless SGD, but its direct AdamW update differences cancel over these 32
+steps. The later 4096-step result shows that this short class cannot be
+transferred across training states. An Oracle that claims to predict parameter
+updates must therefore include the actual optimizer, state, and horizon.
 
 ## Corrected short-screen result
 

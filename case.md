@@ -3,9 +3,13 @@
 > **Current status:** this file preserves the historical case registry and its
 > changing denominators. It is not the current AdamW positive list. The only
 > current count and conclusion are in
-> [docs/current_mainline.md](docs/current_mainline.md): two confirmed direct
-> persistence rows under the common cold-start AdamW protocol, one unresolved
-> candidate, and no universal all-operator Oracle.
+> [docs/current_mainline.md](docs/current_mainline.md), with the complete merged
+> audit in [docs/all_bias_long_horizon_audit.md](docs/all_bias_long_horizon_audit.md).
+> The common cold-start AdamW table is a 16/32-step screen, not the final
+> long-horizon list. The current audit has 23 unique matrix IDs, 11 historical
+> candidates, 26 merged rows, and 4 final cases: three direct long-horizon
+> cases (Liger, Phi `lm_head dX`, Qwen `lm_head dX`) and one feedback-sustained
+> long-horizon case (Qwen3-VL SiLU). No universal all-operator Oracle is claimed.
 
 ## Historical stateless-SGD source-persistence headline (2026-08-22)
 
@@ -32,9 +36,13 @@ classification is
 `results/property/joint_bias_formation_v1/source_persistence_reclassification.json`.
 
 The common-AdamW correction on 2026-08-23 must be kept separate from this
-historical count. Liger and Phi remain directly persistent under AdamW; Qwen
-seq128 does not, while one result-blind sampled Phi row is a small-margin
-positive. See `docs/oracle_repair_v3.md`.
+historical count. It is a cold-start 16/32-step screen: Liger and Phi are
+short-window positives, Qwen seq128 is not, and one result-blind sampled Phi
+row is a small-margin candidate. The later warm-state 4096-step review
+supersedes those short-window labels for long-horizon claims: Liger, Phi and
+Qwen have robust direct direction, while Qwen3-VL SiLU is feedback-sustained
+with a paired loss gap. The full 11-candidate review, including unresolved
+rows, is in `docs/all_bias_long_horizon_audit.md`.
 
 ## Canonical evidence counting (2026-08-20)
 

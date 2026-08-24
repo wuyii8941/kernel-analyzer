@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import linecache
 from typing import Any
 
 os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
@@ -50,13 +51,23 @@ def write(path: Path, payload: dict[str, Any]) -> None:
 
 
 class VProjRepair:
-    def __init__(self, modules: list[Any], mode: str, target_sha: str) -> None:
+    def __init__(
+        self,
+        modules: list[Any],
+        mode: str,
+        target_sha: str | None,
+        expected_output_shape: tuple[int, ...] | None = None,
+        expected_match_index: int | None = None,
+    ) -> None:
         self.modules = modules
         self.mode = mode
         self.target_sha = target_sha
+        self.expected_output_shape = expected_output_shape
+        self.expected_match_index = expected_match_index
         self.restores: list[tuple[Any, Any]] = []
         self.calls = 0
         self.local: dict[str, Any] | None = None
+        self.seen: list[dict[str, Any]] = []
 
     def __enter__(self) -> "VProjRepair":
         seen: set[int] = set()
@@ -68,13 +79,30 @@ class VProjRepair:
             original = namespace.mm
 
             def wrapped(*args: Any, _original: Any = original, **kwargs: Any) -> Any:
-                _, _, digest = _source_identity()
-                if digest != self.target_sha:
+                filename, line, digest = _source_identity()
+                if self.target_sha is not None and digest != self.target_sha:
                     return _original(*args, **kwargs)
                 result = _original(*args, **kwargs)
                 candidate = kwargs.get("out", result)
                 if not isinstance(candidate, torch.Tensor):
                     raise RuntimeError("target MM has no tensor output")
+                if (
+                    self.expected_output_shape is not None
+                    and tuple(candidate.shape) != self.expected_output_shape
+                ):
+                    return result
+                self.match_count = getattr(self, "match_count", 0) + 1
+                if (
+                    self.expected_match_index is not None
+                    and self.match_count != self.expected_match_index
+                ):
+                    return result
+                self.seen.append({
+                    "source_sha": digest,
+                    "source_line": line,
+                    "source_text": linecache.getline(filename, line).strip(),
+                    "shape": list(candidate.shape),
+                })
                 before = candidate.detach().clone()
                 if self.mode == "SHAM":
                     reference = torch.mm(args[0], args[1])
@@ -118,7 +146,14 @@ class VProjRepair:
         for namespace, original in self.restores:
             namespace.mm = original
         if self.calls != 1:
-            raise RuntimeError(f"target repair executed {self.calls} times")
+            unique = []
+            for item in self.seen:
+                if item not in unique:
+                    unique.append(item)
+            raise RuntimeError(
+                f"target repair executed {self.calls} times; "
+                f"matching source/shape calls={unique[:16]}"
+            )
 
 
 def run(model: torch.nn.Module, candidate: Any, values: torch.Tensor, seed: int,

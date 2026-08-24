@@ -11,10 +11,10 @@ It separates three places in the real training step:
 3. the effective parameter-update difference after the optimizer mapping.
 
 Within each row, all three values use one ordered 32-state reference
-trajectory. They are measurements on one declared parameter, not
-full-parameter training results. This table is the historical stateless-SGD
-comparison. The later exact Qwen seq128 run and common-AdamW correction are
-reported in `docs/oracle_repair_v3.md`.
+trajectory. They are mechanism-localization measurements on one declared
+parameter, not long-horizon or full-parameter training results. This table is
+the historical stateless-SGD comparison. Current long-horizon labels come from
+the 4096-step review in `docs/current_mainline.md`.
 
 | case | operator-output `A` | parameter-gradient `A` | stateless-SGD-update `A` |
 |---|---:|---:|---:|
@@ -32,10 +32,13 @@ The optimizer is not always passive.  On the same Phi gradient sequence,
 stateless SGD preserves `A=4.701`, while the frozen AdamW response maps it to
 `A=1.031`.  In this probe, AdamW suppresses the directional gradient error.
 
-The exact Qwen seq128 rerun shows the same boundary in one invocation:
+The exact Qwen seq128 cold-start rerun shows the same boundary in one invocation:
 operator output `A=1.005` becomes gradient `A=1.343`, then falls to AdamW
-update `A=0.961`. A gradient difference must not be reported as a persistent
-parameter-update difference without checking the actual optimizer.
+update `A=0.961`. This proves that the optimizer can suppress a direction in
+that short window; it is not a permanent Qwen label. In the later warm-state
+4096-step protocol, the same endpoint family reaches `A=6.488`, with all 64
+late windows directional. A gradient difference must therefore be checked
+through both the target optimizer and the relevant training horizon.
 
 Exact replay of both the measured error and its negative is available for
 saved-P and SiLU. Both contain one response component that stays the same when
@@ -63,11 +66,19 @@ The measured cases support a three-part explanation:
   suppressed, or amplified.
 
 This is a measured mechanism map, but it is not yet a universal low-cost
-property. Under the frozen generic predictor specification, none of the five
-evaluated cases has every required source measurement, exact response, and propagation
-input.  The predictor therefore emits five explicit abstentions and no score.
+property. The 32-state values locate formation; the 4096-step protocol tests
+whether direct direction survives beyond a short cold-start window. Under the
+frozen generic predictor specification, none of the five evaluated cases has
+every required source measurement, exact response, and propagation input. The
+predictor therefore emits five explicit abstentions and no score.
 That fail-closed result is recorded in
 `results/property/joint_bias_formation_v1/joint_predictor_evaluation_v1.json`.
+
+The separate all-candidate long-horizon audit now has 23 unique matrix IDs,
+11 historical candidates and 26 merged rows. It confirms three direct cases
+(Liger, Phi `lm_head dX`, and Qwen `lm_head dX`) and one feedback-sustained case
+(Qwen3-VL SiLU with a paired loss gap). These are long-horizon case labels,
+not a universal predictor result.
 
 The machine-readable measurements are in
 `results/property/joint_bias_formation_v1/general_mechanism_map_v1.json`.

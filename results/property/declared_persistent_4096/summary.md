@@ -5,7 +5,7 @@
 | 模型 | 算子或位置 | 执行情况 | 4096 步方向分数 | 后半程窗口 | 结果 |
 |---|---|---|---:|---:|---|
 | Qwen3-1.7B | lm_head backward dX | COMPLETE_4096 | 6.488 | 64/64 A>1 | 4096 步仍有稳定直接方向 |
-| Qwen3-1.7B + Liger | fused cross-entropy dW accumulation | PENDING | — | — | 仍在运行 |
+| Qwen3-1.7B + Liger | fused cross-entropy dW accumulation | COMPLETE_4096 | 14.018 | 64/64 A>1 | 4096 步仍有稳定直接方向 |
 | Phi-4-mini | lm_head backward dX | COMPLETE_4096 | 46.090 | 64/64 过自身随机上界 | 4096 步仍有稳定直接方向 |
 | Mamba-130M | in_proj matrix multiply | COMPLETE_4096 | 1.110 | 33/64 A>1 | 未形成稳健的 4096 步直接方向 |
 | Qwen3-1.7B | layer-27 saved-P softmax backward | COMPLETE_4096 | 1.195 | 28/64 A>1 | 未形成稳健的 4096 步直接方向 |

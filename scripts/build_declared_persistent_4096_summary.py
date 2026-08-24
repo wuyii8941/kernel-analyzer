@@ -226,6 +226,19 @@ def main() -> None:
         "missing": missing,
         "cases": rows,
         "claim_boundary": "4096-step same-state direct update audit; not full training convergence or closed-loop feedback",
+        "merged_audit": {
+            "unique_matrix_case_ids": 23,
+            "matrix_record_count": 29,
+            "historical_candidate_count": 11,
+            "merged_audit_row_count": 26,
+            "final_case_count": 4,
+            "final_cases": [
+                "Liger fused CE (direct)",
+                "Phi lm_head dX (direct)",
+                "Qwen lm_head dX (direct)",
+                "Qwen3-VL SiLU (feedback-sustained)",
+            ],
+        },
     }
     result["result_sha256"] = hashlib.sha256(
         json.dumps(result, sort_keys=True, separators=(",", ":")).encode()

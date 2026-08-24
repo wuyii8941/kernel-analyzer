@@ -39,7 +39,7 @@ def main() -> None:
     parser.add_argument("--endpoint")
     parser.add_argument("--case-id", default="gemma4_e2b_ple_rmsnorm")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--steps", type=int, choices=(2, 8, 16, 32), default=2)
+    parser.add_argument("--steps", type=int, choices=(2, 8, 16, 32, 4096), default=2)
     parser.add_argument(
         "--state-role", choices=("TRAJECTORY", "CONFIRMATION", "SCREENING"),
         default="TRAJECTORY",
@@ -180,7 +180,7 @@ def main() -> None:
             learning_rate=args.learning_rate,
         )
 
-    def gradient(master: torch.Tensor, state: dict, repair: bool) -> torch.Tensor:
+    def gradient(master: torch.Tensor, state: dict, repair: bool) -> tuple[torch.Tensor, float]:
         with torch.no_grad(): carrier.copy_(master.to(carrier.dtype))
         values = torch.tensor([state["token_ids"]], dtype=torch.long, device=device)
         model.zero_grad(set_to_none=True)
@@ -194,12 +194,12 @@ def main() -> None:
         else:
             candidate(values).backward()
         torch.cuda.synchronize(device)
-        return carrier.grad.detach().float().clone()
+        return carrier.grad.detach().float().clone(), float(loss.detach().float().item())
 
     for index, state in enumerate(states):
         step = index + 1
-        gc_c = gradient(cmaster, state, False); gr_c = gradient(cmaster, state, True)
-        gc_r = gradient(rmaster, state, False); gr_r = gradient(rmaster, state, True)
+        gc_c, loss_cc = gradient(cmaster, state, False); gr_c, loss_cr = gradient(cmaster, state, True)
+        gc_r, loss_rc = gradient(rmaster, state, False); gr_r, loss_rr = gradient(rmaster, state, True)
         uc_c, ncm, ncv = update(gc_c, cm, cv, step)
         ur_c, _, _ = update(gr_c, cm, cv, step)
         uc_r, _, _ = update(gc_r, rm, rv, step)
@@ -241,6 +241,9 @@ def main() -> None:
             "actual_l2": float(torch.linalg.vector_norm(actual)),
             "drift_l2": float(torch.linalg.vector_norm(next_c - next_r)),
             "recurrence_residual_l2": float(torch.linalg.vector_norm(residual)),
+            "candidate_loss": loss_cc,
+            "repair_loss": loss_cr,
+            "paired_loss_gap_candidate_minus_repair": loss_cc - loss_cr,
         })
         cmaster, rmaster, cm, cv, rm, rv = next_c, next_r, ncm, ncv, nrm, nrv
         print(json.dumps({"event": "GEMMA4_NORM_CONSEQUENCE_STEP", "step": step}), flush=True)
@@ -260,7 +263,7 @@ def main() -> None:
     payload = {
         "schema": "kernel-analyzer-gemma4-target-consequence-v1",
         "case_id": args.case_id,
-        "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
+        "status": "COMPLETE" if args.steps >= 32 else "ENGINEERING_DRY_RUN",
         "prediction": prediction, "steps": args.steps, "state_role": args.state_role,
         "carrier": args.carrier,
         "optimizer": {"name": args.optimizer, "learning_rate": args.learning_rate},
@@ -269,6 +272,9 @@ def main() -> None:
         "carrier_coordinates": carrier.numel(), "statistics": stats,
         "final_drift_l2": float(torch.linalg.vector_norm(cmaster - rmaster)),
         "records": records,
+        "paired_loss_gap_final": records[-1]["paired_loss_gap_candidate_minus_repair"] if records else None,
+        "paired_loss_gap_mean_last_512": float(sum(r["paired_loss_gap_candidate_minus_repair"] for r in records[-min(512, len(records)):]) / max(1, min(512, len(records)))) if records else None,
+        "paired_loss_gap_std_last_512": float((sum((r["paired_loss_gap_candidate_minus_repair"] - (sum(x["paired_loss_gap_candidate_minus_repair"] for x in records[-min(512, len(records)):]) / max(1, min(512, len(records))))) ** 2 for r in records[-min(512, len(records)):]) / max(1, min(512, len(records)))) ** 0.5) if records else None,
         "claim_boundary": "Four-arm symmetric one-parameter trajectory; no feedback prediction was made.",
     }
     payload["result_sha256"] = hashlib.sha256(

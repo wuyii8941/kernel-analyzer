@@ -9,6 +9,8 @@ import os
 import sys
 from pathlib import Path
 
+import numpy as np
+
 os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 os.environ.setdefault("HF_HOME", "/data1/tzh/cache/huggingface")
 os.environ.setdefault("HUGGINGFACE_HUB_CACHE", "/data1/tzh/cache/huggingface/hub")
@@ -82,8 +84,8 @@ def main() -> None:
     parser.add_argument("--height", type=int, default=224)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     args = parser.parse_args()
-    if not 2 <= args.steps <= 32:
-        raise ValueError("steps must be in [2, 32]")
+    if args.steps < 2:
+        raise ValueError("steps must be at least 2")
     if not 1 <= args.calibration_steps < args.steps:
         raise ValueError("calibration steps must precede evaluation")
 
@@ -255,6 +257,12 @@ def main() -> None:
             "step": step,
             "state_id": state["id"],
             "input_sequence_length": metadata["sequence_length"],
+            "candidate_loss": float(candidate_loss_c.detach().float().item()),
+            "repair_loss": float(repair_loss_r.detach().float().item()),
+            "paired_loss_gap_candidate_minus_repair": float(
+                candidate_loss_c.detach().float().item()
+                - repair_loss_r.detach().float().item()
+            ),
             "forward_loss_equal_at_candidate_state": bool(torch.equal(candidate_loss_c, repair_loss_c)),
             "forward_loss_equal_at_repair_state": bool(torch.equal(candidate_loss_r, repair_loss_r)),
             "candidate_state_gradient_effect_l2": norm(candidate_grad_c - repair_grad_c),
@@ -286,6 +294,7 @@ def main() -> None:
     feedback_summary = feedback_path.finalize()
     actual_summary = actual_path.finalize()
     final_drift = candidate_master - repair_master
+    loss_gaps = [float(row["paired_loss_gap_candidate_minus_repair"]) for row in records]
     assert local_path.total is not None and feedback_path.total is not None
     local_final_cosine = cosine(local_path.total, final_drift)
     feedback_final_cosine = cosine(feedback_path.total, final_drift)
@@ -344,6 +353,13 @@ def main() -> None:
             "max_recurrence_relative": max_recurrence_relative,
             "global_master_difference_closure_l2": norm(
                 actual_path.total - final_drift.reshape(-1)
+            ),
+            "paired_loss_gap_final": loss_gaps[-1] if loss_gaps else None,
+            "paired_loss_gap_mean_last_512": (
+                float(np.mean(loss_gaps[-512:])) if loss_gaps else None
+            ),
+            "paired_loss_gap_std_last_512": (
+                float(np.std(loss_gaps[-512:])) if loss_gaps else None
             ),
         },
         "records": records,

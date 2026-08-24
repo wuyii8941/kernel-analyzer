@@ -22,11 +22,21 @@
     },
     {
       "case_id": "liger_fused_ce_t128",
-      "descriptive_long_result": "PENDING",
+      "descriptive_long_result": "ROBUST_4096_DIRECT_DIRECTION",
+      "effective_rank": 49.66595539992591,
       "endpoint": "fused cross-entropy dW accumulation",
-      "exact_A4096": null,
-      "execution_status": "PENDING",
-      "model": "Qwen3-1.7B + Liger"
+      "exact_A4096": 14.018456804811636,
+      "execution_status": "COMPLETE_4096",
+      "late_window_count": 64,
+      "late_window_fraction_A_above_one": 1.0,
+      "late_windows_A_above_one": 64,
+      "measurement_steps": 4096,
+      "model": "Qwen3-1.7B + Liger",
+      "sign_flip_null_upper_95": 1.1629214895391766,
+      "sign_flip_one_sided_p": 0.000999000999000999,
+      "sketch_A4096": 2.6973696642259224,
+      "source_artifact": "results/property/declared_persistent_4096/liger_fused_ce.json",
+      "source_sha256": "16b439e3e8a2a83f4ea81400ab537a203d41d585d83af652ed1f545dccec0add"
     },
     {
       "case_id": "phi4_seq64_lmhead_dx",
@@ -96,13 +106,24 @@
     }
   ],
   "claim_boundary": "4096-step same-state direct update audit; not full training convergence or closed-loop feedback",
-  "complete_4096_count": 4,
-  "missing": [
-    "liger_fused_ce_t128"
-  ],
+  "complete_4096_count": 5,
+  "merged_audit": {
+    "final_case_count": 4,
+    "final_cases": [
+      "Liger fused CE (direct)",
+      "Phi lm_head dX (direct)",
+      "Qwen lm_head dX (direct)",
+      "Qwen3-VL SiLU (feedback-sustained)"
+    ],
+    "historical_candidate_count": 11,
+    "matrix_record_count": 29,
+    "merged_audit_row_count": 26,
+    "unique_matrix_case_ids": 23
+  },
+  "missing": [],
   "population": "all six repository records historically declared as 32-step directional/persistent",
-  "result_sha256": "4fb38ab6bbac8158c40e4b4d7f4f015e88e6ba44600d0266baaf387b3242a114",
-  "robust_4096_direct_count": 2,
+  "result_sha256": "359289a0ccdc2a9f37085c6a8ad953ab976d38466f667e301cd5e48e6be80370",
+  "robust_4096_direct_count": 3,
   "schema": "kernel-analyzer-declared-persistent-4096-summary-v1",
-  "status": "INCOMPLETE"
+  "status": "COMPLETE_WITH_FAIL_CLOSED_ABSTENTION"
 }

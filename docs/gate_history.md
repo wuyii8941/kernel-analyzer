@@ -20,6 +20,7 @@ mistaken for post-hoc threshold fitting.
 | 2026-08-22 | `16afc8d` | short-screen protocol v3 | Increased CountSketch dimension from 64 to 256 after an engineering power audit. The Ministral diagnostic was not promoted to held-out evidence; v3 was frozen for subsequent validation. |
 | 2026-08-22 | `36958d5` | one disjoint `NEW_IMPL` v3 validation | Gemma formation and consequence were moved to separate state banks. Local source was null-like; feedback/actual paths were risk candidates. This added a feedback-sustained validation record, not a strict Flash-style source case. |
 | 2026-08-22 | `75a3fba` | property-search phase closed with explicit scope | Recorded that the workflow is complete as a frozen, fail-closed prioritization system while universal-property, control, and cross-implementation limitations remain explicit. |
+| 2026-08-25 | current long-run audit | 16/32-step labels demoted to screening; 4096-step review becomes authoritative for long-horizon direction | Liger (`A=14.018`), Phi (`A=46.090`) and Qwen (`A=6.488`) have robust direct direction; SiLU has long-run feedback separation with a paired loss gap; Mamba, saved-P and both `v_proj` rows are not robust; layer-23/Gemma4/DeepSeek `dV` remain fail-closed unresolved. This is new horizon/state evidence, not a threshold change. The merged audit is 26 rows from 11 historical candidates plus 23 unique matrix IDs. |
 
 ## 历史审计计数
 
@@ -31,14 +32,22 @@ mistaken for post-hoc threshold fitting.
 
 这些数字描述不同的旧协议，不能当成当前统一 AdamW 下的正例数。
 
-## 当前统一 AdamW 计数
+## 统一 AdamW 16/32 步筛查计数
 
 - 回溯评估：**15** 行。
-- 确认的直接持续正例：**2** 行，Liger 和 Phi `lm_head dX`。
-- Qwen `lm_head dX`：AdamW 下直接更新抵消。
+- 短窗口升级项：Liger 和 Phi `lm_head dX`。
+- Qwen `lm_head dX`：仅在该 cold-start 32 步窗口内抵消。
 - `0543`：总体校正后保持未决。
 - 新 Gemma 实现检查：**3** 行，0 个直接持续正例、1 个状态反馈对照、2 个不适用。
 - 通用跨算子 property：**0**。
+
+## 当前 4096 步长程复核
+
+- 稳健长程直接方向：Phi 与 Qwen `lm_head dX`。
+- 未形成稳健长程直接方向：Mamba `in_proj`、saved-P。
+- 拒绝判断：layer-23 attention（历史实现身份无法重放）。
+- 尚未完成：Liger fused CE。
+- 这些是 direct-update 长程结果，不是 loss 收敛结果。
 
 The machine-readable sources are
 `results/coverage/existing_case_reaudit.json`, `case.md`, and

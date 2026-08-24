@@ -1,0 +1,595 @@
+{
+  "case_count": 26,
+  "definition": "A final bias case requires either robust 4096-step direct direction or a long-run feedback-sustained separation, plus observed paired parameter and loss separation. Different converged losses are not required or claimed.",
+  "final_case_count": 4,
+  "historical_candidate_count": 11,
+  "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
+  "rows": [
+    {
+      "case": "Liger fused CE",
+      "direct_sha256": "16b439e3e8a2a83f4ea81400ab537a203d41d585d83af652ed1f545dccec0add",
+      "final_label": "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
+      "formation_path": "event/pairing imbalance",
+      "long_direct": {
+        "A4096": 14.018456804811636,
+        "artifact": "results/property/declared_persistent_4096/liger_fused_ce.json",
+        "late_windows": 64,
+        "late_windows_above_one": 64,
+        "long_direct": "ROBUST",
+        "null95": 1.1629214895391766,
+        "p": 0.000999000999000999,
+        "status": "COMPLETE_4096",
+        "steps": 4096
+      },
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "fused CE dW accumulation",
+      "paired_consequence": {
+        "artifact": "results/property/paired_loss_4096/liger_fused_ce.json",
+        "final_loss_gap": -0.13049191236495972,
+        "loss_separation_observed": true,
+        "parameter_distance": 9.266324996948242,
+        "recent_loss_gap_mean": 0.0006728400081801311,
+        "recent_loss_gap_std": 0.020003448625209724,
+        "status": "COMPLETE_PAIRED_LOSS_AUDIT",
+        "steps": 4096
+      },
+      "paired_sha256": "566a7ec7ba54ff297a5e5951b664e56ada9d9b9f1012594acfc0a1b3cbfb2cd2",
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "Phi lm_head dX",
+      "direct_sha256": "3da377afc94c8cc906b257ce48760d8983ce4764f48a9bbcbecca96767501073",
+      "final_label": "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
+      "formation_path": "event/pairing imbalance + backward transport",
+      "long_direct": {
+        "A4096": 46.09035419375598,
+        "artifact": "results/property/declared_persistent_4096/phi_lmhead_dx.json",
+        "late_windows": 64,
+        "late_windows_above_own_null": 64,
+        "long_direct": "ROBUST",
+        "null95": 1.5652383432023378,
+        "p": 0.000999000999000999,
+        "status": "COMPLETE_4096",
+        "steps": 4096
+      },
+      "model": "Phi-4-mini",
+      "operator_or_region": "lm_head backward dX",
+      "paired_consequence": {
+        "artifact": "results/property/convergence_v1/phi_carrier_adamw_convergence.json",
+        "final_loss_gap": 0.0015773475170135498,
+        "loss_separation_observed": true,
+        "parameter_distance": 0.01911034993827343,
+        "recent_loss_gap_mean": 0.0008656177669763565,
+        "recent_loss_gap_std": 0.0105780582714005,
+        "status": "MAX_STEPS_WITHOUT_FROZEN_LOSS_PLATEAU",
+        "steps": null
+      },
+      "paired_sha256": "a0625c30f0579ff0d054c8116cf49d02ecf02276b66b1ff2c5d356bf35821423",
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "Qwen lm_head dX",
+      "direct_sha256": "8a5f392d52238c8380d2b1a0620910d11a1e7c16dd995589cfab9357c69bbc9a",
+      "final_label": "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
+      "formation_path": "event/pairing imbalance + backward transport",
+      "long_direct": {
+        "A4096": 6.488266582904519,
+        "artifact": "results/property/declared_persistent_4096/qwen_lmhead_dx.json",
+        "late_windows": 64,
+        "late_windows_above_one": 64,
+        "long_direct": "ROBUST",
+        "null95": 1.0310254717065521,
+        "p": 0.000999000999000999,
+        "status": "COMPLETE_4096",
+        "steps": 4096
+      },
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "lm_head backward dX",
+      "paired_consequence": {
+        "artifact": "results/property/paired_loss_4096/qwen_lmhead_dx.json",
+        "final_loss_gap": 1.2129545211791992e-05,
+        "loss_separation_observed": true,
+        "parameter_distance": 0.001631635008379817,
+        "recent_loss_gap_mean": 5.691312253475189e-06,
+        "recent_loss_gap_std": 0.0005042854995146085,
+        "status": "COMPLETE_PAIRED_LOSS_AUDIT",
+        "steps": 4096
+      },
+      "paired_sha256": "f67137bc2f09acf5f21af3691c0019268b092cabf96bd22384fb87401d77314f",
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "Qwen64 v_proj",
+      "direct_sha256": "73fd0ac2a9b0b50d740f2150a494fec83f3deee1316b18367b216a5e36f2a79b",
+      "final_label": "NO_ROBUST_LONG_DIRECT_BIAS",
+      "formation_path": "conditional source asymmetry",
+      "long_direct": {
+        "A4096": 0.999792219281786,
+        "artifact": "results/property/declared_persistent_4096/qwen64_vproj_output.json",
+        "late_windows": 64,
+        "late_windows_above_one": 29,
+        "long_direct": "NOT_ROBUST",
+        "null95": 1.2712482153463085,
+        "p": 0.7572427572427572,
+        "status": "COMPLETE_4096",
+        "steps": 4096
+      },
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "seq64 v_proj MM + output rounding",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "Qwen v_proj",
+      "direct_sha256": "e84f2af08d21aa24df3e8fe273357871ceb7a2d4eafee7e2567ec20f407edd2c",
+      "final_label": "NO_ROBUST_LONG_DIRECT_BIAS",
+      "formation_path": "local arithmetic/pairing",
+      "long_direct": {
+        "A4096": 0.9812661182136223,
+        "artifact": "results/property/declared_persistent_4096/qwen_vproj_output.json",
+        "late_windows": 64,
+        "late_windows_above_one": 32,
+        "long_direct": "NOT_ROBUST",
+        "null95": 1.4237852125377095,
+        "p": 0.5094905094905094,
+        "status": "COMPLETE_4096",
+        "steps": 4096
+      },
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "v_proj MM/output rounding",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "Mamba in_proj",
+      "direct_sha256": "3a1123c820d215cfbf5e8f066288d2a6508a852457b43e782483642db40d6eb8",
+      "final_label": "NO_ROBUST_LONG_DIRECT_BIAS",
+      "formation_path": "local arithmetic/pairing",
+      "long_direct": {
+        "A4096": 1.10955228576708,
+        "artifact": "results/property/declared_persistent_4096/mamba_in_proj.json",
+        "late_windows": 64,
+        "late_windows_above_one": 33,
+        "long_direct": "NOT_ROBUST",
+        "null95": 1.1276564218974718,
+        "p": 0.10789210789210789,
+        "status": "COMPLETE_4096",
+        "steps": 4096
+      },
+      "model": "Mamba-130M",
+      "operator_or_region": "in_proj matrix multiply",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "saved-P",
+      "direct_sha256": "83886ea28d0eff5bbbc64ba8e9779ee3f35c16ac82324b345b955f7cda1032ea",
+      "final_label": "NO_ROBUST_LONG_DIRECT_BIAS",
+      "formation_path": "response/state-contract imbalance",
+      "long_direct": {
+        "A4096": 1.1953833335315587,
+        "artifact": "results/property/declared_persistent_4096/qwen_saved_p.json",
+        "late_windows": 64,
+        "late_windows_above_one": 28,
+        "long_direct": "NOT_ROBUST",
+        "null95": 1.1134614778307519,
+        "p": 0.08391608391608392,
+        "status": "COMPLETE_4096",
+        "steps": 4096
+      },
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "layer-27 saved-P softmax backward",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "Qwen3-VL SiLU",
+      "direct_sha256": "e01db71e626f9f98fc58c8f0e753ba9b3a8f735276af1e07833539ac3a46ef60",
+      "final_label": "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT",
+      "formation_path": "response asymmetry",
+      "long_direct": {
+        "A4096": 3.1003410526160846,
+        "artifact": "results/property/declared_persistent_4096/qwen3vl_silu_4096_with_loss.json",
+        "feedback_A4096": 3.1003987449351644,
+        "final_drift_l2": 0.8884283900260925,
+        "local_A4096": 1.0170143222848727,
+        "long_direct": "FEEDBACK_SUSTAINED",
+        "paired_loss_gap_final": -7.947285496356926e-09,
+        "paired_loss_gap_mean_last_512": 4.9280933604733956e-08,
+        "paired_loss_gap_std_last_512": 1.286888539562174e-07,
+        "status": "COMPLETE_4096",
+        "steps": 4096,
+        "verdict": "FEEDBACK_SUSTAINED_SEPARATION"
+      },
+      "model": "Qwen3-VL-Reranker-2B",
+      "operator_or_region": "SiLU backward",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/qwen3vl_silu_4096_with_loss.json",
+        "final_loss_gap": -7.947285496356926e-09,
+        "loss_separation_observed": true,
+        "parameter_distance": 0.8884283900260925,
+        "recent_loss_gap_mean": 4.9280933604733956e-08,
+        "recent_loss_gap_std": 1.286888539562174e-07,
+        "status": "COMPLETE_IN_LONG_RECURRENCE",
+        "steps": 4096
+      },
+      "paired_sha256": null,
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "Gemma4 RMSNorm",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY",
+      "formation_path": "response asymmetry / feedback candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/gemma4_norm_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "frozen runtime wrapper bytes no longer match the available compiler environment",
+        "status": "UNRESOLVED_REPLAY_RUNTIME"
+      },
+      "model": "Gemma-4 E2B",
+      "operator_or_region": "RMSNorm / projection feedback region",
+      "paired_consequence": {
+        "artifact": "results/property/paired_loss_4096/gemma4_norm_4096.json",
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "layer-23 attention",
+      "direct_sha256": "f41f5c01067f383602d77cae676282db2594f6169b50036fafcc8657eb23f511",
+      "final_label": "ABSTAIN_NOT_REPLAYABLE",
+      "formation_path": "event/pairing imbalance",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/layer23_qproj_attention_state_region.json",
+        "long_direct": "ABSTAIN",
+        "reason": "Do not spend 4096 steps repeating an exact zero contrast. Restore the historical compiled wrapper or generate a newly screened nonzero repair before long-run measurement.",
+        "status": "ABSTAIN"
+      },
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "attention S_bwd/K to q_proj",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "DeepSeek layer-35 dV",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_FORMATION",
+      "formation_path": "formation unresolved; event/pairing candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/deepseek_l35_dv.json",
+        "status": "NOT_RUN"
+      },
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "attention dV BMM",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "gemma4_random_gelu_backward1860",
+      "direct_sha256": null,
+      "final_label": "NOT_APPLICABLE_NO_CARRIER_EFFECT",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "google/gemma-4-E2B",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "gemma4_random_gelu_loss_backward",
+      "direct_sha256": null,
+      "final_label": "FEEDBACK_CONTROL_NO_DIRECT_GATE",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "COMPLETE_NEW_IMPL_FEEDBACK_CONTROL"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "google/gemma-4-E2B",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "gemma4_random_softmax_backward",
+      "direct_sha256": null,
+      "final_label": "NOT_APPLICABLE_NO_CARRIER_EFFECT",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "google/gemma-4-E2B",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "multishape-backward-cell-0057",
+      "direct_sha256": null,
+      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "multishape-backward-cell-0103",
+      "direct_sha256": null,
+      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "multishape-backward-cell-0153",
+      "direct_sha256": null,
+      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "multishape-backward-cell-0190",
+      "direct_sha256": null,
+      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "multishape-backward-cell-0191",
+      "direct_sha256": null,
+      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "multishape-backward-cell-0450",
+      "direct_sha256": null,
+      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "/data1/tzh/models/state-spaces/mamba-130m-hf",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "multishape-backward-cell-0501",
+      "direct_sha256": null,
+      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "multishape-backward-cell-0508",
+      "direct_sha256": null,
+      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "multishape-backward-cell-0543",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_FORMATION",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "UNRESOLVED_MULTIPLICITY_CANDIDATE"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "multishape-backward-cell-0654",
+      "direct_sha256": null,
+      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "multishape-backward-cell-0745",
+      "direct_sha256": null,
+      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    },
+    {
+      "case": "multishape-backward-cell-0747",
+      "direct_sha256": null,
+      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
+      "formation_path": "complete roster row; no confirmed long-source gate",
+      "long_direct": {
+        "long_direct": "NOT_RUN",
+        "reason": [
+          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+        ],
+        "status": "NOT_ESCALATED"
+      },
+      "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+      "operator_or_region": "case-stage matrix row",
+      "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "roster_control_or_unresolved"
+    }
+  ],
+  "schema": "all-historical-bias-candidates-long-audit-v1",
+  "scope_counts": {
+    "historical_candidate": 11,
+    "roster_control_or_unresolved": 15
+  },
+  "unindexed_historical_candidate_count": 3,
+  "unique_matrix_case_count": 23
+}

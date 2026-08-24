@@ -8,7 +8,7 @@
 2. [当前主结论](current_mainline.md)：唯一的论文主线和数字口径。
 3. [Phi 同协议因果干预](phi_adamw_source_intervention.md)：cold-start AdamW 下 natural、sham 和四个随机舍入臂。
 4. [v4 简单说明](direct_persistence_v4_simple_summary.md)：面向非本项目读者的短版说明。
-5. [短程筛查方法](direct_persistence_screen.md)：16 步筛查、32 步确认和输出含义。
+5. [短程筛查方法](direct_persistence_screen.md)：16/32 步筛查、4096 步复核和输出含义。
 6. [证据表](direct_persistence_evidence.md)：直接作用、训练状态反馈和实际参数变化的分解。
 7. [optimizer 结论](direct_persistence_optimizer.md)：optimizer 能改变结果，但不是已确认的统一根因。
 8. [完成度矩阵](direct_persistence_v4_completion_matrix.md)：哪些已完成、哪些没有完成。
@@ -24,18 +24,19 @@
 - 全量首轮检查：`1,562/1,562` 个具体输出位置。
 - 历史无状态 SGD 记录：3 个有界案例；它们不是 3 个独立实现机制。
 - 统一 cold-start AdamW 回溯集：15 行。
-- AdamW 下确认的直接持续案例：2 行，Liger 和 Phi `lm_head dX`。
+- 统一 cold-start AdamW 的 32 步筛查阳性：Liger 和 Phi `lm_head dX`；它们是短程结果，不是最终长期计数。
 - Phi 已在同一 cold-start AdamW 协议下完成 stochastic-rounding source intervention：natural 显著，四个随机舍入重复均回到各自随机抵消范围。
 - 结果盲候选 `0543`：总体校正后保持未决，不算正例，也不算负例。
-- Qwen `lm_head dX`：在 AdamW 下直接更新抵消。
+- warm-state 4096 步复核：Liger `A=14.018`、Phi `lm_head dX` `A=46.090`、Qwen `lm_head dX` `A=6.488` 均有稳健长程直接方向；Qwen3-VL SiLU 为反馈维持型长程案例并记录到配对 loss gap。Mamba、saved-P 和两个 `v_proj` rows 没有形成稳健长程直接方向；layer-23、Gemma4 和 DeepSeek `dV` 保持未决。
+- 完整审计口径：23 个唯一主矩阵 ID、11 个历史候选、26 行合并审计，最终 4 个案例。
 - 未见实现检查：较早冻结的 Gemma v3 有 1 个直接抵消、状态反馈持续的控制；v4 又完成 3 个新目标，其中 1 个是状态反馈对照、2 个没有可测参数作用。两轮都没有直接持续正例。
 - 通用全算子 Oracle：尚未建立。
 
 ## 当前结论
 
-当前成果是一套有明确使用条件的短程筛查方法：在 moments 从零开始并随后正常更新的 AdamW 设置下，先检查算子直接造成的参数更新差异是否连续累积，再把最终参数分离拆成算子直接作用和训练状态反馈。
+当前成果是一套有明确使用条件的两级方法：先在 moments 从零开始并随后正常更新的 AdamW 设置下，用 16/32 步检查算子直接造成的参数更新差异；再对声明的重点案例 warm up 128 步并运行 4096 步，用累计量和后半程滚动窗口判断长程方向。最终参数分离仍需拆成算子直接作用和训练状态反馈。
 
-它可以用来决定哪些实现值得做完整 32 步检查，但短筛没有升级不等于安全。
+它可以用来决定哪些实现优先进入长程检查，但短筛没有升级不等于长期安全。4096 步也不是 loss 收敛实验；若要声称最终训练后果，还需要全参数训练与稳定 loss 窗口。
 
 ## 已决定停止扩展的项目
 

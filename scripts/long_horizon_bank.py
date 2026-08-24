@@ -75,6 +75,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=20260805)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--allow-custom-shape", action="store_true",
+        help="allow an explicitly recorded exploratory sequence length/batch size instead of the frozen 1024x4 campaign",
+    )
     return parser.parse_args()
 
 
@@ -319,7 +323,7 @@ def main() -> None:
     stop_after = args.steps if args.stop_after is None else args.stop_after
     if not (1 <= stop_after <= args.steps):
         raise ValueError("stop-after must be within [1, steps]")
-    if args.seq_len != 1024 or args.batch_size != 4:
+    if (args.seq_len != 1024 or args.batch_size != 4) and not args.allow_custom_shape:
         raise ValueError("this frozen campaign requires the pilot-selected seq_len=1024, batch_size=4")
     if args.sketch_every < 1 or args.resume_every < 1:
         raise ValueError("sketch-every and resume-every must be positive")

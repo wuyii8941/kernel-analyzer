@@ -32,8 +32,18 @@ scope is summarized in
 [docs/bias_property_search_completion.md](docs/bias_property_search_completion.md).
 Older round notes are retained only as experiment history; they must not be
 used for the current case count or headline conclusion. The current
-deliverable is a bounded cold-start AdamW Direct Persistence Screen, not a
-universal safety classifier.
+deliverable is a two-level workflow: a bounded 16/32-step AdamW direction
+screen followed by a 4096-step warm-state review. Short runs rank what to test;
+only the long run assigns the current long-horizon direction label. This is not
+a universal safety classifier, and a 4096-step direct-effect result is not a
+claim that training loss has converged to a different endpoint.
+
+The current long-horizon audit contains 23 unique matrix case IDs, 11
+historical candidates, and 26 merged audit rows. It currently confirms four
+final cases: three direct long-horizon cases (Liger fused CE, Phi `lm_head dX`,
+and Qwen `lm_head dX`) plus one feedback-sustained Qwen3-VL SiLU case with a
+paired loss gap. The full row-by-row status is in
+`docs/all_bias_long_horizon_audit.md`.
 
 The main code is in `src/` and `scripts/`.  Scientific artifacts are kept
 under `results/coverage/` and compact derivations under `results/final/`.

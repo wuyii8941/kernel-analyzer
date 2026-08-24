@@ -84,6 +84,25 @@ CASE_CONFIG = {
         "learning_rate": 1e-5,
         "contrast": "compiled reconstructed saved-P vs true-forward-P softmax VJP",
     },
+    "qwen_vproj": {
+        "case_id": "qwen128_vproj_output",
+        "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+        "architecture": "qwen",
+        "carriers": ["model.layers.0.self_attn.v_proj.weight"],
+        "learning_rate": 1e-5,
+        "contrast": "compiled BF16 v_proj MM/output rounding vs FP32 MM + BF16 ABI cast",
+        "target_sha": "1847d6184bdf781a1b57531571a298c898337332aa694e47a96de633d30ed2af",
+    },
+    "qwen64_vproj": {
+        "case_id": "qwen64_vproj_output",
+        "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+        "architecture": "qwen",
+        "carriers": ["model.layers.0.self_attn.v_proj.weight"],
+        "learning_rate": 1e-5,
+        "contrast": "seq64 compiled BF16 v_proj MM/output rounding vs FP32 MM + BF16 ABI cast",
+        "target_sha": None,
+        "sequence_length": 64,
+    },
 }
 
 
@@ -293,7 +312,7 @@ def main() -> None:
     # and invalidates the endpoint identity, so retain the original autograd
     # population for those cases.  The simpler lm-head/Liger boundaries may
     # safely stop at their declared carriers.
-    if args.case in {"qwen_lmhead_dx", "liger_fused_ce"}:
+    if args.case in {"qwen_lmhead_dx", "liger_fused_ce", "qwen_vproj", "qwen64_vproj"}:
         for name, parameter in model.named_parameters():
             parameter.requires_grad_(name in carriers)
 
@@ -357,6 +376,21 @@ def main() -> None:
                     observer = VProjRepair(modules, "REPAIR_FP32_CAST_BF16", config["target_sha"])
                 elif args.case == "qwen_saved_p":
                     observer = SavedProbabilityRepair(modules, "REPAIR_SAVED_P")
+                elif args.case in {"qwen_vproj", "qwen64_vproj"}:
+                    # The frozen source-line digest can change when the
+                    # compiler regenerates the graph.  For this historically
+                    # screened output, bind the repair to the declared
+                    # (128,1024) v_proj output shape instead of silently
+                    # accepting a different MM or claiming a zero contrast.
+                    observer = VProjRepair(
+                        modules,
+                        "REPAIR_FP32_CAST_BF16",
+                        None,
+                        expected_output_shape=(
+                            int(config.get("sequence_length", 128)), 1024
+                        ),
+                        expected_match_index=2,
+                    )
                 else:
                     raise AssertionError(args.case)
             if observer is None:
@@ -373,7 +407,7 @@ def main() -> None:
                     "changed_coordinates": -1,
                     "endpoint_error_l2": observer.changed_l2,
                 }
-            elif args.case == "mamba_in_proj":
+            elif args.case in {"mamba_in_proj", "qwen_vproj", "qwen64_vproj"}:
                 if observer.local is None:
                     raise RuntimeError("Mamba repair did not expose its endpoint")
                 local = {
@@ -422,6 +456,9 @@ def main() -> None:
         repair_digest, repair_loss_value, grad_r, local = gradient(
             state, repair=True, seed=50_000 + index
         )
+        # v_proj is a forward-output contrast, so its repair is allowed to
+        # change the scalar loss.  The other listed repairs are backward-only
+        # and must preserve the forward value exactly.
         if args.case in {"qwen_lmhead_dx", "qwen_saved_p", "liger_fused_ce"} and natural_digest != repair_digest:
             raise RuntimeError("backward-only repair changed forward loss")
         update_n, next_first, next_second = update_tree(
