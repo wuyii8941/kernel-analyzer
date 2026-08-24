@@ -13,7 +13,7 @@
     "multishape-backward-cell-0543"
   ],
   "schema": "kernel-analyzer-direct-persistence-v4-optimizer-state-run-manifest-v1",
-  "status": "PARTIAL_SAME_STATE_ABLATION",
+  "status": "COMPLETE_PHASE_RESPONSE_PARTIAL_0543",
   "completed_cases": ["liger_fused_ce_t128", "phi4_seq64_lmhead_dx", "qwen_seq128_lmhead_dx", "gemma4_e2b_ple_rmsnorm_feedback"],
   "completed_artifacts": [
     "optimizer_state/liger_t128_same_state_ablation.json",
@@ -28,10 +28,14 @@
     "direct_screen_role": "FEEDBACK_CONTROL_NOT_DIRECT_POSITIVE"
   },
   "pending_cases": ["multishape-backward-cell-0543"],
+  "last_attempt": "optimizer_state/phi0543_replay_attempt.json",
   "phase_conditioned_natural": {
-    "status": "ABSTAIN_MISSING_PHASE_CAPTURE",
-    "artifact": "optimizer_state/phase_conditioned_natural.json",
+    "status": "COMPLETE_GENUINE_EARLY_MIDDLE_LATE_PHASES",
+    "artifact": "optimizer_state/qwen_phase_conditioned_response.json",
+    "case_id": "qwen3_1p7b_lmhead_dx_natural_phase_response",
+    "carrier": "model.layers.0.self_attn.q_proj.weight",
     "required": ["early", "middle", "late"],
     "synthetic_cross_phase_mixing": false
-  }
+  },
+  "claim_boundary": "Natural phase response is complete for Qwen with each phase's own weights, inputs and moments. It is a same-state response probe, not a live persistence trajectory. 0543 remains fail-closed because the frozen wrapper identity changed during a new run."
 }

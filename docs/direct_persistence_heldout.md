@@ -25,6 +25,23 @@ This is one genuine `NEW_IMPL` negative.  It does not provide recall or AUROC:
 there is no positive in this one-row pool.  More mechanically frozen unseen
 implementations are required before making a generalization claim.
 
+## Two additional Gemma target checks
+
+Two more targets from the pre-frozen Gemma pool were run in a fresh process
+that built its own runtime release. The source result was written before the
+32-step consequence run.
+
+| target | direct/local result | actual result | status |
+|---|---:|---:|---|
+| softmax backward, `k_norm` | `A32=0.000`, no carrier effect | `1.5e-8` | not applicable: no observed carrier difference |
+| GELU/loss backward, projection | `A32=1.0002` | `A32=3.0267` | feedback control, not direct persistence |
+
+These add controls, not new positives. The first target had no measurable
+effect on the chosen carrier, and the second had a large final separation only
+after feedback; neither can be used to claim that the whole model is safe.
+The compact audit is
+`results/property/direct_persistence_v4/heldout/new_impl_targets_v2.json`.
+
 Artifacts:
 
 - `results/property/direct_persistence_v4/heldout_gemma_pool.json`

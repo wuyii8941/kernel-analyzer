@@ -1,8 +1,8 @@
 {
   "abstained": {
     "0543_optimizer_ablation": {
-      "reason": "The archived 0543 file has norms/digests but not vectors or optimizer moments needed for a same-state response replay.",
-      "status": "ABSTAIN_MISSING_RAW_GRADIENT_AND_MOMENT_CAPTURE"
+      "reason": "A fresh replay was attempted, but the current Phi runtime wrapper sequence differs from the frozen release. No raw vectors were imputed.",
+      "status": "ABSTAIN_FROZEN_WRAPPER_IDENTITY_CHANGED"
     },
     "complete_tolerance_family": {
       "missing": [
@@ -17,12 +17,12 @@
       "status": "PARTIAL_AVAILABLE_RMS_BASELINE"
     },
     "heldout_recall_and_auroc": {
-      "reason": "One valid NEW_IMPL row cannot define recall or AUROC, and no positive is inferred.",
-      "status": "ABSTAIN_ONE_NEW_IMPL_NEGATIVE_ONLY"
+      "reason": "The fresh Gemma target checks add no direct-persistence positive; one is not applicable and one is feedback-sustained. Recall and AUROC remain undefined.",
+      "status": "ABSTAIN_NO_NEW_IMPL_DIRECT_POSITIVE"
     },
     "natural_early_middle_late_optimizer_phases": {
-      "reason": "No genuine early, middle and late weights/input/gradient/moment captures are available; no moments were mixed across phases.",
-      "status": "ABSTAIN_MISSING_PHASE_CAPTURE"
+      "reason": "The Qwen phase result uses each phase's own weights, inputs and moments; it is a same-state response probe, not a live persistence trajectory.",
+      "status": "COMPLETE_GENUINE_EARLY_MIDDLE_LATE_PHASES"
     },
     "severity_and_catch_fix": {
       "catch_fix_status": "NOT_STARTED",
@@ -31,11 +31,16 @@
     }
   },
   "completed": {
+    "fresh_new_impl_target_checks": {
+      "artifact": "results/property/direct_persistence_v4/heldout/new_impl_targets_v2.json",
+      "observed_status": "COMPLETE_TWO_FRESH_IN_PROCESS_GEMMA_ROWS",
+      "status": "COMPLETE_TWO_FRESH_IN_PROCESS_GEMMA_ROWS"
+    },
     "holm_families": true,
     "one_new_impl_heldout_negative": true,
     "result_digest_manifest": {
       "failures": [],
-      "files_checked": 31,
+      "files_checked": 43,
       "status": "COMPLETE"
     },
     "retrospective_15_row_reanalysis": true,

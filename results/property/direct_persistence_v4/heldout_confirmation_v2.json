@@ -1,0 +1,112 @@
+{
+  "claim_boundary": "The two rows add NEW_IMPL controls and do not supply a positive; recall and AUROC remain undefined.",
+  "counting": {
+    "fresh_direct_negative": 0,
+    "fresh_direct_positive": 0,
+    "fresh_feedback_controls": 1,
+    "fresh_not_applicable": 1,
+    "fresh_rows": 2
+  },
+  "rows": [
+    {
+      "artifacts": {
+        "consequence.json": {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_softmax_backward.consequence.json",
+          "sha256": "e1d70817b47aefa037ce2333249e05dac1041e7d4d1f3ab91dc9c9a91846cf8d"
+        },
+        "formation.json": {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_softmax_backward.formation.json",
+          "sha256": "37264ebfef771a63bd414110421008228b898223caceabc40c16399039c28c6c"
+        },
+        "prediction.json": {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_softmax_backward.prediction.json",
+          "sha256": "713e6325da402e8aac8e7d4722045d74b397de78b601b0fac313f677c52bbca1"
+        },
+        "short_screen.json": {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_softmax_backward.short_screen.json",
+          "sha256": "f5bd0573905bd101de55f6e18ec9120298067c90fd49b20a48200d1b3e430a51"
+        }
+      },
+      "carrier": "model.language_model.layers.0.self_attn.k_norm.weight",
+      "case_id": "gemma4_random_softmax_backward",
+      "claim_boundary": "This is a fresh in-process Gemma implementation check. The source score was frozen before the paired trajectory. A negative direct score does not prove full training safety; a large actual score with local_A32 near one is reported as feedback-sustained.",
+      "consequence": {
+        "actual_A32": 1.0,
+        "actual_resultant_l2": 1.4901161193847656e-08,
+        "feedback_A32": 1.0,
+        "feedback_resultant_l2": 1.4901161193847656e-08,
+        "final_drift_l2": 1.4901161193847656e-08,
+        "local_A32": 0.0,
+        "local_resultant_l2": 0.0,
+        "steps": 32
+      },
+      "formation": {
+        "complete_coordinate_open_loop_amplification": 1.0,
+        "odd_even_resultant_cosine": 0.0,
+        "states": 16
+      },
+      "model": "google/gemma-4-E2B",
+      "prediction": "NO_SOURCE_PERSISTENCE_UNDER_PROTOCOL",
+      "prediction_frozen_before_consequence": true,
+      "runtime_capture_sha256": "f52ca92c3b1cc352e3a85265bbd5405b16ba6f983035a4188f59c11549902db6",
+      "short_screen": {
+        "source": "gemma4_random_softmax_backward",
+        "status": "COMPLETE"
+      },
+      "source_dir": "/data1/tzh/cache/kernel_analyzer/direct_persistence_v4/gemma4_random_softmax_v3",
+      "status": "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT",
+      "target_region": "backward:1880/in_out_ptr0"
+    },
+    {
+      "artifacts": {
+        "consequence.json": {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_loss_backward.consequence.json",
+          "sha256": "0f2d6a2330e770c9fa40dcdc170840b7d606ccce6e30b6d1e75ee4d761a08f2f"
+        },
+        "formation.json": {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_loss_backward.formation.json",
+          "sha256": "127ea381a3192591459f797ff8132df953584749f6e300fdf25076e6911d34f0"
+        },
+        "prediction.json": {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_loss_backward.prediction.json",
+          "sha256": "1933e2ee35a3d44797ffbb88bc0fd47d9de9832bfb043bc261583ef3997130d3"
+        },
+        "short_screen.json": {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_loss_backward.short_screen.json",
+          "sha256": "cd6631ca2746b10d0120d3f57cc6573c1d4a4b0f5471578fbd0e8acea6bf9c46"
+        }
+      },
+      "carrier": "model.language_model.per_layer_model_projection.weight",
+      "case_id": "gemma4_random_gelu_loss_backward",
+      "claim_boundary": "This is a fresh in-process Gemma implementation check. The source score was frozen before the paired trajectory. A negative direct score does not prove full training safety; a large actual score with local_A32 near one is reported as feedback-sustained.",
+      "consequence": {
+        "actual_A32": 3.0266700917797276,
+        "actual_resultant_l2": 0.055619917809963226,
+        "feedback_A32": 3.0266701084649803,
+        "feedback_resultant_l2": 0.055619917809963226,
+        "final_drift_l2": 0.055619917809963226,
+        "local_A32": 1.0001881058381819,
+        "local_resultant_l2": 9.10153914901457e-07,
+        "steps": 32
+      },
+      "formation": {
+        "complete_coordinate_open_loop_amplification": 0.9999976669440956,
+        "odd_even_resultant_cosine": -4.868879155780245e-06,
+        "states": 16
+      },
+      "model": "google/gemma-4-E2B",
+      "prediction": "NO_SOURCE_PERSISTENCE_UNDER_PROTOCOL",
+      "prediction_frozen_before_consequence": true,
+      "runtime_capture_sha256": "6f18d4a1cdf8c074d78f05171330ac40f7b5db5a1c5677f8415b4d2884d8335f",
+      "short_screen": {
+        "source": "gemma4_random_gelu_loss_backward",
+        "status": "COMPLETE"
+      },
+      "source_dir": "/data1/tzh/cache/kernel_analyzer/direct_persistence_v4/gemma4_random_gelu_v3",
+      "status": "COMPLETE_NEW_IMPL_FEEDBACK_CONTROL",
+      "target_region": "backward:1401/out_ptr3"
+    }
+  ],
+  "schema": "kernel-analyzer-direct-persistence-v4-new-impl-confirmation-v2",
+  "status": "COMPLETE_TWO_FRESH_IN_PROCESS_GEMMA_ROWS"
+}

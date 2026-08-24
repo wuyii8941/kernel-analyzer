@@ -67,6 +67,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sketch-every", type=int, default=32)
     parser.add_argument("--resume-every", type=int, default=256)
     parser.add_argument("--milestones", type=int, nargs="+", default=[0, 64, 256, 1024, 2048, 4096])
+    parser.add_argument(
+        "--phase-resume-dir", type=Path,
+        help="optional directory for immutable model+optimizer snapshots at milestone steps",
+    )
     parser.add_argument("--lr", type=float, default=1e-5)
     parser.add_argument("--seed", type=int, default=20260805)
     parser.add_argument("--device", default="cuda")
@@ -397,6 +401,9 @@ def main() -> None:
         model.parameters(), lr=args.lr, betas=(0.9, 0.95), weight_decay=0.0, foreach=False
     )
     resume_path = output_dir / "latest_resume.pt"
+    phase_resume_dir = under_root(args.phase_resume_dir, "phase-resume-dir") if args.phase_resume_dir else None
+    if phase_resume_dir is not None:
+        phase_resume_dir.mkdir(parents=True, exist_ok=True)
     start_step = 0
     if args.resume:
         if not resume_path.exists():
@@ -443,9 +450,12 @@ def main() -> None:
         "bias_evaluation_requirement": "repeat each saved state and use reference replacement",
     }
 
+    milestones = set(args.milestones)
     if not args.resume:
         print("saving initial replaceable resume state 0", flush=True)
         manifest["latest_resume"] = save_resume(model, optimizer, 0, protocol_sha256, resume_path)
+        if phase_resume_dir is not None and 0 in milestones:
+            save_resume(model, optimizer, 0, protocol_sha256, phase_resume_dir / "phase_step_0000.pt")
         atomic_json(manifest_path, manifest)
 
     if start_step >= stop_after:
@@ -453,7 +463,6 @@ def main() -> None:
         return
 
     sketcher = FixedSketch(device)
-    milestones = set(args.milestones)
     run_started = time.perf_counter()
     for step in range(start_step + 1, stop_after + 1):
         offset = (step - 1) * args.batch_size * args.seq_len
@@ -499,6 +508,8 @@ def main() -> None:
         if checkpoint_due:
             print(f"saving replaceable resume state {step}", flush=True)
             manifest["latest_resume"] = save_resume(model, optimizer, step, protocol_sha256, resume_path)
+            if phase_resume_dir is not None and step in milestones:
+                save_resume(model, optimizer, step, protocol_sha256, phase_resume_dir / f"phase_step_{step:04d}.pt")
             manifest["completed_step"] = step
             manifest["status"] = "COMPLETE" if step == args.steps else "PAUSED_RESUMABLE"
             manifest["last_loss"] = loss_value

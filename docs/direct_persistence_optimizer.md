@@ -77,6 +77,25 @@ The Qwen artifact is
 Its 121-MB raw vectors remain outside the repository and are recorded by SHA-256
 in the artifact.
 
+## Natural training phases
+
+We also captured real Qwen weights, inputs and AdamW state at steps 0, 8 and 16.
+Each phase was measured with its own moments; no late state was installed on an
+early input. The carrier was the first attention `q_proj` weight, and each phase
+used four disjoint states:
+
+| natural phase | gradient difference A | captured AdamW A | reset moments A |
+|---|---:|---:|---:|
+| step 0 | 1.0075 | 1.0000 | 1.0000 |
+| step 8 | 1.0168 | 1.0092 | 1.0001 |
+| step 16 | 0.9976 | 0.9942 | 1.0002 |
+
+The result stays near the diffusive range in all three phases. This is evidence
+that the optimizer response depends on the natural phase, but it is not a live
+32-step persistence result and it does not prove a general optimizer rule.
+The compact artifact is
+`results/property/direct_persistence_v4/optimizer_state/qwen_phase_conditioned_response.json`.
+
 The Gemma feedback experiment gives a second, different result: replacing the
 normal optimizer behavior with stateless SGD or resetting moments reduces the
 later feedback separation in the previously frozen four-arm run. We also ran a

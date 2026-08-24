@@ -28,12 +28,12 @@ def load(path: Path) -> dict[str, Any]:
 
 def status_for(path: Path, expected: set[str]) -> dict[str, Any]:
     if not path.exists():
-        return {"status": "ABSTAIN_MISSING_ARTIFACT", "artifact": str(path.relative_to(ROOT))}
+        return {"status": "ABSTAIN_MISSING_ARTIFACT", "artifact": str(path.resolve().relative_to(ROOT.resolve()))}
     value = load(path)
     status = value.get("status")
     return {
         "status": status if status in expected else "ABSTAIN_UNEXPECTED_STATUS",
-        "artifact": str(path.relative_to(ROOT)),
+        "artifact": str(path.resolve().relative_to(ROOT.resolve())),
         "observed_status": status,
     }
 
@@ -48,6 +48,10 @@ def verify_sha256(out: Path) -> dict[str, Any]:
         if not line.strip():
             continue
         digest, rel = line.split("  ", 1)
+        # The audit writes its own JSON after reading the manifest, so including
+        # that file would create an impossible self-hash cycle.
+        if rel == "completion_audit.json":
+            continue
         path = out / rel
         checked += 1
         if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
@@ -88,21 +92,25 @@ def main() -> None:
                 "cases": optimizer.get("same_state_ablation", {}).get("completed_cases", []),
                 "status": "COMPLETE_FOUR_CASES" if len(optimizer.get("same_state_ablation", {}).get("completed_cases", [])) == 4 else "PARTIAL",
             },
-            "one_new_impl_heldout_negative": heldout.get("metrics", {}).get("eligible_rows") == 1 and heldout.get("metrics", {}).get("confirmed_negative") == 1,
+            "one_new_impl_heldout_negative": heldout.get("metrics", {}).get("eligible_rows") >= 1 and heldout.get("metrics", {}).get("confirmed_negative") == 1,
+            "fresh_new_impl_target_checks": status_for(
+                out / "heldout/new_impl_targets_v2.json",
+                {"COMPLETE_TWO_FRESH_IN_PROCESS_GEMMA_ROWS"},
+            ),
             "result_digest_manifest": verify_sha256(out),
         },
         "abstained": {
             "natural_early_middle_late_optimizer_phases": {
                 "status": optimizer_run.get("phase_conditioned_natural", {}).get("status", "ABSTAIN_MISSING_PHASE_CAPTURE"),
-                "reason": "No genuine early, middle and late weights/input/gradient/moment captures are available; no moments were mixed across phases.",
+                "reason": "The Qwen phase result uses each phase's own weights, inputs and moments; it is a same-state response probe, not a live persistence trajectory.",
             },
             "0543_optimizer_ablation": {
-                "status": "ABSTAIN_MISSING_RAW_GRADIENT_AND_MOMENT_CAPTURE",
-                "reason": "The archived 0543 file has norms/digests but not vectors or optimizer moments needed for a same-state response replay.",
+                "status": "ABSTAIN_FROZEN_WRAPPER_IDENTITY_CHANGED",
+                "reason": "A fresh replay was attempted, but the current Phi runtime wrapper sequence differs from the frozen release. No raw vectors were imputed.",
             },
             "heldout_recall_and_auroc": {
-                "status": "ABSTAIN_ONE_NEW_IMPL_NEGATIVE_ONLY",
-                "reason": "One valid NEW_IMPL row cannot define recall or AUROC, and no positive is inferred.",
+                "status": "ABSTAIN_NO_NEW_IMPL_DIRECT_POSITIVE",
+                "reason": "The fresh Gemma target checks add no direct-persistence positive; one is not applicable and one is feedback-sustained. Recall and AUROC remain undefined.",
             },
             "complete_tolerance_family": {
                 "status": tolerance.get("status", "ABSTAIN"),

@@ -62,14 +62,27 @@ Gemma 4 的未见实现反馈控制也做了同状态响应对照：梯度差异
 为 `1.0001`。因此它不是 direct-persistence positive；它说明最终轨迹分离
 不能替代局部更新检查，反馈和直接作用必须分开报告。
 
-## 第一个未见实现的前瞻检查
+## 未见实现的前瞻检查
 
 Gemma 4 是事前冻结的新实现。它的局部 direct 分数在 16 步为 `0.986`、在
 32 步为 `1.0003`，因此没有通过 direct persistence；但 actual trajectory
 为 `3.231`，主要由 feedback 维持。这是一个有效的 `NEW_IMPL` 负例，而不是
-“整个训练安全”的证明。当前只有这一个未见实现，不能计算 recall 或 AUROC。
+“整个训练安全”的证明。
+
+另外两个 Gemma 4 目标已经在同一个新进程中完成了 16 步形成检查和 32 步后果检查，
+且源判断在轨迹开始前冻结：
+
+| 目标 | 形成判断 | 32 步局部作用 | 32 步实际分离 | 解释 |
+|---|---|---:|---:|---|
+| softmax backward / `k_norm` | 无直接持续性 | `A=0.000`，无可见载体差异 | `1.5e-8` | 没有可测的参数作用，记为不适用 |
+| GELU/loss backward / projection | 无直接持续性 | `A=1.0002` | `A=3.027` | 局部作用近似抵消，分离主要由反馈维持 |
+
+这两个结果增加了未见实现的控制项，但没有增加新的 direct-persistence 正例。
+当前未见实现池仍没有正例，因此不能计算 recall 或 AUROC；它们也不证明整个模型安全。
 
 详见 [Gemma held-out 记录](direct_persistence_heldout.md)。
+本轮两个新目标的紧凑结果见
+`results/property/direct_persistence_v4/heldout/new_impl_targets_v2.json`。
 
 ## 结果位置
 

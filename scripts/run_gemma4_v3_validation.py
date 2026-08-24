@@ -67,11 +67,19 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--runtime-seed", type=int, default=24000)
-    parser.add_argument("--steps", type=int, choices=(2, 8, 16), default=16)
+    parser.add_argument("--steps", type=int, choices=(2, 8, 16), default=16,
+                        help="open-loop formation states")
+    parser.add_argument("--consequence-steps", type=int, choices=(2, 8, 16, 32),
+                        help="closed-loop trajectory steps; may use a disjoint 32-state bank")
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument("--projection-dim", type=int, default=256)
     parser.add_argument("--null-draws", type=int, default=2000)
+    parser.add_argument("--target-region")
+    parser.add_argument("--target-endpoint")
+    parser.add_argument("--carrier")
+    parser.add_argument("--case-id", default="gemma4_e2b_ple_rmsnorm")
     args = parser.parse_args()
+    consequence_steps = args.consequence_steps or args.steps
 
     bank = json.loads(args.input_bank.read_text())
     all_states = bank["states"]
@@ -85,9 +93,9 @@ def main() -> None:
         row for row in consequence_bank["states"]
         if row.get("role") == "TRAJECTORY"
     ] if args.consequence_bank else states
-    if len(consequence_states) < args.steps:
+    if len(consequence_states) < consequence_steps:
         raise RuntimeError("consequence bank lacks the requested disjoint trajectory states")
-    consequence_states = consequence_states[:args.steps]
+    consequence_states = consequence_states[:consequence_steps]
 
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=False)
@@ -99,6 +107,8 @@ def main() -> None:
     missing = sorted(set(CARRIERS) - set(parameters))
     if missing:
         raise RuntimeError(f"declared carrier absent: {missing}")
+    if args.carrier is not None and args.carrier not in parameters:
+        raise RuntimeError(f"requested carrier absent: {args.carrier}")
 
     start = len(PyCodeCache.modules)
     candidate = torch.compile(LossStep(model), backend="inductor", fullgraph=False, dynamic=False)
@@ -120,8 +130,12 @@ def main() -> None:
     import gzip
     with gzip.open(campaign_path, "rt", encoding="utf-8") as handle:
         campaign = json.load(handle)
-    target = choose_target(campaign)
-    repair_targets = {target["region_id"]: target["output_names"]}
+    target = choose_target(campaign) if args.target_region is None else next(
+        row for row in campaign["rows"] if row["region_id"] == args.target_region
+    )
+    repair_endpoints = [args.target_endpoint] if args.target_endpoint else target["output_names"]
+    repair_targets = {target["region_id"]: repair_endpoints}
+    carriers = (args.carrier,) if args.carrier else CARRIERS
 
     def gradient(master: torch.Tensor, state: dict, repair: bool, carrier_name: str) -> torch.Tensor:
         parameter = parameters[carrier_name]
@@ -147,14 +161,14 @@ def main() -> None:
 
     # Open-loop formation: this is completed before the prediction object is
     # written and before any paired trajectory is executed.
-    formation_total = {name: torch.zeros_like(parameters[name], dtype=torch.float32) for name in CARRIERS}
-    formation_odd = {name: torch.zeros_like(formation_total[name]) for name in CARRIERS}
-    formation_even = {name: torch.zeros_like(formation_total[name]) for name in CARRIERS}
+    formation_total = {name: torch.zeros_like(parameters[name], dtype=torch.float32) for name in carriers}
+    formation_odd = {name: torch.zeros_like(formation_total[name]) for name in carriers}
+    formation_even = {name: torch.zeros_like(formation_total[name]) for name in carriers}
     formation_path_energy = 0.0
     formation_records = []
     for index, state in enumerate(states):
         state_energy = 0.0
-        for name in CARRIERS:
+        for name in carriers:
             parameter = parameters[name]
             with torch.no_grad():
                 base = parameter.detach().float().clone()
@@ -174,7 +188,7 @@ def main() -> None:
     odd_energy = sum(float(torch.sum(value * value).item()) for value in formation_odd.values())
     even_energy = sum(float(torch.sum(value * value).item()) for value in formation_even.values())
     odd_even_inner = sum(
-        float(torch.sum(formation_odd[name] * formation_even[name]).item()) for name in CARRIERS
+        float(torch.sum(formation_odd[name] * formation_even[name]).item()) for name in carriers
     )
     formation_amplification = (resultant_energy / max(formation_path_energy, 1e-30)) ** 0.5
     odd_even_cosine = odd_even_inner / max((odd_energy * even_energy) ** 0.5, 1e-30)
@@ -209,7 +223,7 @@ def main() -> None:
     # Closed-loop consequence and shared short screen.  The local/feedback/
     # actual decomposition is the same four-arm update used by the existing
     # Gemma consequence runner.
-    carrier_name = CARRIERS[1]
+    carrier_name = carriers[0]
     carrier = parameters[carrier_name]
     initial = carrier.detach().float().clone()
     cmaster = initial.clone(); rmaster = initial.clone()
@@ -221,10 +235,10 @@ def main() -> None:
         SharedShortPersistenceScreen(
             projection_dim=args.projection_dim,
             projection_seed=20260822,
-            expected_steps=args.steps,
+            expected_steps=consequence_steps,
             null_draws=args.null_draws,
             prefix_growth_mode="after_warmup",
-        ) if args.steps >= 4 else None
+        ) if consequence_steps >= 4 else None
     )
     records = []
     for index, state in enumerate(consequence_states):
@@ -249,7 +263,7 @@ def main() -> None:
             energies[name] += float(torch.sum(value * value).item())
             if short is not None:
                 short.add_chunks(
-                    f"gemma4_e2b_ple_rmsnorm::{name}",
+                    f"{args.case_id}::{name}",
                     (chunk for chunk in (value.detach().float().cpu().numpy(),)),
                 )
         records.append({
@@ -276,7 +290,7 @@ def main() -> None:
         "schema": "kernel-analyzer-gemma4-v3-consequence-v1",
         "status": "COMPLETE",
         "prediction": prediction,
-        "steps": args.steps,
+        "steps": consequence_steps,
         "carrier": carrier_name,
         "statistics": stats,
         "final_drift_l2": l2(cmaster - rmaster),
@@ -293,9 +307,9 @@ def main() -> None:
         "schema": "kernel-analyzer-gemma4-v3-short-screen-dryrun-v1",
         "status": "NOT_RUN_INSUFFICIENT_STEPS" if short is None else "COMPLETE",
         "input": {
-            "case_id": "gemma4_e2b_ple_rmsnorm",
+            "case_id": args.case_id,
             "state_role": "CONFIRMATION",
-            "steps": args.steps,
+            "steps": consequence_steps,
             "projection_dimension": args.projection_dim,
             "runtime_release": str(release_dir),
             "prediction_revealed_before_trajectory": True,
@@ -303,9 +317,9 @@ def main() -> None:
     } if short is None else short.finalize()
     if short is not None:
         short_payload["input"] = {
-            "case_id": "gemma4_e2b_ple_rmsnorm",
+            "case_id": args.case_id,
             "state_role": "CONFIRMATION",
-            "steps": args.steps,
+            "steps": consequence_steps,
             "projection_dimension": args.projection_dim,
             "runtime_release": str(release_dir),
             "prediction_revealed_before_trajectory": True,
@@ -314,10 +328,11 @@ def main() -> None:
     print(json.dumps({
         "event": "GEMMA4_V3_VALIDATION_COMPLETE",
         "output_dir": str(output_dir),
+        "case_id": args.case_id,
         "source_prediction": prediction["source_prediction"],
         "source_amplification": formation_amplification,
         "short_actual_status": short_payload.get("paths", {}).get(
-            "gemma4_e2b_ple_rmsnorm::actual", {}
+            f"{args.case_id}::actual", {}
         ).get("status", short_payload["status"]),
     }), flush=True)
 

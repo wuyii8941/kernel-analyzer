@@ -9,22 +9,24 @@
     "status": "ABSTAIN_RUNTIME_MISMATCH"
   },
   "heldout_external_progress": {
-    "claim_boundary": "One independently frozen NEW_IMPL negative is complete; recall/AUROC remain undefined until more rows exist.",
+    "claim_boundary": "One prior Gemma NEW_IMPL negative plus two fresh in-process Gemma target checks are complete. One target has no measurable carrier effect and is NOT_APPLICABLE; the other is a feedback control. No NEW_IMPL direct-persistence positive exists, so recall/AUROC remain undefined.",
     "confirmed_negative": 1,
     "confirmed_positive": 0,
-    "eligible_rows": 1,
-    "status": "COMPLETE_ONE_NEW_IMPL_NEGATIVE_FOR_DIRECT_SCREEN",
-    "validation": "VALID_ONE_NEW_IMPL_ROW"
+    "eligible_rows": 2,
+    "not_applicable_rows": 1,
+    "feedback_control_rows": 1,
+    "status": "COMPLETE_TWO_FRESH_GEMMA_TARGETS_PLUS_PRIOR_NEGATIVE",
+    "validation": "VALID_TWO_FRESH_IN_PROCESS_ROWS"
   },
   "next_required": [
     "same-state optimizer ablation for 0543 when exact raw captures exist",
-    "phase-conditioned natural optimizer evaluation with real early/middle/late moments",
+    "phase-conditioned natural optimizer evaluation with real early/middle/late moments (complete for Qwen; no cross-model claim)",
     "expand the independently frozen NEW_IMPL pool beyond the one completed Gemma negative",
     "complete tolerance metrics on a common held-out pool",
     "prospective executable catch-and-fix if a candidate escalates"
   ],
   "optimizer_state_progress": {
-    "claim_boundary": "Four same-state ablations are complete: Liger, Phi, Qwen and one Gemma feedback control. The Gemma result is a response/feedback control, not a direct-persistence positive. No universal or natural early/middle/late optimizer-state conclusion is emitted; 0543 and natural-phase captures remain pending.",
+    "claim_boundary": "Four same-state ablations are complete. Qwen also has genuine early/middle/late phase response measurements using each phase's own weights, inputs and moments. This is not a live persistence trajectory; the 0543 same-state replay remains fail-closed.",
     "completed_cases": [
       "liger_fused_ce_t128",
       "phi4_seq64_lmhead_dx",
@@ -32,21 +34,21 @@
       "gemma4_e2b_ple_rmsnorm_feedback"
     ],
     "natural_phase_status": {
-      "artifact": "optimizer_state/phase_conditioned_natural.json",
+      "artifact": "optimizer_state/qwen_phase_conditioned_response.json",
       "required": [
         "early",
         "middle",
         "late"
       ],
-      "status": "ABSTAIN_MISSING_PHASE_CAPTURE",
+      "status": "COMPLETE_GENUINE_EARLY_MIDDLE_LATE_PHASES",
       "synthetic_cross_phase_mixing": false
     },
-    "status": "PARTIAL_SAME_STATE_ABLATION"
+    "status": "COMPLETE_PHASE_RESPONSE_PARTIAL_0543"
   },
   "phi_sr_scope": "16-state stateless-SGD source intervention; not evidence for Phi AdamW A=1.029",
   "qwen": "not direct-persistent under cold-start AdamW",
   "raw_vector_limitation": "Per-step vectors and full sequence cross-Grams were not saved in v3; no vectors were imputed.",
   "schema": "kernel-analyzer-direct-persistence-v4-summary-v1",
-  "status": "DEVELOPMENT_REANALYSIS_COMPLETE_HELDOUT_AND_OPTIMIZER_PHASES_PENDING",
+  "status": "DEVELOPMENT_REANALYSIS_COMPLETE_PHASE_RESPONSE_AND_NEW_IMPL_CONTROLS_PENDING_0543_TOLERANCE_CATCH_FIX",
   "unresolved_candidate": "multishape-backward-cell-0543"
 }

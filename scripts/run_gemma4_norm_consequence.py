@@ -37,6 +37,7 @@ def main() -> None:
     parser.add_argument("--carrier", default=CARRIER)
     parser.add_argument("--region-id")
     parser.add_argument("--endpoint")
+    parser.add_argument("--case-id", default="gemma4_e2b_ple_rmsnorm")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--steps", type=int, choices=(2, 8, 16, 32), default=2)
     parser.add_argument(
@@ -158,7 +159,7 @@ def main() -> None:
         if short_screen is None or step > args.short_screen_steps:
             return
         short_screen.add(
-            f"gemma4_e2b_ple_rmsnorm::{args.optimizer}::{level}",
+            f"{args.case_id}::{args.optimizer}::{level}",
             value.detach().float().cpu().numpy().reshape(-1),
         )
 
@@ -257,7 +258,8 @@ def main() -> None:
             name: path.finalize() for name, path in ablation_paths.items()
         }
     payload = {
-        "schema": "kernel-analyzer-gemma4-norm-consequence-v1",
+        "schema": "kernel-analyzer-gemma4-target-consequence-v1",
+        "case_id": args.case_id,
         "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
         "prediction": prediction, "steps": args.steps, "state_role": args.state_role,
         "carrier": args.carrier,
@@ -278,7 +280,7 @@ def main() -> None:
         ablation_payload = {
             "schema": "kernel-analyzer-direct-persistence-v4-optimizer-state-result-v1",
             "status": "COMPLETE_SAME_STATE_OPTIMIZER_ABLATION" if args.steps == 32 else "ENGINEERING_DRY_RUN",
-            "case_id": "gemma4_e2b_ple_rmsnorm_feedback",
+            "case_id": f"{args.case_id}_feedback",
             "state_ids": [row["state_id"] for row in states],
             "optimizer": {"name": "AdamW", "learning_rate": args.learning_rate, "betas": [0.9, 0.95], "epsilon": 1e-8},
             "arms": {
@@ -293,7 +295,7 @@ def main() -> None:
         short_payload = short_screen.finalize()
         short_payload["input"] = {
             "kind": "LIVE_PAIRED_TRAJECTORY_EFFECTIVE_UPDATE",
-            "case_id": "gemma4_e2b_ple_rmsnorm",
+            "case_id": args.case_id,
             "carrier_parameters": [args.carrier],
             "optimizer": args.optimizer,
             "evaluation_steps_used": args.short_screen_steps,

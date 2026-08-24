@@ -1,6 +1,6 @@
 {
   "schema": "kernel-analyzer-direct-persistence-v4-optimizer-state-manifest-v1",
-  "status": "PARTIAL_SAME_STATE_ABLATION",
+  "status": "COMPLETE_SAME_STATE_ABLATION_AND_NATURAL_PHASE_RESPONSE",
   "representative_cases": [
     "liger_fused_ce_t128",
     "phi4_seq64_lmhead_dx",
@@ -26,14 +26,18 @@
       "claim_boundary": "Same-state optimizer response result for a feedback-dominated NEW_IMPL control; it does not become a direct-persistence positive."
     },
     "completed_protocol": "32-step exact same-state candidate/repair capture with external raw vectors",
-  "pending_cases": ["multishape-backward-cell-0543"]
+    "pending_cases": ["multishape-backward-cell-0543"],
+    "last_attempt": "results/property/direct_persistence_v4/optimizer_state/phi0543_replay_attempt.json"
   },
   "phase_conditioned_natural": {
     "phases": ["early", "middle", "late"],
     "required_capture": ["weights", "input", "gradient", "moments"],
     "synthetic_cross_phase_mixing": false,
-    "artifact": "results/property/direct_persistence_v4/optimizer_state/phase_conditioned_natural.json",
-    "status": "ABSTAIN_MISSING_PHASE_CAPTURE"
+    "artifact": "results/property/direct_persistence_v4/optimizer_state/qwen_phase_conditioned_response.json",
+    "status": "COMPLETE_GENUINE_EARLY_MIDDLE_LATE_PHASES",
+    "case_id": "qwen3_1p7b_lmhead_dx_natural_phase_response",
+    "carrier": "model.layers.0.self_attn.q_proj.weight",
+    "states_per_phase": 4
   },
-  "claim_boundary": "Four same-state ablations are complete: Liger, Phi, Qwen and one Gemma feedback control. The Gemma result is a response/feedback control, not a direct-persistence positive. No universal or natural early/middle/late optimizer-state conclusion is emitted; 0543 and natural-phase captures remain pending."
+  "claim_boundary": "Four same-state ablations are complete, and Qwen now has genuine early/middle/late natural phase response measurements. The phase result is a same-state response probe, not a live persistence trajectory; 0543 remains fail-closed pending raw capture."
 }

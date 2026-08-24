@@ -1,0 +1,252 @@
+{
+  "carrier": "model.layers.0.self_attn.q_proj.weight",
+  "case_id": "qwen3_1p7b_lmhead_dx_natural_phase_response",
+  "claim_boundary": "Natural early/middle/late weights, inputs and optimizer moments are measured without cross-phase mixing. This establishes phase-conditioned response sensitivity; it is not a universal persistence conclusion.",
+  "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+  "optimizer": {
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "learning_rate": 1e-05,
+    "name": "AdamW",
+    "weight_decay": 0.0
+  },
+  "phase_results": {
+    "early": {
+      "arms": {
+        "captured_adamw_moments": {
+          "coherence_amplification": 0.999997023319408,
+          "path_energy_sqrt": 0.005079813414489626,
+          "resultant_l2": 0.0050797982935076235,
+          "state_ids_are_disjoint": true,
+          "states": 4,
+          "status": "COMPLETE"
+        },
+        "gradient_difference": {
+          "coherence_amplification": 1.0074886550216406,
+          "path_energy_sqrt": 0.012357035779040642,
+          "resultant_l2": 0.012449573357079947,
+          "state_ids_are_disjoint": true,
+          "states": 4,
+          "status": "COMPLETE"
+        },
+        "moment_reset_each_step": {
+          "coherence_amplification": 0.999997023319408,
+          "path_energy_sqrt": 0.005079813414489626,
+          "resultant_l2": 0.0050797982935076235,
+          "state_ids_are_disjoint": true,
+          "states": 4,
+          "status": "COMPLETE"
+        },
+        "stateless_sgd": {
+          "coherence_amplification": 1.0074886550913973,
+          "path_energy_sqrt": 1.2357035437178815e-07,
+          "resultant_l2": 1.244957301352002e-07,
+          "state_ids_are_disjoint": true,
+          "states": 4,
+          "status": "COMPLETE"
+        }
+      },
+      "claim_boundary": "Each phase uses its own natural weights, inputs and AdamW moments; this is a same-state response probe, not a live persistence trajectory.",
+      "natural_step": 0,
+      "optimizer_prior_step": 0,
+      "rows": [
+        {
+          "captured_adamw_l2": 0.0026356615126132965,
+          "gradient_l2": 0.0056688059121370316,
+          "natural_phase_step": 0,
+          "optimizer_prior_step": 0,
+          "state_id": "qwen-natural-early-0000-00"
+        },
+        {
+          "captured_adamw_l2": 0.0025217619258910418,
+          "gradient_l2": 0.005645373836159706,
+          "natural_phase_step": 0,
+          "optimizer_prior_step": 0,
+          "state_id": "qwen-natural-early-0000-01"
+        },
+        {
+          "captured_adamw_l2": 0.0025332069490104914,
+          "gradient_l2": 0.006108234636485577,
+          "natural_phase_step": 0,
+          "optimizer_prior_step": 0,
+          "state_id": "qwen-natural-early-0000-02"
+        },
+        {
+          "captured_adamw_l2": 0.002466043457388878,
+          "gradient_l2": 0.007167998235672712,
+          "natural_phase_step": 0,
+          "optimizer_prior_step": 0,
+          "state_id": "qwen-natural-early-0000-03"
+        }
+      ],
+      "snapshot": "/data1/tzh/cache/kernel_analyzer/direct_persistence_v4/qwen_phase16_v2/phases/phase_step_0000.pt",
+      "snapshot_sha256": "afde344e4d72335ce3246898efd2f4c243b3f5b65dd3eddb549805aee8bc8231",
+      "state_ids": [
+        "qwen-natural-early-0000-00",
+        "qwen-natural-early-0000-01",
+        "qwen-natural-early-0000-02",
+        "qwen-natural-early-0000-03"
+      ]
+    },
+    "late": {
+      "arms": {
+        "captured_adamw_moments": {
+          "coherence_amplification": 0.9941876056226628,
+          "path_energy_sqrt": 9.500348948579405e-05,
+          "resultant_l2": 9.44512917376794e-05,
+          "state_ids_are_disjoint": true,
+          "states": 4,
+          "status": "COMPLETE"
+        },
+        "gradient_difference": {
+          "coherence_amplification": 0.9976230113067271,
+          "path_energy_sqrt": 0.006173466546888197,
+          "resultant_l2": 0.006158792286707945,
+          "state_ids_are_disjoint": true,
+          "states": 4,
+          "status": "COMPLETE"
+        },
+        "moment_reset_each_step": {
+          "coherence_amplification": 1.000167386514468,
+          "path_energy_sqrt": 0.005166510551842674,
+          "resultant_l2": 0.005167375356035909,
+          "state_ids_are_disjoint": true,
+          "states": 4,
+          "status": "COMPLETE"
+        },
+        "stateless_sgd": {
+          "coherence_amplification": 0.9976230112860194,
+          "path_energy_sqrt": 6.173466375290587e-08,
+          "resultant_l2": 6.158792115390382e-08,
+          "state_ids_are_disjoint": true,
+          "states": 4,
+          "status": "COMPLETE"
+        }
+      },
+      "claim_boundary": "Each phase uses its own natural weights, inputs and AdamW moments; this is a same-state response probe, not a live persistence trajectory.",
+      "natural_step": 16,
+      "optimizer_prior_step": 16,
+      "rows": [
+        {
+          "captured_adamw_l2": 5.0848164391936734e-05,
+          "gradient_l2": 0.0034318554680794477,
+          "natural_phase_step": 16,
+          "optimizer_prior_step": 16,
+          "state_id": "qwen-natural-late-0016-00"
+        },
+        {
+          "captured_adamw_l2": 4.849062315770425e-05,
+          "gradient_l2": 0.00337793561629951,
+          "natural_phase_step": 16,
+          "optimizer_prior_step": 16,
+          "state_id": "qwen-natural-late-0016-01"
+        },
+        {
+          "captured_adamw_l2": 4.493684900808148e-05,
+          "gradient_l2": 0.0027409945614635944,
+          "natural_phase_step": 16,
+          "optimizer_prior_step": 16,
+          "state_id": "qwen-natural-late-0016-02"
+        },
+        {
+          "captured_adamw_l2": 4.5491382479667664e-05,
+          "gradient_l2": 0.0027222337666898966,
+          "natural_phase_step": 16,
+          "optimizer_prior_step": 16,
+          "state_id": "qwen-natural-late-0016-03"
+        }
+      ],
+      "snapshot": "/data1/tzh/cache/kernel_analyzer/direct_persistence_v4/qwen_phase16_v2/phases/phase_step_0016.pt",
+      "snapshot_sha256": "55e48e5bb7cc9164f0166daca05adbdda08be959cbaef161cd86c9e16fb5ac62",
+      "state_ids": [
+        "qwen-natural-late-0016-00",
+        "qwen-natural-late-0016-01",
+        "qwen-natural-late-0016-02",
+        "qwen-natural-late-0016-03"
+      ]
+    },
+    "middle": {
+      "arms": {
+        "captured_adamw_moments": {
+          "coherence_amplification": 1.0092343993165125,
+          "path_energy_sqrt": 0.00013322086125407986,
+          "resultant_l2": 0.00013445107588418972,
+          "state_ids_are_disjoint": true,
+          "states": 4,
+          "status": "COMPLETE"
+        },
+        "gradient_difference": {
+          "coherence_amplification": 1.0168395187670263,
+          "path_energy_sqrt": 0.0077223225853870975,
+          "resultant_l2": 0.007852362781488754,
+          "state_ids_are_disjoint": true,
+          "states": 4,
+          "status": "COMPLETE"
+        },
+        "moment_reset_each_step": {
+          "coherence_amplification": 1.000079767275698,
+          "path_energy_sqrt": 0.005308287494771557,
+          "resultant_l2": 0.0053087109224036364,
+          "state_ids_are_disjoint": true,
+          "states": 4,
+          "status": "COMPLETE"
+        },
+        "stateless_sgd": {
+          "coherence_amplification": 1.0168395186899393,
+          "path_energy_sqrt": 7.722322369225912e-08,
+          "resultant_l2": 7.852362561092227e-08,
+          "state_ids_are_disjoint": true,
+          "states": 4,
+          "status": "COMPLETE"
+        }
+      },
+      "claim_boundary": "Each phase uses its own natural weights, inputs and AdamW moments; this is a same-state response probe, not a live persistence trajectory.",
+      "natural_step": 8,
+      "optimizer_prior_step": 8,
+      "rows": [
+        {
+          "captured_adamw_l2": 5.31838413735386e-05,
+          "gradient_l2": 0.0025132980663329363,
+          "natural_phase_step": 8,
+          "optimizer_prior_step": 8,
+          "state_id": "qwen-natural-middle-0008-00"
+        },
+        {
+          "captured_adamw_l2": 8.342595538124442e-05,
+          "gradient_l2": 0.00480653066188097,
+          "natural_phase_step": 8,
+          "optimizer_prior_step": 8,
+          "state_id": "qwen-natural-middle-0008-01"
+        },
+        {
+          "captured_adamw_l2": 7.504557288484648e-05,
+          "gradient_l2": 0.004933829419314861,
+          "natural_phase_step": 8,
+          "optimizer_prior_step": 8,
+          "state_id": "qwen-natural-middle-0008-02"
+        },
+        {
+          "captured_adamw_l2": 4.824468487640843e-05,
+          "gradient_l2": 0.0024232601281255484,
+          "natural_phase_step": 8,
+          "optimizer_prior_step": 8,
+          "state_id": "qwen-natural-middle-0008-03"
+        }
+      ],
+      "snapshot": "/data1/tzh/cache/kernel_analyzer/direct_persistence_v4/qwen_phase16_v2/phases/phase_step_0008.pt",
+      "snapshot_sha256": "801bd59625e06dc1487d5a19a749a3810e587c1312ec02a03bf835bdd772b344",
+      "state_ids": [
+        "qwen-natural-middle-0008-00",
+        "qwen-natural-middle-0008-01",
+        "qwen-natural-middle-0008-02",
+        "qwen-natural-middle-0008-03"
+      ]
+    }
+  },
+  "result_sha256": "2391cf94bbe2af1350be1bc5ca8d0981a4231f6f728183ebe428940d718d4894",
+  "schema": "kernel-analyzer-direct-persistence-v4-natural-phase-response-v1",
+  "state_ids_disjoint": true,
+  "status": "COMPLETE_GENUINE_EARLY_MIDDLE_LATE_PHASES"
+}
