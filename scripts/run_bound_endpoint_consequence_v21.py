@@ -226,8 +226,17 @@ def main() -> None:
 
     expected_length = int(capture["input"]["sequence_length"])
 
-    def gradient(master: torch.Tensor, state: dict[str, Any], repair_arm: bool,
-                 seed: int) -> tuple[torch.Tensor, int, torch.Tensor | None]:
+    def gradient(
+        master: torch.Tensor,
+        state: dict[str, Any],
+        repair_arm: bool,
+        seed: int,
+    ) -> tuple[
+        torch.Tensor,
+        int,
+        torch.Tensor | None,
+        tuple[torch.Tensor, torch.Tensor] | None,
+    ]:
         with torch.no_grad():
             carrier.copy_(master.to(carrier.dtype))
         tokens = state.get("input_ids", state.get("token_ids"))
@@ -235,12 +244,38 @@ def main() -> None:
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         if not repair_arm:
-            model.zero_grad(set_to_none=True)
-            candidate(values).backward()
+            candidate_endpoint: dict[str, torch.Tensor] = {}
+
+            def candidate_sink(observed_id: str, tensor: torch.Tensor, metadata: Any) -> None:
+                if observed_id != task_id or candidate_endpoint:
+                    raise RuntimeError("candidate endpoint cardinality changed")
+                candidate_endpoint[observed_id] = tensor.detach().clone()
+
+            if args.raw_stage_output is not None:
+                candidate_observer = SameDtypeSemanticCandidateObserver(
+                    modules=modules,
+                    campaign_rows=campaign["rows"],
+                    inventory_rows=inventory["runtime_call_audit"]["rows"],
+                    task_rows=[task],
+                    sink=candidate_sink,
+                    include_unresolved_tasks=True,
+                )
+                with candidate_observer:
+                    model.zero_grad(set_to_none=True)
+                    candidate(values).backward()
+                candidate_observer.validate()
+            else:
+                model.zero_grad(set_to_none=True)
+                candidate(values).backward()
             torch.cuda.synchronize(device)
             if carrier.grad is None:
                 raise RuntimeError("candidate carrier gradient is absent")
-            return carrier.grad.detach().float().clone(), 0, None
+            return (
+                carrier.grad.detach().float().clone(),
+                0,
+                None,
+                candidate_endpoint.get(task_id),
+            )
 
         references: dict[str, torch.Tensor] = {}
         if reference is not None and reference_capture is not None:
@@ -283,6 +318,10 @@ def main() -> None:
             before = tensor.detach().clone()
             tensor.copy_(target)
             delivered["changed"] = int(torch.count_nonzero(before != target))
+            delivered["endpoint_pair"] = (
+                before.detach().cpu().clone(),
+                target.detach().cpu().clone(),
+            )
             if args.three_stage_output is not None:
                 delivered["endpoint_delta"] = (
                     before.detach().float() - target.detach().float()
@@ -303,7 +342,7 @@ def main() -> None:
             raise RuntimeError("repair did not reach the endpoint/carrier")
         return (
             carrier.grad.detach().float().clone(), delivered["changed"],
-            delivered.get("endpoint_delta"),
+            delivered.get("endpoint_delta"), delivered.get("endpoint_pair"),
         )
 
     initial = carrier.detach().float().clone()
@@ -341,6 +380,10 @@ def main() -> None:
     raw_candidate_update_vectors: list[torch.Tensor] = []
     raw_repair_update_vectors: list[torch.Tensor] = []
     raw_endpoint_vectors: list[torch.Tensor] = []
+    raw_endpoint_candidate_vectors: list[torch.Tensor] = []
+    raw_endpoint_reference_vectors: list[torch.Tensor] = []
+    raw_endpoint_candidate_dtype: str | None = None
+    raw_endpoint_reference_dtype: str | None = None
     raw_candidate_moments: list[torch.Tensor] = []
     raw_candidate_second_moments: list[torch.Tensor] = []
     raw_repair_moments: list[torch.Tensor] = []
@@ -370,10 +413,10 @@ def main() -> None:
         step = index + 1
         seed = 51000 + index
         drift_before = candidate_master - repair_master
-        gc_c, changed_cc, _ = gradient(candidate_master, state, False, seed)
-        gr_c, changed_rc, endpoint_c = gradient(candidate_master, state, True, seed)
-        gc_r, changed_cr, _ = gradient(repair_master, state, False, seed)
-        gr_r, changed_rr, endpoint_r = gradient(repair_master, state, True, seed)
+        gc_c, changed_cc, _, candidate_endpoint_c = gradient(candidate_master, state, False, seed)
+        gr_c, changed_rc, endpoint_c, endpoint_pair_c = gradient(candidate_master, state, True, seed)
+        gc_r, changed_cr, _, _ = gradient(repair_master, state, False, seed)
+        gr_r, changed_rr, endpoint_r, _ = gradient(repair_master, state, True, seed)
         raw_uc_c, next_cm, next_cv = adam_delta(
             gc_c, candidate_m, candidate_v, step,
             learning_rate=args.learning_rate,
@@ -430,7 +473,15 @@ def main() -> None:
             raw_repair_update_vectors.append(raw_ur_c.detach().float().cpu().reshape(-1))
             if endpoint_c is None:
                 raise RuntimeError("raw-stage capture requested but endpoint residual is absent")
+            if endpoint_pair_c is None or candidate_endpoint_c is None:
+                raise RuntimeError("raw-stage capture requested but endpoint candidate/reference pair is absent")
+            if not torch.equal(candidate_endpoint_c, endpoint_pair_c[0].to(candidate_endpoint_c.device)):
+                raise RuntimeError("raw-stage candidate endpoint changed between candidate and repair arms")
             raw_endpoint_vectors.append(endpoint_c.detach().float().cpu().reshape(-1))
+            raw_endpoint_candidate_vectors.append(candidate_endpoint_c.detach().cpu().reshape(-1))
+            raw_endpoint_reference_vectors.append(endpoint_pair_c[1].detach().cpu().reshape(-1))
+            raw_endpoint_candidate_dtype = str(candidate_endpoint_c.dtype)
+            raw_endpoint_reference_dtype = str(endpoint_pair_c[1].dtype)
             raw_candidate_moments.append(candidate_m.detach().float().cpu().reshape(-1))
             raw_candidate_second_moments.append(candidate_v.detach().float().cpu().reshape(-1))
             raw_repair_moments.append(repair_m.detach().float().cpu().reshape(-1))
@@ -560,6 +611,10 @@ def main() -> None:
             "state_path": "live candidate state; all vectors are same-state counterfactuals",
             "vectors": {
                 "operator_output_error": [v.tolist() for v in raw_endpoint_vectors],
+                "operator_output_candidate": [v.tolist() for v in raw_endpoint_candidate_vectors],
+                "operator_output_reference": [v.tolist() for v in raw_endpoint_reference_vectors],
+                "operator_output_candidate_dtype": raw_endpoint_candidate_dtype,
+                "operator_output_reference_dtype": raw_endpoint_reference_dtype,
                 "candidate_gradient": [v.tolist() for v in raw_candidate_gradient_vectors],
                 "repair_gradient": [v.tolist() for v in raw_repair_gradient_vectors],
                 "candidate_update": [v.tolist() for v in raw_candidate_update_vectors],
