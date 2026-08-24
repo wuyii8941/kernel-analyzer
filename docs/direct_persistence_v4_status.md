@@ -10,9 +10,11 @@
 - 三个新的 Gemma 实现目标的同进程 16 步形成检查和 32 步后果检查。
 - 两个保留完整原始更新向量的案例完成了误差指标和 16/32 步随机符号对照的离线重算；没有原始位级输入的 ULP、rtol/atol 仍保持未决。
 
+协议状态现在与这些结果一致：未见实现检查已登记为 `COMPLETE_FRESH_POOL_V3_NO_DIRECT_POSITIVE`，四个同状态优化器对照和早/中/晚阶段响应也已登记为完成。这里的“完成”只表示相应范围的运行已结束，不表示所有误差指标或所有后续实验都完成。
+
 ## 当前能说什么
 
-- 优化器会改变数值差异进入有效更新的方式，但当前数据不能把优化器认定为数值误差的根源。
+- 优化器会改变数值差异进入有效更新的方式，但当前数据不能把优化器认定为数值误差的根源。它是“传递差异的环节”，不是已经被证明的“误差来源”。
 - 新的 Gemma 目标没有提供 direct-persistence 正例：一个没有可测载体作用，另一个的最终分离主要由反馈维持。
 - Qwen 的三个自然阶段都接近扩散范围；这只说明本案例的阶段响应，不是所有模型的规律。
 - 新增的 Gemma GELU backward 区域也没有可测的 carrier 作用，因此仍是“不适用”，不是 direct-persistence 负例。
@@ -23,4 +25,4 @@
 - 完整 tolerance 指标族和统一的未见实现正例；目前只完成了两个原始回放的部分指标。
 - prospective catch-and-fix：当前未见实现池没有 direct-persistence 正例，不能凭空制造修复演示。
 
-因此 v4 仍然是 **optimizer-conditioned Direct Persistence Screen**，不是通用的全算子安全证明。所有未决项都保留为 `ABSTAIN`，没有用相近案例补数字。
+因此 v4 仍然是 **optimizer-conditioned Direct Persistence Screen**：它是在声明的 cold-start AdamW 设置下做短程分诊，不是通用的全算子安全证明。所有未决项都保留为 `ABSTAIN`，没有用相近案例补数字。

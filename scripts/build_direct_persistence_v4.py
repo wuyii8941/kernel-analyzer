@@ -503,7 +503,7 @@ def main() -> None:
     (args.output / "cohort.json").write_text(
         json.dumps({
             "schema": "kernel-analyzer-direct-persistence-v4-cohort-v1",
-            "status": "RETROSPECTIVE_COHORT_COMPLETE_HELDOUT_NOT_STARTED",
+            "status": "RETROSPECTIVE_COHORT_COMPLETE_FRESH_NEW_IMPL_ROWS_COMPLETE",
             "source": "results/property/joint_bias_formation_v1/oracle_repair_v3/same_optimizer_oracle_v3.json",
             "rows": rows,
             "predeclared_case_ids": sorted(PREDECLARED),
@@ -528,7 +528,7 @@ def main() -> None:
     fresh_rows = fresh_heldout.get("rows", []) if fresh_heldout else []
     summary = {
         "schema": "kernel-analyzer-direct-persistence-v4-summary-v1",
-        "status": "DEVELOPMENT_REANALYSIS_COMPLETE_PHASE_RESPONSE_AND_NEW_IMPL_CONTROLS_PENDING_0543_TOLERANCE_CATCH_FIX",
+        "status": "V4_PARTIAL_COMPLETE_FAIL_CLOSED",
         "confirmed_headline_cases": ["liger_fused_ce_t128", "phi4_seq64_lmhead_dx"],
         "unresolved_candidate": UNREPLICATED_CANDIDATE,
         "qwen": "not direct-persistent under cold-start AdamW",
