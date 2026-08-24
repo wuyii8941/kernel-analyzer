@@ -1,0 +1,42 @@
+{
+  "schema": "kernel-analyzer-direct-persistence-v4-new-impl-pool-v3",
+  "status": "COMPLETE_FROZEN_RUN_FAIL_CLOSED",
+  "selection_rule": "From the frozen Gemma-4 backward campaign, exclude the two already-run regions and choose the lexicographically first remaining parameter-reachable GELU-backward region with a declared carrier. The rule uses only campaign metadata and prior run identity, not persistence results.",
+  "model": "google/gemma-4-E2B",
+  "model_revision": "d29ff6b45f081a49ee2733a859c9c9c2d95d1a6f",
+  "sequence_length": 128,
+  "formation_input_bank": {
+    "path": "results/property/tcmp_allop_v1/input_banks/gemma4_e2b_text128.json",
+    "sha256": "5dff355e438bf99bef3805d4baa412875f1b85803413340f1c6be70f89ebaa70"
+  },
+  "trajectory_input_bank": {
+    "path": "results/property/tcmp_allop_v1/input_banks/gemma4_e2b_text128_trajectory32.json",
+    "sha256": "55493b2495cdc565099f6165c752e98c12f5a393dffa281b24dc1b4d4f4cfc20"
+  },
+  "campaign": {
+    "path": "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/runtime_release/campaign.json.gz",
+    "sha256": "7205ce67781c9325c51be4dfe497e4b8ffb2e0c2d14a016ba31acfd7f5d15e9f"
+  },
+  "rows": [
+    {
+      "case_id": "gemma4_random_gelu_backward1860",
+      "role": "NEW_IMPL",
+      "implementation_pattern": "NEW_IMPL_PATTERN",
+      "target_region": "backward:1860",
+      "target_endpoint": "in_out_ptr0",
+      "symbol": "triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_select_view_72",
+      "carrier": "model.language_model.per_layer_model_projection.weight",
+      "repair": "GeneratedFP32Observer at the frozen target endpoint",
+      "excluded_previous_regions": ["backward:1880", "backward:1401"]
+      ,"run_artifacts": {
+        "formation_sha256": "50f89d9c763b343ab4e41b5aa9d1d52ed0339e895ebe9b3d3a79348fe975951b",
+        "prediction_sha256": "443da82da10fdde441afb66e5698bef6ee4e0c8d06d9b96f7eaadb7448e93f51",
+        "consequence_sha256": "4fe931e8ee4f72d44ce7e3eeaf36715028ebab15644813c318933a34ab0ac133",
+        "short_screen_sha256": "d4c4fa43238ea3a5fa2c2de323c962667806b4e2d39fe40735f31a68a10e66d5",
+        "runtime_capture_sha256": "919c782cc37e6bb3a7c3e84b45a2a5bbdef11edf08153f75939eb67c49c1bdae"
+      },
+      "observed_status": "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT"
+    }
+  ],
+  "claim_boundary": "This pool tests one additional unseen Gemma implementation region. It can add a held-out control or a candidate, but it cannot by itself establish a universal Oracle."
+}

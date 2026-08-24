@@ -1,7 +1,11 @@
 {
   "schema": "kernel-analyzer-direct-persistence-v4-heldout-confirmation-v1",
   "status": "PARTIAL_EXTERNAL_NEW_IMPL_COMPLETE",
-  "rows": [],
+  "rows": [
+    {"case_id": "gemma4_random_softmax_backward", "status": "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT", "direct_persistence": false},
+    {"case_id": "gemma4_random_gelu_loss_backward", "status": "COMPLETE_NEW_IMPL_FEEDBACK_CONTROL", "direct_persistence": false},
+    {"case_id": "gemma4_random_gelu_backward1860", "status": "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT", "direct_persistence": false}
+  ],
   "metrics": {
     "recall": null,
     "auroc": null,
@@ -9,12 +13,12 @@
     "false_escalation_rate": null,
     "abstention_rate": null,
     "gpu_cost": null,
-    "external_campaign": "heldout_gemma_confirmation.json",
-    "external_eligible_rows": 1,
+    "external_campaign": "new_impl_targets_v2.json",
+    "external_eligible_rows": 3,
     "external_confirmed_positive": 0,
-    "external_confirmed_negative": 1,
+    "external_confirmed_negative": 0,
     "external_escalation_rate": 0.0
   },
-  "all_negative_policy": "The independent Gemma pool is all-negative for direct persistence, so its recall and AUROC remain null. The atlas-derived pool is still invalid and contributes no labels.",
-  "claim_boundary": "Prospective validation is partial: one valid NEW_IMPL negative is complete; more frozen rows are required for recall, AUROC, or universal generalization."
+  "all_negative_policy": "The independent Gemma pool contains no direct-persistence positive; recall and AUROC remain null. The atlas-derived pool is still invalid and contributes no labels. Feedback controls and not-applicable rows are not relabeled as direct negatives.",
+  "claim_boundary": "Prospective validation is partial: three valid NEW_IMPL target runs are complete, with no direct positive. Recall and AUROC remain undefined; more rows would be needed for a class-balanced evaluation."
 }

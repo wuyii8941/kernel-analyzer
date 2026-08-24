@@ -41,6 +41,116 @@
     "gradient RMS",
     "update RMS on the independent Gemma row"
   ],
+  "raw_stage_reanalysis": {
+    "claim_boundary": "These rows are an offline reanalysis of preserved raw replay vectors. They do not complete the common held-out tolerance family; ULP and rtol/atol remain fail-closed until original/reference operands are preserved.",
+    "rows": [
+      {
+        "case_id": "phi4_seq64_lmhead_dx",
+        "metrics": {
+          "gradient_difference": {
+            "coordinate_count": 3072,
+            "l2_error_mean": 0.0033857388244151626,
+            "max_abs_error": 0.001953125,
+            "relative_l2_mean": 0.004881350984863523,
+            "relative_l2_status": "DERIVED_FROM_REPAIR_VECTOR",
+            "rms_error_max": 7.993119952035298e-05,
+            "rms_error_mean": 6.108616317755815e-05,
+            "state_count": 32
+          },
+          "output": {
+            "coordinate_count": 196608,
+            "l2_error_mean": 0.0009431836442709205,
+            "max_abs_error": 0.0001220703125,
+            "relative_l2_mean": null,
+            "relative_l2_status": "ABSTAIN_MISSING_REFERENCE_VECTOR",
+            "rms_error_max": 2.51028761691983e-06,
+            "rms_error_mean": 2.127138011386985e-06,
+            "state_count": 32
+          },
+          "update_difference": {
+            "coordinate_count": 3072,
+            "l2_error_mean": 1.1909458987450734e-05,
+            "max_abs_error": 0.00019967882690252736,
+            "relative_l2_mean": 0.002867310419455835,
+            "relative_l2_status": "DERIVED_FROM_REPAIR_VECTOR",
+            "rms_error_max": 5.088924770230185e-06,
+            "rms_error_mean": 2.1487279225960907e-07,
+            "state_count": 32
+          }
+        },
+        "optimizer": {
+          "betas": [
+            0.9,
+            0.95
+          ],
+          "epsilon": 1e-08,
+          "learning_rate": 0.0001,
+          "name": "AdamW",
+          "weight_decay": 0.0
+        },
+        "raw_stage_path": "/data1/tzh/cache/kernel_analyzer/direct_persistence_v4/phi_seq64_raw_stage.json",
+        "sequence_length": 64,
+        "status": "PARTIAL_METRICS_DERIVED",
+        "unavailable": {
+          "rtol_atol": "ABSTAIN_MISSING_REFERENCE_OPERANDS_AND_THRESHOLDS",
+          "ulp": "ABSTAIN_MISSING_BITWISE_OPERANDS"
+        }
+      },
+      {
+        "case_id": "qwen_seq128_lmhead_dx",
+        "metrics": {
+          "gradient_difference": {
+            "coordinate_count": 2048,
+            "l2_error_mean": 0.00013412107715292818,
+            "max_abs_error": 0.0009765625,
+            "relative_l2_mean": 0.000727783050311673,
+            "relative_l2_status": "DERIVED_FROM_REPAIR_VECTOR",
+            "rms_error_max": 2.1640913662722617e-05,
+            "rms_error_mean": 2.963685098589989e-06,
+            "state_count": 32
+          },
+          "output": {
+            "coordinate_count": 262144,
+            "l2_error_mean": 4.5071914361558964e-05,
+            "max_abs_error": 7.62939453125e-06,
+            "relative_l2_mean": null,
+            "relative_l2_status": "ABSTAIN_MISSING_REFERENCE_VECTOR",
+            "rms_error_max": 1.058324418337771e-07,
+            "rms_error_mean": 8.803108273741985e-08,
+            "state_count": 32
+          },
+          "update_difference": {
+            "coordinate_count": 2048,
+            "l2_error_mean": 8.807278499439352e-07,
+            "max_abs_error": 1.3498467069439357e-05,
+            "relative_l2_mean": 0.000341849351580049,
+            "relative_l2_status": "DERIVED_FROM_REPAIR_VECTOR",
+            "rms_error_max": 3.1062779629603253e-07,
+            "rms_error_mean": 1.9461519846100147e-08,
+            "state_count": 32
+          }
+        },
+        "optimizer": {
+          "betas": [
+            0.9,
+            0.95
+          ],
+          "epsilon": 1e-08,
+          "learning_rate": 0.0001,
+          "name": "AdamW",
+          "weight_decay": 0.0
+        },
+        "raw_stage_path": "/data1/tzh/cache/kernel_analyzer/direct_persistence_v4/qwen_seq128_raw_stage.json",
+        "sequence_length": 128,
+        "status": "PARTIAL_METRICS_DERIVED",
+        "unavailable": {
+          "rtol_atol": "ABSTAIN_MISSING_REFERENCE_OPERANDS_AND_THRESHOLDS",
+          "ulp": "ABSTAIN_MISSING_BITWISE_OPERANDS"
+        }
+      }
+    ],
+    "status": "PARTIAL_RAW_STAGE_METRICS"
+  },
   "required_outputs": [
     "confusion matrix",
     "AUROC/PR when both classes exist",

@@ -520,9 +520,12 @@ def main() -> None:
     external_heldout_path = args.output / "heldout_gemma_confirmation.json"
     external_heldout_validation_path = args.output / "heldout_gemma_validation.json"
     fresh_heldout_path = args.output / "heldout/new_impl_targets_v2.json"
+    fresh_confirmation_v2_path = args.output / "heldout_confirmation_v2.json"
     external_heldout = load(external_heldout_path) if external_heldout_path.exists() else None
     external_heldout_validation = load(external_heldout_validation_path) if external_heldout_validation_path.exists() else None
     fresh_heldout = load(fresh_heldout_path) if fresh_heldout_path.exists() else None
+    fresh_confirmation_v2 = load(fresh_confirmation_v2_path) if fresh_confirmation_v2_path.exists() else None
+    fresh_rows = fresh_heldout.get("rows", []) if fresh_heldout else []
     summary = {
         "schema": "kernel-analyzer-direct-persistence-v4-summary-v1",
         "status": "DEVELOPMENT_REANALYSIS_COMPLETE_PHASE_RESPONSE_AND_NEW_IMPL_CONTROLS_PENDING_0543_TOLERANCE_CATCH_FIX",
@@ -543,11 +546,15 @@ def main() -> None:
             "claim_boundary": optimizer_progress.get("claim_boundary"),
         },
         "heldout_external_progress": {
-            "status": fresh_heldout.get("status", external_heldout.get("status", "NOT_STARTED")) if fresh_heldout else (external_heldout.get("status", "NOT_STARTED") if external_heldout else "NOT_STARTED"),
-            "validation": external_heldout_validation.get("status", "NOT_STARTED") if external_heldout_validation else "NOT_STARTED",
-            "eligible_rows": (fresh_heldout.get("metrics", {}).get("eligible_rows", 0) + (external_heldout.get("metrics", {}).get("eligible_rows", 0) if external_heldout else 0)) if fresh_heldout else (external_heldout.get("metrics", {}).get("eligible_rows") if external_heldout else 0),
-            "confirmed_positive": 0,
-            "confirmed_negative": external_heldout.get("metrics", {}).get("confirmed_negative", 0) if external_heldout else 0,
+            "status": fresh_heldout.get("status", "NOT_STARTED") if fresh_heldout else (external_heldout.get("status", "NOT_STARTED") if external_heldout else "NOT_STARTED"),
+            "validation": "COMPLETE_FRESH_POOL_V3" if fresh_confirmation_v2 else (external_heldout_validation.get("status", "NOT_STARTED") if external_heldout_validation else "NOT_STARTED"),
+            "run_rows": len(fresh_rows),
+            "direct_positive": sum(row.get("status") == "COMPLETE_NEW_IMPL_DIRECT_POSITIVE" for row in fresh_rows),
+            "direct_negative": sum(row.get("status") == "COMPLETE_NEW_IMPL_DIRECT_NEGATIVE" for row in fresh_rows),
+            "feedback_controls": sum(row.get("status") == "COMPLETE_NEW_IMPL_FEEDBACK_CONTROL" for row in fresh_rows),
+            "not_applicable": sum(row.get("status") == "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT" for row in fresh_rows),
+            "recall": None,
+            "auroc": None,
             "claim_boundary": "Fresh Gemma target checks add controls but no direct-persistence positive; recall/AUROC remain undefined.",
         },
         "next_required": [

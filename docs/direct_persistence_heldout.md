@@ -35,12 +35,16 @@ that built its own runtime release. The source result was written before the
 |---|---:|---:|---|
 | softmax backward, `k_norm` | `A32=0.000`, no carrier effect | `1.5e-8` | not applicable: no observed carrier difference |
 | GELU/loss backward, projection | `A32=1.0002` | `A32=3.0267` | feedback control, not direct persistence |
+| another GELU backward region (`backward:1860`) | `A32=0.000`, no carrier effect | `A32=0.000` | not applicable: no observed carrier difference |
 
 These add controls, not new positives. The first target had no measurable
 effect on the chosen carrier, and the second had a large final separation only
 after feedback; neither can be used to claim that the whole model is safe.
 The compact audit is
 `results/property/direct_persistence_v4/heldout/new_impl_targets_v2.json`.
+The third row was selected by a rule frozen before its consequence run; its
+runtime release and state banks are recorded in
+`results/property/direct_persistence_v4/heldout/new_impl_pool_v3.json`.
 
 Artifacts:
 
@@ -50,3 +54,4 @@ Artifacts:
 - `results/property/direct_persistence_v4/heldout_gemma_validation.json`
 - `results/property/direct_persistence_v4/heldout/gemma4_e2b_norm_short_screen.json`
 - `results/property/direct_persistence_v4/heldout/gemma4_e2b_norm_consequence32.json`
+- `results/property/direct_persistence_v4/heldout/new_impl_pool_v3.json`

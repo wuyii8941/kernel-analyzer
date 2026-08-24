@@ -74,9 +74,11 @@ def main() -> None:
     multiplicity = load(out / "multiplicity.json")
     optimizer = load(out / "optimizer_state/manifest.json")
     optimizer_run = load(out / "optimizer_state_run_manifest.json")
-    heldout = load(out / "heldout_gemma_confirmation.json")
+    heldout = load(out / "heldout_confirmation_v2.json") if (out / "heldout_confirmation_v2.json").exists() else load(out / "heldout_gemma_confirmation.json")
+    fresh_targets = load(out / "heldout/new_impl_targets_v2.json") if (out / "heldout/new_impl_targets_v2.json").exists() else {}
     severity = load(out / "severity.json")
     tolerance = load(out / "tolerance_comparison.json")
+    prefix_null = load(out / "prefix_null_reanalysis.json") if (out / "prefix_null_reanalysis.json").exists() else {}
     catch_fix = load(out / "catch_and_fix/manifest.json")
 
     rows = contribution.get("rows", [])
@@ -92,12 +94,25 @@ def main() -> None:
                 "cases": optimizer.get("same_state_ablation", {}).get("completed_cases", []),
                 "status": "COMPLETE_FOUR_CASES" if len(optimizer.get("same_state_ablation", {}).get("completed_cases", [])) == 4 else "PARTIAL",
             },
-            "one_new_impl_heldout_negative": heldout.get("metrics", {}).get("eligible_rows") >= 1 and heldout.get("metrics", {}).get("confirmed_negative") == 1,
+            "new_impl_heldout_runs": {
+                "count": heldout.get("counting", {}).get("fresh_rows", heldout.get("metrics", {}).get("external_eligible_rows", 0)),
+                "direct_positive": heldout.get("counting", {}).get("fresh_direct_positive", heldout.get("metrics", {}).get("external_confirmed_positive", 0)),
+                "direct_negative": heldout.get("counting", {}).get("fresh_direct_negative", heldout.get("metrics", {}).get("external_confirmed_negative", 0)),
+                "status": "COMPLETE_RUNS_NO_DIRECT_POSITIVE" if heldout.get("counting", {}).get("fresh_rows", heldout.get("metrics", {}).get("external_eligible_rows", 0)) >= 1 else "PARTIAL",
+            },
             "fresh_new_impl_target_checks": status_for(
                 out / "heldout/new_impl_targets_v2.json",
-                {"COMPLETE_TWO_FRESH_IN_PROCESS_GEMMA_ROWS"},
+                {"COMPLETE_FRESH_IN_PROCESS_GEMMA_ROWS"},
             ),
             "result_digest_manifest": verify_sha256(out),
+            "raw_prefix_null_reanalysis": {
+                "status": prefix_null.get("status", "ABSTAIN_MISSING_ARTIFACT"),
+                "rows": len(prefix_null.get("rows", [])),
+            },
+            "raw_tolerance_metrics": {
+                "status": tolerance.get("raw_stage_reanalysis", {}).get("status", "ABSTAIN_MISSING_RAW_REANALYSIS"),
+                "rows": len(tolerance.get("raw_stage_reanalysis", {}).get("rows", [])),
+            },
         },
         "abstained": {
             "natural_early_middle_late_optimizer_phases": {
@@ -110,7 +125,7 @@ def main() -> None:
             },
             "heldout_recall_and_auroc": {
                 "status": "ABSTAIN_NO_NEW_IMPL_DIRECT_POSITIVE",
-                "reason": "The fresh Gemma target checks add no direct-persistence positive; one is not applicable and one is feedback-sustained. Recall and AUROC remain undefined.",
+                "reason": "The fresh Gemma target checks add no direct-persistence positive; not-applicable and feedback-control rows are not relabeled as negatives. Recall and AUROC remain undefined.",
             },
             "complete_tolerance_family": {
                 "status": tolerance.get("status", "ABSTAIN"),

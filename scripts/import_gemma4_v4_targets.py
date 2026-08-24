@@ -112,21 +112,29 @@ def main() -> None:
         one(args.root / "gemma4_random_gelu_v3", args.output_dir,
             "gemma4_random_gelu_loss_backward", "backward:1401/out_ptr3"),
     ]
+    v3 = args.root / "gemma4_random_gelu_backward1860_v4"
+    if v3.is_dir():
+        rows.append(one(
+            v3,
+            args.output_dir,
+            "gemma4_random_gelu_backward1860",
+            "backward:1860/in_out_ptr0",
+        ))
     payload = {
         "schema": "kernel-analyzer-direct-persistence-v4-new-impl-targets-v2",
-        "status": "COMPLETE_TWO_FRESH_IN_PROCESS_GEMMA_ROWS" if all(not row.get("status", "").startswith("ABSTAIN") for row in rows) else "PARTIAL_FAIL_CLOSED",
+        "status": "COMPLETE_FRESH_IN_PROCESS_GEMMA_ROWS" if all(not row.get("status", "").startswith("ABSTAIN") for row in rows) else "PARTIAL_FAIL_CLOSED",
         "rows": rows,
         "selection": "Two targets were selected from the pre-frozen Gemma new-implementation pool before their consequence runs.",
         "metrics": {
             "eligible_rows": sum(row.get("status", "").startswith("COMPLETE") for row in rows),
-            "confirmed_direct_positive": 0,
+            "confirmed_direct_positive": sum(row.get("status") == "COMPLETE_NEW_IMPL_DIRECT_POSITIVE" for row in rows),
             "confirmed_direct_negative": sum(row.get("status") == "COMPLETE_NEW_IMPL_DIRECT_NEGATIVE" for row in rows),
             "feedback_controls": sum(row.get("status") == "COMPLETE_NEW_IMPL_FEEDBACK_CONTROL" for row in rows),
             "not_applicable_no_observed_carrier_effect": sum(row.get("status") == "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT" for row in rows),
             "recall": None,
             "auroc": None,
         },
-        "claim_boundary": "The two rows add NEW_IMPL controls and do not supply a positive; recall and AUROC remain undefined.",
+        "claim_boundary": "These rows add NEW_IMPL controls or candidates. Recall and AUROC remain undefined unless the frozen pool contains both a confirmed direct positive and confirmed negatives.",
     }
     args.output_dir.mkdir(parents=True, exist_ok=True)
     destination = args.output_dir / "new_impl_targets_v2.json"
@@ -137,7 +145,7 @@ def main() -> None:
         "rows": rows,
         "counting": {
             "fresh_rows": len(rows),
-            "fresh_direct_positive": 0,
+            "fresh_direct_positive": payload["metrics"]["confirmed_direct_positive"],
             "fresh_direct_negative": payload["metrics"]["confirmed_direct_negative"],
             "fresh_feedback_controls": payload["metrics"]["feedback_controls"],
             "fresh_not_applicable": payload["metrics"]["not_applicable_no_observed_carrier_effect"],

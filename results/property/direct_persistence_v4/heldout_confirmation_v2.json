@@ -1,11 +1,11 @@
 {
-  "claim_boundary": "The two rows add NEW_IMPL controls and do not supply a positive; recall and AUROC remain undefined.",
+  "claim_boundary": "These rows add NEW_IMPL controls or candidates. Recall and AUROC remain undefined unless the frozen pool contains both a confirmed direct positive and confirmed negatives.",
   "counting": {
     "fresh_direct_negative": 0,
     "fresh_direct_positive": 0,
     "fresh_feedback_controls": 1,
-    "fresh_not_applicable": 1,
-    "fresh_rows": 2
+    "fresh_not_applicable": 2,
+    "fresh_rows": 3
   },
   "rows": [
     {
@@ -105,8 +105,57 @@
       "source_dir": "/data1/tzh/cache/kernel_analyzer/direct_persistence_v4/gemma4_random_gelu_v3",
       "status": "COMPLETE_NEW_IMPL_FEEDBACK_CONTROL",
       "target_region": "backward:1401/out_ptr3"
+    },
+    {
+      "artifacts": {
+        "consequence.json": {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_backward1860.consequence.json",
+          "sha256": "4fe931e8ee4f72d44ce7e3eeaf36715028ebab15644813c318933a34ab0ac133"
+        },
+        "formation.json": {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_backward1860.formation.json",
+          "sha256": "50f89d9c763b343ab4e41b5aa9d1d52ed0339e895ebe9b3d3a79348fe975951b"
+        },
+        "prediction.json": {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_backward1860.prediction.json",
+          "sha256": "443da82da10fdde441afb66e5698bef6ee4e0c8d06d9b96f7eaadb7448e93f51"
+        },
+        "short_screen.json": {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_backward1860.short_screen.json",
+          "sha256": "d4c4fa43238ea3a5fa2c2de323c962667806b4e2d39fe40735f31a68a10e66d5"
+        }
+      },
+      "carrier": "model.language_model.per_layer_model_projection.weight",
+      "case_id": "gemma4_random_gelu_backward1860",
+      "claim_boundary": "This is a fresh in-process Gemma implementation check. The source score was frozen before the paired trajectory. A negative direct score does not prove full training safety; a large actual score with local_A32 near one is reported as feedback-sustained.",
+      "consequence": {
+        "actual_A32": 0.0,
+        "actual_resultant_l2": 0.0,
+        "feedback_A32": 0.0,
+        "feedback_resultant_l2": 0.0,
+        "final_drift_l2": 0.0,
+        "local_A32": 0.0,
+        "local_resultant_l2": 0.0,
+        "steps": 32
+      },
+      "formation": {
+        "complete_coordinate_open_loop_amplification": 0.0,
+        "odd_even_resultant_cosine": 0.0,
+        "states": 16
+      },
+      "model": "google/gemma-4-E2B",
+      "prediction": "NO_SOURCE_PERSISTENCE_UNDER_PROTOCOL",
+      "prediction_frozen_before_consequence": true,
+      "runtime_capture_sha256": "919c782cc37e6bb3a7c3e84b45a2a5bbdef11edf08153f75939eb67c49c1bdae",
+      "short_screen": {
+        "source": "gemma4_random_gelu_backward1860",
+        "status": "COMPLETE"
+      },
+      "source_dir": "/data1/tzh/cache/kernel_analyzer/direct_persistence_v4/gemma4_random_gelu_backward1860_v4",
+      "status": "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT",
+      "target_region": "backward:1860/in_out_ptr0"
     }
   ],
   "schema": "kernel-analyzer-direct-persistence-v4-new-impl-confirmation-v2",
-  "status": "COMPLETE_TWO_FRESH_IN_PROCESS_GEMMA_ROWS"
+  "status": "COMPLETE_FRESH_IN_PROCESS_GEMMA_ROWS"
 }

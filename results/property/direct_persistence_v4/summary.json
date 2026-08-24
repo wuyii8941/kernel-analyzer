@@ -9,24 +9,25 @@
     "status": "ABSTAIN_RUNTIME_MISMATCH"
   },
   "heldout_external_progress": {
-    "claim_boundary": "One prior Gemma NEW_IMPL negative plus two fresh in-process Gemma target checks are complete. One target has no measurable carrier effect and is NOT_APPLICABLE; the other is a feedback control. No NEW_IMPL direct-persistence positive exists, so recall/AUROC remain undefined.",
-    "confirmed_negative": 1,
-    "confirmed_positive": 0,
-    "eligible_rows": 2,
-    "not_applicable_rows": 1,
-    "feedback_control_rows": 1,
-    "status": "COMPLETE_TWO_FRESH_GEMMA_TARGETS_PLUS_PRIOR_NEGATIVE",
-    "validation": "VALID_TWO_FRESH_IN_PROCESS_ROWS"
+    "auroc": null,
+    "claim_boundary": "Fresh Gemma target checks add controls but no direct-persistence positive; recall/AUROC remain undefined.",
+    "direct_negative": 0,
+    "direct_positive": 0,
+    "feedback_controls": 1,
+    "not_applicable": 2,
+    "recall": null,
+    "run_rows": 3,
+    "status": "COMPLETE_FRESH_IN_PROCESS_GEMMA_ROWS",
+    "validation": "COMPLETE_FRESH_POOL_V3"
   },
   "next_required": [
     "same-state optimizer ablation for 0543 when exact raw captures exist",
-    "phase-conditioned natural optimizer evaluation with real early/middle/late moments (complete for Qwen; no cross-model claim)",
-    "expand the independently frozen NEW_IMPL pool beyond the one completed Gemma negative",
+    "expand the independently frozen NEW_IMPL pool until a direct-positive or all-negative boundary is documented",
     "complete tolerance metrics on a common held-out pool",
     "prospective executable catch-and-fix if a candidate escalates"
   ],
   "optimizer_state_progress": {
-    "claim_boundary": "Four same-state ablations are complete. Qwen also has genuine early/middle/late phase response measurements using each phase's own weights, inputs and moments. This is not a live persistence trajectory; the 0543 same-state replay remains fail-closed.",
+    "claim_boundary": "Four same-state ablations are complete, and Qwen now has genuine early/middle/late natural phase response measurements. The phase result is a same-state response probe, not a live persistence trajectory; 0543 remains fail-closed pending raw capture.",
     "completed_cases": [
       "liger_fused_ce_t128",
       "phi4_seq64_lmhead_dx",
@@ -35,6 +36,8 @@
     ],
     "natural_phase_status": {
       "artifact": "optimizer_state/qwen_phase_conditioned_response.json",
+      "carrier": "model.layers.0.self_attn.q_proj.weight",
+      "case_id": "qwen3_1p7b_lmhead_dx_natural_phase_response",
       "required": [
         "early",
         "middle",
@@ -43,7 +46,7 @@
       "status": "COMPLETE_GENUINE_EARLY_MIDDLE_LATE_PHASES",
       "synthetic_cross_phase_mixing": false
     },
-    "status": "COMPLETE_PHASE_RESPONSE_PARTIAL_0543"
+    "status": "COMPLETE_SAME_STATE_ABLATION_AND_NATURAL_PHASE_RESPONSE"
   },
   "phi_sr_scope": "16-state stateless-SGD source intervention; not evidence for Phi AdamW A=1.029",
   "qwen": "not direct-persistent under cold-start AdamW",

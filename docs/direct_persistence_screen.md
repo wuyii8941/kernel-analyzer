@@ -22,6 +22,13 @@ ABSTAIN
 
 短筛没有升级，不代表安全。只有完成 32 步确认后，才允许报告“没有检测到直接持续性”。
 
+在保留了完整每步更新向量的两个回放中，我们另外计算了每一行自己的随机符号对照：
+Phi `lm_head dX` 的 16 步 `A=1.013`，随机对照 95% 上界为 `1.003`；Qwen
+`lm_head dX` 的 16 步 `A=0.968`，随机对照 95% 上界为 `1.034`。这只是离线校准，
+没有用来改写已经冻结的 `A16>1.0` 规则。其余历史行没有保存足够的 prefix 向量，
+所以按规定记为 `ABSTAIN`，不会补造校准值。详见
+`results/property/direct_persistence_v4/prefix_null_reanalysis.json`。
+
 ## 当前 15 行回溯结果
 
 统一 AdamW 后，方向性分数的回溯 AUROC 为 `0.944`，同一批数据上的更新 RMS AUROC 为 `0.528`。这是回溯分诊结果，不是未见实现上的准确率。
@@ -69,7 +76,7 @@ Gemma 4 是事前冻结的新实现。它的局部 direct 分数在 16 步为 `0
 为 `3.231`，主要由 feedback 维持。这是一个有效的 `NEW_IMPL` 负例，而不是
 “整个训练安全”的证明。
 
-另外两个 Gemma 4 目标已经在同一个新进程中完成了 16 步形成检查和 32 步后果检查，
+另外三个 Gemma 4 目标已经在同一个新进程中完成了 16 步形成检查和 32 步后果检查，
 且源判断在轨迹开始前冻结：
 
 | 目标 | 形成判断 | 32 步局部作用 | 32 步实际分离 | 解释 |
@@ -77,11 +84,16 @@ Gemma 4 是事前冻结的新实现。它的局部 direct 分数在 16 步为 `0
 | softmax backward / `k_norm` | 无直接持续性 | `A=0.000`，无可见载体差异 | `1.5e-8` | 没有可测的参数作用，记为不适用 |
 | GELU/loss backward / projection | 无直接持续性 | `A=1.0002` | `A=3.027` | 局部作用近似抵消，分离主要由反馈维持 |
 
-这两个结果增加了未见实现的控制项，但没有增加新的 direct-persistence 正例。
+这三个结果增加了未见实现的控制项，但没有增加新的 direct-persistence 正例。
 当前未见实现池仍没有正例，因此不能计算 recall 或 AUROC；它们也不证明整个模型安全。
 
+随后按冻结规则又登记了一个新的 Gemma GELU backward 区域
+`backward:1860/in_out_ptr0`。它的结果只有在 16/32 步文件、运行包和 repair
+身份全部通过审计后才会写入 held-out 汇总；运行失败或身份不一致会保留为
+`ABSTAIN`，不会被当作负例。
+
 详见 [Gemma held-out 记录](direct_persistence_heldout.md)。
-本轮两个新目标的紧凑结果见
+本轮三个新目标的紧凑结果见
 `results/property/direct_persistence_v4/heldout/new_impl_targets_v2.json`。
 
 ## 结果位置
@@ -90,4 +102,6 @@ Gemma 4 是事前冻结的新实现。它的局部 direct 分数在 16 步为 `0
 - [回溯统计](../results/property/direct_persistence_v4/retrospective_metrics.json)
 - [多重比较](../results/property/direct_persistence_v4/multiplicity.json)
 - [direct/feedback/actual 贡献表](../results/property/direct_persistence_v4/contribution_table.csv)
+- [可由原始回放重算的误差指标](../results/property/direct_persistence_v4/tolerance_comparison.json)
+- [可由原始回放重算的影响量](../results/property/direct_persistence_v4/severity.json)
 - [逐项完成审计](../results/property/direct_persistence_v4/completion_audit.json)
