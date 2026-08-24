@@ -4,12 +4,14 @@
 
 ## 当前有效文档
 
-1. [当前主结论](current_mainline.md)：唯一的论文主线和数字口径。
-2. [v4 简单说明](direct_persistence_v4_simple_summary.md)：面向非本项目读者的短版说明。
-3. [短程筛查方法](direct_persistence_screen.md)：16 步筛查、32 步确认和输出含义。
-4. [证据表](direct_persistence_evidence.md)：直接作用、训练状态反馈和实际参数变化的分解。
-5. [optimizer 结论](direct_persistence_optimizer.md)：optimizer 能改变结果，但不是已确认的统一根因。
-6. [完成度矩阵](direct_persistence_v4_completion_matrix.md)：哪些已完成、哪些没有完成。
+1. [正式讲稿](talk_beyond_tolerance.md)：18–20 分钟的 Property + Oracle 报告版本，包含三张图和数据边界。
+2. [当前主结论](current_mainline.md)：唯一的论文主线和数字口径。
+3. [Phi 同协议因果干预](phi_adamw_source_intervention.md)：cold-start AdamW 下 natural、sham 和四个随机舍入臂。
+4. [v4 简单说明](direct_persistence_v4_simple_summary.md)：面向非本项目读者的短版说明。
+5. [短程筛查方法](direct_persistence_screen.md)：16 步筛查、32 步确认和输出含义。
+6. [证据表](direct_persistence_evidence.md)：直接作用、训练状态反馈和实际参数变化的分解。
+7. [optimizer 结论](direct_persistence_optimizer.md)：optimizer 能改变结果，但不是已确认的统一根因。
+8. [完成度矩阵](direct_persistence_v4_completion_matrix.md)：哪些已完成、哪些没有完成。
 
 机器可读的当前状态由以下文件给出：
 
@@ -23,6 +25,7 @@
 - 历史无状态 SGD 记录：3 个有界案例；它们不是 3 个独立实现机制。
 - 统一 cold-start AdamW 回溯集：15 行。
 - AdamW 下确认的直接持续案例：2 行，Liger 和 Phi `lm_head dX`。
+- Phi 已在同一 cold-start AdamW 协议下完成 stochastic-rounding source intervention：natural 显著，四个随机舍入重复均回到各自随机抵消范围。
 - 结果盲候选 `0543`：总体校正后保持未决，不算正例，也不算负例。
 - Qwen `lm_head dX`：在 AdamW 下直接更新抵消。
 - 未见实现检查：较早冻结的 Gemma v3 有 1 个直接抵消、状态反馈持续的控制；v4 又完成 3 个新目标，其中 1 个是状态反馈对照、2 个没有可测参数作用。两轮都没有直接持续正例。
