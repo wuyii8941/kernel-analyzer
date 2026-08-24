@@ -40,12 +40,13 @@ operator becomes a parameter-update error that keeps accumulating.
 
 - The historical short-horizon rows and current 4096-step results do not
   prove one universal property for every operator.
-- Liger, Phi and Qwen have a robust 4096-step direct audit and an observed
-  paired parameter/loss split under controlled one-carrier training. SiLU has
-  long-run feedback separation and a recorded paired loss gap, but is not a
-  direct-source case. Qwen seq64 `v_proj` is a separate long-loss-split
-  consequence case whose direct source direction is not persistent. These
-  remain controlled runs, not full-parameter training.
+- Liger, Phi, Qwen, Llama and Ministral have a robust 4096-step direct audit
+  and an observed paired parameter/loss split under controlled one-carrier
+  training. SiLU has long-run feedback separation and a recorded paired loss
+  gap, but is not a direct-source case. Qwen64 `v_proj`, Qwen seq64 `v_proj`
+  and saved-P are separate long-loss-split consequence cases whose direct
+  source directions are not persistent. These remain controlled runs, not
+  full-parameter training.
 - The 15-row result is retrospective and measured on declared parameter
   carriers. The 4096-step review measures same-state direct updates; neither
   is full-parameter training or a converged-loss result.

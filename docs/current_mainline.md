@@ -101,7 +101,7 @@ A_X(T)=\frac{\left\|\sum_{t=1}^{T}X_t\right\|}
 | Mamba `in_proj` | 1.110 | 33/64 的 `A>1` | 没有形成稳健长程方向 |
 | Qwen saved-P | 1.195 | 28/64 的 `A>1` | 直接方向未保持，但 live loss 已长程分叉 |
 | Qwen seq64 `v_proj` | 1.000 | 长程结果不超过自身随机基线 | 直接方向未保持，但 live loss 已长程分叉 |
-| Qwen seq128 `v_proj` | 0.981 | 长程结果不超过自身随机基线 | 没有形成稳健长程方向 |
+| Qwen seq128 `v_proj` | 0.981 | 长程结果不超过自身随机基线 | 直接方向未保持，但 live 参数距离 0.302、loss gap 已长程分叉 |
 | layer-23 attention state | — | — | 历史实现无法精确重放，拒绝判断 |
 | Qwen3-VL SiLU | 3.100（实际反馈） | 长程反馈维持 | **反馈维持型长程案例**；参数距离 0.888，末步 loss gap -7.95e-09，后半程平均 gap 4.93e-08 |
 | Gemma4 RMSNorm/反馈区域 | 未决 | 未决 | 长程复核仍在运行，完成前保持未决 |
