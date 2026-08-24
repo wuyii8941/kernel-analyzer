@@ -1,0 +1,27 @@
+{
+  "schema": "kernel-analyzer-layer23-long-release-v1",
+  "status": "ABSTAIN_HISTORICAL_WRAPPER_UNAVAILABLE",
+  "case_id": "layer23_qproj_attention_state_region",
+  "historical_32_step_generated_source_sha256": "58955a5274f7aa8c635a5273590d37388a2664022ca813727e23a322216ac3f3",
+  "long_run_generated_source_sha256": "956e5507ca80611d86b73d0820743e946b198f238e3d76b0fac0f7118b2a4594",
+  "byte_identical_to_historical_release": false,
+  "reason_for_new_release": "The historical compiled wrapper bytes are no longer present. The current declared environment recompiles a different wrapper, so it is frozen as a new release instead of being presented as byte-identical history.",
+  "semantic_identity_checks": {
+    "model": "Qwen3-1.7B checkpoint 1024 from results/final/long_horizon_bank.json",
+    "sequence_length": 1024,
+    "layer": 23,
+    "parameter": "model.layers.23.self_attn.q_proj.weight",
+    "target_operation": "actual backward bmm_76 computing G_q = S_bwd @ K",
+    "target_bmm_ordinal": 20,
+    "repair": "joint replacement by eager-reference S_bwd and K",
+    "target_output_shape": [16, 1024, 128]
+  },
+  "current_release_screen": {
+    "steps": 32,
+    "gradient_difference_l2": 0.0,
+    "direct_update_difference_l2": 0.0,
+    "coherence_amplification": 0.0,
+    "interpretation": "The historical repair is a no-op in the current recompiled program, so repeating it 4096 times would not test the historical implementation difference."
+  },
+  "claim_boundary": "The current release cannot validate or refute the historical 32-step result. A byte-identical historical wrapper is required before a meaningful 4096-step rerun."
+}

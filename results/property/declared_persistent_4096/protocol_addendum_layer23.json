@@ -1,0 +1,26 @@
+{
+  "schema": "kernel-analyzer-declared-persistent-4096-layer23-addendum-v1",
+  "status": "FROZEN_BEFORE_LAYER23_4096_RESULT",
+  "reason": "The historical layer-23 record uses a seq1024 joint S_bwd/K repair and therefore requires its own exact-boundary runner and state bank.",
+  "case_id": "layer23_qproj_attention_state_region",
+  "input_bank": {
+    "path": "results/property/declared_persistent_4096/qwen_seq1024_l23_bank_4224.json",
+    "sha256": "06ae3a9e7ac95008b20efa148ba0c7e65d995dfe7faa0eee0d68316633285946",
+    "states": 4224,
+    "sequence_length": 1024,
+    "dataset": "Salesforce/wikitext:wikitext-103-raw-v1:train",
+    "selection": "contiguous non-overlapping blocks with one-token gaps; no outcome-dependent selection"
+  },
+  "protocol": {
+    "starting_model_checkpoint": 1024,
+    "warmup_steps": 128,
+    "measurement_steps": 4096,
+    "rolling_window_steps": 32,
+    "optimizer": "AdamW, lr=1e-5, betas=(0.9,0.95), epsilon=1e-8, zero moments then evolved normally",
+    "parameter_scope": "model.layers.23.self_attn.q_proj.weight",
+    "state_path": "natural q_proj master and moments; candidate and repair compared at the same state",
+    "repair_boundary": "historical actual bmm_76 G_q = S_bwd @ K with joint eager S_bwd/K replacement",
+    "measurement": "exact full-coordinate resultant/energy plus a fixed full-coordinate signed-bucket sketch",
+    "claim_boundary": "direct 4096-step directionality only; not feedback, full-parameter training, or loss convergence"
+  }
+}

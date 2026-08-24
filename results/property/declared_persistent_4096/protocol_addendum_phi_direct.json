@@ -1,0 +1,25 @@
+{
+  "schema": "kernel-analyzer-declared-persistent-4096-phi-direct-addendum-v1",
+  "status": "FROZEN_BEFORE_PHI_DIRECT_4096_RESULT",
+  "reason": "The existing Phi 4096 artifacts test paired training convergence; this addendum supplies the same-state direct-effect measurement used for the other declared cases.",
+  "case_id": "phi4_seq64_lmhead_dx",
+  "input_bank": {
+    "path": "results/property/declared_persistent_4096/phi_seq64_bank_4224.json",
+    "sha256": "d0bbc0cbc4886d5e857c14369439b26b2d59dfa7b5f2b7477115cdad554577ea",
+    "states": 4224,
+    "sequence_length": 64,
+    "dataset": "Salesforce/wikitext:wikitext-103-raw-v1:train",
+    "selection": "contiguous non-overlapping blocks with one-token gaps; no outcome-dependent selection"
+  },
+  "protocol": {
+    "warmup_steps": 128,
+    "measurement_steps": 4096,
+    "rolling_window_steps": 32,
+    "optimizer": "AdamW, lr=1e-4, betas=(0.9,0.95), epsilon=1e-8, natural warm moments",
+    "parameter_scope": "model.norm.weight",
+    "state_path": "natural master and moments; candidate and repair compared at the same state",
+    "repair_boundary": "compiled BF16 lm_head dX MM vs FP32 MM with BF16 ABI cast",
+    "measurement": "full-vector Gram, sign-flip null, rolling windows, and reference-relative coefficient",
+    "claim_boundary": "direct 4096-step directionality only; convergence remains a separate test"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "schema": "kernel-analyzer-declared-persistent-4096-protocol-v1",
+  "status": "FROZEN_BEFORE_4096_RESULTS",
+  "purpose": "Re-test every repository record currently described as 32-step directional/persistent at a 4096-step horizon without treating protocols as interchangeable.",
+  "direct_effect_protocol": {
+    "warmup_steps": 128,
+    "measurement_steps": 4096,
+    "rolling_window_steps": 32,
+    "optimizer": "the optimizer and learning rate declared by each historical case",
+    "state_path": "natural implementation advances one common parameter/moment state; candidate and exact repair are compared at that same state",
+    "measurement": [
+      "exact full-coordinate resultant and energy",
+      "all 128 disjoint 32-step windows",
+      "full-coordinate signed-bucket sketch for lag, sign-flip null and effective-rank diagnostics",
+      "per-step loss, update norm and endpoint change summary"
+    ],
+    "verdict_boundary": "4096-step direct directionality is not training convergence and does not include feedback"
+  },
+  "input_banks": {
+    "qwen_seq128": {
+      "path": "results/property/declared_persistent_4096/qwen_seq128_bank_4224.json",
+      "sha256": "85c03a23bb14c878172524e23bea5cfc17c660407a627a253fae5a6b10a733bf"
+    },
+    "mamba_seq64": {
+      "path": "results/property/declared_persistent_4096/mamba_seq64_bank_4224.json",
+      "sha256": "0afc51adba74b7091e3052caf2257128b7c8b01a8b71eed6653afec384f72a70"
+    }
+  },
+  "case_roster": [
+    {
+      "case_id": "qwen_seq128_lmhead_dx",
+      "historical_status": "PASS_FLASH_STYLE_CASE",
+      "repair_boundary": "lm_head dX compiled BF16 MM vs FP32 MM with BF16 ABI cast"
+    },
+    {
+      "case_id": "liger_fused_ce_t128",
+      "historical_status": "PASS_FLASH_STYLE_CASE",
+      "repair_boundary": "Liger fused CE BF16 dW accumulation vs FP32 accumulation"
+    },
+    {
+      "case_id": "phi4_seq64_lmhead_dx",
+      "historical_status": "PASS_FLASH_STYLE_CASE",
+      "repair_boundary": "lm_head dX compiled BF16 MM vs FP32 MM with BF16 ABI cast",
+      "existing_4096_artifacts": [
+        "results/property/convergence_v1/phi_carrier_adamw_convergence.json",
+        "results/property/convergence_v2/phi_carrier_adamw_cosine_convergence.json"
+      ]
+    },
+    {
+      "case_id": "mamba_seq64_in_proj",
+      "historical_status": "PASS_FLASH_STYLE_CASE",
+      "repair_boundary": "in_proj compiled BF16 MM vs FP32 MM with BF16 ABI cast"
+    },
+    {
+      "case_id": "qwen_saved_p_seq128",
+      "historical_status": "PASS_STRICT_SEMANTIC_REGION_FLASH_STYLE_CASE",
+      "repair_boundary": "reconstructed saved-P vs true-forward-P softmax VJP"
+    },
+    {
+      "case_id": "layer23_qproj_attention_state_region",
+      "historical_status": "PASS_STRICT_SEMANTIC_REGION_FLASH_STYLE_CASE",
+      "repair_boundary": "joint S_bwd/K attention-state repair"
+    }
+  ],
+  "allowed_outcomes": [
+    "4096_STEP_DIRECT_DIRECTIONAL",
+    "TRANSIENT_32_STEP_EFFECT",
+    "OPTIMIZER_PHASE_CONDITIONAL",
+    "FEEDBACK_ONLY_OR_UNRESOLVED",
+    "ABSTAIN_REPAIR_IDENTITY_DRIFT"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "schema": "kernel-analyzer-declared-layer23-direct-long-v1",
+  "status": "ABSTAIN_REPAIR_IDENTITY_DRIFT_BEFORE_4096",
+  "case_id": "layer23_qproj_attention_state_region",
+  "requested_measurement_steps": 4096,
+  "completed_engineering_screen_steps": 32,
+  "historical_32_step_generated_source_sha256": "58955a5274f7aa8c635a5273590d37388a2664022ca813727e23a322216ac3f3",
+  "current_generated_source_sha256": "956e5507ca80611d86b73d0820743e946b198f238e3d76b0fac0f7118b2a4594",
+  "byte_identical_historical_wrapper_available": false,
+  "semantic_screen": {
+    "repair_boundary": "layer-23 G_q = S_bwd @ K with joint eager S_bwd/K replacement",
+    "target_bmm_ordinal": 20,
+    "target_output_shape": [16, 1024, 128],
+    "states": 32,
+    "gradient_difference_l2_all_states": 0.0,
+    "direct_update_difference_l2_all_states": 0.0,
+    "coherence_amplification": 0.0
+  },
+  "decision": "Do not spend 4096 steps repeating an exact zero contrast. Restore the historical compiled wrapper or generate a newly screened nonzero repair before long-run measurement.",
+  "allowed_claim": "Long-run status unresolved because the historical implementation contrast is unavailable.",
+  "forbidden_claims": [
+    "The historical layer-23 effect persisted for 4096 steps.",
+    "The historical layer-23 effect was disproved by the current no-op repair."
+  ],
+  "engineering_screen_external_artifact": {
+    "path": "/data1/tzh/cache/kernel_analyzer/declared4096_smoke/l23.json",
+    "sha256": "ed66e9064e95754cd618797986aaaed6c9661a783d02810508f8728dae608bc6"
+  }
+}
