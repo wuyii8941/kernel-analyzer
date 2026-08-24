@@ -141,6 +141,13 @@ In the four-arm comparison, only `model.norm.weight` is allowed to evolve:
 | BF16 F+B vs FP32 F+B | `3.223e-4` | `1.857` |
 | different RNG seed | `0` | not informative because dropout is zero |
 
+The different-seed row is not used as a diffusion baseline: this controlled
+carrier has no dropout, so changing the seed produces no change.  The actual
+repeated-diffusion baseline is the separate five-seed, every-step,
+norm/support-matched random-injection experiment.  Its `A` values are
+`0.870--1.037` (mean `0.959`) and are recorded in
+`results/property/joint_bias_formation_v1/four_scale_arms/phi_repeated_random_null.json`.
+
 The precision arm runs the full model forward and backward in BF16 versus
 FP32, but updates only the declared final-norm parameter. It is therefore a
 controlled one-parameter comparison, not full-parameter BF16-versus-FP32
