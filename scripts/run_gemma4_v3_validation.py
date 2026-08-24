@@ -78,6 +78,11 @@ def main() -> None:
     parser.add_argument("--target-endpoint")
     parser.add_argument("--carrier")
     parser.add_argument("--case-id", default="gemma4_e2b_ple_rmsnorm")
+    parser.add_argument(
+        "--raw-capture-dir",
+        type=Path,
+        help="Optional external cache directory for exact endpoint, gradient and update values.",
+    )
     args = parser.parse_args()
     consequence_steps = args.consequence_steps or args.steps
 
@@ -99,6 +104,9 @@ def main() -> None:
 
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=False)
+    raw_capture_dir = args.raw_capture_dir
+    if raw_capture_dir is not None:
+        raw_capture_dir.mkdir(parents=True, exist_ok=True)
     release_dir = output_dir / "runtime_release"
     device = torch.device(args.device)
     configure_candidate_runtime(args.runtime_seed)
@@ -137,6 +145,8 @@ def main() -> None:
     repair_targets = {target["region_id"]: repair_endpoints}
     carriers = (args.carrier,) if args.carrier else CARRIERS
 
+    raw_gradient_records = []
+
     def gradient(master: torch.Tensor, state: dict, repair: bool, carrier_name: str) -> torch.Tensor:
         parameter = parameters[carrier_name]
         with torch.no_grad():
@@ -149,9 +159,16 @@ def main() -> None:
                 campaign_rows=[target],
                 repair_targets=repair_targets,
                 allow_unlisted_calls=True,
+                raw_capture_dir=raw_capture_dir,
             )
             with observer:
                 candidate(values).backward()
+            if raw_capture_dir is not None:
+                raw_gradient_records.append({
+                    "state_id": state["state_id"],
+                    "carrier": carrier_name,
+                    "observer_records": observer.records,
+                })
         else:
             candidate(values).backward()
         torch.cuda.synchronize(device)
@@ -166,6 +183,7 @@ def main() -> None:
     formation_even = {name: torch.zeros_like(formation_total[name]) for name in carriers}
     formation_path_energy = 0.0
     formation_records = []
+    raw_formation_records = []
     for index, state in enumerate(states):
         state_energy = 0.0
         for name in carriers:
@@ -179,6 +197,22 @@ def main() -> None:
             (formation_odd if index % 2 else formation_even)[name].add_(delta)
             energy = float(torch.sum(delta * delta).item())
             state_energy += energy
+            if raw_capture_dir is not None:
+                state_dir = raw_capture_dir / "formation" / f"{state['state_id']}_{name}"
+                state_dir.mkdir(parents=True, exist_ok=True)
+                vector_path = state_dir / "vectors.pt"
+                torch.save({
+                    "state_id": state["state_id"],
+                    "carrier": name,
+                    "candidate_gradient": candidate_grad.detach().cpu(),
+                    "repair_gradient": repair_grad.detach().cpu(),
+                    "gradient_difference": delta.detach().cpu(),
+                }, vector_path)
+                raw_formation_records.append({
+                    "state_id": state["state_id"],
+                    "carrier": name,
+                    "path": str(vector_path),
+                })
             del base, candidate_grad, repair_grad, delta
         formation_path_energy += state_energy
         formation_records.append({"state_id": state["state_id"], "delta_l2": state_energy ** 0.5})
@@ -241,6 +275,7 @@ def main() -> None:
         ) if consequence_steps >= 4 else None
     )
     records = []
+    raw_trajectory_records = []
     for index, state in enumerate(consequence_states):
         step = index + 1
         gc_c = gradient(cmaster, state, False, carrier_name)
@@ -266,6 +301,27 @@ def main() -> None:
                     f"{args.case_id}::{name}",
                     (chunk for chunk in (value.detach().float().cpu().numpy(),)),
                 )
+        if raw_capture_dir is not None:
+            step_dir = raw_capture_dir / "trajectory" / f"step_{step:04d}"
+            step_dir.mkdir(parents=True, exist_ok=True)
+            vector_path = step_dir / "vectors.pt"
+            torch.save({
+                "step": step,
+                "state_id": state["state_id"],
+                "candidate_at_candidate_state_gradient": gc_c.detach().cpu(),
+                "repair_at_candidate_state_gradient": gr_c.detach().cpu(),
+                "candidate_at_repair_state_gradient": gc_r.detach().cpu(),
+                "repair_at_repair_state_gradient": gr_r.detach().cpu(),
+                "local_update": local.detach().cpu(),
+                "feedback_update": feedback.detach().cpu(),
+                "actual_update": actual.detach().cpu(),
+                "recurrence_residual": residual.detach().cpu(),
+            }, vector_path)
+            raw_trajectory_records.append({
+                "step": step,
+                "state_id": state["state_id"],
+                "path": str(vector_path),
+            })
         records.append({
             "step": step,
             "state_id": state["state_id"],
@@ -302,6 +358,22 @@ def main() -> None:
         "consequence_state_role": "TRAJECTORY" if args.consequence_bank else "CONFIRMATION_ENGINEERING_REUSE",
         "claim_boundary": "Same-process current wrapper release; source prediction and consequence are separated, and feedback remains out of source scope.",
     }
+    if raw_capture_dir is not None:
+        raw_manifest = {
+            "schema": "kernel-analyzer-gemma4-v3-raw-capture-v1",
+            "status": "COMPLETE_RAW_ENDPOINT_GRADIENT_UPDATE_CAPTURE",
+            "case_id": args.case_id,
+            "target_region": target["region_id"],
+            "target_endpoint": repair_endpoints,
+            "carrier": carrier_name,
+            "formation_gradient_records": raw_formation_records,
+            "trajectory_update_records": raw_trajectory_records,
+            "observer_gradient_records": raw_gradient_records,
+            "claim_boundary": "Raw tensors remain outside the repository. Import and digest them before publishing tolerance metrics.",
+        }
+        raw_manifest_path = raw_capture_dir / "raw_manifest.json"
+        raw_manifest_path.write_text(json.dumps(raw_manifest, indent=2, sort_keys=True) + "\n")
+        consequence["raw_capture_manifest"] = str(raw_manifest_path)
     (output_dir / "consequence.json").write_text(json.dumps(consequence, indent=2, sort_keys=True) + "\n")
     short_payload = {
         "schema": "kernel-analyzer-gemma4-v3-short-screen-dryrun-v1",

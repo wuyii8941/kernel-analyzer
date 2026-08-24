@@ -557,6 +557,11 @@ def main() -> None:
             "auroc": None,
             "claim_boundary": "Fresh Gemma target checks add controls but no direct-persistence positive; recall/AUROC remain undefined.",
         },
+        "tolerance_progress": {
+            "new_impl_raw_rows": len(load(args.output / "tolerance_comparison.json").get("raw_new_impl_reanalysis", {}).get("rows", [])) if (args.output / "tolerance_comparison.json").exists() else 0,
+            "status": load(args.output / "tolerance_comparison.json").get("status", "NOT_STARTED") if (args.output / "tolerance_comparison.json").exists() else "NOT_STARTED",
+            "claim_boundary": "Complete tolerance comparison still requires raw candidate/repair update pairs and raw operands for all frozen rows.",
+        },
         "next_required": [
             "same-state optimizer ablation for 0543 when exact raw captures exist",
             "expand the independently frozen NEW_IMPL pool until a direct-positive or all-negative boundary is documented",

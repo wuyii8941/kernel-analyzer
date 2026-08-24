@@ -293,6 +293,7 @@ class GeneratedFP32Observer:
         metric_chunk_elements: int = 1_048_576,
         repair_targets: Mapping[str, Sequence[str]] | None = None,
         allow_unlisted_calls: bool = False,
+        raw_capture_dir: Path | None = None,
     ) -> None:
         self.modules = list(modules)
         self.sample_size = sample_size
@@ -302,6 +303,9 @@ class GeneratedFP32Observer:
             for region_id, names in (repair_targets or {}).items()
         }
         self.allow_unlisted_calls = allow_unlisted_calls
+        self.raw_capture_dir = Path(raw_capture_dir) if raw_capture_dir is not None else None
+        if self.raw_capture_dir is not None:
+            self.raw_capture_dir.mkdir(parents=True, exist_ok=True)
         by_symbol: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
         for row in campaign_rows:
             by_symbol[str(row["symbol"])].append(row)
@@ -484,6 +488,23 @@ class GeneratedFP32Observer:
                     )
                     for name in output_names
                 }
+                raw_capture = {}
+                if self.raw_capture_dir is not None:
+                    capture_id = f"{len(self.records):06d}_{row['region_id']}"
+                    capture_dir = self.raw_capture_dir / capture_id
+                    capture_dir.mkdir(parents=True, exist_ok=True)
+                    for name in output_names:
+                        candidate_path = capture_dir / f"{name}.candidate.pt"
+                        reference_path = capture_dir / f"{name}.reference.pt"
+                        torch.save(candidate_pointers[name].detach().cpu(), candidate_path)
+                        torch.save(promoted_pointers[name].detach().cpu(), reference_path)
+                        raw_capture[name] = {
+                            "candidate": str(candidate_path),
+                            "reference": str(reference_path),
+                            "candidate_dtype": str(candidate_pointers[name].dtype),
+                            "reference_dtype": str(promoted_pointers[name].dtype),
+                            "shape": list(candidate_pointers[name].shape),
+                        }
                 repaired = []
                 target_names = self.repair_targets.get(str(row["region_id"]), set())
                 unknown_targets = target_names - set(output_names)
@@ -514,6 +535,7 @@ class GeneratedFP32Observer:
                         "typed_program_sha256"
                     ],
                     "endpoint_metrics": metrics,
+                    "raw_capture": raw_capture,
                     "repaired_endpoints": repaired,
                 })
                 return result

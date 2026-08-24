@@ -117,6 +117,7 @@ def main() -> None:
             "raw_tolerance_metrics": {
                 "status": tolerance.get("raw_stage_reanalysis", {}).get("status", "ABSTAIN_MISSING_RAW_REANALYSIS"),
                 "rows": len(tolerance.get("raw_stage_reanalysis", {}).get("rows", [])),
+                "new_impl_rows": len(tolerance.get("raw_new_impl_reanalysis", {}).get("rows", [])),
             },
         },
         "abstained": {
