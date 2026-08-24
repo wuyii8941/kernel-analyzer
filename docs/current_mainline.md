@@ -6,7 +6,7 @@
 
 仓库中有 **23 个唯一主矩阵 case ID、29 条矩阵记录**。长程审计同时保留 **11 个历史候选**和 **2 个未见模型的同族复现行**；合并后的审计表共有 **28 行**。这几个数字分别是覆盖分母、候选分母和逐行审计数，不能互相替代。
 
-当前有 **6 个最终案例**：5 个直接作用长程成立（Liger fused CE、Phi `lm_head dX`、Qwen `lm_head dX`、Llama `lm_head dX`、Ministral `lm_head dX`），以及 1 个反馈维持型长程案例（Qwen3-VL SiLU）。最终案例要求长程方向或反馈分离成立，并且在某个测量窗口观察到参数或 loss 分叉；不要求两条轨迹收敛到不同的最终 loss。无法安全重放的记录单独标为未决，不会被当成负例。完整逐行表见 [`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)。
+当前有 **9 个已确认的长程结果案例**：5 个直接作用长程成立（Liger fused CE、Phi `lm_head dX`、Qwen `lm_head dX`、Llama `lm_head dX`、Ministral `lm_head dX`），1 个反馈维持型长程案例（Qwen3-VL SiLU），以及 3 个直接方向未持续但 live candidate/repair loss 已长程分叉的后果案例（Qwen64 `v_proj`、Qwen seq64 `v_proj`、saved-P）。最终案例要求长程方向或长程 live 分离成立，并且在某个测量窗口观察到参数或 loss 分叉；不要求两条轨迹收敛到不同的最终 loss。无法安全重放的记录单独标为未决，不会被当成负例。完整逐行表见 [`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)。
 
 ## 我们在问什么
 
@@ -99,12 +99,12 @@ A_X(T)=\frac{\left\|\sum_{t=1}^{T}X_t\right\|}
 | Llama-3.2 `lm_head dX` | 5.881 | 长程方向超过自身随机上界 | 同一实现族在新模型上的长程直接方向 |
 | Ministral-3 `lm_head dX` | 5.050 | 长程方向超过自身随机上界 | 同一实现族在新模型上的长程直接方向 |
 | Mamba `in_proj` | 1.110 | 33/64 的 `A>1` | 没有形成稳健长程方向 |
-| Qwen saved-P | 1.195 | 28/64 的 `A>1` | 没有形成稳健长程方向 |
-| Qwen seq64 `v_proj` | 1.000 | 长程结果不超过自身随机基线 | 没有形成稳健长程方向 |
+| Qwen saved-P | 1.195 | 28/64 的 `A>1` | 直接方向未保持，但 live loss 已长程分叉 |
+| Qwen seq64 `v_proj` | 1.000 | 长程结果不超过自身随机基线 | 直接方向未保持，但 live loss 已长程分叉 |
 | Qwen seq128 `v_proj` | 0.981 | 长程结果不超过自身随机基线 | 没有形成稳健长程方向 |
 | layer-23 attention state | — | — | 历史实现无法精确重放，拒绝判断 |
 | Qwen3-VL SiLU | 3.100（实际反馈） | 长程反馈维持 | **反馈维持型长程案例**；参数距离 0.888，末步 loss gap -7.95e-09，后半程平均 gap 4.93e-08 |
-| Gemma4 RMSNorm/反馈区域 | 未决 | 未决 | 兼容运行包在第 294 步后未写出完整结果，单独保存为长程重放未决 |
+| Gemma4 RMSNorm/反馈区域 | 未决 | 未决 | 长程复核仍在运行，完成前保持未决 |
 | layer-23 attention state | — | — | 历史实现无法精确重放，拒绝判断 |
 | DeepSeek layer-35 `dV` | — | — | 只有形成阶段证据，长程未确认 |
 
@@ -163,7 +163,7 @@ v4.1 是身份字段更完整的新实验入口，目前状态为 `NOT_STARTED_N
 
 > 输出误差大小不能判断一个 LLM 训练实现是否会长期形成方向。更直接的办法是在真实 backward 和实际 optimizer 下先做短程筛查，再对升级项做长程同状态复核，并把最终参数分离拆成算子直接作用和训练状态反馈。
 
-当前证据支持一个 **短程方向筛查 + 4096 步长程复核** 的两级流程。短筛用于节省成本；长期标签只来自长程实验。目前 Liger、Phi 和 Qwen 在声明的 warm-state 4096 步协议中保留直接方向；SiLU 显示长程反馈维持并有配对 loss gap；Mamba、saved-P 和两个 `v_proj` 候选没有稳健长程直接方向；layer-23、Gemma4 和 DeepSeek `dV` 分别因实现身份、运行环境或形成证据不足而保持未决。
+当前证据支持一个 **短程方向筛查 + 4096 步长程复核** 的两级流程。短筛用于节省成本；长期标签只来自长程实验。目前 Liger、Phi、Qwen、Llama 和 Ministral 在声明的 warm-state 4096 步协议中保留直接方向；SiLU 显示长程反馈维持并有配对 loss gap；Qwen64 `v_proj`、Qwen seq64 `v_proj` 和 saved-P 的直接方向未保持，但 live candidate/repair 轨迹出现长程 loss 分叉，作为单独的后果案例；Mamba 与 Gemma4 的统一 live 复核仍在进行，layer-23 和 DeepSeek `dV` 分别因实现身份或形成证据不足而保持未决。
 
 ## 当前不能声称
 

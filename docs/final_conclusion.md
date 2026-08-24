@@ -18,10 +18,14 @@ operator becomes a parameter-update error that keeps accumulating.
 4. In the warm-state 4096-step review, Liger, Phi, Qwen, Llama and Ministral
    `lm_head dX`/fused CE records retain robust direct direction. Llama and
    Ministral reproduce the same lm-head family direction on new operand
-   distributions. Qwen3-VL SiLU shows long-run feedback separation
-   with a paired loss gap. Mamba, saved-P, and both Qwen `v_proj` rows do not;
-   layer-23 abstains because its historical implementation identity cannot be
-   replayed; Gemma4 and DeepSeek `dV` remain unresolved for runtime or
+   distributions. Qwen3-VL SiLU shows long-run feedback separation with a
+   paired loss gap. The Qwen64 `v_proj`, Qwen seq64 `v_proj`, and saved-P
+   direct directions diffuse, but their live candidate/repair trajectories
+   show long-run paired loss splits; they are therefore counted as consequence
+   cases, not direct-source cases. Mamba and Gemma4 are still being checked
+   with the same live protocol; they remain unresolved until their paired
+   artifacts exist. Layer-23 abstains because its historical implementation
+   identity cannot be replayed, while DeepSeek `dV` remains unresolved for
    formation reasons. The complete audit contains 28 rows: 11 historical
    candidates, two same-family replication rows, and 15 roster/control or
    unresolved rows.
@@ -39,8 +43,9 @@ operator becomes a parameter-update error that keeps accumulating.
 - Liger, Phi and Qwen have a robust 4096-step direct audit and an observed
   paired parameter/loss split under controlled one-carrier training. SiLU has
   long-run feedback separation and a recorded paired loss gap, but is not a
-  direct-source case. These remain controlled runs, not full-parameter
-  training.
+  direct-source case. Qwen seq64 `v_proj` is a separate long-loss-split
+  consequence case whose direct source direction is not persistent. These
+  remain controlled runs, not full-parameter training.
 - The 15-row result is retrospective and measured on declared parameter
   carriers. The 4096-step review measures same-state direct updates; neither
   is full-parameter training or a converged-loss result.

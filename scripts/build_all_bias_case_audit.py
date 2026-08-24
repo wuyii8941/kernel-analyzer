@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from collections import Counter
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -193,7 +194,8 @@ def paired_row(path: Path) -> dict[str, Any]:
     if payload is None:
         return {"status": "NOT_RUN", "artifact": str(path.relative_to(ROOT))}
     final = payload.get("final", {})
-    recent = payload.get("last_512_train_steps", {}).get("paired_loss_gap", {})
+    recent_block = payload.get("last_512_train_steps", {})
+    recent = recent_block.get("paired_loss_gap", {}) or recent_block.get("loss_gap_candidate_minus_repair", {})
     # The earlier Phi convergence runner used a different, but still auditable,
     # 4096-step schema.  Keep it in the same consequence column without
     # pretending its frozen-plateau gate passed.
@@ -231,7 +233,13 @@ def paired_row(path: Path) -> dict[str, Any]:
                 for row in payload.get("records", [])
             )
         ),
-        "steps": payload.get("protocol", {}).get("steps") or payload.get("steps_completed") or payload.get("steps"),
+        "steps": (
+            payload.get("protocol", {}).get("steps")
+            or payload.get("protocol", {}).get("measurement_steps")
+            or payload.get("steps_completed")
+            or payload.get("steps")
+            or (len(payload.get("train_rows", [])) if payload.get("train_rows") else None)
+        ),
         "parameter_distance": final.get("parameter_distance_l2") or payload.get("final_master_drift_l2"),
         "final_loss_gap": final.get("loss_gap_candidate_minus_repair") if final else (
             payload.get("records", [{}])[-1].get("paired_loss_gap", payload.get("records", [{}])[-1].get("paired_loss_gap_candidate_minus_repair"))
@@ -251,10 +259,10 @@ CASES = [
     ("Liger fused CE", "Qwen3-1.7B", "fused CE dW accumulation", "event/pairing imbalance", LONG / "liger_fused_ce.json", PAIRED / "liger_fused_ce.json"),
     ("Phi lm_head dX", "Phi-4-mini", "lm_head backward dX", "event/pairing imbalance + backward transport", LONG / "phi_lmhead_dx.json", ROOT / "results/property/convergence_v1/phi_carrier_adamw_convergence.json"),
     ("Qwen lm_head dX", "Qwen3-1.7B", "lm_head backward dX", "event/pairing imbalance + backward transport", LONG / "qwen_lmhead_dx.json", PAIRED / "qwen_lmhead_dx.json"),
-    ("Qwen64 v_proj", "Qwen3-1.7B", "seq64 v_proj MM + output rounding", "conditional source asymmetry", LONG / "qwen64_vproj_output.json", None),
-    ("Qwen v_proj", "Qwen3-1.7B", "v_proj MM/output rounding", "local arithmetic/pairing", LONG / "qwen_vproj_output.json", None),
-    ("Mamba in_proj", "Mamba-130M", "in_proj matrix multiply", "local arithmetic/pairing", LONG / "mamba_in_proj.json", None),
-    ("saved-P", "Qwen3-1.7B", "layer-27 saved-P softmax backward", "response/state-contract imbalance", LONG / "qwen_saved_p.json", None),
+    ("Qwen64 v_proj", "Qwen3-1.7B", "seq64 v_proj MM + output rounding", "conditional source asymmetry", LONG / "qwen64_vproj_output.json", LONG / "qwen64_vproj_live_refresh_live_paired.json"),
+    ("Qwen v_proj", "Qwen3-1.7B", "v_proj MM/output rounding", "local arithmetic/pairing", LONG / "qwen_vproj_output.json", LONG / "qwen_vproj_live_refresh_live_paired.json"),
+    ("Mamba in_proj", "Mamba-130M", "in_proj matrix multiply", "local arithmetic/pairing", LONG / "mamba_in_proj.json", LONG / "mamba_in_proj_live_refresh_live_paired.json"),
+    ("saved-P", "Qwen3-1.7B", "layer-27 saved-P softmax backward", "response/state-contract imbalance", LONG / "qwen_saved_p.json", LONG / "qwen_saved_p_live_refresh_live_paired.json"),
     ("Qwen3-VL SiLU", "Qwen3-VL-Reranker-2B", "SiLU backward", "response asymmetry", LONG / "qwen3vl_silu_4096.json", None),
     ("layer-23 attention", "Qwen3-1.7B", "attention S_bwd/K to q_proj", "event/pairing imbalance", LONG / "layer23_qproj_attention_state_region.json", None),
     ("DeepSeek layer-35 dV", "DeepSeek-R1-Qwen3-8B", "attention dV BMM", "formation unresolved; event/pairing candidate", LONG / "deepseek_l35_dv.json", None),
@@ -280,6 +288,13 @@ def final_label(direct: dict[str, Any], paired: dict[str, Any], formation_path: 
     if direct.get("status") == "ABSTAIN":
         return "ABSTAIN_NOT_REPLAYABLE"
     if direct.get("long_direct") == "NOT_ROBUST":
+        # The user's final criterion is deliberately broader than direct
+        # persistence: a reproducible long live candidate/repair loss split is
+        # still a real training consequence, even when the direct source
+        # direction itself diffuses.  Keep this label separate so it is never
+        # mistaken for a persistent-local-source case.
+        if paired.get("status") == "COMPLETE_LIVE_PAIRED_LOSS_AUDIT" and paired.get("loss_separation_observed"):
+            return "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE"
         return "NO_ROBUST_LONG_DIRECT_BIAS"
     if direct.get("status") == "NOT_RUN":
         if "formation unresolved" in formation_path:
@@ -310,6 +325,23 @@ def main() -> None:
         # same protocol rerun once its richer artifact exists.
         if name == "Qwen3-VL SiLU" and (LONG / "qwen3vl_silu_4096_with_loss.json").exists():
             long_path = LONG / "qwen3vl_silu_4096_with_loss.json"
+        if name == "Gemma4 RMSNorm" and (LONG / "gemma4_norm_4096_rebound.json").exists():
+            rebound = read(LONG / "gemma4_norm_4096_rebound.json") or {}
+            if str(rebound.get("status", "")).startswith("COMPLETE"):
+                long_path = LONG / "gemma4_norm_4096_rebound.json"
+        # A refreshed long replay supersedes an older direct-only artifact,
+        # but only once the new file is complete.  This keeps interrupted
+        # runs from silently changing the audit.
+        refreshed = {
+            "Qwen64 v_proj": LONG / "qwen64_vproj_live_refresh.json",
+            "Qwen v_proj": LONG / "qwen_vproj_live_refresh.json",
+            "Mamba in_proj": LONG / "mamba_in_proj_live_refresh.json",
+            "saved-P": LONG / "qwen_saved_p_live_refresh.json",
+        }.get(name)
+        if refreshed is not None and refreshed.exists():
+            candidate_payload = read(refreshed) or {}
+            if candidate_payload.get("status") == "COMPLETE":
+                long_path = refreshed
         if not long_path.exists() and name in unresolved_paths and unresolved_paths[name].exists():
             unresolved = read(unresolved_paths[name]) or {}
             direct = {
@@ -432,7 +464,21 @@ def main() -> None:
                 "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
                 "ROBUST_LONG_DIRECT_BIAS_LOSS_NOT_RUN",
                 "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT",
+                "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE",
             }
+            for r in rows
+        ),
+        "label_counts": dict(Counter(r["final_label"] for r in rows)),
+        "direct_persistent_case_count": sum(
+            r["long_direct"].get("long_direct") == "ROBUST"
+            for r in rows
+        ),
+        "long_loss_split_without_direct_count": sum(
+            r["final_label"] == "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE"
+            for r in rows
+        ),
+        "unresolved_or_abstain_count": sum(
+            r["final_label"].startswith(("UNRESOLVED", "ABSTAIN"))
             for r in rows
         ),
         "rows": rows,
@@ -444,6 +490,8 @@ def main() -> None:
         "",
         f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(CASES)} 个 extended candidate rows**（其中 11 个来自历史候选，另含 Llama、Ministral 的同族复现行）。合并后表共有 **{len(rows)} 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
         "",
+        f"按当前口径，最终计入 **{payload['final_case_count']} 个**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，直接方向未持续但有长程配对 loss 分叉 **{payload['long_loss_split_without_direct_count']} 个**；反馈维持型案例单独列出。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
+        "",
         "直接源案例只要 4096 步直接更新差异仍有稳定方向，就已经是持久性 bias；如果配对训练还观察到参数或 loss 分叉，就作为后果一并报告。反馈维持型案例只有在 4096 步反馈分离并观察到配对参数/loss gap 时才单独计入，不冒充直接源 bias。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。",
         "",
         "| 模型 | 算子或位置 | 形成路径 | 4096 步直接结果 | 参数/loss 分叉 | 最终分类 |",
@@ -452,6 +500,7 @@ def main() -> None:
     labels = {
         "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": "最终持久性 bias 案例",
         "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": "反馈维持型 bias，且有 loss 分叉",
+        "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": "有长程 loss 分叉，但直接方向未持续",
         "FEEDBACK_SUSTAINED_LOSS_NOT_RECORDED": "反馈维持，但 loss 尚未记录",
         "ROBUST_LONG_DIRECT_BIAS_LOSS_NOT_RUN": "长程方向成立，loss 尚未测",
         "NO_ROBUST_LONG_DIRECT_BIAS": "长程未保持",

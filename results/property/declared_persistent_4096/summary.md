@@ -8,10 +8,10 @@
 | Qwen3-1.7B | fused CE dW accumulation | COMPLETE_4096 | 直接长程方向 + loss 分叉 |
 | Phi-4-mini | lm_head backward dX | COMPLETE_4096 | 直接长程方向 + loss 分叉 |
 | Qwen3-1.7B | lm_head backward dX | COMPLETE_4096 | 直接长程方向 + loss 分叉 |
-| Qwen3-1.7B | seq64 v_proj MM + output rounding | COMPLETE_4096 | 未发现稳健长程直接方向 |
-| Qwen3-1.7B | v_proj MM/output rounding | COMPLETE_4096 | 未发现稳健长程直接方向 |
+| Qwen3-1.7B | seq64 v_proj MM + output rounding | COMPLETE_4096 | LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE |
+| Qwen3-1.7B | v_proj MM/output rounding | COMPLETE_4096 | LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE |
 | Mamba-130M | in_proj matrix multiply | COMPLETE_4096 | 未发现稳健长程直接方向 |
-| Qwen3-1.7B | layer-27 saved-P softmax backward | COMPLETE_4096 | 未发现稳健长程直接方向 |
+| Qwen3-1.7B | layer-27 saved-P softmax backward | COMPLETE_4096 | LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE |
 | Qwen3-VL-Reranker-2B | SiLU backward | COMPLETE_4096 | 反馈长程维持 + loss 分叉 |
 | Qwen3-1.7B | attention S_bwd/K to q_proj | ABSTAIN | 无法安全重放 |
 | DeepSeek-R1-Qwen3-8B | attention dV BMM | NOT_RUN | UNRESOLVED_FORMATION |

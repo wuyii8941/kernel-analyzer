@@ -278,6 +278,14 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sketch-output", type=Path)
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument(
+        "--live-paired-output", type=Path,
+        help=(
+            "Also run a live candidate/repair pair, each with its own carrier and "
+            "AdamW state, and write paired loss/parameter separation. This is "
+            "separate from the common-state direct measurement."
+        ),
+    )
     args = parser.parse_args()
     if args.measurement_steps < 32 or args.measurement_steps % args.window_steps:
         raise ValueError("measurement horizon must contain complete windows")
@@ -343,6 +351,7 @@ def main() -> None:
         modules = list(PyCodeCache.modules[start:])
 
     master = {name: parameter.detach().float().clone() for name, parameter in carriers.items()}
+    initial_master = {name: value.detach().float().clone() for name, value in master.items()}
     first = tree_zeros(master)
     second = tree_zeros(master)
 
@@ -351,8 +360,10 @@ def main() -> None:
             for name, parameter in carriers.items():
                 parameter.copy_(values[name].to(parameter.dtype))
 
-    def gradient(state: dict[str, Any], *, repair: bool, seed: int) -> tuple[str, float, Tree, dict[str, Any]]:
-        set_master(master)
+    def gradient(
+        state: dict[str, Any], *, repair: bool, seed: int, values: Tree | None = None,
+    ) -> tuple[str, float, Tree, dict[str, Any]]:
+        set_master(master if values is None else values)
         tokens = torch.tensor([state["token_ids"]], dtype=torch.long, device=device)
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
@@ -440,6 +451,7 @@ def main() -> None:
             print(json.dumps({"event": "DECLARED_LONG_WARMUP", "case": args.case, "step": step, "loss": loss_value}), flush=True)
         del grad, update
 
+    paired_start_master = {name: value.detach().float().clone() for name, value in initial_master.items()}
     accumulator = LongAccumulator(
         master, steps=args.measurement_steps, window=args.window_steps,
         sketch_dim=args.sketch_dim,
@@ -542,6 +554,122 @@ def main() -> None:
         ),
         "late_window_count": len(exact["rolling_windows"]) // 2,
     }), flush=True)
+
+    if args.live_paired_output is not None:
+        # A separate live pair is intentionally run after the common-state
+        # direct audit.  Each arm owns its parameters and AdamW moments; the
+        # measured loss gap is therefore a real trajectory gap, not a same-
+        # state counterfactual.  This mode keeps the declared carrier scope
+        # and does not claim full-model training or convergence.
+        candidate_master = {name: value.detach().float().clone() for name, value in master.items()}
+        repair_master = {name: value.detach().float().clone() for name, value in master.items()}
+        candidate_first = tree_zeros(candidate_master)
+        candidate_second = tree_zeros(candidate_master)
+        repair_first = tree_zeros(repair_master)
+        repair_second = tree_zeros(repair_master)
+        paired_rows: list[dict[str, Any]] = []
+        # Start both arms from the same post-warmup state used by the direct
+        # run.  Rebuild the warm state from scratch so the direct run's final
+        # master is not accidentally shared with either live arm.
+        base_master = {name: value.detach().float().clone() for name, value in paired_start_master.items()}
+        candidate_master = {name: value.detach().float().clone() for name, value in base_master.items()}
+        repair_master = {name: value.detach().float().clone() for name, value in base_master.items()}
+        for index, state in enumerate(states[: args.warmup_steps]):
+            step = index + 1
+            _, _, grad_c, _ = gradient(state, repair=False, seed=70_000 + index, values=candidate_master)
+            _, _, grad_r, _ = gradient(state, repair=True, seed=70_000 + index, values=repair_master)
+            up_c, candidate_first, candidate_second = update_tree(
+                grad_c, candidate_first, candidate_second, step, config["learning_rate"]
+            )
+            up_r, repair_first, repair_second = update_tree(
+                grad_r, repair_first, repair_second, step, config["learning_rate"]
+            )
+            tree_add_(candidate_master, up_c)
+            tree_add_(repair_master, up_r)
+            del grad_c, grad_r, up_c, up_r
+        paired_initial = {name: value.detach().float().clone() for name, value in candidate_master.items()}
+        recent_gaps: list[float] = []
+        for index, state in enumerate(states[args.warmup_steps:required]):
+            step = index + 1
+            opt_step = args.warmup_steps + step
+            digest_c, loss_c, grad_c, _ = gradient(
+                state, repair=False, seed=80_000 + index, values=candidate_master
+            )
+            digest_r, loss_r, grad_r, local_r = gradient(
+                state, repair=True, seed=80_000 + index, values=repair_master
+            )
+            up_c, candidate_first, candidate_second = update_tree(
+                grad_c, candidate_first, candidate_second, opt_step, config["learning_rate"]
+            )
+            up_r, repair_first, repair_second = update_tree(
+                grad_r, repair_first, repair_second, opt_step, config["learning_rate"]
+            )
+            tree_add_(candidate_master, up_c)
+            tree_add_(repair_master, up_r)
+            gap = float(loss_c - loss_r)
+            recent_gaps.append(gap)
+            paired_rows.append({
+                "step": step,
+                "optimizer_step": opt_step,
+                "state_id": state_ids[args.warmup_steps + index],
+                "candidate_loss": loss_c,
+                "repair_loss": loss_r,
+                "loss_gap_candidate_minus_repair": gap,
+                "parameter_distance_l2": tree_norm(tree_sub(candidate_master, repair_master)),
+                "candidate_update_l2": tree_norm(up_c),
+                "repair_update_l2": tree_norm(up_r),
+                "endpoint_changed_coordinates": local_r.get("changed_coordinates"),
+            })
+            if not args.quiet and (step == 1 or step % args.window_steps == 0):
+                print(json.dumps({"event": "DECLARED_LIVE_PAIRED", "case": args.case, **paired_rows[-1]}), flush=True)
+            del grad_c, grad_r, up_c, up_r
+        tail = paired_rows[-min(512, len(paired_rows)):]
+        final_pair = paired_rows[-1]
+        paired_payload = {
+            "schema": "kernel-analyzer-declared-live-paired-long-v1",
+            "status": "COMPLETE_LIVE_PAIRED_LOSS_AUDIT",
+            "case_id": config["case_id"],
+            "protocol": {
+                "input_bank": str(args.input_bank.resolve()),
+                "warmup_steps": args.warmup_steps,
+                "measurement_steps": args.measurement_steps,
+                "optimizer": "AdamW",
+                "initial_moments": "ZERO_THEN_EVOLVED_SEPARATELY_PER_ARM",
+                "carriers": config["carriers"],
+                "other_parameters_updated": False,
+                "candidate_repair_live_pair": True,
+            },
+            "final": final_pair,
+            "last_512_train_steps": {
+                "loss_gap_candidate_minus_repair": {
+                    "mean": float(np.mean([r["loss_gap_candidate_minus_repair"] for r in tail])),
+                    "population_std": float(np.std([r["loss_gap_candidate_minus_repair"] for r in tail])),
+                },
+                "parameter_distance_l2": final_pair["parameter_distance_l2"],
+            },
+            "train_rows": paired_rows,
+            "loss_separation_observed": bool(
+                final_pair["parameter_distance_l2"] > 0.0 and any(
+                    abs(r["loss_gap_candidate_minus_repair"]) > 0.0 for r in paired_rows
+                )
+            ),
+            "claim_boundary": (
+                "Live candidate/repair trajectory on the declared carrier. A nonzero "
+                "paired loss gap is a consequence signal; it is not a claim of full-"
+                "parameter training degradation or different converged minima."
+            ),
+        }
+        args.live_paired_output.parent.mkdir(parents=True, exist_ok=True)
+        args.live_paired_output.write_text(json.dumps(paired_payload, indent=2, sort_keys=True) + "\n")
+        print(json.dumps({
+            "event": "DECLARED_LIVE_PAIRED_COMPLETE",
+            "case": args.case,
+            "steps": args.measurement_steps,
+            "final_parameter_distance_l2": final_pair["parameter_distance_l2"],
+            "final_loss_gap": final_pair["loss_gap_candidate_minus_repair"],
+            "last_512_loss_gap_mean": paired_payload["last_512_train_steps"]["loss_gap_candidate_minus_repair"]["mean"],
+            "output": str(args.live_paired_output),
+        }), flush=True)
 
 
 if __name__ == "__main__":
