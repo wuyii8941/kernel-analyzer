@@ -9,7 +9,7 @@
 - Qwen step 0、8、16 的真实训练阶段响应；每个阶段使用自己的权重、输入和优化器历史状态。
 - 三个新的 Gemma 实现目标的同进程 16 步形成检查和 32 步后果检查。
 - 两个保留完整原始更新向量的案例完成了误差指标和 16/32 步随机符号对照的离线重算；没有原始位级输入的 ULP、rtol/atol 仍保持未决。
-- 三个新的 Gemma 未见实现目标又完成了原始输出、梯度和更新采集；这三行现在有完整的输出/梯度误差摘要和 `rtol/atol` 扫描，但更新的 ULP/`rtol/atol` 仍因没有单独保存 candidate/repair 更新对而保持未决。
+- 三个新的 Gemma 未见实现目标又完成了原始输出、梯度和更新采集；通过单卡顺序重放，这三行现在也保存了同状态 candidate/repair 更新对，并完成了更新层 ULP 与 `rtol/atol` 扫描。它们仍不能代表整个冻结分母。
 
 协议文件保持揭示结果前的冻结状态；实际执行状态单独记录在 `results/property/direct_persistence_v4/execution_status.json`。其中未见实现检查已完成 3 行、0 个 direct positive，四个同状态优化器对照和早/中/晚阶段响应也已完成。这里的“完成”只表示相应范围的运行已结束，不表示所有误差指标或所有后续实验都完成。
 
@@ -23,7 +23,7 @@
 ## 仍然保持未决
 
 - Phi `0543` 的完整原始优化器重放：重跑时固定的运行时包装顺序变化，已安全停止。
-- 完整 tolerance 指标族和统一的未见实现正例；目前历史回放和三个新的 Gemma 行都有部分指标，但还没有所有行的统一原始输入，也没有新的 direct-persistence 正例。
+- 完整 tolerance 指标族和统一的未见实现正例；三个新的 Gemma 行的输出、梯度、更新指标已经齐全，但历史回放仍没有统一保存原始输入和位级 operand，因此全池比较仍保持 `ABSTAIN`，也没有新的 direct-persistence 正例。
 - prospective catch-and-fix：当前未见实现池没有 direct-persistence 正例，不能凭空制造修复演示。
 
 因此 v4 仍然是 **optimizer-conditioned Direct Persistence Screen**：它是在声明的 cold-start AdamW 设置下做短程分诊，不是通用的全算子安全证明。所有未决项都保留为 `ABSTAIN`，没有用相近案例补数字。

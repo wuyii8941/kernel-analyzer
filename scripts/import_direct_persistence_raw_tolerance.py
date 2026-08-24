@@ -14,10 +14,22 @@ BASE = ROOT / "results/property/direct_persistence_v4"
 def main() -> None:
     tolerance_path = BASE / "tolerance_comparison.json"
     tolerance = json.loads(tolerance_path.read_text())
+    # Prefer the v4 replays, which save same-state candidate/repair updates;
+    # fall back to the earlier output/gradient-only files only if a v4 row is
+    # not present.  This keeps the import deterministic during a partial run.
     raw_paths = [
-        BASE / "gemma4_raw_gelu_loss_tolerance.json",
-        BASE / "gemma4_raw_softmax_tolerance.json",
-        BASE / "gemma4_raw_gelu_backward1860_tolerance.json",
+        next(path for path in (
+            BASE / "gemma4_raw_gelu_loss_v4_tolerance.json",
+            BASE / "gemma4_raw_gelu_loss_tolerance.json",
+        ) if path.is_file()),
+        next(path for path in (
+            BASE / "gemma4_raw_softmax_v4_tolerance.json",
+            BASE / "gemma4_raw_softmax_tolerance.json",
+        ) if path.is_file()),
+        next(path for path in (
+            BASE / "gemma4_raw_gelu1860_v4_tolerance.json",
+            BASE / "gemma4_raw_gelu_backward1860_tolerance.json",
+        ) if path.is_file()),
     ]
     raw_paths = [path for path in raw_paths if path.is_file()]
     raw_rows = []
@@ -34,6 +46,7 @@ def main() -> None:
             "output": raw["output"],
             "gradient": raw["gradient"],
             "update": raw["update"],
+            "update_pair": raw.get("update_pair"),
             "rtol_atol": raw["rtol_atol"],
             "claim_boundary": raw["claim_boundary"],
         })
@@ -42,10 +55,10 @@ def main() -> None:
         "rows": raw_rows,
     }
     tolerance["claim_boundary"] = (
-        "Two historical raw replays and three fresh Gemma NEW_IMPL replays now have "
-        "compact error metrics. The common tolerance family is still partial: "
-        "the fresh replays lack candidate/repair update pairs for update ULP/rtol "
-        "and the historical rows lack complete raw operands."
+        "Three fresh Gemma NEW_IMPL replays now have exact output, gradient, and "
+        "same-state effective-update candidate/repair pairs. The full frozen-pool "
+        "tolerance family remains partial because older rows lack raw operands, "
+        "but the three fresh rows now support update ULP and rtol/atol analysis."
     )
     tolerance["missing_baselines"] = [
         "complete max absolute error across the frozen pool",
@@ -54,7 +67,6 @@ def main() -> None:
         "complete rtol/atol sweep across the frozen pool",
         "complete output RMS across the frozen pool",
         "complete gradient RMS across the frozen pool",
-        "candidate/repair update ULP and rtol/atol on the fresh rows",
         "complete raw operands for the remaining frozen rows",
     ]
     tolerance_path.write_text(json.dumps(tolerance, indent=2, sort_keys=True) + "\n")

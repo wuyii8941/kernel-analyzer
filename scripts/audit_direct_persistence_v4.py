@@ -50,7 +50,11 @@ def verify_sha256(out: Path) -> dict[str, Any]:
         digest, rel = line.split("  ", 1)
         # The audit writes its own JSON after reading the manifest, so including
         # that file would create an impossible self-hash cycle.
-        if rel == "completion_audit.json":
+        # The manifest historically used both ``completion_audit.json`` and
+        # ``./completion_audit.json``.  Normalize the spelling before applying
+        # the self-hash exception; otherwise the audit reports its own output
+        # as a stale digest on every run.
+        if Path(rel).as_posix() == "completion_audit.json":
             continue
         path = out / rel
         checked += 1
@@ -118,6 +122,10 @@ def main() -> None:
                 "status": tolerance.get("raw_stage_reanalysis", {}).get("status", "ABSTAIN_MISSING_RAW_REANALYSIS"),
                 "rows": len(tolerance.get("raw_stage_reanalysis", {}).get("rows", [])),
                 "new_impl_rows": len(tolerance.get("raw_new_impl_reanalysis", {}).get("rows", [])),
+                "new_impl_rows_with_update_pairs": sum(
+                    row.get("update_pair", {}).get("status") == "COMPLETE"
+                    for row in tolerance.get("raw_new_impl_reanalysis", {}).get("rows", [])
+                ),
             },
         },
         "abstained": {

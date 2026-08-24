@@ -83,6 +83,11 @@ def main() -> None:
         type=Path,
         help="Optional external cache directory for exact endpoint, gradient and update values.",
     )
+    parser.add_argument(
+        "--raw-update-only",
+        action="store_true",
+        help="Capture only closed-loop effective-update pairs. Use when formation pairs already exist in an earlier exact replay.",
+    )
     args = parser.parse_args()
     consequence_steps = args.consequence_steps or args.steps
 
@@ -147,7 +152,14 @@ def main() -> None:
 
     raw_gradient_records = []
 
-    def gradient(master: torch.Tensor, state: dict, repair: bool, carrier_name: str) -> torch.Tensor:
+    def gradient(
+        master: torch.Tensor,
+        state: dict,
+        repair: bool,
+        carrier_name: str,
+        *,
+        capture_raw_endpoint: bool = False,
+    ) -> torch.Tensor:
         parameter = parameters[carrier_name]
         with torch.no_grad():
             parameter.copy_(master.to(parameter.dtype))
@@ -159,11 +171,15 @@ def main() -> None:
                 campaign_rows=[target],
                 repair_targets=repair_targets,
                 allow_unlisted_calls=True,
-                raw_capture_dir=raw_capture_dir,
+                # Endpoint output pairs are needed for the open-loop
+                # tolerance rows.  Repeating those large tensors for every
+                # closed-loop step wastes memory and can make a valid GPU
+                # run look like an OOM, so capture them only in formation.
+                raw_capture_dir=raw_capture_dir if capture_raw_endpoint else None,
             )
             with observer:
                 candidate(values).backward()
-            if raw_capture_dir is not None:
+            if raw_capture_dir is not None and capture_raw_endpoint:
                 raw_gradient_records.append({
                     "state_id": state["state_id"],
                     "carrier": carrier_name,
@@ -191,13 +207,16 @@ def main() -> None:
             with torch.no_grad():
                 base = parameter.detach().float().clone()
             candidate_grad = gradient(base, state, False, name)
-            repair_grad = gradient(base, state, True, name)
+            repair_grad = gradient(
+                base, state, True, name,
+                capture_raw_endpoint=(not args.raw_update_only),
+            )
             delta = candidate_grad - repair_grad
             formation_total[name].add_(delta)
             (formation_odd if index % 2 else formation_even)[name].add_(delta)
             energy = float(torch.sum(delta * delta).item())
             state_energy += energy
-            if raw_capture_dir is not None:
+            if raw_capture_dir is not None and not args.raw_update_only:
                 state_dir = raw_capture_dir / "formation" / f"{state['state_id']}_{name}"
                 state_dir.mkdir(parents=True, exist_ok=True)
                 vector_path = state_dir / "vectors.pt"
@@ -308,14 +327,13 @@ def main() -> None:
             torch.save({
                 "step": step,
                 "state_id": state["state_id"],
-                "candidate_at_candidate_state_gradient": gc_c.detach().cpu(),
-                "repair_at_candidate_state_gradient": gr_c.detach().cpu(),
-                "candidate_at_repair_state_gradient": gc_r.detach().cpu(),
-                "repair_at_repair_state_gradient": gr_r.detach().cpu(),
+                # Keep the two same-state effective-update pairs as well as
+                # the local/feedback decomposition.  The former are needed
+                # for exact update ULP and rtol/atol comparisons; a local
+                # difference alone cannot support those claims.
+                "candidate_update_at_candidate_state": uc_c.detach().cpu(),
+                "repair_update_at_candidate_state": ur_c.detach().cpu(),
                 "local_update": local.detach().cpu(),
-                "feedback_update": feedback.detach().cpu(),
-                "actual_update": actual.detach().cpu(),
-                "recurrence_residual": residual.detach().cpu(),
             }, vector_path)
             raw_trajectory_records.append({
                 "step": step,
@@ -369,7 +387,7 @@ def main() -> None:
             "formation_gradient_records": raw_formation_records,
             "trajectory_update_records": raw_trajectory_records,
             "observer_gradient_records": raw_gradient_records,
-            "claim_boundary": "Raw tensors remain outside the repository. Import and digest them before publishing tolerance metrics.",
+            "claim_boundary": "Formation stores endpoint and gradient pairs; consequence stores same-state effective-update pairs and the local magnitude. Closed-loop gradient/feedback vectors are summarized in consequence.json and are not duplicated in raw storage.",
         }
         raw_manifest_path = raw_capture_dir / "raw_manifest.json"
         raw_manifest_path.write_text(json.dumps(raw_manifest, indent=2, sort_keys=True) + "\n")

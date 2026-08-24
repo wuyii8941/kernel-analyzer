@@ -177,15 +177,43 @@ def main() -> None:
         del payload
     gradient_metrics = aggregate_rows(gradient_rows, "parameter_gradient")
     update_rows = []
+    update_pair_rows = []
+    update_pair_pass_rates: dict[tuple[float, float], list[float]] = {
+        (rtol, atol): [] for rtol in RTOL_VALUES for atol in ATOL_VALUES
+    }
     for record in manifest["trajectory_update_records"]:
         payload = torch.load(record["path"], map_location="cpu", weights_only=True)
         candidate = payload["local_update"]
         update_rows.append(magnitude_row(candidate))
+        if {
+            "candidate_update_at_candidate_state",
+            "repair_update_at_candidate_state",
+        } <= set(payload):
+            candidate_update = payload["candidate_update_at_candidate_state"]
+            repair_update = payload["repair_update_at_candidate_state"]
+            update_pair_rows.append(metric_row(candidate_update, repair_update))
+            candidate_float = candidate_update.float()
+            repair_float = repair_update.float()
+            finite = torch.isfinite(candidate_float) & torch.isfinite(repair_float)
+            for rtol, atol in update_pair_pass_rates:
+                allowed = atol + rtol * repair_float.abs()
+                update_pair_pass_rates[(rtol, atol)].append(float(
+                    (finite & ((candidate_float - repair_float).abs() <= allowed)).float().mean().item()
+                ))
         del payload, candidate
     # This is a magnitude baseline only: local_update is not a candidate vs
     # repair bitwise pair, so ULP/rtol are intentionally not reported here.
     update_metrics = aggregate_rows(update_rows, "local_effective_update_magnitude")
     update_metrics["ulp_status"] = "ABSTAIN_NO_CANDIDATE_REPAIR_UPDATE_PAIR"
+    update_pair_metrics = aggregate_rows(update_pair_rows, "effective_update_candidate_vs_repair")
+    # Keep the pair metrics separate from the old local-magnitude baseline:
+    # they answer different questions and must not be merged by imputation.
+    if update_pair_rows:
+        sweep_rows = []
+        for rtol, atol in update_pair_pass_rates:
+            pass_rates = update_pair_pass_rates[(rtol, atol)]
+            sweep_rows.append({"rtol": rtol, "atol": atol, "state_pass_rate_mean": sum(pass_rates) / len(pass_rates)})
+        update_pair_metrics["rtol_atol"] = {"status": "COMPLETE", "rows": sweep_rows}
     result = {
         "schema": "kernel-analyzer-direct-persistence-v4-raw-tolerance-v1",
         "status": "PARTIAL_RAW_TOLERANCE_COMPLETE",
@@ -199,8 +227,9 @@ def main() -> None:
         ),
         "gradient": gradient_metrics,
         "update": update_metrics,
+        "update_pair": update_pair_metrics,
         "rtol_atol": rtol_atol_sweep(output_pairs),
-        "claim_boundary": "Output and gradient have exact stored candidate/reference pairs. Update magnitudes are available, but update ULP/rtol require storing candidate and repair update tensors separately.",
+        "claim_boundary": "Output, gradient, and same-state effective-update candidate/reference pairs are stored for this replay. Historical rows without these raw pairs remain outside the complete tolerance family.",
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
