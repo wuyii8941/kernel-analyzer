@@ -203,6 +203,7 @@ def main() -> None:
     pair_energy = 0.0
     pair_prefix_sum = None
     pair_prefix_energy = 0.0
+    normal_update_energy = 0.0
     trajectory_steps = 0
     update_pair_pass_rates: dict[tuple[float, float], list[float]] = {
         (rtol, atol): [] for rtol in RTOL_VALUES for atol in ATOL_VALUES
@@ -228,6 +229,8 @@ def main() -> None:
             candidate_update = payload["candidate_update_at_candidate_state"]
             repair_update = payload["repair_update_at_candidate_state"]
             update_pair_rows.append(metric_row(candidate_update, repair_update))
+            normal_update = candidate_update.detach().float().reshape(-1)
+            normal_update_energy += float(torch.sum(normal_update * normal_update).item())
             pair_value = (candidate_update - repair_update).detach().float().reshape(-1)
             if pair_sum is None:
                 pair_sum = torch.zeros_like(pair_value)
@@ -272,6 +275,19 @@ def main() -> None:
             if pair_sum is not None else {"status": "ABSTAIN_MISSING_UPDATE_PAIRS"},
         },
     }
+    local_full = persistence["local"]["full32"]
+    severity_proxy = {
+        "status": "COMPLETE" if pair_sum is not None and normal_update_energy > 0.0 else "ABSTAIN_MISSING_UPDATE_PAIR",
+        "direct_resultant_l2": local_full.get("resultant_l2"),
+        "normal_update_path_l2": normal_update_energy ** 0.5 if normal_update_energy > 0.0 else None,
+        "direct_resultant_over_normal_update_path": (
+            local_full.get("resultant_l2", 0.0) / max(normal_update_energy ** 0.5, 1e-30)
+            if normal_update_energy > 0.0 else None
+        ),
+        "parameter_norm": None,
+        "loss_gradient_projection": None,
+        "claim_boundary": "This is a carrier-local ratio using the captured candidate update path. Parameter norm, loss projection and observed loss remain ABSTAIN.",
+    }
     result = {
         "schema": "kernel-analyzer-direct-persistence-v4-raw-tolerance-v1",
         "status": "PARTIAL_RAW_TOLERANCE_COMPLETE",
@@ -287,6 +303,7 @@ def main() -> None:
         "update": update_metrics,
         "update_pair": update_pair_metrics,
         "persistence": persistence,
+        "severity_proxy": severity_proxy,
         "rtol_atol": rtol_atol_sweep(output_pairs),
         "claim_boundary": "Output, gradient, and same-state effective-update candidate/reference pairs are stored for this replay. Historical rows without these raw pairs remain outside the complete tolerance family.",
     }

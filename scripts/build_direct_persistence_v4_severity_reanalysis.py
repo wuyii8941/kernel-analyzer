@@ -10,6 +10,7 @@ import numpy as np
 
 
 OUT = Path("results/property/direct_persistence_v4/severity.json")
+TOLERANCE = Path("results/property/direct_persistence_v4/tolerance_comparison.json")
 RAW = {
     "phi4_seq64_lmhead_dx": Path(
         "/data1/tzh/cache/kernel_analyzer/direct_persistence_v4/phi_seq64_raw_stage.json"
@@ -57,6 +58,22 @@ def main() -> None:
         "status": "PARTIAL_RAW_SEVERITY_DERIVED",
         "rows": sorted(RAW),
         "claim_boundary": "Only direct resultant relative to captured normal update path is available for these two raw replays; all other severity quantities remain fail-closed.",
+    }
+    tolerance = json.loads(TOLERANCE.read_text(encoding="utf-8"))
+    fresh_rows = []
+    for fresh_item in tolerance.get("raw_new_impl_reanalysis", {}).get("rows", []):
+        proxy = fresh_item.get("severity_proxy")
+        if not proxy:
+            continue
+        fresh_rows.append({
+            "case_id": fresh_item.get("case_id"),
+            **proxy,
+            "steps": fresh_item.get("persistence", {}).get("local", {}).get("full32", {}).get("steps"),
+        })
+    d["raw_new_impl_reanalysis"] = {
+        "status": "PARTIAL_RAW_SEVERITY_DERIVED" if fresh_rows else "ABSTAIN_MISSING_RAW_REANALYSIS",
+        "rows": fresh_rows,
+        "claim_boundary": "Fresh Gemma rows have direct resultant relative to their captured candidate update path; parameter norm, loss projection and observed loss remain ABSTAIN.",
     }
     OUT.write_text(json.dumps(d, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps({"status": d["raw_stage_reanalysis"]["status"], "rows": len(d["rows"])}, sort_keys=True))

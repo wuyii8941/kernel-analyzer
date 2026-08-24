@@ -48,6 +48,7 @@ def main() -> None:
             "update": raw["update"],
             "update_pair": raw.get("update_pair"),
             "persistence": raw.get("persistence"),
+            "severity_proxy": raw.get("severity_proxy"),
             "rtol_atol": raw["rtol_atol"],
             "claim_boundary": raw["claim_boundary"],
         })

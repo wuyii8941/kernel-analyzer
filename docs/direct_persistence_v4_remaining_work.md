@@ -18,6 +18,7 @@
    采集器现在支持在同一冻结运行版本中保存 candidate/reference 输出对和更新对；本轮旧运行版本无法通过结构身份检查，因此没有把失败重放当作数据。
 3. **前瞻 catch-and-fix**：新的未见实现中没有 direct-persistence positive，因此本轮已明确标记为“不适用”，没有合法的“先发现、再修复、再复测”对象。
 4. **通用 recall/AUROC**：前瞻池没有 positive，按协议不计算这两个数。
+5. **完整严重度**：三个新的 Gemma 行已有 direct resultant / candidate-update-path 比例；参数范数、loss 投影和真实 loss 仍缺少同一协议下的原始证据，继续保持 `ABSTAIN`。
 
 这些不是被跳过的成功结果，而是当前数据条件下明确的未决项；catch-and-fix 则是由“没有前瞻正例”触发的不适用结果。v4 的有效结论必须限定为：
 
