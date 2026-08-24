@@ -80,6 +80,7 @@ def main() -> None:
     tolerance = load(out / "tolerance_comparison.json")
     prefix_null = load(out / "prefix_null_reanalysis.json") if (out / "prefix_null_reanalysis.json").exists() else {}
     catch_fix = load(out / "catch_and_fix/manifest.json")
+    execution_status = load(out / "execution_status.json") if (out / "execution_status.json").exists() else {}
 
     rows = contribution.get("rows", [])
     audit = {
@@ -103,6 +104,10 @@ def main() -> None:
             "fresh_new_impl_target_checks": status_for(
                 out / "heldout/new_impl_targets_v2.json",
                 {"COMPLETE_FRESH_IN_PROCESS_GEMMA_ROWS"},
+            ),
+            "execution_status": status_for(
+                out / "execution_status.json",
+                {"PARTIAL_COMPLETE_FAIL_CLOSED"},
             ),
             "result_digest_manifest": verify_sha256(out),
             "raw_prefix_null_reanalysis": {
@@ -134,7 +139,7 @@ def main() -> None:
             "severity_and_catch_fix": {
                 "severity_status": severity.get("status", "ABSTAIN"),
                 "catch_fix_status": catch_fix.get("status", "ABSTAIN"),
-                "reason": "No prospective held-out escalation exists, so an executable prospective repair cannot be claimed.",
+                "reason": "No prospective held-out escalation exists; catch-and-fix is not applicable for this all-nonpositive NEW_IMPL pool.",
             },
         },
         "scientific_boundary": (

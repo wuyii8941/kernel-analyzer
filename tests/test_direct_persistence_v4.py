@@ -56,10 +56,12 @@ def test_v4_protocol_is_frozen_before_heldout_and_never_safe():
     assert protocol["status"] == "FROZEN_BEFORE_HELDOUT_REVEAL"
     assert protocol["name"] == "Cold-start AdamW Direct Persistence Screen"
     assert protocol["short_screen"]["no_safe_verdict"] is True
-    assert protocol["heldout"]["status"] == "COMPLETE_FRESH_POOL_V3_NO_DIRECT_POSITIVE"
-    assert protocol["heldout"]["completed_rows"] == 3
-    assert protocol["heldout"]["direct_positive_rows"] == 0
-    assert protocol["optimizer_state_sensitivity"]["status"] == "COMPLETE_SAME_STATE_ABLATION_AND_NATURAL_PHASE_RESPONSE"
+    assert protocol["heldout"]["status"] == "FROZEN_POOL_RULES"
+    assert protocol["optimizer_state_sensitivity"]["status"] == "FROZEN_EXPERIMENT_DESIGN"
+    execution = load("execution_status.json")
+    assert execution["heldout"]["rows"] == 3
+    assert execution["heldout"]["direct_positive"] == 0
+    assert execution["optimizer_state"]["same_state_cases"] == 4
     assert protocol["optimizer"]["moment_reset_every_step"] is False
 
 

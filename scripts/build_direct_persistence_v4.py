@@ -561,7 +561,7 @@ def main() -> None:
             "same-state optimizer ablation for 0543 when exact raw captures exist",
             "expand the independently frozen NEW_IMPL pool until a direct-positive or all-negative boundary is documented",
             "complete tolerance metrics on a common held-out pool",
-            "prospective executable catch-and-fix if a candidate escalates",
+            "prospective executable catch-and-fix if a candidate escalates; currently not applicable because the frozen NEW_IMPL pool has no direct positive",
         ],
     }
     (args.output / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")

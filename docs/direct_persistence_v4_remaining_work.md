@@ -15,10 +15,10 @@
 
 1. **Phi 0543 的重新播放**：旧的运行包装已经不存在，重新运行的包装顺序也不同，不能把旧摘要当作新原始数据。
 2. **完整误差标准对比**：现有历史回放没有保留原始位级 operand，因此不能诚实计算 ULP 和完整 `rtol/atol`；Gemma 新行也没有保存完整误差向量。
-3. **前瞻 catch-and-fix**：新的未见实现中没有 direct-persistence positive，因此没有合法的“先发现、再修复、再复测”对象。
+3. **前瞻 catch-and-fix**：新的未见实现中没有 direct-persistence positive，因此本轮已明确标记为“不适用”，没有合法的“先发现、再修复、再复测”对象。
 4. **通用 recall/AUROC**：前瞻池没有 positive，按协议不计算这两个数。
 
-这些不是被跳过的成功结果，而是当前数据条件下明确的未决项。v4 的有效结论必须限定为：
+这些不是被跳过的成功结果，而是当前数据条件下明确的未决项；catch-and-fix 则是由“没有前瞻正例”触发的不适用结果。v4 的有效结论必须限定为：
 
 > 在 cold-start AdamW 约定下，短程 direct-persistence screen 可以作为 fail-closed 分诊；它不能被写成通用安全分类器，也不能据此断言 AdamW 是误差根因。
 
