@@ -1,0 +1,1932 @@
+{
+  "case_count": 23,
+  "case_index": {
+    "gemma4_random_gelu_backward1860": [
+      "prospective_gemma32::gemma4_random_gelu_backward1860"
+    ],
+    "gemma4_random_gelu_loss_backward": [
+      "prospective_gemma32::gemma4_random_gelu_loss_backward"
+    ],
+    "gemma4_random_softmax_backward": [
+      "prospective_gemma32::gemma4_random_softmax_backward"
+    ],
+    "layer23_qproj_attention_state_region": [
+      "historical32::layer23_qproj_attention_state_region"
+    ],
+    "liger_fused_ce_t128": [
+      "historical32::liger_fused_ce_t128",
+      "unified_adamw32::liger_fused_ce_t128"
+    ],
+    "mamba_seq64_in_proj": [
+      "historical32::mamba_seq64_in_proj"
+    ],
+    "multishape-backward-cell-0057": [
+      "unified_adamw32::multishape-backward-cell-0057"
+    ],
+    "multishape-backward-cell-0103": [
+      "unified_adamw32::multishape-backward-cell-0103"
+    ],
+    "multishape-backward-cell-0153": [
+      "unified_adamw32::multishape-backward-cell-0153"
+    ],
+    "multishape-backward-cell-0190": [
+      "unified_adamw32::multishape-backward-cell-0190"
+    ],
+    "multishape-backward-cell-0191": [
+      "unified_adamw32::multishape-backward-cell-0191"
+    ],
+    "multishape-backward-cell-0450": [
+      "unified_adamw32::multishape-backward-cell-0450"
+    ],
+    "multishape-backward-cell-0501": [
+      "unified_adamw32::multishape-backward-cell-0501"
+    ],
+    "multishape-backward-cell-0508": [
+      "unified_adamw32::multishape-backward-cell-0508"
+    ],
+    "multishape-backward-cell-0543": [
+      "unified_adamw32::multishape-backward-cell-0543"
+    ],
+    "multishape-backward-cell-0654": [
+      "unified_adamw32::multishape-backward-cell-0654"
+    ],
+    "multishape-backward-cell-0745": [
+      "unified_adamw32::multishape-backward-cell-0745"
+    ],
+    "multishape-backward-cell-0747": [
+      "unified_adamw32::multishape-backward-cell-0747"
+    ],
+    "phi4_seq64_lmhead_dx": [
+      "historical32::phi4_seq64_lmhead_dx",
+      "unified_adamw32::phi4_seq64_lmhead_dx",
+      "warm_adamw512::phi4_seq64_lmhead_dx",
+      "constant_lr4096::phi4_seq64_lmhead_dx",
+      "cosine_lr4096::phi4_seq64_lmhead_dx"
+    ],
+    "qwen128_vproj_output": [
+      "historical32::qwen128_vproj_output"
+    ],
+    "qwen3vl_silu_backward": [
+      "historical32::qwen3vl_silu_backward"
+    ],
+    "qwen_saved_p_seq128": [
+      "historical32::qwen_saved_p_seq128"
+    ],
+    "qwen_seq128_lmhead_dx": [
+      "historical32::qwen_seq128_lmhead_dx",
+      "unified_adamw32::qwen_seq128_lmhead_dx"
+    ]
+  },
+  "comparison_rule": "Numerical scores may be compared only when exact contrast, optimizer, moment state, parameter scope, state protocol, horizon and measurement geometry match.",
+  "geometry_vocabulary": [
+    "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+    "FULL_VECTOR_GRAM",
+    "FULL_VECTOR_STATISTICS_NO_RAW_GRAM",
+    "FIXED_CARRIER",
+    "FIXED_CARRIER_AND_FULL_PARAMETER_DISTANCE",
+    "PAIRED_LIVE_FIXED_CARRIER"
+  ],
+  "record_count": 29,
+  "records": [
+    {
+      "abstention_reason": "Restored as a Flash-style case; the original 32-state negative result is retained.",
+      "backward_region": "lm_head dX",
+      "case_id": "qwen_seq128_lmhead_dx",
+      "comparison_identity": {
+        "exact_contrast_id": "seq128 lm_head input-VJP compiled MM vs FP32 repair",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FIXED_CARRIER_AND_FULL_PARAMETER_DISTANCE",
+        "moment_state": "NOT_APPLICABLE",
+        "optimizer": "stateless SGD with FP32 master",
+        "parameter_scope": "all trainable FP32-master parameters",
+        "state_protocol": "historical frozen 32-state live paired trajectory"
+      },
+      "comparison_identity_sha256": "f4fe83c82ae7bac7553a2d90dc6dd7260b9be4eeb5922eb6d5c255eec5285f8f",
+      "exact_contrast_id": "seq128 lm_head input-VJP compiled MM vs FP32 repair",
+      "forward_endpoint": "lm_head logits",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FIXED_CARRIER_AND_FULL_PARAMETER_DISTANCE",
+      "model": "Qwen3-1.7B",
+      "moment_state": "NOT_APPLICABLE",
+      "optimizer": "stateless SGD with FP32 master",
+      "parameter_scope": "all trainable FP32-master parameters",
+      "record_id": "historical32::qwen_seq128_lmhead_dx",
+      "source_artifacts": [
+        {
+          "path": "results/coverage/existing_case_reaudit.json",
+          "sha256": "1a19e1da97b79b85d29f6895ec7c9dbcb1dd6f317ff6957f4b003bd36449c59b"
+        }
+      ],
+      "stages": {
+        "fb_formation": "FAIL_CROSS_STATE_NONCOHERENT",
+        "feedback": "NOT_NORMALIZED_IN_THIS_AUDIT",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "PROTOCOL_SPECIFIC_NOT_CROSS_COMPARABLE",
+        "short_horizon": "PASS_FLASH_STYLE_CASE",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "historical frozen 32-state live paired trajectory",
+      "status": "PASS_FLASH_STYLE_CASE"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "tied embedding dW accumulation",
+      "case_id": "liger_fused_ce_t128",
+      "comparison_identity": {
+        "exact_contrast_id": "fused CE BF16 dW accumulation vs FP32 accumulation",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FIXED_CARRIER_AND_FULL_PARAMETER_DISTANCE",
+        "moment_state": "NOT_APPLICABLE",
+        "optimizer": "stateless SGD with FP32 master",
+        "parameter_scope": "310 trained parameters",
+        "state_protocol": "historical frozen 32-state live paired trajectory"
+      },
+      "comparison_identity_sha256": "f25e8d6329036903b709cadb9c47c8371991d922b6fe074c73592f22ef438f36",
+      "exact_contrast_id": "fused CE BF16 dW accumulation vs FP32 accumulation",
+      "forward_endpoint": "fused linear cross entropy",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FIXED_CARRIER_AND_FULL_PARAMETER_DISTANCE",
+      "model": "Qwen3-1.7B + Liger fused CE",
+      "moment_state": "NOT_APPLICABLE",
+      "optimizer": "stateless SGD with FP32 master",
+      "parameter_scope": "310 trained parameters",
+      "record_id": "historical32::liger_fused_ce_t128",
+      "source_artifacts": [
+        {
+          "path": "results/coverage/existing_case_reaudit.json",
+          "sha256": "1a19e1da97b79b85d29f6895ec7c9dbcb1dd6f317ff6957f4b003bd36449c59b"
+        }
+      ],
+      "stages": {
+        "fb_formation": "PASS_CROSS_STATE_CONCRETE_MECHANISM",
+        "feedback": "NOT_NORMALIZED_IN_THIS_AUDIT",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "PROTOCOL_SPECIFIC_NOT_CROSS_COMPARABLE",
+        "short_horizon": "PASS_FLASH_STYLE_CASE",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "historical frozen 32-state live paired trajectory",
+      "status": "PASS_FLASH_STYLE_CASE"
+    },
+    {
+      "abstention_reason": "Trajectory is bounded to model.norm.weight with other parameters frozen.",
+      "backward_region": "lm_head dX",
+      "case_id": "phi4_seq64_lmhead_dx",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:497:output_0 compiled BF16 MM vs FP32-cast repair",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FIXED_CARRIER",
+        "moment_state": "NOT_APPLICABLE",
+        "optimizer": "SGD with FP32 master",
+        "parameter_scope": "model.norm.weight only",
+        "state_protocol": "historical frozen 32-state live paired trajectory"
+      },
+      "comparison_identity_sha256": "09e9502368601fd328d75f347b214f638573850e93f8a2a79871917ba4691313",
+      "exact_contrast_id": "backward:497:output_0 compiled BF16 MM vs FP32-cast repair",
+      "forward_endpoint": "lm_head logits",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FIXED_CARRIER",
+      "model": "Phi-4-mini",
+      "moment_state": "NOT_APPLICABLE",
+      "optimizer": "SGD with FP32 master",
+      "parameter_scope": "model.norm.weight only",
+      "record_id": "historical32::phi4_seq64_lmhead_dx",
+      "source_artifacts": [
+        {
+          "path": "results/coverage/existing_case_reaudit.json",
+          "sha256": "1a19e1da97b79b85d29f6895ec7c9dbcb1dd6f317ff6957f4b003bd36449c59b"
+        }
+      ],
+      "stages": {
+        "fb_formation": "PASS_CROSS_STATE_CONCRETE_MECHANISM",
+        "feedback": "NOT_NORMALIZED_IN_THIS_AUDIT",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "PROTOCOL_SPECIFIC_NOT_CROSS_COMPARABLE",
+        "short_horizon": "PASS_FLASH_STYLE_CASE",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "historical frozen 32-state live paired trajectory",
+      "status": "PASS_FLASH_STYLE_CASE"
+    },
+    {
+      "abstention_reason": "Strict concrete case at a causally closed semantic-region boundary; no unique single-kernel root or cross-operator property is claimed.",
+      "backward_region": "layer23 attention backward to q_proj",
+      "case_id": "layer23_qproj_attention_state_region",
+      "comparison_identity": {
+        "exact_contrast_id": "joint S_bwd/K saved-state repair",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FIXED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95)",
+        "parameter_scope": "predeclared q_proj.weight tile",
+        "state_protocol": "historical frozen 32-state live paired trajectory"
+      },
+      "comparison_identity_sha256": "4763c784d1ef1ac6bfaae78e949ed615ab25c045fdd9da8a63e1cdfe0ea49b6d",
+      "exact_contrast_id": "joint S_bwd/K saved-state repair",
+      "forward_endpoint": "layer23 attention state",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FIXED_CARRIER",
+      "model": "Qwen3-1.7B",
+      "moment_state": "ZERO_THEN_EVOLVED",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95)",
+      "parameter_scope": "predeclared q_proj.weight tile",
+      "record_id": "historical32::layer23_qproj_attention_state_region",
+      "source_artifacts": [
+        {
+          "path": "results/coverage/existing_case_reaudit.json",
+          "sha256": "1a19e1da97b79b85d29f6895ec7c9dbcb1dd6f317ff6957f4b003bd36449c59b"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_ELIGIBLE_AS_SINGLE_KERNEL_PROPERTY",
+        "feedback": "NOT_NORMALIZED_IN_THIS_AUDIT",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "PROTOCOL_SPECIFIC_NOT_CROSS_COMPARABLE",
+        "short_horizon": "PASS_STRICT_SEMANTIC_REGION_FLASH_STYLE_CASE",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "historical frozen 32-state live paired trajectory",
+      "status": "PASS_STRICT_SEMANTIC_REGION_FLASH_STYLE_CASE"
+    },
+    {
+      "abstention_reason": "The causal boundary replaces reconstructed probability at dS with the typed true-forward-P VJP. This is a closed saved-state semantic region, not a unique single-Triton-instruction attribution.",
+      "backward_region": "layer27 softmax backward",
+      "case_id": "qwen_saved_p_seq128",
+      "comparison_identity": {
+        "exact_contrast_id": "layer27 reconstructed saved-P vs typed true-forward-P VJP",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FIXED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95)",
+        "parameter_scope": "layer27 q_proj.weight + k_proj.weight",
+        "state_protocol": "historical frozen 32-state live paired trajectory"
+      },
+      "comparison_identity_sha256": "78f3879151e0379c2a2e6630766b7a0a79278be4b3569c5e5effaf1bb17b20c3",
+      "exact_contrast_id": "layer27 reconstructed saved-P vs typed true-forward-P VJP",
+      "forward_endpoint": "attention probability state",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FIXED_CARRIER",
+      "model": "Qwen3-1.7B",
+      "moment_state": "ZERO_THEN_EVOLVED",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95)",
+      "parameter_scope": "layer27 q_proj.weight + k_proj.weight",
+      "record_id": "historical32::qwen_saved_p_seq128",
+      "source_artifacts": [
+        {
+          "path": "results/coverage/existing_case_reaudit.json",
+          "sha256": "1a19e1da97b79b85d29f6895ec7c9dbcb1dd6f317ff6957f4b003bd36449c59b"
+        }
+      ],
+      "stages": {
+        "fb_formation": "FAIL_CROSS_STATE_NONCOHERENT",
+        "feedback": "NOT_NORMALIZED_IN_THIS_AUDIT",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "PROTOCOL_SPECIFIC_NOT_CROSS_COMPARABLE",
+        "short_horizon": "PASS_STRICT_SEMANTIC_REGION_FLASH_STYLE_CASE",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "historical frozen 32-state live paired trajectory",
+      "status": "PASS_STRICT_SEMANTIC_REGION_FLASH_STYLE_CASE"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "SiLU backward",
+      "case_id": "qwen3vl_silu_backward",
+      "comparison_identity": {
+        "exact_contrast_id": "compiled SiLU backward decomposition vs reference",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FIXED_CARRIER",
+        "moment_state": "SEE_SOURCE_ARTIFACT",
+        "optimizer": "historical paired trajectory",
+        "parameter_scope": "declared layer0 carrier",
+        "state_protocol": "historical frozen 32-state live paired trajectory"
+      },
+      "comparison_identity_sha256": "a178d7706836123bf5ebd285173dbad333f1436f13b296751b6f6987e9f58a14",
+      "exact_contrast_id": "compiled SiLU backward decomposition vs reference",
+      "forward_endpoint": "SiLU output",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FIXED_CARRIER",
+      "model": "Qwen3-VL-Reranker-2B",
+      "moment_state": "SEE_SOURCE_ARTIFACT",
+      "optimizer": "historical paired trajectory",
+      "parameter_scope": "declared layer0 carrier",
+      "record_id": "historical32::qwen3vl_silu_backward",
+      "source_artifacts": [
+        {
+          "path": "results/coverage/existing_case_reaudit.json",
+          "sha256": "1a19e1da97b79b85d29f6895ec7c9dbcb1dd6f317ff6957f4b003bd36449c59b"
+        }
+      ],
+      "stages": {
+        "fb_formation": "FAIL_CROSS_STATE_NONCOHERENT",
+        "feedback": "NOT_NORMALIZED_IN_THIS_AUDIT",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "PROTOCOL_SPECIFIC_NOT_CROSS_COMPARABLE",
+        "short_horizon": "FAIL_DIRECTIONAL_ACCUMULATION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "historical frozen 32-state live paired trajectory",
+      "status": "FAIL_DIRECTIONAL_ACCUMULATION"
+    },
+    {
+      "abstention_reason": "The local MM-accumulation repair is causal but does not accumulate monotonically through step 32. Coherent output rounding is outside this root-arithmetic intervention and remains a separate semantic-region question.",
+      "backward_region": "v_proj backward",
+      "case_id": "qwen128_vproj_output",
+      "comparison_identity": {
+        "exact_contrast_id": "layer0 v_proj GEMM accumulation repair",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FIXED_CARRIER",
+        "moment_state": "SEE_SOURCE_ARTIFACT",
+        "optimizer": "historical paired trajectory",
+        "parameter_scope": "declared v_proj carrier",
+        "state_protocol": "historical frozen 32-state live paired trajectory"
+      },
+      "comparison_identity_sha256": "33afb208ea37fb7b75f23c918e1bd0c9addfeced294c6d18f2c0b67040640f12",
+      "exact_contrast_id": "layer0 v_proj GEMM accumulation repair",
+      "forward_endpoint": "layer0 v_proj output",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FIXED_CARRIER",
+      "model": "Qwen3-1.7B",
+      "moment_state": "SEE_SOURCE_ARTIFACT",
+      "optimizer": "historical paired trajectory",
+      "parameter_scope": "declared v_proj carrier",
+      "record_id": "historical32::qwen128_vproj_output",
+      "source_artifacts": [
+        {
+          "path": "results/coverage/existing_case_reaudit.json",
+          "sha256": "1a19e1da97b79b85d29f6895ec7c9dbcb1dd6f317ff6957f4b003bd36449c59b"
+        }
+      ],
+      "stages": {
+        "fb_formation": "FAIL_CROSS_STATE_CARRIER_NONCOHERENT",
+        "feedback": "NOT_NORMALIZED_IN_THIS_AUDIT",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "PROTOCOL_SPECIFIC_NOT_CROSS_COMPARABLE",
+        "short_horizon": "FAIL_DIRECTIONAL_ACCUMULATION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "historical frozen 32-state live paired trajectory",
+      "status": "FAIL_DIRECTIONAL_ACCUMULATION"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "in_proj backward",
+      "case_id": "mamba_seq64_in_proj",
+      "comparison_identity": {
+        "exact_contrast_id": "layer0 in_proj GEMM arithmetic repair",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FIXED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95)",
+        "parameter_scope": "backbone.layers.0.mixer.in_proj.weight",
+        "state_protocol": "historical frozen 32-state live paired trajectory"
+      },
+      "comparison_identity_sha256": "391b7f9314c10fc0852e66f2423fb7ca633998c2700c3cceb58eeb69ab6a9b6e",
+      "exact_contrast_id": "layer0 in_proj GEMM arithmetic repair",
+      "forward_endpoint": "layer0 in_proj output",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FIXED_CARRIER",
+      "model": "Mamba-130M",
+      "moment_state": "ZERO_THEN_EVOLVED",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95)",
+      "parameter_scope": "backbone.layers.0.mixer.in_proj.weight",
+      "record_id": "historical32::mamba_seq64_in_proj",
+      "source_artifacts": [
+        {
+          "path": "results/coverage/existing_case_reaudit.json",
+          "sha256": "1a19e1da97b79b85d29f6895ec7c9dbcb1dd6f317ff6957f4b003bd36449c59b"
+        }
+      ],
+      "stages": {
+        "fb_formation": "FAIL_CROSS_STATE_CARRIER_NONCOHERENT",
+        "feedback": "NOT_NORMALIZED_IN_THIS_AUDIT",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "PROTOCOL_SPECIFIC_NOT_CROSS_COMPARABLE",
+        "short_horizon": "PASS_FLASH_STYLE_CASE",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "historical frozen 32-state live paired trajectory",
+      "status": "PASS_FLASH_STYLE_CASE"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "multishape-backward-cell-0057",
+      "case_id": "multishape-backward-cell-0057",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:673:out_ptr0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.layers.35.post_attention_layernorm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "ab85a28c87fe65ed8fd7d361ce61907bd3a96f6ac00be665fbe2911e08dc7858",
+      "exact_contrast_id": "backward:673:out_ptr0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 0.9901458994633713,
+        "A32": 0.9868624354501833,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.926018495376156
+          },
+          "RESULT_BLIND_DISCOVERY_12": {
+            "family_size": 12,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.926018495376156
+          }
+        },
+        "null95_A32": 1.0124818108497957,
+        "raw_p_A32": 0.926018495376156
+      },
+      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.layers.35.post_attention_layernorm.weight",
+      "record_id": "unified_adamw32::multishape-backward-cell-0057",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/consequence/deepseek8b_seq128_multishape-backward-cell-0057.json",
+          "sha256": "856cd0697e49b249a5545e5f834921460e99ebc29d336ca74c66d51287a76552"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "multishape-backward-cell-0103",
+      "case_id": "multishape-backward-cell-0103",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:1303:output_0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.layers.18.input_layernorm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "ecd56915bdb4345dc789427652a8385a8fcf329376ee8be952223e5d571dfb34",
+      "exact_contrast_id": "backward:1303:output_0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 0.9918294870496396,
+        "A32": 0.9932863956708249,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.7358160459885029
+          },
+          "RESULT_BLIND_DISCOVERY_12": {
+            "family_size": 12,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.7358160459885029
+          }
+        },
+        "null95_A32": 1.015356153381837,
+        "raw_p_A32": 0.7358160459885029
+      },
+      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.layers.18.input_layernorm.weight",
+      "record_id": "unified_adamw32::multishape-backward-cell-0103",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/consequence/deepseek8b_seq256_multishape-backward-cell-0103.json",
+          "sha256": "f918df507d5cb42a309e7c442546002f2e290d5a8b00bb8763d8bac51e9f7dbd"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "multishape-backward-cell-0153",
+      "case_id": "multishape-backward-cell-0153",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:1874:out_ptr0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.layers.0.self_attn.k_norm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "698fd982a26a41bc3ae4650ffec3cf9972cdb8c428328bd92a935736e2ca39fc",
+      "exact_contrast_id": "backward:1874:out_ptr0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 0.9522229768866934,
+        "A32": 0.9213783003130566,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.9467633091727068
+          },
+          "RESULT_BLIND_DISCOVERY_12": {
+            "family_size": 12,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.9467633091727068
+          }
+        },
+        "null95_A32": 1.0904473488241706,
+        "raw_p_A32": 0.9467633091727068
+      },
+      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.layers.0.self_attn.k_norm.weight",
+      "record_id": "unified_adamw32::multishape-backward-cell-0153",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/consequence/deepseek8b_seq64_multishape-backward-cell-0153.json",
+          "sha256": "37ce47d6dc744501edfabd176653f8bdd0ba3e35978d152d1d32c25f5d0b2e78"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "multishape-backward-cell-0190",
+      "case_id": "multishape-backward-cell-0190",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:868:out_ptr0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.layers.30.self_attn.q_norm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "332e8698950e0e416e558c28f614d7c3807397f96830c597a18a0c471fe2b8df",
+      "exact_contrast_id": "backward:868:out_ptr0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 1.031362522749719,
+        "A32": 1.021763475455089,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.29967508122969255
+          },
+          "RESULT_BLIND_DISCOVERY_12": {
+            "family_size": 12,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.29967508122969255
+          }
+        },
+        "null95_A32": 1.0625240853143534,
+        "raw_p_A32": 0.29967508122969255
+      },
+      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.layers.30.self_attn.q_norm.weight",
+      "record_id": "unified_adamw32::multishape-backward-cell-0190",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/consequence/deepseek8b_seq64_multishape-backward-cell-0190.json",
+          "sha256": "ae2d08e474ee59d328fbaff1846117903acb75128289df20a34de9d7aa0ad04f"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "multishape-backward-cell-0191",
+      "case_id": "multishape-backward-cell-0191",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:1276:out_ptr0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.layers.18.self_attn.q_norm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "82338f8e513a177ac58c7697296f4cc308d85f3f0552e4c644e806530c277dc0",
+      "exact_contrast_id": "backward:1276:out_ptr0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 0.969157193983975,
+        "A32": 0.9632449163394463,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.6168457885528618
+          },
+          "RESULT_BLIND_DISCOVERY_12": {
+            "family_size": 12,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.6168457885528618
+          }
+        },
+        "null95_A32": 1.0943689075902028,
+        "raw_p_A32": 0.6168457885528618
+      },
+      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.layers.18.self_attn.q_norm.weight",
+      "record_id": "unified_adamw32::multishape-backward-cell-0191",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/consequence/deepseek8b_seq64_multishape-backward-cell-0191.json",
+          "sha256": "070b53af0332d83daef7b9025bac09b1e872c115712f48da2f7b73aacc5808c0"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "multishape-backward-cell-0450",
+      "case_id": "multishape-backward-cell-0450",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:5602:out_ptr0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "backbone.layers.19.mixer.dt_proj.bias",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "c1b34dd080df70b8175c74a33cd9e224af1e54b2e3d3e8db0d58172c3e88925d",
+      "exact_contrast_id": "backward:5602:out_ptr0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 0.9767200909694583,
+        "A32": 0.9797666772272882,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.6960759810047488
+          },
+          "RESULT_BLIND_DISCOVERY_12": {
+            "family_size": 12,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.6960759810047488
+          }
+        },
+        "null95_A32": 1.035490538463116,
+        "raw_p_A32": 0.6960759810047488
+      },
+      "model": "/data1/tzh/models/state-spaces/mamba-130m-hf",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "backbone.layers.19.mixer.dt_proj.bias",
+      "record_id": "unified_adamw32::multishape-backward-cell-0450",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/consequence/mamba_seq64_multishape-backward-cell-0450.json",
+          "sha256": "32a297972d40f38ee8f3952bfed2855699ac162c62e0c003957eafe81057ed3e"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "multishape-backward-cell-0501",
+      "case_id": "multishape-backward-cell-0501",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:1136:out_ptr0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.layers.0.post_attention_layernorm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "1a308119dd53e43f66fe26be87fc47a694d43f213f4a58080235d9d40915fc46",
+      "exact_contrast_id": "backward:1136:out_ptr0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 0.9975948573099218,
+        "A32": 0.9981347017099992,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.5973506623344164
+          },
+          "RESULT_BLIND_DISCOVERY_12": {
+            "family_size": 12,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.5973506623344164
+          }
+        },
+        "null95_A32": 1.0096518049534067,
+        "raw_p_A32": 0.5973506623344164
+      },
+      "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.layers.0.post_attention_layernorm.weight",
+      "record_id": "unified_adamw32::multishape-backward-cell-0501",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/consequence/phi4_seq128_multishape-backward-cell-0501.json",
+          "sha256": "6094dd776329775371b3faeb15f22596ce1d85f465275bdf20a26970ee5d9cbf"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "multishape-backward-cell-0508",
+      "case_id": "multishape-backward-cell-0508",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:606:out_ptr0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.layers.26.post_attention_layernorm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "c7a34b49aede7ce7eae3ab0b8336501071f9b816291b945700e13d327a83d45f",
+      "exact_contrast_id": "backward:606:out_ptr0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 0.9912535046616785,
+        "A32": 0.9951182192027355,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.7685578605348663
+          },
+          "RESULT_BLIND_DISCOVERY_12": {
+            "family_size": 12,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.7685578605348663
+          }
+        },
+        "null95_A32": 1.010015757430616,
+        "raw_p_A32": 0.7685578605348663
+      },
+      "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.layers.26.post_attention_layernorm.weight",
+      "record_id": "unified_adamw32::multishape-backward-cell-0508",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/consequence/phi4_seq128_multishape-backward-cell-0508.json",
+          "sha256": "9e6ce3e1d4d4c558b80580436a7d0cd480ae0dffa32da26e4e776476dcbdafa9"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+    },
+    {
+      "abstention_reason": "multiplicity correction",
+      "backward_region": "multishape-backward-cell-0543",
+      "case_id": "multishape-backward-cell-0543",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:497:out_ptr0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.norm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "de3c0eb0b89fc34944a7aab4494a79ad250441d792f4233d0eeb201e9f32aa5a",
+      "exact_contrast_id": "backward:497:out_ptr0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 1.0069439579690107,
+        "A32": 1.0141052465851146,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 0.3411647088227943,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.026243439140214948
+          },
+          "RESULT_BLIND_DISCOVERY_12": {
+            "family_size": 12,
+            "holm_adjusted_p": 0.3149212696825794,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.026243439140214948
+          }
+        },
+        "null95_A32": 1.0114539751359426,
+        "raw_p_A32": 0.026243439140214948
+      },
+      "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.norm.weight",
+      "record_id": "unified_adamw32::multishape-backward-cell-0543",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/consequence/phi4_seq256_multishape-backward-cell-0543.json",
+          "sha256": "0e2c7bd31ed7544058cf8d2206584a0087f3d67c996b9af11f5fd3b9015149bc"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "UNRESOLVED_MULTIPLICITY_CANDIDATE",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "UNRESOLVED_MULTIPLICITY_CANDIDATE"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "multishape-backward-cell-0654",
+      "case_id": "multishape-backward-cell-0654",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:675:output_0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.layers.23.input_layernorm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "72c867bd4d2933fb992fd2ce8500901c54bcd5a7ccc683827fcf2186f694ff14",
+      "exact_contrast_id": "backward:675:output_0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 0.9963965272886287,
+        "A32": 0.9958075151690124,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.6345913521619595
+          },
+          "RESULT_BLIND_DISCOVERY_12": {
+            "family_size": 12,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.6345913521619595
+          }
+        },
+        "null95_A32": 1.0241955584914932,
+        "raw_p_A32": 0.6345913521619595
+      },
+      "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.layers.23.input_layernorm.weight",
+      "record_id": "unified_adamw32::multishape-backward-cell-0654",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/consequence/qwen_seq256_multishape-backward-cell-0654.json",
+          "sha256": "f84308c5ed2b9a9869c212698019cf1fa4e1f2b6c1fd0a0da4a0cc620155f29a"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "multishape-backward-cell-0745",
+      "case_id": "multishape-backward-cell-0745",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:699:in_out_ptr0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.layers.22.self_attn.q_norm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "91c3727d4d34793a1a28c331716e864277b3f9eb34656a375d1286917ae943f9",
+      "exact_contrast_id": "backward:699:in_out_ptr0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 0.9972039997168488,
+        "A32": 0.9984687527246047,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.551362159460135
+          },
+          "RESULT_BLIND_DISCOVERY_12": {
+            "family_size": 12,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.551362159460135
+          }
+        },
+        "null95_A32": 1.0189144784425825,
+        "raw_p_A32": 0.551362159460135
+      },
+      "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.layers.22.self_attn.q_norm.weight",
+      "record_id": "unified_adamw32::multishape-backward-cell-0745",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/consequence/qwen_seq64_multishape-backward-cell-0745.json",
+          "sha256": "9802c999afced1d985a6e0571b588d7fa19b5085ae41f2946d2d71323a99ca49"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "multishape-backward-cell-0747",
+      "case_id": "multishape-backward-cell-0747",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:1429:out_ptr0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.layers.0.self_attn.k_norm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "63dca29654d4d306af3f42a77e2a22272399003eccaf5ecc8ae0401f3556668a",
+      "exact_contrast_id": "backward:1429:out_ptr0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 1.0033034995278058,
+        "A32": 0.945437851490188,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.7720569857535616
+          },
+          "RESULT_BLIND_DISCOVERY_12": {
+            "family_size": 12,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.7720569857535616
+          }
+        },
+        "null95_A32": 1.140453221380749,
+        "raw_p_A32": 0.7720569857535616
+      },
+      "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.layers.0.self_attn.k_norm.weight",
+      "record_id": "unified_adamw32::multishape-backward-cell-0747",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/consequence/qwen_seq64_multishape-backward-cell-0747.json",
+          "sha256": "4346f7fcc37fa98120ccfcf34500f3992f59aec42496d422dc6f6c5cbfdf25f2"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "qwen_seq128_lmhead_dx",
+      "case_id": "qwen_seq128_lmhead_dx",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:517:output_0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.norm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "0fd078258f5df069bc2ab7ec93ef7e21a10a5d6199a4f4d635102a4595671636",
+      "exact_contrast_id": "backward:517:output_0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 0.970546905963554,
+        "A32": 0.957021059313828,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 1.0,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.7960509872531867
+          },
+          "PREDECLARED_3": {
+            "family_size": 3,
+            "holm_adjusted_p": 0.7960509872531867,
+            "holm_reject_alpha_0_05": false,
+            "raw_p": 0.7960509872531867
+          }
+        },
+        "null95_A32": 1.0454295845000385,
+        "raw_p_A32": 0.7960509872531867
+      },
+      "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.norm.weight",
+      "record_id": "unified_adamw32::qwen_seq128_lmhead_dx",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/oracle_repair_v3/qwen_seq128_adamw_consequence32_with_stages.json",
+          "sha256": "2e73d29932cf8e9678918fce9c5700a275b632f59013d9096e983ab508a91874"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "phi4_seq64_lmhead_dx",
+      "case_id": "phi4_seq64_lmhead_dx",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:497:output_0",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.norm.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "47b7a02b0a1dbfe114566c367c6c5618af90ed7535da94a1320299df7339e231",
+      "exact_contrast_id": "backward:497:output_0",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 1.01261388359702,
+        "A32": 1.0291861708725618,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 0.003749062734316421,
+            "holm_reject_alpha_0_05": true,
+            "raw_p": 0.00024993751562109475
+          },
+          "PREDECLARED_3": {
+            "family_size": 3,
+            "holm_adjusted_p": 0.0007498125468632842,
+            "holm_reject_alpha_0_05": true,
+            "raw_p": 0.00024993751562109475
+          }
+        },
+        "null95_A32": 1.0038651409483546,
+        "raw_p_A32": 0.00024993751562109475
+      },
+      "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.norm.weight",
+      "record_id": "unified_adamw32::phi4_seq64_lmhead_dx",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/oracle_repair_v3/phi_seq64_adamw_consequence32.json",
+          "sha256": "862985f575ebfe6cf5b1a2c766d0cd2aa83a549042f5914afcb239e694346bc7"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_APPLICABLE",
+        "feedback": "COMPLETE",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "CONFIRMED_32_STEP_DIRECTIONAL",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "CONFIRMED_32_STEP_DIRECTIONAL"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "liger_fused_ce_t128",
+      "case_id": "liger_fused_ce_t128",
+      "comparison_identity": {
+        "exact_contrast_id": "liger_fused_ce_t128",
+        "horizon": {
+          "class": "SHORT_HORIZON",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+        "parameter_scope": "model.embed_tokens.weight",
+        "state_protocol": "32-step result-blind/common-optimizer cohort"
+      },
+      "comparison_identity_sha256": "34c5a4c7d6f96795a71f7bbfe4dd37fb46aee8a284fab40bd57a482b4edb683e",
+      "exact_contrast_id": "liger_fused_ce_t128",
+      "forward_endpoint": "see exact task binding",
+      "horizon": {
+        "class": "SHORT_HORIZON",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM_ON_DECLARED_CARRIER",
+      "metrics": {
+        "A16": 1.3383734671479766,
+        "A32": 1.7199830206413163,
+        "holm": {
+          "ALL_15_SENSITIVITY": {
+            "family_size": 15,
+            "holm_adjusted_p": 0.003749062734316421,
+            "holm_reject_alpha_0_05": true,
+            "raw_p": 0.00024993751562109475
+          },
+          "PREDECLARED_3": {
+            "family_size": 3,
+            "holm_adjusted_p": 0.0007498125468632842,
+            "holm_reject_alpha_0_05": true,
+            "raw_p": 0.00024993751562109475
+          }
+        },
+        "null95_A32": 1.1161363205388175,
+        "raw_p_A32": 0.00024993751562109475
+      },
+      "model": "qwen3-1p7b",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,weight_decay=0)",
+      "parameter_scope": "model.embed_tokens.weight",
+      "record_id": "unified_adamw32::liger_fused_ce_t128",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/cohort.json",
+          "sha256": "2cf58282d58b989530d0bca8cc5d70202dceb8b63f34f2bede936f501d671650"
+        },
+        {
+          "path": "results/property/joint_bias_formation_v1/oracle_repair_v3/liger_adamw_consequence32.json",
+          "sha256": "f051aa663db423fcd25eba23806efec26e0df1c8e129dda71b92adaf973b0514"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_EVALUATED",
+        "feedback": "MEASURED_SEPARATELY",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_ADAMW_EFFECTIVE_UPDATE",
+        "short_horizon": "CONFIRMED_32_STEP_DIRECTIONAL",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "32-step result-blind/common-optimizer cohort",
+      "status": "CONFIRMED_32_STEP_DIRECTIONAL"
+    },
+    {
+      "abstention_reason": "This is a fresh in-process Gemma implementation check. The source score was frozen before the paired trajectory. A negative direct score does not prove full training safety; a large actual score with local_A32 near one is reported as feedback-sustained.",
+      "backward_region": "backward:1880/in_out_ptr0",
+      "case_id": "gemma4_random_softmax_backward",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:1880/in_out_ptr0",
+        "horizon": {
+          "class": "SHORT_HORIZON_PROSPECTIVE",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_STATISTICS_NO_RAW_GRAM",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW; see consequence artifact",
+        "parameter_scope": "model.language_model.layers.0.self_attn.k_norm.weight",
+        "state_protocol": "prediction frozen before independent 32-step trajectory"
+      },
+      "comparison_identity_sha256": "69b864152c445283c847b1febc606ca5474bb2715c43fdf370d5d587045ccb31",
+      "exact_contrast_id": "backward:1880/in_out_ptr0",
+      "forward_endpoint": "fresh in-process compiled target",
+      "horizon": {
+        "class": "SHORT_HORIZON_PROSPECTIVE",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_STATISTICS_NO_RAW_GRAM",
+      "metrics": {
+        "actual_A32": 1.0,
+        "actual_resultant_l2": 1.4901161193847656e-08,
+        "feedback_A32": 1.0,
+        "feedback_resultant_l2": 1.4901161193847656e-08,
+        "final_drift_l2": 1.4901161193847656e-08,
+        "local_A32": 0.0,
+        "local_resultant_l2": 0.0,
+        "steps": 32
+      },
+      "model": "google/gemma-4-E2B",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW; see consequence artifact",
+      "parameter_scope": "model.language_model.layers.0.self_attn.k_norm.weight",
+      "record_id": "prospective_gemma32::gemma4_random_softmax_backward",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/heldout_confirmation_v2.json",
+          "sha256": "c9f4be09eb65ff674f0c9295f052515a8a30f606a80f942f22ba630e9d99172e"
+        },
+        {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_softmax_backward.consequence.json",
+          "sha256": "e1d70817b47aefa037ce2333249e05dac1041e7d4d1f3ab91dc9c9a91846cf8d"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NO_SOURCE_PERSISTENCE_UNDER_PROTOCOL",
+        "feedback": "NO_FEEDBACK_DIRECTION_DETECTED",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_IN_LIVE_ADAMW_TRAJECTORY",
+        "short_horizon": "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "prediction frozen before independent 32-step trajectory",
+      "status": "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT"
+    },
+    {
+      "abstention_reason": "This is a fresh in-process Gemma implementation check. The source score was frozen before the paired trajectory. A negative direct score does not prove full training safety; a large actual score with local_A32 near one is reported as feedback-sustained.",
+      "backward_region": "backward:1401/out_ptr3",
+      "case_id": "gemma4_random_gelu_loss_backward",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:1401/out_ptr3",
+        "horizon": {
+          "class": "SHORT_HORIZON_PROSPECTIVE",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_STATISTICS_NO_RAW_GRAM",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW; see consequence artifact",
+        "parameter_scope": "model.language_model.per_layer_model_projection.weight",
+        "state_protocol": "prediction frozen before independent 32-step trajectory"
+      },
+      "comparison_identity_sha256": "99ebf4d9123551b91c723dba55dfbe65330b3c120d8943c46158d671ef33f19e",
+      "exact_contrast_id": "backward:1401/out_ptr3",
+      "forward_endpoint": "fresh in-process compiled target",
+      "horizon": {
+        "class": "SHORT_HORIZON_PROSPECTIVE",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_STATISTICS_NO_RAW_GRAM",
+      "metrics": {
+        "actual_A32": 3.0266700917797276,
+        "actual_resultant_l2": 0.055619917809963226,
+        "feedback_A32": 3.0266701084649803,
+        "feedback_resultant_l2": 0.055619917809963226,
+        "final_drift_l2": 0.055619917809963226,
+        "local_A32": 1.0001881058381819,
+        "local_resultant_l2": 9.10153914901457e-07,
+        "steps": 32
+      },
+      "model": "google/gemma-4-E2B",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW; see consequence artifact",
+      "parameter_scope": "model.language_model.per_layer_model_projection.weight",
+      "record_id": "prospective_gemma32::gemma4_random_gelu_loss_backward",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/heldout_confirmation_v2.json",
+          "sha256": "c9f4be09eb65ff674f0c9295f052515a8a30f606a80f942f22ba630e9d99172e"
+        },
+        {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_loss_backward.consequence.json",
+          "sha256": "0f2d6a2330e770c9fa40dcdc170840b7d606ccce6e30b6d1e75ee4d761a08f2f"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NO_SOURCE_PERSISTENCE_UNDER_PROTOCOL",
+        "feedback": "FEEDBACK_SUSTAINED",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_IN_LIVE_ADAMW_TRAJECTORY",
+        "short_horizon": "NO_32_STEP_DIRECT_DIRECTION",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "prediction frozen before independent 32-step trajectory",
+      "status": "COMPLETE_NEW_IMPL_FEEDBACK_CONTROL"
+    },
+    {
+      "abstention_reason": "This is a fresh in-process Gemma implementation check. The source score was frozen before the paired trajectory. A negative direct score does not prove full training safety; a large actual score with local_A32 near one is reported as feedback-sustained.",
+      "backward_region": "backward:1860/in_out_ptr0",
+      "case_id": "gemma4_random_gelu_backward1860",
+      "comparison_identity": {
+        "exact_contrast_id": "backward:1860/in_out_ptr0",
+        "horizon": {
+          "class": "SHORT_HORIZON_PROSPECTIVE",
+          "steps": 32
+        },
+        "measurement_geometry": "FULL_VECTOR_STATISTICS_NO_RAW_GRAM",
+        "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+        "optimizer": "AdamW; see consequence artifact",
+        "parameter_scope": "model.language_model.per_layer_model_projection.weight",
+        "state_protocol": "prediction frozen before independent 32-step trajectory"
+      },
+      "comparison_identity_sha256": "e1154a109eaf9c8e4d339df05983a6ff1da969acde55e6175e00dca45c2863b4",
+      "exact_contrast_id": "backward:1860/in_out_ptr0",
+      "forward_endpoint": "fresh in-process compiled target",
+      "horizon": {
+        "class": "SHORT_HORIZON_PROSPECTIVE",
+        "steps": 32
+      },
+      "measurement_geometry": "FULL_VECTOR_STATISTICS_NO_RAW_GRAM",
+      "metrics": {
+        "actual_A32": 0.0,
+        "actual_resultant_l2": 0.0,
+        "feedback_A32": 0.0,
+        "feedback_resultant_l2": 0.0,
+        "final_drift_l2": 0.0,
+        "local_A32": 0.0,
+        "local_resultant_l2": 0.0,
+        "steps": 32
+      },
+      "model": "google/gemma-4-E2B",
+      "moment_state": "ZERO_THEN_EVOLVED_NORMALLY",
+      "optimizer": "AdamW; see consequence artifact",
+      "parameter_scope": "model.language_model.per_layer_model_projection.weight",
+      "record_id": "prospective_gemma32::gemma4_random_gelu_backward1860",
+      "source_artifacts": [
+        {
+          "path": "results/property/direct_persistence_v4/heldout_confirmation_v2.json",
+          "sha256": "c9f4be09eb65ff674f0c9295f052515a8a30f606a80f942f22ba630e9d99172e"
+        },
+        {
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_backward1860.consequence.json",
+          "sha256": "4fe931e8ee4f72d44ce7e3eeaf36715028ebab15644813c318933a34ab0ac133"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NO_SOURCE_PERSISTENCE_UNDER_PROTOCOL",
+        "feedback": "NO_FEEDBACK_DIRECTION_DETECTED",
+        "long_run": "NOT_MEASURED",
+        "optimizer_transformation": "MEASURED_IN_LIVE_ADAMW_TRAJECTORY",
+        "short_horizon": "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "prediction frozen before independent 32-step trajectory",
+      "status": "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT"
+    },
+    {
+      "abstention_reason": null,
+      "backward_region": "lm_head dX",
+      "case_id": "phi4_seq64_lmhead_dx",
+      "comparison_identity": {
+        "exact_contrast_id": "DETERMINISTIC_BF16_MINUS_FP32_CAST_REPAIR",
+        "horizon": {
+          "class": "MEDIUM_HORIZON_WARM_STATE",
+          "steps": 512
+        },
+        "measurement_geometry": "FULL_VECTOR_GRAM",
+        "moment_state": "WARMED_ON_NATURAL_IMPLEMENTATION",
+        "optimizer": {
+          "betas": [
+            0.9,
+            0.95
+          ],
+          "epsilon": 1e-08,
+          "initial_moments": "WARMED_ON_NATURAL_IMPLEMENTATION",
+          "learning_rate": 0.0001,
+          "moments_reset_after_warmup": false,
+          "name": "AdamW"
+        },
+        "parameter_scope": "model.norm.weight",
+        "state_protocol": "128 warmup + 512 fresh natural measurement states"
+      },
+      "comparison_identity_sha256": "131f601364cbfce71bd4de5e23d3b5f95b4497413b751600a60e073bd48fdff7",
+      "exact_contrast_id": "DETERMINISTIC_BF16_MINUS_FP32_CAST_REPAIR",
+      "forward_endpoint": "lm_head logits",
+      "horizon": {
+        "class": "MEDIUM_HORIZON_WARM_STATE",
+        "steps": 512
+      },
+      "measurement_geometry": "FULL_VECTOR_GRAM",
+      "metrics": {
+        "A512": 16.243886274241053,
+        "effective_rank": 3.5381887168554695,
+        "late_window_count": 8,
+        "late_windows_above_null": 8,
+        "moving_frame": {
+          "definition": "dot(candidate_minus_repair_update, repair_update) / ||repair_update||^2",
+          "maximum_alpha": 0.0003245995796955552,
+          "mean_alpha": -5.7231116382884244e-06,
+          "median_alpha": -9.899335843960834e-06,
+          "minimum_alpha": -0.00035414864177513383,
+          "negative_fraction": 0.53125,
+          "positive_fraction": 0.46875
+        },
+        "null95_A512": 1.557868845326049
+      },
+      "model": "Phi-4-mini",
+      "moment_state": "WARMED_ON_NATURAL_IMPLEMENTATION",
+      "optimizer": {
+        "betas": [
+          0.9,
+          0.95
+        ],
+        "epsilon": 1e-08,
+        "initial_moments": "WARMED_ON_NATURAL_IMPLEMENTATION",
+        "learning_rate": 0.0001,
+        "moments_reset_after_warmup": false,
+        "name": "AdamW"
+      },
+      "parameter_scope": "model.norm.weight",
+      "record_id": "warm_adamw512::phi4_seq64_lmhead_dx",
+      "source_artifacts": [
+        {
+          "path": "results/property/long_horizon_v2/phi_warm128_measure512.json",
+          "sha256": "feb22f7dd80889c267206bdfe8efa82bd3b48653553d41813207ac59299d92fd"
+        },
+        {
+          "path": "results/property/long_horizon_v2/phi_warm128_measure512.gram.npz",
+          "sha256": "dbb2b2d67e4168b3b910cdca7681740b5614c362b483d288bd22e16ff8082d9f"
+        }
+      ],
+      "stages": {
+        "fb_formation": "EXACT_REPAIR_BOUND",
+        "feedback": "UNMEASURED_BY_THIS_DIRECT_ONLY_PROTOCOL",
+        "long_run": "512_STEP_DIRECT_DIRECTIONAL",
+        "optimizer_transformation": "ADAMW_WARM_STATE_DIRECT_EFFECT",
+        "short_horizon": "ALL_16_DISJOINT_32_STEP_WINDOWS_ABOVE_NULL",
+        "training_convergence": "NOT_MEASURED"
+      },
+      "state_protocol": "128 warmup + 512 fresh natural measurement states",
+      "status": "WARM_STATE_512_STEP_DIRECT_DIRECTIONAL"
+    },
+    {
+      "abstention_reason": "frozen loss plateau gate not reached",
+      "backward_region": "lm_head dX",
+      "case_id": "phi4_seq64_lmhead_dx",
+      "comparison_identity": {
+        "exact_contrast_id": "compiled BF16 lm_head dX vs FP32-cast repair",
+        "horizon": {
+          "class": "CONVERGENCE_ATTEMPT",
+          "steps": 4096
+        },
+        "measurement_geometry": "PAIRED_LIVE_FIXED_CARRIER",
+        "moment_state": "SEPARATE_LIVE_MOMENTS_PER_ARM",
+        "optimizer": {
+          "betas": [
+            0.9,
+            0.95
+          ],
+          "epsilon": 1e-08,
+          "initial_moments": "ZERO_THEN_EVOLVED_SEPARATELY_PER_ARM",
+          "learning_rate": 0.0001,
+          "name": "AdamW"
+        },
+        "parameter_scope": "model.norm.weight",
+        "state_protocol": "32-state frozen train cycle + 8 held-out validation states"
+      },
+      "comparison_identity_sha256": "ca846d2a5dc4ee5e35554336e212b84cc9a1284ec031b381b9bf5a777a5d5b85",
+      "exact_contrast_id": "compiled BF16 lm_head dX vs FP32-cast repair",
+      "forward_endpoint": "lm_head logits",
+      "horizon": {
+        "class": "CONVERGENCE_ATTEMPT",
+        "steps": 4096
+      },
+      "measurement_geometry": "PAIRED_LIVE_FIXED_CARRIER",
+      "metrics": {
+        "candidate_loss": 3.423438787460327,
+        "gradient_difference_l2": 0.008199664764106274,
+        "loss_gap": 0.0015773475170135498,
+        "parameter_distance_l2": 0.01911034993827343,
+        "repair_loss": 3.4218614399433136
+      },
+      "model": "Phi-4-mini",
+      "moment_state": "SEPARATE_LIVE_MOMENTS_PER_ARM",
+      "optimizer": {
+        "betas": [
+          0.9,
+          0.95
+        ],
+        "epsilon": 1e-08,
+        "initial_moments": "ZERO_THEN_EVOLVED_SEPARATELY_PER_ARM",
+        "learning_rate": 0.0001,
+        "name": "AdamW"
+      },
+      "parameter_scope": "model.norm.weight",
+      "record_id": "constant_lr4096::phi4_seq64_lmhead_dx",
+      "source_artifacts": [
+        {
+          "path": "results/property/convergence_v1/phi_carrier_adamw_convergence.json",
+          "sha256": "a0625c30f0579ff0d054c8116cf49d02ecf02276b66b1ff2c5d356bf35821423"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_REESTIMATED",
+        "feedback": "PRESENT_BUT_NOT_DECOMPOSED",
+        "long_run": "PARAMETER_SEPARATION_MEASURED",
+        "optimizer_transformation": "LIVE_ADAMW_PER_ARM",
+        "short_horizon": "NOT_PRIMARY_OUTCOME",
+        "training_convergence": "MAX_STEPS_WITHOUT_FROZEN_LOSS_PLATEAU"
+      },
+      "state_protocol": "32-state frozen train cycle + 8 held-out validation states",
+      "status": "MAX_STEPS_WITHOUT_FROZEN_LOSS_PLATEAU"
+    },
+    {
+      "abstention_reason": "frozen loss plateau gate not reached",
+      "backward_region": "lm_head dX",
+      "case_id": "phi4_seq64_lmhead_dx",
+      "comparison_identity": {
+        "exact_contrast_id": "compiled BF16 lm_head dX vs FP32-cast repair",
+        "horizon": {
+          "class": "CONVERGENCE_ATTEMPT",
+          "steps": 4096
+        },
+        "measurement_geometry": "PAIRED_LIVE_FIXED_CARRIER",
+        "moment_state": "SEPARATE_LIVE_MOMENTS_PER_ARM",
+        "optimizer": {
+          "betas": [
+            0.9,
+            0.95
+          ],
+          "epsilon": 1e-08,
+          "initial_moments": "ZERO_THEN_EVOLVED_SEPARATELY_PER_ARM",
+          "learning_rate": 0.0001,
+          "name": "AdamW",
+          "schedule": "cosine"
+        },
+        "parameter_scope": "model.norm.weight",
+        "state_protocol": "32-state frozen train cycle + 8 held-out validation states"
+      },
+      "comparison_identity_sha256": "94bcec50708f8c618defec09486b58cd54ef2155f49b98dbb376296b7214b099",
+      "exact_contrast_id": "compiled BF16 lm_head dX vs FP32-cast repair",
+      "forward_endpoint": "lm_head logits",
+      "horizon": {
+        "class": "CONVERGENCE_ATTEMPT",
+        "steps": 4096
+      },
+      "measurement_geometry": "PAIRED_LIVE_FIXED_CARRIER",
+      "metrics": {
+        "candidate_loss": 3.4303977489471436,
+        "gradient_difference_l2": 0.008659444749355316,
+        "loss_gap": -1.8656253814697266e-05,
+        "parameter_distance_l2": 0.009375358000397682,
+        "repair_loss": 3.4304164052009583
+      },
+      "model": "Phi-4-mini",
+      "moment_state": "SEPARATE_LIVE_MOMENTS_PER_ARM",
+      "optimizer": {
+        "betas": [
+          0.9,
+          0.95
+        ],
+        "epsilon": 1e-08,
+        "initial_moments": "ZERO_THEN_EVOLVED_SEPARATELY_PER_ARM",
+        "learning_rate": 0.0001,
+        "name": "AdamW",
+        "schedule": "cosine"
+      },
+      "parameter_scope": "model.norm.weight",
+      "record_id": "cosine_lr4096::phi4_seq64_lmhead_dx",
+      "source_artifacts": [
+        {
+          "path": "results/property/convergence_v2/phi_carrier_adamw_cosine_convergence.json",
+          "sha256": "2f15117af40522280ea5a84c91d0869c567054adc6b0c06a0607bceb08ea2c35"
+        }
+      ],
+      "stages": {
+        "fb_formation": "NOT_REESTIMATED",
+        "feedback": "PRESENT_BUT_NOT_DECOMPOSED",
+        "long_run": "PARAMETER_SEPARATION_MEASURED",
+        "optimizer_transformation": "LIVE_ADAMW_PER_ARM",
+        "short_horizon": "NOT_PRIMARY_OUTCOME",
+        "training_convergence": "MAX_STEPS_WITHOUT_FROZEN_LOSS_PLATEAU"
+      },
+      "state_protocol": "32-state frozen train cycle + 8 held-out validation states",
+      "status": "MAX_STEPS_WITHOUT_FROZEN_LOSS_PLATEAU"
+    }
+  ],
+  "schema": "kernel-analyzer-case-stage-matrix-v2",
+  "status": "COMPLETE_PROTOCOL_AWARE_EVIDENCE_INDEX",
+  "unindexed_evidence_gaps": [
+    {
+      "case_family": "Llama/Ministral lm_head dX held-out runs",
+      "reason": "No standalone machine-readable result JSON was found under results/; do not reconstruct it from Markdown."
+    },
+    {
+      "case_family": "DeepSeek layer35 attention dV",
+      "reason": "No standalone machine-readable result JSON was found under results/; conditional-bias prose is not imported."
+    }
+  ]
+}

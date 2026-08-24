@@ -1,0 +1,23 @@
+{
+  "schema": "kernel-analyzer-long-horizon-v1-protocol",
+  "status": "FROZEN_BEFORE_RESULT",
+  "case_id": "phi4_seq64_lmhead_dx",
+  "scientific_question": "Does the 32-step direct-update direction remain after AdamW startup, or is it a cold-start transient?",
+  "protocol": {
+    "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,lr=1e-4)",
+    "warmup_steps": 128,
+    "measurement_steps": 512,
+    "fresh_natural_states": true,
+    "carrier": "model.norm.weight",
+    "other_parameters_frozen": true,
+    "contrast": "deterministic BF16 candidate minus FP32-cast repair at the exact lm_head dX endpoint",
+    "prefix_horizons": [16, 32, 64, 128, 256, 512],
+    "disjoint_window_steps": 32,
+    "null": "per-window and per-prefix random sign flip preserving every step vector and norm"
+  },
+  "interpretation": {
+    "supports_warm_state_medium_horizon": "The full 512-step sequence exceeds its own 95% null and the signal recurs in late disjoint windows.",
+    "supports_only_early_transient": "Early prefixes exceed their null but late disjoint windows do not.",
+    "does_not_support_long_training_claim": "This protocol does not train all parameters to loss convergence and will not be described as convergence-scale persistence."
+  }
+}

@@ -27,8 +27,8 @@ def main() -> None:
         raise ValueError("state-bank offsets and sizes must be nonnegative")
     if bool(args.trajectory_states) != bool(args.start_block):
         raise ValueError("trajectory banks require both --start-block and --trajectory-states")
-    if args.sequence_length not in {128, 256, 512}:
-        raise ValueError("TCMP v1 admits only seq128/256/512")
+    if args.sequence_length not in {64, 128, 256, 512}:
+        raise ValueError("TCMP v1 admits only seq64/128/256/512")
     for path in (args.model, args.output.parent):
         resolved = path.resolve()
         if Path("/data1/tzh") not in (resolved, *resolved.parents):

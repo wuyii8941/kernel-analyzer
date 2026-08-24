@@ -1,0 +1,29 @@
+{
+  "schema": "kernel-analyzer-phi-adamw-carrier-convergence-protocol-v2",
+  "status": "FROZEN_BEFORE_RESULT",
+  "case_id": "phi4_seq64_lmhead_dx",
+  "objective": "Determine whether candidate and exact repair reach the same loss, gradient and parameter point after a standard decaying-learning-rate training objective plateaus.",
+  "data": {
+    "training_states": 32,
+    "validation_states": 8,
+    "training_order": "frozen order repeated",
+    "train_validation_disjoint": true
+  },
+  "optimizer": "AdamW(beta1=0.9,beta2=0.95,eps=1e-8,base_lr=1e-4), moments start at zero and evolve separately",
+  "learning_rate_schedule": "cosine decay from 1e-4 to 0 across 4096 steps",
+  "scope": "model.norm.weight only; all other parameters frozen",
+  "stopping_rule": {
+    "minimum_steps": 1024,
+    "maximum_steps": 4096,
+    "validation_interval": 128,
+    "recent_points": 4,
+    "both_arms_relative_validation_loss_span_at_most": 0.0001
+  },
+  "outcomes": [
+    "validation loss in both arms",
+    "validation mean-gradient norm in both arms",
+    "candidate-minus-repair validation gradient norm",
+    "candidate-minus-repair parameter distance"
+  ],
+  "claim_boundary": "A plateau in this protocol is convergence of a finite-data one-carrier problem under a declared cosine schedule, not full-parameter LLM pretraining convergence."
+}
