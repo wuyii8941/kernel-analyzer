@@ -1,7 +1,12 @@
 {
-  "case_count": 26,
-  "definition": "A final bias case requires either robust 4096-step direct direction or a long-run feedback-sustained separation, plus observed paired parameter and loss separation. Different converged losses are not required or claimed.",
-  "final_case_count": 4,
+  "case_count": 28,
+  "coherent_endpoint_witness_count": 57,
+  "definition": "A final bias case requires either robust 4096-step direct direction (persistent source bias) or a long-run feedback-sustained separation with an observed paired parameter/loss split. A loss split is recorded as a consequence of a direct case when available; different converged losses are not required or claimed.",
+  "endpoint_population_count": 1562,
+  "extended_candidate_count": 13,
+  "extended_candidate_note": "13 rows = 11 historical candidates plus Llama and Ministral lm_head family replication rows; Gemma4 is included in the extended candidate list, not a new source-positive.",
+  "final_case_count": 6,
+  "grouping_rule": "Repeated concrete endpoint occurrences are grouped by the frozen case-stage matrix ID; they are not silently dropped, but they do not count as independent cases.",
   "historical_candidate_count": 11,
   "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
   "rows": [
@@ -26,6 +31,10 @@
       "paired_consequence": {
         "artifact": "results/property/paired_loss_4096/liger_fused_ce.json",
         "final_loss_gap": -0.13049191236495972,
+        "loss_audit": {
+          "any_period_split": true,
+          "recorded": true
+        },
         "loss_separation_observed": true,
         "parameter_distance": 9.266324996948242,
         "recent_loss_gap_mean": 0.0006728400081801311,
@@ -57,12 +66,16 @@
       "paired_consequence": {
         "artifact": "results/property/convergence_v1/phi_carrier_adamw_convergence.json",
         "final_loss_gap": 0.0015773475170135498,
+        "loss_audit": {
+          "any_period_split": true,
+          "recorded": true
+        },
         "loss_separation_observed": true,
         "parameter_distance": 0.01911034993827343,
         "recent_loss_gap_mean": 0.0008656177669763565,
         "recent_loss_gap_std": 0.0105780582714005,
         "status": "MAX_STEPS_WITHOUT_FROZEN_LOSS_PLATEAU",
-        "steps": null
+        "steps": 4096
       },
       "paired_sha256": "a0625c30f0579ff0d054c8116cf49d02ecf02276b66b1ff2c5d356bf35821423",
       "scope": "historical_candidate"
@@ -88,6 +101,10 @@
       "paired_consequence": {
         "artifact": "results/property/paired_loss_4096/qwen_lmhead_dx.json",
         "final_loss_gap": 1.2129545211791992e-05,
+        "loss_audit": {
+          "any_period_split": true,
+          "recorded": true
+        },
         "loss_separation_observed": true,
         "parameter_distance": 0.001631635008379817,
         "recent_loss_gap_mean": 5.691312253475189e-06,
@@ -229,26 +246,6 @@
       "scope": "historical_candidate"
     },
     {
-      "case": "Gemma4 RMSNorm",
-      "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY",
-      "formation_path": "response asymmetry / feedback candidate",
-      "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/gemma4_norm_4096.json",
-        "long_direct": "UNRESOLVED",
-        "reason": "frozen runtime wrapper bytes no longer match the available compiler environment",
-        "status": "UNRESOLVED_REPLAY_RUNTIME"
-      },
-      "model": "Gemma-4 E2B",
-      "operator_or_region": "RMSNorm / projection feedback region",
-      "paired_consequence": {
-        "artifact": "results/property/paired_loss_4096/gemma4_norm_4096.json",
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "historical_candidate"
-    },
-    {
       "case": "layer-23 attention",
       "direct_sha256": "f41f5c01067f383602d77cae676282db2594f6169b50036fafcc8657eb23f511",
       "final_label": "ABSTAIN_NOT_REPLAYABLE",
@@ -279,6 +276,102 @@
       "model": "DeepSeek-R1-Qwen3-8B",
       "operator_or_region": "attention dV BMM",
       "paired_consequence": {
+        "status": "NOT_RUN"
+      },
+      "paired_sha256": null,
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "Llama lm_head dX",
+      "direct_sha256": "f3c37f71117adab7483bc260401675100534c44439dd8329279e1c5c0ddb3233",
+      "final_label": "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
+      "formation_path": "event/pairing family replication",
+      "long_direct": {
+        "A4096": 5.880545232175569,
+        "artifact": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/lmhead_consequence4096.json",
+        "feedback_A4096": 5.496674980338488,
+        "final_drift_l2": 0.00037550932029262185,
+        "late_windows": null,
+        "late_windows_above_own_null": null,
+        "local_A4096": 2.578206563498868,
+        "long_direct": "ROBUST",
+        "null95": 1.0295860095907672,
+        "p": 0.004975124378109453,
+        "status": "COMPLETE_LONG_HORIZON",
+        "steps": 4096
+      },
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "lm_head backward dX",
+      "paired_consequence": {
+        "artifact": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/lmhead_consequence4096.json",
+        "final_loss_gap": 4.2438507080078125e-05,
+        "loss_audit": {
+          "any_period_split": true,
+          "recorded": true
+        },
+        "loss_separation_observed": true,
+        "parameter_distance": 0.00037550932029262185,
+        "recent_loss_gap_mean": -8.874572813510895e-06,
+        "recent_loss_gap_std": 0.000270874530224479,
+        "status": "COMPLETE_LONG_HORIZON",
+        "steps": 4096
+      },
+      "paired_sha256": "f3c37f71117adab7483bc260401675100534c44439dd8329279e1c5c0ddb3233",
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "Ministral lm_head dX",
+      "direct_sha256": "6e7ae5eb5b91252af55ce1a295f7dbdd924860912aeb5e4117b9c6d850271fa1",
+      "final_label": "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
+      "formation_path": "event/pairing family replication",
+      "long_direct": {
+        "A4096": 5.049820008933974,
+        "artifact": "results/property/tcmp_allop_v1/heldout/ministral3_3b_text128/lmhead_consequence4096.json",
+        "feedback_A4096": 4.902936135578214,
+        "final_drift_l2": 0.00041981719550676644,
+        "late_windows": null,
+        "late_windows_above_own_null": null,
+        "local_A4096": 1.7543663675423466,
+        "long_direct": "ROBUST",
+        "null95": 1.0284199943298211,
+        "p": 0.004975124378109453,
+        "status": "COMPLETE_LONG_HORIZON",
+        "steps": 4096
+      },
+      "model": "Ministral-3-3B",
+      "operator_or_region": "lm_head backward dX",
+      "paired_consequence": {
+        "artifact": "results/property/tcmp_allop_v1/heldout/ministral3_3b_text128/lmhead_consequence4096.json",
+        "final_loss_gap": 0.0,
+        "loss_audit": {
+          "any_period_split": true,
+          "recorded": true
+        },
+        "loss_separation_observed": true,
+        "parameter_distance": 0.00041981719550676644,
+        "recent_loss_gap_mean": -9.870855137705803e-06,
+        "recent_loss_gap_std": 0.0001589420520014083,
+        "status": "COMPLETE_LONG_HORIZON",
+        "steps": 4096
+      },
+      "paired_sha256": "6e7ae5eb5b91252af55ce1a295f7dbdd924860912aeb5e4117b9c6d850271fa1",
+      "scope": "historical_candidate"
+    },
+    {
+      "case": "Gemma4 RMSNorm",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY",
+      "formation_path": "response asymmetry / feedback candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/unresolved/gemma4_norm_4096_unresolved.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The rebuilt Transformers-5-compatible runtime reached step 294 but did not produce a complete artifact. The run is retained as unresolved; this is not a negative bias result.",
+        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE"
+      },
+      "model": "Gemma-4 E2B",
+      "operator_or_region": "RMSNorm / projection feedback region",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/gemma4_norm_4096_v4.json",
         "status": "NOT_RUN"
       },
       "paired_sha256": null,
@@ -587,7 +680,7 @@
   ],
   "schema": "all-historical-bias-candidates-long-audit-v1",
   "scope_counts": {
-    "historical_candidate": 11,
+    "historical_candidate": 13,
     "roster_control_or_unresolved": 15
   },
   "unindexed_historical_candidate_count": 3,

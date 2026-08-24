@@ -15,13 +15,16 @@ operator becomes a parameter-update error that keeps accumulating.
    sampled rows plus the three historical rows. Liger and Phi trigger the
    short screen; Qwen does not, while one sampled Phi row is a small-margin
    candidate. This table is no longer used as the final long-horizon label.
-4. In the warm-state 4096-step review, Liger, Phi and Qwen `lm_head dX` retain
-   robust direct direction. Qwen3-VL SiLU shows long-run feedback separation
+4. In the warm-state 4096-step review, Liger, Phi, Qwen, Llama and Ministral
+   `lm_head dX`/fused CE records retain robust direct direction. Llama and
+   Ministral reproduce the same lm-head family direction on new operand
+   distributions. Qwen3-VL SiLU shows long-run feedback separation
    with a paired loss gap. Mamba, saved-P, and both Qwen `v_proj` rows do not;
    layer-23 abstains because its historical implementation identity cannot be
    replayed; Gemma4 and DeepSeek `dV` remain unresolved for runtime or
-   formation reasons. The complete audit contains 26 rows: 11 historical
-   candidates plus 15 roster/control or unresolved rows.
+   formation reasons. The complete audit contains 28 rows: 11 historical
+   candidates, two same-family replication rows, and 15 roster/control or
+   unresolved rows.
 5. Error size alone does not identify short directional formation. Across 32 reachable,
    nonzero rows, local RMS has Pearson correlation `0.018` with persistence.
 6. On the corrected 15-row same-AdamW evaluation, the 16-step local-update

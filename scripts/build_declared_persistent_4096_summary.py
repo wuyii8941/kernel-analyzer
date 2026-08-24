@@ -188,6 +188,54 @@ def main() -> None:
     parser.add_argument("--allow-incomplete", action="store_true")
     args = parser.parse_args()
 
+    # The all-candidate audit is now the single source of truth.  The older
+    # six-row summary is retained in git history, but must not overwrite the
+    # expanded 23-matrix/13-candidate registry or hide Llama, Ministral and
+    # Gemma long replays.
+    audit_path = RESULT_ROOT / "all_bias_case_audit.json"
+    if audit_path.exists():
+        audit = json.loads(audit_path.read_text())
+        result = {
+            "schema": "kernel-analyzer-declared-persistent-4096-summary-v2",
+            "status": "COMPLETE_WITH_UNRESOLVED_REPLAYS",
+            "population": "expanded inventory of every historical bias candidate and every merged matrix row",
+            "case_count": audit["case_count"],
+            "unique_matrix_case_count": audit.get("unique_matrix_case_count"),
+            "historical_candidate_count": audit.get("historical_candidate_count"),
+            "final_case_count": audit.get("final_case_count"),
+            "cases": audit["rows"],
+            "claim_boundary": audit["definition"],
+            "source_audit": "results/property/declared_persistent_4096/all_bias_case_audit.json",
+        }
+        result["result_sha256"] = hashlib.sha256(
+            json.dumps(result, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+        lines = [
+            "# 所有偏差候选的 4096 步复核摘要", "",
+            f"审计表包含 {audit['case_count']} 行：{audit.get('unique_matrix_case_count')} 个主矩阵案例、{audit.get('historical_candidate_count')} 个历史候选，以及新增模型的复核行。",
+            "最终标签允许两条路径：直接更新在长程仍有方向，或虽然直接作用不持续但在某个测量窗口已经出现配对 loss 分叉。两条轨迹不需要收敛到不同的最终 loss。",
+            "", "| 模型 | 算子或位置 | 长程状态 | 结果 |", "|---|---|---|---|",
+        ]
+        labels = {
+            "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": "直接长程方向 + loss 分叉",
+            "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": "反馈长程维持 + loss 分叉",
+            "FEEDBACK_SUSTAINED_PARAMETER_SPLIT_LOSS_NOT_RECORDED": "反馈/参数分离，loss 未记录",
+            "NO_ROBUST_LONG_DIRECT_BIAS": "未发现稳健长程直接方向",
+            "UNRESOLVED_LONG_REPLAY": "运行环境或资源未决",
+            "ABSTAIN_NOT_REPLAYABLE": "无法安全重放",
+        }
+        for row in audit["rows"]:
+            direct = row.get("long_direct", {})
+            status = direct.get("status", "未运行")
+            label = labels.get(row.get("final_label"), row.get("final_label", "未决"))
+            lines.append(f"| {row.get('model','—')} | {row.get('operator_or_region','—')} | {status} | {label} |")
+        lines += ["", "32 步只叫短程方向性；4096 步是长程复核，不等于完整全参数训练收敛。", ""]
+        args.markdown.write_text("\n".join(lines))
+        print(json.dumps({"status": result["status"], "case_count": result["case_count"], "final_case_count": result["final_case_count"]}))
+        return
+
     rows: list[dict[str, Any]] = []
     missing: list[str] = []
     for spec in CASES:

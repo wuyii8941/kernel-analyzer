@@ -56,7 +56,10 @@ def main() -> None:
     parser.add_argument("--carrier", required=True)
     parser.add_argument("--vocab-size", type=int, required=True)
     parser.add_argument("--hidden-size", type=int, required=True)
-    parser.add_argument("--steps", type=int, choices=(2, 8, 16, 32), default=2)
+    # Short runs are useful for screening, but long-run confirmation must not
+    # be artificially capped at 32 states.  The input bank remains the source
+    # of truth for the requested horizon.
+    parser.add_argument("--steps", type=int, default=2)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument("--matched-random-null", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
@@ -224,6 +227,16 @@ def main() -> None:
         repair_m, repair_v = next_rm, next_rv
         drift = drift_after
         actual_sum.add_(actual)
+        # Evaluate the same state on the same held-out batch after the update.
+        # This is deliberately a paired observation, not a claim about a
+        # converged training loss.  Long runs use the per-period gaps to test
+        # whether the implementation contrast ever separates the objective.
+        with torch.no_grad():
+            values = torch.tensor([state["token_ids"]], dtype=torch.long, device=device)
+            carrier.copy_(candidate_master.to(carrier.dtype))
+            candidate_loss = float(candidate(values).detach().float().cpu())
+            carrier.copy_(repair_master.to(carrier.dtype))
+            repair_loss = float(candidate(values).detach().float().cpu())
         records.append({
             "step": step, "state_id": state_ids[index],
             "local_l2": float(torch.linalg.vector_norm(local)),
@@ -231,6 +244,9 @@ def main() -> None:
             "actual_increment_l2": float(torch.linalg.vector_norm(actual)),
             "master_drift_l2": float(torch.linalg.vector_norm(drift)),
             "recurrence_residual_l2": float(torch.linalg.vector_norm(residual)),
+            "candidate_loss": candidate_loss,
+            "repair_loss": repair_loss,
+            "paired_loss_gap": candidate_loss - repair_loss,
             **null_record,
         })
         print(json.dumps({"event": "HELDOUT_CONSEQUENCE_STEP", **records[-1]}), flush=True)
@@ -240,9 +256,14 @@ def main() -> None:
     statistics = None
     if vectors:
         matrix = torch.stack(vectors).double()
+        # A 4096-step Gram has 16.7M entries.  Keep the exact matrix and the
+        # same sign-flip test, but use a predeclared smaller Monte-Carlo draw
+        # count for long runs so post-processing does not turn a completed
+        # trajectory into an apparently failed experiment.
+        sign_flip_draws = 200 if args.steps >= 4096 else 4000
         statistics = aligned_level_statistics_from_gram(
             (matrix @ matrix.T).numpy(), state_ids=state_ids,
-            level_ids=("local", "feedback", "actual"), sign_flip_draws=4000,
+            level_ids=("local", "feedback", "actual"), sign_flip_draws=sign_flip_draws,
             seed=20260820,
         )
     final_drift = candidate_master - repair_master
@@ -275,7 +296,7 @@ def main() -> None:
         }
     payload = {
         "schema": "kernel-analyzer-heldout-lmhead-consequence-v1",
-        "status": "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN",
+        "status": "COMPLETE_LONG_HORIZON" if args.steps >= 4096 else ("COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN"),
         "model": str(args.model.resolve()), "architecture": args.architecture,
         "prediction_file": str(args.prediction.resolve()),
         "prediction_revealed_before_trajectory": prediction["prediction"],
@@ -292,7 +313,8 @@ def main() -> None:
         "only_declared_parameter_updated": True,
         "claim_boundary": (
             "Four-arm symmetric one-parameter consequence trajectory.  COMPLETE measures "
-            "32-step drift but does not by itself establish an empirical-random-null threshold."
+            "The reported horizon is a paired consequence measurement; loss gaps are recorded per step. "
+            "A long run is not called converged unless a separate predeclared stability test passes."
         ),
     }
     payload["result_sha256"] = hashlib.sha256(

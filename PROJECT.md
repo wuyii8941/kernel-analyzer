@@ -18,13 +18,15 @@ accumulation.  A T1 screen or a carrier alone is not a case.
   direction records** (Liger fused CE, Phi `lm_head dX`, and Qwen
   `lm_head dX`). It is not the current long-horizon count.
 - Current long-horizon audit: **23 unique matrix IDs, 29 matrix records, 11
-  historical candidates, and 26 merged audit rows**. Four final cases are
-  confirmed under the current rule: Liger, Phi `lm_head dX`, and Qwen
-  `lm_head dX` have robust 4096-step direct direction; Qwen3-VL SiLU has
-  long-run feedback separation with a paired loss gap. Mamba, saved-P and
-  both `v_proj` rows do not have robust long direct direction; layer-23,
-  Gemma4 and DeepSeek `dV` remain unresolved for different replay/formation
-  reasons.
+  historical candidates plus two held-out family-replication rows, and 28
+  merged audit rows**. Six final cases are confirmed under the current rule:
+  five direct 4096-step cases (Liger, Phi `lm_head dX`, Qwen `lm_head dX`,
+  Llama `lm_head dX`, and Ministral `lm_head dX`) plus Qwen3-VL SiLU, whose
+  long-run feedback separation has a paired loss gap. Mamba, saved-P and both
+  `v_proj` rows do not have robust long direct direction; layer-23, Gemma4
+  and DeepSeek `dV` remain unresolved for different replay/formation
+  reasons. Llama and Ministral are same-family model replications, not new
+  implementation classes.
 - Historical audit registries contain 6 strict F+B/repair/carrier/trajectory
   records and 8 paired-separation records. Those are provenance counts, not
   counts of confirmed persistent operator-local bias.

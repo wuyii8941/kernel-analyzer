@@ -62,8 +62,8 @@ v3 没有保存 prefix-16 的 sign-flip Gram。
 | Qwen seq128 `v_proj` | 0.981 | 不超过自身随机基线 | 未形成稳健长程直接方向 |
 | Qwen3-VL SiLU | 3.100（反馈） | 长程反馈维持 | 反馈维持型长程案例；配对 loss gap 已记录 |
 | layer-23 attention | — | — | 实现身份变化，`ABSTAIN` |
-| Gemma4 RMSNorm | — | — | 冻结运行包不匹配，拒绝重放 |
-| DeepSeek layer-35 `dV` | — | — | 形成阶段证据不足，未升级长程 |
+| Gemma4 RMSNorm | 未决 | 未决 | 兼容运行包未能写出完整长程结果；不判阴性 |
+| DeepSeek layer-35 `dV` | — | — | 形成阶段证据不足，未升级长程；单独保留为未决 |
 
 Qwen 是短筛边界的直接证据：旧 cold-start 32 步为 `A=0.957`，但 warm-state 长程从 `A32=1.084` 增长到 `A4096=6.488`。因此 `NO_ESCALATION_UNDER_SHORT_SCREEN` 只能表示较低优先级，不能表示“不会长期形成方向”。Liger 的长程直接结果是 `A4096=14.018`；SiLU 则不是直接源方向，而是实际反馈分离在 4096 步仍保持，并记录到配对 loss gap。
 

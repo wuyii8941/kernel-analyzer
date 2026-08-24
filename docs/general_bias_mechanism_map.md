@@ -75,9 +75,9 @@ That fail-closed result is recorded in
 `results/property/joint_bias_formation_v1/joint_predictor_evaluation_v1.json`.
 
 The separate all-candidate long-horizon audit now has 23 unique matrix IDs,
-11 historical candidates and 26 merged rows. It confirms three direct cases
-(Liger, Phi `lm_head dX`, and Qwen `lm_head dX`) and one feedback-sustained case
-(Qwen3-VL SiLU with a paired loss gap). These are long-horizon case labels,
+11 historical candidates and 28 merged rows. It confirms five direct cases
+(Liger, Phi/Qwen `lm_head dX`, and the Llama/Ministral family replicas) and one
+feedback-sustained case (Qwen3-VL SiLU with a paired loss gap). These are long-horizon case labels,
 not a universal predictor result.
 
 The machine-readable measurements are in

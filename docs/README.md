@@ -12,6 +12,7 @@
 6. [证据表](direct_persistence_evidence.md)：直接作用、训练状态反馈和实际参数变化的分解。
 7. [optimizer 结论](direct_persistence_optimizer.md)：optimizer 能改变结果，但不是已确认的统一根因。
 8. [完成度矩阵](direct_persistence_v4_completion_matrix.md)：哪些已完成、哪些没有完成。
+9. [长程未决项](unresolved_long_replays.md)：无法安全重放的记录及其原因；它们不被当成阴性。
 
 机器可读的当前状态由以下文件给出：
 
@@ -27,8 +28,8 @@
 - 统一 cold-start AdamW 的 32 步筛查阳性：Liger 和 Phi `lm_head dX`；它们是短程结果，不是最终长期计数。
 - Phi 已在同一 cold-start AdamW 协议下完成 stochastic-rounding source intervention：natural 显著，四个随机舍入重复均回到各自随机抵消范围。
 - 结果盲候选 `0543`：总体校正后保持未决，不算正例，也不算负例。
-- warm-state 4096 步复核：Liger `A=14.018`、Phi `lm_head dX` `A=46.090`、Qwen `lm_head dX` `A=6.488` 均有稳健长程直接方向；Qwen3-VL SiLU 为反馈维持型长程案例并记录到配对 loss gap。Mamba、saved-P 和两个 `v_proj` rows 没有形成稳健长程直接方向；layer-23、Gemma4 和 DeepSeek `dV` 保持未决。
-- 完整审计口径：23 个唯一主矩阵 ID、11 个历史候选、26 行合并审计，最终 4 个案例。
+- warm-state 4096 步复核：Liger `A=14.018`、Phi `lm_head dX` `A=46.090`、Qwen `lm_head dX` `A=6.488`、Llama `A=5.881` 和 Ministral `A=5.050` 均有稳健长程直接方向；Qwen3-VL SiLU 为反馈维持型长程案例并记录到配对 loss gap。Mamba、saved-P 和两个 `v_proj` rows 没有形成稳健长程直接方向；layer-23、Gemma4 和 DeepSeek `dV` 保持未决。
+- 完整审计口径：23 个唯一主矩阵 ID、11 个历史候选加 2 个同族复现行、28 行合并审计，最终 6 个案例；无法安全重放的行单独保留为未决。
 - 未见实现检查：较早冻结的 Gemma v3 有 1 个直接抵消、状态反馈持续的控制；v4 又完成 3 个新目标，其中 1 个是状态反馈对照、2 个没有可测参数作用。两轮都没有直接持续正例。
 - 通用全算子 Oracle：尚未建立。
 

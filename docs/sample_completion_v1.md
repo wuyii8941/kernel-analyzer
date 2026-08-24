@@ -1,7 +1,7 @@
 # Sample completion v1
 
 > 历史协议快照，不是当前案例数量。当前长程审计见
-> `docs/all_bias_long_horizon_audit.md`：23 个唯一主矩阵 ID、11 个历史候选、26 行合并审计、4 个最终案例。
+> `docs/all_bias_long_horizon_audit.md`：23 个唯一主矩阵 ID、11 个历史候选加 2 个同族复现行、28 行合并审计、6 个最终案例。无法安全重放的行保持未决。
 
 这份协议用于补足案例数量，不能把旧实验重新包装成新结果。
 

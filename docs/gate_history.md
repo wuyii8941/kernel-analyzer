@@ -20,7 +20,7 @@ mistaken for post-hoc threshold fitting.
 | 2026-08-22 | `16afc8d` | short-screen protocol v3 | Increased CountSketch dimension from 64 to 256 after an engineering power audit. The Ministral diagnostic was not promoted to held-out evidence; v3 was frozen for subsequent validation. |
 | 2026-08-22 | `36958d5` | one disjoint `NEW_IMPL` v3 validation | Gemma formation and consequence were moved to separate state banks. Local source was null-like; feedback/actual paths were risk candidates. This added a feedback-sustained validation record, not a strict Flash-style source case. |
 | 2026-08-22 | `75a3fba` | property-search phase closed with explicit scope | Recorded that the workflow is complete as a frozen, fail-closed prioritization system while universal-property, control, and cross-implementation limitations remain explicit. |
-| 2026-08-25 | current long-run audit | 16/32-step labels demoted to screening; 4096-step review becomes authoritative for long-horizon direction | Liger (`A=14.018`), Phi (`A=46.090`) and Qwen (`A=6.488`) have robust direct direction; SiLU has long-run feedback separation with a paired loss gap; Mamba, saved-P and both `v_proj` rows are not robust; layer-23/Gemma4/DeepSeek `dV` remain fail-closed unresolved. This is new horizon/state evidence, not a threshold change. The merged audit is 26 rows from 11 historical candidates plus 23 unique matrix IDs. |
+| 2026-08-25 | current long-run audit | 16/32-step labels demoted to screening; 4096-step review becomes authoritative for long-horizon direction | Liger (`A=14.018`), Phi (`A=46.090`), Qwen (`A=6.488`), Llama (`A=5.881`) and Ministral (`A=5.050`) have robust direct direction; SiLU has long-run feedback separation with a paired loss gap; Mamba, saved-P and both `v_proj` rows are not robust; layer-23/Gemma4/DeepSeek `dV` remain fail-closed unresolved. This is new horizon/state evidence, not a threshold change. The merged audit is 28 rows from 11 historical candidates plus 23 unique matrix IDs; Llama and Ministral are now complete same-family replications, not unresolved rows. |
 
 ## 历史审计计数
 
@@ -43,11 +43,11 @@ mistaken for post-hoc threshold fitting.
 
 ## 当前 4096 步长程复核
 
-- 稳健长程直接方向：Phi 与 Qwen `lm_head dX`。
+- 稳健长程直接方向：Liger、Phi、Qwen、Llama 与 Ministral 的 `lm_head dX`/融合 CE 记录。
 - 未形成稳健长程直接方向：Mamba `in_proj`、saved-P。
 - 拒绝判断：layer-23 attention（历史实现身份无法重放）。
-- 尚未完成：Liger fused CE。
-- 这些是 direct-update 长程结果，不是 loss 收敛结果。
+- 反馈维持型长程案例：Qwen3-VL SiLU（已有 paired loss gap）。
+- 这些是 direct/feedback 长程结果，不是 loss 收敛结果；缺少合法重放的记录仍是未决，不是阴性。
 
 The machine-readable sources are
 `results/coverage/existing_case_reaudit.json`, `case.md`, and

@@ -91,7 +91,9 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--resume", action="store_true")
-    parser.add_argument("--steps", type=int, choices=(2, 8, 16, 32), default=2)
+    # Permit the same runner to perform the predeclared long horizon.  The
+    # frozen bank and state-role filter still enforce the actual availability.
+    parser.add_argument("--steps", type=int, default=2)
     parser.add_argument("--state-role")
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--device", default="cuda:0")
@@ -236,6 +238,7 @@ def main() -> None:
         int,
         torch.Tensor | None,
         tuple[torch.Tensor, torch.Tensor] | None,
+        float,
     ]:
         with torch.no_grad():
             carrier.copy_(master.to(carrier.dtype))
@@ -270,11 +273,15 @@ def main() -> None:
             torch.cuda.synchronize(device)
             if carrier.grad is None:
                 raise RuntimeError("candidate carrier gradient is absent")
+            loss_value = float(candidate(values).detach().float().cpu())
+            # The preceding call is intentionally a fresh loss-only forward;
+            # it does not change the captured gradient or optimizer state.
             return (
                 carrier.grad.detach().float().clone(),
                 0,
                 None,
                 candidate_endpoint.get(task_id),
+                loss_value,
             )
 
         references: dict[str, torch.Tensor] = {}
@@ -340,9 +347,11 @@ def main() -> None:
         observer.validate()
         if carrier.grad is None or "changed" not in delivered:
             raise RuntimeError("repair did not reach the endpoint/carrier")
+        repair_loss_value = float(reference_loss.detach().float().cpu()) if reference is not None else float(candidate(values).detach().float().cpu())
         return (
             carrier.grad.detach().float().clone(), delivered["changed"],
             delivered.get("endpoint_delta"), delivered.get("endpoint_pair"),
+            repair_loss_value,
         )
 
     initial = carrier.detach().float().clone()
@@ -413,10 +422,10 @@ def main() -> None:
         step = index + 1
         seed = 51000 + index
         drift_before = candidate_master - repair_master
-        gc_c, changed_cc, _, candidate_endpoint_c = gradient(candidate_master, state, False, seed)
-        gr_c, changed_rc, endpoint_c, endpoint_pair_c = gradient(candidate_master, state, True, seed)
-        gc_r, changed_cr, _, _ = gradient(repair_master, state, False, seed)
-        gr_r, changed_rr, endpoint_r, _ = gradient(repair_master, state, True, seed)
+        gc_c, changed_cc, _, candidate_endpoint_c, loss_cc = gradient(candidate_master, state, False, seed)
+        gr_c, changed_rc, endpoint_c, endpoint_pair_c, _loss_rc = gradient(candidate_master, state, True, seed)
+        gc_r, changed_cr, _, _, _loss_cr = gradient(repair_master, state, False, seed)
+        gr_r, changed_rr, endpoint_r, _, loss_rr = gradient(repair_master, state, True, seed)
         raw_uc_c, next_cm, next_cv = adam_delta(
             gc_c, candidate_m, candidate_v, step,
             learning_rate=args.learning_rate,
@@ -464,6 +473,9 @@ def main() -> None:
                 "repair_changed_coordinates": [changed_rc, changed_rr],
                 "candidate_observation_changed_coordinates": [changed_cc, changed_cr],
                 "recurrence_relative": relative,
+                "candidate_loss": loss_cc,
+                "repair_loss": loss_rr,
+                "paired_loss_gap": loss_cc - loss_rr,
             },
         }
         if args.raw_stage_output is not None:
@@ -526,6 +538,8 @@ def main() -> None:
         torch.cuda.empty_cache()
 
     result = trace.finalize()
+    loss_records = [row.get("metadata", {}) for row in saved_rows]
+    loss_gaps = [float(row.get("paired_loss_gap", 0.0)) for row in loss_records]
     matrix = torch.stack([
         vector for triple in zip(local_vectors, feedback_vectors, actual_vectors)
         for vector in triple
@@ -564,6 +578,16 @@ def main() -> None:
         "statistics": statistics,
         "max_recurrence_relative": max_relative,
         "recurrence_relative_tolerance": args.recurrence_relative_tolerance,
+        "loss_audit": {
+            "recorded": bool(loss_records),
+            "any_period_split": any(abs(value) > 1e-8 for value in loss_gaps),
+            "max_abs_gap": max((abs(value) for value in loss_gaps), default=0.0),
+            "final_gap": loss_gaps[-1] if loss_gaps else None,
+            "last_512_mean": (sum(loss_gaps[-min(512, len(loss_gaps)):]) /
+                              max(1, min(512, len(loss_gaps)))) if loss_gaps else None,
+            "last_512_max_abs": max((abs(value) for value in loss_gaps[-min(512, len(loss_gaps)):]), default=0.0),
+            "tolerance": 1e-8,
+        },
         "claim_boundary": (
             "Four real counterfactual arms on one declared parameter carrier. "
             "Formation labels are not read or emitted. A 32-step result is a "

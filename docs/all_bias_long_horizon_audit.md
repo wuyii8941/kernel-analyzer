@@ -1,8 +1,8 @@
 # 所有历史偏差候选的长程复核
 
-仓库中有 **23 个唯一主矩阵 case ID**；另外列出 **11 个历史上曾被当作候选的案例**，其中包含主矩阵之外的历史记录。合并后本审计表共有 **26 行**。这三种数字分别表示覆盖分母、候选分母和本次逐行审计行数，不能混用。
+仓库中有 **23 个唯一主矩阵 case ID**；本审计逐行复核 **13 个 extended candidate rows**（其中 11 个来自历史候选，另含 Llama、Ministral 的同族复现行）。合并后表共有 **28 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。
 
-直接源案例必须同时满足两点：4096 步直接更新差异仍有稳定方向；配对训练中已经观察到参数和 loss 分叉。反馈维持型案例使用 4096 步反馈分离和配对参数/loss gap，单独标注，不冒充直接源 bias。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。
+直接源案例只要 4096 步直接更新差异仍有稳定方向，就已经是持久性 bias；如果配对训练还观察到参数或 loss 分叉，就作为后果一并报告。反馈维持型案例只有在 4096 步反馈分离并观察到配对参数/loss gap 时才单独计入，不冒充直接源 bias。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。
 
 | 模型 | 算子或位置 | 形成路径 | 4096 步直接结果 | 参数/loss 分叉 | 最终分类 |
 |---|---|---|---|---|---|
@@ -14,9 +14,11 @@
 | Mamba-130M | in_proj matrix multiply | local arithmetic/pairing | A4096=1.110，p=0.108 | 未测 | 长程未保持 |
 | Qwen3-1.7B | layer-27 saved-P softmax backward | response/state-contract imbalance | A4096=1.195，p=0.084 | 未测 | 长程未保持 |
 | Qwen3-VL-Reranker-2B | SiLU backward | response asymmetry | COMPLETE_4096 | 是；参数距离 0.888，末步 loss gap -7.95e-09 | 反馈维持型 bias，且有 loss 分叉 |
-| Gemma-4 E2B | RMSNorm / projection feedback region | response asymmetry / feedback candidate | UNRESOLVED_REPLAY_RUNTIME | 未测 | 长程运行环境不再可重放，未决 |
 | Qwen3-1.7B | attention S_bwd/K to q_proj | event/pairing imbalance | ABSTAIN | 未测 | 不可安全重放 |
 | DeepSeek-R1-Qwen3-8B | attention dV BMM | formation unresolved; event/pairing candidate | NOT_RUN | 未测 | 形成阶段未确认，不升级长程 |
+| Llama-3.2-3B | lm_head backward dX | event/pairing family replication | A4096=5.881，超过自身随机基线（窗口统计未导出） | 是；参数距离 0.000376，末步 loss gap +4.24e-05 | 最终持久性 bias 案例 |
+| Ministral-3-3B | lm_head backward dX | event/pairing family replication | A4096=5.050，超过自身随机基线（窗口统计未导出） | 是；参数距离 0.00042，末步 loss gap +0 | 最终持久性 bias 案例 |
+| Gemma-4 E2B | RMSNorm / projection feedback region | response asymmetry / feedback candidate | UNRESOLVED_LONG_REPLAY_RESOURCE | 未测 | 长程运行环境不再可重放，未决 |
 | google/gemma-4-E2B | case-stage matrix row | complete roster row; no confirmed long-source gate | NOT_ESCALATED | 未测 | 没有可达载体，不适用 |
 | google/gemma-4-E2B | case-stage matrix row | complete roster row; no confirmed long-source gate | NOT_ESCALATED | 未测 | 反馈对照，没有直接 bias 门 |
 | google/gemma-4-E2B | case-stage matrix row | complete roster row; no confirmed long-source gate | NOT_ESCALATED | 未测 | 没有可达载体，不适用 |

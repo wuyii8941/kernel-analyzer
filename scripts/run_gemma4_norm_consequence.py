@@ -39,7 +39,7 @@ def main() -> None:
     parser.add_argument("--endpoint")
     parser.add_argument("--case-id", default="gemma4_e2b_ple_rmsnorm")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--steps", type=int, choices=(2, 8, 16, 32, 4096), default=2)
+    parser.add_argument("--steps", type=int, default=2)
     parser.add_argument(
         "--state-role", choices=("TRAJECTORY", "CONFIRMATION", "SCREENING"),
         default="TRAJECTORY",
@@ -190,9 +190,12 @@ def main() -> None:
                 repair_targets={target["region_id"]: repair_endpoints},
                 allow_unlisted_calls=True,
             )
-            with observer: candidate(values).backward()
+            with observer:
+                loss = candidate(values)
+                loss.backward()
         else:
-            candidate(values).backward()
+            loss = candidate(values)
+            loss.backward()
         torch.cuda.synchronize(device)
         return carrier.grad.detach().float().clone(), float(loss.detach().float().item())
 
@@ -263,7 +266,7 @@ def main() -> None:
     payload = {
         "schema": "kernel-analyzer-gemma4-target-consequence-v1",
         "case_id": args.case_id,
-        "status": "COMPLETE" if args.steps >= 32 else "ENGINEERING_DRY_RUN",
+        "status": "COMPLETE_LONG_HORIZON" if args.steps >= 4096 else ("COMPLETE" if args.steps >= 32 else "ENGINEERING_DRY_RUN"),
         "prediction": prediction, "steps": args.steps, "state_role": args.state_role,
         "carrier": args.carrier,
         "optimizer": {"name": args.optimizer, "learning_rate": args.learning_rate},
