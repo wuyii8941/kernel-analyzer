@@ -49,7 +49,7 @@ v3 没有保存 prefix-16 的 sign-flip Gram。
 
 ## Phi 协议边界
 
-Phi 的 `A=3.325→0.956` 是 16 个共同状态、无 moments 的 stateless SGD 源干预；Phi 的 `A=1.029` 是 32 步 cold-start AdamW 结果。两者不是同一个测量，前者不能解释后者。AdamW 下的 matched source intervention 仍未完成。
+旧的 Phi `A=3.325→0.956` 是无状态 SGD 源干预，不能解释 AdamW 结果。现在同一 cold-start AdamW 协议已经闭合：deterministic BF16 为 `A=1.02959`，四次 stochastic-rounding 重复为 `1.00045、1.00004、1.00005、1.00182`，均未超过各自随机抵消上界。详细结果见 `docs/phi_adamw_source_intervention.md`。
 
 ## 优化器不是统一根因
 

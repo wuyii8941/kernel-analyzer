@@ -130,16 +130,16 @@ coverage, or a deployable automatic repair workflow.
 
 1. Complete wall-clock cost accounting after the Mamba and uncontended
    headline timing runs.
-2. An executable source intervention with exactly matched update energy remains
-   optional strengthening. Under a separate 16-state stateless-SGD protocol,
-   Phi provides a positive deterministic baseline and causal suppression with
-   stochastic rounding. A new analysis
-   matches every stochastic update norm to the deterministic update within
-   `1.4e-7` relative error and still reduces mean `A` from `3.325` to `0.984`,
-   but that exact rescaling is an update analysis rather than a second kernel.
-   It does not explain the separate zero-moment AdamW `A=1.029` result; a
-   matched AdamW source intervention remains open.
-   The Liger RN arm is diffusive and cannot support a suppression claim.
+2. Phi now has an executable source intervention under the same cold-start
+   AdamW protocol as its direct-persistence result. Deterministic BF16 gives
+   `A=1.02959`; four real stochastic-rounding repeats give `A=1.00045`,
+   `1.00004`, `1.00005`, and `1.00182`, all inside their own sign-flip nulls.
+   The no-op sham exactly reproduces the natural arm. The earlier stateless-SGD
+   result remains separate evidence rather than support borrowed across
+   protocols. Exact per-step update-energy matching remains optional; the
+   first three AdamW SR arms already have path energy close to or above the
+   natural arm. The Liger RN arm is diffusive and cannot support a suppression
+   claim.
 3. A prospective, protocol-conforming `NEW_IMPL` source-positive confirmation,
    or an explicit decision to publish the narrower family-scoped result.
 4. Full-parameter RNG/data-order/precision scale controls.  The current Phi
