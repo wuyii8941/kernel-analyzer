@@ -1,277 +1,154 @@
-# Current main result
+# 当前主结论
 
-This file is the short, authoritative description of the project. Older round
-notes are retained as experiment history and must not be used to change the
-current case count.
+这是项目唯一的论文主线。旧轮次文档保留用于审计，但不能用来改变这里的案例数量和结论。
 
-## Question
+## 我们在问什么
 
-When does a numerical difference introduced by one LLM training operator turn
-into a parameter-update difference that keeps adding up instead of canceling?
+一个 LLM 训练算子的实现会产生很小的数值差异。我们要判断的不是“误差是否足够小”，而是：
 
-## What is measured in one training step
+> 这个差异经过真实反向计算和 optimizer 后，会不会连续改变模型参数，并且长期不抵消？
 
-The original implementation and the repaired implementation start a step from
-the same weights and optimizer state. The repair changes only the operator
-under test.
+## 每一步分开测三件事
 
-For a live pair of training runs, the change in their parameter difference is
-split into two parts:
+candidate 和 repair 从相同参数、输入和 optimizer 状态开始。repair 只改变被检查的算子。
+
+在第 `t` 步，我们把两条训练轨迹之间新增的参数差异写成：
 
 \[
 D_{t+1}-D_t=L_t+B_t.
 \]
 
-- `L_t` is the update difference caused by the operator when both
-  implementations are evaluated from the same current state.
-- `B_t` is the extra difference caused by the two runs having reached
-  different weights or optimizer states in earlier steps.
-- `D_{t+1}-D_t` is the actual change in distance between the two training
-  runs.
+- `L_t`：在同一训练状态下，只由 candidate/repair 算子差异造成的参数更新差异。
+- `B_t`：两条轨迹此前已经分开后，由参数和 optimizer 状态不同产生的额外差异。
+- `D_{t+1}-D_t`：这一训练步实际新增的参数差异。
 
-These three quantities answer different questions. A large actual separation
-does not by itself prove that the operator's direct effect keeps pointing in a
-consistent direction.
+因此，最终参数分开不等于算子本身每一步都在同向推动。必须分别报告 `L`、`B` 和 `D`。
 
-We use
+方向性分数为：
 
 \[
 A_X(T)=\frac{\left\|\sum_{t=1}^{T}X_t\right\|}
-{\sqrt{\sum_{t=1}^{T}\|X_t\|^2}}
+{\sqrt{\sum_{t=1}^{T}\|X_t\|^2}}.
 \]
 
-to describe how much a sequence cancels. At 32 steps its maximum is
-`sqrt(32) = 5.66`: values near 1 look like diffusion, while much larger values
-mean that the step differences reinforce one another. `A` is a continuous
-measurement, not a universal pass/fail constant.
+32 步时最大值为 `sqrt(32)=5.66`。`A` 接近 1 表示不同训练步大致抵消，明显大于 1 表示它们更倾向于同向累积。`A` 是连续测量，不是所有模型共享的安全阈值。
 
-## Historical stateless-SGD result
+## 覆盖范围
 
-Three bounded records show that the direct operator or backward gradient
-difference can keep adding up when parameter updates use stateless SGD:
+四个核心模型、三个序列长度的全量首轮检查包含：
 
-- Liger fused cross entropy;
-- Phi-4 `lm_head dX`;
-- the Qwen `lm_head dX` family.
+- 466,419 次 eager 调用；
+- 70,171 次被测编译实现调用；
+- 186,807 个已连接真实 forward 和 backward 的计算单元；
+- 1,562 个进入首轮数值检查的具体输出位置。
 
-They are not three independent implementation mechanisms. Liger is a fused
-accumulation example. Phi and Qwen are two models using the same mathematical
-`lm_head` input-gradient matrix-multiplication family.
+1,562 个位置已经全部得到首轮结果：1,390 个通过，172 个拒绝。这里的“全量”只指 forward/backward 绑定和首轮数值检查，不代表 1,562 个位置都完成了 repair、参数可达性和 32 步训练实验。
 
-The 32-state measurements at three points are:
+## 历史无状态 SGD 结果
 
-| measured record | operator output | parameter gradient | stateless SGD parameter update |
+三个有界记录显示，算子或 backward 产生的更新差异在无状态 SGD 映射下可以持续累积：
+
+| 记录 | 算子输出 A | 参数梯度 A | SGD 参数更新 A |
 |---|---:|---:|---:|
-| Liger fused CE, seq128 | 2.984 | 2.931 | 2.931 |
-| Phi-4 `lm_head dX`, seq64 | 2.074 | 4.701 | 4.701 |
-| Qwen `lm_head dX`, seq256 companion measurement | 1.008 | 1.698 | 1.698 |
+| Liger fused CE，seq128 | 2.984 | 2.931 | 2.931 |
+| Phi-4 `lm_head dX`，seq64 | 2.074 | 4.701 | 4.701 |
+| Qwen `lm_head dX` family，seq256 companion | 1.008 | 1.698 | 1.698 |
 
-Liger is already directional at the operator boundary. For Phi and Qwen, the
-direction becomes clearer after the real backward pass reaches a parameter
-gradient. Stateless SGD preserves it. The optimizer is not always passive:
-on Phi, a gradient sequence with `A=4.665` becomes an AdamW update sequence
-with `A=1.031` when both arms use the same stored moments.
+这不是三个独立机制。Liger 是融合累加案例；Phi 和 Qwen 属于同一个 `lm_head` 输入梯度矩阵乘法家族。Qwen 的这组历史 seq256 SGD 数据也不能和后来的 seq128 AdamW 数据拼成一个 exact case。
 
-The old Qwen row still remains a valid historical SGD-family result. A new
-seq128 run now closes the exact endpoint, parameter and state order under
-AdamW; its different result is reported below instead of being attached to
-the seq256 SGD numbers.
+## 统一 AdamW 后的修正结果
 
-## Same-optimizer correction
+为了公平比较，我们把三个历史行和十二个结果盲控制行统一到同一 cold-start AdamW 设置：moments 从零开始，之后正常更新。
 
-The earlier 14-row Oracle comparison was not fair: the three historical rows
-above used stateless SGD, while the controls used AdamW. We therefore reran
-all three historical rows with the same AdamW settings as the controls and
-kept all twelve mechanically sampled controls. The corrected set has 15 rows.
+15 行回溯集中：
 
-| row | local update `A16` | local update `A32` | random-sign 95% bound | AdamW result |
+| 行 | 直接更新 A16 | 直接更新 A32 | 本行随机符号 95% 上界 | 当前结论 |
 |---|---:|---:|---:|---|
-| Liger fused CE | 1.338 | 1.720 | 1.116 | persistent |
-| Phi-4 `lm_head dX` | 1.013 | 1.029 | 1.004 | persistent, small margin |
-| Qwen seq128 `lm_head dX` | 0.971 | 0.957 | 1.045 | canceling |
-| sampled Phi seq256 row `0543` | 1.007 | 1.014 | 1.011 | persistent, small margin |
+| Liger fused CE | 1.338 | 1.720 | 1.116 | 确认直接持续 |
+| Phi-4 `lm_head dX` | 1.013 | 1.029 | 1.004 | 确认直接持续，但幅度小 |
+| Qwen seq128 `lm_head dX` | 0.971 | 0.957 | 1.045 | 直接更新抵消 |
+| 结果盲 Phi row `0543` | 1.007 | 1.014 | 1.011 | 总体校正后未决 |
 
-This changes the scientific interpretation. Qwen has aligned gradient
-differences under the historical SGD measurement, but the direct update
-differences cancel after AdamW. The optimizer is therefore part of the
-measured training behavior, not an interchangeable final step.
+`0543` 的单行结果略过门槛，但没有通过十二行 discovery family 的 Holm 校正。因此它不是确认正例，也不能改标成负例。
 
-The separate Phi stochastic-rounding experiment must not be attached to the
-Phi AdamW row in this table. Its `A=3.325 -> 0.956` result uses 16 common
-states and stateless SGD with no moments; the `A=1.029` result here uses a
-32-step zero-moment AdamW trajectory. The former supports a source-level
-intervention under SGD. A matched source intervention for the AdamW result
-has not been run.
+短程筛查只看前 16 步：
 
-These data do not locate the defect inside AdamW. Directionality is already
-strong at the Phi gradient before the optimizer, while AdamW suppresses most
-of it. The supported conclusion is that the optimizer changes whether an
-existing gradient bias reaches the parameter update; the small remaining
-AdamW signal has not yet been assigned to a mechanism.
+- 15 行中升级 5 行；
+- 没漏掉 3 个名义正例；
+- 额外升级 2 个控制项；
+- 回溯 AUROC 为 `0.944`；
+- 同层更新 RMS 的回溯 AUROC 为 `0.528`。
 
-The new exact Qwen seq128 three-stage result is `A=1.005` at the operator
-output, `A=1.343` at the parameter gradient, and `A=0.961` after AdamW. Its
-live direct update has `A=0.957`; feedback has `A=1.191`, and actual parameter
-separation has `A=1.508`.
+这支持“便宜的优先级筛查”，不支持“通用安全分类”。没有被 16 步筛查升级的行也不能直接判为安全。
 
-All three historical rows now have an exported direct/feedback/actual split
-under AdamW. Liger has direct `A=1.720`, feedback `A=3.494`, and actual
-`A=3.489`, with recurrence error below `8.5e-8`. Phi has direct `A=1.029`,
-feedback `A=5.075`, and actual `A=1.711`. Thus a persistent direct effect can
-exist while later training feedback is much larger; final distance must not
-be attributed entirely to the operator.
+## optimizer 会改变结果，但不是统一根因
 
-## Two Phi measurements that must stay separate
+方向差异在进入 optimizer 前已经存在。相同梯度差异经过不同更新映射后，方向性会被保留或压低：
 
-- `A=4.701` is the 32-state same-state parameter-update difference caused by
-  the repaired `lm_head dX` operator.
-- `A=4.488` is the actual 32-step separation of the candidate and repaired
-  final-norm parameter runs.
+| 案例 | 梯度差异 A32 | captured AdamW A32 | 每步重置 moments A32 |
+|---|---:|---:|---:|
+| Liger | 2.838 | 1.681 | 1.828 |
+| Phi | 4.683 | 1.030 | 1.014 |
+| Qwen | 1.343 | 0.961 | 1.000 |
 
-They concern the same Phi operator family and parameter, but come from two
-different measurement protocols. They are not a range and must not be merged
-into `4.49--4.70`.
+因此可以说：optimizer 是数值差异进入实际参数更新时必须测量的一环。不能说 AdamW 是这些数值误差的统一来源。
 
-In the four-arm comparison, only `model.norm.weight` is allowed to evolve:
+Phi 的两组实验必须分开：
 
-| comparison | final parameter distance | `A` |
-|---|---:|---:|
-| candidate operator vs repaired operator | `9.186e-5` | `4.488` |
-| different data order, same batch multiset | `3.548e-5` | `0.0067` |
-| BF16 F+B vs FP32 F+B | `3.223e-4` | `1.857` |
-| different RNG seed | `0` | not informative because dropout is zero |
+- `A=3.325 -> 0.956` 是 16 个共同状态、无 moments、无状态 SGD 下的随机舍入干预；
+- `A=1.029` 是 32 步 cold-start AdamW 下的直接更新结果。
 
-The different-seed row is not used as a diffusion baseline: this controlled
-carrier has no dropout, so changing the seed produces no change.  The actual
-repeated-diffusion baseline is the separate five-seed, every-step,
-norm/support-matched random-injection experiment.  Its `A` values are
-`0.870--1.037` (mean `0.959`) and are recorded in
-`results/property/joint_bias_formation_v1/four_scale_arms/phi_repeated_random_null.json`.
+前者支持 SGD 协议下的 source 干预，不能用来解释或修复后者。
 
-The precision arm runs the full model forward and backward in BF16 versus
-FP32, but updates only the declared final-norm parameter. It is therefore a
-controlled one-parameter comparison, not full-parameter BF16-versus-FP32
-training.
+## 直接作用与训练状态反馈
 
-## Coverage: what was exhaustive and what was not
+三个可重算案例的 32 步结果是：
 
-The four-model, three-sequence-length core contains:
+| 案例 | 直接作用 A | 状态反馈 A | 实际参数变化 A | 直接作用沿最终方向的份额 | 状态反馈份额 |
+|---|---:|---:|---:|---:|---:|
+| Liger | 1.720 | 3.494 | 3.489 | 0.0046 | 0.9954 |
+| Phi | 1.029 | 5.075 | 1.711 | 0.4393 | 0.5607 |
+| Qwen | 0.957 | 1.191 | 1.508 | -0.0862 | 1.0862 |
 
-- 466,419 eager calls;
-- 70,171 calls from the compiled implementation under test;
-- 186,807 units in which one forward calculation is linked to its real
-  backward calculation;
-- 1,562 concrete tensor locations selected for the first numerical test.
+份额是带符号投影，所以可以小于 0 或大于 1。这里说明最终分离主要由训练状态反馈维持，但不能因为反馈的 `A` 更高就声称其绝对贡献一定更大；表中的累计长度和沿最终方向投影才用于判断贡献。
 
-All 1,562 locations have a first numerical result: 1,390 pass and 172 reject.
-Their forward and actual backward mathematics are bound. This is an
-exhaustive census and first numerical screen; it is not 1,562 complete
-32-step training experiments.
+在机械选择的十二行控制样本中，十一行的直接作用接近抵消，但状态反馈仍维持最终分离；一行同时包含两者。这进一步证明最终参数距离不能替代直接作用检查。
 
-The core locations are also grouped into 804 groups according to generated
-code region and the backward calculation that consumes the result. A later
-search uses a different denominator: 791 operator-and-backward combinations,
-deduplicated into 493 distinct implementation patterns. The numbers 804 and
-791 describe different scopes and must not be treated as interchangeable.
+## 新实现检查
 
-Only rows that also have a valid one-operator repair, a reachable parameter,
-and the required trajectory data enter deeper tests. Six historical records
-pass the older strict repair/carrier/trajectory checklist. Three records enter
-the narrower historical stateless-SGD headline above. The common-AdamW
-comparison is counted separately.
+未见实现检查分两轮：较早冻结的 Gemma v3 有一行直接作用 `A32=1.0003`、状态反馈 `A32=3.2340`；它是直接抵消、状态反馈持续的控制。v4 随后又完成三个新目标：
 
-## Other forms of parameter separation
+- 0 个直接持续正例；
+- 1 个状态反馈对照；
+- 2 个没有可测参数作用的目标，记为不适用，而不是负例。
 
-Not every real separation is a persistent direct operator effect.
+因此两轮检查都没有直接持续正例。它们能说明方法会诚实输出“反馈型”或“不适用”，但不能计算跨未见实现的 recall 或 AUROC，也不能证明整个模型安全。
 
-- Some numerical differences are visible in one step but cancel over time.
-- Some become directional after backward or optimizer processing.
-- Some direct operator effects remain close to diffusion, while earlier
-  parameter or optimizer differences cause the two training runs to keep
-  separating.
-- Missing repair, parameter reach, or trajectory evidence remains unresolved;
-  it is not converted into a negative result.
+v4.1 是身份字段更完整的新实验入口，目前状态为 `NOT_STARTED_NEW_FREEZE`。它没有产生新的科学结果，当前稿件也不要求启动它。
 
-In the mechanically selected 12-row control sample, 11 rows have a
-near-diffusive direct operator effect and a persistent later feedback effect;
-one row contains both. This is why final parameter distance cannot replace a
-direct operator-persistence measurement.
+## 当前可以写入论文的结论
 
-## Short screening result
+> 输出误差大小不能判断一个 LLM 训练实现是否会持续改变参数。更直接的办法是在真实 backward 和实际 optimizer 下，短程测量算子造成的参数更新差异是否抵消，并把最终参数分离拆成算子直接作用和训练状态反馈。
 
-The corrected retrospective evaluation has 15 rows and one optimizer:
-AdamW. It contains all twelve result-blind sampled rows plus the three
-historical rows. Nominally, the full 32-step test finds three rows above their
-row-level null: Liger, Phi, and sampled row `0543`; Qwen is not positive under
-AdamW. After the predeclared twelve-row Holm correction, `0543` is an
-unresolved candidate rather than a confirmed positive.
+当前证据支持一个 **cold-start AdamW Direct Persistence Screen**：它用于决定哪些实现值得继续做完整检查，不是安全证明。
 
-Using only the first 16 local parameter-update differences:
+## 当前不能声称
 
-- all three AdamW positives are selected;
-- two of 12 negatives are also selected;
-- precision is `3/5` and recall on this small set is `3/3`;
-- the short score has AUROC `0.944`;
-- short-horizon update RMS has AUROC `0.528`.
+- 已经得到所有算子都适用的 Oracle 或 property；
+- 16 步未升级等于算子安全；
+- 所有最终参数分离都由算子直接 bias 造成；
+- AdamW 是统一根因；
+- 三个新 Gemma 控制项足以估计未见实现上的准确率；
+- 当前结果代表完整全参数训练的 loss collapse。
 
-The old 14-row AUROC `1.00` is withdrawn because it mixed SGD positives with
-AdamW controls and omitted sampled row `0543` after its full result was known.
-Across a separate 32-row formation population, local RMS still has Pearson
-correlation `0.018` (`p=0.921`) and Spearman correlation `0.243` (`p=0.178`)
-with directionality.
+## 当前停止决定
 
-This supports a cheap, fail-closed prioritization step: selected rows receive
-the full test, while unselected rows are not declared safe. It is not a
-universal all-operator classifier.
+当前稿件不再要求启动新 GPU campaign。扩大未见实现池、补齐全样本 tolerance、完整严重度、v4.1 运行和 prospective catch-and-fix 都属于升级更强主张所需的未来工作，不是当前有界结论的缺口。
 
-## Safe conclusion
+当前状态和数据入口：
 
-Output tolerance and error size do not tell us whether an implementation
-difference will keep changing model parameters in one direction. The relevant
-chain is:
-
-```text
-operator output difference
--> parameter-gradient difference after the real backward pass
--> parameter-update difference after the optimizer
--> direct accumulation or cancellation
--> additional separation caused by changed training state
-```
-
-The repository supports this measured workflow, three bounded historical SGD
-records, and a corrected same-AdamW evaluation with two confirmed rows plus
-one unresolved candidate. Two of the historical rows remain positive under
-AdamW; Qwen does not, while one result-blind sampled row is nominally a
-small-margin positive but does not survive the predeclared Holm correction. It does not yet
-support a universal rule for unseen implementations, full-parameter training
-failure, or a claim that every observed parameter separation is caused by a
-persistent direct operator effect.
-
-Machine-readable sources:
-
-- `results/property/joint_bias_formation_v1/headline_case_evidence_scope_v1.json`
-- `results/property/joint_bias_formation_v1/three_stage_summary.json`
-- `results/property/bias_formation/consequence/phi4_lm_head_dx_seup.json`
-- `results/property/joint_bias_formation_v1/source_persistence_reclassification.json`
-- `results/property/joint_bias_formation_v1/oracle_repair_v3/same_optimizer_oracle_v3.json`
-- `docs/oracle_repair_v3.md`
-- `results/coverage/coverage_table_v1.json`
-
-## Direct Persistence Screen v4
-
-The current short selector is named the **Cold-start AdamW Direct Persistence
-Screen**. It is a follow-up selector, not a safety classifier. The v4 package
-separates the three predeclared rows from the twelve result-blind rows, keeps
-`0543` as an unresolved candidate after Holm correction, and reports signed
-direct/feedback/actual contributions.
-
-See [`docs/direct_persistence_screen.md`](direct_persistence_screen.md), the
-[v4 summary](../results/property/direct_persistence_v4/summary.json), and the
-[evidence table](direct_persistence_evidence.md).
-The optimizer boundary is stated separately in
-[`docs/direct_persistence_optimizer.md`](direct_persistence_optimizer.md).
-
-The old v3 records do not contain complete per-step vectors. The v4 package
-therefore derives only the three-resultant inner-product matrix and explicitly
-marks per-step cross-Grams unavailable. New measurements must save those
-statistics or return `ABSTAIN`.
+- [文档入口](README.md)
+- [v4 完成审计](../results/property/direct_persistence_v4/completion_audit.json)
+- [v4 执行状态](../results/property/direct_persistence_v4/execution_status.json)
+- [v4.1 未运行状态](../results/property/direct_persistence_v4_1/execution_status.json)
+- [覆盖汇总](../results/coverage/coverage_table_v1.json)

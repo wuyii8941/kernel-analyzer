@@ -122,7 +122,11 @@ Flash-style persistent-local-source cases.
 6. The short Oracle is a fail-closed prioritization workflow, not a safety
    certificate or a validated universal classifier.
 
-## Highest-priority open evidence
+## Optional evidence for stronger future claims
+
+The current bounded paper claim does not require the items below. They are
+needed only to claim cross-implementation generalization, complete tolerance
+coverage, or a deployable automatic repair workflow.
 
 1. Complete wall-clock cost accounting after the Mamba and uncontended
    headline timing runs.
@@ -206,9 +210,12 @@ the three predeclared rows and the twelve result-blind rows. The small-margin
 `0543` row is retained as `UNRESOLVED_CANDIDATE`, not relabeled negative. The
 signed direct/feedback/actual contribution table is derived from exported
 resultants and explicitly records that complete per-step cross-Grams were not
-saved. Prospective heldout, real moment-state sensitivity, and an executable
-catch-and-fix are still pending; the v4 package is not a universal safety
-classifier.
+saved. Four same-state optimizer ablations, Qwen early/middle/late natural
+phase response, and three fresh Gemma target checks are complete. The fresh
+pool has no direct positive, so prospective recall and catch-and-fix remain
+undefined or not applicable. The v4 package is not a universal safety
+classifier. The identity-complete v4.1 entry is frozen but intentionally not
+started for the current bounded paper claim.
 
 The optimizer boundary is explicit: current data show that AdamW can suppress
 the Phi gradient directionality and that optimizer state can maintain Gemma

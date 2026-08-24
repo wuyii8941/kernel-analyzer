@@ -21,18 +21,25 @@ mistaken for post-hoc threshold fitting.
 | 2026-08-22 | `36958d5` | one disjoint `NEW_IMPL` v3 validation | Gemma formation and consequence were moved to separate state banks. Local source was null-like; feedback/actual paths were risk candidates. This added a feedback-sustained validation record, not a strict Flash-style source case. |
 | 2026-08-22 | `75a3fba` | property-search phase closed with explicit scope | Recorded that the workflow is complete as a frozen, fail-closed prioritization system while universal-property, control, and cross-implementation limitations remain explicit. |
 
-## Current authoritative counts
+## 历史审计计数
 
-- Strict project Flash-style cases: **6**.
-- Bias Formation roster denominator: **8**.
-- Ordered-trajectory directional persistence in that roster: **7/8**.
-- Matched formation mechanisms in that roster: **6/8**.
-- Same-contrast formation-plus-persistence chains in that roster: **4/8**.
-- Cross-state concrete-mechanism passes in the strict re-audit: **2**.
-- Universal cross-operator properties: **0**.
-- New-implementation source-persistence positives after freeze: **0**.
+- 历史 strict registry：**6** 条记录。
+- Bias Formation 历史 roster：**8** 条记录。
+- 该 roster 中历史 ordered-trajectory persistence：**7/8**。
+- 该 roster 中 matched formation evidence：**6/8**。
+- 同一 contrast 完成 formation 与 persistence 的历史链：**4/8**。
+
+这些数字描述不同的旧协议，不能当成当前统一 AdamW 下的正例数。
+
+## 当前统一 AdamW 计数
+
+- 回溯评估：**15** 行。
+- 确认的直接持续正例：**2** 行，Liger 和 Phi `lm_head dX`。
+- Qwen `lm_head dX`：AdamW 下直接更新抵消。
+- `0543`：总体校正后保持未决。
+- 新 Gemma 实现检查：**3** 行，0 个直接持续正例、1 个状态反馈对照、2 个不适用。
+- 通用跨算子 property：**0**。
 
 The machine-readable sources are
 `results/coverage/existing_case_reaudit.json`, `case.md`, and
 `results/property/bias_property_search/completion_audit_v1.json`.
-

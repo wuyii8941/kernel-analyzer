@@ -1,5 +1,12 @@
 # Directional-bias cases
 
+> **Current status:** this file preserves the historical case registry and its
+> changing denominators. It is not the current AdamW positive list. The only
+> current count and conclusion are in
+> [docs/current_mainline.md](docs/current_mainline.md): two confirmed direct
+> persistence rows under the common cold-start AdamW protocol, one unresolved
+> candidate, and no universal all-operator Oracle.
+
 ## Historical stateless-SGD source-persistence headline (2026-08-22)
 
 The paper headline now separates persistent endpoint-mediated local effects

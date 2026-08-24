@@ -76,21 +76,17 @@ Gemma 4 是事前冻结的新实现。它的局部 direct 分数在 16 步为 `0
 为 `3.231`，主要由 feedback 维持。这是一个有效的 `NEW_IMPL` 负例，而不是
 “整个训练安全”的证明。
 
-另外三个 Gemma 4 目标已经在同一个新进程中完成了 16 步形成检查和 32 步后果检查，
+另外三个 Gemma 4 目标已经在新进程中完成了 16 步形成检查和 32 步后果检查，
 且源判断在轨迹开始前冻结：
 
 | 目标 | 形成判断 | 32 步局部作用 | 32 步实际分离 | 解释 |
 |---|---|---:|---:|---|
 | softmax backward / `k_norm` | 无直接持续性 | `A=0.000`，无可见载体差异 | `1.5e-8` | 没有可测的参数作用，记为不适用 |
 | GELU/loss backward / projection | 无直接持续性 | `A=1.0002` | `A=3.027` | 局部作用近似抵消，分离主要由反馈维持 |
+| GELU backward / `backward:1860` | 无直接持续性 | `A=0.000`，无可见载体差异 | `A=0.000` | 没有可测的参数作用，记为不适用 |
 
 这三个结果增加了未见实现的控制项，但没有增加新的 direct-persistence 正例。
 当前未见实现池仍没有正例，因此不能计算 recall 或 AUROC；它们也不证明整个模型安全。
-
-随后按冻结规则又登记了一个新的 Gemma GELU backward 区域
-`backward:1860/in_out_ptr0`。它的结果只有在 16/32 步文件、运行包和 repair
-身份全部通过审计后才会写入 held-out 汇总；运行失败或身份不一致会保留为
-`ABSTAIN`，不会被当作负例。
 
 详见 [Gemma held-out 记录](direct_persistence_heldout.md)。
 本轮三个新目标的紧凑结果见
@@ -105,3 +101,5 @@ Gemma 4 是事前冻结的新实现。它的局部 direct 分数在 16 步为 `0
 - [可由原始回放重算的误差指标](../results/property/direct_persistence_v4/tolerance_comparison.json)
 - [可由原始回放重算的影响量](../results/property/direct_persistence_v4/severity.json)
 - [逐项完成审计](../results/property/direct_persistence_v4/completion_audit.json)
+
+身份更完整的 v4.1 清单已经冻结但尚未运行。当前稿件按有界结论收口，不要求启动该轮实验。

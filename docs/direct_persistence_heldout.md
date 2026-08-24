@@ -1,57 +1,32 @@
-# What the first unseen implementation test shows
+# 新实现检查说明
 
-Gemma 4 was frozen as a new implementation before its trajectory was run.  It
-is kept separate from the later atlas-derived pool because that pool is missing
-exact repair and state identities.
+Gemma 4 在运行轨迹前被登记为新实现。它与后来的 atlas-derived pool 分开保存，因为后者缺少完整 repair 和 state 身份。
 
-The v4 adapter checks the model revision, the frozen wrapper hashes, the
-separate 16-state formation bank, the separate 32-state trajectory bank, the
-repair target, and the AdamW settings.  It then reports:
+## 第一个 Gemma 目标
 
-| item | result |
+| 项目 | 结果 |
 |---|---:|
-| 16-step direct/local score | `A=0.9860` |
-| 16-step local null upper 95% | `1.0125` |
-| 32-step direct/local score | `A=1.0003` |
-| 32-step actual trajectory score | `A=3.2312` |
-| 32-step feedback score | `A=3.2340` |
+| 16 步直接作用 A | 0.9860 |
+| 16 步随机对照 95% 上界 | 1.0125 |
+| 32 步直接作用 A | 1.0003 |
+| 32 步实际参数变化 A | 3.2312 |
+| 32 步状态反馈 A | 3.2340 |
 
-The frozen source prediction was negative for direct persistence, and the
-full confirmation agrees: Gemma is **not** a direct-persistence positive under
-the declared screen.  Its actual trajectory is strongly separated, but that
-separation is feedback-dominated and outside the direct screen's claim.
+事前判断是“没有直接持续作用”，32 步结果与之相符。最终参数仍明显分开，但主要由训练状态反馈维持，因此不属于 Direct Persistence Screen 的直接正例。
 
-This is one genuine `NEW_IMPL` negative.  It does not provide recall or AUROC:
-there is no positive in this one-row pool.  More mechanically frozen unseen
-implementations are required before making a generalization claim.
+## v4 的三个新目标
 
-## Two additional Gemma target checks
-
-Two more targets from the pre-frozen Gemma pool were run in a fresh process
-that built its own runtime release. The source result was written before the
-32-step consequence run.
-
-| target | direct/local result | actual result | status |
+| 目标 | 直接作用 | 实际结果 | 分类 |
 |---|---:|---:|---|
-| softmax backward, `k_norm` | `A32=0.000`, no carrier effect | `1.5e-8` | not applicable: no observed carrier difference |
-| GELU/loss backward, projection | `A32=1.0002` | `A32=3.0267` | feedback control, not direct persistence |
-| another GELU backward region (`backward:1860`) | `A32=0.000`, no carrier effect | `A32=0.000` | not applicable: no observed carrier difference |
+| softmax backward / `k_norm` | `A32=0`，没有可见参数作用 | `1.5e-8` | 不适用 |
+| GELU/loss backward / projection | `A32=1.0002` | `A32=3.0267` | 状态反馈对照 |
+| GELU backward `backward:1860` | `A32=0`，没有可见参数作用 | `A32=0` | 不适用 |
 
-These add controls, not new positives. The first target had no measurable
-effect on the chosen carrier, and the second had a large final separation only
-after feedback; neither can be used to claim that the whole model is safe.
-The compact audit is
-`results/property/direct_persistence_v4/heldout/new_impl_targets_v2.json`.
-The third row was selected by a rule frozen before its consequence run; its
-runtime release and state banks are recorded in
-`results/property/direct_persistence_v4/heldout/new_impl_pool_v3.json`.
+三行增加了未见实现控制项，但没有直接持续正例。因此：
 
-Artifacts:
+- 不能计算跨未见实现的 recall 或 AUROC；
+- 不能把“不适用”改写成负例；
+- 不能据此证明整个模型安全；
+- 也不需要为了当前稿件继续扩大该池。
 
-- `results/property/direct_persistence_v4/heldout_gemma_pool.json`
-- `results/property/direct_persistence_v4/heldout_gemma_predictions.json`
-- `results/property/direct_persistence_v4/heldout_gemma_confirmation.json`
-- `results/property/direct_persistence_v4/heldout_gemma_validation.json`
-- `results/property/direct_persistence_v4/heldout/gemma4_e2b_norm_short_screen.json`
-- `results/property/direct_persistence_v4/heldout/gemma4_e2b_norm_consequence32.json`
-- `results/property/direct_persistence_v4/heldout/new_impl_pool_v3.json`
+紧凑审计：`results/property/direct_persistence_v4/heldout/new_impl_targets_v2.json`。

@@ -19,18 +19,21 @@ Independent-state coherence is reported on the separate generalizable-bias
 track.  Failing that stronger gate does not revoke a complete trajectory-local
 Flash-style case.
 
-See [docs/current_mainline.md](docs/current_mainline.md) for the current
-scientific result and remaining boundary, [PROJECT.md](PROJECT.md) for the
+Start from the [documentation index](docs/README.md) and
+[current main result](docs/current_mainline.md). They define the only current
+claim and count. See [PROJECT.md](PROJECT.md) for the
 coverage and retention map,
-[cases_flash_style.md](cases_flash_style.md) for the case standard, and
-[case.md](case.md) for the current case registry.  Paper-facing claims and
+[cases_flash_style.md](cases_flash_style.md) for the historical case standard,
+and [case.md](case.md) for the historical case registry. Paper-facing claims and
 their exact evidence boundaries are tracked in
 [docs/claims.md](docs/claims.md); count and gate changes are recorded in
 [docs/gate_history.md](docs/gate_history.md).  The completed property-search
 scope is summarized in
 [docs/bias_property_search_completion.md](docs/bias_property_search_completion.md).
 Older round notes are retained only as experiment history; they must not be
-used for the current case count or headline conclusion.
+used for the current case count or headline conclusion. The current
+deliverable is a bounded cold-start AdamW Direct Persistence Screen, not a
+universal safety classifier.
 
 The main code is in `src/` and `scripts/`.  Scientific artifacts are kept
 under `results/coverage/` and compact derivations under `results/final/`.

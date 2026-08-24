@@ -30,3 +30,7 @@
 - prospective catch-and-fix：当前未见实现池没有 direct-persistence 正例，不能凭空制造修复演示。
 
 因此 v4 仍然是 **optimizer-conditioned Direct Persistence Screen**：它是在声明的 cold-start AdamW 设置下做短程分诊，不是通用的全算子安全证明。所有未决项都保留为 `ABSTAIN`，没有用相近案例补数字。
+
+## 当前项目决定
+
+本轮停止扩展实验并进入写作。上述未决项限制更强的跨实现泛化、完整 tolerance 和自动修复主张，但不阻塞当前有界结论。v4.1 保留为未来可选入口，当前未运行，也不计入结果。

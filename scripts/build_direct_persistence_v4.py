@@ -562,7 +562,11 @@ def main() -> None:
             "status": load(args.output / "tolerance_comparison.json").get("status", "NOT_STARTED") if (args.output / "tolerance_comparison.json").exists() else "NOT_STARTED",
             "claim_boundary": "Complete tolerance comparison still requires raw candidate/repair update pairs and raw operands for all frozen rows.",
         },
-        "next_required": [
+        "publication_decision": (
+            "Documentation closed on the bounded cold-start AdamW Direct Persistence Screen. "
+            "No additional GPU campaign is required for this scoped claim."
+        ),
+        "optional_for_stronger_claims": [
             "same-state optimizer ablation for 0543 when exact raw captures exist",
             "expand the independently frozen NEW_IMPL pool until a direct-positive or all-negative boundary is documented",
             "complete tolerance metrics on a common held-out pool",

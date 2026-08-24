@@ -1,45 +1,46 @@
-# Direct Persistence Screen 的边界和后续实验
+# 当前边界与未来增强
 
-当前结果支持的是：
+当前结果已经足以支持一个范围明确的结论：
 
-> 在统一的 cold-start AdamW 设置下，短程有效更新方向性可以作为高召回的后续检查分诊器；它不是通用安全分类器。
+> 在 moments 从零开始、随后正常更新的 AdamW 设置下，短程有效更新方向性可以用来决定哪些算子值得做完整 32 步检查。它不是安全分类器。
 
-## 尚未完成的三类证据
+下面的工作不是当前稿件的必做项。只有要升级相应主张时才需要继续。
 
-### 1. optimizer 状态
+## 已经完成的 optimizer 证据
 
-需要在同一 weights、输入和 gradient difference 下比较：
+- Liger、Phi、Qwen 和一个 Gemma 状态反馈对照已经完成同状态 AdamW、每步重置 moments 和无状态 SGD 比较。
+- Qwen 已经完成早期、中期、后期真实权重、输入和 moments 下的响应测量。
+- 这些结果证明 optimizer 会改变梯度差异进入参数更新的方式，但没有证明 AdamW 是数值误差的统一来源。
 
-- 已捕获 moments；
-- moments reset；
-- stateless SGD。
+因此，“optimizer 对照未做”已经不是当前缺口。仍未完成的是更强的跨训练阶段 32 步自然轨迹结论。
 
-还需要在真实训练早期、中期、后期分别捕获完整 weights、输入、gradients 和 moments。不能把晚期 moments 人工安装到早期 gradient 上并称为真实训练阶段结果。
+## 只有更强主张才需要的工作
 
-### 2. 未见实现
+### 跨未见实现泛化
 
-先机械冻结 held-out pool，再冻结短筛、严重度指标和 tolerance 基线。所有 eligible rows 都要完成 16 步短筛和 32 步确认，包括短筛没有升级的 rows。
+若要声称筛查可以泛化到未见实现，需要扩大事前冻结的实现池，并让所有可运行目标都完成 16 步筛查和 32 步确认。当前 Gemma 池没有直接持续正例，所以不能计算 recall 或 AUROC。
 
-同一个实现换模型属于 `SEEN_IMPL_NEW_OPERANDS`；训练中完全没有出现过的实现才属于 `NEW_IMPL`。
+### 完整 tolerance 对比
 
-如果 held-out 全部为 negative，只报告升级率、误升级率、abstention 和成本；不报告 recall 或 AUROC。
+若要声称优于所有常见 tolerance，需要在同一冻结样本中保存 candidate/repair 的原始输出、梯度和更新位模式，再统一比较 max error、relative L2、ULP、`rtol/atol`、输出 RMS、梯度 RMS 和更新 RMS。当前只能稳妥声称短程方向性优于同层更新 RMS。
 
-### 3. catch-and-fix
+### 严重度与真实训练后果
 
-如果前瞻实验升级了候选，需要完成：32 步确认、定位偏差出现的层、可执行 repair、再次测 persistence、loss/参数后果和运行速度。
+若要自动决定“是否值得修”，还需要统一的参数尺度、正常训练更新尺度、loss 一阶投影和真实 evaluation loss。当前筛查主要回答“是否持续”，不负责完整判断后果大小。
 
-现有 Phi 随机舍入结果只是 stateless SGD 的 development demonstration，不能冒充 AdamW `A=1.029` 的修复实验。
+### catch-and-fix
 
-### 4. 当前 GPU 复跑阻塞
+只有当前瞻池出现直接持续正例后，才能做“筛出候选、确认、修复、复测”的完整演示。本轮没有合法对象，因此状态是 `NOT_APPLICABLE`，不是实验失败。
 
-一次 Phi 2-step 工程复跑没有产生科学结果：严格编译模式遇到动态
-RoPE 分支，允许 graph break 后又找不到冻结 release 中的 Triton 符号。
-这被记录为 `ABSTAIN_RUNTIME_MISMATCH`，不是 negative，也没有改变任何
-已有标签。详细记录见
-`results/property/direct_persistence_v4/gpu_preflight.json`。
+### v4.1
 
-## 最终允许的结论
+`results/property/direct_persistence_v4_1/` 是身份字段更完整的新一轮冻结入口，当前为 `NOT_STARTED_NEW_FREEZE`。它没有产生新结果，当前稿件不要求运行。
 
-- 跨未见实现仍有效：可以升级为更通用的训练算子 Oracle；
-- 只在特定 optimizer 或实现范围有效：明确声明适用域；
-- 能解释现象但短筛不能稳定泛化：保留为分析方法，不继续无限寻找 positive。
+## 已知运行问题
+
+Phi 的一次工程复跑遇到冻结运行包与当前 wrapper 顺序不一致，因此安全停止并记为 `ABSTAIN_RUNTIME_MISMATCH`。它不是负例，也不改变已有标签。
+
+## 写作时的最终边界
+
+- 可以写：在当前统一 AdamW 回溯样本中，短程方向性比同层 RMS 更适合做 fail-closed 分诊。
+- 不可以写：已经得到跨所有算子、optimizer 和训练阶段的通用安全 Oracle。
