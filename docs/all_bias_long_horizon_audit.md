@@ -24,7 +24,7 @@
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0057; post-attention LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0103; input LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_RESOURCE | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0153; attention k-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_RESOURCE | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
-| DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0190; attention q-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
+| DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0190; attention q-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_RESOURCE | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0191; attention q-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | Mamba-130M | Mamba backward cell 0450; dt-projection bias carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | Phi-4-mini | Phi backward cell 0501; post-attention LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_RESOURCE | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |

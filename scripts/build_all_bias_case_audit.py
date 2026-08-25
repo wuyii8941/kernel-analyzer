@@ -56,10 +56,11 @@ def long_row(path: Path) -> dict[str, Any]:
             a = float(actual.get("coherence_amplification", 0.0))
             upper = float(null.get("upper_95", 0.0))
             p = float(null.get("one_sided_p", 1.0))
+            measured_steps = int(payload.get("steps", payload.get("step_count", 0)))
             return {
-                "status": payload.get("trajectory_status", payload.get("status", "COMPLETE")),
+                "status": "COMPLETE_4096" if measured_steps >= 4096 and payload.get("status") == "COMPLETE" else payload.get("trajectory_status", payload.get("status", "COMPLETE")),
                 "long_direct": "ROBUST" if p <= 0.05 and a > upper else "NOT_ROBUST",
-                "steps": int(payload.get("steps", payload.get("step_count", 0))),
+                "steps": measured_steps,
                 "A4096": a, "null95": upper, "p": p,
                 "late_windows": None, "late_windows_above_own_null": None,
                 "loss_audit": payload.get("loss_audit", {}),
