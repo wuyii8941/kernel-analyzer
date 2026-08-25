@@ -77,6 +77,10 @@ def main() -> None:
     )
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument(
+        "--allow-graph-breaks", action="store_true",
+        help="Use the permissive Gemma-style compile.  The generic Llama replay keeps the frozen full-graph protocol by default.",
+    )
     parser.add_argument("--runtime-seed", type=int, default=24000)
     parser.add_argument("--steps", type=int, choices=(2, 8, 16), default=16,
                         help="open-loop formation states")
@@ -156,7 +160,10 @@ def main() -> None:
             parameter.requires_grad_(name == requested_carrier)
 
     start = len(PyCodeCache.modules)
-    candidate = torch.compile(LossStep(model), backend="inductor", fullgraph=False, dynamic=False)
+    candidate = torch.compile(
+        LossStep(model), backend="inductor",
+        fullgraph=not args.allow_graph_breaks, dynamic=False,
+    )
     warm = torch.tensor([warm_states[0]["token_ids"]], dtype=torch.long, device=device)
     model.zero_grad(set_to_none=True)
     candidate(warm).backward()
@@ -169,7 +176,7 @@ def main() -> None:
         architecture=args.architecture,
         input_bank=args.input_bank,
         state=warm_states[0],
-        allow_graph_breaks=True,
+        allow_graph_breaks=args.allow_graph_breaks,
     )
     del inventory_path
     import gzip
@@ -238,6 +245,18 @@ def main() -> None:
                 step_loss = candidate(values)
                 step_loss_value = float(step_loss.detach().float().cpu())
                 step_loss.backward()
+            # A permissive observer may allow unrelated generated calls to
+            # pass through when a freshly compiled wrapper has a different
+            # call-site layout.  That is useful for discovery, but it must
+            # never silently turn a missing target into a zero-difference
+            # result.  Require at least one observed target invocation for
+            # every repair replay; otherwise the row is a binding failure,
+            # not a negative bias result.
+            if not observer.records:
+                raise RuntimeError(
+                    f"TARGET_NOT_OBSERVED: {target['region_id']} "
+                    f"{target['symbol']} in state {state['state_id']}"
+                )
             if raw_capture_dir is not None and capture_raw_endpoint:
                 raw_gradient_records.append({
                     "state_id": state["state_id"],

@@ -61,7 +61,8 @@ run_one() {
       "$PY" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
       --input-bank "$input" --consequence-bank "$consequence" --output-dir "$pilot" --steps 16 \
       --consequence-steps 16 --target-region "$region" --target-symbol "$symbol" --target-endpoint "$endpoint" --carrier "$carrier" \
-      --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 1000 >>"$LOG" 2>&1; then
+      --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 1000 \
+      $([[ "$arch" == "gemma4" ]] && echo --allow-graph-breaks) >>"$LOG" 2>&1; then
     echo "[$(date -Is)] pilot unresolved $case_id" >>"$LOG"; return 0
   fi
   local decision
@@ -74,7 +75,8 @@ run_one() {
       "$PY" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
       --input-bank "$input" --consequence-bank "$consequence" --output-dir "$long" --steps 16 \
       --consequence-steps 4096 --target-region "$region" --target-symbol "$symbol" --target-endpoint "$endpoint" --carrier "$carrier" \
-      --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 2000 >>"$LOG" 2>&1; then
+      --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 2000 \
+      $([[ "$arch" == "gemma4" ]] && echo --allow-graph-breaks) >>"$LOG" 2>&1; then
     mkdir -p "$base/unresolved"
     "$PY" -c 'import json,sys; print(json.dumps({"schema":"kernel-analyzer-target-replay-failure-v1","case_id":sys.argv[1],"status":"UNRESOLVED_LONG_REPLAY_RESOURCE","log":sys.argv[2],"output_dir":sys.argv[3],"claim_boundary":"Target replay failed; no negative label is assigned."},indent=2))' "$case_id" "$LOG" "$long" >"$base/unresolved/${case_id}.json"
   fi

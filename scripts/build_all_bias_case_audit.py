@@ -41,6 +41,7 @@ GEMMA_GELU_LOG = LONG / "expanded_controls/logs/gemma4_random_gelu_loss_backward
 GEMMA_GELU_UNRESOLVED = LONG / "unresolved/gemma4_random_gelu_loss_backward_long_unresolved.json"
 GEMMA_NORM_LOG = LONG / "expanded_controls/logs/gemma4_norm_v3_long.log"
 TARGET_MANIFEST = LONG / "operator_scan_target_manifest.json"
+CANDIDATE_MAP = ROOT / "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json"
 
 
 def sha(path: Path) -> str | None:
@@ -570,6 +571,9 @@ def main() -> None:
     target_manifest = read(TARGET_MANIFEST) or {}
     target_manifest_rows = target_manifest.get("rows", [])
     known.update(row.get("case_id") for row in target_manifest_rows if row.get("case_id"))
+    candidate_map = read(CANDIDATE_MAP) or {}
+    short_candidates = list(candidate_map.get("candidates", []))
+    short_candidate_ids = {str(row.get("case_id")) for row in short_candidates if row.get("case_id")}
     for name, model, region, path, long_path, paired_path in CASES:
         unresolved_paths = {
             "Llama lm_head dX": LONG / "unresolved/llama32_lmhead_4096_unresolved.json",
@@ -953,6 +957,77 @@ def main() -> None:
             },
         })
 
+    # Every row in the frozen short-screen candidate map is a bias candidate,
+    # not a negative.  Only the mechanically sampled subset currently has an
+    # exact 4096-step consequence plan.  Keep the remaining rows in the same
+    # audit file as explicit long-replay work items, so the denominator cannot
+    # silently shrink when a candidate lacks a saved repair or its old runtime
+    # cannot be rebound.  A missing plan is unresolved, never "no bias".
+    represented = {str(row.get("case")) for row in rows}
+    short_candidate_universe_rows: list[dict[str, Any]] = []
+    model_names = {
+        "qwen": "Qwen3-1.7B",
+        "phi4": "Phi-4-mini",
+        "deepseek8b": "DeepSeek-R1-Qwen3-8B",
+        "mamba": "Mamba-130M",
+    }
+    for candidate in short_candidates:
+        case_id = str(candidate.get("case_id"))
+        if not case_id or case_id in represented:
+            continue
+        has_exact_confirmation = bool(candidate.get("confirmation_available"))
+        direct = {
+            "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+            "long_direct": "UNRESOLVED",
+            "reason": (
+                "Short-screen bias candidate has an exact confirmation artifact, "
+                "but no 4096-step candidate/repair replay has completed."
+                if has_exact_confirmation else
+                "Short-screen bias candidate needs a fresh exact F+B/repair recapture "
+                "before its required 4096-step replay."
+            ),
+            "steps": None,
+            "artifact": str(CANDIDATE_MAP.relative_to(ROOT)),
+        }
+        paired = {
+            "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+            "loss_separation_observed": False,
+            "steps": None,
+            "artifact": str(CANDIDATE_MAP.relative_to(ROOT)),
+        }
+        formation_path = (
+            "short-screen candidate; exact confirmation available; long replay required"
+            if has_exact_confirmation else
+            "short-screen candidate; exact confirmation unavailable; recapture and long replay required"
+        )
+        row = {
+            "case": case_id,
+            "matrix_case_id": case_id,
+            "model": model_names.get(str(candidate.get("model")), str(candidate.get("model"))),
+            "operator_or_region": f"{candidate.get('family', 'unknown')} {candidate.get('task_id', '')} [{candidate.get('carrier', '')}]",
+            "formation_path": formation_path,
+            "long_direct": direct,
+            "paired_consequence": paired,
+            "scope": "short_screen_candidate_universe",
+            "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+            "direct_sha256": None,
+            "paired_sha256": None,
+            "short_candidate": {
+                "task_id": candidate.get("task_id"),
+                "model_key": candidate.get("model"),
+                "sequence_length": candidate.get("sequence_length"),
+                "family": candidate.get("family"),
+                "screen_signature": candidate.get("screen_signature"),
+                "screen_local_ratio": candidate.get("screen_local_ratio"),
+                "screen_gradient_ratio": candidate.get("screen_gradient_ratio"),
+                "screen_transport_gain": candidate.get("screen_transport_gain"),
+                "confirmation_available": has_exact_confirmation,
+                "confirmation_outcome": candidate.get("confirmation_outcome"),
+            },
+        }
+        rows.append(row)
+        short_candidate_universe_rows.append(row)
+
     # Keep the complete 23-case roster visible.  Rows that never passed the
     # nonzero, parameter-reachable direct-bias gate are recorded as screened
     # negatives or unresolved; they are not silently dropped and are not
@@ -1037,7 +1112,7 @@ def main() -> None:
     }
     payload = {
         "schema": "all-historical-bias-candidates-long-audit-v1",
-        "definition": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. A loss split alone is consequence-only and never establishes persistent bias. Different converged losses are not required or claimed.",
+        "definition": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. Separately, any earlier bias candidate that produces a paired loss split during the long replay is counted as outcome_relevant, even if its direct bias component later stops; it is not promoted to the stricter persistent-component count. Different converged losses are not required or claimed.",
         "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
         "case_count": len(rows),
         "unique_matrix_case_count": matrix_count,
@@ -1046,9 +1121,22 @@ def main() -> None:
         "grouping_rule": "Repeated concrete endpoint occurrences are grouped by the frozen case-stage matrix ID; they are not silently dropped, but they do not count as independent cases.",
         "historical_candidate_count": 11,
         "extended_candidate_count": len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES) + len(target_manifest_rows),
+        "short_candidate_count": len(short_candidates),
+        "all_long_replay_required_candidate_count": len(short_candidates),
+        "all_long_replay_pending_candidate_count": len(short_candidate_universe_rows),
         "extended_candidate_note": "The extended roster includes historical candidates, Llama/Ministral family replication rows, Gemma4, the 12 result-blind 32-step consequence candidates, the separately tracked Gemma GELU consequence candidate, and six new Gemma/Llama target-replay rows. These rows are not negatives until their long replay is complete.",
         "operator_scan": operator_scan_summary,
         "operator_scan_target_replay": operator_scan_target_summary,
+        "short_candidate_universe": {
+            "artifact": str(CANDIDATE_MAP.relative_to(ROOT)) if CANDIDATE_MAP.exists() else None,
+            "count": len(short_candidates),
+            "long_replay_required_count": len(short_candidates),
+            "exact_confirmation_available_count": sum(bool(r.get("confirmation_available")) for r in short_candidates),
+            "represented_by_existing_long_or_historical_row_count": len(short_candidates) - len(short_candidate_universe_rows),
+            "pending_or_unresolved_count": len(short_candidate_universe_rows),
+            "claim_boundary": "All short-screen candidates remain in the denominator. Missing exact replay, compiler mismatch, zero-energy binding, and failed resources are unresolved, never negative.",
+            "rows": [r["short_candidate"] | {"case_id": r["case"]} for r in short_candidate_universe_rows],
+        },
         "unindexed_historical_candidate_count": len(historical_ids - matrix_ids),
         "matrix_case_ids_covered_by_rows": sorted(
             {r.get("matrix_case_id") for r in rows if r.get("matrix_case_id")}
@@ -1062,6 +1150,7 @@ def main() -> None:
             "expanded_bias_candidate": sum(r.get("scope") == "expanded_bias_candidate" for r in rows),
             "additional_outcome_candidate": sum(r.get("scope") == "additional_outcome_candidate" for r in rows),
             "operator_scan_candidate": sum(r.get("scope") == "operator_scan_candidate" for r in rows),
+            "short_screen_candidate_universe": sum(r.get("scope") == "short_screen_candidate_universe" for r in rows),
         },
         "final_case_count": sum(
             r["final_label"] in {
@@ -1106,9 +1195,10 @@ def main() -> None:
         "",
         f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES)} 个 extended candidate rows**（其中包含历史候选、Llama/Ministral 同族复现、Gemma4、12 个结果盲抽的长程 consequence 候选，以及单独追踪的 Gemma GELU consequence 候选）。合并后表共有 **{len(rows)} 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
         "",
-        f"按当前口径，最终计入 **{payload['final_case_count']} 个持久性 bias 案例**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**。另有 **{payload['long_loss_split_without_direct_count']} 个**虽没有持久 bias 组件、但确实出现长程配对 loss 分叉；因此当前共有 **{payload['outcome_relevant_case_count']} 个训练结果相关记录**，但不能把后果对照改称为持久性 bias。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
+        f"按严格口径，最终计入 **{payload['final_case_count']} 个持久性 bias 案例**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**。另有 **{payload['long_loss_split_without_direct_count']} 个**早先已有 bias 证据、并在长程中出现配对 loss 分叉，但 bias 组件后来未保持；它们仍计为 **结果受影响的 bias 记录**，只是不能升级为严格的持久性 bias 组件。当前共有 **{payload['outcome_relevant_case_count']} 个训练结果相关记录**。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
         "",
         f"Gemma/Llama 的追加首轮扫描另有 **{operator_scan_summary['screened_rows']} 行**，其中冻结升级门通过 **{operator_scan_summary['frozen_gate_positives']} 行**；本轮按冻结规则选出 **{len(target_manifest_rows)} 个**新的 exact F+B 目标，目前完成长程重放 **{operator_scan_target_summary['completed']} 个**。没有完成合法重放的行不计入 bias 案例数，也不改判为阴性。",
+        f"短筛候选图中另有 **{len(short_candidates)} 个**候选（其中 **{sum(bool(r.get('confirmation_available')) for r in short_candidates)} 个**已有确认材料、其余需要重新捕获）。这些候选全部要求长程复核；当前尚未完成的 **{len(short_candidate_universe_rows)} 个**统一标为未决，不得写成阴性。",
         "",
         "持久性 bias 的必要条件是 bias 本身在 4096 步仍然存在：直接源方向或反馈有效更新方向至少有一个通过长程检验。配对训练中的参数或 loss 分叉是后果证据，不足以单独把一个没有持久 bias 组件的记录升级为案例。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。",
         "",
@@ -1118,7 +1208,7 @@ def main() -> None:
     labels = {
         "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": "最终持久性 bias 案例",
         "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": "反馈维持型 bias，且有 loss 分叉",
-        "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": "后果对照：有长程 loss 分叉，但没有持久 bias 组件",
+        "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": "结果受影响的 bias 候选：有长程 loss 分叉，但直接 bias 组件未保持",
         "FEEDBACK_SUSTAINED_LOSS_NOT_RECORDED": "反馈维持，但 loss 尚未记录",
         "ROBUST_LONG_DIRECT_BIAS_LOSS_NOT_RUN": "长程方向成立，loss 尚未测",
         "NO_ROBUST_LONG_DIRECT_BIAS": "长程未保持",

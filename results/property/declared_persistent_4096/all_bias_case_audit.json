@@ -1,7 +1,9 @@
 {
-  "case_count": 34,
+  "all_long_replay_pending_candidate_count": 66,
+  "all_long_replay_required_candidate_count": 69,
+  "case_count": 100,
   "coherent_endpoint_witness_count": 57,
-  "definition": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. A loss split alone is consequence-only and never establishes persistent bias. Different converged losses are not required or claimed.",
+  "definition": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. Separately, any earlier bias candidate that produces a paired loss split during the long replay is counted as outcome_relevant, even if its direct bias component later stops; it is not promoted to the stricter persistent-component count. Different converged losses are not required or claimed.",
   "direct_persistent_case_count": 5,
   "endpoint_population_count": 1562,
   "extended_candidate_count": 32,
@@ -18,11 +20,37 @@
     "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": 5,
     "UNRESOLVED_FORMATION": 1,
     "UNRESOLVED_LONG_REPLAY": 5,
-    "UNRESOLVED_LONG_REPLAY_PENDING": 15
+    "UNRESOLVED_LONG_REPLAY_PENDING": 81
   },
   "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
   "long_loss_split_without_direct_count": 3,
   "matrix_case_ids_covered_by_rows": [
+    "backward-cell-0001",
+    "backward-cell-0024",
+    "backward-cell-0050",
+    "backward-cell-0062",
+    "backward-cell-0063",
+    "backward-cell-0086",
+    "backward-cell-0139",
+    "backward-cell-0165",
+    "backward-cell-0171",
+    "backward-cell-0190",
+    "backward-cell-0191",
+    "backward-cell-0196",
+    "backward-cell-0197",
+    "backward-cell-0198",
+    "backward-cell-0199",
+    "backward-cell-0200",
+    "backward-cell-0203",
+    "backward-cell-0204",
+    "backward-cell-0206",
+    "backward-cell-0209",
+    "backward-cell-0231",
+    "backward-cell-0232",
+    "backward-cell-0237",
+    "backward-cell-0238",
+    "backward-cell-0240",
+    "backward-cell-0241",
     "deepseek8b_seq64_l35_attention_dv",
     "gemma4_norm",
     "gemma4_random_gelu_backward1860",
@@ -37,18 +65,58 @@
     "llama32_scan_01",
     "llama32_scan_02",
     "mamba_seq64_in_proj",
+    "multishape-backward-cell-0001",
+    "multishape-backward-cell-0023",
+    "multishape-backward-cell-0024",
     "multishape-backward-cell-0057",
+    "multishape-backward-cell-0066",
+    "multishape-backward-cell-0081",
+    "multishape-backward-cell-0099",
+    "multishape-backward-cell-0100",
+    "multishape-backward-cell-0102",
     "multishape-backward-cell-0103",
     "multishape-backward-cell-0153",
     "multishape-backward-cell-0190",
     "multishape-backward-cell-0191",
+    "multishape-backward-cell-0200",
+    "multishape-backward-cell-0206",
+    "multishape-backward-cell-0209",
+    "multishape-backward-cell-0212",
+    "multishape-backward-cell-0227",
+    "multishape-backward-cell-0266",
+    "multishape-backward-cell-0268",
+    "multishape-backward-cell-0275",
+    "multishape-backward-cell-0278",
+    "multishape-backward-cell-0287",
+    "multishape-backward-cell-0290",
+    "multishape-backward-cell-0299",
+    "multishape-backward-cell-0309",
+    "multishape-backward-cell-0311",
+    "multishape-backward-cell-0313",
+    "multishape-backward-cell-0314",
+    "multishape-backward-cell-0325",
+    "multishape-backward-cell-0333",
+    "multishape-backward-cell-0346",
+    "multishape-backward-cell-0414",
+    "multishape-backward-cell-0416",
+    "multishape-backward-cell-0441",
+    "multishape-backward-cell-0447",
+    "multishape-backward-cell-0448",
     "multishape-backward-cell-0450",
+    "multishape-backward-cell-0452",
+    "multishape-backward-cell-0482",
     "multishape-backward-cell-0501",
     "multishape-backward-cell-0508",
+    "multishape-backward-cell-0537",
     "multishape-backward-cell-0543",
+    "multishape-backward-cell-0570",
+    "multishape-backward-cell-0584",
+    "multishape-backward-cell-0591",
+    "multishape-backward-cell-0636",
     "multishape-backward-cell-0654",
     "multishape-backward-cell-0745",
     "multishape-backward-cell-0747",
+    "phi4-seq256-lm-head-dx",
     "phi4_seq64_lmhead_dx",
     "qwen128_vproj_output",
     "qwen3vl_silu_backward",
@@ -1045,6 +1113,2382 @@
       }
     },
     {
+      "case": "multishape-backward-cell-0275",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0275",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:21457:out_ptr0 [backbone.layers.19.norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.5608352724575852,
+        "screen_local_ratio": 0.5608352724575852,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:21457:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0100",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0100",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:1306:output_0 [model.layers.18.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.5359824511936172,
+        "screen_local_ratio": 0.0309312049425033,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.5050512462511139,
+        "sequence_length": 256,
+        "task_id": "backward:1306:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0206",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0206",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:681:output_0 [model.layers.23.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.5162536279847141,
+        "screen_local_ratio": 0.0735881476968479,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.4426654802878662,
+        "sequence_length": 64,
+        "task_id": "backward:681:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0290",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0290",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:20909:output_0 [backbone.layers.20.mixer.conv1d.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.43757372667758526,
+        "screen_local_ratio": 0.1743588993058871,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.26321482737169816,
+        "sequence_length": 256,
+        "task_id": "backward:20909:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0570",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0570",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:1430:out_ptr1 [model.layers.0.self_attn.q_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.42549520509717365,
+        "screen_local_ratio": -0.010080400659298144,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.4355756057564718,
+        "sequence_length": 128,
+        "task_id": "backward:1430:out_ptr1"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0102",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0102",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:871:output_0 [model.layers.30.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.42515053175545875,
+        "screen_local_ratio": 0.13819320153788278,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.28695733021757597,
+        "sequence_length": 256,
+        "task_id": "backward:871:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0266",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0266",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:18750:output_0 [backbone.norm_f.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.4097895844318128,
+        "screen_local_ratio": 0.022766813712790827,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.38702277071902197,
+        "sequence_length": 256,
+        "task_id": "backward:18750:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0190",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0190",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD backward:669:output_0 [model.layers.23.self_attn.k_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.3993795895870536,
+        "screen_local_ratio": 0.04167794233908579,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.3577016472479678,
+        "sequence_length": 64,
+        "task_id": "backward:669:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0299",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0299",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:20908:output_0 [backbone.layers.20.mixer.x_proj.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.3697855002985569,
+        "screen_local_ratio": 0.3697855002985569,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:20908:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0441",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0441",
+      "model": "Phi-4-mini",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:1136:out_ptr0 [model.layers.0.post_attention_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.36825538321160567,
+        "screen_local_ratio": 0.36825538321160567,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:1136:out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0086",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0086",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:5461:output_0 [backbone.layers.20.norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.3583935399866944,
+        "screen_local_ratio": -0.011759748822168877,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.3701532888088633,
+        "sequence_length": 64,
+        "task_id": "backward:5461:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0199",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0199",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD backward:1429:out_ptr0 [model.layers.0.self_attn.k_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.3567331270784294,
+        "screen_local_ratio": -0.011379841415686638,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.36811296849411607,
+        "sequence_length": 64,
+        "task_id": "backward:1429:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0452",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0452",
+      "model": "Phi-4-mini",
+      "operator_or_region": "ATTENTION_PROJECTION_BACKWARD backward:846:output_0 [model.layers.16.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.35557447241105034,
+        "screen_local_ratio": 0.03304117581238942,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.3225332965986609,
+        "sequence_length": 256,
+        "task_id": "backward:846:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0200",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0200",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "LOSS_CE_BACKWARD backward:517:output_0 [model.norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "LOSS_CE_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.3504995248666214,
+        "screen_local_ratio": 0.03260536012446232,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.3178941647421591,
+        "sequence_length": 64,
+        "task_id": "backward:517:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0198",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0198",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD backward:996:in_out_ptr0 [model.layers.13.self_attn.q_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.34079824699336536,
+        "screen_local_ratio": -0.005485478274459867,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.34628372526782525,
+        "sequence_length": 64,
+        "task_id": "backward:996:in_out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0191",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0191",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD backward:1000:output_0 [model.layers.13.self_attn.q_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.3389940194259231,
+        "screen_local_ratio": -0.010504074162832958,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.34949809358875605,
+        "sequence_length": 64,
+        "task_id": "backward:1000:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0241",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0241",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:1014:out_ptr0 [model.layers.13.self_attn.q_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.3279402203642335,
+        "screen_local_ratio": 0.3279402203642335,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:1014:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0212",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0212",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:10613:output_0 [backbone.layers.20.norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.3259871062656136,
+        "screen_local_ratio": -0.00041883471794398593,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.3264059409835576,
+        "sequence_length": 128,
+        "task_id": "backward:10613:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0584",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0584",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:1306:out_ptr0 [model.layers.4.self_attn.k_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.32252169581770235,
+        "screen_local_ratio": 0.32252169581770235,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:1306:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0537",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0537",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD backward:1296:output_0 [model.layers.4.self_attn.k_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.316689512464096,
+        "screen_local_ratio": -0.005851506753793299,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.3225410192178893,
+        "sequence_length": 128,
+        "task_id": "backward:1296:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0278",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0278",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:20906:output_0 [backbone.layers.20.mixer.x_proj.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.3057519039705393,
+        "screen_local_ratio": 0.18135178552386874,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.12440011844667057,
+        "sequence_length": 256,
+        "task_id": "backward:20906:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0204",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0204",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "LOSS_HEAD_BACKWARD backward:518:out_ptr0 [model.norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "LOSS_HEAD_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.2998805852176647,
+        "screen_local_ratio": 0.2998805852176647,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:518:out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0197",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0197",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD backward:699:in_out_ptr0 [model.layers.22.self_attn.q_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.2861588504734058,
+        "screen_local_ratio": -0.006520476672906011,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.2926793271463118,
+        "sequence_length": 64,
+        "task_id": "backward:699:in_out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0232",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0232",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:1004:out_ptr0 [model.layers.13.self_attn.k_proj.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.2765372040930499,
+        "screen_local_ratio": 0.0005383118704792401,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.2759988922225706,
+        "sequence_length": 64,
+        "task_id": "backward:1004:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0333",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0333",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:19281:out_ptr0 [backbone.layers.23.mixer.dt_proj.bias]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.262442647211426,
+        "screen_local_ratio": 0.262442647211426,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:19281:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0448",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0448",
+      "model": "Phi-4-mini",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:606:out_ptr0 [model.layers.26.post_attention_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.2579107066338584,
+        "screen_local_ratio": 0.2579107066338584,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:606:out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0231",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0231",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:707:out_ptr0 [model.layers.22.self_attn.k_proj.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.2545350450831149,
+        "screen_local_ratio": 0.043818349429796614,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.2107166956533183,
+        "sequence_length": 64,
+        "task_id": "backward:707:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0206",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0206",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:10605:output_0 [backbone.layers.20.mixer.x_proj.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.2517791541032672,
+        "screen_local_ratio": -0.006926397332718881,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.25870555143598606,
+        "sequence_length": 128,
+        "task_id": "backward:10605:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0238",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0238",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:1009:out_ptr0 [model.layers.13.self_attn.k_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.2380207251587063,
+        "screen_local_ratio": 0.2380207251587063,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:1009:out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0171",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0171",
+      "model": "Phi-4-mini",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:1006:out_ptr0 [model.layers.6.post_attention_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.23615996340677234,
+        "screen_local_ratio": 0.23615996340677234,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:1006:out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0165",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0165",
+      "model": "Phi-4-mini",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:1136:out_ptr0 [model.layers.0.post_attention_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.23111966970661502,
+        "screen_local_ratio": 0.23111966970661502,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:1136:out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0001",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0001",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "ATTENTION_PROJECTION_BACKWARD backward:851:output_0 [model.layers.30.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.22330820684170238,
+        "screen_local_ratio": 0.006528075863313949,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.21678013097838844,
+        "sequence_length": 64,
+        "task_id": "backward:851:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0240",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0240",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:684:out_ptr0 [model.layers.23.self_attn.q_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.2222380720044734,
+        "screen_local_ratio": 0.2222380720044734,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:684:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0227",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0227",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:10607:output_0 [backbone.layers.20.mixer.x_proj.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.21225243699384566,
+        "screen_local_ratio": 0.21225243699384566,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:10607:output_0"
+      }
+    },
+    {
+      "case": "phi4-seq256-lm-head-dx",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "phi4-seq256-lm-head-dx",
+      "model": "Phi-4-mini",
+      "operator_or_region": "LOSS_CE_BACKWARD backward:494:output_0 [model.norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "LOSS_CE_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.21107775664610617,
+        "screen_local_ratio": 0.0016775904247219291,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.20940016622138424,
+        "sequence_length": 256,
+        "task_id": "backward:494:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0062",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0062",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:868:out_ptr0 [model.layers.30.self_attn.q_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.20633316245324296,
+        "screen_local_ratio": 0.20633316245324296,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:868:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0416",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0416",
+      "model": "Phi-4-mini",
+      "operator_or_region": "ATTENTION_PROJECTION_BACKWARD backward:817:output_0 [model.layers.16.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.2011507132033547,
+        "screen_local_ratio": -0.007596767374636917,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.2087474805779916,
+        "sequence_length": 128,
+        "task_id": "backward:817:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0346",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0346",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:19287:out_ptr0 [backbone.layers.23.mixer.conv1d.bias]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.197406948568214,
+        "screen_local_ratio": 0.197406948568214,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:19287:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0200",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0200",
+      "model": "Mamba-130M",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:16235:out_ptr0 [backbone.layers.0.norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.19285273676981637,
+        "screen_local_ratio": 0.19285273676981637,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:16235:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0081",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0081",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD backward:1293:output_0 [model.layers.18.self_attn.k_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.19074609704078238,
+        "screen_local_ratio": 0.016627968799340698,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.17411812824144168,
+        "sequence_length": 256,
+        "task_id": "backward:1293:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0414",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0414",
+      "model": "Phi-4-mini",
+      "operator_or_region": "ATTENTION_PROJECTION_BACKWARD backward:1037:output_0 [model.layers.5.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.17909200298142455,
+        "screen_local_ratio": 0.007962771992468207,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.17112923098895635,
+        "sequence_length": 128,
+        "task_id": "backward:1037:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0268",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0268",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:18752:out_ptr1 [backbone.norm_f.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.1785186692062233,
+        "screen_local_ratio": 0.1785186692062233,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:18752:out_ptr1"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0447",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0447",
+      "model": "Phi-4-mini",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:1006:out_ptr0 [model.layers.6.post_attention_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.16819096748363355,
+        "screen_local_ratio": 0.16819096748363355,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:1006:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0066",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0066",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "ATTENTION_PROJECTION_BACKWARD backward:1292:output_0 [model.layers.18.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.1632294400390701,
+        "screen_local_ratio": 0.02674323070894462,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.13648620933012548,
+        "sequence_length": 256,
+        "task_id": "backward:1292:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0023",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0023",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD backward:883:in_out_ptr0 [model.layers.29.self_attn.q_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.16250720970119728,
+        "screen_local_ratio": -0.011081394908456837,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.1735886046096541,
+        "sequence_length": 128,
+        "task_id": "backward:883:in_out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0139",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0139",
+      "model": "Phi-4-mini",
+      "operator_or_region": "ATTENTION_PROJECTION_BACKWARD backward:617:output_0 [model.layers.26.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.15965994496162636,
+        "screen_local_ratio": 0.021873086251947126,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.13778685870967924,
+        "sequence_length": 64,
+        "task_id": "backward:617:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0063",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0063",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:1276:out_ptr0 [model.layers.18.self_attn.q_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.1571590551163204,
+        "screen_local_ratio": 0.1571590551163204,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:1276:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0287",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0287",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:20913:output_0 [backbone.layers.20.mixer.in_proj.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.15550509745668348,
+        "screen_local_ratio": 0.15550509745668348,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:20913:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0099",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0099",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:874:output_0 [model.layers.30.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.15391407267432847,
+        "screen_local_ratio": 0.006019998559023721,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.14789407411530475,
+        "sequence_length": 256,
+        "task_id": "backward:874:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0209",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0209",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:678:output_0 [model.layers.23.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.1510802670779946,
+        "screen_local_ratio": -0.010258904376592687,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.1613391714545873,
+        "sequence_length": 64,
+        "task_id": "backward:678:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0482",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0482",
+      "model": "Phi-4-mini",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:497:out_ptr0 [model.norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.14338627488154232,
+        "screen_local_ratio": 0.14338627488154232,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:497:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0311",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0311",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:23604:in_out_ptr0 [backbone.layers.15.mixer.x_proj.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.1431285701792727,
+        "screen_local_ratio": 0.011973593429390986,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.1311549767498817,
+        "sequence_length": 256,
+        "task_id": "backward:23604:in_out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0050",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0050",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:1884:out_ptr0 [model.layers.0.post_attention_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.14050446199890237,
+        "screen_local_ratio": 0.14050446199890237,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:1884:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0314",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0314",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:19022:in_out_ptr0 [backbone.layers.23.mixer.A_log]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.13706093697059057,
+        "screen_local_ratio": 0.00036062818433390983,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.13670030878625666,
+        "sequence_length": 256,
+        "task_id": "backward:19022:in_out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0024",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0024",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD backward:1257:in_out_ptr0 [model.layers.18.self_attn.q_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.13342320683897077,
+        "screen_local_ratio": 0.011169718595407087,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.12225348824356369,
+        "sequence_length": 64,
+        "task_id": "backward:1257:in_out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0209",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0209",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:10604:output_0 [backbone.layers.20.mixer.dt_proj.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.13165233322837655,
+        "screen_local_ratio": 0.13165233322837655,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:10604:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0325",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0325",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:19280:in_out_ptr0 [backbone.layers.23.mixer.A_log]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.13149245279331306,
+        "screen_local_ratio": 0.13149245279331306,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:19280:in_out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0203",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0203",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "LOSS_HEAD_BACKWARD backward:519:in_out_ptr0 [model.layers.27.mlp.down_proj.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "LOSS_HEAD_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.12888155099552592,
+        "screen_local_ratio": 0.038541556802890925,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.090339994192635,
+        "sequence_length": 64,
+        "task_id": "backward:519:in_out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0001",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0001",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "ATTENTION_PROJECTION_BACKWARD backward:851:output_0 [model.layers.30.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.1254251662087416,
+        "screen_local_ratio": 0.001603218042614349,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.12382194816612727,
+        "sequence_length": 128,
+        "task_id": "backward:851:output_0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0309",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0309",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:24770:out_ptr0 [backbone.layers.12.mixer.A_log]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.11952070132705823,
+        "screen_local_ratio": -0.01219692260232427,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.1317176239293825,
+        "sequence_length": 256,
+        "task_id": "backward:24770:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0636",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0636",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:541:out_ptr0 [model.layers.27.self_attn.k_proj.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.11374542291145,
+        "screen_local_ratio": 0.0067173311498529426,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.10702809176159706,
+        "sequence_length": 256,
+        "task_id": "backward:541:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0024",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0024",
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD backward:1257:in_out_ptr0 [model.layers.18.self_attn.q_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.11148333144659131,
+        "screen_local_ratio": -0.004432477653656817,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.11591580910024812,
+        "sequence_length": 128,
+        "task_id": "backward:1257:in_out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0591",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0591",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "ATTENTION_PROJECTION_BACKWARD backward:675:output_0 [model.layers.23.input_layernorm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.1080671311420588,
+        "screen_local_ratio": -0.0036043395757948296,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.11167147071785363,
+        "sequence_length": 256,
+        "task_id": "backward:675:output_0"
+      }
+    },
+    {
+      "case": "backward-cell-0196",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0196",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD backward:1293:in_out_ptr0 [model.layers.4.self_attn.q_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.10709270403978895,
+        "screen_local_ratio": 0.0019833867475863745,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.10510931729220258,
+        "sequence_length": 64,
+        "task_id": "backward:1293:in_out_ptr0"
+      }
+    },
+    {
+      "case": "backward-cell-0237",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation available; long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate has an exact confirmation artifact, but no 4096-step candidate/repair replay has completed.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "backward-cell-0237",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "NORMALIZATION_BACKWARD backward:712:out_ptr0 [model.layers.22.self_attn.k_norm.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.10568422475900201,
+        "screen_local_ratio": 0.10568422475900201,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:712:out_ptr0"
+      }
+    },
+    {
+      "case": "multishape-backward-cell-0313",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "short-screen candidate; exact confirmation unavailable; recapture and long replay required",
+      "long_direct": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Short-screen bias candidate needs a fresh exact F+B/repair recapture before its required 4096-step replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "multishape-backward-cell-0313",
+      "model": "Mamba-130M",
+      "operator_or_region": "STATE_SPACE_RECURRENT_BACKWARD backward:19276:in_out_ptr0 [backbone.layers.23.mixer.x_proj.weight]",
+      "paired_consequence": {
+        "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "short_screen_candidate_universe",
+      "short_candidate": {
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.10550732841531603,
+        "screen_local_ratio": -0.0012803137687158923,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.10678764218403192,
+        "sequence_length": 256,
+        "task_id": "backward:19276:in_out_ptr0"
+      }
+    },
+    {
       "case": "gemma4_random_gelu_backward1860",
       "direct_sha256": null,
       "final_label": "NOT_APPLICABLE_NO_CARRIER_EFFECT",
@@ -1093,9 +3537,880 @@
     "expanded_bias_candidate": 12,
     "historical_candidate": 13,
     "operator_scan_candidate": 6,
-    "roster_control_or_unresolved": 2
+    "roster_control_or_unresolved": 2,
+    "short_screen_candidate_universe": 66
+  },
+  "short_candidate_count": 69,
+  "short_candidate_universe": {
+    "artifact": "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json",
+    "claim_boundary": "All short-screen candidates remain in the denominator. Missing exact replay, compiler mismatch, zero-energy binding, and failed resources are unresolved, never negative.",
+    "count": 69,
+    "exact_confirmation_available_count": 50,
+    "long_replay_required_count": 69,
+    "pending_or_unresolved_count": 66,
+    "represented_by_existing_long_or_historical_row_count": 3,
+    "rows": [
+      {
+        "case_id": "multishape-backward-cell-0275",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.5608352724575852,
+        "screen_local_ratio": 0.5608352724575852,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:21457:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0100",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.5359824511936172,
+        "screen_local_ratio": 0.0309312049425033,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.5050512462511139,
+        "sequence_length": 256,
+        "task_id": "backward:1306:output_0"
+      },
+      {
+        "case_id": "backward-cell-0206",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.5162536279847141,
+        "screen_local_ratio": 0.0735881476968479,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.4426654802878662,
+        "sequence_length": 64,
+        "task_id": "backward:681:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0290",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.43757372667758526,
+        "screen_local_ratio": 0.1743588993058871,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.26321482737169816,
+        "sequence_length": 256,
+        "task_id": "backward:20909:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0570",
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.42549520509717365,
+        "screen_local_ratio": -0.010080400659298144,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.4355756057564718,
+        "sequence_length": 128,
+        "task_id": "backward:1430:out_ptr1"
+      },
+      {
+        "case_id": "multishape-backward-cell-0102",
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.42515053175545875,
+        "screen_local_ratio": 0.13819320153788278,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.28695733021757597,
+        "sequence_length": 256,
+        "task_id": "backward:871:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0266",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.4097895844318128,
+        "screen_local_ratio": 0.022766813712790827,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.38702277071902197,
+        "sequence_length": 256,
+        "task_id": "backward:18750:output_0"
+      },
+      {
+        "case_id": "backward-cell-0190",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.3993795895870536,
+        "screen_local_ratio": 0.04167794233908579,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.3577016472479678,
+        "sequence_length": 64,
+        "task_id": "backward:669:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0299",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.3697855002985569,
+        "screen_local_ratio": 0.3697855002985569,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:20908:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0441",
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.36825538321160567,
+        "screen_local_ratio": 0.36825538321160567,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:1136:out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0086",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.3583935399866944,
+        "screen_local_ratio": -0.011759748822168877,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.3701532888088633,
+        "sequence_length": 64,
+        "task_id": "backward:5461:output_0"
+      },
+      {
+        "case_id": "backward-cell-0199",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.3567331270784294,
+        "screen_local_ratio": -0.011379841415686638,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.36811296849411607,
+        "sequence_length": 64,
+        "task_id": "backward:1429:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0452",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.35557447241105034,
+        "screen_local_ratio": 0.03304117581238942,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.3225332965986609,
+        "sequence_length": 256,
+        "task_id": "backward:846:output_0"
+      },
+      {
+        "case_id": "backward-cell-0200",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "LOSS_CE_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.3504995248666214,
+        "screen_local_ratio": 0.03260536012446232,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.3178941647421591,
+        "sequence_length": 64,
+        "task_id": "backward:517:output_0"
+      },
+      {
+        "case_id": "backward-cell-0198",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.34079824699336536,
+        "screen_local_ratio": -0.005485478274459867,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.34628372526782525,
+        "sequence_length": 64,
+        "task_id": "backward:996:in_out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0191",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.3389940194259231,
+        "screen_local_ratio": -0.010504074162832958,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.34949809358875605,
+        "sequence_length": 64,
+        "task_id": "backward:1000:output_0"
+      },
+      {
+        "case_id": "backward-cell-0241",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.3279402203642335,
+        "screen_local_ratio": 0.3279402203642335,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:1014:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0212",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.3259871062656136,
+        "screen_local_ratio": -0.00041883471794398593,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.3264059409835576,
+        "sequence_length": 128,
+        "task_id": "backward:10613:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0584",
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.32252169581770235,
+        "screen_local_ratio": 0.32252169581770235,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:1306:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0537",
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.316689512464096,
+        "screen_local_ratio": -0.005851506753793299,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.3225410192178893,
+        "sequence_length": 128,
+        "task_id": "backward:1296:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0278",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.3057519039705393,
+        "screen_local_ratio": 0.18135178552386874,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.12440011844667057,
+        "sequence_length": 256,
+        "task_id": "backward:20906:output_0"
+      },
+      {
+        "case_id": "backward-cell-0204",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "LOSS_HEAD_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.2998805852176647,
+        "screen_local_ratio": 0.2998805852176647,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:518:out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0197",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.2861588504734058,
+        "screen_local_ratio": -0.006520476672906011,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.2926793271463118,
+        "sequence_length": 64,
+        "task_id": "backward:699:in_out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0232",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.2765372040930499,
+        "screen_local_ratio": 0.0005383118704792401,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.2759988922225706,
+        "sequence_length": 64,
+        "task_id": "backward:1004:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0333",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.262442647211426,
+        "screen_local_ratio": 0.262442647211426,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:19281:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0448",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.2579107066338584,
+        "screen_local_ratio": 0.2579107066338584,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:606:out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0231",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.2545350450831149,
+        "screen_local_ratio": 0.043818349429796614,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.2107166956533183,
+        "sequence_length": 64,
+        "task_id": "backward:707:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0206",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.2517791541032672,
+        "screen_local_ratio": -0.006926397332718881,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.25870555143598606,
+        "sequence_length": 128,
+        "task_id": "backward:10605:output_0"
+      },
+      {
+        "case_id": "backward-cell-0238",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.2380207251587063,
+        "screen_local_ratio": 0.2380207251587063,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:1009:out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0171",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.23615996340677234,
+        "screen_local_ratio": 0.23615996340677234,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:1006:out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0165",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.23111966970661502,
+        "screen_local_ratio": 0.23111966970661502,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:1136:out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0001",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.22330820684170238,
+        "screen_local_ratio": 0.006528075863313949,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.21678013097838844,
+        "sequence_length": 64,
+        "task_id": "backward:851:output_0"
+      },
+      {
+        "case_id": "backward-cell-0240",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.2222380720044734,
+        "screen_local_ratio": 0.2222380720044734,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:684:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0227",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.21225243699384566,
+        "screen_local_ratio": 0.21225243699384566,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:10607:output_0"
+      },
+      {
+        "case_id": "phi4-seq256-lm-head-dx",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "LOSS_CE_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.21107775664610617,
+        "screen_local_ratio": 0.0016775904247219291,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.20940016622138424,
+        "sequence_length": 256,
+        "task_id": "backward:494:output_0"
+      },
+      {
+        "case_id": "backward-cell-0062",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.20633316245324296,
+        "screen_local_ratio": 0.20633316245324296,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:868:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0416",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.2011507132033547,
+        "screen_local_ratio": -0.007596767374636917,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.2087474805779916,
+        "sequence_length": 128,
+        "task_id": "backward:817:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0346",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.197406948568214,
+        "screen_local_ratio": 0.197406948568214,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:19287:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0200",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.19285273676981637,
+        "screen_local_ratio": 0.19285273676981637,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:16235:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0081",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.19074609704078238,
+        "screen_local_ratio": 0.016627968799340698,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.17411812824144168,
+        "sequence_length": 256,
+        "task_id": "backward:1293:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0414",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.17909200298142455,
+        "screen_local_ratio": 0.007962771992468207,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.17112923098895635,
+        "sequence_length": 128,
+        "task_id": "backward:1037:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0268",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.1785186692062233,
+        "screen_local_ratio": 0.1785186692062233,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:18752:out_ptr1"
+      },
+      {
+        "case_id": "multishape-backward-cell-0447",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.16819096748363355,
+        "screen_local_ratio": 0.16819096748363355,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:1006:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0066",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.1632294400390701,
+        "screen_local_ratio": 0.02674323070894462,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.13648620933012548,
+        "sequence_length": 256,
+        "task_id": "backward:1292:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0023",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.16250720970119728,
+        "screen_local_ratio": -0.011081394908456837,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.1735886046096541,
+        "sequence_length": 128,
+        "task_id": "backward:883:in_out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0139",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.15965994496162636,
+        "screen_local_ratio": 0.021873086251947126,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.13778685870967924,
+        "sequence_length": 64,
+        "task_id": "backward:617:output_0"
+      },
+      {
+        "case_id": "backward-cell-0063",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.1571590551163204,
+        "screen_local_ratio": 0.1571590551163204,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:1276:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0287",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.15550509745668348,
+        "screen_local_ratio": 0.15550509745668348,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:20913:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0099",
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.15391407267432847,
+        "screen_local_ratio": 0.006019998559023721,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.14789407411530475,
+        "sequence_length": 256,
+        "task_id": "backward:874:output_0"
+      },
+      {
+        "case_id": "backward-cell-0209",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.1510802670779946,
+        "screen_local_ratio": -0.010258904376592687,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.1613391714545873,
+        "sequence_length": 64,
+        "task_id": "backward:678:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0482",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "phi4",
+        "screen_gradient_ratio": 0.14338627488154232,
+        "screen_local_ratio": 0.14338627488154232,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:497:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0311",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.1431285701792727,
+        "screen_local_ratio": 0.011973593429390986,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.1311549767498817,
+        "sequence_length": 256,
+        "task_id": "backward:23604:in_out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0050",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.14050446199890237,
+        "screen_local_ratio": 0.14050446199890237,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:1884:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0314",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.13706093697059057,
+        "screen_local_ratio": 0.00036062818433390983,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.13670030878625666,
+        "sequence_length": 256,
+        "task_id": "backward:19022:in_out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0024",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.13342320683897077,
+        "screen_local_ratio": 0.011169718595407087,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.12225348824356369,
+        "sequence_length": 64,
+        "task_id": "backward:1257:in_out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0209",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.13165233322837655,
+        "screen_local_ratio": 0.13165233322837655,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 128,
+        "task_id": "backward:10604:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0325",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.13149245279331306,
+        "screen_local_ratio": 0.13149245279331306,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 256,
+        "task_id": "backward:19280:in_out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0203",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "LOSS_HEAD_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.12888155099552592,
+        "screen_local_ratio": 0.038541556802890925,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.090339994192635,
+        "sequence_length": 64,
+        "task_id": "backward:519:in_out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0001",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.1254251662087416,
+        "screen_local_ratio": 0.001603218042614349,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.12382194816612727,
+        "sequence_length": 128,
+        "task_id": "backward:851:output_0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0309",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.11952070132705823,
+        "screen_local_ratio": -0.01219692260232427,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.1317176239293825,
+        "sequence_length": 256,
+        "task_id": "backward:24770:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0636",
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.11374542291145,
+        "screen_local_ratio": 0.0067173311498529426,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.10702809176159706,
+        "sequence_length": 256,
+        "task_id": "backward:541:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0024",
+        "confirmation_available": true,
+        "confirmation_outcome": "SAME_SIGN_UNRESOLVED_OR_CENTERED",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "deepseek8b",
+        "screen_gradient_ratio": 0.11148333144659131,
+        "screen_local_ratio": -0.004432477653656817,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.11591580910024812,
+        "sequence_length": 128,
+        "task_id": "backward:1257:in_out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0591",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "ATTENTION_PROJECTION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.1080671311420588,
+        "screen_local_ratio": -0.0036043395757948296,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.11167147071785363,
+        "sequence_length": 256,
+        "task_id": "backward:675:output_0"
+      },
+      {
+        "case_id": "backward-cell-0196",
+        "confirmation_available": true,
+        "confirmation_outcome": "DIRECTION_REVERSAL",
+        "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.10709270403978895,
+        "screen_local_ratio": 0.0019833867475863745,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.10510931729220258,
+        "sequence_length": 64,
+        "task_id": "backward:1293:in_out_ptr0"
+      },
+      {
+        "case_id": "backward-cell-0237",
+        "confirmation_available": true,
+        "confirmation_outcome": "NOT_REPRODUCED",
+        "family": "NORMALIZATION_BACKWARD",
+        "model_key": "qwen",
+        "screen_gradient_ratio": 0.10568422475900201,
+        "screen_local_ratio": 0.10568422475900201,
+        "screen_signature": "SOURCE_DIRECTIONAL",
+        "screen_transport_gain": 0.0,
+        "sequence_length": 64,
+        "task_id": "backward:712:out_ptr0"
+      },
+      {
+        "case_id": "multishape-backward-cell-0313",
+        "confirmation_available": false,
+        "confirmation_outcome": "NOT_PROMOTED",
+        "family": "STATE_SPACE_RECURRENT_BACKWARD",
+        "model_key": "mamba",
+        "screen_gradient_ratio": 0.10550732841531603,
+        "screen_local_ratio": -0.0012803137687158923,
+        "screen_signature": "TRANSPORT_AMPLIFIED",
+        "screen_transport_gain": 0.10678764218403192,
+        "sequence_length": 256,
+        "task_id": "backward:19276:in_out_ptr0"
+      }
+    ]
   },
   "unindexed_historical_candidate_count": 3,
   "unique_matrix_case_count": 23,
-  "unresolved_or_abstain_count": 22
+  "unresolved_or_abstain_count": 88
 }
