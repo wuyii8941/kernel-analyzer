@@ -49,6 +49,37 @@ run_one() {
     local suffix=0
     while [[ -e "$pilot" ]]; do suffix=$((suffix + 1)); pilot="$base/${case_id}_pilot_retry${suffix}"; done
   fi
+  # A zero-energy Llama pilot can mean that the historical target is real but
+  # the chosen final-norm carrier is downstream of the changed value (or the
+  # fresh compiler rebound the callsite to a different semantic region).  Try
+  # one declared downstream carrier before leaving the row unresolved.  This
+  # is still a target-binding diagnostic, never a negative result.
+  if [[ "$arch" == "generic" && -f "$pilot/prediction.json" && -f "$pilot/short_screen.json" ]]; then
+    if "$PY" - "$pilot/short_screen.json" <<'PY'
+import json,sys
+d=json.load(open(sys.argv[1])); rows=d.get("cases",[])
+raise SystemExit(0 if rows and all(x.get("status") == "UNRESOLVED_ZERO_ENERGY" for x in rows) else 1)
+PY
+    then
+      rebind="$base/${case_id}_pilot_rebind_lmhead"
+      if [[ ! -f "$rebind/prediction.json" ]]; then
+        wait_for_gpu
+        echo "[$(date -Is)] rebind pilot $case_id carrier=model.lm_head.weight" >>"$LOG"
+        if ! CUDA_VISIBLE_DEVICES="$GPU" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
+            OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+            "$PY" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
+            --input-bank "$input" --consequence-bank "$consequence" --output-dir "$rebind" --steps 16 \
+            --consequence-steps 16 --target-region "$region" --target-symbol "$symbol" --target-endpoint "$endpoint" \
+            --carrier model.lm_head.weight --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 1000 \
+            >>"$LOG" 2>&1; then
+          echo "[$(date -Is)] rebind unresolved $case_id" >>"$LOG"
+        fi
+      fi
+      if [[ -f "$rebind/prediction.json" && -f "$rebind/short_screen.json" ]]; then
+        pilot="$rebind"
+      fi
+    fi
+  fi
   if [[ -f "$pilot/prediction.json" && -f "$pilot/short_screen.json" ]]; then
     local decision
     decision=$("$PY" -c 'import json,sys; p=sys.argv[1]; pred=json.load(open(p+"/prediction.json")).get("source_prediction"); short=json.load(open(p+"/short_screen.json")); print("LONG" if pred=="SOURCE_PERSISTENCE_RISK" or any(x.get("status")=="RISK_CANDIDATE" for x in short.get("cases",[])) else "STOP")' "$pilot")
