@@ -42,6 +42,7 @@ EXPECTED_CASES = {
     "Mamba in_proj",
     "saved-P",
     "Qwen3-VL SiLU",
+    "llama32_text128_scan_extern_5477521afded",
 }
 
 
@@ -110,6 +111,28 @@ def formation_certificate(case: str, row: dict, parity: dict) -> dict:
             "response_even_over_natural": p["even_over_natural_resultant"],
             "feedback_projection_A4096": long["projection_A4096"],
             "feedback_null95": long["null95"],
+        }
+
+    if case == "llama32_text128_scan_extern_5477521afded":
+        screen = row.get("screen_metadata", {})
+        require(screen.get("screen_amplification", 0.0) > 1.0,
+                "Llama q_proj: frozen endpoint screen has no directional excess")
+        require(screen.get("screen_p_value", 1.0) <= 0.05,
+                "Llama q_proj: frozen endpoint screen is not nominally directional")
+        require(long.get("long_direct") == "FEEDBACK_SUSTAINED",
+                "Llama q_proj: long feedback is not sustained")
+        require(long.get("local_A4096", float("inf")) <= 1.0,
+                "Llama q_proj: local component should remain in the canceling regime")
+        require(long.get("feedback_A4096", 0.0) > long["null95"] and long.get("p", 1.0) <= 0.05,
+                "Llama q_proj: feedback direction does not exceed its own null")
+        return {
+            "kind": "FROZEN_ENDPOINT_DIRECTION_PLUS_4096_STEP_FEEDBACK_BIAS",
+            "endpoint_screen_A": screen["screen_amplification"],
+            "endpoint_screen_p": screen["screen_p_value"],
+            "local_A4096": long["local_A4096"],
+            "feedback_A4096": long["feedback_A4096"],
+            "feedback_null95": long["null95"],
+            "feedback_p": long["p"],
         }
 
     if case == "Qwen64 v_proj":
@@ -199,7 +222,7 @@ def main() -> None:
         "checked": checked,
         "claim_boundary": (
             "All rows have independent bias evidence and a 4096-record paired loss split. "
-            "Only the first three direct rows, two aggregate direct rows, and the SiLU feedback row "
+            "Only the first three direct rows, two aggregate direct rows, and the two feedback rows "
             "have long directional evidence; the remaining four are consequence controls and are not "
             "persistent-bias cases. A loss split is not evidence of different converged optima."
         ),

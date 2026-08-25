@@ -488,6 +488,22 @@ class GeneratedFP32Observer:
                     )
                     for name in output_names
                 }
+                # The promoted reference can differ in FP32 while becoming
+                # bit-identical after it is cast back to the endpoint dtype.
+                # Such a row has no executable same-dtype repair at this
+                # boundary and must not be confused with a failed parameter
+                # carrier binding.  Record both comparisons before mutating
+                # the candidate output.
+                same_dtype_metrics = {
+                    name: nonfinite_aware_metrics(
+                        candidate_pointers[name],
+                        promoted_pointers[name].to(dtype=candidate_pointers[name].dtype),
+                        sample_size=self.sample_size,
+                        metric_chunk_elements=self.metric_chunk_elements,
+                        retain_sampled_values=False,
+                    )
+                    for name in output_names
+                }
                 raw_capture = {}
                 if self.raw_capture_dir is not None:
                     capture_id = f"{len(self.records):06d}_{row['region_id']}"
@@ -535,6 +551,7 @@ class GeneratedFP32Observer:
                         "typed_program_sha256"
                     ],
                     "endpoint_metrics": metrics,
+                    "same_dtype_repair_metrics": same_dtype_metrics,
                     "raw_capture": raw_capture,
                     "repaired_endpoints": repaired,
                 })

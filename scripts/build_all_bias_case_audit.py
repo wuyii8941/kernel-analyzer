@@ -102,6 +102,15 @@ def long_row(path: Path) -> dict[str, Any]:
     payload = read(path)
     if payload is None:
         return {"status": "NOT_RUN", "artifact": str(path.relative_to(ROOT))}
+    if payload.get("status") == "NOT_APPLICABLE_NO_REPRESENTABLE_SAME_DTYPE_REPAIR":
+        return {
+            "status": payload["status"],
+            "long_direct": "NOT_APPLICABLE",
+            "reason": payload.get("claim_boundary", "no executable same-dtype repair exists at the selected endpoint"),
+            "steps": 0,
+            "loss_audit": payload.get("loss_audit", {}),
+            "artifact": str(path.relative_to(ROOT)),
+        }
     if str(payload.get("status", "")).startswith("UNRESOLVED"):
         return {
             "status": payload.get("status"),
@@ -290,7 +299,7 @@ def long_row(path: Path) -> dict[str, Any]:
                 "artifact": str(path.relative_to(ROOT)),
             }
     # The common runner writes a top-level status only in the completed artifact.
-    if "statistics" in payload:
+    if "statistics" in payload and "exact_full_coordinate" in payload.get("statistics", {}):
         stats = payload["statistics"]
         exact = stats["exact_full_coordinate"]
         sketch = stats["sketch_diagnostics"]
@@ -446,7 +455,11 @@ def long_row(path: Path) -> dict[str, Any]:
         short_path = path.with_name("short_screen.json")
         short = read(short_path) or {}
         short_cases = {str(row.get("case_id")): row for row in short.get("cases", [])}
-        case_id = str(payload.get("case_id", ""))
+        case_id = str(
+            payload.get("case_id")
+            or payload.get("prediction", {}).get("case_id")
+            or path.parent.name
+        )
         local = short_cases.get(f"{case_id}::local", {})
         feedback = short_cases.get(f"{case_id}::feedback", {})
         actual = short_cases.get(f"{case_id}::actual", {})
@@ -679,6 +692,8 @@ def gemma_norm_retry_is_in_progress() -> bool:
 def final_label(direct: dict[str, Any], paired: dict[str, Any], formation_path: str = "") -> str:
     loss_audit = direct.get("loss_audit", {}) or paired.get("loss_audit", {}) or {}
     any_loss = bool(loss_audit.get("any_period_split") or paired.get("loss_separation_observed"))
+    if direct.get("long_direct") == "NOT_APPLICABLE" or str(direct.get("status", "")).startswith("NOT_APPLICABLE"):
+        return "NOT_APPLICABLE_NO_REPRESENTABLE_SAME_DTYPE_REPAIR"
     if direct.get("long_direct") == "FEEDBACK_SUSTAINED":
         if any_loss:
             return "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT"
@@ -1050,11 +1065,22 @@ def main() -> None:
         # short_screen.json is only written by the older full-vector wrapper.
         # Treat either complete form as a completed pilot, but never as a
         # 4096-step confirmation.
-        completed_pilots = [
-            d for d in pilot_dirs
-            if (d / "prediction.json").exists()
-            and ((d / "short_screen.json").exists() or (d / "formation.json").exists())
-        ]
+        completed_pilots = []
+        for pilot_candidate in pilot_dirs:
+            prediction_path = pilot_candidate / "prediction.json"
+            short_path = pilot_candidate / "short_screen.json"
+            if not prediction_path.exists() or not short_path.exists():
+                continue
+            prediction_payload = read(prediction_path) or {}
+            short_payload = read(short_path) or {}
+            # Two-state binding smoke tests are useful engineering evidence,
+            # but they are not the frozen 16-state screen and must never stop
+            # a scientific retry or enter the audit as a negative.
+            if (
+                int(prediction_payload.get("evidence", {}).get("states", 0)) >= 16
+                and int(short_payload.get("input", {}).get("steps", 0)) >= 16
+            ):
+                completed_pilots.append(pilot_candidate)
         pilot_dir = completed_pilots[-1] if completed_pilots else None
         pilot_failure_path = LONG / "operator_scan_targets" / "unresolved" / f"{case_id}_pilot.json"
         pilot_failure = read(pilot_failure_path)
@@ -1065,6 +1091,7 @@ def main() -> None:
             prediction = read(pilot_dir / "prediction.json") or {}
             short = read(pilot_dir / "short_screen.json") or {}
             short_cases = short.get("cases", [])
+            not_applicable = str(prediction.get("source_prediction", "")).startswith("NOT_APPLICABLE")
             # A zero-energy pilot is not a negative result for a frozen scan
             # target.  It can mean that the freshly compiled wrapper did not
             # bind the historical screen endpoint (especially when Inductor
@@ -1074,10 +1101,27 @@ def main() -> None:
                 row.get("status") == "UNRESOLVED_ZERO_ENERGY"
                 for row in short_cases
             )
-            risk = prediction.get("source_prediction") == "SOURCE_PERSISTENCE_RISK" or any(
-                row.get("status") == "RISK_CANDIDATE" for row in short_cases
+            frozen_screen_bias = float(target.get("screen_p_value") or 1.0) <= 0.05
+            risk = (
+                frozen_screen_bias
+                or prediction.get("source_prediction") == "SOURCE_PERSISTENCE_RISK"
+                or any(row.get("status") == "RISK_CANDIDATE" for row in short_cases)
             )
-            if zero_energy:
+            if not_applicable:
+                direct = {
+                    "status": "NOT_APPLICABLE_NO_REPRESENTABLE_SAME_DTYPE_REPAIR",
+                    "long_direct": "NOT_APPLICABLE",
+                    "reason": prediction.get("claim_boundary", "no executable same-dtype repair exists at this endpoint"),
+                    "steps": 16,
+                    "artifact": str((pilot_dir / "formation.json").relative_to(ROOT)),
+                }
+                paired = {
+                    "status": "NOT_APPLICABLE_NO_REPRESENTABLE_SAME_DTYPE_REPAIR",
+                    "loss_separation_observed": False,
+                    "steps": 0,
+                    "artifact": str((pilot_dir / "consequence.json").relative_to(ROOT)),
+                }
+            elif zero_energy:
                 direct = {
                     "status": "UNRESOLVED_PARAMETER_BINDING",
                     "long_direct": "UNRESOLVED",
@@ -1095,7 +1139,7 @@ def main() -> None:
                 direct = {
                     "status": "UNRESOLVED_LONG_REPLAY_PENDING",
                     "long_direct": "UNRESOLVED",
-                    "reason": "The frozen target pilot is risk-positive; its 4096-step consequence is still required.",
+                    "reason": "The frozen scan has bias evidence or the target pilot is risk-positive; its 4096-step consequence is still required.",
                     "steps": 16,
                     "artifact": str(path.relative_to(ROOT)),
                 }
@@ -1146,7 +1190,8 @@ def main() -> None:
             "case": case_id,
             "matrix_case_id": case_id,
             "model": target["model"],
-            "operator_or_region": f"{target['target_region']} {target['target_symbol']} [{target['target_endpoint']}]",
+            "operator_or_region": target.get("semantic_location")
+            or f"{target.get('target_phase')} {target['target_symbol']} [{target.get('target_endpoint', 'output')}]",
             "formation_path": "new operator scan; exact generated target replay",
             "long_direct": direct,
             "paired_consequence": paired,
@@ -1460,14 +1505,49 @@ def main() -> None:
         "screened_rows": sum(int(row.get("screened_rows", 0)) for row in operator_scan_models),
         "frozen_gate_positives": sum(int(row.get("bh_positive_rows", 0)) for row in operator_scan_models),
         "nonzero_rows_without_legal_replay": sum(int(row.get("nonzero_new_impl_rows_requiring_legal_replay", 0)) for row in operator_scan_models),
-        "claim_boundary": "Pattern-screen signals are not bias cases without an exact parameter-reachable repair and long replay; no new Gemma/Llama row passed the frozen gate.",
+        "claim_boundary": (
+            "Pattern-screen signals are not bias cases without an exact parameter-reachable repair and long replay. "
+            "One newly replayed Llama q_proj target now has sustained feedback direction and a 4096-step paired loss split; "
+            "all incomplete targets remain unresolved."
+        ),
     }
+    operator_target_rows = [
+        row for row in rows if row.get("scope") == "operator_scan_candidate"
+    ]
+    operator_pilot_completed = sum(
+        int(row.get("long_direct", {}).get("steps") or 0) >= 16
+        for row in operator_target_rows
+    )
+    operator_long_completed = sum(
+        (LONG / "operator_scan_targets" / str(row.get("case")) / "consequence.json").exists()
+        for row in operator_target_rows
+    )
+    operator_long_required = sum(
+        (
+            float(row.get("screen_metadata", {}).get("screen_p_value") or 1.0) <= 0.05
+            or (
+                int(row.get("long_direct", {}).get("steps") or 0) >= 16
+                and row.get("long_direct", {}).get("status")
+                in {"UNRESOLVED_LONG_REPLAY_PENDING", "COMPLETE_4096", "COMPLETE_LONG_HORIZON"}
+            )
+        )
+        for row in operator_target_rows
+    )
+    operator_pending_or_unresolved = sum(
+        str(row.get("final_label", "")).startswith(("UNRESOLVED", "ABSTAIN"))
+        for row in operator_target_rows
+    )
     operator_scan_target_summary = {
         "manifest": str(TARGET_MANIFEST.relative_to(ROOT)) if TARGET_MANIFEST.exists() else None,
         "rows": len(target_manifest_rows),
         "blocked_no_matching_program": len(target_blocked.get("rows", [])),
         "total_nonzero_scan_rows_in_manifest_or_blocked": len(target_manifest_rows) + len(target_blocked.get("rows", [])),
-        "completed": sum((LONG / "operator_scan_targets" / str(row.get("case_id")) / "consequence.json").exists() for row in target_manifest_rows),
+        "pilot_completed": operator_pilot_completed,
+        "long_replay_required_after_pilot_or_frozen_screen": operator_long_required,
+        "long_replay_completed": operator_long_completed,
+        "pending_or_unresolved": operator_pending_or_unresolved,
+        # Backward-compatible name used by older reports.
+        "completed": operator_long_completed,
         "claim_boundary": "Rows are selected before target replay results. Pattern-screen amplification alone is never promoted to a bias case.",
     }
     payload = {
@@ -1487,7 +1567,21 @@ def main() -> None:
             str(r.get("final_label", "")).startswith(("UNRESOLVED", "ABSTAIN"))
             for r in short_candidate_universe_rows
         ),
-        "extended_candidate_note": "The extended roster includes historical candidates, Llama/Ministral family replication rows, Gemma4, the earlier 12 result-blind consequence candidates, the separately tracked Gemma GELU consequence candidate, and six new Gemma/Llama target-replay rows. The frozen short-screen candidate pool adds 69 rows. None of these rows is a negative before its long replay is complete.",
+        "total_candidate_replay_denominator_count": (
+            len(short_candidates) + len(legacy_coherent_candidates) + len(target_manifest_rows)
+        ),
+        "total_candidate_pending_or_unresolved_count": (
+            sum(
+                str(r.get("final_label", "")).startswith(("UNRESOLVED", "ABSTAIN"))
+                for r in short_candidate_universe_rows
+            )
+            + sum(
+                str(r.get("final_label", "")).startswith(("UNRESOLVED", "ABSTAIN"))
+                for r in legacy_coherent_rows
+            )
+            + operator_pending_or_unresolved
+        ),
+        "extended_candidate_note": "The extended roster includes historical candidates, Llama/Ministral family replication rows, Gemma4, the earlier 12 result-blind consequence candidates, the separately tracked Gemma GELU consequence candidate, 69 frozen short-screen candidates, 57 legacy coherent F+B candidates, and 150 mechanically enumerated Gemma/Llama exact target replays. None of these rows is a negative before its required replay is complete.",
         "operator_scan": operator_scan_summary,
         "operator_scan_target_replay": operator_scan_target_summary,
         "short_candidate_universe": {
@@ -1600,7 +1694,9 @@ def main() -> None:
         "",
         f"当前有 **{payload['final_case_count']} 个**4096 步 bias + loss 记录：其中 **{payload['rolling_window_confirmed_persistent_count']} 个**同时具备后半程窗口证据，另有 **{payload['aggregate_long_bias_missing_window_count']} 个**旧 held-out 记录只保存了4096步整段统计，后半程窗口尚未单独导出。另有 **{payload['long_loss_split_without_direct_count']} 个**早先已有 bias 证据、并在长程中出现配对 loss 分叉，但 bias 组件后来未保持；它们仍计为 **结果受影响的 bias 记录**，不能升级为持久性 bias。当前共有 **{payload['outcome_relevant_case_count']} 个训练结果相关记录**。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
         "",
-        f"Gemma/Llama 的追加首轮扫描另有 **{operator_scan_summary['screened_rows']} 行**，其中冻结升级门通过 **{operator_scan_summary['frozen_gate_positives']} 行**；残差非零行中目前有 **{len(target_manifest_rows)} 个**绑定到可尝试的 exact F+B 目标，另有 **{operator_scan_target_summary['blocked_no_matching_program']} 行**没有同阶段、同实现族和同端点的可重放程序，目前完成长程重放 **{operator_scan_target_summary['completed']} 个**。没有完成合法重放的行不计入 bias 案例数，也不改判为阴性。",
+        f"三类追加候选的统一重放分母是 **{payload['total_candidate_replay_denominator_count']} 个**：冻结短筛候选 {len(short_candidates)} 个、旧的 coherent F+B 候选 {len(legacy_coherent_candidates)} 个，以及 Gemma/Llama exact target {len(target_manifest_rows)} 个。当前仍有 **{payload['total_candidate_pending_or_unresolved_count']} 个**待完成或未决；这些记录不计入 bias 案例数，也不改判为阴性。",
+        "",
+        f"Gemma/Llama 的追加首轮扫描另有 **{operator_scan_summary['screened_rows']} 行**，其中冻结升级门通过 **{operator_scan_summary['frozen_gate_positives']} 行**；残差非零行中目前有 **{len(target_manifest_rows)} 个**绑定到可尝试的 exact F+B 目标，另有 **{operator_scan_target_summary['blocked_no_matching_program']} 行**没有同阶段、同实现族和同端点的可重放程序。已经完成 16 步 exact pilot **{operator_scan_target_summary['pilot_completed']} 个**，其中按冻结首筛或 pilot 结果需要长程升级 **{operator_scan_target_summary['long_replay_required_after_pilot_or_frozen_screen']} 个**，已经完成长程重放 **{operator_scan_target_summary['long_replay_completed']} 个**。",
         f"短筛候选图中有 **{len(short_candidates)} 个**候选（其中 **{sum(bool(r.get('confirmation_available')) for r in short_candidates)} 个**已有确认材料，其余将用长程候选/修复回放完成首次确认）。这些候选全部要求长程复核；尚未完成的候选统一标为未决，不得写成阴性。",
         f"旧的全量 T3/F+B 结果中另有 **{len(legacy_coherent_candidates)} 个**具体 endpoint 曾出现方向信号；它们与上述 backward 候选池不重合，目前 **{sum(bool(r.get('runnable')) for r in legacy_coherent_candidates)} 个**都已绑定到可执行的 4096 步计划。旧标签只负责把它们送入复核，不能直接当作长程成功。",
         "",

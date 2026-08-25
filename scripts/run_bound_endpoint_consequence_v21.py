@@ -146,8 +146,9 @@ def main() -> None:
             "Treat a recorded |candidate_loss-repair_loss| > 1e-8 as a "
             "terminal consequence result. The run is still predeclared with "
             "--steps as its maximum horizon, but an early result proves only "
-            "that the prior bias candidate affected loss; it does not measure "
-            "4096-step persistence."
+            "that the tested implementation contrast affected loss; it does not "
+            "measure 4096-step persistence. A separate formation artifact is "
+            "still required before calling the contrast biased."
         ),
     )
     parser.add_argument("--recurrence-tolerance", type=float, default=1e-6)
@@ -792,8 +793,10 @@ def main() -> None:
             "bounded one-parameter consequence, not full-model training safety. "
             + (
                 "This run stopped at the first predeclared paired-loss split; "
-                "it establishes an outcome consequence for an independently "
-                "identified bias candidate, not long-horizon persistence."
+                "it establishes a paired loss consequence for this implementation "
+                "contrast, not long-horizon persistence. It counts as a bias "
+                "consequence only when a separate formation artifact has already "
+                "confirmed bias; the loss split alone cannot supply that label."
                 if early_loss_split else ""
             )
         ),

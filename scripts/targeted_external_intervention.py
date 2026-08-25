@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+from functools import lru_cache
 import linecache
+from pathlib import Path
+import re
 import sys
 from typing import Any, Callable, Iterable, Mapping
 
@@ -26,6 +29,7 @@ class TargetedExternalIntervention:
 
     def __init__(
         self, *, modules: Iterable[Any], target: Mapping[str, Any], mode: str,
+        capture_tensors: bool = True,
     ) -> None:
         if mode not in self.MODES:
             raise ValueError(f"unsupported intervention mode: {mode}")
@@ -37,6 +41,7 @@ class TargetedExternalIntervention:
         self.modules = list(modules)
         self.target = dict(target)
         self.mode = mode
+        self.capture_tensors = capture_tensors
         self.count = 0
         self.records: list[dict[str, Any]] = []
         self.restores: list[Callable[[], None]] = []
@@ -70,11 +75,21 @@ class TargetedExternalIntervention:
                 candidate = kwargs.get("out", result)
                 if not isinstance(candidate, torch.Tensor):
                     raise TypeError("target external call produced no tensor")
-                candidate_before = candidate.detach().float().cpu().clone()
-                reference_cpu = reference.detach().float().cpu().clone()
-                reference_cast_cpu = reference.to(dtype=candidate.dtype).detach().float().cpu().clone()
+                reference_cast = reference.to(dtype=candidate.dtype)
+                error = candidate.detach().float() - reference.detach().float()
+                cast_delta = candidate.detach().float() - reference_cast.detach().float()
+                compact_metrics = {
+                    "full_coordinate_count": int(error.numel()),
+                    "rms": float(torch.mean(error.double().square()).sqrt()),
+                    "max_abs": float(error.abs().max()),
+                    "reference_cast_changed_coordinates": int(torch.count_nonzero(cast_delta)),
+                    "reference_cast_max_abs_change": float(cast_delta.abs().max()),
+                }
+                candidate_before = candidate.detach().float().cpu().clone() if self.capture_tensors else None
+                reference_cpu = reference.detach().float().cpu().clone() if self.capture_tensors else None
+                reference_cast_cpu = reference_cast.detach().float().cpu().clone() if self.capture_tensors else None
                 if self.mode == "REPAIR":
-                    candidate.copy_(reference.to(dtype=candidate.dtype))
+                    candidate.copy_(reference_cast)
                 elif self.mode == "SHAM":
                     candidate.copy_(candidate.clone())
                 self.records.append({
@@ -87,7 +102,9 @@ class TargetedExternalIntervention:
                     "candidate_before": candidate_before,
                     "reference": reference_cpu,
                     "reference_cast": reference_cast_cpu,
-                    "delivered": candidate.detach().float().cpu().clone(),
+                    "delivered": candidate.detach().float().cpu().clone() if self.capture_tensors else None,
+                    "compact_metrics": compact_metrics,
+                    "delivered_matches_reference_cast": bool(torch.equal(candidate, reference_cast)),
                 })
                 return result
 
@@ -109,6 +126,19 @@ class TargetedExternalIntervention:
         if self.count != 1 or len(self.records) != 1:
             raise RuntimeError(f"target callsite execution count is {self.count}, expected 1")
         row = self.records[0]
+        if not self.capture_tensors:
+            return {
+                "mode": self.mode,
+                "source_line_sha256": row["source_line_sha256"],
+                "runtime_filename": row["runtime_filename"],
+                "runtime_line": row["runtime_line"],
+                "candidate_dtype": row["candidate_dtype"],
+                "candidate_shape": row["candidate_shape"],
+                "reference_dtype": row["reference_dtype"],
+                **row["compact_metrics"],
+                "signed_error": None,
+                "delivered_matches_reference_cast": row["delivered_matches_reference_cast"],
+            }
         error = row["candidate_before"] - row["reference"]
         cast_delta = row["candidate_before"] - row["reference_cast"]
         delivered = row["delivered"]
@@ -128,3 +158,103 @@ class TargetedExternalIntervention:
             "reference_cast_max_abs_change": float(cast_delta.abs().max()),
             "delivered_matches_reference_cast": bool(torch.equal(delivered, row["reference_cast"])),
         }
+
+
+@lru_cache(maxsize=None)
+def _runtime_phase(filename: str) -> str:
+    header = Path(filename).read_text(errors="ignore")[:512]
+    match = re.search(r"# AOT ID: \['\d+_(forward|backward|inference)'\]", header)
+    if match is None:
+        return "UNKNOWN"
+    value = match.group(1).upper()
+    return "FORWARD" if value == "INFERENCE" else value
+
+
+def _tensor_contract(value: torch.Tensor) -> dict[str, Any]:
+    return {
+        "device_type": value.device.type,
+        "dtype": str(value.dtype),
+        "layout": str(value.layout),
+        "shape": list(value.shape),
+        "storage_offset": int(value.storage_offset()),
+        "stride": list(value.stride()),
+    }
+
+
+class ExternalCallDiscovery:
+    """Record runtime contracts for generated mm/bmm/addmm callsites."""
+
+    SYMBOLS = ("mm", "bmm", "addmm")
+
+    def __init__(self, modules: Iterable[Any]) -> None:
+        self.modules = list(modules)
+        self.records: list[dict[str, Any]] = []
+        self.restores: list[Callable[[], None]] = []
+
+    def __enter__(self) -> "ExternalCallDiscovery":
+        seen: set[int] = set()
+        for module in self.modules:
+            namespace = getattr(module, "extern_kernels", None)
+            if namespace is None or id(namespace) in seen:
+                continue
+            seen.add(id(namespace))
+            for symbol in self.SYMBOLS:
+                original = getattr(namespace, symbol, None)
+                if not callable(original):
+                    continue
+
+                def wrapped(
+                    *args: Any, _original: Any = original, _symbol: str = symbol,
+                    **kwargs: Any,
+                ) -> Any:
+                    filename, line, digest = _source_identity()
+                    result = _original(*args, **kwargs)
+                    contracts: dict[str, Any] = {}
+                    for index, value in enumerate(args):
+                        if isinstance(value, torch.Tensor):
+                            contracts[f"arg{index}"] = _tensor_contract(value)
+                    for name, value in kwargs.items():
+                        if isinstance(value, torch.Tensor):
+                            contracts[f"kw:{name}"] = _tensor_contract(value)
+                    output = kwargs.get("out", result)
+                    if isinstance(output, torch.Tensor) and "kw:out" not in contracts:
+                        contracts["output"] = _tensor_contract(output)
+                    self.records.append({
+                        "implementation_kind": "EXTERN",
+                        "function": f"extern_kernels.{_symbol}",
+                        "phase": _runtime_phase(filename),
+                        "runtime_filename": filename,
+                        "runtime_line": line,
+                        "source_line_sha256": digest,
+                        "operand_contracts": contracts,
+                    })
+                    return result
+
+                setattr(namespace, symbol, wrapped)
+                self.restores.append(
+                    lambda ns=namespace, name=symbol, value=original: setattr(ns, name, value)
+                )
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        del exc_type, exc, traceback
+        for restore in reversed(self.restores):
+            restore()
+        self.restores.clear()
+
+    def select(self, exact_payload: Mapping[str, Any]) -> tuple[dict[str, Any], int]:
+        expected = dict(exact_payload["operand_contracts"])
+        matches = [
+            row for row in self.records
+            if row["function"] == exact_payload["operation"]
+            and row["phase"] == exact_payload["phase"]
+            and row["operand_contracts"] == expected
+        ]
+        if not matches:
+            raise RuntimeError(
+                "external target contract is absent from the fresh full backward"
+            )
+        matches.sort(key=lambda row: (
+            row["runtime_filename"], row["runtime_line"], row["source_line_sha256"]
+        ))
+        return matches[0], len(matches)

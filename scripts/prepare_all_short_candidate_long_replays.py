@@ -53,6 +53,21 @@ def read(path: Path):
 _TASK_CACHE: dict[Path, set[str]] = {}
 
 
+def runtime_release(info: dict[str, str], model_key: str, seq: int) -> Path:
+    """Select the repaired seq64 release when the old capture was overwritten.
+
+    The original qwen_seq64_r1/capture.json was accidentally replaced by a
+    Torch checkpoint.  The recovered release is rebuilt from a fresh F+B warm
+    compile and reuses the frozen task plan only after task-ID validation.
+    Keeping the fallback here makes manifest regeneration deterministic.
+    """
+    if model_key == "qwen" and seq == 64:
+        recovered = ROOT / "results/coverage/runtime_releases/qwen_seq64_r2_recovered"
+        if (recovered / "capture.json").exists():
+            return recovered
+    return ROOT / "results/coverage/runtime_releases" / info["release_template"].format(seq=seq)
+
+
 def release_has_task(path: Path, task_id: str) -> bool:
     if path in _TASK_CACHE:
         return task_id in _TASK_CACHE[path]
@@ -73,7 +88,7 @@ def main() -> None:
         model_key = str(candidate.get("model"))
         seq = int(candidate.get("sequence_length"))
         info = MODEL_INFO[model_key]
-        release = ROOT / "results/coverage/runtime_releases" / info["release_template"].format(seq=seq)
+        release = runtime_release(info, model_key, seq)
         bank = ROOT / info["bank_template"].format(seq=seq)
         # Some frozen confirmation banks use the explicit 4224-state naming
         # even though they implement the same 4096-step trajectory protocol.

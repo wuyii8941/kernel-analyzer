@@ -163,9 +163,10 @@ def main() -> None:
         "source_checkpoint": str(args.checkpoint.resolve()),
         "claim_boundary": (
             "A four-counterfactual checkpoint reached the predeclared paired-loss "
-            "terminal condition. This establishes an outcome consequence for an "
-            "independently identified bias candidate; it does not establish "
-            "4096-step persistence or full-parameter training convergence."
+            "terminal condition. This establishes a paired loss consequence for "
+            "the tested implementation contrast; it does not establish 4096-step "
+            "persistence or full-parameter training convergence. A separate "
+            "formation artifact is required before calling the contrast biased."
         ),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -31,6 +31,10 @@ from scripts.run_frozen_candidate_fp32_screen import (  # noqa: E402
     wrapper_modules,
 )
 from scripts.run_heldout_lmhead_consequence import adam_delta  # noqa: E402
+from scripts.targeted_external_intervention import (  # noqa: E402
+    ExternalCallDiscovery,
+    TargetedExternalIntervention,
+)
 
 
 GEMMA_CARRIERS = (
@@ -93,6 +97,29 @@ def main() -> None:
     parser.add_argument("--null-draws", type=int, default=2000)
     parser.add_argument("--target-region")
     parser.add_argument("--target-endpoint")
+    parser.add_argument("--target-kind", choices=("TRITON", "EXTERN"), default="TRITON")
+    parser.add_argument("--external-census", type=Path)
+    parser.add_argument("--external-exact-id")
+    parser.add_argument(
+        "--retain-full-backward", action="store_true",
+        help="Keep all parameter gradients in the compiled graph while still updating only the declared carrier. Required for replaying parameter-gradient external calls.",
+    )
+    parser.add_argument(
+        "--allow-single-output-rebind",
+        action="store_true",
+        help="Allow a frozen out_ptr endpoint to bind to the sole surviving "
+             "output of the same phase and symbol family after a declared "
+             "single-carrier backward specialization.  The resolved endpoint "
+             "is recorded in the result; this never permits a symbol-family "
+             "or phase change.",
+    )
+    parser.add_argument(
+        "--allow-semantic-norm-rebind",
+        action="store_true",
+        help="Allow the frozen Gemma RMSNorm weight-gradient family to bind "
+             "to a uniquely matching same-phase reduction after a declared "
+             "single-norm-carrier specialization changes fusion tokens.",
+    )
     parser.add_argument(
         "--target-symbol",
         help="Fallback symbolic target when a freshly compiled release renumbers regions.",
@@ -155,7 +182,7 @@ def main() -> None:
     # the unobserved parameters only when the caller explicitly declares one
     # carrier.  The all-carrier historical protocol remains unchanged.
     requested_carrier = args.carrier
-    if requested_carrier is not None:
+    if requested_carrier is not None and not args.retain_full_backward:
         for name, parameter in parameters.items():
             parameter.requires_grad_(name == requested_carrier)
 
@@ -182,38 +209,108 @@ def main() -> None:
     import gzip
     with gzip.open(campaign_path, "rt", encoding="utf-8") as handle:
         campaign = json.load(handle)
-    if args.target_region is None and args.target_symbol is None and args.architecture != "gemma4":
-        raise RuntimeError("generic target replay requires --target-region")
-    requested_family = symbol_family(args.target_symbol) if args.target_symbol else None
-    if args.target_region is not None:
-        target = next((row for row in campaign["rows"] if row["region_id"] == args.target_region), None)
-        # A fresh compile can reuse the same ordinal for a different fused
-        # region.  Do not silently repair that unrelated region.
-        if target is not None and requested_family is not None and symbol_family(target.get("symbol", "")) != requested_family:
-            target = None
+    endpoint_rebound = False
+    external_match_count = None
+    if args.target_kind == "EXTERN":
+        if args.external_census is None or args.external_exact_id is None:
+            raise RuntimeError("external replay requires --external-census and --external-exact-id")
+        census = json.loads(args.external_census.read_text())
+        census_row = next(
+            (row for row in census.get("implementations", [])
+             if row.get("exact_implementation_id") == args.external_exact_id),
+            None,
+        )
+        if census_row is None:
+            raise RuntimeError(f"external exact implementation is absent: {args.external_exact_id}")
+        exact_payload = census_row["identity"]["exact_payload"]
+        if exact_payload.get("implementation_kind") != "EXTERNAL_OR_LIBRARY":
+            raise RuntimeError("requested exact implementation is not an external/library call")
+        model.zero_grad(set_to_none=True)
+        discovery = ExternalCallDiscovery(modules)
+        with discovery:
+            candidate(warm).backward()
+        torch.cuda.synchronize(device)
+        runtime_target, external_match_count = discovery.select(exact_payload)
+        target = {
+            **runtime_target,
+            "region_id": f"external:{runtime_target['source_line_sha256'][:16]}",
+            "symbol": runtime_target["function"],
+            "output_names": ["output"],
+        }
+        repair_endpoints = ["output"]
+        repair_targets = {}
+        target_binding_mode = "FROZEN_EXACT_EXTERNAL_ABI_FIRST_CALLSITE_REPRESENTATIVE"
     else:
-        target = None
-    if target is None and args.target_symbol is not None:
-        phase = args.target_region.split(":", 1)[0].upper() if args.target_region and ":" in args.target_region else None
-        target = next(
-            (
+        if args.target_region is None and args.target_symbol is None and args.architecture != "gemma4":
+            raise RuntimeError("generic target replay requires --target-region")
+        requested_family = symbol_family(args.target_symbol) if args.target_symbol else None
+        if args.target_region is not None:
+            target = next((row for row in campaign["rows"] if row["region_id"] == args.target_region), None)
+            # A fresh compile can reuse the same ordinal for a different fused
+            # region.  Do not silently repair that unrelated region.
+            if target is not None and requested_family is not None and symbol_family(target.get("symbol", "")) != requested_family:
+                target = None
+        else:
+            target = None
+        target_binding_mode = "EXACT_REGION_OR_FAMILY_ENDPOINT"
+        if target is None and args.target_symbol is not None:
+            if args.target_region in {"FORWARD", "BACKWARD"}:
+                phase = args.target_region
+            else:
+                phase = args.target_region.split(":", 1)[0].upper() if args.target_region and ":" in args.target_region else None
+            family_matches = [
                 row for row in campaign["rows"]
                 if requested_family is not None and symbol_family(row.get("symbol", "")) == requested_family
                 and (phase is None or row.get("phase") == phase)
-                and (args.target_endpoint is None or args.target_endpoint in row.get("output_names", []))
-            ),
-            None,
+            ]
+            target = next(
+                (
+                    row for row in family_matches
+                    if args.target_endpoint is None or args.target_endpoint in row.get("output_names", [])
+                ),
+                None,
+            )
+            if target is None and args.allow_single_output_rebind and args.target_endpoint is not None:
+                target = next(
+                    (row for row in family_matches if len(row.get("output_names", [])) == 1),
+                    None,
+                )
+                endpoint_rebound = target is not None
+                if endpoint_rebound:
+                    target_binding_mode = "SAME_PHASE_FAMILY_SINGLE_SURVIVING_OUTPUT"
+            if target is None and args.allow_semantic_norm_rebind:
+                requested_symbol = str(args.target_symbol)
+                if (
+                    phase == "BACKWARD"
+                    and args.target_endpoint == "out_ptr1"
+                    and requested_symbol.startswith("triton_red_fused_")
+                    and all(token in requested_symbol for token in ("add", "mul", "pow", "sum", "view"))
+                ):
+                    norm_matches = [
+                        row for row in campaign["rows"]
+                        if row.get("phase") == "BACKWARD"
+                        and str(row.get("symbol", "")).startswith("triton_red_fused_")
+                        and all(token in str(row.get("symbol", "")) for token in ("add", "mul", "pow", "sum", "view"))
+                        and args.target_endpoint in row.get("output_names", [])
+                    ]
+                    if len(norm_matches) == 1:
+                        target = norm_matches[0]
+                        target_binding_mode = "UNIQUE_SAME_PHASE_RMSNORM_WEIGHT_GRADIENT"
+        if target is None:
+            if args.target_region is None:
+                target = choose_target(campaign)
+            else:
+                raise RuntimeError(f"target region/symbol is absent from freshly compiled release: {args.target_region} {args.target_symbol}")
+        repair_endpoints = (
+            list(target["output_names"])
+            if endpoint_rebound
+            else ([args.target_endpoint] if args.target_endpoint else target["output_names"])
         )
-    if target is None:
-        if args.target_region is None:
-            target = choose_target(campaign)
-        else:
-            raise RuntimeError(f"target region/symbol is absent from freshly compiled release: {args.target_region} {args.target_symbol}")
-    repair_endpoints = [args.target_endpoint] if args.target_endpoint else target["output_names"]
-    repair_targets = {target["region_id"]: repair_endpoints}
+        repair_targets = {target["region_id"]: repair_endpoints}
     carriers = (args.carrier,) if args.carrier else GEMMA_CARRIERS
 
     raw_gradient_records = []
+    target_repair_observations = []
 
     def gradient(
         master: torch.Tensor,
@@ -230,17 +327,27 @@ def main() -> None:
         values = torch.tensor([state["token_ids"]], dtype=torch.long, device=device)
         model.zero_grad(set_to_none=True)
         if repair:
-            observer = GeneratedFP32Observer(
-                modules=modules,
-                campaign_rows=[target],
-                repair_targets=repair_targets,
-                allow_unlisted_calls=True,
-                # Endpoint output pairs are needed for the open-loop
-                # tolerance rows.  Repeating those large tensors for every
-                # closed-loop step wastes memory and can make a valid GPU
-                # run look like an OOM, so capture them only in formation.
-                raw_capture_dir=raw_capture_dir if capture_raw_endpoint else None,
-            )
+            if args.target_kind == "EXTERN":
+                # External GEMM/BMM outputs can contain hundreds of millions
+                # of values.  Keep the exact intervention on device and save
+                # compact error metrics; the parameter-gradient difference is
+                # still measured over every carrier coordinate below.
+                observer = TargetedExternalIntervention(
+                    modules=modules, target=target, mode="REPAIR",
+                    capture_tensors=False,
+                )
+            else:
+                observer = GeneratedFP32Observer(
+                    modules=modules,
+                    campaign_rows=[target],
+                    repair_targets=repair_targets,
+                    allow_unlisted_calls=True,
+                    # Endpoint output pairs are needed for the open-loop
+                    # tolerance rows.  Repeating those large tensors for every
+                    # closed-loop step wastes memory and can make a valid GPU
+                    # run look like an OOM, so capture them only in formation.
+                    raw_capture_dir=raw_capture_dir if capture_raw_endpoint else None,
+                )
             with observer:
                 step_loss = candidate(values)
                 step_loss_value = float(step_loss.detach().float().cpu())
@@ -257,11 +364,37 @@ def main() -> None:
                     f"TARGET_NOT_OBSERVED: {target['region_id']} "
                     f"{target['symbol']} in state {state['state_id']}"
                 )
+            if capture_raw_endpoint and args.target_kind == "TRITON":
+                for observed in observer.records:
+                    target_repair_observations.append({
+                        "state_id": state["state_id"],
+                        "region_id": observed.get("region_id"),
+                        "symbol": observed.get("symbol"),
+                        "repaired_endpoints": observed.get("repaired_endpoints", []),
+                        "endpoint_metrics": {
+                            endpoint: {
+                                key: metrics.get(key)
+                                for key in ("exact", "nonzero_elements", "rms", "max_abs")
+                            }
+                            for endpoint, metrics in observed.get("endpoint_metrics", {}).items()
+                        },
+                        "same_dtype_repair_metrics": {
+                            endpoint: {
+                                key: metrics.get(key)
+                                for key in ("exact", "nonzero_elements", "rms", "max_abs")
+                            }
+                            for endpoint, metrics in observed.get("same_dtype_repair_metrics", {}).items()
+                        },
+                    })
             if raw_capture_dir is not None and capture_raw_endpoint:
                 raw_gradient_records.append({
                     "state_id": state["state_id"],
                     "carrier": carrier_name,
-                    "observer_records": observer.records,
+                    "observer_records": (
+                        [observer.summary()]
+                        if args.target_kind == "EXTERN"
+                        else observer.records
+                    ),
                 })
         else:
             step_loss = candidate(values)
@@ -323,6 +456,105 @@ def main() -> None:
     odd_even_inner = sum(
         float(torch.sum(formation_odd[name] * formation_even[name]).item()) for name in carriers
     )
+    if formation_path_energy <= 0.0 and args.target_symbol is not None:
+        fp32_nonzero = sum(
+            int(metrics.get("nonzero_elements") or 0)
+            for record in target_repair_observations
+            for endpoint, metrics in record.get("endpoint_metrics", {}).items()
+            if endpoint in set(record.get("repaired_endpoints", []))
+        )
+        same_dtype_nonzero = sum(
+            int(metrics.get("nonzero_elements") or 0)
+            for record in target_repair_observations
+            for endpoint, metrics in record.get("same_dtype_repair_metrics", {}).items()
+            if endpoint in set(record.get("repaired_endpoints", []))
+        )
+        no_representable_repair = (
+            bool(target_repair_observations)
+            and fp32_nonzero > 0
+            and same_dtype_nonzero == 0
+        )
+        zero_status = (
+            "NOT_APPLICABLE_NO_REPRESENTABLE_SAME_DTYPE_REPAIR"
+            if no_representable_repair
+            else "UNRESOLVED_ZERO_GRADIENT_AFTER_REPRESENTABLE_REPAIR"
+        )
+        zero_prediction = {
+            "schema": "kernel-analyzer-target-v3-source-prediction-v1",
+            "status": zero_status,
+            "source_prediction": (
+                "NOT_APPLICABLE_NO_REPRESENTABLE_SAME_DTYPE_REPAIR"
+                if no_representable_repair else "ABSTAIN_ZERO_GRADIENT"
+            ),
+            "evidence": {
+                "states": args.steps,
+                "complete_coordinate_open_loop_amplification": 0.0,
+                "odd_even_resultant_cosine": 0.0,
+                "fp32_endpoint_changed_coordinates": fp32_nonzero,
+                "same_dtype_repair_changed_coordinates": same_dtype_nonzero,
+            },
+            "target_region_id": target["region_id"],
+            "target_symbol": target["symbol"],
+            "target_kind": args.target_kind,
+            "requested_target_endpoint": args.target_endpoint,
+            "resolved_target_endpoints": repair_endpoints,
+            "target_binding_mode": target_binding_mode,
+            "architecture": args.architecture,
+            "case_id": args.case_id,
+            "runtime_release": str(release_dir),
+            "claim_boundary": (
+                "The FP32 reference differs before endpoint casting, but the "
+                "same-dtype repair is bit-identical; no executable contrast "
+                "exists at this boundary."
+                if no_representable_repair else
+                "A representable endpoint repair was observed, but it produced "
+                "zero gradient contrast on the declared carrier; no negative "
+                "bias label is assigned."
+            ),
+        }
+        (output_dir / "prediction.json").write_text(
+            json.dumps(zero_prediction, indent=2, sort_keys=True) + "\n"
+        )
+        (output_dir / "formation.json").write_text(json.dumps({
+            "schema": "kernel-analyzer-target-v3-formation-v1",
+            "status": zero_status,
+            "prediction": zero_prediction,
+            "records": formation_records,
+            "target_repair_observations": target_repair_observations,
+            "runtime_release": str(release_dir),
+        }, indent=2, sort_keys=True) + "\n")
+        (output_dir / "consequence.json").write_text(json.dumps({
+            "schema": "kernel-analyzer-target-v3-consequence-v1",
+            "status": zero_status,
+            "case_id": args.case_id,
+            "prediction": zero_prediction,
+            "steps": 0,
+            "records": [],
+            "loss_audit": {"recorded": False, "any_period_split": False},
+            "runtime_release": str(release_dir),
+            "claim_boundary": zero_prediction["claim_boundary"],
+        }, indent=2, sort_keys=True) + "\n")
+        (output_dir / "short_screen.json").write_text(json.dumps({
+            "schema": "kernel-analyzer-target-v3-short-screen-dryrun-v1",
+            "status": zero_status,
+            "input": {
+                "case_id": args.case_id,
+                "state_role": "CONFIRMATION",
+                "steps": args.steps,
+                "projection_dimension": args.projection_dim,
+                "runtime_release": str(release_dir),
+                "prediction_revealed_before_trajectory": True,
+            },
+            "cases": [{"case_id": args.case_id, "status": zero_status}],
+        }, indent=2, sort_keys=True) + "\n")
+        print(json.dumps({
+            "event": "TARGET_V3_ZERO_EFFECT_CLASSIFIED",
+            "case_id": args.case_id,
+            "status": zero_status,
+            "fp32_endpoint_changed_coordinates": fp32_nonzero,
+            "same_dtype_repair_changed_coordinates": same_dtype_nonzero,
+        }), flush=True)
+        return
     formation_amplification = (resultant_energy / max(formation_path_energy, 1e-30)) ** 0.5
     odd_even_cosine = odd_even_inner / max((odd_energy * even_energy) ** 0.5, 1e-30)
     prediction = {
@@ -341,7 +573,15 @@ def main() -> None:
         },
         "target_region_id": target["region_id"],
         "target_symbol": target["symbol"],
+        "target_kind": args.target_kind,
+        "external_exact_id": args.external_exact_id,
+        "external_matching_callsites": external_match_count,
+        "requested_target_endpoint": args.target_endpoint,
+        "resolved_target_endpoints": repair_endpoints,
+        "single_output_endpoint_rebind": endpoint_rebound,
+        "target_binding_mode": target_binding_mode,
         "architecture": args.architecture,
+        "case_id": args.case_id,
         "runtime_release": str(release_dir),
         "claim_boundary": "Source prediction is frozen before the paired trajectory; feedback is outside this source branch.",
     }
@@ -351,6 +591,7 @@ def main() -> None:
         "status": "COMPLETE",
         "prediction": prediction,
         "records": formation_records,
+        "target_repair_observations": target_repair_observations,
         "runtime_release": str(release_dir),
     }, indent=2, sort_keys=True) + "\n")
 
@@ -447,6 +688,7 @@ def main() -> None:
     consequence = {
         "schema": "kernel-analyzer-target-v3-consequence-v1",
         "status": "COMPLETE_LONG_HORIZON" if consequence_steps >= 4096 else "COMPLETE",
+        "case_id": args.case_id,
         "prediction": prediction,
         "steps": consequence_steps,
         "carrier": carrier_name,
@@ -475,7 +717,8 @@ def main() -> None:
         "gradient_scope": {
             "declared_carrier_only": requested_carrier is not None,
             "carrier": requested_carrier,
-            "other_parameters_frozen": requested_carrier is not None,
+            "other_parameters_frozen": requested_carrier is not None and not args.retain_full_backward,
+            "full_backward_retained": args.retain_full_backward,
         },
     }
     if raw_capture_dir is not None:

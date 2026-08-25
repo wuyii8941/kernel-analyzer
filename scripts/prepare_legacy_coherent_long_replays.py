@@ -55,6 +55,15 @@ def safe_case_id(candidate_id: str) -> str:
     return "legacy-coherent-" + candidate_id.replace(":", "-")
 
 
+def runtime_release(info: dict[str, str], model_key: str, seq: int) -> Path:
+    """Prefer the rebuilt Qwen seq64 release over the overwritten r1 capture."""
+    if model_key == "qwen" and seq == 64:
+        recovered = ROOT / "results/coverage/runtime_releases/qwen_seq64_r2_recovered"
+        if (recovered / "capture.json").exists():
+            return recovered
+    return ROOT / "results/coverage/runtime_releases" / info["release"].format(seq=seq)
+
+
 def main() -> None:
     source = read_json(SOURCE)
     candidates = [
@@ -73,7 +82,7 @@ def main() -> None:
         candidate_id = str(candidate["candidate_id"])
         case_id = safe_case_id(candidate_id)
         task_id = ":".join(candidate_id.split(":")[2:])
-        release = ROOT / "results/coverage/runtime_releases" / info["release"].format(seq=seq)
+        release = runtime_release(info, model_key, seq)
         bank = ROOT / info["bank"].format(seq=seq)
         if model_key == "qwen" and seq == 128:
             bank = ROOT / "results/property/declared_persistent_4096/qwen_seq128_bank_4224.json"

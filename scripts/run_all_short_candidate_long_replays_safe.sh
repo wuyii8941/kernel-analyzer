@@ -14,9 +14,11 @@ LOG_ROOT="$ROOT/results/property/declared_persistent_4096/all_candidates/logs"
 OUT_ROOT="$ROOT/results/property/declared_persistent_4096/all_candidates"
 FAIL_ROOT="$ROOT/results/property/declared_persistent_4096/all_candidates/unresolved"
 CACHE_ROOT="/data1/tzh/cache/bias_long_all_candidates"
-GPU="${1:?usage: $0 GPU SHARD TOTAL_SHARDS}"
-SHARD="${2:?usage: $0 GPU SHARD TOTAL_SHARDS}"
-TOTAL="${3:?usage: $0 GPU SHARD TOTAL_SHARDS}"
+GPU="${1:?usage: $0 GPU SHARD TOTAL_SHARDS [MODEL_KEY] [SEQUENCE_LENGTH]}"
+SHARD="${2:?usage: $0 GPU SHARD TOTAL_SHARDS [MODEL_KEY] [SEQUENCE_LENGTH]}"
+TOTAL="${3:?usage: $0 GPU SHARD TOTAL_SHARDS [MODEL_KEY] [SEQUENCE_LENGTH]}"
+ONLY_MODEL_KEY="${4:-}"
+ONLY_SEQUENCE_LENGTH="${5:-}"
 mkdir -p "$LOG_ROOT" "$OUT_ROOT" "$FAIL_ROOT" "$CACHE_ROOT"
 
 wait_for_gpu() {
@@ -55,10 +57,15 @@ raise SystemExit(0 if str(d.get("status","")).startswith("COMPLETE") else 1)
 PY
 }
 
-mapfile -t rows < <("$PY" - "$MANIFEST" "$SHARD" "$TOTAL" <<'PY'
+mapfile -t rows < <("$PY" - "$MANIFEST" "$SHARD" "$TOTAL" "$ONLY_MODEL_KEY" "$ONLY_SEQUENCE_LENGTH" <<'PY'
 import json,sys
 d=json.load(open(sys.argv[1])); shard=int(sys.argv[2]); total=int(sys.argv[3])
+only_model=sys.argv[4]; only_seq=sys.argv[5]
 rows=[r for r in d["rows"] if r.get("runnable")]
+if only_model:
+    rows=[r for r in rows if str(r.get("model_key")) == only_model]
+if only_seq:
+    rows=[r for r in rows if int(r.get("sequence_length")) == int(only_seq)]
 cost_order={"qwen":0,"phi4":1,"mamba":2,"deepseek8b":3}
 rows.sort(key=lambda r:(
     cost_order.get(str(r.get("model_key")),9),

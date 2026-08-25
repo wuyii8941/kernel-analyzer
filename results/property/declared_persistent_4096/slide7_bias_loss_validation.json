@@ -206,6 +206,31 @@
     },
     {
       "bias_evidence": {
+        "endpoint_screen_A": 1.1783921029988345,
+        "endpoint_screen_p": 0.03125,
+        "feedback_A4096": 3.2097079880195842,
+        "feedback_null95": 1.0809516773723404,
+        "feedback_p": 0.0004997501249375312,
+        "kind": "FROZEN_ENDPOINT_DIRECTION_PLUS_4096_STEP_FEEDBACK_BIAS",
+        "local_A4096": 0.9795784584612016
+      },
+      "case": "llama32_text128_scan_extern_5477521afded",
+      "final_label": "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT",
+      "long_artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_extern_5477521afded/consequence.json",
+      "long_sha256": "e9281ecc90e28a79c4c630d26e752712618b203a76a5d79857e2075d1b95e3a9",
+      "loss_evidence": {
+        "max_abs_gap": 0.011974573135375977,
+        "recorded_steps": 4096,
+        "split_step_count": 4096,
+        "split_threshold": 1e-08
+      },
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "layer-0 attention q_proj forward GEMM",
+      "paired_artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_extern_5477521afded/consequence.json",
+      "paired_sha256": "e9281ecc90e28a79c4c630d26e752712618b203a76a5d79857e2075d1b95e3a9"
+    },
+    {
+      "bias_evidence": {
         "artifact": "results/property/joint_bias_formation_v1/mu_parity_decomposition.json",
         "kind": "ANTITHETIC_RESPONSE_BIAS_NOT_LONG_DIRECT",
         "response_even_over_natural": 0.6769473244939587
@@ -226,12 +251,12 @@
       "paired_sha256": "d4e88bada3c1d4cd4bb1c50246f75d5aa3fb3d995aedaa53b9c6bf0b70c87d90"
     }
   ],
-  "claim_boundary": "All rows have independent bias evidence and a 4096-record paired loss split. Only the first three direct rows, two aggregate direct rows, and the SiLU feedback row have long directional evidence; the remaining four are consequence controls and are not persistent-bias cases. A loss split is not evidence of different converged optima.",
+  "claim_boundary": "All rows have independent bias evidence and a 4096-record paired loss split. Only the first three direct rows, two aggregate direct rows, and the two feedback rows have long directional evidence; the remaining four are consequence controls and are not persistent-bias cases. A loss split is not evidence of different converged optima.",
   "counts": {
     "aggregate_direct_missing_late_windows": 2,
     "bias_and_loss_but_not_long_direct": 4,
-    "bias_and_loss_rows": 10,
-    "feedback_persistent": 1,
+    "bias_and_loss_rows": 11,
+    "feedback_persistent": 2,
     "late_window_direct_persistent": 3
   },
   "schema": "slide7-bias-plus-loss-validation-v1",
