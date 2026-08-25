@@ -18,8 +18,13 @@ if [[ -s "$OUT/consequence.json" ]]; then
   exit 0
 fi
 if [[ -e "$OUT" ]]; then
-  echo "[$(date -Is)] UNRESOLVED output directory already exists: $OUT" >>"$LOG"
-  exit 2
+  # A previous attempt may have produced only a compiler release or a partial
+  # trace. Preserve it as evidence, then allow a fresh retry. Refusing to run
+  # here made a recoverable OOM look like a permanent replay failure.
+  archive="$ROOT/results/property/declared_persistent_4096/unresolved/gemma4_norm_v3_long_projection_partial_$(date +%Y%m%dT%H%M%S)"
+  mkdir -p "$(dirname "$archive")"
+  mv "$OUT" "$archive"
+  echo "[$(date -Is)] ARCHIVED partial output to $archive" >>"$LOG"
 fi
 mkdir -p "$(dirname "$LOG")"
 export PYTHONPATH="$ROOT:$ROOT/src:$ROOT/archive/round1_code/src"

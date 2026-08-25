@@ -125,6 +125,18 @@ def main() -> None:
     if args.carrier is not None and args.carrier not in parameters:
         raise RuntimeError(f"requested carrier absent: {args.carrier}")
 
+    # A single-carrier consequence replay does not need gradients for the
+    # other 1,900+ model parameters.  Leaving every parameter trainable makes
+    # autograd retain large embedding and projection backward buffers even
+    # though the protocol only observes the declared carrier; on Gemma this
+    # can make a valid replay look like a compiler/runtime failure.  Freeze
+    # the unobserved parameters only when the caller explicitly declares one
+    # carrier.  The all-carrier historical protocol remains unchanged.
+    requested_carrier = args.carrier
+    if requested_carrier is not None:
+        for name, parameter in parameters.items():
+            parameter.requires_grad_(name == requested_carrier)
+
     start = len(PyCodeCache.modules)
     candidate = torch.compile(LossStep(model), backend="inductor", fullgraph=False, dynamic=False)
     warm = torch.tensor([warm_states[0]["token_ids"]], dtype=torch.long, device=device)
@@ -377,6 +389,11 @@ def main() -> None:
         "formation_state_role": "CONFIRMATION",
         "consequence_state_role": "TRAJECTORY" if args.consequence_bank else "CONFIRMATION_ENGINEERING_REUSE",
         "claim_boundary": "Same-process current wrapper release; source prediction and consequence are separated, and feedback remains out of source scope.",
+        "gradient_scope": {
+            "declared_carrier_only": requested_carrier is not None,
+            "carrier": requested_carrier,
+            "other_parameters_frozen": requested_carrier is not None,
+        },
     }
     if raw_capture_dir is not None:
         raw_manifest = {
