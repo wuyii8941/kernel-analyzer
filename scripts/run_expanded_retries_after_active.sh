@@ -67,3 +67,6 @@ run_case phi /data1/tzh/models/microsoft/Phi-4-mini-instruct \
   multishape-backward-cell-0501 \
   results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0501_4096.json \
   /data1/tzh/cache/bias_long_expanded/multishape-backward-cell-0501_retry.pt
+
+echo "REBUILD_AUDIT $(date -Is)"
+"$PY" scripts/build_all_bias_case_audit.py
