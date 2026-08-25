@@ -43,6 +43,7 @@ GEMMA_NORM_LOG = LONG / "expanded_controls/logs/gemma4_norm_v3_long.log"
 TARGET_MANIFEST = LONG / "operator_scan_target_manifest.json"
 TARGET_BLOCKED = LONG / "operator_scan_replay_blocked.json"
 CANDIDATE_MAP = ROOT / "results/property/bias_formation/hotspot_search/bias_mechanism_candidate_map.json"
+LEGACY_COHERENT_MANIFEST = LONG / "legacy_coherent_long_replay_manifest.json"
 
 
 def sha(path: Path) -> str | None:
@@ -53,6 +54,42 @@ def sha(path: Path) -> str | None:
 
 def read(path: Path) -> dict[str, Any] | None:
     return json.loads(path.read_text()) if path.exists() else None
+
+
+def loss_gap_series(payload: dict[str, Any]) -> list[float]:
+    """Extract the per-step candidate-minus-repair loss gaps without using summaries."""
+    rows = payload.get("train_rows") or payload.get("records") or payload.get("rows") or []
+    keys = (
+        "paired_loss_gap",
+        "paired_loss_gap_candidate_minus_repair",
+        "loss_gap_candidate_minus_repair",
+        "loss_gap",
+    )
+    gaps: list[float] = []
+    for row in rows:
+        for key in keys:
+            value = row.get(key)
+            if isinstance(value, (int, float)):
+                gaps.append(float(value))
+                break
+    return gaps
+
+
+def measured_loss_audit(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return a uniform audit based on the recorded 4096 per-step losses."""
+    existing = dict(payload.get("loss_audit", {}) or {})
+    gaps = loss_gap_series(payload)
+    if gaps:
+        existing.update({
+            "recorded": True,
+            "recorded_steps": len(gaps),
+            "split_threshold": 1e-8,
+            "split_step_count": sum(abs(value) > 1e-8 for value in gaps),
+            "any_period_split": any(abs(value) > 1e-8 for value in gaps),
+            "max_abs_gap": max(abs(value) for value in gaps),
+            "final_recorded_gap": gaps[-1],
+        })
+    return existing
 
 
 def window_sidecar(path: Path) -> dict[str, Any] | None:
@@ -80,10 +117,8 @@ def long_row(path: Path) -> dict[str, Any]:
         levels = payload.get("statistics", {}).get("levels", {})
         actual = levels.get("actual", {})
         if actual:
-            null = actual.get("sign_flip_null", {})
-            a = float(actual.get("coherence_amplification", 0.0))
-            upper = float(null.get("upper_95", 0.0))
-            p = float(null.get("one_sided_p", 1.0))
+            local = levels.get("local", {})
+            feedback = levels.get("feedback", {})
             measured_steps = int(payload.get("steps", payload.get("step_count", 0)))
             windows = window_sidecar(path)
             local_windows = (windows or {}).get("levels", {}).get("local", {})
@@ -91,18 +126,43 @@ def long_row(path: Path) -> dict[str, Any]:
             if windows is not None:
                 if local_windows.get("long_persistent"):
                     long_direct = "ROBUST"
+                    classification_level = "local"
                 elif feedback_windows.get("long_persistent"):
                     long_direct = "FEEDBACK_SUSTAINED"
+                    classification_level = "feedback"
                 else:
                     long_direct = "NOT_ROBUST"
+                    classification_level = "actual"
             else:
                 # Preserve the historical aggregate interpretation until the
                 # checkpoint-window sidecar is available. New replays are
                 # upgraded by the offline analyzer before final publication.
-                long_direct = "ROBUST" if p <= 0.05 and a > upper else "NOT_ROBUST"
+                def passes(level: dict[str, Any]) -> bool:
+                    level_null = level.get("sign_flip_null", {})
+                    return (
+                        float(level_null.get("one_sided_p", 1.0)) <= 0.05
+                        and float(level.get("coherence_amplification", 0.0))
+                        > float(level_null.get("upper_95", float("inf")))
+                    )
+
+                if passes(local):
+                    long_direct = "ROBUST"
+                    classification_level = "local"
+                elif passes(feedback):
+                    long_direct = "FEEDBACK_SUSTAINED"
+                    classification_level = "feedback"
+                else:
+                    long_direct = "NOT_ROBUST"
+                    classification_level = "actual"
+            chosen = levels.get(classification_level, actual)
+            null = chosen.get("sign_flip_null", {})
+            a = float(chosen.get("coherence_amplification", 0.0))
+            upper = float(null.get("upper_95", 0.0))
+            p = float(null.get("one_sided_p", 1.0))
             return {
                 "status": "COMPLETE_4096" if measured_steps >= 4096 and payload.get("status") == "COMPLETE" else payload.get("trajectory_status", payload.get("status", "COMPLETE")),
                 "long_direct": long_direct,
+                "classification_level": classification_level,
                 "steps": measured_steps,
                 "A4096": a, "null95": upper, "p": p,
                 "late_windows": local_windows.get("late_windows") if windows is not None else None,
@@ -110,6 +170,7 @@ def long_row(path: Path) -> dict[str, Any]:
                 "loss_audit": payload.get("loss_audit", {}),
                 "local_A4096": levels.get("local", {}).get("coherence_amplification"),
                 "feedback_A4096": levels.get("feedback", {}).get("coherence_amplification"),
+                "actual_A4096": actual.get("coherence_amplification"),
                 "window_evidence": windows,
                 "final_drift_l2": payload.get("cumulative", {}).get("actual", {}).get("resultant_l2"),
                 "paired_loss_gap_final": payload.get("loss_audit", {}).get("final_gap"),
@@ -162,25 +223,51 @@ def long_row(path: Path) -> dict[str, Any]:
     if "statistics" in payload and "levels" in payload.get("statistics", {}):
         # Held-out lm-head consequence runner: it has the same three-vector
         # statistics as the bound runner, but no rolling-window export.
-        actual = payload["statistics"]["levels"].get("actual", {})
+        levels = payload["statistics"]["levels"]
+        actual = levels.get("actual", {})
         if actual:
-            null = actual.get("sign_flip_null", {})
-            a = float(actual.get("coherence_amplification", 0.0))
+            local = levels.get("local", {})
+            feedback = levels.get("feedback", {})
+
+            def passes(level: dict[str, Any]) -> bool:
+                level_null = level.get("sign_flip_null", {})
+                return (
+                    float(level_null.get("one_sided_p", 1.0)) <= 0.05
+                    and float(level.get("coherence_amplification", 0.0))
+                    > float(level_null.get("upper_95", float("inf")))
+                )
+
+            if passes(local):
+                long_status = "ROBUST"
+                classification_level = "local"
+                chosen = local
+            elif passes(feedback):
+                long_status = "FEEDBACK_SUSTAINED"
+                classification_level = "feedback"
+                chosen = feedback
+            else:
+                long_status = "NOT_ROBUST"
+                classification_level = "actual"
+                chosen = actual
+            null = chosen.get("sign_flip_null", {})
+            a = float(chosen.get("coherence_amplification", 0.0))
             upper = float(null.get("upper_95", 0.0))
             p = float(null.get("one_sided_p", 1.0))
             return {
                 "status": payload.get("status", "COMPLETE"),
-                "long_direct": "ROBUST" if p <= 0.05 and a > upper else "NOT_ROBUST",
+                "long_direct": long_status,
+                "classification_level": classification_level,
                 "steps": int(payload.get("steps", 0)),
                 "A4096": a, "null95": upper, "p": p,
                 "late_windows": None, "late_windows_above_own_null": None,
-                "local_A4096": payload["statistics"]["levels"].get("local", {}).get("coherence_amplification"),
-                "feedback_A4096": payload["statistics"]["levels"].get("feedback", {}).get("coherence_amplification"),
+                "local_A4096": local.get("coherence_amplification"),
+                "feedback_A4096": feedback.get("coherence_amplification"),
+                "actual_A4096": actual.get("coherence_amplification"),
                 "final_drift_l2": payload.get("final_master_drift_l2"),
                 "paired_loss_gap_final": payload.get("loss_audit", {}).get("final_gap"),
                 "paired_loss_gap_mean_last_512": payload.get("loss_audit", {}).get("last_512_mean"),
                 "paired_loss_gap_std_last_512": None,
-                "loss_audit": payload.get("loss_audit", {}),
+                "loss_audit": measured_loss_audit(payload),
                 "artifact": str(path.relative_to(ROOT)),
             }
     # The common runner writes a top-level status only in the completed artifact.
@@ -228,25 +315,51 @@ def long_row(path: Path) -> dict[str, Any]:
     if "summaries" in payload and payload.get("status") == "COMPLETE":
         verdict = str(payload.get("verdict", ""))
         summary = payload["summaries"]
-        if verdict == "PERSISTENT_LOCAL_BIAS":
+        sidecar = window_sidecar(path) or {}
+        side_levels = sidecar.get("levels", {})
+        local_side = side_levels.get("local", {})
+        feedback_side = side_levels.get("feedback", {})
+        if local_side.get("long_persistent"):
             long_status = "ROBUST"
+            classification_level = "local"
+            chosen_side = local_side
+        elif feedback_side.get("long_persistent"):
+            long_status = "FEEDBACK_SUSTAINED"
+            classification_level = "feedback"
+            chosen_side = feedback_side
+        elif verdict == "PERSISTENT_LOCAL_BIAS":
+            long_status = "ROBUST"
+            classification_level = "local"
+            chosen_side = {}
         elif verdict == "FEEDBACK_SUSTAINED_SEPARATION":
             long_status = "FEEDBACK_SUSTAINED"
+            classification_level = "feedback"
+            chosen_side = {}
         else:
             long_status = "NOT_ROBUST"
+            classification_level = "actual"
+            chosen_side = {}
         return {
             "status": "COMPLETE_4096",
             "long_direct": long_status,
             "verdict": verdict,
+            "classification_level": classification_level,
             "steps": int(payload.get("protocol", {}).get("steps", 0)),
             "A4096": float(summary["actual_drift_increment"].get("coherence_amplification", 0.0)),
             "local_A4096": float(summary["local"].get("coherence_amplification", 0.0)),
             "feedback_A4096": float(summary["feedback"].get("coherence_amplification", 0.0)),
+            "projection_A4096": chosen_side.get("coherence_amplification"),
+            "null95": chosen_side.get("sign_flip_null", {}).get("upper_95"),
+            "p": chosen_side.get("sign_flip_null", {}).get("one_sided_p"),
+            "late_windows": chosen_side.get("late_windows"),
+            "late_windows_above_one": chosen_side.get("late_windows_above_one"),
             "final_drift_l2": summary.get("final_drift_l2"),
             "paired_loss_gap_final": summary.get("paired_loss_gap_final"),
             "paired_loss_gap_mean_last_512": summary.get("paired_loss_gap_mean_last_512"),
             "paired_loss_gap_std_last_512": summary.get("paired_loss_gap_std_last_512"),
+            "loss_audit": measured_loss_audit(payload),
             "artifact": str(path.relative_to(ROOT)),
+            "window_evidence": str(path.with_name(path.stem + "_windows.json").relative_to(ROOT)) if sidecar else None,
         }
     if payload.get("schema", "").startswith("kernel-analyzer-gemma4-target-consequence") and str(payload.get("status", "")).startswith("COMPLETE"):
         stats = payload.get("statistics", {})
@@ -389,10 +502,13 @@ def paired_row(path: Path) -> dict[str, Any]:
                 "mean": statistics.fmean(gaps),
                 "population_std": statistics.pstdev(gaps),
             }
+    measured_audit = measured_loss_audit(payload)
+    gaps = loss_gap_series(payload)
     return {
         "status": payload.get("status", "UNKNOWN"),
         "loss_separation_observed": bool(
             payload.get("loss_separation_observed", False)
+            or measured_audit.get("any_period_split", False)
             or (
                 final.get("parameter_distance_l2", 0.0) > 0.0
                 and abs(final.get("loss_gap_candidate_minus_repair", 0.0)) > 0.0
@@ -417,16 +533,19 @@ def paired_row(path: Path) -> dict[str, Any]:
                 payload.get("rows", [{}])[-1].get("loss_gap") if payload.get("rows") else None
             )
         ),
+        "final_recorded_loss_gap": gaps[-1] if gaps else None,
+        "loss_split_step_count": measured_audit.get("split_step_count"),
+        "loss_recorded_steps": measured_audit.get("recorded_steps"),
+        "loss_max_abs_gap": measured_audit.get("max_abs_gap"),
         "recent_loss_gap_mean": recent.get("mean"),
         "recent_loss_gap_std": recent.get("population_std"),
-        "loss_audit": payload.get("loss_audit", {
+        "loss_audit": measured_audit or {
             "recorded": bool(recent or final),
             "any_period_split": bool(
                 abs(float(final.get("loss_gap_candidate_minus_repair", 0.0) or 0.0)) > 1e-8
                 or abs(float(recent.get("mean", 0.0) or 0.0)) > 1e-8
-                or any(abs(float(row.get("loss_gap", 0.0))) > 1e-8 for row in payload.get("rows", []))
             ),
-        }),
+        },
         "artifact": str(path.relative_to(ROOT)),
     }
 
@@ -548,6 +667,8 @@ def final_label(direct: dict[str, Any], paired: dict[str, Any], formation_path: 
             return "FEEDBACK_SUSTAINED_PARAMETER_SPLIT_LOSS_NOT_RECORDED"
         return "FEEDBACK_SUSTAINED_LOSS_NOT_RECORDED"
     if direct.get("long_direct") == "ROBUST" and any_loss:
+        if direct.get("late_windows") is None:
+            return "AGGREGATE_LONG_BIAS_WITH_PAIRED_LOSS_SPLIT_LATE_WINDOW_NOT_EXPORTED"
         return "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT"
     if direct.get("long_direct") == "ROBUST":
         return "ROBUST_LONG_DIRECT_BIAS_LOSS_NOT_RUN"
@@ -594,6 +715,8 @@ def main() -> None:
     candidate_map = read(CANDIDATE_MAP) or {}
     short_candidates = list(candidate_map.get("candidates", []))
     short_candidate_ids = {str(row.get("case_id")) for row in short_candidates if row.get("case_id")}
+    legacy_coherent_manifest = read(LEGACY_COHERENT_MANIFEST) or {}
+    legacy_coherent_candidates = list(legacy_coherent_manifest.get("rows", []))
     for name, model, region, path, long_path, paired_path in CASES:
         unresolved_paths = {
             "Llama lm_head dX": LONG / "unresolved/llama32_lmhead_4096_unresolved.json",
@@ -688,14 +811,20 @@ def main() -> None:
         # gap in the same artifact; do not report that evidence as "unmeasured"
         # merely because it has no separate paired-loss file.
         if name == "Qwen3-VL SiLU" and direct.get("paired_loss_gap_mean_last_512") is not None:
+            loss_audit = direct.get("loss_audit", {}) or {}
             paired = {
                 "status": "COMPLETE_IN_LONG_RECURRENCE",
-                "loss_separation_observed": abs(float(direct.get("paired_loss_gap_mean_last_512") or 0.0)) > 0.0,
+                "loss_separation_observed": bool(loss_audit.get("any_period_split")),
                 "steps": direct.get("steps"),
                 "parameter_distance": direct.get("final_drift_l2"),
                 "final_loss_gap": direct.get("paired_loss_gap_final"),
+                "final_recorded_loss_gap": loss_audit.get("final_recorded_gap"),
+                "loss_split_step_count": loss_audit.get("split_step_count"),
+                "loss_recorded_steps": loss_audit.get("recorded_steps"),
+                "loss_max_abs_gap": loss_audit.get("max_abs_gap"),
                 "recent_loss_gap_mean": direct.get("paired_loss_gap_mean_last_512"),
                 "recent_loss_gap_std": direct.get("paired_loss_gap_std_last_512"),
+                "loss_audit": loss_audit,
                 "artifact": direct.get("artifact"),
             }
         rows.append({
@@ -1147,6 +1276,86 @@ def main() -> None:
         rows.append(row)
         short_candidate_universe_rows.append(row)
 
+    # The original T3 endpoint census contains 57 concrete coherent-F+B
+    # witnesses that are disjoint from the later backward-hotspot candidate
+    # map.  They are candidate evidence, not already confirmed long cases.
+    # Keep every one in the same denominator and consume a 4096-step result
+    # only when the exact replay has completed.
+    legacy_coherent_rows: list[dict[str, Any]] = []
+    for candidate in legacy_coherent_candidates:
+        case_id = str(candidate.get("case_id"))
+        long_path = ROOT / str(candidate.get("output"))
+        failure_path = LONG / "legacy_coherent_candidates" / "unresolved" / f"{case_id}.json"
+        if long_path.exists():
+            direct = long_row(long_path)
+            loss_audit = direct.get("loss_audit", {}) or {}
+            paired = {
+                "status": "COMPLETE_IN_LONG_REPLAY",
+                "loss_separation_observed": bool(loss_audit.get("any_period_split")),
+                "steps": direct.get("steps"),
+                "parameter_distance": direct.get("final_drift_l2"),
+                "final_loss_gap": direct.get("paired_loss_gap_final"),
+                "recent_loss_gap_mean": direct.get("paired_loss_gap_mean_last_512"),
+                "recent_loss_gap_std": direct.get("paired_loss_gap_std_last_512"),
+                "loss_audit": loss_audit,
+                "artifact": direct.get("artifact"),
+            }
+            final = final_label(direct, paired, "legacy coherent F+B endpoint")
+        elif failure_path.exists():
+            failure = read(failure_path) or {}
+            direct = {
+                "status": failure.get("status", "UNRESOLVED_LONG_REPLAY_RESOURCE"),
+                "long_direct": "UNRESOLVED",
+                "reason": failure.get("claim_boundary", "long replay unavailable"),
+                "steps": failure.get("steps_completed"),
+                "artifact": str(failure_path.relative_to(ROOT)),
+            }
+            paired = {
+                "status": direct["status"],
+                "loss_separation_observed": False,
+                "steps": direct.get("steps"),
+                "artifact": direct["artifact"],
+            }
+            final = "UNRESOLVED_LONG_REPLAY"
+        else:
+            direct = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "long_direct": "UNRESOLVED",
+                "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+                "steps": None,
+                "artifact": str(long_path.relative_to(ROOT)),
+            }
+            paired = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "loss_separation_observed": False,
+                "steps": None,
+                "artifact": str(long_path.relative_to(ROOT)),
+            }
+            final = "UNRESOLVED_LONG_REPLAY_PENDING"
+        row = {
+            "case": case_id,
+            "candidate_id": candidate.get("candidate_id"),
+            "matrix_case_id": None,
+            "model": candidate.get("model_key"),
+            "operator_or_region": f"{candidate.get('phase')} {candidate.get('mathematical_operation')} [{candidate.get('task_id')}]",
+            "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+            "long_direct": direct,
+            "paired_consequence": paired,
+            "scope": "legacy_coherent_endpoint_candidate",
+            "final_label": final,
+            "direct_sha256": sha(long_path) if long_path.exists() else None,
+            "paired_sha256": sha(long_path) if long_path.exists() else None,
+            "legacy_candidate": {
+                "exact_aot_endpoint_id": candidate.get("exact_aot_endpoint_id"),
+                "implementation_kind": candidate.get("implementation_kind"),
+                "carrier": candidate.get("carrier"),
+                "legacy_evidence": candidate.get("legacy_evidence"),
+                "runnable": candidate.get("runnable"),
+            },
+        }
+        rows.append(row)
+        legacy_coherent_rows.append(row)
+
     # Keep the complete 23-case roster visible.  Rows that never passed the
     # nonzero, parameter-reachable direct-bias gate are recorded as screened
     # negatives or unresolved; they are not silently dropped and are not
@@ -1243,7 +1452,7 @@ def main() -> None:
         "historical_candidate_count": 11,
         "extended_candidate_count": len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES) + len(target_manifest_rows),
         "short_candidate_count": len(short_candidates),
-        "all_long_replay_required_candidate_count": len(short_candidates),
+        "all_long_replay_required_candidate_count": len(short_candidates) + len(legacy_coherent_candidates),
         "all_long_replay_pending_candidate_count": sum(
             str(r.get("final_label", "")).startswith(("UNRESOLVED", "ABSTAIN"))
             for r in short_candidate_universe_rows
@@ -1269,6 +1478,16 @@ def main() -> None:
             "claim_boundary": "All short-screen candidates remain in the denominator. Missing exact replay, compiler mismatch, zero-energy binding, and failed resources are unresolved, never negative.",
             "rows": [r["short_candidate"] | {"case_id": r["case"]} for r in short_candidate_universe_rows],
         },
+        "legacy_coherent_candidate_universe": {
+            "artifact": str(LEGACY_COHERENT_MANIFEST.relative_to(ROOT)) if LEGACY_COHERENT_MANIFEST.exists() else None,
+            "count": len(legacy_coherent_candidates),
+            "ready_for_long_replay_count": sum(bool(row.get("runnable")) for row in legacy_coherent_candidates),
+            "pending_or_unresolved_count": sum(
+                str(row.get("final_label", "")).startswith(("UNRESOLVED", "ABSTAIN"))
+                for row in legacy_coherent_rows
+            ),
+            "claim_boundary": "Legacy coherent F+B labels are candidate evidence only; each endpoint receives a fresh 4096-step candidate/repair replay and failed runtime remains unresolved.",
+        },
         "unindexed_historical_candidate_count": len(historical_ids - matrix_ids),
         "matrix_case_ids_covered_by_rows": sorted(
             {r.get("matrix_case_id") for r in rows if r.get("matrix_case_id")}
@@ -1283,10 +1502,12 @@ def main() -> None:
             "additional_outcome_candidate": sum(r.get("scope") == "additional_outcome_candidate" for r in rows),
             "operator_scan_candidate": sum(r.get("scope") == "operator_scan_candidate" for r in rows),
             "short_screen_candidate_universe": sum(r.get("scope") == "short_screen_candidate_universe" for r in rows),
+            "legacy_coherent_endpoint_candidate": sum(r.get("scope") == "legacy_coherent_endpoint_candidate" for r in rows),
         },
         "final_case_count": sum(
             r["final_label"] in {
                 "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
+                "AGGREGATE_LONG_BIAS_WITH_PAIRED_LOSS_SPLIT_LATE_WINDOW_NOT_EXPORTED",
                 "ROBUST_LONG_DIRECT_BIAS_LOSS_NOT_RUN",
                 "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT",
             }
@@ -1295,6 +1516,18 @@ def main() -> None:
         "label_counts": dict(Counter(r["final_label"] for r in rows)),
         "direct_persistent_case_count": sum(
             r["long_direct"].get("long_direct") == "ROBUST"
+            for r in rows
+        ),
+        "rolling_window_confirmed_persistent_count": sum(
+            r["final_label"] in {
+                "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
+                "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT",
+            }
+            and r["long_direct"].get("late_windows") is not None
+            for r in rows
+        ),
+        "aggregate_long_bias_missing_window_count": sum(
+            r["final_label"] == "AGGREGATE_LONG_BIAS_WITH_PAIRED_LOSS_SPLIT_LATE_WINDOW_NOT_EXPORTED"
             for r in rows
         ),
         "long_loss_split_without_direct_count": sum(
@@ -1308,6 +1541,7 @@ def main() -> None:
         "outcome_relevant_case_count": sum(
             r["final_label"] in {
                 "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
+                "AGGREGATE_LONG_BIAS_WITH_PAIRED_LOSS_SPLIT_LATE_WINDOW_NOT_EXPORTED",
                 "ROBUST_LONG_DIRECT_BIAS_LOSS_NOT_RUN",
                 "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT",
                 "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE",
@@ -1325,12 +1559,13 @@ def main() -> None:
     lines = [
         "# 所有历史偏差候选的长程复核",
         "",
-        f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(rows)} 行**，其中 {len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES)} 行是已命名的 extended candidates，{len(short_candidates)} 行来自冻结的短程候选池，另有少量 roster/control 行。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
+        f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(rows)} 行**。其中 {len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES)} 行是已命名的 extended candidates，{len(short_candidates)} 行来自后续 backward 短筛候选池，{len(legacy_coherent_candidates)} 行来自更早的全量 T3/F+B 方向信号，另外还包含 Gemma/Llama 新目标和 roster/control 行。这些来源可能重叠，因此分别报告来源分母和逐行审计分母，不能相加冒充独立案例数。",
         "",
-        f"按严格口径，最终计入 **{payload['final_case_count']} 个持久性 bias 案例**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**。另有 **{payload['long_loss_split_without_direct_count']} 个**早先已有 bias 证据、并在长程中出现配对 loss 分叉，但 bias 组件后来未保持；它们仍计为 **结果受影响的 bias 记录**，只是不能升级为严格的持久性 bias 组件。当前共有 **{payload['outcome_relevant_case_count']} 个训练结果相关记录**。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
+        f"当前有 **{payload['final_case_count']} 个**4096 步 bias + loss 记录：其中 **{payload['rolling_window_confirmed_persistent_count']} 个**同时具备后半程窗口证据，另有 **{payload['aggregate_long_bias_missing_window_count']} 个**旧 held-out 记录只保存了4096步整段统计，后半程窗口尚未单独导出。另有 **{payload['long_loss_split_without_direct_count']} 个**早先已有 bias 证据、并在长程中出现配对 loss 分叉，但 bias 组件后来未保持；它们仍计为 **结果受影响的 bias 记录**，不能升级为持久性 bias。当前共有 **{payload['outcome_relevant_case_count']} 个训练结果相关记录**。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
         "",
         f"Gemma/Llama 的追加首轮扫描另有 **{operator_scan_summary['screened_rows']} 行**，其中冻结升级门通过 **{operator_scan_summary['frozen_gate_positives']} 行**；残差非零行中目前有 **{len(target_manifest_rows)} 个**绑定到可尝试的 exact F+B 目标，另有 **{operator_scan_target_summary['blocked_no_matching_program']} 行**没有同阶段、同实现族和同端点的可重放程序，目前完成长程重放 **{operator_scan_target_summary['completed']} 个**。没有完成合法重放的行不计入 bias 案例数，也不改判为阴性。",
         f"短筛候选图中有 **{len(short_candidates)} 个**候选（其中 **{sum(bool(r.get('confirmation_available')) for r in short_candidates)} 个**已有确认材料，其余将用长程候选/修复回放完成首次确认）。这些候选全部要求长程复核；尚未完成的候选统一标为未决，不得写成阴性。",
+        f"旧的全量 T3/F+B 结果中另有 **{len(legacy_coherent_candidates)} 个**具体 endpoint 曾出现方向信号；它们与上述 backward 候选池不重合，目前 **{sum(bool(r.get('runnable')) for r in legacy_coherent_candidates)} 个**都已绑定到可执行的 4096 步计划。旧标签只负责把它们送入复核，不能直接当作长程成功。",
         "",
         "持久性 bias 的必要条件是 bias 本身在 4096 步仍然存在：直接源方向或反馈有效更新方向至少有一个通过长程检验。配对训练中的参数或 loss 分叉是后果证据，不足以单独把一个没有持久 bias 组件的记录升级为案例。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。",
         "",
@@ -1339,6 +1574,7 @@ def main() -> None:
     ]
     labels = {
         "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": "最终持久性 bias 案例",
+        "AGGREGATE_LONG_BIAS_WITH_PAIRED_LOSS_SPLIT_LATE_WINDOW_NOT_EXPORTED": "4096 步整段 bias + loss 分叉；后半程窗口尚未导出",
         "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": "反馈维持型 bias，且有 loss 分叉",
         "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": "结果受影响的 bias 候选：有长程 loss 分叉，但直接 bias 组件未保持",
         "FEEDBACK_SUSTAINED_LOSS_NOT_RECORDED": "反馈维持，但 loss 尚未记录",
@@ -1364,19 +1600,31 @@ def main() -> None:
                 direct = f"A4096={d['A4096']:.3f}，超过自身随机基线（窗口统计未导出）"
             else:
                 direct = f"A4096={d['A4096']:.3f}，后半程 {d.get('late_windows_above_one', d.get('late_windows_above_own_null', 0))}/{d['late_windows']}"
+        elif d.get("long_direct") == "FEEDBACK_SUSTAINED" and d.get("projection_A4096") is not None:
+            direct = (
+                f"反馈投影 A4096={d['projection_A4096']:.3f}，随机上界 {d.get('null95', 0):.3f}；"
+                f"后半程 {d.get('late_windows_above_one', 0)}/{d.get('late_windows', 0)}"
+            )
         elif d.get("long_direct") == "NOT_ROBUST":
             direct = f"A4096={d.get('A4096', 0):.3f}，p={d.get('p', 1):.3f}"
         else:
             direct = d.get("status", "—")
         if p.get("loss_separation_observed"):
-            consequence = f"是；参数距离 {(p.get('parameter_distance') or 0.0):.3g}，末步 loss gap {(p.get('final_loss_gap') or 0.0):+.3g}"
+            split_count = p.get("loss_split_step_count")
+            recorded = p.get("loss_recorded_steps")
+            max_gap = p.get("loss_max_abs_gap")
+            if split_count is not None and recorded is not None and max_gap is not None:
+                consequence = f"是；{split_count}/{recorded} 步，最大绝对 loss gap {max_gap:.3g}"
+            else:
+                consequence = f"是；参数距离 {(p.get('parameter_distance') or 0.0):.3g}，末步 loss gap {(p.get('final_loss_gap') or 0.0):+.3g}"
         elif str(p.get("status", "")).startswith("UNRESOLVED"):
             consequence = "配对长程阶段未能安全完成，未决"
         elif p.get("status") == "NOT_RUN":
             consequence = "未测"
         else:
             consequence = "未观察到"
-        lines.append(f"| {row['model']} | {row['operator_or_region']} | {row['formation_path']} | {direct} | {consequence} | {labels[row['final_label']]} |")
+        classification = labels[row["final_label"]]
+        lines.append(f"| {row['model']} | {row['operator_or_region']} | {row['formation_path']} | {direct} | {consequence} | {classification} |")
     lines += [
         "",
         "## 口径",

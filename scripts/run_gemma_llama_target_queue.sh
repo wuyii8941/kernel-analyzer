@@ -8,13 +8,21 @@ ROOT="/data1/tzh/kernel-analyzer"
 PY="/data1/tzh/miniconda3/envs/pt_nightly/bin/python"
 PY_GEMMA="/data1/tzh/envs/pt_nightly_transformers5/bin/python"
 MANIFEST="$ROOT/results/property/declared_persistent_4096/operator_scan_target_manifest.json"
-LOG="$ROOT/results/property/declared_persistent_4096/operator_scan_targets_queue.log"
 GPU="${1:-3}"
+SHARD="${2:-0}"
+TOTAL_SHARDS="${3:-1}"
+MIN_FREE_MB="${4:-12000}"
+LOG="$ROOT/results/property/declared_persistent_4096/operator_scan_targets_queue_gpu${GPU}_shard${SHARD}of${TOTAL_SHARDS}.log"
+
+if (( TOTAL_SHARDS < 1 || SHARD < 0 || SHARD >= TOTAL_SHARDS )); then
+  echo "usage: $0 GPU [SHARD TOTAL_SHARDS]" >&2
+  exit 2
+fi
 
 wait_for_gpu() {
   while true; do
     free=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | awk -F, -v g="$GPU" '$1+0==g {gsub(/ /,"",$2); print $2}')
-    if [[ -n "$free" && "$free" -ge 12000 ]]; then return 0; fi
+    if [[ -n "$free" && "$free" -ge "$MIN_FREE_MB" ]]; then return 0; fi
     echo "[$(date -Is)] waiting for GPU${GPU}, free_memory=${free:-unknown} MiB" >>"$LOG"
     sleep 120
   done
@@ -161,6 +169,15 @@ PY
 
 mkdir -p "$(dirname "$LOG")"
 echo "[$(date -Is)] queue start" >>"$LOG"
-while IFS= read -r row; do run_one "$row"; done < <("$PY" -c 'import json,sys; [print(json.dumps(r,sort_keys=True)) for r in json.load(open(sys.argv[1]))["rows"]]' "$MANIFEST")
+while IFS= read -r row; do run_one "$row"; done < <(
+  "$PY" -c '
+import json, sys
+rows = json.load(open(sys.argv[1]))["rows"]
+shard, total = int(sys.argv[2]), int(sys.argv[3])
+for index, row in enumerate(rows):
+    if index % total == shard:
+        print(json.dumps(row, sort_keys=True))
+' "$MANIFEST" "$SHARD" "$TOTAL_SHARDS"
+)
 "$PY" "$ROOT/scripts/build_all_bias_case_audit.py" >>"$LOG" 2>&1 || true
-echo "[$(date -Is)] queue complete" >>"$LOG"
+echo "[$(date -Is)] queue complete gpu=$GPU shard=$SHARD/$TOTAL_SHARDS" >>"$LOG"

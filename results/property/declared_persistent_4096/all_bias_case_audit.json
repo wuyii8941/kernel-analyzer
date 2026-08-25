@@ -1,7 +1,8 @@
 {
+  "aggregate_long_bias_missing_window_count": 2,
   "all_long_replay_pending_candidate_count": 66,
-  "all_long_replay_required_candidate_count": 69,
-  "case_count": 244,
+  "all_long_replay_required_candidate_count": 126,
+  "case_count": 301,
   "coherent_endpoint_witness_count": 57,
   "definition": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. Separately, any earlier bias candidate that produces a paired loss split during the long replay is counted as outcome_relevant, even if its direct bias component later stops; it is not promoted to the stricter persistent-component count. Different converged losses are not required or claimed.",
   "direct_persistent_case_count": 5,
@@ -13,16 +14,24 @@
   "historical_candidate_count": 11,
   "label_counts": {
     "ABSTAIN_NOT_REPLAYABLE": 1,
+    "AGGREGATE_LONG_BIAS_WITH_PAIRED_LOSS_SPLIT_LATE_WINDOW_NOT_EXPORTED": 2,
     "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": 1,
     "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": 4,
     "NOT_APPLICABLE_NO_CARRIER_EFFECT": 2,
     "NO_ROBUST_LONG_DIRECT_BIAS": 12,
-    "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": 5,
+    "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": 3,
     "UNRESOLVED_FORMATION": 1,
-    "UNRESOLVED_LONG_REPLAY": 11,
-    "UNRESOLVED_LONG_REPLAY_PENDING": 186,
-    "UNRESOLVED_PILOT_REPLAY_RESOURCE": 3,
+    "UNRESOLVED_LONG_REPLAY": 17,
+    "UNRESOLVED_LONG_REPLAY_PENDING": 233,
+    "UNRESOLVED_PILOT_REPLAY_RESOURCE": 7,
     "UNRESOLVED_REPLAY_BLOCKED": 18
+  },
+  "legacy_coherent_candidate_universe": {
+    "artifact": "results/property/declared_persistent_4096/legacy_coherent_long_replay_manifest.json",
+    "claim_boundary": "Legacy coherent F+B labels are candidate evidence only; each endpoint receives a fresh 4096-step candidate/repair replay and failed runtime remains unresolved.",
+    "count": 57,
+    "pending_or_unresolved_count": 57,
+    "ready_for_long_replay_count": 57
   },
   "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
   "long_loss_split_without_direct_count": 4,
@@ -310,6 +319,7 @@
     "total_nonzero_scan_rows_in_manifest_or_blocked": 150
   },
   "outcome_relevant_case_count": 10,
+  "rolling_window_confirmed_persistent_count": 4,
   "rows": [
     {
       "case": "Liger fused CE",
@@ -333,11 +343,20 @@
       "paired_consequence": {
         "artifact": "results/property/paired_loss_4096/liger_fused_ce.json",
         "final_loss_gap": -0.13049191236495972,
+        "final_recorded_loss_gap": 0.04153043870610418,
         "loss_audit": {
           "any_period_split": true,
-          "recorded": true
+          "final_recorded_gap": 0.04153043870610418,
+          "max_abs_gap": 0.5551912356168032,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 4095,
+          "split_threshold": 1e-08
         },
+        "loss_max_abs_gap": 0.5551912356168032,
+        "loss_recorded_steps": 4096,
         "loss_separation_observed": true,
+        "loss_split_step_count": 4095,
         "parameter_distance": 9.266324996948242,
         "recent_loss_gap_mean": 0.0006728400081801311,
         "recent_loss_gap_std": 0.020003448625209724,
@@ -369,11 +388,20 @@
       "paired_consequence": {
         "artifact": "results/property/convergence_v1/phi_carrier_adamw_convergence.json",
         "final_loss_gap": 0.0015773475170135498,
+        "final_recorded_loss_gap": 0.0023789405822753906,
         "loss_audit": {
           "any_period_split": true,
-          "recorded": true
+          "final_recorded_gap": 0.0023789405822753906,
+          "max_abs_gap": 0.03244137763977051,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 4066,
+          "split_threshold": 1e-08
         },
+        "loss_max_abs_gap": 0.03244137763977051,
+        "loss_recorded_steps": 4096,
         "loss_separation_observed": true,
+        "loss_split_step_count": 4066,
         "parameter_distance": 0.01911034993827343,
         "recent_loss_gap_mean": 0.0008656177669763565,
         "recent_loss_gap_std": 0.0105780582714005,
@@ -405,11 +433,20 @@
       "paired_consequence": {
         "artifact": "results/property/paired_loss_4096/qwen_lmhead_dx.json",
         "final_loss_gap": 1.2129545211791992e-05,
+        "final_recorded_loss_gap": 7.224082946777344e-05,
         "loss_audit": {
           "any_period_split": true,
-          "recorded": true
+          "final_recorded_gap": 7.224082946777344e-05,
+          "max_abs_gap": 0.00426793098449707,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 2782,
+          "split_threshold": 1e-08
         },
+        "loss_max_abs_gap": 0.00426793098449707,
+        "loss_recorded_steps": 4096,
         "loss_separation_observed": true,
+        "loss_split_step_count": 2782,
         "parameter_distance": 0.001631635008379817,
         "recent_loss_gap_mean": 5.691312253475189e-06,
         "recent_loss_gap_std": 0.0005042854995146085,
@@ -441,11 +478,20 @@
       "paired_consequence": {
         "artifact": "results/property/declared_persistent_4096/qwen64_vproj_live_refresh_live_paired.json",
         "final_loss_gap": -0.004801750183105469,
+        "final_recorded_loss_gap": -0.004801750183105469,
         "loss_audit": {
           "any_period_split": true,
-          "recorded": true
+          "final_recorded_gap": -0.004801750183105469,
+          "max_abs_gap": 0.2645270824432373,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 4096,
+          "split_threshold": 1e-08
         },
+        "loss_max_abs_gap": 0.2645270824432373,
+        "loss_recorded_steps": 4096,
         "loss_separation_observed": true,
+        "loss_split_step_count": 4096,
         "parameter_distance": 0.2199705480389887,
         "recent_loss_gap_mean": 0.004098633769899607,
         "recent_loss_gap_std": 0.013470370812385776,
@@ -477,11 +523,20 @@
       "paired_consequence": {
         "artifact": "results/property/declared_persistent_4096/qwen_vproj_live_refresh_live_paired.json",
         "final_loss_gap": 0.0003705024719238281,
+        "final_recorded_loss_gap": 0.0003705024719238281,
         "loss_audit": {
           "any_period_split": true,
-          "recorded": true
+          "final_recorded_gap": 0.0003705024719238281,
+          "max_abs_gap": 0.13423681259155273,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 4096,
+          "split_threshold": 1e-08
         },
+        "loss_max_abs_gap": 0.13423681259155273,
+        "loss_recorded_steps": 4096,
         "loss_separation_observed": true,
+        "loss_split_step_count": 4096,
         "parameter_distance": 0.3021670357824462,
         "recent_loss_gap_mean": -0.0006145299412310123,
         "recent_loss_gap_std": 0.00942503711004147,
@@ -513,11 +568,20 @@
       "paired_consequence": {
         "artifact": "results/property/declared_persistent_4096/mamba_in_proj_live_refresh.json",
         "final_loss_gap": 0.027274131774902344,
+        "final_recorded_loss_gap": 0.027274131774902344,
         "loss_audit": {
           "any_period_split": true,
-          "recorded": true
+          "final_recorded_gap": 0.027274131774902344,
+          "max_abs_gap": 0.04711008071899414,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 4096,
+          "split_threshold": 1e-08
         },
+        "loss_max_abs_gap": 0.04711008071899414,
+        "loss_recorded_steps": 4096,
         "loss_separation_observed": true,
+        "loss_split_step_count": 4096,
         "parameter_distance": null,
         "recent_loss_gap_mean": 1.5167519450187683e-05,
         "recent_loss_gap_std": 0.012713337447941692,
@@ -549,11 +613,20 @@
       "paired_consequence": {
         "artifact": "results/property/declared_persistent_4096/qwen_saved_p_live_refresh_live_paired.json",
         "final_loss_gap": -0.0022797584533691406,
+        "final_recorded_loss_gap": -0.0022797584533691406,
         "loss_audit": {
           "any_period_split": true,
-          "recorded": true
+          "final_recorded_gap": -0.0022797584533691406,
+          "max_abs_gap": 0.010428905487060547,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 4096,
+          "split_threshold": 1e-08
         },
+        "loss_max_abs_gap": 0.010428905487060547,
+        "loss_recorded_steps": 4096,
         "loss_separation_observed": true,
+        "loss_split_step_count": 4096,
         "parameter_distance": 0.12252924832089666,
         "recent_loss_gap_mean": -0.00015041884034872055,
         "recent_loss_gap_std": 0.002710823878132805,
@@ -571,16 +644,32 @@
       "long_direct": {
         "A4096": 3.1003410526160846,
         "artifact": "results/property/declared_persistent_4096/qwen3vl_silu_4096_with_loss.json",
+        "classification_level": "feedback",
         "feedback_A4096": 3.1003987449351644,
         "final_drift_l2": 0.8884283900260925,
+        "late_windows": 62,
+        "late_windows_above_one": 50,
         "local_A4096": 1.0170143222848727,
         "long_direct": "FEEDBACK_SUSTAINED",
+        "loss_audit": {
+          "any_period_split": true,
+          "final_recorded_gap": -7.947285496356926e-09,
+          "max_abs_gap": 0.5454945106221203,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 3769,
+          "split_threshold": 1e-08
+        },
+        "null95": 1.9541374521938923,
+        "p": 0.00024993751562109475,
         "paired_loss_gap_final": -7.947285496356926e-09,
         "paired_loss_gap_mean_last_512": 4.9280933604733956e-08,
         "paired_loss_gap_std_last_512": 1.286888539562174e-07,
+        "projection_A4096": 6.874933937384515,
         "status": "COMPLETE_4096",
         "steps": 4096,
-        "verdict": "FEEDBACK_SUSTAINED_SEPARATION"
+        "verdict": "FEEDBACK_SUSTAINED_SEPARATION",
+        "window_evidence": "results/property/declared_persistent_4096/qwen3vl_silu_4096_with_loss_windows.json"
       },
       "matrix_case_id": "qwen3vl_silu_backward",
       "model": "Qwen3-VL-Reranker-2B",
@@ -588,7 +677,20 @@
       "paired_consequence": {
         "artifact": "results/property/declared_persistent_4096/qwen3vl_silu_4096_with_loss.json",
         "final_loss_gap": -7.947285496356926e-09,
+        "final_recorded_loss_gap": -7.947285496356926e-09,
+        "loss_audit": {
+          "any_period_split": true,
+          "final_recorded_gap": -7.947285496356926e-09,
+          "max_abs_gap": 0.5454945106221203,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 3769,
+          "split_threshold": 1e-08
+        },
+        "loss_max_abs_gap": 0.5454945106221203,
+        "loss_recorded_steps": 4096,
         "loss_separation_observed": true,
+        "loss_split_step_count": 3769,
         "parameter_distance": 0.8884283900260925,
         "recent_loss_gap_mean": 4.9280933604733956e-08,
         "recent_loss_gap_std": 1.286888539562174e-07,
@@ -639,19 +741,29 @@
     {
       "case": "Llama lm_head dX",
       "direct_sha256": "f3c37f71117adab7483bc260401675100534c44439dd8329279e1c5c0ddb3233",
-      "final_label": "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
+      "final_label": "AGGREGATE_LONG_BIAS_WITH_PAIRED_LOSS_SPLIT_LATE_WINDOW_NOT_EXPORTED",
       "formation_path": "event/pairing family replication",
       "long_direct": {
-        "A4096": 5.880545232175569,
+        "A4096": 2.578206563498868,
+        "actual_A4096": 5.880545232175569,
         "artifact": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/lmhead_consequence4096.json",
+        "classification_level": "local",
         "feedback_A4096": 5.496674980338488,
         "final_drift_l2": 0.00037550932029262185,
         "late_windows": null,
         "late_windows_above_own_null": null,
         "local_A4096": 2.578206563498868,
         "long_direct": "ROBUST",
-        "loss_audit": {},
-        "null95": 1.0295860095907672,
+        "loss_audit": {
+          "any_period_split": true,
+          "final_recorded_gap": 4.2438507080078125e-05,
+          "max_abs_gap": 0.001909017562866211,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 1890,
+          "split_threshold": 1e-08
+        },
+        "null95": 1.023415036289319,
         "p": 0.004975124378109453,
         "paired_loss_gap_final": null,
         "paired_loss_gap_mean_last_512": null,
@@ -665,11 +777,20 @@
       "paired_consequence": {
         "artifact": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/lmhead_consequence4096.json",
         "final_loss_gap": 4.2438507080078125e-05,
+        "final_recorded_loss_gap": 4.2438507080078125e-05,
         "loss_audit": {
           "any_period_split": true,
-          "recorded": true
+          "final_recorded_gap": 4.2438507080078125e-05,
+          "max_abs_gap": 0.001909017562866211,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 1890,
+          "split_threshold": 1e-08
         },
+        "loss_max_abs_gap": 0.001909017562866211,
+        "loss_recorded_steps": 4096,
         "loss_separation_observed": true,
+        "loss_split_step_count": 1890,
         "parameter_distance": 0.00037550932029262185,
         "recent_loss_gap_mean": -8.874572813510895e-06,
         "recent_loss_gap_std": 0.000270874530224479,
@@ -682,19 +803,29 @@
     {
       "case": "Ministral lm_head dX",
       "direct_sha256": "6e7ae5eb5b91252af55ce1a295f7dbdd924860912aeb5e4117b9c6d850271fa1",
-      "final_label": "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
+      "final_label": "AGGREGATE_LONG_BIAS_WITH_PAIRED_LOSS_SPLIT_LATE_WINDOW_NOT_EXPORTED",
       "formation_path": "event/pairing family replication",
       "long_direct": {
-        "A4096": 5.049820008933974,
+        "A4096": 1.7543663675423466,
+        "actual_A4096": 5.049820008933974,
         "artifact": "results/property/tcmp_allop_v1/heldout/ministral3_3b_text128/lmhead_consequence4096.json",
+        "classification_level": "local",
         "feedback_A4096": 4.902936135578214,
         "final_drift_l2": 0.00041981719550676644,
         "late_windows": null,
         "late_windows_above_own_null": null,
         "local_A4096": 1.7543663675423466,
         "long_direct": "ROBUST",
-        "loss_audit": {},
-        "null95": 1.0284199943298211,
+        "loss_audit": {
+          "any_period_split": true,
+          "final_recorded_gap": 0.0,
+          "max_abs_gap": 0.00101470947265625,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 755,
+          "split_threshold": 1e-08
+        },
+        "null95": 1.0240154029066872,
         "p": 0.004975124378109453,
         "paired_loss_gap_final": null,
         "paired_loss_gap_mean_last_512": null,
@@ -708,11 +839,20 @@
       "paired_consequence": {
         "artifact": "results/property/tcmp_allop_v1/heldout/ministral3_3b_text128/lmhead_consequence4096.json",
         "final_loss_gap": 0.0,
+        "final_recorded_loss_gap": 0.0,
         "loss_audit": {
           "any_period_split": true,
-          "recorded": true
+          "final_recorded_gap": 0.0,
+          "max_abs_gap": 0.00101470947265625,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 755,
+          "split_threshold": 1e-08
         },
+        "loss_max_abs_gap": 0.00101470947265625,
+        "loss_recorded_steps": 4096,
         "loss_separation_observed": true,
+        "loss_split_step_count": 755,
         "parameter_distance": 0.00041981719550676644,
         "recent_loss_gap_mean": -9.870855137705803e-06,
         "recent_loss_gap_std": 0.0001589420520014083,
@@ -849,22 +989,22 @@
     {
       "case": "multishape-backward-cell-0191",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY",
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
       "formation_path": "feedback-sustained candidate",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/expanded_controls/retry_failures/multishape-backward-cell-0191.json",
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0191_4096.json",
         "long_direct": "UNRESOLVED",
-        "reason": "long replay unavailable",
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
+        "reason": "A compact 4096-step retry is currently in progress; the earlier attempt failure is not treated as a negative.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
       "matrix_case_id": "multishape-backward-cell-0191",
       "model": "DeepSeek-R1-Qwen3-8B",
       "operator_or_region": "DeepSeek backward cell 0191; attention q-norm carrier",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/expanded_controls/retry_failures/multishape-backward-cell-0191.json",
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0191_4096.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
       "paired_sha256": null,
@@ -1791,22 +1931,22 @@
     {
       "case": "llama32_text128_scan_0024",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0024/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/unresolved/llama32_text128_scan_0024_pilot.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "reason": "Target pilot failed or could not allocate resources; no negative label is assigned.",
+        "status": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
         "steps": null
       },
       "matrix_case_id": "llama32_text128_scan_0024",
       "model": "Llama-3.2-3B",
       "operator_or_region": "BACKWARD triton_red_fused__to_copy__unsafe_view_add_mul_sum_view [out_ptr1]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0024/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/unresolved/llama32_text128_scan_0024_pilot.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "status": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
         "steps": null
       },
       "paired_sha256": null,
@@ -1821,23 +1961,23 @@
     {
       "case": "llama32_text128_scan_0025",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "UNRESOLVED_LONG_REPLAY",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0025/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0025_pilot/short_screen.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "reason": "The target pilot produced zero candidate/repair energy; this is retained as unresolved because the historical screen endpoint may not have rebound to the freshly compiled callsite.",
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "matrix_case_id": "llama32_text128_scan_0025",
       "model": "Llama-3.2-3B",
       "operator_or_region": "BACKWARD triton_red_fused__log_softmax__log_softmax_backward_data__to_copy__unsafe_view_arange_eq_expand_nll_loss_backward_nll_loss_forward_scalar_tensor_slice_view [in_out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0025/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0025_pilot/consequence.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "paired_sha256": null,
       "scope": "operator_scan_candidate",
@@ -1851,23 +1991,23 @@
     {
       "case": "llama32_text128_scan_0026",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "UNRESOLVED_LONG_REPLAY",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0026/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0026_pilot_rebind_model_layers_0_input_layernorm_weight/short_screen.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "reason": "The target pilot produced zero candidate/repair energy; this is retained as unresolved because the historical screen endpoint may not have rebound to the freshly compiled callsite.",
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "matrix_case_id": "llama32_text128_scan_0026",
       "model": "Llama-3.2-3B",
       "operator_or_region": "FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0026/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0026_pilot_rebind_model_layers_0_input_layernorm_weight/consequence.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "paired_sha256": null,
       "scope": "operator_scan_candidate",
@@ -1881,23 +2021,23 @@
     {
       "case": "llama32_text128_scan_0027",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "UNRESOLVED_LONG_REPLAY",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0027/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0027_pilot_rebind_model_layers_0_input_layernorm_weight/short_screen.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "reason": "The target pilot produced zero candidate/repair energy; this is retained as unresolved because the historical screen endpoint may not have rebound to the freshly compiled callsite.",
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "matrix_case_id": "llama32_text128_scan_0027",
       "model": "Llama-3.2-3B",
       "operator_or_region": "BACKWARD triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view [in_out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0027/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0027_pilot_rebind_model_layers_0_input_layernorm_weight/consequence.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "paired_sha256": null,
       "scope": "operator_scan_candidate",
@@ -1911,23 +2051,23 @@
     {
       "case": "llama32_text128_scan_0028",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "UNRESOLVED_LONG_REPLAY",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0028/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0028_pilot_rebind_model_layers_0_input_layernorm_weight/short_screen.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "reason": "The target pilot produced zero candidate/repair energy; this is retained as unresolved because the historical screen endpoint may not have rebound to the freshly compiled callsite.",
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "matrix_case_id": "llama32_text128_scan_0028",
       "model": "Llama-3.2-3B",
       "operator_or_region": "BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [in_out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0028/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0028_pilot_rebind_model_layers_0_input_layernorm_weight/consequence.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "paired_sha256": null,
       "scope": "operator_scan_candidate",
@@ -1941,23 +2081,23 @@
     {
       "case": "llama32_text128_scan_0029",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "UNRESOLVED_LONG_REPLAY",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0029/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0029_pilot_rebind_model_layers_0_input_layernorm_weight/short_screen.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "reason": "The target pilot produced zero candidate/repair energy; this is retained as unresolved because the historical screen endpoint may not have rebound to the freshly compiled callsite.",
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "matrix_case_id": "llama32_text128_scan_0029",
       "model": "Llama-3.2-3B",
       "operator_or_region": "BACKWARD triton_poi_fused__to_copy_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_slice_backward_transpose_unsqueeze_view [out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0029/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0029_pilot_rebind_model_layers_0_input_layernorm_weight/consequence.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "paired_sha256": null,
       "scope": "operator_scan_candidate",
@@ -1971,23 +2111,23 @@
     {
       "case": "llama32_text128_scan_0030",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "UNRESOLVED_LONG_REPLAY",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0030/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0030_pilot_rebind_model_layers_0_input_layernorm_weight/short_screen.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "reason": "The target pilot produced zero candidate/repair energy; this is retained as unresolved because the historical screen endpoint may not have rebound to the freshly compiled callsite.",
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "matrix_case_id": "llama32_text128_scan_0030",
       "model": "Llama-3.2-3B",
       "operator_or_region": "BACKWARD triton_red_fused__to_copy_add_mul_sum_view [out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0030/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0030_pilot_rebind_model_layers_0_input_layernorm_weight/consequence.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "paired_sha256": null,
       "scope": "operator_scan_candidate",
@@ -2001,23 +2141,23 @@
     {
       "case": "llama32_text128_scan_0031",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "UNRESOLVED_LONG_REPLAY",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0031/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0031_pilot_rebind_model_layers_0_input_layernorm_weight/short_screen.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "reason": "The target pilot produced zero candidate/repair energy; this is retained as unresolved because the historical screen endpoint may not have rebound to the freshly compiled callsite.",
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "matrix_case_id": "llama32_text128_scan_0031",
       "model": "Llama-3.2-3B",
       "operator_or_region": "BACKWARD triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view [in_out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0031/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0031_pilot_rebind_model_layers_0_input_layernorm_weight/consequence.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "status": "UNRESOLVED_PARAMETER_BINDING",
+        "steps": 16
       },
       "paired_sha256": null,
       "scope": "operator_scan_candidate",
@@ -2031,22 +2171,22 @@
     {
       "case": "gemma4_text128_scan_0032",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_text128_scan_0032/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/unresolved/gemma4_text128_scan_0032_pilot.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "reason": "Target pilot failed or could not allocate resources; no negative label is assigned.",
+        "status": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
         "steps": null
       },
       "matrix_case_id": "gemma4_text128_scan_0032",
       "model": "Gemma-4 E2B",
       "operator_or_region": "BACKWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view [out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_text128_scan_0032/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/unresolved/gemma4_text128_scan_0032_pilot.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "status": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
         "steps": null
       },
       "paired_sha256": null,
@@ -2061,22 +2201,22 @@
     {
       "case": "gemma4_text128_scan_0033",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_text128_scan_0033/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/unresolved/gemma4_text128_scan_0033_pilot.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "reason": "Target pilot failed or could not allocate resources; no negative label is assigned.",
+        "status": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
         "steps": null
       },
       "matrix_case_id": "gemma4_text128_scan_0033",
       "model": "Gemma-4 E2B",
       "operator_or_region": "BACKWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view [out_ptr2]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_text128_scan_0033/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/unresolved/gemma4_text128_scan_0033_pilot.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "status": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
         "steps": null
       },
       "paired_sha256": null,
@@ -2091,22 +2231,22 @@
     {
       "case": "gemma4_text128_scan_0034",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_text128_scan_0034/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/unresolved/gemma4_text128_scan_0034_pilot.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "reason": "Target pilot failed or could not allocate resources; no negative label is assigned.",
+        "status": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
         "steps": null
       },
       "matrix_case_id": "gemma4_text128_scan_0034",
       "model": "Gemma-4 E2B",
       "operator_or_region": "BACKWARD triton_red_fused__to_copy_add_mul_pow_sum_view [out_ptr1]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_text128_scan_0034/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/unresolved/gemma4_text128_scan_0034_pilot.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "status": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
         "steps": null
       },
       "paired_sha256": null,
@@ -2126,9 +2266,9 @@
       "long_direct": {
         "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_text128_scan_0035/consequence.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
+        "reason": "The frozen target pilot is risk-positive; its 4096-step consequence is still required.",
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "steps": 16
       },
       "matrix_case_id": "gemma4_text128_scan_0035",
       "model": "Gemma-4 E2B",
@@ -2137,7 +2277,7 @@
         "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_text128_scan_0035/consequence.json",
         "loss_separation_observed": false,
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "steps": 16
       },
       "paired_sha256": null,
       "scope": "operator_scan_candidate",
@@ -7945,6 +8085,1830 @@
       }
     },
     {
+      "candidate_id": "qwen:seq64:forward:232:in_out_ptr1",
+      "case": "legacy-coherent-qwen-seq64-forward-232-in_out_ptr1",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.12.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:rsqrt_51",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq64_r1/27225bab71d7acbc.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq64-forward-232-in_out_ptr1_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "FORWARD rsqrt [forward:232:in_out_ptr1]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq64-forward-232-in_out_ptr1_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "qwen:seq64:forward:273:in_out_ptr1",
+      "case": "legacy-coherent-qwen-seq64-forward-273-in_out_ptr1",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.14.mlp.down_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:rsqrt_60",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq64_r1/f0596e3f3d41a6ae.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq64-forward-273-in_out_ptr1_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "FORWARD rsqrt [forward:273:in_out_ptr1]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq64-forward-273-in_out_ptr1_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "qwen:seq64:forward:295:in_out_ptr0",
+      "case": "legacy-coherent-qwen-seq64-forward-295-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.16.self_attn.k_norm.weight",
+        "exact_aot_endpoint_id": "forward:graph0:rsqrt_66",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq64_r1/029e95582c15d689.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq64-forward-295-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "FORWARD rsqrt [forward:295:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq64-forward-295-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "qwen:seq64:backward:553:output_0",
+      "case": "legacy-coherent-qwen-seq64-backward-553-output_0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.26.mlp.down_proj.weight",
+        "exact_aot_endpoint_id": "backward:graph0:mm_213",
+        "implementation_kind": "EXTERN",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq64_r1/73e8ff031a6fbb49.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq64-backward-553-output_0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "BACKWARD mm [backward:553:output_0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq64-backward-553-output_0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "qwen:seq128:forward:5:out_ptr2",
+      "case": "legacy-coherent-qwen-seq128-forward-5-out_ptr2",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.0.self_attn.k_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:permute_1360",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq128_r1/local_f5_kproj.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq128-forward-5-out_ptr2_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "FORWARD permute [forward:5:out_ptr2]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq128-forward-5-out_ptr2_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "qwen:seq256:forward:115:in_out_ptr0",
+      "case": "legacy-coherent-qwen-seq256-forward-115-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.6.self_attn.k_norm.weight",
+        "exact_aot_endpoint_id": "forward:graph0:rsqrt_26",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq256_r1/c010e48918eb92f2.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-forward-115-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "FORWARD rsqrt [forward:115:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-forward-115-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "qwen:seq256:forward:133:in_out_ptr0",
+      "case": "legacy-coherent-qwen-seq256-forward-133-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.7.self_attn.k_norm.weight",
+        "exact_aot_endpoint_id": "forward:graph0:rsqrt_30",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq256_r1/ee727121173c39f7.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-forward-133-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "FORWARD rsqrt [forward:133:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-forward-133-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "qwen:seq256:forward:295:in_out_ptr0",
+      "case": "legacy-coherent-qwen-seq256-forward-295-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.16.self_attn.k_norm.weight",
+        "exact_aot_endpoint_id": "forward:graph0:rsqrt_66",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq256_r1/029e95582c15d689.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-forward-295-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "FORWARD rsqrt [forward:295:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-forward-295-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "qwen:seq256:forward:322:in_out_ptr1",
+      "case": "legacy-coherent-qwen-seq256-forward-322-in_out_ptr1",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.17.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:rsqrt_71",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq256_r1/c20bb0be34386743.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-forward-322-in_out_ptr1_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "FORWARD rsqrt [forward:322:in_out_ptr1]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-forward-322-in_out_ptr1_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "qwen:seq256:forward:483:output_0",
+      "case": "legacy-coherent-qwen-seq256-forward-483-output_0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.26.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:mm_185",
+        "implementation_kind": "EXTERN",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq256_r1/664f626184303823.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-forward-483-output_0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "FORWARD mm [forward:483:output_0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-forward-483-output_0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "qwen:seq256:backward:552:output_0",
+      "case": "legacy-coherent-qwen-seq256-backward-552-output_0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.26.mlp.down_proj.weight",
+        "exact_aot_endpoint_id": "backward:graph0:mm_213",
+        "implementation_kind": "EXTERN",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq256_r1/3409498300caf38f.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-backward-552-output_0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "BACKWARD mm [backward:552:output_0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-backward-552-output_0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "qwen:seq256:backward:581:out_ptr0",
+      "case": "legacy-coherent-qwen-seq256-backward-581-out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.26.self_attn.k_norm.weight",
+        "exact_aot_endpoint_id": "backward:graph0:sum_51",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq256_r1/e790925acb1ffc67.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-backward-581-out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "BACKWARD sum [backward:581:out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-backward-581-out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "qwen:seq256:backward:589:out_ptr0",
+      "case": "legacy-coherent-qwen-seq256-backward-589-out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.26.input_layernorm.weight",
+        "exact_aot_endpoint_id": "backward:graph0:sum_55",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/qwen_seq256_r1/e1980514206ff7bb.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-backward-589-out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "qwen",
+      "operator_or_region": "BACKWARD sum [backward:589:out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-qwen-seq256-backward-589-out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "phi4:seq128:forward:108:in_out_ptr1",
+      "case": "legacy-coherent-phi4-seq128-forward-108-in_out_ptr1",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.6.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:forward_g4__rsqrt_13",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/phi4_seq128_r1/ae9144212b006296.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-phi4-seq128-forward-108-in_out_ptr1_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "phi4",
+      "operator_or_region": "FORWARD rsqrt [forward:108:in_out_ptr1]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-phi4-seq128-forward-108-in_out_ptr1_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "phi4:seq256:forward:18:in_out_ptr0",
+      "case": "legacy-coherent-phi4-seq256-forward-18-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.0.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:forward_g4__rsqrt_1",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/phi4_seq256_r1/099bce5a04b145c5.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-phi4-seq256-forward-18-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "phi4",
+      "operator_or_region": "FORWARD rsqrt [forward:18:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-phi4-seq256-forward-18-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "phi4:seq256:forward:22:in_out_ptr1",
+      "case": "legacy-coherent-phi4-seq256-forward-22-in_out_ptr1",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.0.mlp.down_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:forward_g4__rsqrt_2",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/phi4_seq256_r1/b28c74c999cc3f20.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-phi4-seq256-forward-22-in_out_ptr1_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "phi4",
+      "operator_or_region": "FORWARD rsqrt [forward:22:in_out_ptr1]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-phi4-seq256-forward-22-in_out_ptr1_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "phi4:seq256:forward:93:in_out_ptr1",
+      "case": "legacy-coherent-phi4-seq256-forward-93-in_out_ptr1",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.5.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:forward_g4__rsqrt_11",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/phi4_seq256_r1/c80a714ee5029153.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-phi4-seq256-forward-93-in_out_ptr1_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "phi4",
+      "operator_or_region": "FORWARD rsqrt [forward:93:in_out_ptr1]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-phi4-seq256-forward-93-in_out_ptr1_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:47:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-47-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.2.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_26",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/a249303bf5dbe446.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-47-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:47:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-47-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:299:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-299-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.16.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_166",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/d5160bed9f75dc56.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-299-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:299:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-299-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:317:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-317-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.17.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_176",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/12d7284a02084c10.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-317-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:317:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-317-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:371:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-371-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.20.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_206",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/ff0f82a860db49d3.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-371-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:371:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-371-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:389:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-389-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.21.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_216",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/7cc237c5406f79a7.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-389-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:389:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-389-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:407:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-407-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.22.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_226",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/5819a076ffbaf9de.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-407-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:407:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-407-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:443:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-443-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.24.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_246",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/ef9af8bb45202753.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-443-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:443:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-443-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:460:output_0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-460-output_0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.25.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:bmm_50",
+        "implementation_kind": "EXTERN",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/ee600ceb3a1641ad.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-460-output_0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD bmm [forward:460:output_0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-460-output_0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:461:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-461-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.25.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_256",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/36d5c31bb32013aa.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-461-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:461:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-461-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:515:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-515-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.28.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_286",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/cf503a156db17483.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-515-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:515:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-515-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:533:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-533-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.29.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_296",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/ccbb22b9d4dc33ef.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-533-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:533:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-533-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:550:output_0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-550-output_0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.30.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:bmm_60",
+        "implementation_kind": "EXTERN",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/4fa70fad937dbe8c.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-550-output_0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD bmm [forward:550:output_0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-550-output_0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:551:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-551-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.30.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_306",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/e70405ff7ec0c914.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-551-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:551:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-551-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:568:output_0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-568-output_0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.31.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:bmm_62",
+        "implementation_kind": "EXTERN",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/0b0fe1d74f5cf6dc.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-568-output_0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD bmm [forward:568:output_0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-568-output_0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:586:output_0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-586-output_0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.32.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:bmm_64",
+        "implementation_kind": "EXTERN",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/f15e78713bfbb711.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-586-output_0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD bmm [forward:586:output_0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-586-output_0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:587:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-587-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.32.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_326",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/c26163196da4cfba.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-587-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:587:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-587-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:605:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-605-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.33.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_336",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/314c8120df1f1fda.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-605-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:605:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-605-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:619:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-619-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.34.self_attn.k_norm.weight",
+        "exact_aot_endpoint_id": "forward:graph0:rsqrt_138",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/29c3bd398c29eb49.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-619-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD rsqrt [forward:619:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-619-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:622:output_0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-622-output_0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.34.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:bmm_68",
+        "implementation_kind": "EXTERN",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/995abae4dbd4d5fc.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-622-output_0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD bmm [forward:622:output_0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-622-output_0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:forward:623:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-forward-623-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.34.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_346",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/2e7ab7d7f35175bb.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-623-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:623:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-forward-623-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq64:backward:1854:out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq64-backward-1854-out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.1.self_attn.q_norm.weight",
+        "exact_aot_endpoint_id": "backward:graph0:sum_424",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq64_r1/e2aaccb6644d8f0d.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-backward-1854-out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "BACKWARD sum [backward:1854:out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq64-backward-1854-out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq128:forward:115:in_out_ptr1",
+      "case": "legacy-coherent-deepseek8b-seq128-forward-115-in_out_ptr1",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.6.self_attn.k_norm.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_65",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq128_r1/bd32be90eac07ac7.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-115-in_out_ptr1_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:115:in_out_ptr1]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-115-in_out_ptr1_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq128:forward:117:out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq128-forward-117-out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.6.self_attn.k_norm.weight",
+        "exact_aot_endpoint_id": "forward:graph0:clone_26",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq128_r1/377dc049c8c20579.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-117-out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD clone [forward:117:out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-117-out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq128:forward:160:in_out_ptr1",
+      "case": "legacy-coherent-deepseek8b-seq128-forward-160-in_out_ptr1",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.8.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:rsqrt_35",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq128_r1/6285312e178e81b1.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-160-in_out_ptr1_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD rsqrt [forward:160:in_out_ptr1]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-160-in_out_ptr1_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq128:forward:317:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq128-forward-317-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.17.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_176",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq128_r1/12d7284a02084c10.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-317-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:317:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-317-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq128:forward:443:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq128-forward-443-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.24.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_246",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq128_r1/ef9af8bb45202753.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-443-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:443:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-443-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq128:forward:515:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq128-forward-515-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.28.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_286",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq128_r1/cf503a156db17483.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-515-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:515:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-515-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq128:forward:551:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq128-forward-551-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.30.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_306",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq128_r1/e70405ff7ec0c914.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-551-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:551:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-551-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq128:forward:569:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq128-forward-569-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.31.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_316",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq128_r1/b2751500d5ac8504.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-569-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:569:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-569-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq128:forward:619:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq128-forward-619-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.34.self_attn.k_norm.weight",
+        "exact_aot_endpoint_id": "forward:graph0:rsqrt_138",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq128_r1/29c3bd398c29eb49.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-619-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD rsqrt [forward:619:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq128-forward-619-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq256:forward:83:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq256-forward-83-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.4.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_46",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq256_r1/4a8203d99caaf581.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-83-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:83:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-83-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq256:forward:317:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq256-forward-317-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.17.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_176",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq256_r1/12d7284a02084c10.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-317-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:317:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-317-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq256:forward:460:output_0",
+      "case": "legacy-coherent-deepseek8b-seq256-forward-460-output_0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.25.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:bmm_50",
+        "implementation_kind": "EXTERN",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq256_r1/ee600ceb3a1641ad.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-460-output_0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD bmm [forward:460:output_0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-460-output_0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq256:forward:461:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq256-forward-461-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.25.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_256",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq256_r1/36d5c31bb32013aa.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-461-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:461:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-461-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq256:forward:550:output_0",
+      "case": "legacy-coherent-deepseek8b-seq256-forward-550-output_0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.30.self_attn.o_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:bmm_60",
+        "implementation_kind": "EXTERN",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq256_r1/4fa70fad937dbe8c.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-550-output_0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD bmm [forward:550:output_0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-550-output_0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq256:forward:551:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq256-forward-551-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.30.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_306",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq256_r1/e70405ff7ec0c914.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-551-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:551:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-551-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq256:forward:569:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq256-forward-569-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.31.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_316",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq256_r1/b2751500d5ac8504.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-569-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:569:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-569-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq256:forward:605:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq256-forward-605-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.33.self_attn.q_proj.weight",
+        "exact_aot_endpoint_id": "forward:graph0:add_336",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq256_r1/314c8120df1f1fda.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-605-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD add [forward:605:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-605-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq256:forward:619:in_out_ptr0",
+      "case": "legacy-coherent-deepseek8b-seq256-forward-619-in_out_ptr0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.34.self_attn.k_norm.weight",
+        "exact_aot_endpoint_id": "forward:graph0:rsqrt_138",
+        "implementation_kind": "TRITON",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq256_r1/29c3bd398c29eb49.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-619-in_out_ptr0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "FORWARD rsqrt [forward:619:in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-forward-619-in_out_ptr0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
+      "candidate_id": "deepseek8b:seq256:backward:871:output_0",
+      "case": "legacy-coherent-deepseek8b-seq256-backward-871-output_0",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "legacy 32-state coherent F+B endpoint; long replay required",
+      "legacy_candidate": {
+        "carrier": "model.layers.30.input_layernorm.weight",
+        "exact_aot_endpoint_id": "backward:graph0:mm_338",
+        "implementation_kind": "EXTERN",
+        "legacy_evidence": "results/coverage/cases/carrier/deepseek8b_seq256_r1/629e5956df117b3b.json.gz",
+        "runnable": true
+      },
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-backward-871-output_0_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Legacy 32-state coherent F+B endpoint requires a 4096-step candidate/repair replay before a long-horizon label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": null,
+      "model": "deepseek8b",
+      "operator_or_region": "BACKWARD mm [backward:871:output_0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/legacy_coherent_candidates/legacy-coherent-deepseek8b-seq256-backward-871-output_0_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "legacy_coherent_endpoint_candidate"
+    },
+    {
       "case": "gemma4_random_gelu_backward1860",
       "direct_sha256": null,
       "final_label": "NOT_APPLICABLE_NO_CARRIER_EFFECT",
@@ -7992,6 +9956,7 @@
     "additional_outcome_candidate": 1,
     "expanded_bias_candidate": 12,
     "historical_candidate": 13,
+    "legacy_coherent_endpoint_candidate": 57,
     "operator_scan_candidate": 132,
     "roster_control_or_unresolved": 2,
     "short_screen_candidate_universe": 66
@@ -8870,5 +10835,5 @@
   },
   "unindexed_historical_candidate_count": 3,
   "unique_matrix_case_count": 23,
-  "unresolved_or_abstain_count": 220
+  "unresolved_or_abstain_count": 277
 }

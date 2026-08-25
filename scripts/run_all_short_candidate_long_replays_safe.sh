@@ -44,10 +44,27 @@ skip_existing() {
   esac
 }
 
+is_complete() {
+  local output="$1"
+  [[ -s "$output" ]] || return 1
+  "$PY" - "$output" <<'PY'
+import json,sys
+try: d=json.load(open(sys.argv[1]))
+except Exception: raise SystemExit(1)
+raise SystemExit(0 if str(d.get("status","")).startswith("COMPLETE") else 1)
+PY
+}
+
 mapfile -t rows < <("$PY" - "$MANIFEST" "$SHARD" "$TOTAL" <<'PY'
 import json,sys
 d=json.load(open(sys.argv[1])); shard=int(sys.argv[2]); total=int(sys.argv[3])
 rows=[r for r in d["rows"] if r.get("runnable")]
+cost_order={"qwen":0,"phi4":1,"mamba":2,"deepseek8b":3}
+rows.sort(key=lambda r:(
+    cost_order.get(str(r.get("model_key")),9),
+    -abs(float(r.get("short_screen_gradient_ratio") or 0.0)),
+    str(r.get("case_id")),
+))
 for i,r in enumerate(rows):
     if i % total == shard: print(json.dumps(r,sort_keys=True))
 PY
@@ -62,22 +79,23 @@ for row in "${rows[@]}"; do
   output="$OUT_ROOT/${case_id}_4096.json"
   checkpoint="$CACHE_ROOT/${case_id}.pt"
   log="$LOG_ROOT/${case_id}.log"
-  if [[ -s "$output" ]] && "$PY" - "$output" <<'PY'
-import json,sys
-try: d=json.load(open(sys.argv[1]))
-except Exception: raise SystemExit(1)
-raise SystemExit(0 if str(d.get("status","")).startswith("COMPLETE") else 1)
-PY
-  then
+  if is_complete "$output"; then
     echo "[$(date -Is)] skip complete $case_id" >>"$log"; continue
   fi
   wait_for_gpu
+  # Another queue may have completed this case while this shard was waiting
+  # for memory.  Recheck at the last safe point before starting a costly
+  # replay so parallel shards never duplicate a finished run.
+  if is_complete "$output"; then
+    echo "[$(date -Is)] skip completed-while-waiting $case_id" >>"$log"; continue
+  fi
   echo "[$(date -Is)] START case=$case_id gpu=$GPU" >>"$log"
   cmd=("$PY" "$ROOT/scripts/run_bound_endpoint_consequence_v21.py"
     --architecture "$arch" --model "$model" --input-bank "$ROOT/$input"
     --release-dir "$ROOT/$release" --case-plan "$ROOT/$plan" --case-id "$case_id"
     --output "$output" --checkpoint "$checkpoint" --steps 4096 --keep-checkpoint
     --state-role TRAJECTORY --device cuda:0 --compact-long)
+  [[ -s "$checkpoint" ]] && cmd+=(--resume)
   [[ "$arch" == "phi" ]] && cmd+=(--allow-graph-breaks)
   if CUDA_VISIBLE_DEVICES="$GPU" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
       OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \

@@ -110,6 +110,16 @@ def main() -> None:
     parser.add_argument("--case-id", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--checkpoint", type=Path, required=True)
+    parser.add_argument(
+        "--checkpoint-every",
+        type=int,
+        default=32,
+        help=(
+            "Persist resumable state every N completed steps and always at the "
+            "final step. A larger interval only changes restart granularity; it "
+            "does not change any model, optimizer, or measurement value."
+        ),
+    )
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
         "--keep-checkpoint",
@@ -145,6 +155,8 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+    if args.checkpoint_every < 1:
+        raise ValueError("--checkpoint-every must be positive")
     compact_long = bool(args.compact_long and args.steps >= 256)
     if args.resume and args.three_stage_output is not None:
         raise ValueError(
@@ -602,16 +614,18 @@ def main() -> None:
         repair_master = next_repair_master
         candidate_m, candidate_v = next_cm, next_cv
         repair_m, repair_v = next_rm, next_rv
-        atomic_torch_save({
-            "case_id": args.case_id, "state_ids": state_ids,
-            "compact_long": compact_long,
-            "measurement_geometry": "COUNT_SKETCH_256" if compact_long else "FULL_COORDINATE",
-            "candidate_master": candidate_master.cpu(),
-            "repair_master": repair_master.cpu(),
-            "candidate_m": candidate_m.cpu(), "candidate_v": candidate_v.cpu(),
-            "repair_m": repair_m.cpu(), "repair_v": repair_v.cpu(),
-            "next_step": step, "rows": saved_rows,
-        }, args.checkpoint)
+        if step % args.checkpoint_every == 0 or step == args.steps:
+            atomic_torch_save({
+                "case_id": args.case_id, "state_ids": state_ids,
+                "compact_long": compact_long,
+                "measurement_geometry": "COUNT_SKETCH_256" if compact_long else "FULL_COORDINATE",
+                "candidate_master": candidate_master.cpu(),
+                "repair_master": repair_master.cpu(),
+                "candidate_m": candidate_m.cpu(), "candidate_v": candidate_v.cpu(),
+                "repair_m": repair_m.cpu(), "repair_v": repair_v.cpu(),
+                "next_step": step, "rows": saved_rows,
+                "checkpoint_every": args.checkpoint_every,
+            }, args.checkpoint)
         print(json.dumps({
             "event": "BOUND_CONSEQUENCE_STEP", "case_id": args.case_id,
             "step": step, "state_id": state_ids[index],
