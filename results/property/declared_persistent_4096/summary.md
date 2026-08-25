@@ -17,7 +17,7 @@
 | DeepSeek-R1-Qwen3-8B | attention dV BMM | NOT_RUN | UNRESOLVED_FORMATION |
 | Llama-3.2-3B | lm_head backward dX | COMPLETE_LONG_HORIZON | 直接长程方向 + loss 分叉 |
 | Ministral-3-3B | lm_head backward dX | COMPLETE_LONG_HORIZON | 直接长程方向 + loss 分叉 |
-| Gemma-4 E2B | RMSNorm / projection feedback region | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | RMSNorm / projection feedback region | INVALID_OR_INCOMPLETE | UNRESOLVED |
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0057; post-attention LayerNorm carrier | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0103; input LayerNorm carrier | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0153; attention k-norm carrier | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
