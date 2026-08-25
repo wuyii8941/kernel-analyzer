@@ -34,6 +34,26 @@ run_one() {
   local base="$ROOT/results/property/declared_persistent_4096/operator_scan_targets"
   local pilot="$base/${case_id}_pilot" long="$base/${case_id}"
   if [[ -f "$long/consequence.json" ]]; then echo "[$(date -Is)] skip complete $case_id" >>"$LOG"; return 0; fi
+  # Reuse any completed pilot from a manual retry instead of creating a
+  # duplicate process.  A failed/partial directory is left as evidence and a
+  # fresh suffix is used below.
+  local completed_pilot=""
+  for candidate in "$base/${case_id}"_pilot*; do
+    if [[ -f "$candidate/prediction.json" && -f "$candidate/short_screen.json" ]]; then
+      completed_pilot="$candidate"
+    fi
+  done
+  if [[ -n "$completed_pilot" ]]; then
+    pilot="$completed_pilot"
+  else
+    local suffix=0
+    while [[ -e "$pilot" ]]; do suffix=$((suffix + 1)); pilot="$base/${case_id}_pilot_retry${suffix}"; done
+  fi
+  if [[ -f "$pilot/prediction.json" && -f "$pilot/short_screen.json" ]]; then
+    local decision
+    decision=$("$PY" -c 'import json,sys; p=sys.argv[1]; pred=json.load(open(p+"/prediction.json")).get("source_prediction"); short=json.load(open(p+"/short_screen.json")); print("LONG" if pred=="SOURCE_PERSISTENCE_RISK" or any(x.get("status")=="RISK_CANDIDATE" for x in short.get("cases",[])) else "STOP")' "$pilot")
+    if [[ "$decision" != LONG ]]; then echo "[$(date -Is)] reuse pilot no-risk $case_id" >>"$LOG"; return 0; fi
+  fi
   wait_for_gpu
   echo "[$(date -Is)] pilot $case_id region=$region endpoint=$endpoint" >>"$LOG"
   if ! CUDA_VISIBLE_DEVICES="$GPU" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \

@@ -86,7 +86,9 @@ def atomic_torch_save(payload: dict[str, Any], path: Path) -> None:
 def deterministic_projection(case_id: str, coordinates: int, device: torch.device) -> torch.Tensor:
     seed = int(hashlib.sha256(case_id.encode()).hexdigest()[:16], 16) % (2**63 - 1)
     generator = torch.Generator(device="cpu").manual_seed(seed)
-    signs = torch.randint(0, 2, (coordinates,), generator=generator, dtype=torch.int8)
+    signs = torch.empty(
+        (coordinates,), dtype=torch.int8, device="cpu"
+    ).random_(0, 2, generator=generator)
     return signs.mul_(2).sub_(1).float().div_(math.sqrt(coordinates)).to(device)
 
 
@@ -425,14 +427,18 @@ def main() -> None:
             % (2**63 - 1)
         )
         coordinates = int(initial.numel())
-        sketch_buckets = torch.randint(
-            0, sketch_dimension, (coordinates,), generator=generator,
-            dtype=torch.int64, device="cpu",
-        ).to(device)
-        sketch_signs = torch.randint(
-            0, 2, (coordinates,), generator=generator,
-            dtype=torch.float32, device="cpu",
-        ).mul_(2).sub_(1).to(device)
+        # Build the random sketch on an explicitly CPU tensor and move it
+        # afterwards.  Some torch nightly builds resolve ``torch.randint``
+        # against the current CUDA default even when ``device='cpu'`` is
+        # supplied, which then rejects this CPU generator.  ``random_`` on a
+        # preallocated CPU tensor keeps the generator/device contract
+        # unambiguous and preserves the frozen seed.
+        sketch_buckets = torch.empty(
+            (coordinates,), dtype=torch.int64, device="cpu"
+        ).random_(0, sketch_dimension, generator=generator).to(device)
+        sketch_signs = torch.empty(
+            (coordinates,), dtype=torch.float32, device="cpu"
+        ).random_(0, 2, generator=generator).mul_(2).sub_(1).to(device)
     local_vectors: list[torch.Tensor] = []
     feedback_vectors: list[torch.Tensor] = []
     actual_vectors: list[torch.Tensor] = []

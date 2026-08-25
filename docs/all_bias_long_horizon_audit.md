@@ -39,9 +39,9 @@ Gemma/Llama 的追加首轮扫描另有 **242 行**，其中冻结升级门通�
 | Gemma-4 E2B | backward:671 triton_red_fused__to_copy_mul_pow_sum_view_1 [out_ptr1] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | Gemma-4 E2B | forward:17 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_10 [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | Gemma-4 E2B | forward:22 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_12 [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
-| Llama-3.2-3B | forward:20 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_11 [in_out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
-| Llama-3.2-3B | forward:449 triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view_13 [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
-| Llama-3.2-3B | forward:32 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_12 [in_out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
+| Llama-3.2-3B | forward:20 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_11 [in_out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
+| Llama-3.2-3B | forward:449 triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view_13 [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
+| Llama-3.2-3B | forward:32 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_12 [in_out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
 | google/gemma-4-E2B | case-stage matrix row | complete roster row; no confirmed long-source gate | NOT_ESCALATED | 未测 | 没有可达载体，不适用 |
 | google/gemma-4-E2B | case-stage matrix row | complete roster row; no confirmed long-source gate | NOT_ESCALATED | 未测 | 没有可达载体，不适用 |
 

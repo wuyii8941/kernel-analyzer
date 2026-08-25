@@ -860,9 +860,65 @@ def main() -> None:
         case_id = str(target["case_id"])
         target_dir = LONG / "operator_scan_targets" / case_id
         path = target_dir / "consequence.json"
+        pilot_dirs = sorted(LONG.glob(f"operator_scan_targets/{case_id}_pilot*"))
+        completed_pilots = [d for d in pilot_dirs if (d / "prediction.json").exists() and (d / "short_screen.json").exists()]
+        pilot_dir = completed_pilots[-1] if completed_pilots else None
         if path.exists():
             direct = long_row(path)
             paired = paired_row(path)
+        elif pilot_dir is not None:
+            prediction = read(pilot_dir / "prediction.json") or {}
+            short = read(pilot_dir / "short_screen.json") or {}
+            short_cases = short.get("cases", [])
+            # A zero-energy pilot is not a negative result for a frozen scan
+            # target.  It can mean that the freshly compiled wrapper did not
+            # bind the historical screen endpoint (especially when Inductor
+            # renumbered or fused repeated regions).  Keep it unresolved
+            # until the target has a nonzero, parameter-reachable contrast.
+            zero_energy = bool(short_cases) and all(
+                row.get("status") == "UNRESOLVED_ZERO_ENERGY"
+                for row in short_cases
+            )
+            risk = prediction.get("source_prediction") == "SOURCE_PERSISTENCE_RISK" or any(
+                row.get("status") == "RISK_CANDIDATE" for row in short_cases
+            )
+            if zero_energy:
+                direct = {
+                    "status": "UNRESOLVED_PARAMETER_BINDING",
+                    "long_direct": "UNRESOLVED",
+                    "reason": "The target pilot produced zero candidate/repair energy; this is retained as unresolved because the historical screen endpoint may not have rebound to the freshly compiled callsite.",
+                    "steps": 16,
+                    "artifact": str((pilot_dir / "short_screen.json").relative_to(ROOT)),
+                }
+                paired = {
+                    "status": "UNRESOLVED_PARAMETER_BINDING",
+                    "loss_separation_observed": False,
+                    "steps": 16,
+                    "artifact": str((pilot_dir / "consequence.json").relative_to(ROOT)),
+                }
+            elif risk:
+                direct = {
+                    "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                    "long_direct": "UNRESOLVED",
+                    "reason": "The frozen target pilot is risk-positive; its 4096-step consequence is still required.",
+                    "steps": 16,
+                    "artifact": str(path.relative_to(ROOT)),
+                }
+                paired = {
+                    "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                    "loss_separation_observed": False,
+                    "steps": 16,
+                    "artifact": str(path.relative_to(ROOT)),
+                }
+            else:
+                direct = {
+                    "status": "COMPLETE_SHORT_NO_RISK",
+                    "long_direct": "NOT_ROBUST",
+                    "reason": "The frozen 16-step target pilot did not trigger the source or local/feedback risk screen; no 4096-step consequence was escalated.",
+                    "steps": 16,
+                    "artifact": str((pilot_dir / "short_screen.json").relative_to(ROOT)),
+                }
+                paired = {"status": "NOT_ESCALATED", "loss_separation_observed": False, "steps": 0}
         else:
             direct = {
                 "status": "UNRESOLVED_LONG_REPLAY_PENDING",

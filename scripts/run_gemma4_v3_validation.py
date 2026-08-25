@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import sys
 
 import torch
@@ -54,6 +55,11 @@ def choose_target(campaign: dict) -> dict:
     if not choices:
         raise RuntimeError("frozen current release has no PLE/RMSNorm target")
     return choices[0]
+
+
+def symbol_family(symbol: str) -> str:
+    """Ignore Inductor's per-compile numeric suffix when binding a target."""
+    return re.sub(r"_\d+$", "", str(symbol))
 
 
 def main() -> None:
@@ -171,8 +177,13 @@ def main() -> None:
         campaign = json.load(handle)
     if args.target_region is None and args.target_symbol is None and args.architecture != "gemma4":
         raise RuntimeError("generic target replay requires --target-region")
+    requested_family = symbol_family(args.target_symbol) if args.target_symbol else None
     if args.target_region is not None:
         target = next((row for row in campaign["rows"] if row["region_id"] == args.target_region), None)
+        # A fresh compile can reuse the same ordinal for a different fused
+        # region.  Do not silently repair that unrelated region.
+        if target is not None and requested_family is not None and symbol_family(target.get("symbol", "")) != requested_family:
+            target = None
     else:
         target = None
     if target is None and args.target_symbol is not None:
@@ -180,7 +191,7 @@ def main() -> None:
         target = next(
             (
                 row for row in campaign["rows"]
-                if row.get("symbol") == args.target_symbol
+                if requested_family is not None and symbol_family(row.get("symbol", "")) == requested_family
                 and (phase is None or row.get("phase") == phase)
                 and (args.target_endpoint is None or args.target_endpoint in row.get("output_names", []))
             ),
