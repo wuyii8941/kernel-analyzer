@@ -42,7 +42,7 @@ run_one() {
   # fresh suffix is used below.
   local completed_pilot=""
   for candidate in "$base/${case_id}"_pilot*; do
-    if [[ -f "$candidate/prediction.json" && -f "$candidate/short_screen.json" ]]; then
+    if [[ -f "$candidate/prediction.json" && ( -f "$candidate/short_screen.json" || -f "$candidate/formation.json" ) ]]; then
       completed_pilot="$candidate"
     fi
   done
@@ -83,9 +83,9 @@ PY
       fi
     fi
   fi
-  if [[ -f "$pilot/prediction.json" && -f "$pilot/short_screen.json" ]]; then
+  if [[ -f "$pilot/prediction.json" ]]; then
     local decision
-    decision=$("$PY" -c 'import json,sys; p=sys.argv[1]; pred=json.load(open(p+"/prediction.json")).get("source_prediction"); short=json.load(open(p+"/short_screen.json")); print("LONG" if pred=="SOURCE_PERSISTENCE_RISK" or any(x.get("status")=="RISK_CANDIDATE" for x in short.get("cases",[])) else "STOP")' "$pilot")
+    decision=$("$PY" -c 'import json,sys,os; p=sys.argv[1]; pred=json.load(open(p+"/prediction.json")).get("source_prediction"); short=json.load(open(p+"/short_screen.json")) if os.path.exists(p+"/short_screen.json") else {}; print("LONG" if pred=="SOURCE_PERSISTENCE_RISK" or any(x.get("status")=="RISK_CANDIDATE" for x in short.get("cases",[])) else "STOP")' "$pilot")
     if [[ "$decision" != LONG ]]; then echo "[$(date -Is)] reuse pilot no-risk $case_id" >>"$LOG"; return 0; fi
   fi
   wait_for_gpu
