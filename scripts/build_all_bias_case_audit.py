@@ -832,6 +832,26 @@ def main() -> None:
         "qwen_saved_p_seq128", "qwen3vl_silu_backward", "gemma4_norm",
         "layer23_qproj_attention_state_region", "deepseek8b_seq64_l35_attention_dv",
     }
+    operator_scan_path = ROOT / "results/property/declared_persistent_4096/operator_scan_gemma_llama.json"
+    operator_scan = read(operator_scan_path) or {}
+    operator_scan_models = operator_scan.get("models", [])
+    operator_scan_summary = {
+        "artifact": str(operator_scan_path.relative_to(ROOT)) if operator_scan_path.exists() else None,
+        "models": [
+            {
+                "model": row.get("model"),
+                "screened_rows": row.get("screened_rows", 0),
+                "frozen_gate_positives": row.get("bh_positive_rows", 0),
+                "nonzero_rows_without_legal_replay": row.get("nonzero_new_impl_rows_requiring_legal_replay", 0),
+                "status": "SCREEN_ONLY_NO_NEW_LONG_CANDIDATE",
+            }
+            for row in operator_scan_models
+        ],
+        "screened_rows": sum(int(row.get("screened_rows", 0)) for row in operator_scan_models),
+        "frozen_gate_positives": sum(int(row.get("bh_positive_rows", 0)) for row in operator_scan_models),
+        "nonzero_rows_without_legal_replay": sum(int(row.get("nonzero_new_impl_rows_requiring_legal_replay", 0)) for row in operator_scan_models),
+        "claim_boundary": "Pattern-screen signals are not bias cases without an exact parameter-reachable repair and long replay; no new Gemma/Llama row passed the frozen gate.",
+    }
     payload = {
         "schema": "all-historical-bias-candidates-long-audit-v1",
         "definition": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. A loss split alone is consequence-only and never establishes persistent bias. Different converged losses are not required or claimed.",
@@ -844,6 +864,7 @@ def main() -> None:
         "historical_candidate_count": 11,
         "extended_candidate_count": len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES),
         "extended_candidate_note": "The extended roster includes the historical candidates, Llama/Ministral family replication rows, Gemma4, the 12 result-blind 32-step consequence candidates, and the separately tracked Gemma GELU consequence candidate. These rows are not negatives until their long replay is complete.",
+        "operator_scan": operator_scan_summary,
         "unindexed_historical_candidate_count": len(historical_ids - matrix_ids),
         "scope_counts": {
             "historical_candidate": sum(r.get("scope") == "historical_candidate" for r in rows),
@@ -895,6 +916,8 @@ def main() -> None:
         f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES)} 个 extended candidate rows**（其中包含历史候选、Llama/Ministral 同族复现、Gemma4、12 个结果盲抽的长程 consequence 候选，以及单独追踪的 Gemma GELU consequence 候选）。合并后表共有 **{len(rows)} 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
         "",
         f"按当前口径，最终计入 **{payload['final_case_count']} 个持久性 bias 案例**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**。另有 **{payload['long_loss_split_without_direct_count']} 个**虽没有持久 bias 组件、但确实出现长程配对 loss 分叉；因此当前共有 **{payload['outcome_relevant_case_count']} 个训练结果相关记录**，但不能把后果对照改称为持久性 bias。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
+        "",
+        f"Gemma/Llama 的追加首轮扫描另有 **{operator_scan_summary['screened_rows']} 行**，其中冻结升级门通过 **{operator_scan_summary['frozen_gate_positives']} 行**；有 nominal 非零信号但缺少合法长程重放的行保存在单独扫描清单中，不计入上述 bias 案例数。",
         "",
         "持久性 bias 的必要条件是 bias 本身在 4096 步仍然存在：直接源方向或反馈有效更新方向至少有一个通过长程检验。配对训练中的参数或 loss 分叉是后果证据，不足以单独把一个没有持久 bias 组件的记录升级为案例。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。",
         "",
