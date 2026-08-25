@@ -99,6 +99,14 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--keep-checkpoint",
+        action="store_true",
+        help=(
+            "Keep the completed checkpoint so an offline late-window audit can "
+            "be run after the long replay."
+        ),
+    )
     # Permit the same runner to perform the predeclared long horizon.  The
     # frozen bank and state-role filter still enforce the actual availability.
     parser.add_argument("--steps", type=int, default=2)
@@ -677,7 +685,8 @@ def main() -> None:
         raw_temporary = args.raw_stage_output.with_name("." + args.raw_stage_output.name + ".tmp")
         raw_temporary.write_text(json.dumps(raw_stage, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         raw_temporary.replace(args.raw_stage_output)
-    args.checkpoint.unlink(missing_ok=True)
+    if not args.keep_checkpoint:
+        args.checkpoint.unlink(missing_ok=True)
     print(json.dumps({
         "event": "BOUND_CONSEQUENCE_COMPLETE", "case_id": args.case_id,
         "output": str(args.output), "status": result["status"],

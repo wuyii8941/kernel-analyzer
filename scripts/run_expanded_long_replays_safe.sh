@@ -16,10 +16,29 @@ run_case() {
   local gpu="$1" arch="$2" model="$3" input="$4" release="$5" plan="$6" id="$7" checkpoint="$8" extra="${9:-}"
   local output="$ROOT/results/property/declared_persistent_4096/expanded_controls/${id}_4096.json"
   local log="$LOG_ROOT/${id}_safe.log"
+  # Queues may be started after a previous worker exits.  Do not duplicate a
+  # live replay or rerun a complete artifact on another GPU.
+  if pgrep -f "run_bound_endpoint_consequence_v21.py.*--case-id[= ]${id}([[:space:]]|$)" >/dev/null 2>&1; then
+    echo "[$(date -Is)] SKIP active $id" >>"$log"
+    return 0
+  fi
+  if [[ -s "$output" ]] && "$PY" - "$output" <<'PY'
+import json, sys
+try:
+    payload = json.load(open(sys.argv[1]))
+except Exception:
+    raise SystemExit(1)
+raise SystemExit(0 if str(payload.get("status", "")).startswith("COMPLETE") else 1)
+PY
+  then
+    echo "[$(date -Is)] SKIP complete $id" >>"$log"
+    return 0
+  fi
   local -a cmd=("$PY" "$ROOT/scripts/run_bound_endpoint_consequence_v21.py"
     --architecture "$arch" --model "$model" --input-bank "$input"
     --release-dir "$release" --case-plan "$plan" --case-id "$id"
     --output "$output" --checkpoint "$checkpoint" --steps 4096
+    --keep-checkpoint
     --state-role TRAJECTORY --device cuda:0)
   if [[ -s "$checkpoint" ]]; then
     cmd+=(--resume)

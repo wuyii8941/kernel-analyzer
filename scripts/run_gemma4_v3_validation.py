@@ -69,8 +69,10 @@ def main() -> None:
     parser.add_argument("--runtime-seed", type=int, default=24000)
     parser.add_argument("--steps", type=int, choices=(2, 8, 16), default=16,
                         help="open-loop formation states")
-    parser.add_argument("--consequence-steps", type=int, choices=(2, 8, 16, 32),
-                        help="closed-loop trajectory steps; may use a disjoint 32-state bank")
+    parser.add_argument(
+        "--consequence-steps", type=int, choices=(2, 8, 16, 32, 4096),
+        help="closed-loop trajectory steps; may use a disjoint long trajectory bank",
+    )
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument("--projection-dim", type=int, default=256)
     parser.add_argument("--null-draws", type=int, default=2000)
@@ -362,7 +364,7 @@ def main() -> None:
         }
     consequence = {
         "schema": "kernel-analyzer-gemma4-v3-consequence-v1",
-        "status": "COMPLETE",
+        "status": "COMPLETE_LONG_HORIZON" if consequence_steps >= 4096 else "COMPLETE",
         "prediction": prediction,
         "steps": consequence_steps,
         "carrier": carrier_name,
