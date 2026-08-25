@@ -2,19 +2,19 @@
 
 仓库中有 **23 个唯一主矩阵 case ID**；本审计逐行复核 **25 个 extended candidate rows**（其中包含历史候选、Llama/Ministral 同族复现、Gemma4，以及 12 个结果盲抽的长程 consequence 候选）。合并后表共有 **28 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。
 
-按当前口径，最终计入 **9 个**：其中直接长程方向案例 **5 个**，反馈维持型案例 **1 个**，直接方向未持续但有长程配对 loss 分叉 **3 个**；未决/不可安全重放共 **15 个**，不作阴性判断。
+按当前口径，最终计入 **6 个持久性 bias 案例**：其中直接长程方向案例 **5 个**，反馈维持型案例 **1 个**。另有 **3 个**只有长程配对 loss 分叉、但没有持久 bias 组件的后果对照；它们不计入持久性 bias。未决/不可安全重放共 **15 个**，不作阴性判断。
 
-直接源案例只要 4096 步直接更新差异仍有稳定方向，就已经是持久性 bias；如果配对训练还观察到参数或 loss 分叉，就作为后果一并报告。反馈维持型案例只有在 4096 步反馈分离并观察到配对参数/loss gap 时才单独计入，不冒充直接源 bias。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。
+持久性 bias 的必要条件是 bias 本身在 4096 步仍然存在：直接源方向或反馈有效更新方向至少有一个通过长程检验。配对训练中的参数或 loss 分叉是后果证据，不足以单独把一个没有持久 bias 组件的记录升级为案例。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。
 
 | 模型 | 算子或位置 | 形成路径 | 4096 步直接结果 | 参数/loss 分叉 | 最终分类 |
 |---|---|---|---|---|---|
 | Qwen3-1.7B | fused CE dW accumulation | event/pairing imbalance | A4096=14.018，后半程 64/64 | 是；参数距离 9.27，末步 loss gap -0.13 | 最终持久性 bias 案例 |
 | Phi-4-mini | lm_head backward dX | event/pairing imbalance + backward transport | A4096=46.090，后半程 64/64 | 是；参数距离 0.0191，末步 loss gap +0.00158 | 最终持久性 bias 案例 |
 | Qwen3-1.7B | lm_head backward dX | event/pairing imbalance + backward transport | A4096=6.488，后半程 64/64 | 是；参数距离 0.00163，末步 loss gap +1.21e-05 | 最终持久性 bias 案例 |
-| Qwen3-1.7B | seq64 v_proj MM + output rounding | conditional source asymmetry | A4096=0.993，p=0.511 | 是；参数距离 0.22，末步 loss gap -0.0048 | 有长程 loss 分叉，但直接方向未持续 |
-| Qwen3-1.7B | v_proj MM/output rounding | local arithmetic/pairing | A4096=0.981，p=0.509 | 是；参数距离 0.302，末步 loss gap +0.000371 | 有长程 loss 分叉，但直接方向未持续 |
+| Qwen3-1.7B | seq64 v_proj MM + output rounding | conditional source asymmetry | A4096=0.993，p=0.511 | 是；参数距离 0.22，末步 loss gap -0.0048 | 后果对照：有长程 loss 分叉，但没有持久 bias 组件 |
+| Qwen3-1.7B | v_proj MM/output rounding | local arithmetic/pairing | A4096=0.981，p=0.509 | 是；参数距离 0.302，末步 loss gap +0.000371 | 后果对照：有长程 loss 分叉，但没有持久 bias 组件 |
 | Mamba-130M | in_proj matrix multiply | local arithmetic/pairing | A4096=0.935，p=0.405 | 配对长程阶段未能安全完成，未决 | 长程未保持 |
-| Qwen3-1.7B | layer-27 saved-P softmax backward | response/state-contract imbalance | A4096=1.195，p=0.084 | 是；参数距离 0.123，末步 loss gap -0.00228 | 有长程 loss 分叉，但直接方向未持续 |
+| Qwen3-1.7B | layer-27 saved-P softmax backward | response/state-contract imbalance | A4096=1.195，p=0.084 | 是；参数距离 0.123，末步 loss gap -0.00228 | 后果对照：有长程 loss 分叉，但没有持久 bias 组件 |
 | Qwen3-VL-Reranker-2B | SiLU backward | response asymmetry | COMPLETE_4096 | 是；参数距离 0.888，末步 loss gap -7.95e-09 | 反馈维持型 bias，且有 loss 分叉 |
 | Qwen3-1.7B | attention S_bwd/K to q_proj | event/pairing imbalance | ABSTAIN | 未测 | 不可安全重放 |
 | DeepSeek-R1-Qwen3-8B | attention dV BMM | formation unresolved; event/pairing candidate | NOT_RUN | 未测 | 形成阶段未确认，不升级长程 |

@@ -21,8 +21,8 @@ operator becomes a parameter-update error that keeps accumulating.
    distributions. Qwen3-VL SiLU shows long-run feedback separation with a
    paired loss gap. The Qwen64 `v_proj`, Qwen seq64 `v_proj`, and saved-P
    direct directions diffuse, but their live candidate/repair trajectories
-   show long-run paired loss splits; they are therefore counted as consequence
-   cases, not direct-source cases. Mamba's completed 4096-step direct audit
+   show long-run paired loss splits; they are therefore retained as consequence
+   controls, not persistent-bias cases. Mamba's completed 4096-step direct audit
    does not exceed its own random baseline, and its separate live paired stage
    did not produce a safe artifact; Gemma4's compatible replay stopped before
    producing a complete artifact. Both remain unresolved/non-positive rather
@@ -46,9 +46,9 @@ operator becomes a parameter-update error that keeps accumulating.
   and an observed paired parameter/loss split under controlled one-carrier
   training. SiLU has a feedback-sustained long-horizon bias and a recorded
   paired loss gap, but is not a direct-source case. Qwen64 `v_proj`, Qwen seq64 `v_proj`
-  and saved-P are separate long-loss-split consequence cases whose direct
-   source directions are not persistent. These remain controlled runs, not
-  full-parameter training.
+  and saved-P are separate long-loss-split consequence controls whose direct
+  source directions are not persistent; they are not counted as persistent
+  bias. These remain controlled runs, not full-parameter training.
 - The 15-row result is retrospective and measured on declared parameter
   carriers. The 4096-step review measures same-state direct updates; neither
   is full-parameter training or a converged-loss result.
@@ -59,7 +59,7 @@ operator becomes a parameter-update error that keeps accumulating.
   were checked for complete inputs and all five required abstention.
 
 - The audit has also promoted 12 result-blind 32-step consequence controls to
-  a separate long-replay queue. They are not included in the nine completed
+  a separate long-replay queue. They are not included in the six completed
   result cases and are not called negatives while their 4096-step paired
   replays are pending or unresolved.
 

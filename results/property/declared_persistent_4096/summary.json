@@ -178,17 +178,17 @@
     },
     {
       "case": "Mamba in_proj",
-      "direct_sha256": "3a1123c820d215cfbf5e8f066288d2a6508a852457b43e782483642db40d6eb8",
+      "direct_sha256": "aa490c43fe0bc0f65fe4726df0cffdc6172de45ce1fcec45d38281ccb06981f6",
       "final_label": "NO_ROBUST_LONG_DIRECT_BIAS",
       "formation_path": "local arithmetic/pairing",
       "long_direct": {
-        "A4096": 1.10955228576708,
-        "artifact": "results/property/declared_persistent_4096/mamba_in_proj.json",
+        "A4096": 0.9353448075264164,
+        "artifact": "results/property/declared_persistent_4096/mamba_in_proj_live_refresh.json",
         "late_windows": 64,
-        "late_windows_above_one": 33,
+        "late_windows_above_one": 21,
         "long_direct": "NOT_ROBUST",
-        "null95": 1.1276564218974718,
-        "p": 0.10789210789210789,
+        "null95": 1.1671825631613972,
+        "p": 0.4045954045954046,
         "status": "COMPLETE_4096",
         "steps": 4096
       },
@@ -330,8 +330,12 @@
         "late_windows_above_own_null": null,
         "local_A4096": 2.578206563498868,
         "long_direct": "ROBUST",
+        "loss_audit": {},
         "null95": 1.0295860095907672,
         "p": 0.004975124378109453,
+        "paired_loss_gap_final": null,
+        "paired_loss_gap_mean_last_512": null,
+        "paired_loss_gap_std_last_512": null,
         "status": "COMPLETE_LONG_HORIZON",
         "steps": 4096
       },
@@ -368,8 +372,12 @@
         "late_windows_above_own_null": null,
         "local_A4096": 1.7543663675423466,
         "long_direct": "ROBUST",
+        "loss_audit": {},
         "null95": 1.0284199943298211,
         "p": 0.004975124378109453,
+        "paired_loss_gap_final": null,
+        "paired_loss_gap_mean_last_512": null,
+        "paired_loss_gap_std_last_512": null,
         "status": "COMPLETE_LONG_HORIZON",
         "steps": 4096
       },
@@ -395,13 +403,13 @@
     {
       "case": "Gemma4 RMSNorm",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY",
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
       "formation_path": "response asymmetry / feedback candidate",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/gemma4_norm_4096_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/gemma4_norm_4096_rebound.json",
         "long_direct": "UNRESOLVED",
-        "reason": "The rebuilt Transformers-5-compatible runtime reached step 294 but did not produce a complete artifact. The run is retained as unresolved; this is not a negative bias result.",
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE"
+        "reason": "A resource-safe rebound replay is still running; the historical failure is not treated as a negative.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING"
       },
       "model": "Gemma-4 E2B",
       "operator_or_region": "RMSNorm / projection feedback region",
@@ -410,6 +418,306 @@
       },
       "paired_sha256": null,
       "scope": "historical_candidate"
+    },
+    {
+      "case": "multishape-backward-cell-0057",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "feedback-sustained candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0057_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "DeepSeek backward cell 0057; post-attention LayerNorm carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0057_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "expanded_bias_candidate",
+      "short_consequence_artifact": "results/property/joint_bias_formation_v1/consequence/deepseek8b_seq128_multishape-backward-cell-0057.json",
+      "short_regime": "FEEDBACK_SUSTAINED"
+    },
+    {
+      "case": "multishape-backward-cell-0103",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "feedback-sustained candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0103_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "DeepSeek backward cell 0103; input LayerNorm carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0103_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "expanded_bias_candidate",
+      "short_consequence_artifact": "results/property/joint_bias_formation_v1/consequence/deepseek8b_seq256_multishape-backward-cell-0103.json",
+      "short_regime": "FEEDBACK_SUSTAINED"
+    },
+    {
+      "case": "multishape-backward-cell-0153",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "feedback-sustained candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0153_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "DeepSeek backward cell 0153; attention k-norm carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0153_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "expanded_bias_candidate",
+      "short_consequence_artifact": "results/property/joint_bias_formation_v1/consequence/deepseek8b_seq64_multishape-backward-cell-0153.json",
+      "short_regime": "FEEDBACK_SUSTAINED"
+    },
+    {
+      "case": "multishape-backward-cell-0190",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "feedback-sustained candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0190_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "DeepSeek backward cell 0190; attention q-norm carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0190_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "expanded_bias_candidate",
+      "short_consequence_artifact": "results/property/joint_bias_formation_v1/consequence/deepseek8b_seq64_multishape-backward-cell-0190.json",
+      "short_regime": "FEEDBACK_SUSTAINED"
+    },
+    {
+      "case": "multishape-backward-cell-0191",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "feedback-sustained candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0191_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "DeepSeek-R1-Qwen3-8B",
+      "operator_or_region": "DeepSeek backward cell 0191; attention q-norm carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0191_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "expanded_bias_candidate",
+      "short_consequence_artifact": "results/property/joint_bias_formation_v1/consequence/deepseek8b_seq64_multishape-backward-cell-0191.json",
+      "short_regime": "FEEDBACK_SUSTAINED"
+    },
+    {
+      "case": "multishape-backward-cell-0450",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "feedback-sustained candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0450_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "Mamba-130M",
+      "operator_or_region": "Mamba backward cell 0450; dt-projection bias carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0450_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "expanded_bias_candidate",
+      "short_consequence_artifact": "results/property/joint_bias_formation_v1/consequence/mamba_seq64_multishape-backward-cell-0450.json",
+      "short_regime": "FEEDBACK_SUSTAINED"
+    },
+    {
+      "case": "multishape-backward-cell-0501",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "feedback-sustained candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0501_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "Phi-4-mini",
+      "operator_or_region": "Phi backward cell 0501; post-attention LayerNorm carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0501_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "expanded_bias_candidate",
+      "short_consequence_artifact": "results/property/joint_bias_formation_v1/consequence/phi4_seq128_multishape-backward-cell-0501.json",
+      "short_regime": "FEEDBACK_SUSTAINED"
+    },
+    {
+      "case": "multishape-backward-cell-0508",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "feedback-sustained candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0508_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "Phi-4-mini",
+      "operator_or_region": "Phi backward cell 0508; post-attention LayerNorm carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0508_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "expanded_bias_candidate",
+      "short_consequence_artifact": "results/property/joint_bias_formation_v1/consequence/phi4_seq128_multishape-backward-cell-0508.json",
+      "short_regime": "FEEDBACK_SUSTAINED"
+    },
+    {
+      "case": "multishape-backward-cell-0543",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "small mixed candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0543_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "Phi-4-mini",
+      "operator_or_region": "Phi backward cell 0543; final norm carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0543_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "expanded_bias_candidate",
+      "short_consequence_artifact": "results/property/joint_bias_formation_v1/consequence/phi4_seq256_multishape-backward-cell-0543.json",
+      "short_regime": "MIXED_LOCAL_AND_FEEDBACK_PERSISTENCE"
+    },
+    {
+      "case": "multishape-backward-cell-0654",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "feedback-sustained candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0654_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "Qwen backward cell 0654; input LayerNorm carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0654_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "expanded_bias_candidate",
+      "short_consequence_artifact": "results/property/joint_bias_formation_v1/consequence/qwen_seq256_multishape-backward-cell-0654.json",
+      "short_regime": "FEEDBACK_SUSTAINED"
+    },
+    {
+      "case": "multishape-backward-cell-0745",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "feedback-sustained candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0745_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "Qwen backward cell 0745; attention q-norm carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0745_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "expanded_bias_candidate",
+      "short_consequence_artifact": "results/property/joint_bias_formation_v1/consequence/qwen_seq64_multishape-backward-cell-0745.json",
+      "short_regime": "FEEDBACK_SUSTAINED"
+    },
+    {
+      "case": "multishape-backward-cell-0747",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "feedback-sustained candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0747_4096.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "Qwen backward cell 0747; attention k-norm carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0747_4096.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "expanded_bias_candidate",
+      "short_consequence_artifact": "results/property/joint_bias_formation_v1/consequence/qwen_seq64_multishape-backward-cell-0747.json",
+      "short_regime": "FEEDBACK_SUSTAINED"
     },
     {
       "case": "gemma4_random_gelu_backward1860",
@@ -470,253 +778,13 @@
       },
       "paired_sha256": null,
       "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "multishape-backward-cell-0057",
-      "direct_sha256": null,
-      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "multishape-backward-cell-0103",
-      "direct_sha256": null,
-      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "multishape-backward-cell-0153",
-      "direct_sha256": null,
-      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "multishape-backward-cell-0190",
-      "direct_sha256": null,
-      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "multishape-backward-cell-0191",
-      "direct_sha256": null,
-      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "multishape-backward-cell-0450",
-      "direct_sha256": null,
-      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "/data1/tzh/models/state-spaces/mamba-130m-hf",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "multishape-backward-cell-0501",
-      "direct_sha256": null,
-      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "multishape-backward-cell-0508",
-      "direct_sha256": null,
-      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "multishape-backward-cell-0543",
-      "direct_sha256": null,
-      "final_label": "UNRESOLVED_FORMATION",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "UNRESOLVED_MULTIPLICITY_CANDIDATE"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "multishape-backward-cell-0654",
-      "direct_sha256": null,
-      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "multishape-backward-cell-0745",
-      "direct_sha256": null,
-      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "multishape-backward-cell-0747",
-      "direct_sha256": null,
-      "final_label": "SCREENED_NO_CONFIRMED_DIRECT_BIAS",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "NO_CONFIRMED_32_STEP_DIRECT_DIRECTION"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
     }
   ],
-  "claim_boundary": "A final bias case requires either robust 4096-step direct direction (persistent source bias) or a long-run feedback-sustained separation with an observed paired parameter/loss split. A loss split is recorded as a consequence of a direct case when available; different converged losses are not required or claimed.",
-  "final_case_count": 9,
+  "claim_boundary": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. A loss split alone is consequence-only and never establishes persistent bias. Different converged losses are not required or claimed.",
+  "final_case_count": 6,
   "historical_candidate_count": 11,
   "population": "expanded inventory of every historical bias candidate and every merged matrix row",
-  "result_sha256": "5772a377e372fce4d6b238b14c77b8fb5afb33e1ff1d5b032f5f5944cbb55f85",
+  "result_sha256": "72e65e4224aff082912bf71162b9b8df255f5585600e2bacf2ec7938415cfa68",
   "schema": "kernel-analyzer-declared-persistent-4096-summary-v2",
   "source_audit": "results/property/declared_persistent_4096/all_bias_case_audit.json",
   "status": "COMPLETE_WITH_UNRESOLVED_REPLAYS",

@@ -215,7 +215,7 @@ def main() -> None:
         lines = [
             "# 所有偏差候选的 4096 步复核摘要", "",
             f"审计表包含 {audit['case_count']} 行：{audit.get('unique_matrix_case_count')} 个主矩阵案例、{audit.get('historical_candidate_count')} 个历史候选，以及新增模型的复核行。",
-            "最终标签允许两条路径：直接更新在长程仍有方向，或虽然直接作用不持续但在某个测量窗口已经出现配对 loss 分叉。两条轨迹不需要收敛到不同的最终 loss。",
+            "最终持久性 bias 标签要求 bias-bearing 的直接作用或反馈作用本身在长程仍有方向；只有 loss 分叉但没有持久 bias 组件的记录保留为后果对照，不计入持久性 bias。两条轨迹不需要收敛到不同的最终 loss。",
             "", "| 模型 | 算子或位置 | 长程状态 | 结果 |", "|---|---|---|---|",
         ]
         labels = {
@@ -223,6 +223,7 @@ def main() -> None:
             "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": "反馈长程维持 + loss 分叉",
             "FEEDBACK_SUSTAINED_PARAMETER_SPLIT_LOSS_NOT_RECORDED": "反馈/参数分离，loss 未记录",
             "NO_ROBUST_LONG_DIRECT_BIAS": "未发现稳健长程直接方向",
+            "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": "后果对照：loss 分叉但没有持久 bias 组件",
             "UNRESOLVED_LONG_REPLAY": "运行环境或资源未决",
             "ABSTAIN_NOT_REPLAYABLE": "无法安全重放",
         }

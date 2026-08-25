@@ -6,7 +6,7 @@
 
 仓库中有 **23 个唯一主矩阵 case ID、28 条合并后的审计记录**。其中 **13 条**是历史或同族复现候选，另有 **12 条**是结果盲抽、32 步已经出现实际/反馈分离、正在等待 4096 步的补充候选；剩余 3 条是其他 roster/control 或未决记录。这几个数字分别表示覆盖分母、候选分母和逐行审计数，不能互相替代。
 
-当前有 **9 个已确认的长程结果案例**：5 个直接作用长程成立（Liger fused CE、Phi `lm_head dX`、Qwen `lm_head dX`、Llama `lm_head dX`、Ministral `lm_head dX`），1 个反馈维持型长程案例（Qwen3-VL SiLU），以及 3 个直接方向未持续但 live candidate/repair loss 已长程分叉的后果案例（Qwen64 `v_proj`、Qwen seq64 `v_proj`、saved-P）。这 9 个不包含正在排队的 12 条补充候选；补充候选在长程完成前不算阴性。最终案例要求长程方向或长程 live 分离成立，并且在某个测量窗口观察到参数或 loss 分叉；不要求两条轨迹收敛到不同的最终 loss。无法安全重放的记录单独标为未决，不会被当成负例。完整逐行表见 [`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)。
+当前有 **6 个已确认的长程持久性 bias 案例**：5 个直接作用长程成立（Liger fused CE、Phi `lm_head dX`、Qwen `lm_head dX`、Llama `lm_head dX`、Ministral `lm_head dX`），1 个反馈维持型长程案例（Qwen3-VL SiLU）。另有 3 个记录出现了长程配对 loss 分叉，但直接 bias 没有保持，因此只作为“长程后果对照”，不计入持久性 bias。6 个持久性案例和 3 个后果对照都不包含正在排队的 12 条补充候选；补充候选在长程完成前不算阴性。持久性 bias 要求 bias-bearing 的直接作用或反馈作用本身跨越 4096 步保持；loss 分叉是后果证据，不能单独升级一个案例。无法安全重放的记录单独标为未决，不会被当成负例。完整逐行表见 [`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)。
 
 ## 我们在问什么
 
@@ -165,7 +165,7 @@ v4.1 是身份字段更完整的新实验入口，目前状态为 `NOT_STARTED_N
 
 > 输出误差大小不能判断一个 LLM 训练实现是否会长期形成方向。更直接的办法是在真实 backward 和实际 optimizer 下先做短程筛查，再对升级项做长程同状态复核，并把最终参数分离拆成算子直接作用和训练状态反馈。
 
-当前证据支持一个 **短程方向筛查 + 4096 步长程复核** 的两级流程。短筛用于节省成本；长期标签只来自长程实验。目前 Liger、Phi、Qwen、Llama 和 Ministral 在声明的 warm-state 4096 步协议中保留直接方向；SiLU 显示长程反馈维持并有配对 loss gap；Qwen64 `v_proj`、Qwen seq64 `v_proj` 和 saved-P 的直接方向未保持，但 live candidate/repair 轨迹出现长程 loss 分叉，作为单独的后果案例；Mamba 的直接长程审计已完成但未超过自身随机基线，单独的 live loss 阶段未能安全产出，Gemma4 的兼容长程重放在第 294 步后未产出完整结果，二者都保留为未决/非阳性；layer-23 和 DeepSeek `dV` 分别因实现身份或形成证据不足而保持未决。
+当前证据支持一个 **短程方向筛查 + 4096 步长程复核** 的两级流程。短筛用于节省成本；长期标签只来自长程实验。目前 Liger、Phi、Qwen、Llama 和 Ministral 在声明的 warm-state 4096 步协议中保留直接方向；SiLU 显示长程反馈维持并有配对 loss gap；Qwen64 `v_proj`、Qwen seq64 `v_proj` 和 saved-P 的直接方向未保持，虽然 live candidate/repair 轨迹出现长程 loss 分叉，但它们没有持久 bias 组件，只作为后果对照；Mamba 的直接长程审计已完成但未超过自身随机基线，单独的 live loss 阶段未能安全产出，Gemma4 的兼容长程重放在第 294 步后未产出完整结果，二者都保留为未决/非阳性；layer-23 和 DeepSeek `dV` 分别因实现身份或形成证据不足而保持未决。
 
 ## 当前不能声称
 

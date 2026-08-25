@@ -8,10 +8,10 @@ This registry deliberately separates three questions:
 
 For a direct-source case, the long direct gate is sufficient to establish a
 persistent bias; a paired loss gap is reported as its consequence when
-available. A feedback-sustained case may instead qualify when the direct
-effect is not persistent but a completed long-horizon feedback separation has
-an observed paired loss gap; it is reported separately from direct-source
-persistence.
+available. A feedback-sustained case may qualify only when the feedback
+effective-update direction itself remains long-range and a paired parameter or
+loss split is observed. A loss split by itself never establishes a persistent
+bias case; it is retained as a consequence-only control.
 """
 
 from __future__ import annotations
@@ -330,11 +330,10 @@ def final_label(direct: dict[str, Any], paired: dict[str, Any], formation_path: 
     if direct.get("status") == "ABSTAIN":
         return "ABSTAIN_NOT_REPLAYABLE"
     if direct.get("long_direct") == "NOT_ROBUST":
-        # The user's final criterion is deliberately broader than direct
-        # persistence: a reproducible long live candidate/repair loss split is
-        # still a real training consequence, even when the direct source
-        # direction itself diffuses.  Keep this label separate so it is never
-        # mistaken for a persistent-local-source case.
+        # A paired loss split without a long-range bias component is retained
+        # as a consequence-only control. It must not be promoted to a
+        # persistent-bias case: a bias-bearing direct or feedback component
+        # must itself survive the long horizon.
         if str(paired.get("status", "")).startswith("COMPLETE") and paired.get("loss_separation_observed"):
             return "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE"
         return "NO_ROBUST_LONG_DIRECT_BIAS"
@@ -584,7 +583,7 @@ def main() -> None:
     }
     payload = {
         "schema": "all-historical-bias-candidates-long-audit-v1",
-        "definition": "A final bias case requires either robust 4096-step direct direction (persistent source bias) or a long-run feedback-sustained separation with an observed paired parameter/loss split. A loss split is recorded as a consequence of a direct case when available; different converged losses are not required or claimed.",
+        "definition": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. A loss split alone is consequence-only and never establishes persistent bias. Different converged losses are not required or claimed.",
         "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
         "case_count": len(rows),
         "unique_matrix_case_count": matrix_count,
@@ -605,7 +604,6 @@ def main() -> None:
                 "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
                 "ROBUST_LONG_DIRECT_BIAS_LOSS_NOT_RUN",
                 "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT",
-                "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE",
             }
             for r in rows
         ),
@@ -631,9 +629,9 @@ def main() -> None:
         "",
         f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(CASES) + len(EXPANDED_CANDIDATES)} 个 extended candidate rows**（其中包含历史候选、Llama/Ministral 同族复现、Gemma4，以及 12 个结果盲抽的长程 consequence 候选）。合并后表共有 **{len(rows)} 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
         "",
-        f"按当前口径，最终计入 **{payload['final_case_count']} 个**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**，直接方向未持续但有长程配对 loss 分叉 **{payload['long_loss_split_without_direct_count']} 个**；未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
+        f"按当前口径，最终计入 **{payload['final_case_count']} 个持久性 bias 案例**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**。另有 **{payload['long_loss_split_without_direct_count']} 个**只有长程配对 loss 分叉、但没有持久 bias 组件的后果对照；它们不计入持久性 bias。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
         "",
-        "直接源案例只要 4096 步直接更新差异仍有稳定方向，就已经是持久性 bias；如果配对训练还观察到参数或 loss 分叉，就作为后果一并报告。反馈维持型案例只有在 4096 步反馈分离并观察到配对参数/loss gap 时才单独计入，不冒充直接源 bias。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。",
+        "持久性 bias 的必要条件是 bias 本身在 4096 步仍然存在：直接源方向或反馈有效更新方向至少有一个通过长程检验。配对训练中的参数或 loss 分叉是后果证据，不足以单独把一个没有持久 bias 组件的记录升级为案例。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。",
         "",
         "| 模型 | 算子或位置 | 形成路径 | 4096 步直接结果 | 参数/loss 分叉 | 最终分类 |",
         "|---|---|---|---|---|---|",
@@ -641,7 +639,7 @@ def main() -> None:
     labels = {
         "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": "最终持久性 bias 案例",
         "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": "反馈维持型 bias，且有 loss 分叉",
-        "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": "有长程 loss 分叉，但直接方向未持续",
+        "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": "后果对照：有长程 loss 分叉，但没有持久 bias 组件",
         "FEEDBACK_SUSTAINED_LOSS_NOT_RECORDED": "反馈维持，但 loss 尚未记录",
         "ROBUST_LONG_DIRECT_BIAS_LOSS_NOT_RUN": "长程方向成立，loss 尚未测",
         "NO_ROBUST_LONG_DIRECT_BIAS": "长程未保持",
