@@ -32,7 +32,7 @@ from scripts.run_frozen_candidate_fp32_screen import (  # noqa: E402
 from scripts.run_heldout_lmhead_consequence import adam_delta  # noqa: E402
 
 
-CARRIERS = (
+GEMMA_CARRIERS = (
     "model.language_model.embed_tokens.weight",
     "model.language_model.per_layer_model_projection.weight",
 )
@@ -59,6 +59,11 @@ def choose_target(campaign: dict) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=Path, required=True)
+    parser.add_argument(
+        "--architecture", choices=("gemma4", "generic"), default="gemma4",
+        help="Model loader used for the same-process target replay. The generic "
+             "loader is used for ordinary text-only causal LMs such as Llama.",
+    )
     parser.add_argument("--input-bank", type=Path, required=True)
     parser.add_argument(
         "--consequence-bank", type=Path,
@@ -117,11 +122,14 @@ def main() -> None:
     release_dir = output_dir / "runtime_release"
     device = torch.device(args.device)
     configure_candidate_runtime(args.runtime_seed)
-    model = load_model("gemma4", args.model, device)
+    model = load_model(args.architecture, args.model, device)
     parameters = dict(model.named_parameters())
-    missing = sorted(set(CARRIERS) - set(parameters))
-    if missing:
-        raise RuntimeError(f"declared carrier absent: {missing}")
+    if args.architecture == "gemma4":
+        missing = sorted(set(GEMMA_CARRIERS) - set(parameters))
+        if missing:
+            raise RuntimeError(f"declared carrier absent: {missing}")
+    elif args.carrier is None:
+        raise RuntimeError("--architecture generic requires an explicit --carrier")
     if args.carrier is not None and args.carrier not in parameters:
         raise RuntimeError(f"requested carrier absent: {args.carrier}")
 
@@ -148,7 +156,7 @@ def main() -> None:
     inventory_path, campaign_path = freeze_or_validate_release(
         modules=wrappers,
         release=release_dir,
-        architecture="gemma4",
+        architecture=args.architecture,
         input_bank=args.input_bank,
         state=warm_states[0],
         allow_graph_breaks=True,
@@ -157,12 +165,14 @@ def main() -> None:
     import gzip
     with gzip.open(campaign_path, "rt", encoding="utf-8") as handle:
         campaign = json.load(handle)
+    if args.target_region is None and args.architecture != "gemma4":
+        raise RuntimeError("generic target replay requires --target-region")
     target = choose_target(campaign) if args.target_region is None else next(
         row for row in campaign["rows"] if row["region_id"] == args.target_region
     )
     repair_endpoints = [args.target_endpoint] if args.target_endpoint else target["output_names"]
     repair_targets = {target["region_id"]: repair_endpoints}
-    carriers = (args.carrier,) if args.carrier else CARRIERS
+    carriers = (args.carrier,) if args.carrier else GEMMA_CARRIERS
 
     raw_gradient_records = []
 
@@ -265,7 +275,7 @@ def main() -> None:
     formation_amplification = (resultant_energy / max(formation_path_energy, 1e-30)) ** 0.5
     odd_even_cosine = odd_even_inner / max((odd_energy * even_energy) ** 0.5, 1e-30)
     prediction = {
-        "schema": "kernel-analyzer-gemma4-v3-source-prediction-v1",
+        "schema": "kernel-analyzer-target-v3-source-prediction-v1",
         "status": "PREDICTION_FROZEN_BEFORE_CONSEQUENCE",
         "source_prediction": (
             "SOURCE_PERSISTENCE_RISK"
@@ -280,12 +290,13 @@ def main() -> None:
         },
         "target_region_id": target["region_id"],
         "target_symbol": target["symbol"],
+        "architecture": args.architecture,
         "runtime_release": str(release_dir),
         "claim_boundary": "Source prediction is frozen before the paired trajectory; feedback is outside this source branch.",
     }
     (output_dir / "prediction.json").write_text(json.dumps(prediction, indent=2, sort_keys=True) + "\n")
     (output_dir / "formation.json").write_text(json.dumps({
-        "schema": "kernel-analyzer-gemma4-v3-formation-v1",
+        "schema": "kernel-analyzer-target-v3-formation-v1",
         "status": "COMPLETE",
         "prediction": prediction,
         "records": formation_records,
@@ -383,11 +394,12 @@ def main() -> None:
             "coherence_amplification": l2(sums[name]) / max(energies[name] ** 0.5, 1e-30),
         }
     consequence = {
-        "schema": "kernel-analyzer-gemma4-v3-consequence-v1",
+        "schema": "kernel-analyzer-target-v3-consequence-v1",
         "status": "COMPLETE_LONG_HORIZON" if consequence_steps >= 4096 else "COMPLETE",
         "prediction": prediction,
         "steps": consequence_steps,
         "carrier": carrier_name,
+        "architecture": args.architecture,
         "statistics": stats,
         "final_drift_l2": l2(cmaster - rmaster),
         "records": records,
@@ -433,7 +445,7 @@ def main() -> None:
         consequence["raw_capture_manifest"] = str(raw_manifest_path)
     (output_dir / "consequence.json").write_text(json.dumps(consequence, indent=2, sort_keys=True) + "\n")
     short_payload = {
-        "schema": "kernel-analyzer-gemma4-v3-short-screen-dryrun-v1",
+        "schema": "kernel-analyzer-target-v3-short-screen-dryrun-v1",
         "status": "NOT_RUN_INSUFFICIENT_STEPS" if short is None else "COMPLETE",
         "input": {
             "case_id": args.case_id,
@@ -455,9 +467,10 @@ def main() -> None:
         }
     (output_dir / "short_screen.json").write_text(json.dumps(short_payload, indent=2, sort_keys=True) + "\n")
     print(json.dumps({
-        "event": "GEMMA4_V3_VALIDATION_COMPLETE",
+        "event": "TARGET_V3_VALIDATION_COMPLETE",
         "output_dir": str(output_dir),
         "case_id": args.case_id,
+        "architecture": args.architecture,
         "source_prediction": prediction["source_prediction"],
         "source_amplification": formation_amplification,
         "short_actual_status": short_payload.get("paths", {}).get(

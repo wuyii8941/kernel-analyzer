@@ -1,11 +1,11 @@
 {
-  "case_count": 28,
+  "case_count": 34,
   "coherent_endpoint_witness_count": 57,
   "definition": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. A loss split alone is consequence-only and never establishes persistent bias. Different converged losses are not required or claimed.",
   "direct_persistent_case_count": 5,
   "endpoint_population_count": 1562,
-  "extended_candidate_count": 26,
-  "extended_candidate_note": "The extended roster includes the historical candidates, Llama/Ministral family replication rows, Gemma4, the 12 result-blind 32-step consequence candidates, and the separately tracked Gemma GELU consequence candidate. These rows are not negatives until their long replay is complete.",
+  "extended_candidate_count": 32,
+  "extended_candidate_note": "The extended roster includes historical candidates, Llama/Ministral family replication rows, Gemma4, the 12 result-blind 32-step consequence candidates, the separately tracked Gemma GELU consequence candidate, and six new Gemma/Llama target-replay rows. These rows are not negatives until their long replay is complete.",
   "final_case_count": 6,
   "grouping_rule": "Repeated concrete endpoint occurrences are grouped by the frozen case-stage matrix ID; they are not silently dropped, but they do not count as independent cases.",
   "historical_candidate_count": 11,
@@ -18,7 +18,7 @@
     "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": 5,
     "UNRESOLVED_FORMATION": 1,
     "UNRESOLVED_LONG_REPLAY": 2,
-    "UNRESOLVED_LONG_REPLAY_PENDING": 12
+    "UNRESOLVED_LONG_REPLAY_PENDING": 18
   },
   "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
   "long_loss_split_without_direct_count": 3,
@@ -28,8 +28,14 @@
     "gemma4_random_gelu_backward1860",
     "gemma4_random_gelu_loss_backward",
     "gemma4_random_softmax_backward",
+    "gemma4_scan_00",
+    "gemma4_scan_01",
+    "gemma4_scan_02",
     "layer23_qproj_attention_state_region",
     "liger_fused_ce_t128",
+    "llama32_scan_00",
+    "llama32_scan_01",
+    "llama32_scan_02",
     "mamba_seq64_in_proj",
     "multishape-backward-cell-0057",
     "multishape-backward-cell-0103",
@@ -80,6 +86,12 @@
     ],
     "nonzero_rows_without_legal_replay": 141,
     "screened_rows": 242
+  },
+  "operator_scan_target_replay": {
+    "claim_boundary": "Rows are selected before target replay results. Pattern-screen amplification alone is never promoted to a bias case.",
+    "completed": 0,
+    "manifest": "results/property/declared_persistent_4096/operator_scan_target_manifest.json",
+    "rows": 6
   },
   "outcome_relevant_case_count": 9,
   "rows": [
@@ -853,6 +865,186 @@
       "short_regime": "feedback-sustained 32-step consequence candidate"
     },
     {
+      "case": "gemma4_scan_00",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "new operator scan; exact generated target replay",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_scan_00/consequence.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "gemma4_scan_00",
+      "model": "Gemma-4 E2B",
+      "operator_or_region": "backward:671 triton_red_fused__to_copy_mul_pow_sum_view_1 [out_ptr1]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_scan_00/consequence.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "operator_scan_candidate",
+      "screen_metadata": {
+        "screen_amplification": 1.4792047956882213,
+        "screen_exact_implementation_id": "31408ef5ecc9a31a41e57110c18c06bcd298c71953380b68896e4bf57d5aece5",
+        "screen_p_value": 0.1484375,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "gemma4_scan_01",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "new operator scan; exact generated target replay",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_scan_01/consequence.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "gemma4_scan_01",
+      "model": "Gemma-4 E2B",
+      "operator_or_region": "forward:17 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_10 [out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_scan_01/consequence.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "operator_scan_candidate",
+      "screen_metadata": {
+        "screen_amplification": 1.2561085381234127,
+        "screen_exact_implementation_id": "417c6b70f778465ebe20285d9ad7746551a9c343a7c4d3456bc8cf1c4ea3b403",
+        "screen_p_value": 0.2421875,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "gemma4_scan_02",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "new operator scan; exact generated target replay",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_scan_02/consequence.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "gemma4_scan_02",
+      "model": "Gemma-4 E2B",
+      "operator_or_region": "forward:22 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_12 [out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/gemma4_scan_02/consequence.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "operator_scan_candidate",
+      "screen_metadata": {
+        "screen_amplification": 1.2346417023554286,
+        "screen_exact_implementation_id": "5d659f98f2b98a78ef2c16f4c4e88a8e04180fc3609488ee9e90187f347cd880",
+        "screen_p_value": 0.171875,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "llama32_scan_00",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "new operator scan; exact generated target replay",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_scan_00/consequence.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "llama32_scan_00",
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "forward:20 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_11 [in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_scan_00/consequence.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "operator_scan_candidate",
+      "screen_metadata": {
+        "screen_amplification": 1.2858736252657847,
+        "screen_exact_implementation_id": "629763cfa21a164c3186e0ef5078925bec97ee70b43f2727b7f5f645cbb6fb07",
+        "screen_p_value": 0.0390625,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "llama32_scan_01",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "new operator scan; exact generated target replay",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_scan_01/consequence.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "llama32_scan_01",
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "forward:449 triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view_13 [out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_scan_01/consequence.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "operator_scan_candidate",
+      "screen_metadata": {
+        "screen_amplification": 1.2598555312425812,
+        "screen_exact_implementation_id": "820b65246c84532ef8663097541f6382dc535f978ee305a12e48148bf7282fd2",
+        "screen_p_value": 0.046875,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "llama32_scan_02",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "new operator scan; exact generated target replay",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_scan_02/consequence.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "matrix_case_id": "llama32_scan_02",
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "forward:32 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_12 [in_out_ptr0]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_scan_02/consequence.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "operator_scan_candidate",
+      "screen_metadata": {
+        "screen_amplification": 1.2581759994449548,
+        "screen_exact_implementation_id": "b790504aed0531ea2e7dfe93ce0e8f99cd7852ab20b809f94df621b98b5d3915",
+        "screen_p_value": 0.0078125,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json"
+      }
+    },
+    {
       "case": "gemma4_random_gelu_backward1860",
       "direct_sha256": null,
       "final_label": "NOT_APPLICABLE_NO_CARRIER_EFFECT",
@@ -900,9 +1092,10 @@
     "additional_outcome_candidate": 1,
     "expanded_bias_candidate": 12,
     "historical_candidate": 13,
+    "operator_scan_candidate": 6,
     "roster_control_or_unresolved": 2
   },
   "unindexed_historical_candidate_count": 3,
   "unique_matrix_case_count": 23,
-  "unresolved_or_abstain_count": 16
+  "unresolved_or_abstain_count": 22
 }

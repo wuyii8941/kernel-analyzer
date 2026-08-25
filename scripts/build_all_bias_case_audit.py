@@ -40,6 +40,7 @@ GEMMA_GELU_LONG = LONG / "gemma4_random_gelu_loss_backward_long" / "consequence.
 GEMMA_GELU_LOG = LONG / "expanded_controls/logs/gemma4_random_gelu_loss_backward_long.log"
 GEMMA_GELU_UNRESOLVED = LONG / "unresolved/gemma4_random_gelu_loss_backward_long_unresolved.json"
 GEMMA_NORM_LOG = LONG / "expanded_controls/logs/gemma4_norm_v3_long.log"
+TARGET_MANIFEST = LONG / "operator_scan_target_manifest.json"
 
 
 def sha(path: Path) -> str | None:
@@ -304,6 +305,38 @@ def long_row(path: Path) -> dict[str, Any]:
             "artifact": str(path.relative_to(ROOT)),
             "window_evidence": str(short_path.relative_to(ROOT)) if short_path.exists() else None,
         }
+    if payload.get("schema", "").startswith("kernel-analyzer-target-v3-consequence") and str(payload.get("status", "")).startswith("COMPLETE"):
+        # The generic target runner uses the same sketch/null protocol as the
+        # Gemma runner, but also supports ordinary text-only LMs.  Its sibling
+        # short_screen.json is the long-horizon window evidence.
+        short_path = path.with_name("short_screen.json")
+        short = read(short_path) or {}
+        short_cases = {str(row.get("case_id")): row for row in short.get("cases", [])}
+        case_id = str(payload.get("case_id", ""))
+        local = short_cases.get(f"{case_id}::local", {})
+        feedback = short_cases.get(f"{case_id}::feedback", {})
+        actual = short_cases.get(f"{case_id}::actual", {})
+        local_risk = local.get("status") == "RISK_CANDIDATE"
+        feedback_risk = feedback.get("status") == "RISK_CANDIDATE"
+        long_status = "ROBUST" if local_risk else ("FEEDBACK_SUSTAINED" if feedback_risk else "NOT_ROBUST")
+        chosen = local if local_risk else (feedback if feedback_risk else actual)
+        return {
+            "status": "COMPLETE_4096" if int(payload.get("steps", 0)) >= 4096 else payload.get("status", "COMPLETE"),
+            "long_direct": long_status,
+            "verdict": "PERSISTENT_LOCAL_BIAS" if local_risk else ("FEEDBACK_SUSTAINED_SEPARATION" if feedback_risk else "NO_ROBUST_LONG_DIRECT"),
+            "steps": int(payload.get("steps", 0)),
+            "A4096": float(chosen.get("observed_amplification", 0.0)),
+            "local_A4096": float(local.get("observed_amplification", 0.0)),
+            "feedback_A4096": float(feedback.get("observed_amplification", 0.0)),
+            "null95": chosen.get("sign_flip_null", {}).get("upper_95"),
+            "p": chosen.get("sign_flip_null", {}).get("one_sided_p"),
+            "paired_loss_gap_final": payload.get("loss_audit", {}).get("final_gap"),
+            "paired_loss_gap_mean_last_512": payload.get("loss_audit", {}).get("last_512_mean"),
+            "loss_audit": payload.get("loss_audit", {}),
+            "artifact": str(path.relative_to(ROOT)),
+            "window_evidence": str(short_path.relative_to(ROOT)) if short_path.exists() else None,
+            "measurement_geometry": "COUNT_SKETCH_256",
+        }
     if payload.get("status", "").startswith("ABSTAIN") or "decision" in payload:
         return {
             "status": "ABSTAIN",
@@ -534,6 +567,9 @@ def main() -> None:
     expanded_ids = {case_id for case_id, *_ in EXPANDED_CANDIDATES}
     known.update(expanded_ids)
     known.update(case_id for case_id, *_ in ADDITIONAL_OUTCOME_CANDIDATES)
+    target_manifest = read(TARGET_MANIFEST) or {}
+    target_manifest_rows = target_manifest.get("rows", [])
+    known.update(row.get("case_id") for row in target_manifest_rows if row.get("case_id"))
     for name, model, region, path, long_path, paired_path in CASES:
         unresolved_paths = {
             "Llama lm_head dX": LONG / "unresolved/llama32_lmhead_4096_unresolved.json",
@@ -817,6 +853,50 @@ def main() -> None:
             "short_regime": "feedback-sustained 32-step consequence candidate",
         })
 
+    # New Gemma/Llama scan targets are part of the same audit file, but they
+    # stay unresolved until exact F+B reachability and the long replay are
+    # both present.  A pattern-screen amplification is never a final label.
+    for target in target_manifest_rows:
+        case_id = str(target["case_id"])
+        target_dir = LONG / "operator_scan_targets" / case_id
+        path = target_dir / "consequence.json"
+        if path.exists():
+            direct = long_row(path)
+            paired = paired_row(path)
+        else:
+            direct = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "long_direct": "UNRESOLVED",
+                "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
+                "steps": None,
+                "artifact": str(path.relative_to(ROOT)),
+            }
+            paired = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "loss_separation_observed": False,
+                "steps": None,
+                "artifact": str(path.relative_to(ROOT)),
+            }
+        rows.append({
+            "case": case_id,
+            "matrix_case_id": case_id,
+            "model": target["model"],
+            "operator_or_region": f"{target['target_region']} {target['target_symbol']} [{target['target_endpoint']}]",
+            "formation_path": "new operator scan; exact generated target replay",
+            "long_direct": direct,
+            "paired_consequence": paired,
+            "scope": "operator_scan_candidate",
+            "final_label": final_label(direct, paired, "new operator scan"),
+            "direct_sha256": sha(path),
+            "paired_sha256": sha(path),
+            "screen_metadata": {
+                "screen_exact_implementation_id": target.get("screen_exact_implementation_id"),
+                "screen_amplification": target.get("screen_amplification"),
+                "screen_p_value": target.get("screen_p_value"),
+                "source_screen": target.get("source_screen"),
+            },
+        })
+
     # Keep the complete 23-case roster visible.  Rows that never passed the
     # nonzero, parameter-reachable direct-bias gate are recorded as screened
     # negatives or unresolved; they are not silently dropped and are not
@@ -893,6 +973,12 @@ def main() -> None:
         "nonzero_rows_without_legal_replay": sum(int(row.get("nonzero_new_impl_rows_requiring_legal_replay", 0)) for row in operator_scan_models),
         "claim_boundary": "Pattern-screen signals are not bias cases without an exact parameter-reachable repair and long replay; no new Gemma/Llama row passed the frozen gate.",
     }
+    operator_scan_target_summary = {
+        "manifest": str(TARGET_MANIFEST.relative_to(ROOT)) if TARGET_MANIFEST.exists() else None,
+        "rows": len(target_manifest_rows),
+        "completed": sum((LONG / "operator_scan_targets" / str(row.get("case_id")) / "consequence.json").exists() for row in target_manifest_rows),
+        "claim_boundary": "Rows are selected before target replay results. Pattern-screen amplification alone is never promoted to a bias case.",
+    }
     payload = {
         "schema": "all-historical-bias-candidates-long-audit-v1",
         "definition": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. A loss split alone is consequence-only and never establishes persistent bias. Different converged losses are not required or claimed.",
@@ -903,9 +989,10 @@ def main() -> None:
         "coherent_endpoint_witness_count": coherent_endpoint_count,
         "grouping_rule": "Repeated concrete endpoint occurrences are grouped by the frozen case-stage matrix ID; they are not silently dropped, but they do not count as independent cases.",
         "historical_candidate_count": 11,
-        "extended_candidate_count": len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES),
-        "extended_candidate_note": "The extended roster includes the historical candidates, Llama/Ministral family replication rows, Gemma4, the 12 result-blind 32-step consequence candidates, and the separately tracked Gemma GELU consequence candidate. These rows are not negatives until their long replay is complete.",
+        "extended_candidate_count": len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES) + len(target_manifest_rows),
+        "extended_candidate_note": "The extended roster includes historical candidates, Llama/Ministral family replication rows, Gemma4, the 12 result-blind 32-step consequence candidates, the separately tracked Gemma GELU consequence candidate, and six new Gemma/Llama target-replay rows. These rows are not negatives until their long replay is complete.",
         "operator_scan": operator_scan_summary,
+        "operator_scan_target_replay": operator_scan_target_summary,
         "unindexed_historical_candidate_count": len(historical_ids - matrix_ids),
         "matrix_case_ids_covered_by_rows": sorted(
             {r.get("matrix_case_id") for r in rows if r.get("matrix_case_id")}
@@ -918,6 +1005,7 @@ def main() -> None:
             "roster_control_or_unresolved": sum(r.get("scope") == "roster_control_or_unresolved" for r in rows),
             "expanded_bias_candidate": sum(r.get("scope") == "expanded_bias_candidate" for r in rows),
             "additional_outcome_candidate": sum(r.get("scope") == "additional_outcome_candidate" for r in rows),
+            "operator_scan_candidate": sum(r.get("scope") == "operator_scan_candidate" for r in rows),
         },
         "final_case_count": sum(
             r["final_label"] in {
@@ -964,7 +1052,7 @@ def main() -> None:
         "",
         f"按当前口径，最终计入 **{payload['final_case_count']} 个持久性 bias 案例**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**。另有 **{payload['long_loss_split_without_direct_count']} 个**虽没有持久 bias 组件、但确实出现长程配对 loss 分叉；因此当前共有 **{payload['outcome_relevant_case_count']} 个训练结果相关记录**，但不能把后果对照改称为持久性 bias。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
         "",
-        f"Gemma/Llama 的追加首轮扫描另有 **{operator_scan_summary['screened_rows']} 行**，其中冻结升级门通过 **{operator_scan_summary['frozen_gate_positives']} 行**；有 nominal 非零信号但缺少合法长程重放的行保存在单独扫描清单中，不计入上述 bias 案例数。",
+        f"Gemma/Llama 的追加首轮扫描另有 **{operator_scan_summary['screened_rows']} 行**，其中冻结升级门通过 **{operator_scan_summary['frozen_gate_positives']} 行**；本轮按冻结规则选出 **{len(target_manifest_rows)} 个**新的 exact F+B 目标，目前完成长程重放 **{operator_scan_target_summary['completed']} 个**。没有完成合法重放的行不计入 bias 案例数，也不改判为阴性。",
         "",
         "持久性 bias 的必要条件是 bias 本身在 4096 步仍然存在：直接源方向或反馈有效更新方向至少有一个通过长程检验。配对训练中的参数或 loss 分叉是后果证据，不足以单独把一个没有持久 bias 组件的记录升级为案例。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。",
         "",
