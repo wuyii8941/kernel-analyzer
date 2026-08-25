@@ -173,7 +173,8 @@ def main() -> None:
         carrier_name: str,
         *,
         capture_raw_endpoint: bool = False,
-    ) -> torch.Tensor:
+        return_loss: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, float]:
         parameter = parameters[carrier_name]
         with torch.no_grad():
             parameter.copy_(master.to(parameter.dtype))
@@ -192,7 +193,9 @@ def main() -> None:
                 raw_capture_dir=raw_capture_dir if capture_raw_endpoint else None,
             )
             with observer:
-                candidate(values).backward()
+                step_loss = candidate(values)
+                step_loss_value = float(step_loss.detach().float().cpu())
+                step_loss.backward()
             if raw_capture_dir is not None and capture_raw_endpoint:
                 raw_gradient_records.append({
                     "state_id": state["state_id"],
@@ -200,11 +203,13 @@ def main() -> None:
                     "observer_records": observer.records,
                 })
         else:
-            candidate(values).backward()
+            step_loss = candidate(values)
+            step_loss_value = float(step_loss.detach().float().cpu())
+            step_loss.backward()
         torch.cuda.synchronize(device)
         result = parameter.grad.detach().float().clone()
         del values
-        return result
+        return (result, step_loss_value) if return_loss else result
 
     # Open-loop formation: this is completed before the prediction object is
     # written and before any paired trajectory is executed.
@@ -311,10 +316,10 @@ def main() -> None:
     raw_trajectory_records = []
     for index, state in enumerate(consequence_states):
         step = index + 1
-        gc_c = gradient(cmaster, state, False, carrier_name)
+        gc_c, candidate_loss = gradient(cmaster, state, False, carrier_name, return_loss=True)
         gr_c = gradient(cmaster, state, True, carrier_name)
         gc_r = gradient(rmaster, state, False, carrier_name)
-        gr_r = gradient(rmaster, state, True, carrier_name)
+        gr_r, repair_loss = gradient(rmaster, state, True, carrier_name, return_loss=True)
         uc_c, ncm, ncv = adam_delta(gc_c, cm, cv, step, learning_rate=args.learning_rate)
         ur_c, _, _ = adam_delta(gr_c, cm, cv, step, learning_rate=args.learning_rate)
         uc_r, _, _ = adam_delta(gc_r, rm, rv, step, learning_rate=args.learning_rate)
@@ -362,6 +367,9 @@ def main() -> None:
             "actual_l2": l2(actual),
             "recurrence_residual_l2": l2(residual),
             "drift_l2": l2(next_c - next_r),
+            "candidate_loss": candidate_loss,
+            "repair_loss": repair_loss,
+            "paired_loss_gap": candidate_loss - repair_loss,
         })
         cmaster, rmaster, cm, cv, rm, rv = next_c, next_r, ncm, ncv, nrm, nrv
         del gc_c, gr_c, gc_r, gr_r, local, feedback, actual, residual
@@ -388,6 +396,18 @@ def main() -> None:
         "consequence_bank": str(consequence_bank_path),
         "formation_state_role": "CONFIRMATION",
         "consequence_state_role": "TRAJECTORY" if args.consequence_bank else "CONFIRMATION_ENGINEERING_REUSE",
+        "loss_audit": {
+            "recorded": True,
+            "any_period_split": any(abs(float(row.get("paired_loss_gap", 0.0))) > 1e-8 for row in records),
+            "max_abs_gap": max((abs(float(row.get("paired_loss_gap", 0.0))) for row in records), default=0.0),
+            "final_gap": records[-1].get("paired_loss_gap") if records else None,
+            "last_512_mean": (
+                sum(float(row.get("paired_loss_gap", 0.0)) for row in records[-min(512, len(records)):])
+                / max(1, min(512, len(records)))
+            ) if records else None,
+            "last_512_max_abs": max((abs(float(row.get("paired_loss_gap", 0.0))) for row in records[-min(512, len(records)):]), default=0.0),
+            "tolerance": 1e-8,
+        },
         "claim_boundary": "Same-process current wrapper release; source prediction and consequence are separated, and feedback remains out of source scope.",
         "gradient_scope": {
             "declared_carrier_only": requested_carrier is not None,
