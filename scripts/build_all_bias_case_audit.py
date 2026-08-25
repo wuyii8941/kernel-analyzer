@@ -674,6 +674,7 @@ def main() -> None:
             "short_regime": row.get("short_regime"),
             "long_artifact": str(expanded_long_path(row["case"]).relative_to(ROOT)),
             "unresolved_artifact": str((LONG / "unresolved" / f"{row['case']}_4096_unresolved.json").relative_to(ROOT)),
+            "trajectory_protocol": "CYCLED_32_STATE_SYNTHETIC_STREAM" if row["model"] == "Phi-4-mini" else "NATURAL_4096_STATE_TRAJECTORY_BANK",
             "status": row["final_label"],
             "claim_boundary": "Only a completed 4096-step candidate/repair replay with an observed paired loss or parameter split can promote this row; missing or failed runtime remains unresolved.",
         })
