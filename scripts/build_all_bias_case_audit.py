@@ -760,6 +760,19 @@ def main() -> None:
             r["final_label"] == "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE"
             for r in rows
         ),
+        # Keep the two scientific questions separate: a persistent bias
+        # component is the primary case count, while a paired long-run loss
+        # split is a secondary outcome count even when its source component
+        # did not remain directional.
+        "outcome_relevant_case_count": sum(
+            r["final_label"] in {
+                "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT",
+                "ROBUST_LONG_DIRECT_BIAS_LOSS_NOT_RUN",
+                "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT",
+                "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE",
+            }
+            for r in rows
+        ),
         "unresolved_or_abstain_count": sum(
             r["final_label"].startswith(("UNRESOLVED", "ABSTAIN"))
             for r in rows
@@ -773,7 +786,7 @@ def main() -> None:
         "",
         f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(CASES) + len(EXPANDED_CANDIDATES)} 个 extended candidate rows**（其中包含历史候选、Llama/Ministral 同族复现、Gemma4，以及 12 个结果盲抽的长程 consequence 候选）。合并后表共有 **{len(rows)} 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
         "",
-        f"按当前口径，最终计入 **{payload['final_case_count']} 个持久性 bias 案例**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**。另有 **{payload['long_loss_split_without_direct_count']} 个**只有长程配对 loss 分叉、但没有持久 bias 组件的后果对照；它们不计入持久性 bias。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
+        f"按当前口径，最终计入 **{payload['final_case_count']} 个持久性 bias 案例**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**。另有 **{payload['long_loss_split_without_direct_count']} 个**虽没有持久 bias 组件、但确实出现长程配对 loss 分叉；因此当前共有 **{payload['outcome_relevant_case_count']} 个训练结果相关记录**，但不能把后果对照改称为持久性 bias。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
         "",
         "持久性 bias 的必要条件是 bias 本身在 4096 步仍然存在：直接源方向或反馈有效更新方向至少有一个通过长程检验。配对训练中的参数或 loss 分叉是后果证据，不足以单独把一个没有持久 bias 组件的记录升级为案例。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。",
         "",
