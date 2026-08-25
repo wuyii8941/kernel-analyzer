@@ -28,9 +28,9 @@ operator becomes a parameter-update error that keeps accumulating.
    producing a complete artifact. Both remain unresolved/non-positive rather
    than being called negative. Layer-23 abstains because its historical implementation
    identity cannot be replayed, while DeepSeek `dV` remains unresolved for
-   formation reasons. The complete audit contains 28 rows: 11 historical
-   candidates, two same-family replication rows, and 15 roster/control or
-   unresolved rows.
+   formation reasons. The complete audit contains 28 rows: 13 historical or
+   same-family replication candidates, 12 result-blind consequence candidates
+   awaiting long replay, and 3 remaining roster/control or unresolved rows.
 5. Error size alone does not identify short directional formation. Across 32 reachable,
    nonzero rows, local RMS has Pearson correlation `0.018` with persistence.
 6. On the corrected 15-row same-AdamW evaluation, the 16-step local-update
@@ -47,7 +47,7 @@ operator becomes a parameter-update error that keeps accumulating.
   training. SiLU has a feedback-sustained long-horizon bias and a recorded
   paired loss gap, but is not a direct-source case. Qwen64 `v_proj`, Qwen seq64 `v_proj`
   and saved-P are separate long-loss-split consequence cases whose direct
-  source directions are not persistent. These remain controlled runs, not
+   source directions are not persistent. These remain controlled runs, not
   full-parameter training.
 - The 15-row result is retrospective and measured on declared parameter
   carriers. The 4096-step review measures same-state direct updates; neither
@@ -57,6 +57,11 @@ operator becomes a parameter-update error that keeps accumulating.
   not counted as operator-local source bias.
 - A generic three-part predictor cannot yet be evaluated fairly. Five cases
   were checked for complete inputs and all five required abstention.
+
+- The audit has also promoted 12 result-blind 32-step consequence controls to
+  a separate long-replay queue. They are not included in the nine completed
+  result cases and are not called negatives while their 4096-step paired
+  replays are pending or unresolved.
 
 The defensible result is therefore a measured operator-to-gradient-to-update
 map plus a two-level workflow: short direction triage followed by 4096-step
