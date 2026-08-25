@@ -34,6 +34,24 @@ run_case() {
     --state-role TRAJECTORY --device cuda:0 --allow-graph-breaks
   rc=$?
   echo "END $case rc=$rc $(date -Is)"
+  if [ "$rc" -ne 0 ]; then
+    mkdir -p "$ROOT/results/property/declared_persistent_4096/expanded_controls/retry_failures"
+    CASE_ID="$case" RC="$rc" OUT_LOG="$LOG" "$PY" - <<'PY'
+import json, os
+from pathlib import Path
+case = os.environ["CASE_ID"]
+payload = {
+    "schema": "kernel-analyzer-expanded-replay-failure-v1",
+    "case_id": case,
+    "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
+    "reason": "Resource-safe retry exited nonzero after the prior contention failure.",
+    "return_code": int(os.environ["RC"]),
+    "log": os.environ["OUT_LOG"],
+}
+path = Path("/data1/tzh/kernel-analyzer/results/property/declared_persistent_4096/expanded_controls/retry_failures") / f"{case}.json"
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+PY
+  fi
 }
 
 run_case deepseek /data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B \

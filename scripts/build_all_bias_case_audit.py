@@ -28,6 +28,13 @@ PAIRED = ROOT / "results/property/paired_loss_4096"
 OUT = ROOT / "results/property/declared_persistent_4096/all_bias_case_audit.json"
 MD = ROOT / "docs/all_bias_long_horizon_audit.md"
 MANIFEST = LONG / "expanded_controls/manifest.json"
+RETRY_SCHEDULED_IDS = {
+    "multishape-backward-cell-0103",
+    "multishape-backward-cell-0153",
+    "multishape-backward-cell-0190",
+    "multishape-backward-cell-0501",
+    "multishape-backward-cell-0508",
+}
 
 
 def sha(path: Path) -> str | None:
@@ -364,10 +371,13 @@ def main() -> None:
         # same protocol rerun once its richer artifact exists.
         if name == "Qwen3-VL SiLU" and (LONG / "qwen3vl_silu_4096_with_loss.json").exists():
             long_path = LONG / "qwen3vl_silu_4096_with_loss.json"
-        if name == "Gemma4 RMSNorm" and (LONG / "gemma4_norm_4096_rebound.json").exists():
-            rebound = read(LONG / "gemma4_norm_4096_rebound.json") or {}
+        if name == "Gemma4 RMSNorm":
+            rebound_path = LONG / "gemma4_norm_4096_rebound.json"
+            rebound = read(rebound_path) or {}
             if str(rebound.get("status", "")).startswith("COMPLETE"):
-                long_path = LONG / "gemma4_norm_4096_rebound.json"
+                long_path = rebound_path
+            elif (LONG / "unresolved/gemma4_norm_4096_rebound_unresolved.json").exists():
+                long_path = LONG / "unresolved/gemma4_norm_4096_rebound_unresolved.json"
         # A refreshed long replay supersedes an older direct-only artifact,
         # but only once the new file is complete.  This keeps interrupted
         # runs from silently changing the audit.
@@ -381,7 +391,14 @@ def main() -> None:
             candidate_payload = read(refreshed) or {}
             if candidate_payload.get("status") == "COMPLETE":
                 long_path = refreshed
-        if not long_path.exists() and name in unresolved_paths and unresolved_paths[name].exists():
+        if name == "Gemma4 RMSNorm" and not long_path.exists():
+            direct = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "long_direct": "UNRESOLVED",
+                "reason": "A resource-safe rebound replay is still running; the historical failure is not treated as a negative.",
+                "artifact": str((LONG / "gemma4_norm_4096_rebound.json").relative_to(ROOT)),
+            }
+        elif not long_path.exists() and name in unresolved_paths and unresolved_paths[name].exists():
             unresolved = read(unresolved_paths[name]) or {}
             direct = {
                 "status": unresolved.get("status", "UNRESOLVED_LONG_REPLAY"),
@@ -459,20 +476,27 @@ def main() -> None:
                 "loss_audit": loss_audit,
                 "artifact": direct.get("artifact"),
             }
-        elif unresolved_path.exists():
-            unresolved = read(unresolved_path) or {}
+        elif (LONG / "expanded_controls" / "retry_failures" / f"{case_id}.json").exists() or (
+            unresolved_path.exists() and case_id not in RETRY_SCHEDULED_IDS
+        ):
+            chosen_unresolved = (
+                LONG / "expanded_controls" / "retry_failures" / f"{case_id}.json"
+                if (LONG / "expanded_controls" / "retry_failures" / f"{case_id}.json").exists()
+                else unresolved_path
+            )
+            unresolved = read(chosen_unresolved) or {}
             direct = {
                 "status": unresolved.get("status", "UNRESOLVED_LONG_REPLAY"),
                 "long_direct": "UNRESOLVED",
                 "reason": unresolved.get("reason", "long replay unavailable"),
                 "steps": unresolved.get("steps_completed"),
-                "artifact": str(unresolved_path.relative_to(ROOT)),
+                "artifact": str(chosen_unresolved.relative_to(ROOT)),
             }
             paired = {
                 "status": unresolved.get("status", "UNRESOLVED_LONG_REPLAY"),
                 "loss_separation_observed": False,
                 "steps": unresolved.get("steps_completed"),
-                "artifact": str(unresolved_path.relative_to(ROOT)),
+                "artifact": str(chosen_unresolved.relative_to(ROOT)),
             }
         else:
             direct = {

@@ -18,8 +18,7 @@
     "NO_ROBUST_LONG_DIRECT_BIAS": 1,
     "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": 5,
     "UNRESOLVED_FORMATION": 1,
-    "UNRESOLVED_LONG_REPLAY": 6,
-    "UNRESOLVED_LONG_REPLAY_PENDING": 7
+    "UNRESOLVED_LONG_REPLAY_PENDING": 13
   },
   "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
   "long_loss_split_without_direct_count": 3,
@@ -426,13 +425,13 @@
     {
       "case": "Gemma4 RMSNorm",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY",
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
       "formation_path": "response asymmetry / feedback candidate",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/gemma4_norm_4096_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/gemma4_norm_4096_rebound.json",
         "long_direct": "UNRESOLVED",
-        "reason": "The rebuilt Transformers-5-compatible runtime reached step 294 but did not produce a complete artifact. The run is retained as unresolved; this is not a negative bias result.",
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE"
+        "reason": "A resource-safe rebound replay is still running; the historical failure is not treated as a negative.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING"
       },
       "model": "Gemma-4 E2B",
       "operator_or_region": "RMSNorm / projection feedback region",
@@ -470,22 +469,22 @@
     {
       "case": "multishape-backward-cell-0103",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY",
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
       "formation_path": "feedback-sustained candidate",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/multishape-backward-cell-0103_4096_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0103_4096.json",
         "long_direct": "UNRESOLVED",
-        "reason": "The exact four-arm replay reached step 10, then the seq256 DeepSeek runtime exhausted the 48GB GPU while moving the compiled model. The short 32-step consequence remains valid, but this run is not called a long-horizon negative.",
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
-        "steps": 10
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
       },
       "model": "DeepSeek-R1-Qwen3-8B",
       "operator_or_region": "DeepSeek backward cell 0103; input LayerNorm carrier",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/multishape-backward-cell-0103_4096_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0103_4096.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
-        "steps": 10
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
       },
       "paired_sha256": null,
       "scope": "expanded_bias_candidate",
@@ -495,22 +494,22 @@
     {
       "case": "multishape-backward-cell-0153",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY",
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
       "formation_path": "feedback-sustained candidate",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/multishape-backward-cell-0153_4096_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0153_4096.json",
         "long_direct": "UNRESOLVED",
-        "reason": "The seq64 DeepSeek replay could not allocate a further 96 MiB because a stale compiled DeepSeek context occupied the 48GB device. The exact four-arm long artifact was not produced, so this candidate remains unresolved rather than negative.",
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
-        "steps": 0
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
       },
       "model": "DeepSeek-R1-Qwen3-8B",
       "operator_or_region": "DeepSeek backward cell 0153; attention k-norm carrier",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/multishape-backward-cell-0153_4096_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0153_4096.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
-        "steps": 0
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
       },
       "paired_sha256": null,
       "scope": "expanded_bias_candidate",
@@ -520,22 +519,22 @@
     {
       "case": "multishape-backward-cell-0190",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY",
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
       "formation_path": "feedback-sustained candidate",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/multishape-backward-cell-0190_4096_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0190_4096.json",
         "long_direct": "UNRESOLVED",
-        "reason": "A resume attempt reached the saved step-3 checkpoint but the GPU was concurrently occupied by Phi 0508; the compiled DeepSeek backward then required another 96 MiB and hit the 48GB limit. The candidate remains unresolved rather than negative.",
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
-        "steps": 3
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
       },
       "model": "DeepSeek-R1-Qwen3-8B",
       "operator_or_region": "DeepSeek backward cell 0190; attention q-norm carrier",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/multishape-backward-cell-0190_4096_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0190_4096.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
-        "steps": 3
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
       },
       "paired_sha256": null,
       "scope": "expanded_bias_candidate",
@@ -595,22 +594,22 @@
     {
       "case": "multishape-backward-cell-0501",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY",
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
       "formation_path": "feedback-sustained candidate",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/multishape-backward-cell-0501_4096_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0501_4096.json",
         "long_direct": "UNRESOLVED",
-        "reason": "The Phi seq128 replay was started on a GPU already carrying two Qwen jobs and Mamba; model compilation required an additional 2.29 GiB and hit the 48GB limit. No long artifact was produced, so the candidate remains unresolved rather than negative.",
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
-        "steps": 0
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
       },
       "model": "Phi-4-mini",
       "operator_or_region": "Phi backward cell 0501; post-attention LayerNorm carrier",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/multishape-backward-cell-0501_4096_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0501_4096.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
-        "steps": 0
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
       },
       "paired_sha256": null,
       "scope": "expanded_bias_candidate",
@@ -620,22 +619,22 @@
     {
       "case": "multishape-backward-cell-0508",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY",
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
       "formation_path": "feedback-sustained candidate",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/multishape-backward-cell-0508_4096_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0508_4096.json",
         "long_direct": "UNRESOLVED",
-        "reason": "The Phi seq128 replay shared GPU2 with a DeepSeek job and hit the 48GB limit while allocating a further 96 MiB. No long artifact was produced, so the candidate remains unresolved rather than negative.",
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
-        "steps": 0
+        "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
       },
       "model": "Phi-4-mini",
       "operator_or_region": "Phi backward cell 0508; post-attention LayerNorm carrier",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/multishape-backward-cell-0508_4096_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/expanded_controls/multishape-backward-cell-0508_4096.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
-        "steps": 0
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
       },
       "paired_sha256": null,
       "scope": "expanded_bias_candidate",
