@@ -32,7 +32,10 @@ SPECS = [
         "campaign": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/campaign.json.gz",
         "input_bank": "results/property/tcmp_allop_v1/input_banks/llama32_3b_text128.json",
         "consequence_bank": "results/property/tcmp_allop_v1/input_banks/llama32_3b_text128_trajectory4096.json",
-        "carrier": "model.embed_tokens.weight",
+        # Keep the default carrier small enough for a fresh compiled replay;
+        # the queue can rebind to the tied embedding only when this carrier
+        # has zero energy.
+        "carrier": "model.norm.weight",
         "prefix": "llama32_text128_scan",
     },
     {

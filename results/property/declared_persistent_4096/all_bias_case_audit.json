@@ -16,11 +16,11 @@
     "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": 1,
     "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": 3,
     "NOT_APPLICABLE_NO_CARRIER_EFFECT": 2,
-    "NO_ROBUST_LONG_DIRECT_BIAS": 3,
+    "NO_ROBUST_LONG_DIRECT_BIAS": 5,
     "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": 5,
     "UNRESOLVED_FORMATION": 1,
     "UNRESOLVED_LONG_REPLAY": 2,
-    "UNRESOLVED_LONG_REPLAY_PENDING": 208,
+    "UNRESOLVED_LONG_REPLAY_PENDING": 206,
     "UNRESOLVED_REPLAY_BLOCKED": 18
   },
   "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
@@ -1170,23 +1170,22 @@
     {
       "case": "llama32_text128_scan_0003",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "NO_ROBUST_LONG_DIRECT_BIAS",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0003/consequence.json",
-        "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0003_pilot_retry1/short_screen.json",
+        "long_direct": "NOT_ROBUST",
+        "reason": "The frozen 16-step target pilot did not trigger the source or local/feedback risk screen; no 4096-step consequence was escalated.",
+        "status": "COMPLETE_SHORT_NO_RISK",
+        "steps": 16
       },
       "matrix_case_id": "llama32_text128_scan_0003",
       "model": "Llama-3.2-3B",
       "operator_or_region": "BACKWARD triton_poi_fused__unsafe_view_mul_silu_silu_backward_view [out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0003/consequence.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "status": "NOT_ESCALATED",
+        "steps": 0
       },
       "paired_sha256": null,
       "scope": "operator_scan_candidate",
@@ -1200,23 +1199,22 @@
     {
       "case": "llama32_text128_scan_0004",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "NO_ROBUST_LONG_DIRECT_BIAS",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0004/consequence.json",
-        "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0004_pilot/short_screen.json",
+        "long_direct": "NOT_ROBUST",
+        "reason": "The frozen 16-step target pilot did not trigger the source or local/feedback risk screen; no 4096-step consequence was escalated.",
+        "status": "COMPLETE_SHORT_NO_RISK",
+        "steps": 16
       },
       "matrix_case_id": "llama32_text128_scan_0004",
       "model": "Llama-3.2-3B",
       "operator_or_region": "FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0004/consequence.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "status": "NOT_ESCALATED",
+        "steps": 0
       },
       "paired_sha256": null,
       "scope": "operator_scan_candidate",
@@ -5039,7 +5037,7 @@
     },
     {
       "case": "operator_scan_blocked_0000",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5058,7 +5056,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 0.9270489194937006,
@@ -5069,7 +5067,7 @@
     },
     {
       "case": "operator_scan_blocked_0001",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5088,7 +5086,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 1.1103167001807224,
@@ -5099,7 +5097,7 @@
     },
     {
       "case": "operator_scan_blocked_0002",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5118,7 +5116,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 0.9770432175759547,
@@ -5129,7 +5127,7 @@
     },
     {
       "case": "operator_scan_blocked_0003",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5148,7 +5146,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 0.6707918503416512,
@@ -5159,7 +5157,7 @@
     },
     {
       "case": "operator_scan_blocked_0004",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5178,7 +5176,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 1.0672427825503088,
@@ -5189,7 +5187,7 @@
     },
     {
       "case": "operator_scan_blocked_0005",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5208,7 +5206,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 1.1783921029988345,
@@ -5219,7 +5217,7 @@
     },
     {
       "case": "operator_scan_blocked_0006",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5238,7 +5236,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 1.0389383098927003,
@@ -5249,7 +5247,7 @@
     },
     {
       "case": "operator_scan_blocked_0007",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5268,7 +5266,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 1.0733254739088862,
@@ -5279,7 +5277,7 @@
     },
     {
       "case": "operator_scan_blocked_0008",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5298,7 +5296,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 1.0099131418748792,
@@ -5309,7 +5307,7 @@
     },
     {
       "case": "operator_scan_blocked_0009",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5328,7 +5326,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 0.858892057093696,
@@ -5339,7 +5337,7 @@
     },
     {
       "case": "operator_scan_blocked_0010",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5358,7 +5356,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 0.9377645863363674,
@@ -5369,7 +5367,7 @@
     },
     {
       "case": "operator_scan_blocked_0011",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5388,7 +5386,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 0.909089087889545,
@@ -5399,7 +5397,7 @@
     },
     {
       "case": "operator_scan_blocked_0012",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5418,7 +5416,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 0.8060765962386363,
@@ -5429,7 +5427,7 @@
     },
     {
       "case": "operator_scan_blocked_0013",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5448,7 +5446,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 0.9849926924142106,
@@ -5459,7 +5457,7 @@
     },
     {
       "case": "operator_scan_blocked_0014",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5478,7 +5476,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 1.1218074819296162,
@@ -5489,7 +5487,7 @@
     },
     {
       "case": "operator_scan_blocked_0015",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5508,7 +5506,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 1.0564645753452222,
@@ -5519,7 +5517,7 @@
     },
     {
       "case": "operator_scan_blocked_0016",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5538,7 +5536,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 0.9233710682131394,
@@ -5549,7 +5547,7 @@
     },
     {
       "case": "operator_scan_blocked_0017",
-      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "direct_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "final_label": "UNRESOLVED_REPLAY_BLOCKED",
       "formation_path": "new operator scan; no matching generated replay program",
       "long_direct": {
@@ -5568,7 +5566,7 @@
         "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
         "steps": null
       },
-      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "paired_sha256": "ccff64ae3c8c1fc49df064be8b565845515c002e99eec6e1647cde6fc9ef0798",
       "scope": "operator_scan_blocked",
       "screen_metadata": {
         "screen_amplification": 0.4996544503240028,
@@ -8879,5 +8877,5 @@
   },
   "unindexed_historical_candidate_count": 3,
   "unique_matrix_case_count": 23,
-  "unresolved_or_abstain_count": 230
+  "unresolved_or_abstain_count": 228
 }
