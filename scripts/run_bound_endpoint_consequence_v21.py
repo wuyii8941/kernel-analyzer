@@ -542,7 +542,12 @@ def main() -> None:
             "recurrence_relative": relative,
         }, sort_keys=True), flush=True)
         del gc_c, gr_c, gc_r, gr_r, local, feedback, actual, residual
-        torch.cuda.empty_cache()
+        # The four counterfactual arms release their graph references above;
+        # flushing the allocator on every step is very expensive at 4096
+        # steps.  Periodic flushing preserves the resource guard without
+        # turning allocator maintenance into a fifth arm.
+        if step % 32 == 0:
+            torch.cuda.empty_cache()
 
     result = trace.finalize()
     loss_records = [row.get("metadata", {}) for row in saved_rows]
