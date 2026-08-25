@@ -126,6 +126,20 @@ case "$QUEUE" in
       "$ROOT/results/property/joint_bias_formation_v1/negative_consequence_plans/deepseek8b_seq64.json" \
       multishape-backward-cell-0191 /data1/tzh/cache/bias_long_expanded/multishape-backward-cell-0191.pt
     ;;
+  deepseek_mid)
+    run_case "$GPU" deepseek8b /data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B \
+      "$ROOT/results/property/tcmp_allop_v1/input_banks/deepseek8b_seq64_trajectory4096.json" \
+      "$ROOT/results/coverage/runtime_releases/deepseek8b_seq64_r1" \
+      "$ROOT/results/property/joint_bias_formation_v1/negative_consequence_plans/deepseek8b_seq64.json" \
+      multishape-backward-cell-0153 /data1/tzh/cache/bias_long_expanded/multishape-backward-cell-0153.pt
+    ;;
+  deepseek_0190)
+    run_case "$GPU" deepseek8b /data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B \
+      "$ROOT/results/property/tcmp_allop_v1/input_banks/deepseek8b_seq64_trajectory4096.json" \
+      "$ROOT/results/coverage/runtime_releases/deepseek8b_seq64_r1" \
+      "$ROOT/results/property/joint_bias_formation_v1/negative_consequence_plans/deepseek8b_seq64.json" \
+      multishape-backward-cell-0190 /data1/tzh/cache/bias_long_expanded/multishape-backward-cell-0190.pt
+    ;;
   phi)
     run_case "$GPU" phi /data1/tzh/models/microsoft/Phi-4-mini-instruct \
       "$ROOT/results/property/declared_persistent_4096/expanded_controls/input_banks/phi4_seq128_cycled_4224.json" \
