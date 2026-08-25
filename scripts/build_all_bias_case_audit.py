@@ -359,7 +359,15 @@ def main() -> None:
                 "reason": "frozen runtime wrapper bytes no longer match the available compiler environment",
                 "artifact": str(long_path.relative_to(ROOT)),
             }
-        paired = paired_row(paired_path) if paired_path else {"status": "NOT_RUN"}
+        paired_unresolved_paths = {
+            "Mamba in_proj": LONG / "unresolved/mamba_in_proj_live_refresh_live_paired_unresolved.json",
+        }
+        if paired_path and paired_path.exists():
+            paired = paired_row(paired_path)
+        elif name in paired_unresolved_paths and paired_unresolved_paths[name].exists():
+            paired = paired_row(paired_unresolved_paths[name])
+        else:
+            paired = {"status": "NOT_RUN"}
         # SiLU's long recurrence runner records the paired parameter and loss
         # gap in the same artifact; do not report that evidence as "unmeasured"
         # merely because it has no separate paired-loss file.
@@ -490,7 +498,7 @@ def main() -> None:
         "",
         f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(CASES)} 个 extended candidate rows**（其中 11 个来自历史候选，另含 Llama、Ministral 的同族复现行）。合并后表共有 **{len(rows)} 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
         "",
-        f"按当前口径，最终计入 **{payload['final_case_count']} 个**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，直接方向未持续但有长程配对 loss 分叉 **{payload['long_loss_split_without_direct_count']} 个**；反馈维持型案例单独列出。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
+        f"按当前口径，最终计入 **{payload['final_case_count']} 个**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**，直接方向未持续但有长程配对 loss 分叉 **{payload['long_loss_split_without_direct_count']} 个**；未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
         "",
         "直接源案例只要 4096 步直接更新差异仍有稳定方向，就已经是持久性 bias；如果配对训练还观察到参数或 loss 分叉，就作为后果一并报告。反馈维持型案例只有在 4096 步反馈分离并观察到配对参数/loss gap 时才单独计入，不冒充直接源 bias。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。",
         "",
@@ -527,6 +535,8 @@ def main() -> None:
             direct = d.get("status", "—")
         if p.get("loss_separation_observed"):
             consequence = f"是；参数距离 {p.get('parameter_distance', 0):.3g}，末步 loss gap {p.get('final_loss_gap', 0):+.3g}"
+        elif str(p.get("status", "")).startswith("UNRESOLVED"):
+            consequence = "配对长程阶段未能安全完成，未决"
         elif p.get("status") == "NOT_RUN":
             consequence = "未测"
         else:

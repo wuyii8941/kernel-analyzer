@@ -22,9 +22,11 @@ operator becomes a parameter-update error that keeps accumulating.
    paired loss gap. The Qwen64 `v_proj`, Qwen seq64 `v_proj`, and saved-P
    direct directions diffuse, but their live candidate/repair trajectories
    show long-run paired loss splits; they are therefore counted as consequence
-   cases, not direct-source cases. Mamba and Gemma4 are still being checked
-   with the same live protocol; they remain unresolved until their paired
-   artifacts exist. Layer-23 abstains because its historical implementation
+   cases, not direct-source cases. Mamba's completed 4096-step direct audit
+   does not exceed its own random baseline, and its separate live paired stage
+   did not produce a safe artifact; Gemma4's compatible replay stopped before
+   producing a complete artifact. Both remain unresolved/non-positive rather
+   than being called negative. Layer-23 abstains because its historical implementation
    identity cannot be replayed, while DeepSeek `dV` remains unresolved for
    formation reasons. The complete audit contains 28 rows: 11 historical
    candidates, two same-family replication rows, and 15 roster/control or

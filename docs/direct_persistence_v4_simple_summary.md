@@ -45,12 +45,12 @@
 | Qwen lm_head dX | 6.488 | 64/64 有方向 | 稳健长程方向 |
 | Llama lm_head dX | 5.881 | 超过自身随机基线 | 同一实现族的长程直接方向 |
 | Ministral lm_head dX | 5.050 | 超过自身随机基线 | 同一实现族的长程直接方向 |
-| Mamba in_proj | 1.110 | 33/64 有方向 | 直接方向不稳健，live 复核仍在进行 |
+| Mamba in_proj | 1.110 | 33/64 有方向 | 直接方向不稳健；独立 live 阶段未安全产出，保留未决 |
 | Qwen saved-P | 1.195 | 28/64 有方向 | 直接方向不稳健，但 live loss 已长程分叉 |
 | Qwen seq64/128 v_proj | 1.000 / 0.981 | 不超过自身随机基线 | 直接方向不稳健；seq64 live loss 已长程分叉 |
 | Qwen3-VL SiLU | 3.100（反馈） | 长程反馈维持 | 反馈维持型长程案例；配对 loss gap 已记录 |
 | layer-23 attention | — | — | 实现身份变化，拒绝判断 |
-| Gemma4 RMSNorm | — | — | 长程复核进行中，完成前单独未决，不判阴性 |
+| Gemma4 RMSNorm | — | — | 兼容长程重放在第 294 步后未产出完整结果，单独未决，不判阴性 |
 | DeepSeek layer-35 dV | — | — | 形成阶段未确认 |
 
 因此，Qwen 的 `0.957` 只能说明旧 cold-start 32 步窗口内抵消，不能再写成“Qwen 被 AdamW 永久消掉”。4096 步仍不是 loss 收敛实验；配对 loss gap 只表示已经观察到分叉，不要求不同的最终收敛值。

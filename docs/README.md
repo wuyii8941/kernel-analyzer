@@ -28,7 +28,7 @@
 - 统一 cold-start AdamW 的 32 步筛查阳性：Liger 和 Phi `lm_head dX`；它们是短程结果，不是最终长期计数。
 - Phi 已在同一 cold-start AdamW 协议下完成 stochastic-rounding source intervention：natural 显著，四个随机舍入重复均回到各自随机抵消范围。
 - 结果盲候选 `0543`：总体校正后保持未决，不算正例，也不算负例。
-- warm-state 4096 步复核：Liger `A=14.018`、Phi `lm_head dX` `A=46.090`、Qwen `lm_head dX` `A=6.488`、Llama `A=5.881` 和 Ministral `A=5.050` 均有稳健长程直接方向；Qwen3-VL SiLU 为反馈维持型长程案例并记录到配对 loss gap；Qwen64 `v_proj`、Qwen seq64 `v_proj` 和 saved-P 的直接方向未保持，但 live 配对 loss 已长程分叉，作为后果案例单列；Mamba 与 Gemma4 正在补统一长程复核，layer-23 和 DeepSeek `dV` 仍保持未决。
+- warm-state 4096 步复核：Liger `A=14.018`、Phi `lm_head dX` `A=46.090`、Qwen `lm_head dX` `A=6.488`、Llama `A=5.881` 和 Ministral `A=5.050` 均有稳健长程直接方向；Qwen3-VL SiLU 为反馈维持型长程案例并记录到配对 loss gap；Qwen64 `v_proj`、Qwen seq64 `v_proj` 和 saved-P 的直接方向未保持，但 live 配对 loss 已长程分叉，作为后果案例单列；Mamba 的直接长程审计已完成但未超过自身随机基线，独立 live 阶段未安全产出；Gemma4 的兼容重放在第 294 步后未形成完整结果，二者都保持未决/非阳性；layer-23 和 DeepSeek `dV` 仍保持未决。
 - 完整审计口径：23 个唯一主矩阵 ID、11 个历史候选加 2 个同族复现行、28 行合并审计，当前 9 个长程结果案例（5 个直接、1 个反馈维持、3 个 live loss 后果）；无法安全重放的行单独保留为未决。
 - 未见实现检查：较早冻结的 Gemma v3 有 1 个直接抵消、状态反馈持续的控制；v4 又完成 3 个新目标，其中 1 个是状态反馈对照、2 个没有可测参数作用。两轮都没有直接持续正例。
 - 通用全算子 Oracle：尚未建立。
