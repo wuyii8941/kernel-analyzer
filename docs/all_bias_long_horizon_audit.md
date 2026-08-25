@@ -21,16 +21,16 @@
 | Llama-3.2-3B | lm_head backward dX | event/pairing family replication | A4096=5.881，超过自身随机基线（窗口统计未导出） | 是；参数距离 0.000376，末步 loss gap +4.24e-05 | 最终持久性 bias 案例 |
 | Ministral-3-3B | lm_head backward dX | event/pairing family replication | A4096=5.050，超过自身随机基线（窗口统计未导出） | 是；参数距离 0.00042，末步 loss gap +0 | 最终持久性 bias 案例 |
 | Gemma-4 E2B | RMSNorm / projection feedback region | response asymmetry / feedback candidate | INVALID_OR_INCOMPLETE | 未测 | 未决 |
-| DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0057; post-attention LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
+| DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0057; post-attention LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_RESOURCE | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0103; input LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0153; attention k-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0190; attention q-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
-| DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0191; attention q-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
+| DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0191; attention q-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_RESOURCE | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
 | Mamba-130M | Mamba backward cell 0450; dt-projection bias carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | Phi-4-mini | Phi backward cell 0501; post-attention LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
-| Phi-4-mini | Phi backward cell 0508; post-attention LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
-| Phi-4-mini | Phi backward cell 0543; final norm carrier | small mixed candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
-| Qwen3-1.7B | Qwen backward cell 0654; input LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
+| Phi-4-mini | Phi backward cell 0508; post-attention LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_RESOURCE | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
+| Phi-4-mini | Phi backward cell 0543; final norm carrier | small mixed candidate | UNRESOLVED_LONG_REPLAY_RESOURCE | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
+| Qwen3-1.7B | Qwen backward cell 0654; input LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_RESOURCE | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
 | Qwen3-1.7B | Qwen backward cell 0745; attention q-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | Qwen3-1.7B | Qwen backward cell 0747; attention k-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | google/gemma-4-E2B | case-stage matrix row | complete roster row; no confirmed long-source gate | NOT_ESCALATED | 未测 | 没有可达载体，不适用 |

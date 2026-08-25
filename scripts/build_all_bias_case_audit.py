@@ -488,12 +488,22 @@ def main() -> None:
             if candidate_payload.get("status") == "COMPLETE":
                 long_path = refreshed
         if name == "Gemma4 RMSNorm" and not long_path.exists():
-            direct = {
-                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-                "long_direct": "UNRESOLVED",
-                "reason": "A resource-safe rebound replay is still running; the historical failure is not treated as a negative.",
-                "artifact": str((LONG / "gemma4_norm_4096_rebound.json").relative_to(ROOT)),
-            }
+            projection_unresolved = LONG / "unresolved/gemma4_norm_v3_long_projection_unresolved.json"
+            if projection_unresolved.exists():
+                unresolved = read(projection_unresolved) or {}
+                direct = {
+                    "status": unresolved.get("status", "UNRESOLVED_LONG_REPLAY_RESOURCE"),
+                    "long_direct": "UNRESOLVED",
+                    "reason": unresolved.get("reason", "long replay unavailable"),
+                    "artifact": str(projection_unresolved.relative_to(ROOT)),
+                }
+            else:
+                direct = {
+                    "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                    "long_direct": "UNRESOLVED",
+                    "reason": "A resource-safe rebound replay is still running; the historical failure is not treated as a negative.",
+                    "artifact": str((LONG / "gemma4_norm_4096_rebound.json").relative_to(ROOT)),
+                }
         elif not long_path.exists() and name in unresolved_paths and unresolved_paths[name].exists():
             unresolved = read(unresolved_paths[name]) or {}
             direct = {
