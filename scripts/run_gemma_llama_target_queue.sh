@@ -13,9 +13,9 @@ GPU="${1:-3}"
 
 wait_for_gpu() {
   while true; do
-    used=$(nvidia-smi --query-gpu=index,memory.used --format=csv,noheader,nounits | awk -F, -v g="$GPU" '$1+0==g {gsub(/ /,"",$2); print $2}')
-    if [[ -n "$used" && "$used" -lt 3000 ]]; then return 0; fi
-    echo "[$(date -Is)] waiting for GPU${GPU}, memory=${used:-unknown} MiB" >>"$LOG"
+    free=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | awk -F, -v g="$GPU" '$1+0==g {gsub(/ /,"",$2); print $2}')
+    if [[ -n "$free" && "$free" -ge 12000 ]]; then return 0; fi
+    echo "[$(date -Is)] waiting for GPU${GPU}, free_memory=${free:-unknown} MiB" >>"$LOG"
     sleep 120
   done
 }

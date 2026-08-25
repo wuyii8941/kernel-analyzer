@@ -371,9 +371,18 @@ def paired_row(path: Path) -> dict[str, Any]:
     if not recent and "records" in payload:
         tail = payload["records"][-min(512, len(payload["records"])) :]
         gaps = [
-            float(row.get("paired_loss_gap", row.get("paired_loss_gap_candidate_minus_repair", 0.0)))
+            float(row.get("paired_loss_gap", row.get("paired_loss_gap_candidate_minus_repair", row.get("loss_gap", 0.0))))
             for row in tail
         ]
+        if gaps:
+            import statistics
+            recent = {
+                "mean": statistics.fmean(gaps),
+                "population_std": statistics.pstdev(gaps),
+            }
+    if not recent and "rows" in payload:
+        tail = payload["rows"][-min(512, len(payload["rows"])) :]
+        gaps = [float(row.get("loss_gap", 0.0)) for row in tail]
         if gaps:
             import statistics
             recent = {
@@ -389,9 +398,10 @@ def paired_row(path: Path) -> dict[str, Any]:
                 and abs(final.get("loss_gap_candidate_minus_repair", 0.0)) > 0.0
             )
             or any(
-                abs(float(row.get("paired_loss_gap", row.get("paired_loss_gap_candidate_minus_repair", 0.0)))) > 1e-8
+                abs(float(row.get("paired_loss_gap", row.get("paired_loss_gap_candidate_minus_repair", row.get("loss_gap", 0.0))))) > 1e-8
                 for row in payload.get("records", [])
             )
+            or any(abs(float(row.get("loss_gap", 0.0))) > 1e-8 for row in payload.get("rows", []))
         ),
         "steps": (
             payload.get("protocol", {}).get("steps")
@@ -402,14 +412,20 @@ def paired_row(path: Path) -> dict[str, Any]:
         ),
         "parameter_distance": final.get("parameter_distance_l2") or payload.get("final_master_drift_l2"),
         "final_loss_gap": final.get("loss_gap_candidate_minus_repair") if final else (
-            payload.get("records", [{}])[-1].get("paired_loss_gap", payload.get("records", [{}])[-1].get("paired_loss_gap_candidate_minus_repair"))
-            if payload.get("records") else None
+            payload.get("records", [{}])[-1].get("paired_loss_gap", payload.get("records", [{}])[-1].get("paired_loss_gap_candidate_minus_repair", payload.get("records", [{}])[-1].get("loss_gap")))
+            if payload.get("records") else (
+                payload.get("rows", [{}])[-1].get("loss_gap") if payload.get("rows") else None
+            )
         ),
         "recent_loss_gap_mean": recent.get("mean"),
         "recent_loss_gap_std": recent.get("population_std"),
         "loss_audit": payload.get("loss_audit", {
             "recorded": bool(recent or final),
-            "any_period_split": bool(abs(float(final.get("loss_gap_candidate_minus_repair", 0.0) or 0.0)) > 1e-8 or abs(float(recent.get("mean", 0.0) or 0.0)) > 1e-8),
+            "any_period_split": bool(
+                abs(float(final.get("loss_gap_candidate_minus_repair", 0.0) or 0.0)) > 1e-8
+                or abs(float(recent.get("mean", 0.0) or 0.0)) > 1e-8
+                or any(abs(float(row.get("loss_gap", 0.0))) > 1e-8 for row in payload.get("rows", []))
+            ),
         }),
         "artifact": str(path.relative_to(ROOT)),
     }
@@ -611,6 +627,12 @@ def main() -> None:
             candidate_payload = read(refreshed) or {}
             if candidate_payload.get("status") == "COMPLETE":
                 long_path = refreshed
+                # These refreshed artifacts contain the paired candidate/repair
+                # loss rows as well as the direct-update audit.  Prefer the
+                # completed live artifact over an older unresolved sidecar;
+                # otherwise a real long loss split is silently lost.
+                if name == "Mamba in_proj":
+                    paired_path = refreshed
         gemma_norm_pending = name == "Gemma4 RMSNorm" and gemma_norm_retry_is_in_progress()
         if name == "Gemma4 RMSNorm" and (gemma_norm_pending or not long_path.exists()):
             projection_unresolved = LONG / "unresolved/gemma4_norm_v3_long_projection_unresolved.json"
@@ -1347,7 +1369,7 @@ def main() -> None:
         else:
             direct = d.get("status", "—")
         if p.get("loss_separation_observed"):
-            consequence = f"是；参数距离 {p.get('parameter_distance', 0):.3g}，末步 loss gap {p.get('final_loss_gap', 0):+.3g}"
+            consequence = f"是；参数距离 {(p.get('parameter_distance') or 0.0):.3g}，末步 loss gap {(p.get('final_loss_gap') or 0.0):+.3g}"
         elif str(p.get("status", "")).startswith("UNRESOLVED"):
             consequence = "配对长程阶段未能安全完成，未决"
         elif p.get("status") == "NOT_RUN":

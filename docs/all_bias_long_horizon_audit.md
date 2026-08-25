@@ -2,7 +2,7 @@
 
 仓库中有 **23 个唯一主矩阵 case ID**；本审计逐行复核 **244 行**，其中 26 行是已命名的 extended candidates，69 行来自冻结的短程候选池，另有少量 roster/control 行。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。
 
-按严格口径，最终计入 **6 个持久性 bias 案例**：其中直接长程方向案例 **5 个**，反馈维持型案例 **1 个**。另有 **3 个**早先已有 bias 证据、并在长程中出现配对 loss 分叉，但 bias 组件后来未保持；它们仍计为 **结果受影响的 bias 记录**，只是不能升级为严格的持久性 bias 组件。当前共有 **9 个训练结果相关记录**。未决/不可安全重放共 **226 个**，不作阴性判断。
+按严格口径，最终计入 **6 个持久性 bias 案例**：其中直接长程方向案例 **5 个**，反馈维持型案例 **1 个**。另有 **4 个**早先已有 bias 证据、并在长程中出现配对 loss 分叉，但 bias 组件后来未保持；它们仍计为 **结果受影响的 bias 记录**，只是不能升级为严格的持久性 bias 组件。当前共有 **10 个训练结果相关记录**。未决/不可安全重放共 **227 个**，不作阴性判断。
 
 Gemma/Llama 的追加首轮扫描另有 **242 行**，其中冻结升级门通过 **0 行**；残差非零行中目前有 **132 个**绑定到可尝试的 exact F+B 目标，另有 **18 行**没有同阶段、同实现族和同端点的可重放程序，目前完成长程重放 **0 个**。没有完成合法重放的行不计入 bias 案例数，也不改判为阴性。
 短筛候选图中有 **69 个**候选（其中 **50 个**已有确认材料，其余将用长程候选/修复回放完成首次确认）。这些候选全部要求长程复核；尚未完成的候选统一标为未决，不得写成阴性。
@@ -16,7 +16,7 @@ Gemma/Llama 的追加首轮扫描另有 **242 行**，其中冻结升级门通�
 | Qwen3-1.7B | lm_head backward dX | event/pairing imbalance + backward transport | A4096=6.488，后半程 64/64 | 是；参数距离 0.00163，末步 loss gap +1.21e-05 | 最终持久性 bias 案例 |
 | Qwen3-1.7B | seq64 v_proj MM + output rounding | conditional source asymmetry | A4096=0.993，p=0.511 | 是；参数距离 0.22，末步 loss gap -0.0048 | 结果受影响的 bias 候选：有长程 loss 分叉，但直接 bias 组件未保持 |
 | Qwen3-1.7B | v_proj MM/output rounding | local arithmetic/pairing | A4096=0.981，p=0.509 | 是；参数距离 0.302，末步 loss gap +0.000371 | 结果受影响的 bias 候选：有长程 loss 分叉，但直接 bias 组件未保持 |
-| Mamba-130M | in_proj matrix multiply | local arithmetic/pairing | A4096=0.935，p=0.405 | 配对长程阶段未能安全完成，未决 | 长程未保持 |
+| Mamba-130M | in_proj matrix multiply | local arithmetic/pairing | A4096=0.935，p=0.405 | 是；参数距离 0，末步 loss gap +0.0273 | 结果受影响的 bias 候选：有长程 loss 分叉，但直接 bias 组件未保持 |
 | Qwen3-1.7B | layer-27 saved-P softmax backward | response/state-contract imbalance | A4096=1.195，p=0.084 | 是；参数距离 0.123，末步 loss gap -0.00228 | 结果受影响的 bias 候选：有长程 loss 分叉，但直接 bias 组件未保持 |
 | Qwen3-VL-Reranker-2B | SiLU backward | response asymmetry | COMPLETE_4096 | 是；参数距离 0.888，末步 loss gap -7.95e-09 | 反馈维持型 bias，且有 loss 分叉 |
 | Qwen3-1.7B | attention S_bwd/K to q_proj | event/pairing imbalance | ABSTAIN | 未测 | 不可安全重放 |
@@ -55,12 +55,12 @@ Gemma/Llama 的追加首轮扫描另有 **242 行**，其中冻结升级门通�
 | Llama-3.2-3B | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr2] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
 | Llama-3.2-3B | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
 | Llama-3.2-3B | FORWARD triton_red_fused__to_copy_add_embedding_mean_mul_pow_rsqrt [out_ptr1] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
-| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy_add_mul_sum_view [out_ptr0] | new operator scan; exact generated target replay | A4096=0.000，p=1.000 | 未观察到 | 长程未保持 |
-| Llama-3.2-3B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [in_out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
-| Llama-3.2-3B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
-| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view [in_out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
-| Llama-3.2-3B | BACKWARD triton_poi_fused_clone_squeeze_sum_transpose_view [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
-| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_mul_sum_view [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
+| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy_add_mul_sum_view [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
+| Llama-3.2-3B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [in_out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
+| Llama-3.2-3B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
+| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view [in_out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
+| Llama-3.2-3B | BACKWARD triton_poi_fused_clone_squeeze_sum_transpose_view [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
+| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_mul_sum_view [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PILOT_REPLAY_RESOURCE | 配对长程阶段未能安全完成，未决 | 短程重放失败或资源不足，未决 |
 | Llama-3.2-3B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_mul_sum_view [out_ptr1] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | Llama-3.2-3B | BACKWARD triton_red_fused__log_softmax__log_softmax_backward_data__to_copy__unsafe_view_arange_eq_expand_nll_loss_backward_nll_loss_forward_scalar_tensor_slice_view [in_out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | Llama-3.2-3B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
