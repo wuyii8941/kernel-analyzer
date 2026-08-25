@@ -24,6 +24,7 @@ while :; do
     output="$BASE/${id}_4096.json"
     sidecar="$BASE/${id}_4096_windows.json"
     checkpoint="$CHECK/${id}.pt"
+    [[ -s "$checkpoint" ]] || checkpoint="$CHECK/${id}_retry.pt"
     [[ -s "$sidecar" ]] && continue
     [[ -s "$BASE/retry_failures/${id}.json" ]] && continue
     if [[ -s "$output" && -s "$checkpoint" ]]; then
