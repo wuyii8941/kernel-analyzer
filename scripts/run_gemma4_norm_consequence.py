@@ -63,7 +63,10 @@ def main() -> None:
     )
     args = parser.parse_args()
     prediction = json.loads(args.prediction.read_text())
-    if prediction["status"] != "PREDICTION_FROZEN_BEFORE_TRAJECTORY":
+    if prediction["status"] not in {
+        "PREDICTION_FROZEN_BEFORE_TRAJECTORY",
+        "PREDICTION_FROZEN_BEFORE_CONSEQUENCE",
+    }:
         raise RuntimeError("prediction is not frozen")
     bank = json.loads(args.input_bank.read_text())
     trajectory_bank = (
