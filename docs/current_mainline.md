@@ -4,9 +4,9 @@
 
 ## 当前案例总数（长程复核口径）
 
-仓库中有 **23 个唯一主矩阵 case ID、28 条合并后的审计记录**。长程审计同时保留 **11 个历史候选**和 **2 个未见模型的同族复现行**。这几个数字分别表示覆盖分母、候选分母和逐行审计数，不能互相替代。
+仓库中有 **23 个唯一主矩阵 case ID、28 条合并后的审计记录**。其中 **13 条**是历史或同族复现候选，另有 **12 条**是结果盲抽、32 步已经出现实际/反馈分离、正在等待 4096 步的补充候选；剩余 3 条是其他 roster/control 或未决记录。这几个数字分别表示覆盖分母、候选分母和逐行审计数，不能互相替代。
 
-当前有 **9 个已确认的长程结果案例**：5 个直接作用长程成立（Liger fused CE、Phi `lm_head dX`、Qwen `lm_head dX`、Llama `lm_head dX`、Ministral `lm_head dX`），1 个反馈维持型长程案例（Qwen3-VL SiLU），以及 3 个直接方向未持续但 live candidate/repair loss 已长程分叉的后果案例（Qwen64 `v_proj`、Qwen seq64 `v_proj`、saved-P）。最终案例要求长程方向或长程 live 分离成立，并且在某个测量窗口观察到参数或 loss 分叉；不要求两条轨迹收敛到不同的最终 loss。无法安全重放的记录单独标为未决，不会被当成负例。完整逐行表见 [`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)。
+当前有 **9 个已确认的长程结果案例**：5 个直接作用长程成立（Liger fused CE、Phi `lm_head dX`、Qwen `lm_head dX`、Llama `lm_head dX`、Ministral `lm_head dX`），1 个反馈维持型长程案例（Qwen3-VL SiLU），以及 3 个直接方向未持续但 live candidate/repair loss 已长程分叉的后果案例（Qwen64 `v_proj`、Qwen seq64 `v_proj`、saved-P）。这 9 个不包含正在排队的 12 条补充候选；补充候选在长程完成前不算阴性。最终案例要求长程方向或长程 live 分离成立，并且在某个测量窗口观察到参数或 loss 分叉；不要求两条轨迹收敛到不同的最终 loss。无法安全重放的记录单独标为未决，不会被当成负例。完整逐行表见 [`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)。
 
 ## 我们在问什么
 
@@ -86,6 +86,8 @@ A_X(T)=\frac{\left\|\sum_{t=1}^{T}X_t\right\|}
 - 同层更新 RMS 的回溯 AUROC 为 `0.528`。
 
 这支持“便宜的优先级筛查”，不支持“通用安全分类”或长期结论。没有被 16 步筛查升级的行也不能直接判为安全。
+
+Gemma 4 的 115 行和 Llama 3.2 的 64 行未重复算子首轮扫描没有产生新的通过冻结升级门的候选；nominal 信号保留在 `docs/gemma_llama_operator_scan.md`，不被直接当成 bias。12 条结果盲抽、32 步已出现实际/反馈分离的补充候选则进入独立 4096 步队列，完成前保持未决。
 
 ## 4096 步长程复核（当前权威结果）
 
