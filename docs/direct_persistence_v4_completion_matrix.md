@@ -12,7 +12,7 @@
 | 优化器同状态对照 | `COMPLETE`（4 个案例） | Liger、Phi、Qwen、Gemma feedback；另有 Qwen 早/中/晚真实阶段 | 0543 因运行包身份变化保持 `ABSTAIN` |
 | 未见实现前瞻检查 | `COMPLETE`（3 行） | Gemma 新进程、预测先冻结、16 步筛查和 32 步确认均完成 | 3 行均无 direct positive，因此不能计算 recall/AUROC |
 | 16/32 步方向筛查 | `PARTIAL` | 新 Gemma 行有保存向量上的 16/32 步重算 | 未覆盖历史冻结池的所有原始向量；不能给长期标签 |
-| 4096 步长程复核 | `COMPLETE_WITH_FAIL_CLOSED_ABSTENTION` | Liger、Phi、Qwen、Mamba、saved-P 已完成；SiLU 为反馈维持型长程结果；layer-23 fail-closed abstain | Gemma4/DeepSeek 等仍按逐行审计表保持未决；Mamba 的直接审计完成但 live 后果阶段未安全产出；完成项见 `results/property/declared_persistent_4096/summary.md` 与 `docs/all_bias_long_horizon_audit.md` |
+| 4096 步长程复核 | `COMPLETE_WITH_FAIL_CLOSED_ABSTENTION` | Liger、Phi、Qwen、Llama、Ministral、Mamba、saved-P、两条 `v_proj` 已有直接审计；SiLU 为反馈维持型长程结果；layer-23 fail-closed abstain | Gemma4/DeepSeek 等仍按逐行审计表保持未决；Mamba 的直接审计未超过自身随机基线且 live 后果阶段未安全产出；完成项见 `results/property/declared_persistent_4096/summary.md` 与 `docs/all_bias_long_horizon_audit.md` |
 | 影响大小 | `PARTIAL` | 新 Gemma 行有 direct resultant / candidate-update-path 比例 | 参数总范数、loss 投影、真实 loss 仍为 `ABSTAIN` |
 | 传统误差标准对比 | `PARTIAL` | 3 个新 Gemma 行有输出/梯度/更新对、ULP 和 `rtol/atol`；历史两行有部分 raw 指标 | 历史冻结池缺原始 operand 和位级数据，不能生成全池表 |
 | catch-and-fix | `NOT_APPLICABLE` | 前瞻池没有 direct positive | 没有合法的“先发现再修复”对象，不能人为制造 |
