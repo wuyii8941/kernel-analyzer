@@ -178,8 +178,8 @@ Golden et al. (2024) 也做过类似的 matched implementation 对比，追踪�
 | 10 | **Qwen3-VL SiLU** | **根因 2：响应不对称** | 严格 antithetic 重放后 even response 非零；4096 步反馈方向在后半程持续 | **反馈维持型持久性 bias，并记录到 loss 分叉** |
 | 11 | Gemma GELU/loss | 未确认根因 | 直接作用抵消 | 反馈对照，不升级 |
 | 12 | DeepSeek dV BMM | 根因 1 候选 | gradient 中有方向 | 缺同一对照的完整链 |
-| 13 | Llama lm_head dX | 已有族复现 | 新模型复现 | 非新根因 |
-| 14 | Ministral lm_head dX | 已有族复现 | 新模型复现 | 非新根因 |
+| 13 | **Llama lm_head dX** | 已有族复现 | 4096 步 A=5.881，高于自身 null 1.030；记录到参数/loss 分叉 | **持久性 bias；同一实现族的新模型复现** |
+| 14 | **Ministral lm_head dX** | 已有族复现 | 4096 步 A=5.050，高于自身 null 1.028；记录到参数/loss 分叉 | **持久性 bias；同一实现族的新模型复现** |
 
 **怎么读这张表：**
 
@@ -188,6 +188,8 @@ Golden et al. (2024) 也做过类似的 matched implementation 对比，追踪�
 - #3 说明 optimizer 也可以**把已有方向压回抵消**
 - #10、#11 说明"最终轨迹分离"不能反推 formation
 - 未闭合的保留未决，不强行贴标签
+
+按 4096 步严格口径，当前总审计表的 28 行中有 **6 个持久性 bias**：5 个直接方向案例（Liger、Phi/Qwen/Llama/Ministral 的 `lm_head dX` 家族）和 1 个反馈维持案例（Qwen3-VL SiLU）。其余记录要么是只有 loss 分叉的后果对照，要么仍未能安全重放；它们不被写成阴性。
 
 【图 · Slide 7】这张表可以做成一张带颜色标注的大表。根因 1 用蓝色，根因 2 用橙色，未决用灰色。表旁标注三条读法。
 
