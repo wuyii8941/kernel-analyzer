@@ -203,6 +203,10 @@ def main() -> None:
             "unique_matrix_case_count": audit.get("unique_matrix_case_count"),
             "historical_candidate_count": audit.get("historical_candidate_count"),
             "final_case_count": audit.get("final_case_count"),
+            "short_candidate_count": audit.get("short_candidate_count"),
+            "all_long_replay_required_candidate_count": audit.get("all_long_replay_required_candidate_count"),
+            "all_long_replay_pending_candidate_count": audit.get("all_long_replay_pending_candidate_count"),
+            "outcome_relevant_case_count": audit.get("outcome_relevant_case_count"),
             "cases": audit["rows"],
             "claim_boundary": audit["definition"],
             "source_audit": "results/property/declared_persistent_4096/all_bias_case_audit.json",
@@ -215,7 +219,7 @@ def main() -> None:
         lines = [
             "# 所有偏差候选的 4096 步复核摘要", "",
             f"审计表包含 {audit['case_count']} 行：{audit.get('unique_matrix_case_count')} 个主矩阵案例、{audit.get('historical_candidate_count')} 个历史候选，以及新增模型的复核行。",
-            "最终持久性 bias 标签要求 bias-bearing 的直接作用或反馈作用本身在长程仍有方向；只有 loss 分叉但没有持久 bias 组件的记录保留为后果对照，不计入持久性 bias。两条轨迹不需要收敛到不同的最终 loss。",
+            "严格持久性 bias 标签要求 bias-bearing 的直接作用或反馈作用本身在长程仍有方向；如果一个早先已有 bias 证据的候选在长程出现配对 loss 分叉，即使直接 bias 后来停止，也计入结果受影响的 bias 记录，但不计入严格持久性组件数量。两条轨迹不需要收敛到不同的最终 loss。",
             "", "| 模型 | 算子或位置 | 长程状态 | 结果 |", "|---|---|---|---|",
         ]
         labels = {
@@ -223,7 +227,7 @@ def main() -> None:
             "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": "反馈长程维持 + loss 分叉",
             "FEEDBACK_SUSTAINED_PARAMETER_SPLIT_LOSS_NOT_RECORDED": "反馈/参数分离，loss 未记录",
             "NO_ROBUST_LONG_DIRECT_BIAS": "未发现稳健长程直接方向",
-            "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": "后果对照：loss 分叉但没有持久 bias 组件",
+            "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": "结果受影响的 bias 候选：loss 分叉但直接 bias 未保持",
             "UNRESOLVED_LONG_REPLAY": "运行环境或资源未决",
             "ABSTAIN_NOT_REPLAYABLE": "无法安全重放",
         }
@@ -232,7 +236,7 @@ def main() -> None:
             status = direct.get("status", "未运行")
             label = labels.get(row.get("final_label"), row.get("final_label", "未决"))
             lines.append(f"| {row.get('model','—')} | {row.get('operator_or_region','—')} | {status} | {label} |")
-        lines += ["", "32 步只叫短程方向性；4096 步是长程复核，不等于完整全参数训练收敛。", ""]
+        lines += ["", f"短筛候选总数为 {audit.get('short_candidate_count', '—')}；这些候选全部要求长程复核，当前仍未完成的 {audit.get('all_long_replay_pending_candidate_count', '—')} 个保持未决，不改判为阴性。", "32 步只叫短程方向性；4096 步是长程复核，不等于完整全参数训练收敛。", ""]
         args.markdown.write_text("\n".join(lines))
         print(json.dumps({"status": result["status"], "case_count": result["case_count"], "final_case_count": result["final_case_count"]}))
         return
