@@ -102,6 +102,48 @@ def long_row(path: Path) -> dict[str, Any]:
                 "paired_loss_gap_std_last_512": None,
                 "artifact": str(path.relative_to(ROOT)),
             }
+    if payload.get("compact_long_horizon") and "statistics" in payload:
+        stats = payload["statistics"]
+        levels = stats.get("levels", {})
+        sidecar = read(path.with_name(path.stem + "_windows.json")) or {}
+        side_levels = sidecar.get("levels", {})
+        local_side = side_levels.get("local", {})
+        feedback_side = side_levels.get("feedback", {})
+        actual_side = side_levels.get("actual", {})
+        local_robust = bool(local_side.get("long_persistent", False))
+        feedback_robust = bool(feedback_side.get("long_persistent", False))
+        if local_robust:
+            long_status = "ROBUST"
+            verdict = "PERSISTENT_LOCAL_BIAS"
+        elif feedback_robust:
+            long_status = "FEEDBACK_SUSTAINED"
+            verdict = "FEEDBACK_SUSTAINED_SEPARATION"
+        else:
+            long_status = "NOT_ROBUST"
+            verdict = "NO_ROBUST_LONG_DIRECT"
+        actual = levels.get("actual", {})
+        null = actual.get("sign_flip_null", {})
+        return {
+            "status": "COMPLETE_4096" if int(payload.get("steps", 0)) >= 4096 else payload.get("status", "COMPLETE"),
+            "long_direct": long_status,
+            "verdict": verdict,
+            "steps": int(payload.get("steps", 0)),
+            "A4096": float(actual.get("coherence_amplification", 0.0)),
+            "local_A4096": float(levels.get("local", {}).get("coherence_amplification", 0.0)),
+            "feedback_A4096": float(levels.get("feedback", {}).get("coherence_amplification", 0.0)),
+            "null95": null.get("upper_95"),
+            "p": null.get("one_sided_p"),
+            "late_windows": actual_side.get("late_windows"),
+            "late_windows_above_own_null": actual_side.get("late_windows_above_own_null"),
+            "loss_audit": payload.get("loss_audit", {}),
+            "final_drift_l2": payload.get("final_drift_l2"),
+            "paired_loss_gap_final": payload.get("loss_audit", {}).get("final_gap"),
+            "paired_loss_gap_mean_last_512": payload.get("loss_audit", {}).get("last_512_mean"),
+            "paired_loss_gap_std_last_512": None,
+            "artifact": str(path.relative_to(ROOT)),
+            "window_evidence": str(path.with_name(path.stem + "_windows.json").relative_to(ROOT)) if sidecar else None,
+            "measurement_geometry": "COUNT_SKETCH_256",
+        }
     if "statistics" in payload and "levels" in payload.get("statistics", {}):
         # Held-out lm-head consequence runner: it has the same three-vector
         # statistics as the bound runner, but no rolling-window export.
@@ -339,7 +381,7 @@ CASES = [
     ("DeepSeek layer-35 dV", "DeepSeek-R1-Qwen3-8B", "attention dV BMM", "formation unresolved; event/pairing candidate", LONG / "deepseek_l35_dv.json", None),
     ("Llama lm_head dX", "Llama-3.2-3B", "lm_head backward dX", "event/pairing family replication", ROOT / "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/lmhead_consequence4096.json", ROOT / "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/lmhead_consequence4096.json"),
     ("Ministral lm_head dX", "Ministral-3-3B", "lm_head backward dX", "event/pairing family replication", ROOT / "results/property/tcmp_allop_v1/heldout/ministral3_3b_text128/lmhead_consequence4096.json", ROOT / "results/property/tcmp_allop_v1/heldout/ministral3_3b_text128/lmhead_consequence4096.json"),
-    ("Gemma4 RMSNorm", "Gemma-4 E2B", "RMSNorm / projection feedback region", "response asymmetry / feedback candidate", ROOT / "results/property/declared_persistent_4096/gemma4_norm_v3_long/consequence.json", ROOT / "results/property/declared_persistent_4096/gemma4_norm_v3_long/consequence.json"),
+    ("Gemma4 RMSNorm", "Gemma-4 E2B", "RMSNorm / projection feedback region", "response asymmetry / feedback candidate", ROOT / "results/property/declared_persistent_4096/gemma4_norm_v3_long_projection/consequence.json", ROOT / "results/property/declared_persistent_4096/gemma4_norm_v3_long_projection/consequence.json"),
 ]
 
 # The 12 rows below were not chosen after seeing a 4096-step result.  They
@@ -426,7 +468,7 @@ def main() -> None:
         if name == "Qwen3-VL SiLU" and (LONG / "qwen3vl_silu_4096_with_loss.json").exists():
             long_path = LONG / "qwen3vl_silu_4096_with_loss.json"
         if name == "Gemma4 RMSNorm":
-            rebound_path = LONG / "gemma4_norm_v3_long/consequence.json"
+            rebound_path = LONG / "gemma4_norm_v3_long_projection/consequence.json"
             rebound = read(rebound_path) or {}
             if str(rebound.get("status", "")).startswith("COMPLETE"):
                 long_path = rebound_path

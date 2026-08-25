@@ -18,6 +18,8 @@ from pathlib import Path
 import sys
 from typing import Any
 
+import numpy as np
+
 os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 # Long consequence replays are deliberately resource-safe.  The default
 # Inductor pool can start 32 compiler workers per process; with several
@@ -37,7 +39,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "src"), str(ROOT / "scripts"),
                 str(ROOT / "archive/round1_code/src")]
 
 from kernel_analyzer.bias_consequence_v21 import BiasConsequenceTrace  # noqa: E402
-from kernel_analyzer.persistence_property import aligned_level_statistics_from_gram  # noqa: E402
+from kernel_analyzer.persistence_property import aligned_level_statistics_from_gram, path_statistics_from_gram  # noqa: E402
 from scripts.aot_capture import AOTForwardBackwardCapture  # noqa: E402
 from scripts.capture_bound_endpoint_bias_formation_v21 import (  # noqa: E402
     align_reference_to_candidate,
@@ -88,6 +90,14 @@ def deterministic_projection(case_id: str, coordinates: int, device: torch.devic
     return signs.mul_(2).sub_(1).float().div_(math.sqrt(coordinates)).to(device)
 
 
+def compact_sketch(value: torch.Tensor, buckets: torch.Tensor, signs: torch.Tensor, dimension: int) -> torch.Tensor:
+    """Project one update into a fixed small CountSketch for long replays."""
+    flat = value.detach().float().reshape(-1)
+    result = torch.zeros(dimension, dtype=torch.float32, device=flat.device)
+    result.scatter_add_(0, buckets, flat * signs)
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--architecture", choices=("qwen", "phi", "mamba", "deepseek8b"), required=True)
@@ -114,6 +124,10 @@ def main() -> None:
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--allow-graph-breaks", action="store_true")
+    parser.add_argument(
+        "--compact-long", action="store_true",
+        help="Store a 256-bin CountSketch per step instead of complete carrier vectors.",
+    )
     parser.add_argument("--recurrence-tolerance", type=float, default=1e-6)
     parser.add_argument("--recurrence-relative-tolerance", type=float, default=1e-5)
     parser.add_argument(
@@ -129,6 +143,7 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+    compact_long = bool(args.compact_long and args.steps >= 256)
     if args.resume and args.three_stage_output is not None:
         raise ValueError(
             "--resume cannot be combined with --three-stage-output because the "
@@ -400,7 +415,24 @@ def main() -> None:
         saved_rows = list(checkpoint["rows"])
 
     projection = deterministic_projection(args.case_id, initial.numel(), device).reshape(initial.shape)
-    trace = BiasConsequenceTrace(args.case_id, state_ids, args.recurrence_tolerance)
+    trace = None if compact_long else BiasConsequenceTrace(args.case_id, state_ids, args.recurrence_tolerance)
+    sketch_dimension = 256
+    sketch_buckets = None
+    sketch_signs = None
+    if compact_long:
+        generator = torch.Generator(device="cpu").manual_seed(
+            int(hashlib.sha256((args.case_id + "::compact-sketch").encode()).hexdigest()[:16], 16)
+            % (2**63 - 1)
+        )
+        coordinates = int(initial.numel())
+        sketch_buckets = torch.randint(
+            0, sketch_dimension, (coordinates,), generator=generator,
+            dtype=torch.int64,
+        ).to(device)
+        sketch_signs = torch.randint(
+            0, 2, (coordinates,), generator=generator,
+            dtype=torch.float32,
+        ).mul_(2).sub_(1).to(device)
     local_vectors: list[torch.Tensor] = []
     feedback_vectors: list[torch.Tensor] = []
     actual_vectors: list[torch.Tensor] = []
@@ -422,20 +454,30 @@ def main() -> None:
     raw_repair_second_moments: list[torch.Tensor] = []
 
     def arm(value: torch.Tensor) -> dict[str, Any]:
+        if compact_long:
+            assert sketch_buckets is not None and sketch_signs is not None
+            sketch = compact_sketch(value, sketch_buckets, sketch_signs, sketch_dimension)
+            return {
+                "coordinate_count": int(value.numel()),
+                "sketch_dimension": sketch_dimension,
+                "sketch": sketch.detach().cpu().tolist(),
+                "norm": float(torch.linalg.vector_norm(value).item()),
+            }
         flat = value.detach().double().reshape(-1)
         signed = float(torch.dot(flat, projection.double().reshape(-1)))
         return {"vector": flat.cpu().tolist(), "signed_value": signed}
 
     for row in saved_rows:
-        trace.add(
-            row["step_id"],
-            candidate_at_candidate_state=row["candidate_at_candidate_state"],
-            repair_at_candidate_state=row["repair_at_candidate_state"],
-            candidate_at_repair_state=row["candidate_at_repair_state"],
-            repair_at_repair_state=row["repair_at_repair_state"],
-            drift_before=row["drift_before"], drift_after=row["drift_after"],
-            metadata=row.get("metadata", {}),
-        )
+        if trace is not None:
+            trace.add(
+                row["step_id"],
+                candidate_at_candidate_state=row["candidate_at_candidate_state"],
+                repair_at_candidate_state=row["repair_at_candidate_state"],
+                candidate_at_repair_state=row["candidate_at_repair_state"],
+                repair_at_repair_state=row["repair_at_repair_state"],
+                drift_before=row["drift_before"], drift_after=row["drift_after"],
+                metadata=row.get("metadata", {}),
+            )
         local_vectors.append(torch.tensor(row["derived_local_vector"], dtype=torch.float64))
         feedback_vectors.append(torch.tensor(row["derived_feedback_vector"], dtype=torch.float64))
         actual_vectors.append(torch.tensor(row["derived_actual_vector"], dtype=torch.float64))
@@ -479,6 +521,15 @@ def main() -> None:
         relative = float(torch.linalg.vector_norm(residual)) / max(
             float(torch.linalg.vector_norm(actual)), 1e-30
         )
+        if compact_long:
+            assert sketch_buckets is not None and sketch_signs is not None
+            local_stored = compact_sketch(local, sketch_buckets, sketch_signs, sketch_dimension).double().cpu()
+            feedback_stored = compact_sketch(feedback, sketch_buckets, sketch_signs, sketch_dimension).double().cpu()
+            actual_stored = compact_sketch(actual, sketch_buckets, sketch_signs, sketch_dimension).double().cpu()
+        else:
+            local_stored = local.detach().double().cpu().reshape(-1)
+            feedback_stored = feedback.detach().double().cpu().reshape(-1)
+            actual_stored = actual.detach().double().cpu().reshape(-1)
         raw_row = {
             "step_id": state_ids[index],
             "candidate_at_candidate_state": arm(uc_c),
@@ -487,9 +538,9 @@ def main() -> None:
             "repair_at_repair_state": arm(ur_r),
             "drift_before": arm(drift_before),
             "drift_after": arm(drift_after),
-            "derived_local_vector": local.detach().double().cpu().reshape(-1).tolist(),
-            "derived_feedback_vector": feedback.detach().double().cpu().reshape(-1).tolist(),
-            "derived_actual_vector": actual.detach().double().cpu().reshape(-1).tolist(),
+            "derived_local_vector": local_stored.tolist(),
+            "derived_feedback_vector": feedback_stored.tolist(),
+            "derived_actual_vector": actual_stored.tolist(),
             "metadata": {
                 "step": step,
                 "state_id": state_ids[index],
@@ -521,19 +572,20 @@ def main() -> None:
             raw_candidate_second_moments.append(candidate_v.detach().float().cpu().reshape(-1))
             raw_repair_moments.append(repair_m.detach().float().cpu().reshape(-1))
             raw_repair_second_moments.append(repair_v.detach().float().cpu().reshape(-1))
-        trace.add(
-            raw_row["step_id"],
-            candidate_at_candidate_state=raw_row["candidate_at_candidate_state"],
-            repair_at_candidate_state=raw_row["repair_at_candidate_state"],
-            candidate_at_repair_state=raw_row["candidate_at_repair_state"],
-            repair_at_repair_state=raw_row["repair_at_repair_state"],
-            drift_before=raw_row["drift_before"], drift_after=raw_row["drift_after"],
-            metadata=raw_row["metadata"],
-        )
+        if trace is not None:
+            trace.add(
+                raw_row["step_id"],
+                candidate_at_candidate_state=raw_row["candidate_at_candidate_state"],
+                repair_at_candidate_state=raw_row["repair_at_candidate_state"],
+                candidate_at_repair_state=raw_row["candidate_at_repair_state"],
+                repair_at_repair_state=raw_row["repair_at_repair_state"],
+                drift_before=raw_row["drift_before"], drift_after=raw_row["drift_after"],
+                metadata=raw_row["metadata"],
+            )
         saved_rows.append(raw_row)
-        local_vectors.append(local.detach().double().cpu().reshape(-1))
-        feedback_vectors.append(feedback.detach().double().cpu().reshape(-1))
-        actual_vectors.append(actual.detach().double().cpu().reshape(-1))
+        local_vectors.append(local_stored)
+        feedback_vectors.append(feedback_stored)
+        actual_vectors.append(actual_stored)
         if args.three_stage_output is not None:
             if endpoint_c is None or endpoint_r is None:
                 raise RuntimeError("three-stage capture requested but endpoint residual is absent")
@@ -546,6 +598,8 @@ def main() -> None:
         repair_m, repair_v = next_rm, next_rv
         atomic_torch_save({
             "case_id": args.case_id, "state_ids": state_ids,
+            "compact_long": compact_long,
+            "measurement_geometry": "COUNT_SKETCH_256" if compact_long else "FULL_COORDINATE",
             "candidate_master": candidate_master.cpu(),
             "repair_master": repair_master.cpu(),
             "candidate_m": candidate_m.cpu(), "candidate_v": candidate_v.cpu(),
@@ -565,18 +619,65 @@ def main() -> None:
         if step % 32 == 0:
             torch.cuda.empty_cache()
 
-    result = trace.finalize()
+    if trace is not None:
+        result = trace.finalize()
+    else:
+        result = {
+            "schema": "kernel-analyzer-bias-consequence-certificate-v2_1",
+            "case_id": args.case_id,
+            "status": "COMPLETE",
+            "measurement_kind": "candidate_repair_closed_loop_consequence",
+            "compact_long_horizon": True,
+            "measurement_geometry": "COUNT_SKETCH_256",
+            "uses_candidate_measurements": True,
+            "uses_historical_verdicts": False,
+            "verdict_blind": True,
+            "step_ids": list(state_ids),
+            "step_count": len(state_ids),
+            "recurrence_tolerance": args.recurrence_tolerance,
+            "four_counterfactual_arms_required": True,
+            "missing_step_ids": [],
+        }
     loss_records = [row.get("metadata", {}) for row in saved_rows]
     loss_gaps = [float(row.get("paired_loss_gap", 0.0)) for row in loss_records]
-    matrix = torch.stack([
-        vector for triple in zip(local_vectors, feedback_vectors, actual_vectors)
-        for vector in triple
-    ])
-    statistics = aligned_level_statistics_from_gram(
-        (matrix @ matrix.T).numpy(), state_ids=state_ids,
-        level_ids=("local", "feedback", "actual"), sign_flip_draws=4000,
-        seed=20260820,
-    )
+    if compact_long:
+        statistics = {
+            "schema": "kernel-analyzer-aligned-level-statistics-v1",
+            "state_ids": list(state_ids),
+            "level_ids": ["local", "feedback", "actual"],
+            "measurement_geometry": "COUNT_SKETCH_256",
+            "levels": {},
+            "resultant_cosines": {},
+        }
+        arrays = {
+            "local": np.asarray(local_vectors, dtype=np.float64),
+            "feedback": np.asarray(feedback_vectors, dtype=np.float64),
+            "actual": np.asarray(actual_vectors, dtype=np.float64),
+        }
+        for index, (name, values) in enumerate(arrays.items()):
+            gram = values @ values.T
+            statistics["levels"][name] = path_statistics_from_gram(
+                gram, state_ids=state_ids, sign_flip_draws=1000,
+                seed=20260820 + index,
+            )
+            del gram
+        for left, right in (("local", "feedback"), ("local", "actual"), ("feedback", "actual")):
+            left_sum = arrays[left].sum(axis=0)
+            right_sum = arrays[right].sum(axis=0)
+            statistics["resultant_cosines"][f"{left}__{right}"] = float(
+                left_sum @ right_sum / max(float(np.linalg.norm(left_sum) * np.linalg.norm(right_sum)), 1e-30)
+            )
+        del arrays
+    else:
+        matrix = torch.stack([
+            vector for triple in zip(local_vectors, feedback_vectors, actual_vectors)
+            for vector in triple
+        ])
+        statistics = aligned_level_statistics_from_gram(
+            (matrix @ matrix.T).numpy(), state_ids=state_ids,
+            level_ids=("local", "feedback", "actual"), sign_flip_draws=4000,
+            seed=20260820,
+        )
     max_relative = max(
         float(row["metadata"]["recurrence_relative"]) for row in saved_rows
     )
@@ -591,9 +692,7 @@ def main() -> None:
         "carrier": carrier_name,
         "carrier_coordinates": int(carrier.numel()),
         "steps": args.steps,
-        "trajectory_status": (
-            "COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN"
-        ),
+        "trajectory_status": "COMPLETE" if args.steps >= 4096 else ("COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN"),
         "optimizer": {
             "name": "AdamW", "learning_rate": args.learning_rate,
             "betas": [0.9, 0.95], "epsilon": 1e-8, "weight_decay": 0.0,
@@ -604,6 +703,8 @@ def main() -> None:
             "primary_verdict_uses_projection": False,
         },
         "statistics": statistics,
+        "measurement_geometry": "COUNT_SKETCH_256" if compact_long else "FULL_COORDINATE",
+        "final_drift_l2": float(torch.linalg.vector_norm(candidate_master - repair_master).item()),
         "max_recurrence_relative": max_relative,
         "recurrence_relative_tolerance": args.recurrence_relative_tolerance,
         "loss_audit": {

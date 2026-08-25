@@ -15,6 +15,9 @@ mkdir -p "$LOG_ROOT" "$FAIL_ROOT"
 run_case() {
   local gpu="$1" arch="$2" model="$3" input="$4" release="$5" plan="$6" id="$7" checkpoint="$8" extra="${9:-}"
   local output="$ROOT/results/property/declared_persistent_4096/expanded_controls/${id}_4096.json"
+  # The legacy partial checkpoint stores a full carrier vector per step. Keep
+  # it as evidence, but use a fresh compact checkpoint for the 4096 replay.
+  local compact_checkpoint="${checkpoint}.compact"
   local log="$LOG_ROOT/${id}_safe.log"
   # Queues may be started after a previous worker exits.  Do not duplicate a
   # live replay or rerun a complete artifact on another GPU.
@@ -37,10 +40,11 @@ PY
   local -a cmd=("$PY" "$ROOT/scripts/run_bound_endpoint_consequence_v21.py"
     --architecture "$arch" --model "$model" --input-bank "$input"
     --release-dir "$release" --case-plan "$plan" --case-id "$id"
-    --output "$output" --checkpoint "$checkpoint" --steps 4096
+    --output "$output" --checkpoint "$compact_checkpoint" --steps 4096
     --keep-checkpoint
     --state-role TRAJECTORY --device cuda:0)
-  if [[ -s "$checkpoint" ]]; then
+  cmd+=(--compact-long)
+  if [[ -s "$compact_checkpoint" ]]; then
     cmd+=(--resume)
   fi
   if [[ -n "$extra" ]]; then
@@ -48,7 +52,7 @@ PY
     local extra_args=( $extra )
     cmd+=("${extra_args[@]}")
   fi
-  echo "[$(date -Is)] START $id gpu=$gpu resume=$([[ -s "$checkpoint" ]] && echo yes || echo no)" >>"$log"
+  echo "[$(date -Is)] START $id gpu=$gpu compact=yes resume=$([[ -s "$compact_checkpoint" ]] && echo yes || echo no)" >>"$log"
   if CUDA_VISIBLE_DEVICES="$gpu" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
       OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
       "${cmd[@]}" >>"$log" 2>&1; then
@@ -56,7 +60,7 @@ PY
     # before the row is allowed into the final audit. This avoids treating a
     # large early transient as a persistent 4096-step bias.
     "$PY" "$ROOT/scripts/analyze_long_checkpoint_windows.py" \
-      --checkpoint "$checkpoint" \
+      --checkpoint "$compact_checkpoint" \
       --output "$ROOT/results/property/declared_persistent_4096/expanded_controls/${id}_4096_windows.json" \
       >>"$log" 2>&1 || {
         echo "[$(date -Is)] WINDOW_REANALYSIS_FAILED $id" >>"$log"
