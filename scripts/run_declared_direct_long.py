@@ -20,6 +20,8 @@ import sys
 from typing import Any, Callable
 
 os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+os.environ.setdefault("TORCHINDUCTOR_COMPILE_THREADS", "1")
+os.environ.setdefault("TORCHINDUCTOR_WORKER_START", "subprocess")
 os.environ.setdefault("HF_HOME", "/data1/tzh/cache/huggingface")
 os.environ.setdefault("HUGGINGFACE_HUB_CACHE", "/data1/tzh/cache/huggingface/hub")
 os.environ.setdefault("TRANSFORMERS_CACHE", "/data1/tzh/cache/huggingface/transformers")

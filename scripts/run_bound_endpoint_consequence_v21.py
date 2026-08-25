@@ -19,6 +19,14 @@ import sys
 from typing import Any
 
 os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+# Long consequence replays are deliberately resource-safe.  The default
+# Inductor pool can start 32 compiler workers per process; with several
+# independent candidate replays this exhausts host memory and leaves CUDA
+# kernels starved.  A single compiler worker is slower during the first
+# compile but makes resume/retry deterministic and allows the queue to make
+# progress.
+os.environ.setdefault("TORCHINDUCTOR_COMPILE_THREADS", "1")
+os.environ.setdefault("TORCHINDUCTOR_WORKER_START", "subprocess")
 
 import torch
 from torch._inductor import config as inductor_config
