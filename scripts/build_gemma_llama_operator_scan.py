@@ -114,6 +114,10 @@ def main() -> None:
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    target_manifest = json.loads(TARGET_MANIFEST.read_text()) if TARGET_MANIFEST.exists() else {}
+    blocked_replay = json.loads(BLOCKED_REPLAY.read_text()) if BLOCKED_REPLAY.exists() else {}
+    expanded_targets = len(target_manifest.get("rows", []))
+    expanded_blocked = len(blocked_replay.get("rows", []))
     lines = [
         "# Gemma / Llama 未重复算子扫描",
         "",
@@ -123,7 +127,7 @@ def main() -> None:
         "|---|---:|---:|---|",
     ]
     for row in models:
-        lines.append(f"| {row['model']} | {row['screened_rows']} | {row['bh_positive_rows']} | {row['nonzero_new_impl_rows_requiring_legal_replay']} 行有非零差异但缺合法长程重放，暂记未决 |")
+        lines.append(f"| {row['model']} | {row['screened_rows']} | {row['bh_positive_rows']} | {row['nonzero_new_impl_rows_requiring_legal_replay']} 行保留为重放候选，不能判阴 |")
     lines += ["", "## 最强但未升级的算子族", "", "下面只列出排序最靠前的行，作为后续可重放入口；它们不被称为阴性，也不被称为 bias。", ""]
     for row in models:
         lines += [f"### {row['model']}", "", "| 阶段 | 算子族 | 端点 | 方向分数 | nominal p |", "|---|---|---|---:|---:|"]
@@ -131,7 +135,7 @@ def main() -> None:
             lines.append(f"| {item['phase']} | `{item['operation']}` | `{item['endpoint']}` | {float(item['amplification']):.3f} | {float(item['p_value']):.4f} |")
         lines.append("")
     lines += [
-        "当前结果：Gemma 115 行、Llama text128 的 64 行和 text512 的 63 行都完成了首轮扫描，但没有新增通过冻结升级门的候选。部分行虽然有非零差异，却没有合法的参数可达 repair/长程重放边界；这些行明确记为未决，不能当作阴性。若后续要扩大分母，应先建立合法 repair、载体和 live replay，而不是把 pattern-screen 直接当作训练 bias 证据。",
+        f"当前结果：Gemma 115 行、Llama text128 的 64 行和 text512 的 63 行都完成了首轮扫描，但没有新增通过冻结升级门的候选。根据用户要求，所有残差非零行已进入统一重放清单：当前有 {expanded_targets} 个行已绑定到可尝试的 fresh-compile 目标，另有 {expanded_blocked} 行因冻结 campaign 中没有同阶段、同实现族和同端点的程序而保留为 unresolved。任何一行在 pilot/4096 步前都不判为阴性；pattern-screen 本身也不等于训练 bias。",
         "",
     ]
     MD.write_text("\n".join(lines))

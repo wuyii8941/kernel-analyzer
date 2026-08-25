@@ -4,9 +4,9 @@
 
 | 模型 | 首轮扫描行数 | 通过升级门的行数 | 结论 |
 |---|---:|---:|---|
-| Llama-3.2-3B | 64 | 0 | 32 行有非零差异但缺合法长程重放，暂记未决 |
-| Gemma-4 E2B | 115 | 0 | 72 行有非零差异但缺合法长程重放，暂记未决 |
-| Llama-3.2-3B (text512) | 63 | 0 | 37 行有非零差异但缺合法长程重放，暂记未决 |
+| Llama-3.2-3B | 64 | 0 | 32 行保留为重放候选，不能判阴 |
+| Gemma-4 E2B | 115 | 0 | 72 行保留为重放候选，不能判阴 |
+| Llama-3.2-3B (text512) | 63 | 0 | 37 行保留为重放候选，不能判阴 |
 
 ## 最强但未升级的算子族
 
@@ -57,4 +57,4 @@
 | FORWARD | `triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt` | `in_out_ptr0` | 1.071 | 0.2344 |
 | FORWARD | `triton_red_fused__to_copy_add_embedding_mean_mul_pow_rsqrt` | `out_ptr1` | 1.085 | 0.2578 |
 
-当前结果：Gemma 115 行、Llama text128 的 64 行和 text512 的 63 行都完成了首轮扫描，但没有新增通过冻结升级门的候选。部分行虽然有非零差异，却没有合法的参数可达 repair/长程重放边界；这些行明确记为未决，不能当作阴性。若后续要扩大分母，应先建立合法 repair、载体和 live replay，而不是把 pattern-screen 直接当作训练 bias 证据。
+当前结果：Gemma 115 行、Llama text128 的 64 行和 text512 的 63 行都完成了首轮扫描，但没有新增通过冻结升级门的候选。根据用户要求，所有残差非零行已进入统一重放清单：当前有 132 个行已绑定到可尝试的 fresh-compile 目标，另有 18 行因冻结 campaign 中没有同阶段、同实现族和同端点的程序而保留为 unresolved。任何一行在 pilot/4096 步前都不判为阴性；pattern-screen 本身也不等于训练 bias。
