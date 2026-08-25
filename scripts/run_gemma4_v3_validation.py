@@ -83,6 +83,10 @@ def main() -> None:
     parser.add_argument("--null-draws", type=int, default=2000)
     parser.add_argument("--target-region")
     parser.add_argument("--target-endpoint")
+    parser.add_argument(
+        "--target-symbol",
+        help="Fallback symbolic target when a freshly compiled release renumbers regions.",
+    )
     parser.add_argument("--carrier")
     parser.add_argument("--case-id", default="gemma4_e2b_ple_rmsnorm")
     parser.add_argument(
@@ -165,11 +169,28 @@ def main() -> None:
     import gzip
     with gzip.open(campaign_path, "rt", encoding="utf-8") as handle:
         campaign = json.load(handle)
-    if args.target_region is None and args.architecture != "gemma4":
+    if args.target_region is None and args.target_symbol is None and args.architecture != "gemma4":
         raise RuntimeError("generic target replay requires --target-region")
-    target = choose_target(campaign) if args.target_region is None else next(
-        row for row in campaign["rows"] if row["region_id"] == args.target_region
-    )
+    if args.target_region is not None:
+        target = next((row for row in campaign["rows"] if row["region_id"] == args.target_region), None)
+    else:
+        target = None
+    if target is None and args.target_symbol is not None:
+        phase = args.target_region.split(":", 1)[0].upper() if args.target_region and ":" in args.target_region else None
+        target = next(
+            (
+                row for row in campaign["rows"]
+                if row.get("symbol") == args.target_symbol
+                and (phase is None or row.get("phase") == phase)
+                and (args.target_endpoint is None or args.target_endpoint in row.get("output_names", []))
+            ),
+            None,
+        )
+    if target is None:
+        if args.target_region is None:
+            target = choose_target(campaign)
+        else:
+            raise RuntimeError(f"target region/symbol is absent from freshly compiled release: {args.target_region} {args.target_symbol}")
     repair_endpoints = [args.target_endpoint] if args.target_endpoint else target["output_names"]
     repair_targets = {target["region_id"]: repair_endpoints}
     carriers = (args.carrier,) if args.carrier else GEMMA_CARRIERS

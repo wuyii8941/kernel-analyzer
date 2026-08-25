@@ -21,7 +21,7 @@ wait_for_gpu() {
 
 run_one() {
   local row_json="$1"
-  local case_id arch model input consequence carrier region endpoint
+  local case_id arch model input consequence carrier region endpoint symbol
   case_id=$(echo "$row_json" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["case_id"])')
   arch=$(echo "$row_json" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["architecture"])')
   model=$(echo "$row_json" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["model_path"])')
@@ -30,6 +30,7 @@ run_one() {
   carrier=$(echo "$row_json" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["carrier"])')
   region=$(echo "$row_json" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["target_region"])')
   endpoint=$(echo "$row_json" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["target_endpoint"])')
+  symbol=$(echo "$row_json" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["target_symbol"])')
   local base="$ROOT/results/property/declared_persistent_4096/operator_scan_targets"
   local pilot="$base/${case_id}_pilot" long="$base/${case_id}"
   if [[ -f "$long/consequence.json" ]]; then echo "[$(date -Is)] skip complete $case_id" >>"$LOG"; return 0; fi
@@ -39,7 +40,7 @@ run_one() {
       OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
       "$PY" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
       --input-bank "$input" --consequence-bank "$consequence" --output-dir "$pilot" --steps 16 \
-      --consequence-steps 16 --target-region "$region" --target-endpoint "$endpoint" --carrier "$carrier" \
+      --consequence-steps 16 --target-region "$region" --target-symbol "$symbol" --target-endpoint "$endpoint" --carrier "$carrier" \
       --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 1000 >>"$LOG" 2>&1; then
     echo "[$(date -Is)] pilot unresolved $case_id" >>"$LOG"; return 0
   fi
@@ -52,7 +53,7 @@ run_one() {
       OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
       "$PY" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
       --input-bank "$input" --consequence-bank "$consequence" --output-dir "$long" --steps 16 \
-      --consequence-steps 4096 --target-region "$region" --target-endpoint "$endpoint" --carrier "$carrier" \
+      --consequence-steps 4096 --target-region "$region" --target-symbol "$symbol" --target-endpoint "$endpoint" --carrier "$carrier" \
       --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 2000 >>"$LOG" 2>&1; then
     mkdir -p "$base/unresolved"
     "$PY" -c 'import json,sys; print(json.dumps({"schema":"kernel-analyzer-target-replay-failure-v1","case_id":sys.argv[1],"status":"UNRESOLVED_LONG_REPLAY_RESOURCE","log":sys.argv[2],"output_dir":sys.argv[3],"claim_boundary":"Target replay failed; no negative label is assigned."},indent=2))' "$case_id" "$LOG" "$long" >"$base/unresolved/${case_id}.json"
