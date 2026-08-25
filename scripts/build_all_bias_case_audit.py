@@ -411,6 +411,19 @@ def expanded_long_path(case_id: str) -> Path:
     return LONG / "expanded_controls" / f"{case_id}_4096.json"
 
 
+def retry_is_in_progress(case_id: str) -> bool:
+    """A stale first-attempt failure must not hide a later live retry."""
+    log = LONG / "expanded_controls/logs" / f"{case_id}_safe.log"
+    if not log.exists():
+        return False
+    lines = log.read_text(errors="replace").splitlines()
+    starts = [i for i, line in enumerate(lines) if "START " in line and "compact=yes" in line]
+    if not starts:
+        return False
+    tail = lines[starts[-1] + 1 :]
+    return not any("FAILED " in line or "COMPLETE " in line for line in tail)
+
+
 def final_label(direct: dict[str, Any], paired: dict[str, Any], formation_path: str = "") -> str:
     loss_audit = direct.get("loss_audit", {}) or paired.get("loss_audit", {}) or {}
     any_loss = bool(loss_audit.get("any_period_split") or paired.get("loss_separation_observed"))
@@ -581,6 +594,20 @@ def main() -> None:
                 "recent_loss_gap_std": direct.get("paired_loss_gap_std_last_512"),
                 "loss_audit": loss_audit,
                 "artifact": direct.get("artifact"),
+            }
+        elif retry_is_in_progress(case_id):
+            direct = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "long_direct": "UNRESOLVED",
+                "reason": "A compact 4096-step retry is currently in progress; the earlier attempt failure is not treated as a negative.",
+                "steps": None,
+                "artifact": str(path.relative_to(ROOT)),
+            }
+            paired = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "loss_separation_observed": False,
+                "steps": None,
+                "artifact": str(path.relative_to(ROOT)),
             }
         elif (LONG / "expanded_controls" / "retry_failures" / f"{case_id}.json").exists() or (
             unresolved_path.exists() and case_id not in RETRY_SCHEDULED_IDS
