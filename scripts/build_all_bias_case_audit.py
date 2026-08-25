@@ -976,25 +976,55 @@ def main() -> None:
         if not case_id or case_id in represented:
             continue
         has_exact_confirmation = bool(candidate.get("confirmation_available"))
-        direct = {
-            "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-            "long_direct": "UNRESOLVED",
-            "reason": (
-                "Short-screen bias candidate has an exact confirmation artifact, "
-                "but no 4096-step candidate/repair replay has completed."
-                if has_exact_confirmation else
-                "Short-screen bias candidate needs a fresh exact F+B/repair recapture "
-                "before its required 4096-step replay."
-            ),
-            "steps": None,
-            "artifact": str(CANDIDATE_MAP.relative_to(ROOT)),
-        }
-        paired = {
-            "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-            "loss_separation_observed": False,
-            "steps": None,
-            "artifact": str(CANDIDATE_MAP.relative_to(ROOT)),
-        }
+        candidate_long_path = LONG / "all_candidates" / f"{case_id}_4096.json"
+        candidate_failure_path = LONG / "all_candidates" / "unresolved" / f"{case_id}.json"
+        if candidate_long_path.exists():
+            direct = long_row(candidate_long_path)
+            loss_audit = direct.get("loss_audit", {}) or {}
+            paired = {
+                "status": "COMPLETE_IN_LONG_REPLAY",
+                "loss_separation_observed": bool(loss_audit.get("any_period_split")),
+                "steps": direct.get("steps"),
+                "parameter_distance": direct.get("final_drift_l2"),
+                "final_loss_gap": direct.get("paired_loss_gap_final"),
+                "recent_loss_gap_mean": direct.get("paired_loss_gap_mean_last_512"),
+                "recent_loss_gap_std": direct.get("paired_loss_gap_std_last_512"),
+                "loss_audit": loss_audit,
+                "artifact": direct.get("artifact"),
+            }
+            final = final_label(direct, paired, "short-screen candidate long replay")
+        elif candidate_failure_path.exists():
+            unresolved = read(candidate_failure_path) or {}
+            direct = {
+                "status": unresolved.get("status", "UNRESOLVED_LONG_REPLAY"),
+                "long_direct": "UNRESOLVED",
+                "reason": unresolved.get("claim_boundary", "long replay unavailable"),
+                "steps": unresolved.get("steps_completed"),
+                "artifact": str(candidate_failure_path.relative_to(ROOT)),
+            }
+            paired = {"status": direct["status"], "loss_separation_observed": False, "steps": direct.get("steps"), "artifact": direct["artifact"]}
+            final = "UNRESOLVED_LONG_REPLAY"
+        else:
+            direct = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "long_direct": "UNRESOLVED",
+                "reason": (
+                    "Short-screen bias candidate has an exact confirmation artifact, "
+                    "but no 4096-step candidate/repair replay has completed."
+                    if has_exact_confirmation else
+                    "Short-screen bias candidate needs a fresh exact F+B/repair recapture "
+                    "before its required 4096-step replay."
+                ),
+                "steps": None,
+                "artifact": str(CANDIDATE_MAP.relative_to(ROOT)),
+            }
+            paired = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "loss_separation_observed": False,
+                "steps": None,
+                "artifact": str(CANDIDATE_MAP.relative_to(ROOT)),
+            }
+            final = "UNRESOLVED_LONG_REPLAY_PENDING"
         formation_path = (
             "short-screen candidate; exact confirmation available; long replay required"
             if has_exact_confirmation else
@@ -1009,9 +1039,9 @@ def main() -> None:
             "long_direct": direct,
             "paired_consequence": paired,
             "scope": "short_screen_candidate_universe",
-            "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
-            "direct_sha256": None,
-            "paired_sha256": None,
+            "final_label": final,
+            "direct_sha256": sha(candidate_long_path) if candidate_long_path.exists() else None,
+            "paired_sha256": sha(candidate_long_path) if candidate_long_path.exists() else None,
             "short_candidate": {
                 "task_id": candidate.get("task_id"),
                 "model_key": candidate.get("model"),
@@ -1123,7 +1153,10 @@ def main() -> None:
         "extended_candidate_count": len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES) + len(target_manifest_rows),
         "short_candidate_count": len(short_candidates),
         "all_long_replay_required_candidate_count": len(short_candidates),
-        "all_long_replay_pending_candidate_count": len(short_candidate_universe_rows),
+        "all_long_replay_pending_candidate_count": sum(
+            str(r.get("final_label", "")).startswith(("UNRESOLVED", "ABSTAIN"))
+            for r in short_candidate_universe_rows
+        ),
         "extended_candidate_note": "The extended roster includes historical candidates, Llama/Ministral family replication rows, Gemma4, the 12 result-blind 32-step consequence candidates, the separately tracked Gemma GELU consequence candidate, and six new Gemma/Llama target-replay rows. These rows are not negatives until their long replay is complete.",
         "operator_scan": operator_scan_summary,
         "operator_scan_target_replay": operator_scan_target_summary,
@@ -1133,7 +1166,10 @@ def main() -> None:
             "long_replay_required_count": len(short_candidates),
             "exact_confirmation_available_count": sum(bool(r.get("confirmation_available")) for r in short_candidates),
             "represented_by_existing_long_or_historical_row_count": len(short_candidates) - len(short_candidate_universe_rows),
-            "pending_or_unresolved_count": len(short_candidate_universe_rows),
+            "pending_or_unresolved_count": sum(
+                str(r.get("final_label", "")).startswith(("UNRESOLVED", "ABSTAIN"))
+                for r in short_candidate_universe_rows
+            ),
             "claim_boundary": "All short-screen candidates remain in the denominator. Missing exact replay, compiler mismatch, zero-energy binding, and failed resources are unresolved, never negative.",
             "rows": [r["short_candidate"] | {"case_id": r["case"]} for r in short_candidate_universe_rows],
         },
