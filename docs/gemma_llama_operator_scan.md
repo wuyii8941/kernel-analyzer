@@ -4,8 +4,8 @@
 
 | 模型 | 首轮扫描行数 | 通过升级门的行数 | 结论 |
 |---|---:|---:|---|
-| Llama-3.2-3B | 64 | 0 | 未产生新的长程候选 |
-| Gemma-4 E2B | 115 | 0 | 未产生新的长程候选 |
+| Llama-3.2-3B | 64 | 0 | 32 行有非零差异但缺合法长程重放，暂记未决 |
+| Gemma-4 E2B | 115 | 0 | 72 行有非零差异但缺合法长程重放，暂记未决 |
 
 ## 最强但未升级的算子族
 
@@ -31,4 +31,4 @@
 | FORWARD | `triton_per_fused__to_copy__unsafe_view_add_embedding_mean_mul_pow_view` | 1.157 | 0.0703 |
 | BACKWARD | `triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view` | 1.146 | 0.0703 |
 
-当前结果：Gemma 115 行、Llama 64 行都完成了首轮扫描，但没有新增通过冻结升级门的候选。因此没有凭 nominal 信号强行增加长程任务；若后续要扩大分母，应为这些算子建立合法 repair、载体和 live replay，而不是把 pattern-screen 直接当作训练 bias 证据。
+当前结果：Gemma 115 行、Llama 64 行都完成了首轮扫描，但没有新增通过冻结升级门的候选。部分行虽然有非零差异，却没有合法的参数可达 repair/长程重放边界；这些行明确记为未决，不能当作阴性。若后续要扩大分母，应先建立合法 repair、载体和 live replay，而不是把 pattern-screen 直接当作训练 bias 证据。

@@ -10,6 +10,10 @@ SOURCES = {
     "Llama-3.2-3B": ROOT / "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json",
     "Gemma-4 E2B": ROOT / "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/pattern_screen.json",
 }
+ELIGIBILITY = {
+    "Llama-3.2-3B": ROOT / "results/property/declared_persistent_4096/llama32_3b_eligibility_freeze.json",
+    "Gemma-4 E2B": ROOT / "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/eligibility_freeze.json",
+}
 OUT = ROOT / "results/property/declared_persistent_4096/operator_scan_gemma_llama.json"
 MD = ROOT / "docs/gemma_llama_operator_scan.md"
 
@@ -19,6 +23,11 @@ def main() -> None:
     for model, path in SOURCES.items():
         payload = json.loads(path.read_text())
         rows = payload.get("rows", [])
+        eligibility = json.loads(ELIGIBILITY[model].read_text())
+        eligible_rows = [
+            row for row in eligibility.get("all_rows", [])
+            if row.get("eligibility") == "ELIGIBLE_NONZERO_NEW_IMPL"
+        ]
         ranked = sorted(rows, key=lambda row: (float(row.get("p_value", 1.0)), -float(row.get("amplification", 0.0))))
         models.append({
             "model": model,
@@ -26,6 +35,23 @@ def main() -> None:
             "screened_rows": len(rows),
             "bh_positive_rows": sum(bool(row.get("screen_positive_bh_q_0_10", False)) for row in rows),
             "unseen_operator_rows_not_escalated": sum(not row.get("screen_positive_bh_q_0_10", False) for row in rows),
+            "nonzero_new_impl_rows_requiring_legal_replay": len(eligible_rows),
+            "legal_replay_candidates_completed": 0,
+            "legal_replay_boundary": (
+                "No exact parameter-reachable repair/trajectory replay was available in the frozen "
+                "held-out artifact; these rows remain unresolved rather than negative."
+            ),
+            "unresolved_replay_rows": [
+                {
+                    "implementation_pattern_id": row.get("implementation_pattern_id"),
+                    "endpoint": row.get("endpoint"),
+                    "phase": row.get("phase"),
+                    "operation": row.get("operation"),
+                    "semantic_family_id": row.get("semantic_family_id"),
+                    "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+                }
+                for row in eligible_rows
+            ],
             "top_unseen_rows": [
                 {
                     "phase": row.get("phase"),
@@ -36,13 +62,23 @@ def main() -> None:
                 }
                 for row in ranked[:10]
             ],
-            "claim_boundary": "No row passed the frozen multiple-comparison gate; nominal p-values and A>1 are retained as scan evidence, not promoted to bias cases.",
+            "claim_boundary": "No row passed the frozen multiple-comparison gate; nominal p-values and A>1 are retained as scan evidence, not promoted to bias cases. Nonzero new-implementation rows without a legal replay remain unresolved, not negative.",
         })
     result = {
         "schema": "gemma-llama-unseen-operator-scan-v1",
         "selection_rule": "Use the existing outcome-blind pattern screens; inspect all rows and escalate only screen_positive_bh_q_0_10=true.",
         "models": models,
         "new_long_candidates": [],
+        "unresolved_replay_candidates": [
+            {
+                "model": model["model"],
+                "count": model["nonzero_new_impl_rows_requiring_legal_replay"],
+                "reason": model["legal_replay_boundary"],
+                "rows": model["unresolved_replay_rows"],
+            }
+            for model in models
+            if model["nonzero_new_impl_rows_requiring_legal_replay"]
+        ],
         "claim_boundary": "This scan found no new candidate that met the frozen escalation gate. It does not prove safety for rows with nominal p-values or without a legal repair/parameter carrier.",
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -56,7 +92,7 @@ def main() -> None:
         "|---|---:|---:|---|",
     ]
     for row in models:
-        lines.append(f"| {row['model']} | {row['screened_rows']} | {row['bh_positive_rows']} | 未产生新的长程候选 |")
+        lines.append(f"| {row['model']} | {row['screened_rows']} | {row['bh_positive_rows']} | {row['nonzero_new_impl_rows_requiring_legal_replay']} 行有非零差异但缺合法长程重放，暂记未决 |")
     lines += ["", "## 最强但未升级的算子族", "", "下面只列出排序最靠前的行，作为后续可重放入口；它们不被称为阴性，也不被称为 bias。", ""]
     for row in models:
         lines += [f"### {row['model']}", "", "| 阶段 | 算子族 | 方向分数 | nominal p |", "|---|---|---:|---:|"]
@@ -64,7 +100,7 @@ def main() -> None:
             lines.append(f"| {item['phase']} | `{item['operation']}` | {float(item['amplification']):.3f} | {float(item['p_value']):.4f} |")
         lines.append("")
     lines += [
-        "当前结果：Gemma 115 行、Llama 64 行都完成了首轮扫描，但没有新增通过冻结升级门的候选。因此没有凭 nominal 信号强行增加长程任务；若后续要扩大分母，应为这些算子建立合法 repair、载体和 live replay，而不是把 pattern-screen 直接当作训练 bias 证据。",
+        "当前结果：Gemma 115 行、Llama 64 行都完成了首轮扫描，但没有新增通过冻结升级门的候选。部分行虽然有非零差异，却没有合法的参数可达 repair/长程重放边界；这些行明确记为未决，不能当作阴性。若后续要扩大分母，应先建立合法 repair、载体和 live replay，而不是把 pattern-screen 直接当作训练 bias 证据。",
         "",
     ]
     MD.write_text("\n".join(lines))

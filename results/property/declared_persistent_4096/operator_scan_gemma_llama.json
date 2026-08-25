@@ -3,8 +3,11 @@
   "models": [
     {
       "bh_positive_rows": 0,
-      "claim_boundary": "No row passed the frozen multiple-comparison gate; nominal p-values and A>1 are retained as scan evidence, not promoted to bias cases.",
+      "claim_boundary": "No row passed the frozen multiple-comparison gate; nominal p-values and A>1 are retained as scan evidence, not promoted to bias cases. Nonzero new-implementation rows without a legal replay remain unresolved, not negative.",
+      "legal_replay_boundary": "No exact parameter-reachable repair/trajectory replay was available in the frozen held-out artifact; these rows remain unresolved rather than negative.",
+      "legal_replay_candidates_completed": 0,
       "model": "Llama-3.2-3B",
+      "nonzero_new_impl_rows_requiring_legal_replay": 32,
       "screened_rows": 64,
       "source": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json",
       "top_unseen_rows": [
@@ -79,12 +82,273 @@
           "phase": "BACKWARD"
         }
       ],
+      "unresolved_replay_rows": [
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "0cf3d4e3c74a7b9049cdd2f880a38353b45d1a08e74b7eff54c6d717ec7e47df",
+          "operation": "triton_poi_fused__to_copy_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "503629d00d773c9a4854ce2bea3246106643c9f5e1c335ac5b08ebcdedbc571e"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "0dd48ca97e277a1ccbd161d3ff3c967196f2dadc847c02cc98db3b1fd4436f71",
+          "operation": "triton_poi_fused__unsafe_view_mul_silu_silu_backward_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3a1f399c8d45f8e8f2c4e2f7216de8073633e58461fb2ba08aed0dc5f971322f"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "0dd48ca97e277a1ccbd161d3ff3c967196f2dadc847c02cc98db3b1fd4436f71",
+          "operation": "triton_poi_fused__unsafe_view_mul_silu_silu_backward_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3a1f399c8d45f8e8f2c4e2f7216de8073633e58461fb2ba08aed0dc5f971322f"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "10cb948e75d4162b5e19100221b9ab92a83d860ffe9be2ce47d414b3e94ce8ae",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "e5b25a4ae945679c3e0c4e5a1f85eb25e80e770f7b63edefbbc091d18734d0e4"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "10cb948e75d4162b5e19100221b9ab92a83d860ffe9be2ce47d414b3e94ce8ae",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "e5b25a4ae945679c3e0c4e5a1f85eb25e80e770f7b63edefbbc091d18734d0e4"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "15a4159a2a28388205843b1f617a0d6f830925e00d4fe9e3894e1a055ee89bdd",
+          "operation": "triton_poi_fused__unsafe_view_mul_silu",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "fab8fd5c46a4e05a270ba41abb39e0ebcedef4759bed9d87d684d07b8d0acecc"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "28a3c88b04d7f194998148d1373b30eab655df2a0c9e81dd8ab973c93c778e61",
+          "operation": "triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_index_le_lift_fresh_mul_prepare_softmax_online_scalar_tensor_view_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2337eb7ba7fbd51d186cb8fa5515038093c0424ced04d61884838abf7f35ffca"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "28a3c88b04d7f194998148d1373b30eab655df2a0c9e81dd8ab973c93c778e61",
+          "operation": "triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_index_le_lift_fresh_mul_prepare_softmax_online_scalar_tensor_view_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2337eb7ba7fbd51d186cb8fa5515038093c0424ced04d61884838abf7f35ffca"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "29f08563ce28b6c7f5db1e25b8ff83aaa27fa00cf4253af62f22289a2d849b8c",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "07b2068f3a7c0f0094b261727f3935cf759ec0c11a20c1d3e9d8c52951c5cfdc"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "29f08563ce28b6c7f5db1e25b8ff83aaa27fa00cf4253af62f22289a2d849b8c",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "07b2068f3a7c0f0094b261727f3935cf759ec0c11a20c1d3e9d8c52951c5cfdc"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "30c2870fc593f148ecd1550bdffed9596080c59e74b9f7a0ebfcd3aa3433b61c",
+          "operation": "triton_red_fused__to_copy_mul_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "411fdcebb804e0942b01ae93dcad12f70015522954a9250eee28806384f42314"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "3c2e6e3535c62d24faf1a9e3ccdef56cf8b0a4e9576beaa2ad2eade5cf715c37",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3ba189446beb9a3360ab72c048b49f7766469d693c4d455bf4f46627191342b0"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "3c2e6e3535c62d24faf1a9e3ccdef56cf8b0a4e9576beaa2ad2eade5cf715c37",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3ba189446beb9a3360ab72c048b49f7766469d693c4d455bf4f46627191342b0"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "3c2e6e3535c62d24faf1a9e3ccdef56cf8b0a4e9576beaa2ad2eade5cf715c37",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3ba189446beb9a3360ab72c048b49f7766469d693c4d455bf4f46627191342b0"
+        },
+        {
+          "endpoint": "output",
+          "implementation_pattern_id": "58d3980c4533dbaa4002baddea86fdea19da14b35d012d3437f1e7ba3da7cde4",
+          "operation": "extern_kernels.bmm",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "7648c9ae0c237b670416e939d90b9c789ea25e3a70546cc433b500459e9e74d4"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "66a8af4318707db0344a9cfecc9aaec447cb2a3b2d90a18ef084b3f16da59bc4",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3ba189446beb9a3360ab72c048b49f7766469d693c4d455bf4f46627191342b0"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "6e169396b494a060b8a76c0035171ed1b8e4a0953e2e978b28ff3bb0bef0ca3b",
+          "operation": "triton_red_fused__to_copy_add_embedding_mean_mul_pow_rsqrt",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5a200df5f908bdf7ce9b637be76ade245fc58255585bc2af0a5bd0134b56fe2f"
+        },
+        {
+          "endpoint": "output",
+          "implementation_pattern_id": "7a70e9d9ee74d0c6795aab0f443a333634e3940223497096554c1c4e5610fe7f",
+          "operation": "extern_kernels.bmm",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "4c19ecf4fa9b4c597dc128f0dae1bd24c32a5622a9c92a4dd9f1444c14a0852d"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "7c048b547a0243cbb14883eb7cf52e95abadf26b874835bfee6a6c688d7309c4",
+          "operation": "triton_red_fused__to_copy_add_mul_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "911969cb46f5b115e8ab43e7c7ed1330c6ee79844ea7f29caf8e49bb40a15ed3"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "7fca1713cb4d4d1914f5311ed448192df1a79992fc9b2ffbc6e66e3c04e69891",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "07b2068f3a7c0f0094b261727f3935cf759ec0c11a20c1d3e9d8c52951c5cfdc"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "7fca1713cb4d4d1914f5311ed448192df1a79992fc9b2ffbc6e66e3c04e69891",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "07b2068f3a7c0f0094b261727f3935cf759ec0c11a20c1d3e9d8c52951c5cfdc"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "7fcecf4ef1d0f4c0a499070b1ba02b4081b4fea972ed66e4d96f9280402ef2a5",
+          "operation": "triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2115a0ea77a8c8029f2f37634c0f67fca951837902cc3f97665c0ee44d3acf11"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "837eaf04d2683d13ba8b06ad9af6310384db59f5d09c32f262a12cc2b68d26c3",
+          "operation": "triton_poi_fused_clone_squeeze_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "43c1682ea2c9047b8637ff51a7a15c1d7510b0e4acca7ef7a50db8fa834e91fc"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "a003d1a89a50f2c648b682c78c2b125a60e339c5a6bd52716101e1ef973ae52a",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mul_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "e2218f009a51ad98f6ae13f44699c6d46ecfa0d1a1da6efaa2455317872f6017"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "a003d1a89a50f2c648b682c78c2b125a60e339c5a6bd52716101e1ef973ae52a",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mul_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "e2218f009a51ad98f6ae13f44699c6d46ecfa0d1a1da6efaa2455317872f6017"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "a26cd5b34bf8553c2741bda361b786d3ce3b703d834b9e8ca8aa2013defd5370",
+          "operation": "triton_red_fused__log_softmax__log_softmax_backward_data__to_copy__unsafe_view_arange_eq_expand_nll_loss_backward_nll_loss_forward_scalar_tensor_slice_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "6fc69549b5abcc421cf3474a81c8d68d1f4330907abe7cef6f03c5ebefe2974a"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "c7c72d1f1a60ceb4efee5c0f81402a65636f9febc3671b6b7d58cecaf4be4873",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "07b2068f3a7c0f0094b261727f3935cf759ec0c11a20c1d3e9d8c52951c5cfdc"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "ce2df1f5abb78e735127345a5cfcaad3c95f4a42b49a879e73e772654bdfc23b",
+          "operation": "triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2115a0ea77a8c8029f2f37634c0f67fca951837902cc3f97665c0ee44d3acf11"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "d719324be6f2bf219d955ae948e4d86db504be1b18464cc878928ea89d474e77",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "d9b8b70c17fdb957ccd34cec217fd76ed8ebe40e7d262211bab8cda7cf99d7f8",
+          "operation": "triton_poi_fused__to_copy_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_slice_backward_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "6496f9215ae34eb6763a006f42f20e314295149625b2d83c457d651e92f5b790"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "db34c79c1c872f838f8b5b2d8ac9373baa252cde28f0203386591aac68535a29",
+          "operation": "triton_red_fused__to_copy_add_mul_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "911969cb46f5b115e8ab43e7c7ed1330c6ee79844ea7f29caf8e49bb40a15ed3"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "fffbcd51f5b48e755e428c20e0fc7bde9a833bbe9ef65939a2d16e5619929ab6",
+          "operation": "triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2115a0ea77a8c8029f2f37634c0f67fca951837902cc3f97665c0ee44d3acf11"
+        }
+      ],
       "unseen_operator_rows_not_escalated": 64
     },
     {
       "bh_positive_rows": 0,
-      "claim_boundary": "No row passed the frozen multiple-comparison gate; nominal p-values and A>1 are retained as scan evidence, not promoted to bias cases.",
+      "claim_boundary": "No row passed the frozen multiple-comparison gate; nominal p-values and A>1 are retained as scan evidence, not promoted to bias cases. Nonzero new-implementation rows without a legal replay remain unresolved, not negative.",
+      "legal_replay_boundary": "No exact parameter-reachable repair/trajectory replay was available in the frozen held-out artifact; these rows remain unresolved rather than negative.",
+      "legal_replay_candidates_completed": 0,
       "model": "Gemma-4 E2B",
+      "nonzero_new_impl_rows_requiring_legal_replay": 72,
       "screened_rows": 115,
       "source": "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/pattern_screen.json",
       "top_unseen_rows": [
@@ -159,10 +423,1436 @@
           "phase": "BACKWARD"
         }
       ],
+      "unresolved_replay_rows": [
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "11c9a259adf1058e072d440136a54fb6dfb1d96281291719d9940c5adfa56905",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "8f2538226cc627532b8c56e291d06f89b1f4dbaa8cb8c99c110c419498c488d5"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "11c9a259adf1058e072d440136a54fb6dfb1d96281291719d9940c5adfa56905",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "8f2538226cc627532b8c56e291d06f89b1f4dbaa8cb8c99c110c419498c488d5"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "1c404dc5c0049e6d390b4c77717c281135410af1c4e1587f5579530cc3191ccc",
+          "operation": "triton_red_fused__to_copy_add_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "94408aa5ed08548fb5dfa71261e400e877ab5c072b37fce96ad2489807f6ceb4"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "233a5ebc4ca9a77ec62e81f248470afadc15e24a7efa900773dc6a6cae82c6a8",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "in_out_ptr1",
+          "implementation_pattern_id": "233a5ebc4ca9a77ec62e81f248470afadc15e24a7efa900773dc6a6cae82c6a8",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "233a5ebc4ca9a77ec62e81f248470afadc15e24a7efa900773dc6a6cae82c6a8",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "233a5ebc4ca9a77ec62e81f248470afadc15e24a7efa900773dc6a6cae82c6a8",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "23c5b091217b740bda0dbb245c37984fa8290eadcd064cff31a1a9100c246b72",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "88e5fd102402cd00fe94cd867b3e0babd8d1d2392f0000a20ebd733d3ab17e4e"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "23c5b091217b740bda0dbb245c37984fa8290eadcd064cff31a1a9100c246b72",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "88e5fd102402cd00fe94cd867b3e0babd8d1d2392f0000a20ebd733d3ab17e4e"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "252dea98e0aa1cc8190aba854d1b2c56267bdbe5138eea6e6a59ee25dee661c8",
+          "operation": "triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_select_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "348a20701d5efbf248b1348ad9e635e9a6bcd51325e7451cc3d8181941eda795"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "2cd714dfb8269a4ab92e991a0d6935742e9f1eea6e8a460485140708e886ad50",
+          "operation": "triton_red_fused__to_copy__unsafe_view_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "618e01678cdb1ee74d930a1dddb8f6d8ebd134b30826791611f886b3eaeca12c"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "31344eb6752007120348de1bd459b1ec22a32250062cfe14627e7bb47032b687",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "88e5fd102402cd00fe94cd867b3e0babd8d1d2392f0000a20ebd733d3ab17e4e"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "31344eb6752007120348de1bd459b1ec22a32250062cfe14627e7bb47032b687",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "88e5fd102402cd00fe94cd867b3e0babd8d1d2392f0000a20ebd733d3ab17e4e"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "33c1f351193a0f4652d38c79067396188453b0c3c4160e498b909c3112b9fd68",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "33c1f351193a0f4652d38c79067396188453b0c3c4160e498b909c3112b9fd68",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "4591d65130a40580923ff819699b0ed116154bfb4900fd12459204f9a473c4fc",
+          "operation": "triton_per_fused__to_copy_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "86ca7ce8997c8b7c8b52c609c80adb4e771b3b3d033009dfd3c4db7e4f682b37"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "4e6ba199b21db6b91e74ae73086220bd68385f839cad6516b6b87f5441b195bb",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "7f88806ff1e57e6d9f93bd00963d388e0590d74c96948a404988dc7714f21f6e"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "4e6ba199b21db6b91e74ae73086220bd68385f839cad6516b6b87f5441b195bb",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "7f88806ff1e57e6d9f93bd00963d388e0590d74c96948a404988dc7714f21f6e"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "4e73a22f2330b54666109b84c850bcbcf503c63661bd8d9f0ee5374133666c98",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "8f2538226cc627532b8c56e291d06f89b1f4dbaa8cb8c99c110c419498c488d5"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "4e73a22f2330b54666109b84c850bcbcf503c63661bd8d9f0ee5374133666c98",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "8f2538226cc627532b8c56e291d06f89b1f4dbaa8cb8c99c110c419498c488d5"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "4f53e5020d130a7af262f928ac1ae34c6fcc5904237313fa023ef795aa07f96c",
+          "operation": "triton_per_fused__softmax__softmax_backward_data__to_copy_add_arange_bitwise_and_eq_expand_gt_index_le_lift_fresh_mul_new_ones_scalar_tensor_sub_unsqueeze_view_where",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2c9c24bfe3848cf28f110b50d135c36736ed3bd3f5957d72296e63927a958f89"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "598d28a56091a275d51155efea65d8dbddfd753c1527484691a61e6f0c201db5",
+          "operation": "triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_expand_gt_index_le_lift_fresh_mul_new_ones_prepare_softmax_online_scalar_tensor_sub_unsqueeze_view_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "efdfd85394a32fda984478ee34f20cda078b359b39210019d1b73c875c07ccf5"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "5ff51b5d92e28b8e263875302c5a4e1321c4e917b071d1e5a868de3e3607c1a3",
+          "operation": "triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_expand_gt_index_le_lift_fresh_mul_new_ones_prepare_softmax_online_scalar_tensor_sub_unsqueeze_view_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "efdfd85394a32fda984478ee34f20cda078b359b39210019d1b73c875c07ccf5"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "61ac95f66ea61c88ce318e9faf010ba8338402a01951e97f9103c8e9b79180a8",
+          "operation": "triton_per_fused_add_squeeze_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "4699ac89cf8125d7949dd3397b4872c5d0ed426d305d1541ee871a06991861fb"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "61b6e815dc8a7eb88ceb1827ef5e104013a7b6d1ac3d214d171f47a69e8c21ab",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_div_embedding_dense_backward_expand_gelu_mul_nll_loss_forward_pow_select_backward_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "dc23ce7e87ea5ad45f37cd8be0783c793d6e6d592e032978309cab95abdc95fc"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "6886e46bb39ab80705c180089f7daaa89c373dacab1cc2598b2365969649071d",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "in_out_ptr1",
+          "implementation_pattern_id": "6886e46bb39ab80705c180089f7daaa89c373dacab1cc2598b2365969649071d",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "6886e46bb39ab80705c180089f7daaa89c373dacab1cc2598b2365969649071d",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "6886e46bb39ab80705c180089f7daaa89c373dacab1cc2598b2365969649071d",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "6bcfc897f7588395aca6b5449a412a4294ca49f1b591f3bb0060b09f58e9b37e",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "6bcfc897f7588395aca6b5449a412a4294ca49f1b591f3bb0060b09f58e9b37e",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "6d8a50f7e010f73eb22370e5d84effdf4e806a046d2cf2eba64808ff536343b9",
+          "operation": "triton_per_fused_add_squeeze_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "19f2ca23a405ab11ed043b0e9cf9c9e28baf94d8417535b6fc290d73f1577f4c"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "737895d8372e826f0b926e7ba119398b985ffcae96f69667b4c164e834cb267d",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "b19b2f2d93e29b95fd86cc10d6afcc96a2903248bb9529c103dedc1d59d15694"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "73c7280d133e14b8641df4ae2dfbe82cfdd46266795d448aab3dc89ad8aa68ce",
+          "operation": "triton_per_fused__to_copy__unsafe_view_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "1413c2030046ff225a990b6fff2b2fe4cdfa46aa34f93ca2ad7b798e4dd62ef0"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "7e745e67a182ee4485a7fdad163db1f57357864fa6916e36bd26bdba7944c250",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "7e745e67a182ee4485a7fdad163db1f57357864fa6916e36bd26bdba7944c250",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "7fc21810c9261868b90d6d98fef3a90227ac1dd2d9452f35b42ca3165a472a19",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_mean_mul_pow_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "d963681df1a13cb52abc941b03cf7d321755bdc38e87c640b6c28db2dbeed4ef"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "81d8b0847906b2acf5ea808950ad1fdc04bf56c9fdfd3f4156d18ce6bcbf4487",
+          "operation": "triton_per_fused_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "018008b9d44e4b877a0575eb286e4c97d6159491891556abf8009b8da61adeb2"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "86743acac4a6cf6a97aaba24e570f7534870b4870200d32e80b687cb11eaa2f0",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_div_expand_mul_pow_squeeze_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "470d4bb2e676ee22b7eae7b1402ba12622d2524053789321b4103e6b4e4d9780"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "8788dd43c86364a135648ab15d0298e80dc5dd27ec84071a4ab7f0a070960f09",
+          "operation": "triton_poi_fused__unsafe_view_gelu_mul_select",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "7486d684f76f2ce988fb16564ea23d921b3a51ce509393b12c79623fde39e9fd"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "87e957e299ed5298bf268cae31688a5c130f695f011ab69e9e90dfff64f8484f",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_div_expand_mul_pow_squeeze_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "470d4bb2e676ee22b7eae7b1402ba12622d2524053789321b4103e6b4e4d9780"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "97ef6740a07c09c501eb532390d21620d04d9267698522b79f888313c3e2df32",
+          "operation": "triton_per_fused_add_squeeze_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "4699ac89cf8125d7949dd3397b4872c5d0ed426d305d1541ee871a06991861fb"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "9a59d6014314eeb03eefff554c65f70671b67e790d17b5997b0c54993b30beb6",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "8f2538226cc627532b8c56e291d06f89b1f4dbaa8cb8c99c110c419498c488d5"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "9a59d6014314eeb03eefff554c65f70671b67e790d17b5997b0c54993b30beb6",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "8f2538226cc627532b8c56e291d06f89b1f4dbaa8cb8c99c110c419498c488d5"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "9a95c5cf2055e42f8a1635c62672fb57cd9999ea5e049e9b2165f2578f81cff4",
+          "operation": "triton_red_fused__to_copy_add_div_embedding_dense_backward_expand_mul_nll_loss_forward_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "753abbbeebfd9649c1a942aebfd04563048fcfb050615ebf89e316da2facd11d"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "9c3479e40160f90af28a685a819f797111626ea159cacaf36247628879a7aa4a",
+          "operation": "triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_select_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "348a20701d5efbf248b1348ad9e635e9a6bcd51325e7451cc3d8181941eda795"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "a28e72e0e7f00467b249294a23aeafe770c9dc55001e3ea400880b0082467cb9",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "a2a0c4e720f49d4145f9aa5bf6888de9ba47bccdd0f19195a5852bb6be55c5da",
+          "operation": "triton_red_fused__to_copy_add_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "94408aa5ed08548fb5dfa71261e400e877ab5c072b37fce96ad2489807f6ceb4"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "a5d2411f15f3eb0233a6898087a580fd2dc5d97333f277604f72cbce1c6c3709",
+          "operation": "triton_red_fused__to_copy_add_bitwise_or_embedding_eq_mean_mul_pow_scalar_tensor_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "4d42a1c9a1052a2880a6542b26a9c9c84c5a01d66266165a62b81881e50126fc"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "a5d2411f15f3eb0233a6898087a580fd2dc5d97333f277604f72cbce1c6c3709",
+          "operation": "triton_red_fused__to_copy_add_bitwise_or_embedding_eq_mean_mul_pow_scalar_tensor_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "4d42a1c9a1052a2880a6542b26a9c9c84c5a01d66266165a62b81881e50126fc"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "a5d2411f15f3eb0233a6898087a580fd2dc5d97333f277604f72cbce1c6c3709",
+          "operation": "triton_red_fused__to_copy_add_bitwise_or_embedding_eq_mean_mul_pow_scalar_tensor_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "4d42a1c9a1052a2880a6542b26a9c9c84c5a01d66266165a62b81881e50126fc"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "ae88498bdba16e7f66ad0bb0be9df4002bd9980340a47ac0e50483bd2862fa8f",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "ae88498bdba16e7f66ad0bb0be9df4002bd9980340a47ac0e50483bd2862fa8f",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "afaff41da894e1c3ab6514b7c2e75627658885d8e7e12a7f586926843a1e10f2",
+          "operation": "triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "fb5923b0cb727561fd66a8c9d4d4fa67225c69a44ebb0de4fb69f34aad719ff2"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "afaff41da894e1c3ab6514b7c2e75627658885d8e7e12a7f586926843a1e10f2",
+          "operation": "triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "fb5923b0cb727561fd66a8c9d4d4fa67225c69a44ebb0de4fb69f34aad719ff2"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "b0a5c50d26c34bba975863bd9d30b56e26684b9671b48adf180d372936e4985b",
+          "operation": "triton_red_fused__to_copy_add_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "94408aa5ed08548fb5dfa71261e400e877ab5c072b37fce96ad2489807f6ceb4"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "b4be3aa80d68ac8d6a76af7369ee36eeb82d02938f37e00b9652fd28e5249822",
+          "operation": "triton_per_fused_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "25a0e42e964105a737b379b90430d08c5cffcf9f4e54d9636155063e062021c3"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "b96152d92824a933a3b2ca39d296b73fbb326b5ebb4b1bb09f3baa6e8d140e91",
+          "operation": "triton_poi_fused__unsafe_view_gelu_mul",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3efea17501d15427d2861bb7d8b92f176499d37a361af43ccd2611c58674b595"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "c271f903c2f5874288efe5320c6f823390a59e8f16fc05571d3934183a67512f",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "c271f903c2f5874288efe5320c6f823390a59e8f16fc05571d3934183a67512f",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "in_out_ptr1",
+          "implementation_pattern_id": "c3b565ad8ab2ee8fc4d5348f153ffd7f04995e5a7c11b60d046be0e2c1c6a4a6",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mean_mul_neg_pow_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "76dbea4b003faa47e86471a1658fc04fca7a23e6d3df7d4aecdc413cec87bad2"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "df0357d5486e7569939edf0fa7ca3fb1ef849f68928d60cab6a74f42f0e1ff8b",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "df0357d5486e7569939edf0fa7ca3fb1ef849f68928d60cab6a74f42f0e1ff8b",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "e46fb549973f7b6c02e615221e38a330361b44600cef1d9871cc63cafa4c57c6",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "e7c1bd75785537d331b1368786e3941fbd61c7d92043aebb691c4da14d68251a",
+          "operation": "triton_red_fused__log_softmax__log_softmax_backward_data__to_copy__unsafe_view_arange_div_eq_expand_mul_nll_loss_backward_nll_loss_forward_scalar_tensor_slice_tanh_tanh_backward_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "a6f4829a1f53a7bef1fa7b71c7d3aa10b248b74e778748ab3f4a7ad217843131"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "ed618faab504cb7fbf9d7115445d3a2c4356138c20893a0a845d2bd3d0008d83",
+          "operation": "triton_red_fused__to_copy_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "409d3cfa1433edb5b16398ecb66e8ea1ee9bdfa11b83eae32217f2c8c95e7b0a"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "ee8f70cad9d3aa53726be7d6dcab7563956cf3e7bbc7ce8544e23a351263b1be",
+          "operation": "triton_red_fused__to_copy_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "409d3cfa1433edb5b16398ecb66e8ea1ee9bdfa11b83eae32217f2c8c95e7b0a"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "f590141f388fe4e44635157476a768f1b133d4fedbccfb53bf8383fa51156d82",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "f590141f388fe4e44635157476a768f1b133d4fedbccfb53bf8383fa51156d82",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "f82502d9b0a9be7a800374fe42d9641574e36798e56904ba36eb98de29f0d485",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_embedding_mean_mul_pow_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2e5790d1637e628da33b231bb9c0255868e64b013d16d5479381a0dd1e30ceb9"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "f82502d9b0a9be7a800374fe42d9641574e36798e56904ba36eb98de29f0d485",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_embedding_mean_mul_pow_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2e5790d1637e628da33b231bb9c0255868e64b013d16d5479381a0dd1e30ceb9"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "fbda28102b302c9834b4ffb7d517f79c1193a4c1581e09db73c1775710fc6963",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_mul_pow_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "bc062708d0c7bc87e60cc1a859584dc9af1819da2576f1cdad8f3b9fde54effc"
+        }
+      ],
       "unseen_operator_rows_not_escalated": 115
     }
   ],
   "new_long_candidates": [],
   "schema": "gemma-llama-unseen-operator-scan-v1",
-  "selection_rule": "Use the existing outcome-blind pattern screens; inspect all rows and escalate only screen_positive_bh_q_0_10=true."
+  "selection_rule": "Use the existing outcome-blind pattern screens; inspect all rows and escalate only screen_positive_bh_q_0_10=true.",
+  "unresolved_replay_candidates": [
+    {
+      "count": 32,
+      "model": "Llama-3.2-3B",
+      "reason": "No exact parameter-reachable repair/trajectory replay was available in the frozen held-out artifact; these rows remain unresolved rather than negative.",
+      "rows": [
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "0cf3d4e3c74a7b9049cdd2f880a38353b45d1a08e74b7eff54c6d717ec7e47df",
+          "operation": "triton_poi_fused__to_copy_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "503629d00d773c9a4854ce2bea3246106643c9f5e1c335ac5b08ebcdedbc571e"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "0dd48ca97e277a1ccbd161d3ff3c967196f2dadc847c02cc98db3b1fd4436f71",
+          "operation": "triton_poi_fused__unsafe_view_mul_silu_silu_backward_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3a1f399c8d45f8e8f2c4e2f7216de8073633e58461fb2ba08aed0dc5f971322f"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "0dd48ca97e277a1ccbd161d3ff3c967196f2dadc847c02cc98db3b1fd4436f71",
+          "operation": "triton_poi_fused__unsafe_view_mul_silu_silu_backward_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3a1f399c8d45f8e8f2c4e2f7216de8073633e58461fb2ba08aed0dc5f971322f"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "10cb948e75d4162b5e19100221b9ab92a83d860ffe9be2ce47d414b3e94ce8ae",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "e5b25a4ae945679c3e0c4e5a1f85eb25e80e770f7b63edefbbc091d18734d0e4"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "10cb948e75d4162b5e19100221b9ab92a83d860ffe9be2ce47d414b3e94ce8ae",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "e5b25a4ae945679c3e0c4e5a1f85eb25e80e770f7b63edefbbc091d18734d0e4"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "15a4159a2a28388205843b1f617a0d6f830925e00d4fe9e3894e1a055ee89bdd",
+          "operation": "triton_poi_fused__unsafe_view_mul_silu",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "fab8fd5c46a4e05a270ba41abb39e0ebcedef4759bed9d87d684d07b8d0acecc"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "28a3c88b04d7f194998148d1373b30eab655df2a0c9e81dd8ab973c93c778e61",
+          "operation": "triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_index_le_lift_fresh_mul_prepare_softmax_online_scalar_tensor_view_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2337eb7ba7fbd51d186cb8fa5515038093c0424ced04d61884838abf7f35ffca"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "28a3c88b04d7f194998148d1373b30eab655df2a0c9e81dd8ab973c93c778e61",
+          "operation": "triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_index_le_lift_fresh_mul_prepare_softmax_online_scalar_tensor_view_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2337eb7ba7fbd51d186cb8fa5515038093c0424ced04d61884838abf7f35ffca"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "29f08563ce28b6c7f5db1e25b8ff83aaa27fa00cf4253af62f22289a2d849b8c",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "07b2068f3a7c0f0094b261727f3935cf759ec0c11a20c1d3e9d8c52951c5cfdc"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "29f08563ce28b6c7f5db1e25b8ff83aaa27fa00cf4253af62f22289a2d849b8c",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "07b2068f3a7c0f0094b261727f3935cf759ec0c11a20c1d3e9d8c52951c5cfdc"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "30c2870fc593f148ecd1550bdffed9596080c59e74b9f7a0ebfcd3aa3433b61c",
+          "operation": "triton_red_fused__to_copy_mul_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "411fdcebb804e0942b01ae93dcad12f70015522954a9250eee28806384f42314"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "3c2e6e3535c62d24faf1a9e3ccdef56cf8b0a4e9576beaa2ad2eade5cf715c37",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3ba189446beb9a3360ab72c048b49f7766469d693c4d455bf4f46627191342b0"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "3c2e6e3535c62d24faf1a9e3ccdef56cf8b0a4e9576beaa2ad2eade5cf715c37",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3ba189446beb9a3360ab72c048b49f7766469d693c4d455bf4f46627191342b0"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "3c2e6e3535c62d24faf1a9e3ccdef56cf8b0a4e9576beaa2ad2eade5cf715c37",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3ba189446beb9a3360ab72c048b49f7766469d693c4d455bf4f46627191342b0"
+        },
+        {
+          "endpoint": "output",
+          "implementation_pattern_id": "58d3980c4533dbaa4002baddea86fdea19da14b35d012d3437f1e7ba3da7cde4",
+          "operation": "extern_kernels.bmm",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "7648c9ae0c237b670416e939d90b9c789ea25e3a70546cc433b500459e9e74d4"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "66a8af4318707db0344a9cfecc9aaec447cb2a3b2d90a18ef084b3f16da59bc4",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3ba189446beb9a3360ab72c048b49f7766469d693c4d455bf4f46627191342b0"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "6e169396b494a060b8a76c0035171ed1b8e4a0953e2e978b28ff3bb0bef0ca3b",
+          "operation": "triton_red_fused__to_copy_add_embedding_mean_mul_pow_rsqrt",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5a200df5f908bdf7ce9b637be76ade245fc58255585bc2af0a5bd0134b56fe2f"
+        },
+        {
+          "endpoint": "output",
+          "implementation_pattern_id": "7a70e9d9ee74d0c6795aab0f443a333634e3940223497096554c1c4e5610fe7f",
+          "operation": "extern_kernels.bmm",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "4c19ecf4fa9b4c597dc128f0dae1bd24c32a5622a9c92a4dd9f1444c14a0852d"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "7c048b547a0243cbb14883eb7cf52e95abadf26b874835bfee6a6c688d7309c4",
+          "operation": "triton_red_fused__to_copy_add_mul_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "911969cb46f5b115e8ab43e7c7ed1330c6ee79844ea7f29caf8e49bb40a15ed3"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "7fca1713cb4d4d1914f5311ed448192df1a79992fc9b2ffbc6e66e3c04e69891",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "07b2068f3a7c0f0094b261727f3935cf759ec0c11a20c1d3e9d8c52951c5cfdc"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "7fca1713cb4d4d1914f5311ed448192df1a79992fc9b2ffbc6e66e3c04e69891",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "07b2068f3a7c0f0094b261727f3935cf759ec0c11a20c1d3e9d8c52951c5cfdc"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "7fcecf4ef1d0f4c0a499070b1ba02b4081b4fea972ed66e4d96f9280402ef2a5",
+          "operation": "triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2115a0ea77a8c8029f2f37634c0f67fca951837902cc3f97665c0ee44d3acf11"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "837eaf04d2683d13ba8b06ad9af6310384db59f5d09c32f262a12cc2b68d26c3",
+          "operation": "triton_poi_fused_clone_squeeze_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "43c1682ea2c9047b8637ff51a7a15c1d7510b0e4acca7ef7a50db8fa834e91fc"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "a003d1a89a50f2c648b682c78c2b125a60e339c5a6bd52716101e1ef973ae52a",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mul_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "e2218f009a51ad98f6ae13f44699c6d46ecfa0d1a1da6efaa2455317872f6017"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "a003d1a89a50f2c648b682c78c2b125a60e339c5a6bd52716101e1ef973ae52a",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mul_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "e2218f009a51ad98f6ae13f44699c6d46ecfa0d1a1da6efaa2455317872f6017"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "a26cd5b34bf8553c2741bda361b786d3ce3b703d834b9e8ca8aa2013defd5370",
+          "operation": "triton_red_fused__log_softmax__log_softmax_backward_data__to_copy__unsafe_view_arange_eq_expand_nll_loss_backward_nll_loss_forward_scalar_tensor_slice_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "6fc69549b5abcc421cf3474a81c8d68d1f4330907abe7cef6f03c5ebefe2974a"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "c7c72d1f1a60ceb4efee5c0f81402a65636f9febc3671b6b7d58cecaf4be4873",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "07b2068f3a7c0f0094b261727f3935cf759ec0c11a20c1d3e9d8c52951c5cfdc"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "ce2df1f5abb78e735127345a5cfcaad3c95f4a42b49a879e73e772654bdfc23b",
+          "operation": "triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2115a0ea77a8c8029f2f37634c0f67fca951837902cc3f97665c0ee44d3acf11"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "d719324be6f2bf219d955ae948e4d86db504be1b18464cc878928ea89d474e77",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "d9b8b70c17fdb957ccd34cec217fd76ed8ebe40e7d262211bab8cda7cf99d7f8",
+          "operation": "triton_poi_fused__to_copy_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_slice_backward_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "6496f9215ae34eb6763a006f42f20e314295149625b2d83c457d651e92f5b790"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "db34c79c1c872f838f8b5b2d8ac9373baa252cde28f0203386591aac68535a29",
+          "operation": "triton_red_fused__to_copy_add_mul_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "911969cb46f5b115e8ab43e7c7ed1330c6ee79844ea7f29caf8e49bb40a15ed3"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "fffbcd51f5b48e755e428c20e0fc7bde9a833bbe9ef65939a2d16e5619929ab6",
+          "operation": "triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2115a0ea77a8c8029f2f37634c0f67fca951837902cc3f97665c0ee44d3acf11"
+        }
+      ]
+    },
+    {
+      "count": 72,
+      "model": "Gemma-4 E2B",
+      "reason": "No exact parameter-reachable repair/trajectory replay was available in the frozen held-out artifact; these rows remain unresolved rather than negative.",
+      "rows": [
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "11c9a259adf1058e072d440136a54fb6dfb1d96281291719d9940c5adfa56905",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "8f2538226cc627532b8c56e291d06f89b1f4dbaa8cb8c99c110c419498c488d5"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "11c9a259adf1058e072d440136a54fb6dfb1d96281291719d9940c5adfa56905",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "8f2538226cc627532b8c56e291d06f89b1f4dbaa8cb8c99c110c419498c488d5"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "1c404dc5c0049e6d390b4c77717c281135410af1c4e1587f5579530cc3191ccc",
+          "operation": "triton_red_fused__to_copy_add_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "94408aa5ed08548fb5dfa71261e400e877ab5c072b37fce96ad2489807f6ceb4"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "233a5ebc4ca9a77ec62e81f248470afadc15e24a7efa900773dc6a6cae82c6a8",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "in_out_ptr1",
+          "implementation_pattern_id": "233a5ebc4ca9a77ec62e81f248470afadc15e24a7efa900773dc6a6cae82c6a8",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "233a5ebc4ca9a77ec62e81f248470afadc15e24a7efa900773dc6a6cae82c6a8",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "233a5ebc4ca9a77ec62e81f248470afadc15e24a7efa900773dc6a6cae82c6a8",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "23c5b091217b740bda0dbb245c37984fa8290eadcd064cff31a1a9100c246b72",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "88e5fd102402cd00fe94cd867b3e0babd8d1d2392f0000a20ebd733d3ab17e4e"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "23c5b091217b740bda0dbb245c37984fa8290eadcd064cff31a1a9100c246b72",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "88e5fd102402cd00fe94cd867b3e0babd8d1d2392f0000a20ebd733d3ab17e4e"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "252dea98e0aa1cc8190aba854d1b2c56267bdbe5138eea6e6a59ee25dee661c8",
+          "operation": "triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_select_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "348a20701d5efbf248b1348ad9e635e9a6bcd51325e7451cc3d8181941eda795"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "2cd714dfb8269a4ab92e991a0d6935742e9f1eea6e8a460485140708e886ad50",
+          "operation": "triton_red_fused__to_copy__unsafe_view_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "618e01678cdb1ee74d930a1dddb8f6d8ebd134b30826791611f886b3eaeca12c"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "31344eb6752007120348de1bd459b1ec22a32250062cfe14627e7bb47032b687",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "88e5fd102402cd00fe94cd867b3e0babd8d1d2392f0000a20ebd733d3ab17e4e"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "31344eb6752007120348de1bd459b1ec22a32250062cfe14627e7bb47032b687",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "88e5fd102402cd00fe94cd867b3e0babd8d1d2392f0000a20ebd733d3ab17e4e"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "33c1f351193a0f4652d38c79067396188453b0c3c4160e498b909c3112b9fd68",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "33c1f351193a0f4652d38c79067396188453b0c3c4160e498b909c3112b9fd68",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "4591d65130a40580923ff819699b0ed116154bfb4900fd12459204f9a473c4fc",
+          "operation": "triton_per_fused__to_copy_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "86ca7ce8997c8b7c8b52c609c80adb4e771b3b3d033009dfd3c4db7e4f682b37"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "4e6ba199b21db6b91e74ae73086220bd68385f839cad6516b6b87f5441b195bb",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "7f88806ff1e57e6d9f93bd00963d388e0590d74c96948a404988dc7714f21f6e"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "4e6ba199b21db6b91e74ae73086220bd68385f839cad6516b6b87f5441b195bb",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "7f88806ff1e57e6d9f93bd00963d388e0590d74c96948a404988dc7714f21f6e"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "4e73a22f2330b54666109b84c850bcbcf503c63661bd8d9f0ee5374133666c98",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "8f2538226cc627532b8c56e291d06f89b1f4dbaa8cb8c99c110c419498c488d5"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "4e73a22f2330b54666109b84c850bcbcf503c63661bd8d9f0ee5374133666c98",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "8f2538226cc627532b8c56e291d06f89b1f4dbaa8cb8c99c110c419498c488d5"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "4f53e5020d130a7af262f928ac1ae34c6fcc5904237313fa023ef795aa07f96c",
+          "operation": "triton_per_fused__softmax__softmax_backward_data__to_copy_add_arange_bitwise_and_eq_expand_gt_index_le_lift_fresh_mul_new_ones_scalar_tensor_sub_unsqueeze_view_where",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2c9c24bfe3848cf28f110b50d135c36736ed3bd3f5957d72296e63927a958f89"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "598d28a56091a275d51155efea65d8dbddfd753c1527484691a61e6f0c201db5",
+          "operation": "triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_expand_gt_index_le_lift_fresh_mul_new_ones_prepare_softmax_online_scalar_tensor_sub_unsqueeze_view_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "efdfd85394a32fda984478ee34f20cda078b359b39210019d1b73c875c07ccf5"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "5ff51b5d92e28b8e263875302c5a4e1321c4e917b071d1e5a868de3e3607c1a3",
+          "operation": "triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_expand_gt_index_le_lift_fresh_mul_new_ones_prepare_softmax_online_scalar_tensor_sub_unsqueeze_view_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "efdfd85394a32fda984478ee34f20cda078b359b39210019d1b73c875c07ccf5"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "61ac95f66ea61c88ce318e9faf010ba8338402a01951e97f9103c8e9b79180a8",
+          "operation": "triton_per_fused_add_squeeze_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "4699ac89cf8125d7949dd3397b4872c5d0ed426d305d1541ee871a06991861fb"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "61b6e815dc8a7eb88ceb1827ef5e104013a7b6d1ac3d214d171f47a69e8c21ab",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_div_embedding_dense_backward_expand_gelu_mul_nll_loss_forward_pow_select_backward_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "dc23ce7e87ea5ad45f37cd8be0783c793d6e6d592e032978309cab95abdc95fc"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "6886e46bb39ab80705c180089f7daaa89c373dacab1cc2598b2365969649071d",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "in_out_ptr1",
+          "implementation_pattern_id": "6886e46bb39ab80705c180089f7daaa89c373dacab1cc2598b2365969649071d",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "6886e46bb39ab80705c180089f7daaa89c373dacab1cc2598b2365969649071d",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "6886e46bb39ab80705c180089f7daaa89c373dacab1cc2598b2365969649071d",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "6bcfc897f7588395aca6b5449a412a4294ca49f1b591f3bb0060b09f58e9b37e",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "6bcfc897f7588395aca6b5449a412a4294ca49f1b591f3bb0060b09f58e9b37e",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "181f37a869aca1143c9ee7fef97555e30d641d66b672facabfe5e51d3efa4fe5"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "6d8a50f7e010f73eb22370e5d84effdf4e806a046d2cf2eba64808ff536343b9",
+          "operation": "triton_per_fused_add_squeeze_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "19f2ca23a405ab11ed043b0e9cf9c9e28baf94d8417535b6fc290d73f1577f4c"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "737895d8372e826f0b926e7ba119398b985ffcae96f69667b4c164e834cb267d",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "b19b2f2d93e29b95fd86cc10d6afcc96a2903248bb9529c103dedc1d59d15694"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "73c7280d133e14b8641df4ae2dfbe82cfdd46266795d448aab3dc89ad8aa68ce",
+          "operation": "triton_per_fused__to_copy__unsafe_view_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "1413c2030046ff225a990b6fff2b2fe4cdfa46aa34f93ca2ad7b798e4dd62ef0"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "7e745e67a182ee4485a7fdad163db1f57357864fa6916e36bd26bdba7944c250",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "7e745e67a182ee4485a7fdad163db1f57357864fa6916e36bd26bdba7944c250",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "7fc21810c9261868b90d6d98fef3a90227ac1dd2d9452f35b42ca3165a472a19",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_mean_mul_pow_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "d963681df1a13cb52abc941b03cf7d321755bdc38e87c640b6c28db2dbeed4ef"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "81d8b0847906b2acf5ea808950ad1fdc04bf56c9fdfd3f4156d18ce6bcbf4487",
+          "operation": "triton_per_fused_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "018008b9d44e4b877a0575eb286e4c97d6159491891556abf8009b8da61adeb2"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "86743acac4a6cf6a97aaba24e570f7534870b4870200d32e80b687cb11eaa2f0",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_div_expand_mul_pow_squeeze_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "470d4bb2e676ee22b7eae7b1402ba12622d2524053789321b4103e6b4e4d9780"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "8788dd43c86364a135648ab15d0298e80dc5dd27ec84071a4ab7f0a070960f09",
+          "operation": "triton_poi_fused__unsafe_view_gelu_mul_select",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "7486d684f76f2ce988fb16564ea23d921b3a51ce509393b12c79623fde39e9fd"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "87e957e299ed5298bf268cae31688a5c130f695f011ab69e9e90dfff64f8484f",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_div_expand_mul_pow_squeeze_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "470d4bb2e676ee22b7eae7b1402ba12622d2524053789321b4103e6b4e4d9780"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "97ef6740a07c09c501eb532390d21620d04d9267698522b79f888313c3e2df32",
+          "operation": "triton_per_fused_add_squeeze_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "4699ac89cf8125d7949dd3397b4872c5d0ed426d305d1541ee871a06991861fb"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "9a59d6014314eeb03eefff554c65f70671b67e790d17b5997b0c54993b30beb6",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "8f2538226cc627532b8c56e291d06f89b1f4dbaa8cb8c99c110c419498c488d5"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "9a59d6014314eeb03eefff554c65f70671b67e790d17b5997b0c54993b30beb6",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "8f2538226cc627532b8c56e291d06f89b1f4dbaa8cb8c99c110c419498c488d5"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "9a95c5cf2055e42f8a1635c62672fb57cd9999ea5e049e9b2165f2578f81cff4",
+          "operation": "triton_red_fused__to_copy_add_div_embedding_dense_backward_expand_mul_nll_loss_forward_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "753abbbeebfd9649c1a942aebfd04563048fcfb050615ebf89e316da2facd11d"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "9c3479e40160f90af28a685a819f797111626ea159cacaf36247628879a7aa4a",
+          "operation": "triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_select_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "348a20701d5efbf248b1348ad9e635e9a6bcd51325e7451cc3d8181941eda795"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "a28e72e0e7f00467b249294a23aeafe770c9dc55001e3ea400880b0082467cb9",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "a2a0c4e720f49d4145f9aa5bf6888de9ba47bccdd0f19195a5852bb6be55c5da",
+          "operation": "triton_red_fused__to_copy_add_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "94408aa5ed08548fb5dfa71261e400e877ab5c072b37fce96ad2489807f6ceb4"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "a5d2411f15f3eb0233a6898087a580fd2dc5d97333f277604f72cbce1c6c3709",
+          "operation": "triton_red_fused__to_copy_add_bitwise_or_embedding_eq_mean_mul_pow_scalar_tensor_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "4d42a1c9a1052a2880a6542b26a9c9c84c5a01d66266165a62b81881e50126fc"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "a5d2411f15f3eb0233a6898087a580fd2dc5d97333f277604f72cbce1c6c3709",
+          "operation": "triton_red_fused__to_copy_add_bitwise_or_embedding_eq_mean_mul_pow_scalar_tensor_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "4d42a1c9a1052a2880a6542b26a9c9c84c5a01d66266165a62b81881e50126fc"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "a5d2411f15f3eb0233a6898087a580fd2dc5d97333f277604f72cbce1c6c3709",
+          "operation": "triton_red_fused__to_copy_add_bitwise_or_embedding_eq_mean_mul_pow_scalar_tensor_where",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "4d42a1c9a1052a2880a6542b26a9c9c84c5a01d66266165a62b81881e50126fc"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "ae88498bdba16e7f66ad0bb0be9df4002bd9980340a47ac0e50483bd2862fa8f",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "ae88498bdba16e7f66ad0bb0be9df4002bd9980340a47ac0e50483bd2862fa8f",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "afaff41da894e1c3ab6514b7c2e75627658885d8e7e12a7f586926843a1e10f2",
+          "operation": "triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "fb5923b0cb727561fd66a8c9d4d4fa67225c69a44ebb0de4fb69f34aad719ff2"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "afaff41da894e1c3ab6514b7c2e75627658885d8e7e12a7f586926843a1e10f2",
+          "operation": "triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "fb5923b0cb727561fd66a8c9d4d4fa67225c69a44ebb0de4fb69f34aad719ff2"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "b0a5c50d26c34bba975863bd9d30b56e26684b9671b48adf180d372936e4985b",
+          "operation": "triton_red_fused__to_copy_add_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "94408aa5ed08548fb5dfa71261e400e877ab5c072b37fce96ad2489807f6ceb4"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "b4be3aa80d68ac8d6a76af7369ee36eeb82d02938f37e00b9652fd28e5249822",
+          "operation": "triton_per_fused_sum_transpose_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "25a0e42e964105a737b379b90430d08c5cffcf9f4e54d9636155063e062021c3"
+        },
+        {
+          "endpoint": "out_ptr0",
+          "implementation_pattern_id": "b96152d92824a933a3b2ca39d296b73fbb326b5ebb4b1bb09f3baa6e8d140e91",
+          "operation": "triton_poi_fused__unsafe_view_gelu_mul",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "3efea17501d15427d2861bb7d8b92f176499d37a361af43ccd2611c58674b595"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "c271f903c2f5874288efe5320c6f823390a59e8f16fc05571d3934183a67512f",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "c271f903c2f5874288efe5320c6f823390a59e8f16fc05571d3934183a67512f",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "in_out_ptr1",
+          "implementation_pattern_id": "c3b565ad8ab2ee8fc4d5348f153ffd7f04995e5a7c11b60d046be0e2c1c6a4a6",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mean_mul_neg_pow_sin_slice_transpose_unsqueeze_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "76dbea4b003faa47e86471a1658fc04fca7a23e6d3df7d4aecdc413cec87bad2"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "df0357d5486e7569939edf0fa7ca3fb1ef849f68928d60cab6a74f42f0e1ff8b",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr3",
+          "implementation_pattern_id": "df0357d5486e7569939edf0fa7ca3fb1ef849f68928d60cab6a74f42f0e1ff8b",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "e46fb549973f7b6c02e615221e38a330361b44600cef1d9871cc63cafa4c57c6",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "e7c1bd75785537d331b1368786e3941fbd61c7d92043aebb691c4da14d68251a",
+          "operation": "triton_red_fused__log_softmax__log_softmax_backward_data__to_copy__unsafe_view_arange_div_eq_expand_mul_nll_loss_backward_nll_loss_forward_scalar_tensor_slice_tanh_tanh_backward_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "a6f4829a1f53a7bef1fa7b71c7d3aa10b248b74e778748ab3f4a7ad217843131"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "ed618faab504cb7fbf9d7115445d3a2c4356138c20893a0a845d2bd3d0008d83",
+          "operation": "triton_red_fused__to_copy_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "409d3cfa1433edb5b16398ecb66e8ea1ee9bdfa11b83eae32217f2c8c95e7b0a"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "ee8f70cad9d3aa53726be7d6dcab7563956cf3e7bbc7ce8544e23a351263b1be",
+          "operation": "triton_red_fused__to_copy_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "409d3cfa1433edb5b16398ecb66e8ea1ee9bdfa11b83eae32217f2c8c95e7b0a"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "f590141f388fe4e44635157476a768f1b133d4fedbccfb53bf8383fa51156d82",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "out_ptr2",
+          "implementation_pattern_id": "f590141f388fe4e44635157476a768f1b133d4fedbccfb53bf8383fa51156d82",
+          "operation": "triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "5729cdb85e686aaddda9fc74732ca50d3a7252d4bf7ab2a12c4361877e376f6f"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "f82502d9b0a9be7a800374fe42d9641574e36798e56904ba36eb98de29f0d485",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_embedding_mean_mul_pow_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2e5790d1637e628da33b231bb9c0255868e64b013d16d5479381a0dd1e30ceb9"
+        },
+        {
+          "endpoint": "out_ptr1",
+          "implementation_pattern_id": "f82502d9b0a9be7a800374fe42d9641574e36798e56904ba36eb98de29f0d485",
+          "operation": "triton_per_fused__to_copy__unsafe_view_add_embedding_mean_mul_pow_view",
+          "phase": "FORWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "2e5790d1637e628da33b231bb9c0255868e64b013d16d5479381a0dd1e30ceb9"
+        },
+        {
+          "endpoint": "in_out_ptr0",
+          "implementation_pattern_id": "fbda28102b302c9834b4ffb7d517f79c1193a4c1581e09db73c1775710fc6963",
+          "operation": "triton_poi_fused__to_copy__unsafe_view_add_mul_pow_view",
+          "phase": "BACKWARD",
+          "reason": "NONZERO_PATTERN_WITHOUT_EXACT_PARAMETER_REACHABLE_REPAIR",
+          "semantic_family_id": "bc062708d0c7bc87e60cc1a859584dc9af1819da2576f1cdad8f3b9fde54effc"
+        }
+      ]
+    }
+  ]
 }
