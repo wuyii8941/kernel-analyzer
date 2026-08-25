@@ -47,6 +47,12 @@ def read(path: Path) -> dict[str, Any] | None:
     return json.loads(path.read_text()) if path.exists() else None
 
 
+def window_sidecar(path: Path) -> dict[str, Any] | None:
+    """Return offline late-window evidence when it has been computed."""
+    candidate = path.with_name(path.stem + "_windows.json")
+    return read(candidate)
+
+
 def long_row(path: Path) -> dict[str, Any]:
     payload = read(path)
     if payload is None:
@@ -64,15 +70,32 @@ def long_row(path: Path) -> dict[str, Any]:
             upper = float(null.get("upper_95", 0.0))
             p = float(null.get("one_sided_p", 1.0))
             measured_steps = int(payload.get("steps", payload.get("step_count", 0)))
+            windows = window_sidecar(path)
+            local_windows = (windows or {}).get("levels", {}).get("local", {})
+            feedback_windows = (windows or {}).get("levels", {}).get("feedback", {})
+            if windows is not None:
+                if local_windows.get("long_persistent"):
+                    long_direct = "ROBUST"
+                elif feedback_windows.get("long_persistent"):
+                    long_direct = "FEEDBACK_SUSTAINED"
+                else:
+                    long_direct = "NOT_ROBUST"
+            else:
+                # Preserve the historical aggregate interpretation until the
+                # checkpoint-window sidecar is available. New replays are
+                # upgraded by the offline analyzer before final publication.
+                long_direct = "ROBUST" if p <= 0.05 and a > upper else "NOT_ROBUST"
             return {
                 "status": "COMPLETE_4096" if measured_steps >= 4096 and payload.get("status") == "COMPLETE" else payload.get("trajectory_status", payload.get("status", "COMPLETE")),
-                "long_direct": "ROBUST" if p <= 0.05 and a > upper else "NOT_ROBUST",
+                "long_direct": long_direct,
                 "steps": measured_steps,
                 "A4096": a, "null95": upper, "p": p,
-                "late_windows": None, "late_windows_above_own_null": None,
+                "late_windows": local_windows.get("late_windows") if windows is not None else None,
+                "late_windows_above_own_null": local_windows.get("late_windows_above_own_null") if windows is not None else None,
                 "loss_audit": payload.get("loss_audit", {}),
                 "local_A4096": levels.get("local", {}).get("coherence_amplification"),
                 "feedback_A4096": levels.get("feedback", {}).get("coherence_amplification"),
+                "window_evidence": windows,
                 "final_drift_l2": payload.get("cumulative", {}).get("actual", {}).get("resultant_l2"),
                 "paired_loss_gap_final": payload.get("loss_audit", {}).get("final_gap"),
                 "paired_loss_gap_mean_last_512": payload.get("loss_audit", {}).get("last_512_mean"),

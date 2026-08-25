@@ -33,6 +33,16 @@ run_case() {
   if CUDA_VISIBLE_DEVICES="$gpu" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
       OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
       "${cmd[@]}" >>"$log" 2>&1; then
+    # Re-analyze the saved vector sequence into 32-step late-window evidence
+    # before the row is allowed into the final audit. This avoids treating a
+    # large early transient as a persistent 4096-step bias.
+    "$PY" "$ROOT/scripts/analyze_long_checkpoint_windows.py" \
+      --checkpoint "$checkpoint" \
+      --output "$ROOT/results/property/declared_persistent_4096/expanded_controls/${id}_4096_windows.json" \
+      >>"$log" 2>&1 || {
+        echo "[$(date -Is)] WINDOW_REANALYSIS_FAILED $id" >>"$log"
+        return 1
+      }
     echo "[$(date -Is)] COMPLETE $id" >>"$log"
   else
     local code=$?
