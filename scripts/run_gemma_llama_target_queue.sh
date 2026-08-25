@@ -97,10 +97,35 @@ PY
       --consequence-steps 16 --target-region "$region" --target-symbol "$symbol" --target-endpoint "$endpoint" --carrier "$carrier" \
       --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 1000 \
       $([[ "$arch" == "gemma4" ]] && echo --allow-graph-breaks) >>"$LOG" 2>&1; then
-    echo "[$(date -Is)] pilot unresolved $case_id" >>"$LOG"; return 0
+    # A small norm carrier can compile while the historical target is absent
+    # from the fresh graph. Retry once with the tied embedding before calling
+    # the row unresolved; this is a binding repair, never a negative verdict.
+    if [[ "$arch" == "generic" && "$carrier" != "model.embed_tokens.weight" ]]; then
+      rebind="$base/${case_id}_pilot_rebind_embed"
+      if [[ ! -f "$rebind/prediction.json" ]]; then
+        wait_for_gpu
+        echo "[$(date -Is)] rebind after target failure $case_id carrier=model.embed_tokens.weight" >>"$LOG"
+        if CUDA_VISIBLE_DEVICES="$GPU" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
+            OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+            "$runner_py" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
+            --input-bank "$input" --consequence-bank "$consequence" --output-dir "$rebind" --steps 16 \
+            --consequence-steps 16 --target-region "$region" --target-symbol "$symbol" --target-endpoint "$endpoint" \
+            --carrier model.embed_tokens.weight --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 1000 \
+            >>"$LOG" 2>&1; then
+          pilot="$rebind"
+        fi
+      elif [[ -f "$rebind/prediction.json" ]]; then
+        pilot="$rebind"
+      fi
+    fi
+    if [[ ! -f "$pilot/prediction.json" ]]; then
+      mkdir -p "$base/unresolved"
+      "$PY" -c 'import json,sys; print(json.dumps({"schema":"kernel-analyzer-target-replay-failure-v1","case_id":sys.argv[1],"status":"UNRESOLVED_PILOT_REPLAY_RESOURCE","log":sys.argv[2],"output_dir":sys.argv[3],"claim_boundary":"Target pilot failed or could not allocate resources; no negative label is assigned."},indent=2))' "$case_id" "$LOG" "$pilot" >"$base/unresolved/${case_id}_pilot.json"
+      echo "[$(date -Is)] pilot unresolved $case_id" >>"$LOG"; return 0
+    fi
   fi
   local decision
-  decision=$("$PY" -c 'import json,sys; p=sys.argv[1]; pred=json.load(open(p+"/prediction.json")).get("source_prediction"); short=json.load(open(p+"/short_screen.json")); print("LONG" if pred=="SOURCE_PERSISTENCE_RISK" or any(x.get("status")=="RISK_CANDIDATE" for x in short.get("cases",[])) else "STOP")' "$pilot")
+  decision=$("$PY" -c 'import json,sys,os; p=sys.argv[1]; pred=json.load(open(p+"/prediction.json")).get("source_prediction"); short=json.load(open(p+"/short_screen.json")) if os.path.exists(p+"/short_screen.json") else {}; print("LONG" if pred=="SOURCE_PERSISTENCE_RISK" or any(x.get("status")=="RISK_CANDIDATE" for x in short.get("cases",[])) else "STOP")' "$pilot")
   if [[ "$decision" != LONG ]]; then echo "[$(date -Is)] pilot no-risk $case_id" >>"$LOG"; return 0; fi
   wait_for_gpu
   echo "[$(date -Is)] long $case_id" >>"$LOG"
