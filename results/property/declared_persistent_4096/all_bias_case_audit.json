@@ -22,6 +22,35 @@
   },
   "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
   "long_loss_split_without_direct_count": 3,
+  "matrix_case_ids_covered_by_rows": [
+    "deepseek8b_seq64_l35_attention_dv",
+    "gemma4_norm",
+    "gemma4_random_gelu_backward1860",
+    "gemma4_random_gelu_loss_backward",
+    "gemma4_random_softmax_backward",
+    "layer23_qproj_attention_state_region",
+    "liger_fused_ce_t128",
+    "mamba_seq64_in_proj",
+    "multishape-backward-cell-0057",
+    "multishape-backward-cell-0103",
+    "multishape-backward-cell-0153",
+    "multishape-backward-cell-0190",
+    "multishape-backward-cell-0191",
+    "multishape-backward-cell-0450",
+    "multishape-backward-cell-0501",
+    "multishape-backward-cell-0508",
+    "multishape-backward-cell-0543",
+    "multishape-backward-cell-0654",
+    "multishape-backward-cell-0745",
+    "multishape-backward-cell-0747",
+    "phi4_seq64_lmhead_dx",
+    "qwen128_vproj_output",
+    "qwen3vl_silu_backward",
+    "qwen64_vproj",
+    "qwen_saved_p_seq128",
+    "qwen_seq128_lmhead_dx"
+  ],
+  "matrix_case_ids_missing_from_rows": [],
   "operator_scan": {
     "artifact": "results/property/declared_persistent_4096/operator_scan_gemma_llama.json",
     "claim_boundary": "Pattern-screen signals are not bias cases without an exact parameter-reachable repair and long replay; no new Gemma/Llama row passed the frozen gate.",
@@ -70,6 +99,7 @@
         "status": "COMPLETE_4096",
         "steps": 4096
       },
+      "matrix_case_id": "liger_fused_ce_t128",
       "model": "Qwen3-1.7B",
       "operator_or_region": "fused CE dW accumulation",
       "paired_consequence": {
@@ -105,6 +135,7 @@
         "status": "COMPLETE_4096",
         "steps": 4096
       },
+      "matrix_case_id": "phi4_seq64_lmhead_dx",
       "model": "Phi-4-mini",
       "operator_or_region": "lm_head backward dX",
       "paired_consequence": {
@@ -140,6 +171,7 @@
         "status": "COMPLETE_4096",
         "steps": 4096
       },
+      "matrix_case_id": "qwen_seq128_lmhead_dx",
       "model": "Qwen3-1.7B",
       "operator_or_region": "lm_head backward dX",
       "paired_consequence": {
@@ -175,6 +207,7 @@
         "status": "COMPLETE_4096",
         "steps": 4096
       },
+      "matrix_case_id": "qwen64_vproj",
       "model": "Qwen3-1.7B",
       "operator_or_region": "seq64 v_proj MM + output rounding",
       "paired_consequence": {
@@ -210,6 +243,7 @@
         "status": "COMPLETE_4096",
         "steps": 4096
       },
+      "matrix_case_id": "qwen128_vproj_output",
       "model": "Qwen3-1.7B",
       "operator_or_region": "v_proj MM/output rounding",
       "paired_consequence": {
@@ -245,6 +279,7 @@
         "status": "COMPLETE_4096",
         "steps": 4096
       },
+      "matrix_case_id": "mamba_seq64_in_proj",
       "model": "Mamba-130M",
       "operator_or_region": "in_proj matrix multiply",
       "paired_consequence": {
@@ -280,6 +315,7 @@
         "status": "COMPLETE_4096",
         "steps": 4096
       },
+      "matrix_case_id": "qwen_saved_p_seq128",
       "model": "Qwen3-1.7B",
       "operator_or_region": "layer-27 saved-P softmax backward",
       "paired_consequence": {
@@ -318,6 +354,7 @@
         "steps": 4096,
         "verdict": "FEEDBACK_SUSTAINED_SEPARATION"
       },
+      "matrix_case_id": "qwen3vl_silu_backward",
       "model": "Qwen3-VL-Reranker-2B",
       "operator_or_region": "SiLU backward",
       "paired_consequence": {
@@ -344,6 +381,7 @@
         "reason": "Do not spend 4096 steps repeating an exact zero contrast. Restore the historical compiled wrapper or generate a newly screened nonzero repair before long-run measurement.",
         "status": "ABSTAIN"
       },
+      "matrix_case_id": "layer23_qproj_attention_state_region",
       "model": "Qwen3-1.7B",
       "operator_or_region": "attention S_bwd/K to q_proj",
       "paired_consequence": {
@@ -361,6 +399,7 @@
         "artifact": "results/property/declared_persistent_4096/deepseek_l35_dv.json",
         "status": "NOT_RUN"
       },
+      "matrix_case_id": "deepseek8b_seq64_l35_attention_dv",
       "model": "DeepSeek-R1-Qwen3-8B",
       "operator_or_region": "attention dV BMM",
       "paired_consequence": {
@@ -392,6 +431,7 @@
         "status": "COMPLETE_LONG_HORIZON",
         "steps": 4096
       },
+      "matrix_case_id": null,
       "model": "Llama-3.2-3B",
       "operator_or_region": "lm_head backward dX",
       "paired_consequence": {
@@ -434,6 +474,7 @@
         "status": "COMPLETE_LONG_HORIZON",
         "steps": 4096
       },
+      "matrix_case_id": null,
       "model": "Ministral-3-3B",
       "operator_or_region": "lm_head backward dX",
       "paired_consequence": {
@@ -464,6 +505,7 @@
         "reason": "A same-process Gemma RMSNorm 4096-step retry is currently running; the earlier runtime failure is not treated as a negative.",
         "status": "UNRESOLVED_LONG_REPLAY_PENDING"
       },
+      "matrix_case_id": "gemma4_norm",
       "model": "Gemma-4 E2B",
       "operator_or_region": "RMSNorm / projection feedback region",
       "paired_consequence": {
@@ -484,6 +526,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
+      "matrix_case_id": "multishape-backward-cell-0057",
       "model": "DeepSeek-R1-Qwen3-8B",
       "operator_or_region": "DeepSeek backward cell 0057; post-attention LayerNorm carrier",
       "paired_consequence": {
@@ -509,6 +552,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
+      "matrix_case_id": "multishape-backward-cell-0103",
       "model": "DeepSeek-R1-Qwen3-8B",
       "operator_or_region": "DeepSeek backward cell 0103; input LayerNorm carrier",
       "paired_consequence": {
@@ -534,6 +578,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
+      "matrix_case_id": "multishape-backward-cell-0153",
       "model": "DeepSeek-R1-Qwen3-8B",
       "operator_or_region": "DeepSeek backward cell 0153; attention k-norm carrier",
       "paired_consequence": {
@@ -559,6 +604,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
+      "matrix_case_id": "multishape-backward-cell-0190",
       "model": "DeepSeek-R1-Qwen3-8B",
       "operator_or_region": "DeepSeek backward cell 0190; attention q-norm carrier",
       "paired_consequence": {
@@ -584,6 +630,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
         "steps": null
       },
+      "matrix_case_id": "multishape-backward-cell-0191",
       "model": "DeepSeek-R1-Qwen3-8B",
       "operator_or_region": "DeepSeek backward cell 0191; attention q-norm carrier",
       "paired_consequence": {
@@ -609,6 +656,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
+      "matrix_case_id": "multishape-backward-cell-0450",
       "model": "Mamba-130M",
       "operator_or_region": "Mamba backward cell 0450; dt-projection bias carrier",
       "paired_consequence": {
@@ -634,6 +682,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
+      "matrix_case_id": "multishape-backward-cell-0501",
       "model": "Phi-4-mini",
       "operator_or_region": "Phi backward cell 0501; post-attention LayerNorm carrier",
       "paired_consequence": {
@@ -659,6 +708,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
+      "matrix_case_id": "multishape-backward-cell-0508",
       "model": "Phi-4-mini",
       "operator_or_region": "Phi backward cell 0508; post-attention LayerNorm carrier",
       "paired_consequence": {
@@ -684,6 +734,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_RESOURCE",
         "steps": null
       },
+      "matrix_case_id": "multishape-backward-cell-0543",
       "model": "Phi-4-mini",
       "operator_or_region": "Phi backward cell 0543; final norm carrier",
       "paired_consequence": {
@@ -709,6 +760,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
+      "matrix_case_id": "multishape-backward-cell-0654",
       "model": "Qwen3-1.7B",
       "operator_or_region": "Qwen backward cell 0654; input LayerNorm carrier",
       "paired_consequence": {
@@ -734,6 +786,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
+      "matrix_case_id": "multishape-backward-cell-0745",
       "model": "Qwen3-1.7B",
       "operator_or_region": "Qwen backward cell 0745; attention q-norm carrier",
       "paired_consequence": {
@@ -759,6 +812,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
+      "matrix_case_id": "multishape-backward-cell-0747",
       "model": "Qwen3-1.7B",
       "operator_or_region": "Qwen backward cell 0747; attention k-norm carrier",
       "paired_consequence": {
@@ -784,6 +838,7 @@
         "status": "UNRESOLVED_LONG_REPLAY_PENDING",
         "steps": null
       },
+      "matrix_case_id": "gemma4_random_gelu_loss_backward",
       "model": "Gemma-4 E2B",
       "operator_or_region": "GELU/loss backward region 1401; projection carrier",
       "paired_consequence": {
@@ -809,6 +864,7 @@
         ],
         "status": "NOT_ESCALATED"
       },
+      "matrix_case_id": "gemma4_random_gelu_backward1860",
       "model": "google/gemma-4-E2B",
       "operator_or_region": "case-stage matrix row",
       "paired_consequence": {
@@ -829,6 +885,7 @@
         ],
         "status": "NOT_ESCALATED"
       },
+      "matrix_case_id": "gemma4_random_softmax_backward",
       "model": "google/gemma-4-E2B",
       "operator_or_region": "case-stage matrix row",
       "paired_consequence": {

@@ -396,6 +396,20 @@ CASES = [
     ("Gemma4 RMSNorm", "Gemma-4 E2B", "RMSNorm / projection feedback region", "response asymmetry / feedback candidate", ROOT / "results/property/declared_persistent_4096/gemma4_norm_v3_long_projection/consequence.json", ROOT / "results/property/declared_persistent_4096/gemma4_norm_v3_long_projection/consequence.json"),
 ]
 
+HISTORICAL_MATRIX_IDS = {
+    "Liger fused CE": "liger_fused_ce_t128",
+    "Phi lm_head dX": "phi4_seq64_lmhead_dx",
+    "Qwen lm_head dX": "qwen_seq128_lmhead_dx",
+    "Qwen64 v_proj": "qwen64_vproj",
+    "Qwen v_proj": "qwen128_vproj_output",
+    "Mamba in_proj": "mamba_seq64_in_proj",
+    "saved-P": "qwen_saved_p_seq128",
+    "Qwen3-VL SiLU": "qwen3vl_silu_backward",
+    "layer-23 attention": "layer23_qproj_attention_state_region",
+    "DeepSeek layer-35 dV": "deepseek8b_seq64_l35_attention_dv",
+    "Gemma4 RMSNorm": "gemma4_norm",
+}
+
 # The 12 rows below were not chosen after seeing a 4096-step result.  They
 # were mechanically drawn from the frozen result-blind screen-negative pool,
 # but their 32-step consequence files showed an actual/feedback separation.
@@ -620,6 +634,7 @@ def main() -> None:
             }
         rows.append({
             "case": name,
+            "matrix_case_id": HISTORICAL_MATRIX_IDS.get(name),
             "model": model,
             "operator_or_region": region,
             "formation_path": path,
@@ -708,6 +723,7 @@ def main() -> None:
             }
         rows.append({
             "case": case_id,
+            "matrix_case_id": case_id,
             "model": model,
             "operator_or_region": region,
             "formation_path": formation_path,
@@ -787,6 +803,7 @@ def main() -> None:
             }
         rows.append({
             "case": case_id,
+            "matrix_case_id": case_id,
             "model": model,
             "operator_or_region": region,
             "formation_path": formation_path,
@@ -823,6 +840,7 @@ def main() -> None:
                 label = "SCREENED_NO_CONFIRMED_DIRECT_BIAS"
             rows.append({
                 "case": case_id,
+                "matrix_case_id": case_id,
                 "model": info_row.get("model", "from case-stage matrix"),
                 "operator_or_region": info_row.get("operator_or_region", info_row.get("endpoint", "case-stage matrix row")),
                 "formation_path": "complete roster row; no confirmed long-source gate",
@@ -889,6 +907,12 @@ def main() -> None:
         "extended_candidate_note": "The extended roster includes the historical candidates, Llama/Ministral family replication rows, Gemma4, the 12 result-blind 32-step consequence candidates, and the separately tracked Gemma GELU consequence candidate. These rows are not negatives until their long replay is complete.",
         "operator_scan": operator_scan_summary,
         "unindexed_historical_candidate_count": len(historical_ids - matrix_ids),
+        "matrix_case_ids_covered_by_rows": sorted(
+            {r.get("matrix_case_id") for r in rows if r.get("matrix_case_id")}
+        ),
+        "matrix_case_ids_missing_from_rows": sorted(
+            matrix_ids - {r.get("matrix_case_id") for r in rows if r.get("matrix_case_id")}
+        ),
         "scope_counts": {
             "historical_candidate": sum(r.get("scope") == "historical_candidate" for r in rows),
             "roster_control_or_unresolved": sum(r.get("scope") == "roster_control_or_unresolved" for r in rows),
