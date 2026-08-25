@@ -25,6 +25,7 @@ while :; do
     sidecar="$BASE/${id}_4096_windows.json"
     checkpoint="$CHECK/${id}.pt"
     [[ -s "$sidecar" ]] && continue
+    [[ -s "$BASE/retry_failures/${id}.json" ]] && continue
     if [[ -s "$output" && -s "$checkpoint" ]]; then
       "$PY" "$ROOT/scripts/analyze_long_checkpoint_windows.py" \
         --checkpoint "$checkpoint" --output "$sidecar" \
