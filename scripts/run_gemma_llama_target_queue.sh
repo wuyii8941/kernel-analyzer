@@ -63,4 +63,5 @@ run_one() {
 mkdir -p "$(dirname "$LOG")"
 echo "[$(date -Is)] queue start" >>"$LOG"
 while IFS= read -r row; do run_one "$row"; done < <("$PY" -c 'import json,sys; [print(json.dumps(r,sort_keys=True)) for r in json.load(open(sys.argv[1]))["rows"]]' "$MANIFEST")
+"$PY" "$ROOT/scripts/build_all_bias_case_audit.py" >>"$LOG" 2>&1 || true
 echo "[$(date -Is)] queue complete" >>"$LOG"

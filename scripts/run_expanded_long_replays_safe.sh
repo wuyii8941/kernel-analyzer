@@ -67,6 +67,8 @@ PY
         return 1
       }
     echo "[$(date -Is)] COMPLETE $id" >>"$log"
+    # Keep the single audit JSON synchronized as each long candidate closes.
+    "$PY" "$ROOT/scripts/build_all_bias_case_audit.py" >>"$log" 2>&1 || true
   else
     local code=$?
     "$PY" - "$id" "$code" "$log" "$output" >"$FAIL_ROOT/${id}.json" <<'PY'
@@ -83,6 +85,7 @@ print(json.dumps({
 }, indent=2, sort_keys=True))
 PY
     echo "[$(date -Is)] FAILED $id exit=$code" >>"$log"
+    "$PY" "$ROOT/scripts/build_all_bias_case_audit.py" >>"$log" 2>&1 || true
   fi
 }
 
