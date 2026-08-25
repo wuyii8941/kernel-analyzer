@@ -20,7 +20,7 @@
 | DeepSeek-R1-Qwen3-8B | attention dV BMM | formation unresolved; event/pairing candidate | NOT_RUN | 未测 | 形成阶段未确认，不升级长程 |
 | Llama-3.2-3B | lm_head backward dX | event/pairing family replication | A4096=5.881，超过自身随机基线（窗口统计未导出） | 是；参数距离 0.000376，末步 loss gap +4.24e-05 | 最终持久性 bias 案例 |
 | Ministral-3-3B | lm_head backward dX | event/pairing family replication | A4096=5.050，超过自身随机基线（窗口统计未导出） | 是；参数距离 0.00042，末步 loss gap +0 | 最终持久性 bias 案例 |
-| Gemma-4 E2B | RMSNorm / projection feedback region | response asymmetry / feedback candidate | INVALID_OR_INCOMPLETE | 未测 | 未决 |
+| Gemma-4 E2B | RMSNorm / projection feedback region | response asymmetry / feedback candidate | UNRESOLVED_LONG_REPLAY_RESOURCE | 未测 | 长程运行环境不再可重放，未决 |
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0057; post-attention LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0103; input LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | DeepSeek-R1-Qwen3-8B | DeepSeek backward cell 0153; attention k-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |

@@ -57,6 +57,13 @@ def long_row(path: Path) -> dict[str, Any]:
     payload = read(path)
     if payload is None:
         return {"status": "NOT_RUN", "artifact": str(path.relative_to(ROOT))}
+    if str(payload.get("status", "")).startswith("UNRESOLVED"):
+        return {
+            "status": payload.get("status"),
+            "long_direct": "UNRESOLVED",
+            "reason": payload.get("reason", "long replay unavailable"),
+            "artifact": str(path.relative_to(ROOT)),
+        }
     # The generic bound-endpoint runner stores the three paths under
     # statistics.levels.  It does not keep 4096 rolling windows, so use its
     # frozen sign-flip null and mark the window check as unavailable rather
@@ -482,9 +489,12 @@ def main() -> None:
             long_path = LONG / "qwen3vl_silu_4096_with_loss.json"
         if name == "Gemma4 RMSNorm":
             rebound_path = LONG / "gemma4_norm_v3_long_projection/consequence.json"
+            projection_unresolved = LONG / "unresolved/gemma4_norm_v3_long_projection_unresolved.json"
             rebound = read(rebound_path) or {}
             if str(rebound.get("status", "")).startswith("COMPLETE"):
                 long_path = rebound_path
+            elif projection_unresolved.exists():
+                long_path = projection_unresolved
             elif (LONG / "unresolved/gemma4_norm_4096_rebound_unresolved.json").exists():
                 long_path = LONG / "unresolved/gemma4_norm_4096_rebound_unresolved.json"
         # A refreshed long replay supersedes an older direct-only artifact,
