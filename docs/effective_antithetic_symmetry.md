@@ -1,5 +1,11 @@
 # Effective antithetic symmetry: working bias-formation hypothesis
 
+> **Horizon note.** The fixed-condition and 32-step experiments in this
+> document describe bias formation and short-horizon directionality. They are
+> not, by themselves, the final long-horizon label. The current 4096-step
+> decisions live in `docs/all_bias_long_horizon_audit.md`; a loss split without
+> a bias-bearing component that survives that audit remains an outcome control.
+
 ## Question
 
 Why do some implementation differences become directional training bias while
@@ -372,9 +378,11 @@ contrast. Each repair state uses two independent 16-stratum ensembles; the
 local resultant is `3.011` times its split-ensemble Monte Carlo resultant. It
 is therefore resolved rather than noise-limited. Nevertheless local and
 actual coherence amplifications are only `0.999` and `1.825`, below the frozen
-`2.0` persistence gate. This is the required counterexample: conditional
+`2.0` short-horizon gate. This is a formation-stage counterexample: conditional
 source bias can be real in every fixed state without becoming an ordered
-persistent trajectory bias.
+short-horizon trajectory direction under that protocol. Its final long-horizon
+status must be read from the 4096-step audit rather than inferred from this
+32-step experiment.
 
 Mamba seq64 `in_proj` provides a cross-architecture boundary rather than a
 forced replication.  Its joint repair centers the local residual in 16/16 and
