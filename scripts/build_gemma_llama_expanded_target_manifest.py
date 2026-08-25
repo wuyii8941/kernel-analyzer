@@ -32,7 +32,7 @@ SPECS = [
         "campaign": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/campaign.json.gz",
         "input_bank": "results/property/tcmp_allop_v1/input_banks/llama32_3b_text128.json",
         "consequence_bank": "results/property/tcmp_allop_v1/input_banks/llama32_3b_text128_trajectory4096.json",
-        "carrier": "model.lm_head.weight",
+        "carrier": "model.embed_tokens.weight",
         "prefix": "llama32_text128_scan",
     },
     {

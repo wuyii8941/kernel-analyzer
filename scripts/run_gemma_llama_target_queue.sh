@@ -6,6 +6,7 @@ set -u
 # unresolved and are never converted to negative labels.
 ROOT="/data1/tzh/kernel-analyzer"
 PY="/data1/tzh/miniconda3/envs/pt_nightly/bin/python"
+PY_GEMMA="/data1/tzh/envs/pt_nightly_transformers5/bin/python"
 MANIFEST="$ROOT/results/property/declared_persistent_4096/operator_scan_target_manifest.json"
 LOG="$ROOT/results/property/declared_persistent_4096/operator_scan_targets_queue.log"
 GPU="${1:-3}"
@@ -24,6 +25,8 @@ run_one() {
   local case_id arch model input consequence carrier region endpoint symbol
   case_id=$(echo "$row_json" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["case_id"])')
   arch=$(echo "$row_json" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["architecture"])')
+  local runner_py="$PY"
+  if [[ "$arch" == "gemma4" ]]; then runner_py="$PY_GEMMA"; fi
   model=$(echo "$row_json" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["model_path"])')
   input=$(echo "$row_json" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["input_bank"])')
   consequence=$(echo "$row_json" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["consequence_bank"])')
@@ -61,16 +64,16 @@ d=json.load(open(sys.argv[1])); rows=d.get("cases",[])
 raise SystemExit(0 if rows and all(x.get("status") == "UNRESOLVED_ZERO_ENERGY" for x in rows) else 1)
 PY
     then
-      rebind="$base/${case_id}_pilot_rebind_lmhead"
+      rebind="$base/${case_id}_pilot_rebind_embed"
       if [[ ! -f "$rebind/prediction.json" ]]; then
         wait_for_gpu
-        echo "[$(date -Is)] rebind pilot $case_id carrier=model.lm_head.weight" >>"$LOG"
+        echo "[$(date -Is)] rebind pilot $case_id carrier=model.embed_tokens.weight" >>"$LOG"
         if ! CUDA_VISIBLE_DEVICES="$GPU" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
             OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
-            "$PY" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
+            "$runner_py" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
             --input-bank "$input" --consequence-bank "$consequence" --output-dir "$rebind" --steps 16 \
             --consequence-steps 16 --target-region "$region" --target-symbol "$symbol" --target-endpoint "$endpoint" \
-            --carrier model.lm_head.weight --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 1000 \
+            --carrier model.embed_tokens.weight --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 1000 \
             >>"$LOG" 2>&1; then
           echo "[$(date -Is)] rebind unresolved $case_id" >>"$LOG"
         fi
@@ -89,7 +92,7 @@ PY
   echo "[$(date -Is)] pilot $case_id region=$region endpoint=$endpoint" >>"$LOG"
   if ! CUDA_VISIBLE_DEVICES="$GPU" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
       OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
-      "$PY" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
+      "$runner_py" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
       --input-bank "$input" --consequence-bank "$consequence" --output-dir "$pilot" --steps 16 \
       --consequence-steps 16 --target-region "$region" --target-symbol "$symbol" --target-endpoint "$endpoint" --carrier "$carrier" \
       --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 1000 \
@@ -103,7 +106,7 @@ PY
   echo "[$(date -Is)] long $case_id" >>"$LOG"
   if ! CUDA_VISIBLE_DEVICES="$GPU" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
       OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
-      "$PY" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
+      "$runner_py" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
       --input-bank "$input" --consequence-bank "$consequence" --output-dir "$long" --steps 16 \
       --consequence-steps 4096 --target-region "$region" --target-symbol "$symbol" --target-endpoint "$endpoint" --carrier "$carrier" \
       --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 2000 \
