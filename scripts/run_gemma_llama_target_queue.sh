@@ -190,16 +190,68 @@ PY
       echo "[$(date -Is)] pilot unresolved $case_id" >>"$LOG"; return 0
     fi
   fi
+
+  # A representable endpoint repair with zero gradient on the declared
+  # carrier is a reachability failure, not a negative.  Retry a small,
+  # predeclared set of downstream parameters and keep the first replay that
+  # produces a real gradient contrast.  This also covers external GEMM/BMM
+  # targets, for which the original manifest carrier is only a hypothesis.
+  if [[ -f "$pilot/prediction.json" ]] && \
+     "$PY" -c 'import json,sys; d=json.load(open(sys.argv[1])); raise SystemExit(0 if str(d.get("status",""))=="UNRESOLVED_ZERO_GRADIENT_AFTER_REPRESENTABLE_REPAIR" else 1)' "$pilot/prediction.json"; then
+    local -a carrier_fallbacks=()
+    if [[ "$arch" == "gemma4" ]]; then
+      carrier_fallbacks=(
+        model.language_model.layers.0.input_layernorm.weight
+        model.language_model.per_layer_model_projection.weight
+      )
+    else
+      carrier_fallbacks=(
+        model.layers.0.input_layernorm.weight
+        model.norm.weight
+        model.embed_tokens.weight
+      )
+    fi
+    for fallback in "${carrier_fallbacks[@]}"; do
+      [[ "$fallback" == "$carrier" ]] && continue
+      tag="${fallback//./_}"
+      rebind="$base/${case_id}_pilot_rebind_${tag}"
+      rebind=$(fresh_output_dir "$rebind")
+      wait_for_gpu
+      echo "[$(date -Is)] rebind after zero reachable gradient $case_id carrier=$fallback" >>"$LOG"
+      if CUDA_VISIBLE_DEVICES="$GPU" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
+          OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+          "$runner_py" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
+          --input-bank "$input" --consequence-bank "$consequence" --output-dir "$rebind" --steps 16 \
+          --consequence-steps 16 "${target_args[@]}" --carrier "$fallback" \
+          --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 1000 \
+          $endpoint_rebind_flag \
+          $([[ "$arch" == "gemma4" ]] && echo --allow-graph-breaks) >>"$LOG" 2>&1; then
+        if "$PY" -c 'import json,sys; d=json.load(open(sys.argv[1])); raise SystemExit(1 if str(d.get("status",""))=="UNRESOLVED_ZERO_GRADIENT_AFTER_REPRESENTABLE_REPAIR" else 0)' "$rebind/prediction.json"; then
+          pilot="$rebind"
+          break
+        fi
+      fi
+    done
+  fi
   local decision
   decision=$("$PY" -c 'import json,sys,os; p=sys.argv[1]; frozen_bias=sys.argv[2]=="1"; prediction=json.load(open(p+"/prediction.json")); pred=str(prediction.get("source_prediction","")); short=json.load(open(p+"/short_screen.json")) if os.path.exists(p+"/short_screen.json") else {}; not_applicable=pred.startswith("NOT_APPLICABLE"); print("STOP" if not_applicable else ("LONG" if frozen_bias or pred=="SOURCE_PERSISTENCE_RISK" or any(x.get("status")=="RISK_CANDIDATE" for x in short.get("cases",[])) else "STOP"))' "$pilot" "$screen_bias")
   if [[ "$decision" != LONG ]]; then echo "[$(date -Is)] pilot no-risk $case_id" >>"$LOG"; return 0; fi
+  # If the pilot had to rebind its carrier, the long replay must use that
+  # exact same parameter location.  Falling back to the manifest carrier here
+  # would silently change the experimental contrast between 16 and 4096 steps.
+  local long_carrier="$carrier"
+  if [[ -f "$pilot/consequence.json" ]]; then
+    long_carrier=$("$PY" -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d.get("carrier") or sys.argv[2])' "$pilot/consequence.json" "$carrier")
+  elif [[ -f "$pilot/prediction.json" ]]; then
+    long_carrier=$("$PY" -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d.get("carrier") or sys.argv[2])' "$pilot/prediction.json" "$carrier")
+  fi
   wait_for_gpu
-  echo "[$(date -Is)] long $case_id" >>"$LOG"
+  echo "[$(date -Is)] long $case_id carrier=$long_carrier" >>"$LOG"
   if ! CUDA_VISIBLE_DEVICES="$GPU" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
       OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
       "$runner_py" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
       --input-bank "$input" --consequence-bank "$consequence" --output-dir "$long" --steps 16 \
-      --consequence-steps 4096 "${target_args[@]}" --carrier "$carrier" \
+      --consequence-steps 4096 "${target_args[@]}" --carrier "$long_carrier" \
       --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 2000 \
       $endpoint_rebind_flag \
       $([[ "$arch" == "gemma4" ]] && echo --allow-graph-breaks) >>"$LOG" 2>&1; then

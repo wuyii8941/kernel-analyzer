@@ -501,6 +501,7 @@ def main() -> None:
             "target_binding_mode": target_binding_mode,
             "architecture": args.architecture,
             "case_id": args.case_id,
+            "carrier": carriers[0],
             "runtime_release": str(release_dir),
             "claim_boundary": (
                 "The FP32 reference differs before endpoint casting, but the "
@@ -521,12 +522,14 @@ def main() -> None:
             "prediction": zero_prediction,
             "records": formation_records,
             "target_repair_observations": target_repair_observations,
+            "carrier": carriers[0],
             "runtime_release": str(release_dir),
         }, indent=2, sort_keys=True) + "\n")
         (output_dir / "consequence.json").write_text(json.dumps({
             "schema": "kernel-analyzer-target-v3-consequence-v1",
             "status": zero_status,
             "case_id": args.case_id,
+            "carrier": carriers[0],
             "prediction": zero_prediction,
             "steps": 0,
             "records": [],
@@ -582,6 +585,7 @@ def main() -> None:
         "target_binding_mode": target_binding_mode,
         "architecture": args.architecture,
         "case_id": args.case_id,
+        "carrier": carriers[0],
         "runtime_release": str(release_dir),
         "claim_boundary": "Source prediction is frozen before the paired trajectory; feedback is outside this source branch.",
     }
@@ -592,6 +596,7 @@ def main() -> None:
         "prediction": prediction,
         "records": formation_records,
         "target_repair_observations": target_repair_observations,
+        "carrier": carriers[0],
         "runtime_release": str(release_dir),
     }, indent=2, sort_keys=True) + "\n")
 
