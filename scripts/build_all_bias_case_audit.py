@@ -1157,7 +1157,7 @@ def main() -> None:
             str(r.get("final_label", "")).startswith(("UNRESOLVED", "ABSTAIN"))
             for r in short_candidate_universe_rows
         ),
-        "extended_candidate_note": "The extended roster includes historical candidates, Llama/Ministral family replication rows, Gemma4, the 12 result-blind 32-step consequence candidates, the separately tracked Gemma GELU consequence candidate, and six new Gemma/Llama target-replay rows. These rows are not negatives until their long replay is complete.",
+        "extended_candidate_note": "The extended roster includes historical candidates, Llama/Ministral family replication rows, Gemma4, the earlier 12 result-blind consequence candidates, the separately tracked Gemma GELU consequence candidate, and six new Gemma/Llama target-replay rows. The frozen short-screen candidate pool adds 69 rows. None of these rows is a negative before its long replay is complete.",
         "operator_scan": operator_scan_summary,
         "operator_scan_target_replay": operator_scan_target_summary,
         "short_candidate_universe": {
@@ -1234,12 +1234,12 @@ def main() -> None:
     lines = [
         "# 所有历史偏差候选的长程复核",
         "",
-        f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES)} 个 extended candidate rows**（其中包含历史候选、Llama/Ministral 同族复现、Gemma4、12 个结果盲抽的长程 consequence 候选，以及单独追踪的 Gemma GELU consequence 候选）。合并后表共有 **{len(rows)} 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
+        f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(rows)} 行**，其中 {len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES)} 行是已命名的 extended candidates，{len(short_candidates)} 行来自冻结的短程候选池，另有少量 roster/control 行。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
         "",
         f"按严格口径，最终计入 **{payload['final_case_count']} 个持久性 bias 案例**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**。另有 **{payload['long_loss_split_without_direct_count']} 个**早先已有 bias 证据、并在长程中出现配对 loss 分叉，但 bias 组件后来未保持；它们仍计为 **结果受影响的 bias 记录**，只是不能升级为严格的持久性 bias 组件。当前共有 **{payload['outcome_relevant_case_count']} 个训练结果相关记录**。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
         "",
         f"Gemma/Llama 的追加首轮扫描另有 **{operator_scan_summary['screened_rows']} 行**，其中冻结升级门通过 **{operator_scan_summary['frozen_gate_positives']} 行**；本轮按冻结规则选出 **{len(target_manifest_rows)} 个**新的 exact F+B 目标，目前完成长程重放 **{operator_scan_target_summary['completed']} 个**。没有完成合法重放的行不计入 bias 案例数，也不改判为阴性。",
-        f"短筛候选图中另有 **{len(short_candidates)} 个**候选（其中 **{sum(bool(r.get('confirmation_available')) for r in short_candidates)} 个**已有确认材料，其余将用长程候选/修复回放完成首次确认）。这些候选全部要求长程复核；当前尚未完成的 **{len(short_candidate_universe_rows)} 个**统一标为未决，不得写成阴性。",
+        f"短筛候选图中有 **{len(short_candidates)} 个**候选（其中 **{sum(bool(r.get('confirmation_available')) for r in short_candidates)} 个**已有确认材料，其余将用长程候选/修复回放完成首次确认）。这些候选全部要求长程复核；尚未完成的候选统一标为未决，不得写成阴性。",
         "",
         "持久性 bias 的必要条件是 bias 本身在 4096 步仍然存在：直接源方向或反馈有效更新方向至少有一个通过长程检验。配对训练中的参数或 loss 分叉是后果证据，不足以单独把一个没有持久 bias 组件的记录升级为案例。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。",
         "",
