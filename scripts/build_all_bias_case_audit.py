@@ -866,7 +866,15 @@ def main() -> None:
         target_dir = LONG / "operator_scan_targets" / case_id
         path = target_dir / "consequence.json"
         pilot_dirs = sorted(LONG.glob(f"operator_scan_targets/{case_id}_pilot*"))
-        completed_pilots = [d for d in pilot_dirs if (d / "prediction.json").exists() and (d / "short_screen.json").exists()]
+        # The generic target runner emits formation.json + prediction.json;
+        # short_screen.json is only written by the older full-vector wrapper.
+        # Treat either complete form as a completed pilot, but never as a
+        # 4096-step confirmation.
+        completed_pilots = [
+            d for d in pilot_dirs
+            if (d / "prediction.json").exists()
+            and ((d / "short_screen.json").exists() or (d / "formation.json").exists())
+        ]
         pilot_dir = completed_pilots[-1] if completed_pilots else None
         if path.exists():
             direct = long_row(path)

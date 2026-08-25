@@ -16,11 +16,11 @@
     "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": 1,
     "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": 3,
     "NOT_APPLICABLE_NO_CARRIER_EFFECT": 2,
-    "NO_ROBUST_LONG_DIRECT_BIAS": 1,
+    "NO_ROBUST_LONG_DIRECT_BIAS": 2,
     "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": 5,
     "UNRESOLVED_FORMATION": 1,
     "UNRESOLVED_LONG_REPLAY": 2,
-    "UNRESOLVED_LONG_REPLAY_PENDING": 210
+    "UNRESOLVED_LONG_REPLAY_PENDING": 209
   },
   "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
   "long_loss_split_without_direct_count": 3,
@@ -1063,23 +1063,22 @@
     {
       "case": "llama32_text128_scan_0000",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "NO_ROBUST_LONG_DIRECT_BIAS",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0000/consequence.json",
-        "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0000_pilot_retry2/short_screen.json",
+        "long_direct": "NOT_ROBUST",
+        "reason": "The frozen 16-step target pilot did not trigger the source or local/feedback risk screen; no 4096-step consequence was escalated.",
+        "status": "COMPLETE_SHORT_NO_RISK",
+        "steps": 16
       },
       "matrix_case_id": "llama32_text128_scan_0000",
       "model": "Llama-3.2-3B",
       "operator_or_region": "BACKWARD triton_per_fused__softmax__softmax_backward_data__to_copy_mul_view [in_out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0000/consequence.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "status": "NOT_ESCALATED",
+        "steps": 0
       },
       "paired_sha256": null,
       "scope": "operator_scan_candidate",
@@ -8322,5 +8321,5 @@
   },
   "unindexed_historical_candidate_count": 3,
   "unique_matrix_case_count": 23,
-  "unresolved_or_abstain_count": 214
+  "unresolved_or_abstain_count": 213
 }
