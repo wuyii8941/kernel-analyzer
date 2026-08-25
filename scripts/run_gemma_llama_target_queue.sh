@@ -101,22 +101,26 @@ PY
     # from the fresh graph. Retry once with the tied embedding before calling
     # the row unresolved; this is a binding repair, never a negative verdict.
     if [[ "$arch" == "generic" && "$carrier" != "model.embed_tokens.weight" ]]; then
-      rebind="$base/${case_id}_pilot_rebind_embed"
-      if [[ ! -f "$rebind/prediction.json" ]]; then
+      # Try a small early LayerNorm carrier before the very large tied
+      # embedding.  This often keeps the target reachable without the
+      # embedding's multi-gigabyte optimizer buffers.
+      for fallback in model.layers.0.input_layernorm.weight model.embed_tokens.weight; do
+        tag="${fallback//./_}"
+        rebind="$base/${case_id}_pilot_rebind_${tag}"
+        if [[ -f "$rebind/prediction.json" ]]; then pilot="$rebind"; break; fi
         wait_for_gpu
-        echo "[$(date -Is)] rebind after target failure $case_id carrier=model.embed_tokens.weight" >>"$LOG"
+        echo "[$(date -Is)] rebind after target failure $case_id carrier=$fallback" >>"$LOG"
         if CUDA_VISIBLE_DEVICES="$GPU" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
             OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
             "$runner_py" "$ROOT/scripts/run_gemma4_v3_validation.py" --architecture "$arch" --model "$model" \
             --input-bank "$input" --consequence-bank "$consequence" --output-dir "$rebind" --steps 16 \
             --consequence-steps 16 --target-region "$region" --target-symbol "$symbol" --target-endpoint "$endpoint" \
-            --carrier model.embed_tokens.weight --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 1000 \
+            --carrier "$fallback" --case-id "$case_id" --learning-rate 1e-5 --device cuda:0 --null-draws 1000 \
             >>"$LOG" 2>&1; then
           pilot="$rebind"
+          break
         fi
-      elif [[ -f "$rebind/prediction.json" ]]; then
-        pilot="$rebind"
-      fi
+      done
     fi
     if [[ ! -f "$pilot/prediction.json" ]]; then
       mkdir -p "$base/unresolved"
