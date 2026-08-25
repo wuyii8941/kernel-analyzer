@@ -571,6 +571,7 @@ def main() -> None:
     known.update(case_id for case_id, *_ in ADDITIONAL_OUTCOME_CANDIDATES)
     target_manifest = read(TARGET_MANIFEST) or {}
     target_manifest_rows = target_manifest.get("rows", [])
+    target_blocked = read(TARGET_BLOCKED) or {}
     known.update(row.get("case_id") for row in target_manifest_rows if row.get("case_id"))
     candidate_map = read(CANDIDATE_MAP) or {}
     short_candidates = list(candidate_map.get("candidates", []))
@@ -966,6 +967,45 @@ def main() -> None:
             },
         })
 
+    # Keep scan rows that cannot even be rebound to a same-family generated
+    # program in the same machine-readable denominator.  They are not
+    # negatives and they are not eligible for a long verdict; they are
+    # explicit replay blockers.
+    for index, blocked in enumerate(target_blocked.get("rows", [])):
+        case_id = f"operator_scan_blocked_{index:04d}"
+        direct = {
+            "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+            "long_direct": "UNRESOLVED",
+            "reason": blocked.get("reason", "no matching generated program"),
+            "steps": None,
+            "artifact": str(TARGET_BLOCKED.relative_to(ROOT)),
+        }
+        paired = {
+            "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+            "loss_separation_observed": False,
+            "steps": None,
+            "artifact": str(TARGET_BLOCKED.relative_to(ROOT)),
+        }
+        rows.append({
+            "case": case_id,
+            "matrix_case_id": case_id,
+            "model": blocked.get("model"),
+            "operator_or_region": f"{blocked.get('target_phase')} {blocked.get('target_symbol')} [{blocked.get('target_endpoint')}]",
+            "formation_path": "new operator scan; no matching generated replay program",
+            "long_direct": direct,
+            "paired_consequence": paired,
+            "scope": "operator_scan_blocked",
+            "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+            "direct_sha256": sha(TARGET_BLOCKED),
+            "paired_sha256": sha(TARGET_BLOCKED),
+            "screen_metadata": {
+                "screen_exact_implementation_id": blocked.get("screen_exact_implementation_id"),
+                "screen_amplification": blocked.get("screen_amplification"),
+                "screen_p_value": blocked.get("screen_p_value"),
+                "source_screen": blocked.get("source_screen"),
+            },
+        })
+
     # Every row in the frozen short-screen candidate map is a bias candidate,
     # not a negative.  Only the mechanically sampled subset currently has an
     # exact 4096-step consequence plan.  Keep the remaining rows in the same
@@ -1143,7 +1183,6 @@ def main() -> None:
         "nonzero_rows_without_legal_replay": sum(int(row.get("nonzero_new_impl_rows_requiring_legal_replay", 0)) for row in operator_scan_models),
         "claim_boundary": "Pattern-screen signals are not bias cases without an exact parameter-reachable repair and long replay; no new Gemma/Llama row passed the frozen gate.",
     }
-    target_blocked = read(TARGET_BLOCKED) or {}
     operator_scan_target_summary = {
         "manifest": str(TARGET_MANIFEST.relative_to(ROOT)) if TARGET_MANIFEST.exists() else None,
         "rows": len(target_manifest_rows),
@@ -1275,6 +1314,7 @@ def main() -> None:
         "NOT_APPLICABLE_NO_CARRIER_EFFECT": "没有可达载体，不适用",
         "SCREENED_NO_CONFIRMED_DIRECT_BIAS": "短程筛查未确认直接 bias",
         "UNRESOLVED_LONG_REPLAY_PENDING": "已通过短程 consequence 筛查，4096 步仍未完成",
+        "UNRESOLVED_REPLAY_BLOCKED": "没有同阶段、同实现族和同端点的可重放程序，未决",
     }
     for row in rows:
         d, p = row["long_direct"], row["paired_consequence"]

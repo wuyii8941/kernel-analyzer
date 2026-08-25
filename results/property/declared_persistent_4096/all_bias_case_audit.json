@@ -1,7 +1,7 @@
 {
   "all_long_replay_pending_candidate_count": 66,
   "all_long_replay_required_candidate_count": 69,
-  "case_count": 226,
+  "case_count": 244,
   "coherent_endpoint_witness_count": 57,
   "definition": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. Separately, any earlier bias candidate that produces a paired loss split during the long replay is counted as outcome_relevant, even if its direct bias component later stops; it is not promoted to the stricter persistent-component count. Different converged losses are not required or claimed.",
   "direct_persistent_case_count": 5,
@@ -16,11 +16,12 @@
     "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": 1,
     "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": 3,
     "NOT_APPLICABLE_NO_CARRIER_EFFECT": 2,
-    "NO_ROBUST_LONG_DIRECT_BIAS": 2,
+    "NO_ROBUST_LONG_DIRECT_BIAS": 3,
     "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": 5,
     "UNRESOLVED_FORMATION": 1,
     "UNRESOLVED_LONG_REPLAY": 2,
-    "UNRESOLVED_LONG_REPLAY_PENDING": 209
+    "UNRESOLVED_LONG_REPLAY_PENDING": 208,
+    "UNRESOLVED_REPLAY_BLOCKED": 18
   },
   "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
   "long_loss_split_without_direct_count": 3,
@@ -242,6 +243,24 @@
     "multishape-backward-cell-0654",
     "multishape-backward-cell-0745",
     "multishape-backward-cell-0747",
+    "operator_scan_blocked_0000",
+    "operator_scan_blocked_0001",
+    "operator_scan_blocked_0002",
+    "operator_scan_blocked_0003",
+    "operator_scan_blocked_0004",
+    "operator_scan_blocked_0005",
+    "operator_scan_blocked_0006",
+    "operator_scan_blocked_0007",
+    "operator_scan_blocked_0008",
+    "operator_scan_blocked_0009",
+    "operator_scan_blocked_0010",
+    "operator_scan_blocked_0011",
+    "operator_scan_blocked_0012",
+    "operator_scan_blocked_0013",
+    "operator_scan_blocked_0014",
+    "operator_scan_blocked_0015",
+    "operator_scan_blocked_0016",
+    "operator_scan_blocked_0017",
     "phi4-seq256-lm-head-dx",
     "phi4_seq64_lmhead_dx",
     "qwen128_vproj_output",
@@ -1122,23 +1141,22 @@
     {
       "case": "llama32_text128_scan_0002",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "NO_ROBUST_LONG_DIRECT_BIAS",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0002/consequence.json",
-        "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0002_pilot_retry2/short_screen.json",
+        "long_direct": "NOT_ROBUST",
+        "reason": "The frozen 16-step target pilot did not trigger the source or local/feedback risk screen; no 4096-step consequence was escalated.",
+        "status": "COMPLETE_SHORT_NO_RISK",
+        "steps": 16
       },
       "matrix_case_id": "llama32_text128_scan_0002",
       "model": "Llama-3.2-3B",
       "operator_or_region": "BACKWARD triton_poi_fused__unsafe_view_mul_silu_silu_backward_view [in_out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0002/consequence.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": null
+        "status": "NOT_ESCALATED",
+        "steps": 0
       },
       "paired_sha256": null,
       "scope": "operator_scan_candidate",
@@ -5020,6 +5038,546 @@
       }
     },
     {
+      "case": "operator_scan_blocked_0000",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0000",
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "BACKWARD extern_kernels.bmm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 0.9270489194937006,
+        "screen_exact_implementation_id": "d5058b8f4f0678d27ac983824c85fb3bf4a720dd5e2def1d7ebbabba40cc1ee3",
+        "screen_p_value": 0.5,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0001",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0001",
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "BACKWARD extern_kernels.mm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 1.1103167001807224,
+        "screen_exact_implementation_id": "66dd86f10775986dd0ece5bbf59a177a7fcae6db1656a4e3c7824e2535780afc",
+        "screen_p_value": 0.109375,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0002",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0002",
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "FORWARD extern_kernels.bmm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 0.9770432175759547,
+        "screen_exact_implementation_id": "0ee6c76d15a109a68e1fab994c7783d3a7daa9a3ab44e9c5ad068eb869eadb7b",
+        "screen_p_value": 0.5703125,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0003",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0003",
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "BACKWARD extern_kernels.addmm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 0.6707918503416512,
+        "screen_exact_implementation_id": "8ad516df0766562313db6915ea6a797e7ba745f3ae51f44298c9c721405e1c41",
+        "screen_p_value": 0.7265625,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0004",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0004",
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "BACKWARD extern_kernels.bmm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 1.0672427825503088,
+        "screen_exact_implementation_id": "d64d4718fcd9776fad1e5af353045437e11589f90f38e4f7c81e9333db9c1fb9",
+        "screen_p_value": 0.1640625,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0005",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0005",
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "FORWARD extern_kernels.mm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 1.1783921029988345,
+        "screen_exact_implementation_id": "5477521afded413c06fbad69c94b7011e380f2449a116424e9b42a2e586de5a2",
+        "screen_p_value": 0.03125,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0006",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0006",
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "FORWARD extern_kernels.bmm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 1.0389383098927003,
+        "screen_exact_implementation_id": "69506f16ce260fbe2e8b07ace36d4873c118e4a2309fb297b2d2ceaa10cf1cfd",
+        "screen_p_value": 0.3125,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0007",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0007",
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "BACKWARD extern_kernels.mm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 1.0733254739088862,
+        "screen_exact_implementation_id": "3ee3fea901319cf7688e1976dfb4de8766a62e7512d632c0b5ec488de8eec892",
+        "screen_p_value": 0.25,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0008",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0008",
+      "model": "Llama-3.2-3B",
+      "operator_or_region": "BACKWARD extern_kernels.bmm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 1.0099131418748792,
+        "screen_exact_implementation_id": "526c6bf94814a556c83c80138e8d64df0f85d12cfbcf30ad6cabce7f95991fb0",
+        "screen_p_value": 0.4296875,
+        "source_screen": "results/property/tcmp_allop_v1/heldout/llama32_3b_text128/pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0009",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0009",
+      "model": "Llama-3.2-3B (text512)",
+      "operator_or_region": "BACKWARD extern_kernels.bmm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 0.858892057093696,
+        "screen_exact_implementation_id": "e675358e1c3c4b7fc666211d826b870a989ad17563177743ccaa7a4786e5062a",
+        "screen_p_value": 0.4453125,
+        "source_screen": "results/property/declared_persistent_4096/llama32_3b_text512_pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0010",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0010",
+      "model": "Llama-3.2-3B (text512)",
+      "operator_or_region": "BACKWARD extern_kernels.mm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 0.9377645863363674,
+        "screen_exact_implementation_id": "402cad31a105b3cbf562eff5f78bf31e71a5d5436e1801b65ba671281d6778d6",
+        "screen_p_value": 0.7734375,
+        "source_screen": "results/property/declared_persistent_4096/llama32_3b_text512_pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0011",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0011",
+      "model": "Llama-3.2-3B (text512)",
+      "operator_or_region": "FORWARD extern_kernels.bmm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 0.909089087889545,
+        "screen_exact_implementation_id": "dc4ef40f35ebd01b042561358541951f454b76a316793b255b6a06345f6e6e86",
+        "screen_p_value": 0.78125,
+        "source_screen": "results/property/declared_persistent_4096/llama32_3b_text512_pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0012",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0012",
+      "model": "Llama-3.2-3B (text512)",
+      "operator_or_region": "BACKWARD extern_kernels.addmm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 0.8060765962386363,
+        "screen_exact_implementation_id": "e151bc59c15eeacdc1fb579fce08c3f7a73b133bc12b0efa6c83cfa280f82fbb",
+        "screen_p_value": 0.8828125,
+        "source_screen": "results/property/declared_persistent_4096/llama32_3b_text512_pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0013",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0013",
+      "model": "Llama-3.2-3B (text512)",
+      "operator_or_region": "BACKWARD extern_kernels.bmm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 0.9849926924142106,
+        "screen_exact_implementation_id": "e5771cacdf9c1f4e0e96dae48ab25a4e29ea8ed11d33ff3aa2860c1dacdd2c63",
+        "screen_p_value": 0.5703125,
+        "source_screen": "results/property/declared_persistent_4096/llama32_3b_text512_pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0014",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0014",
+      "model": "Llama-3.2-3B (text512)",
+      "operator_or_region": "FORWARD extern_kernels.mm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 1.1218074819296162,
+        "screen_exact_implementation_id": "5ef58dc051ed9c9d9ee86e71527fb75342f1e7540b812a42cf650b7c0c363361",
+        "screen_p_value": 0.1640625,
+        "source_screen": "results/property/declared_persistent_4096/llama32_3b_text512_pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0015",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0015",
+      "model": "Llama-3.2-3B (text512)",
+      "operator_or_region": "FORWARD extern_kernels.bmm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 1.0564645753452222,
+        "screen_exact_implementation_id": "52c98819cd8d601eaec74ab4c8eb2e1acc4cc8581aebee43833bf930104cb593",
+        "screen_p_value": 0.3125,
+        "source_screen": "results/property/declared_persistent_4096/llama32_3b_text512_pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0016",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0016",
+      "model": "Llama-3.2-3B (text512)",
+      "operator_or_region": "BACKWARD extern_kernels.mm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 0.9233710682131394,
+        "screen_exact_implementation_id": "0db36ebf10bcefdaff77a58925b8a93cabb7d120eb59b8dfe2d05588e634384f",
+        "screen_p_value": 0.8359375,
+        "source_screen": "results/property/declared_persistent_4096/llama32_3b_text512_pattern_screen.json"
+      }
+    },
+    {
+      "case": "operator_scan_blocked_0017",
+      "direct_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "final_label": "UNRESOLVED_REPLAY_BLOCKED",
+      "formation_path": "new operator scan; no matching generated replay program",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The frozen campaign has no same-phase, same-symbol-family endpoint; no target was fabricated.",
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "matrix_case_id": "operator_scan_blocked_0017",
+      "model": "Llama-3.2-3B (text512)",
+      "operator_or_region": "BACKWARD extern_kernels.bmm [output]",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/operator_scan_replay_blocked.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_NO_MATCHING_PROGRAM",
+        "steps": null
+      },
+      "paired_sha256": "6d7365af115587dfb3fa604d60dd0c9a86ab7c1a1d200f78312f0c12dde99cab",
+      "scope": "operator_scan_blocked",
+      "screen_metadata": {
+        "screen_amplification": 0.4996544503240028,
+        "screen_exact_implementation_id": "38ceb592b9e2d78462bffeb840837ae877fe94bdaf700c10a5361ce3e8388a8b",
+        "screen_p_value": 0.6640625,
+        "source_screen": "results/property/declared_persistent_4096/llama32_3b_text512_pattern_screen.json"
+      }
+    },
+    {
       "case": "multishape-backward-cell-0275",
       "direct_sha256": null,
       "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
@@ -8321,5 +8879,5 @@
   },
   "unindexed_historical_candidate_count": 3,
   "unique_matrix_case_count": 23,
-  "unresolved_or_abstain_count": 213
+  "unresolved_or_abstain_count": 230
 }
