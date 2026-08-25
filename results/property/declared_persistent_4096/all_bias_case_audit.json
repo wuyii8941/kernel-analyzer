@@ -17,8 +17,8 @@
     "NO_ROBUST_LONG_DIRECT_BIAS": 1,
     "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": 5,
     "UNRESOLVED_FORMATION": 1,
-    "UNRESOLVED_LONG_REPLAY": 3,
-    "UNRESOLVED_LONG_REPLAY_PENDING": 11
+    "UNRESOLVED_LONG_REPLAY": 2,
+    "UNRESOLVED_LONG_REPLAY_PENDING": 12
   },
   "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
   "long_loss_split_without_direct_count": 3,
@@ -456,13 +456,13 @@
     {
       "case": "Gemma4 RMSNorm",
       "direct_sha256": "93f629894d9fe68ddf796031e0127171900ffaa8b6d12dfd198aa2592057aba8",
-      "final_label": "UNRESOLVED_LONG_REPLAY",
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
       "formation_path": "response asymmetry / feedback candidate",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/unresolved/gemma4_norm_v3_long_projection_unresolved.json",
+        "artifact": "results/property/declared_persistent_4096/gemma4_norm_v3_long_projection/consequence.json",
         "long_direct": "UNRESOLVED",
-        "reason": "The smaller declared projection carrier was retried after the embedding-carrier OOM, but the 4096-step consequence artifact was not produced. The runtime stopped after schedule/campaign generation while the GPU driver was unavailable for further inspection.",
-        "status": "UNRESOLVED_LONG_REPLAY_RESOURCE"
+        "reason": "A same-process Gemma RMSNorm 4096-step retry is currently running; the earlier runtime failure is not treated as a negative.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING"
       },
       "model": "Gemma-4 E2B",
       "operator_or_region": "RMSNorm / projection feedback region",

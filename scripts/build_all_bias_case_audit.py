@@ -39,6 +39,7 @@ RETRY_SCHEDULED_IDS = {
 GEMMA_GELU_LONG = LONG / "gemma4_random_gelu_loss_backward_long" / "consequence.json"
 GEMMA_GELU_LOG = LONG / "expanded_controls/logs/gemma4_random_gelu_loss_backward_long.log"
 GEMMA_GELU_UNRESOLVED = LONG / "unresolved/gemma4_random_gelu_loss_backward_long_unresolved.json"
+GEMMA_NORM_LOG = LONG / "expanded_controls/logs/gemma4_norm_v3_long.log"
 
 
 def sha(path: Path) -> str | None:
@@ -458,6 +459,20 @@ def gemma_gelu_retry_is_in_progress() -> bool:
     )
 
 
+def gemma_norm_retry_is_in_progress() -> bool:
+    """Do not turn an older Gemma runtime failure into a negative while a fresh retry runs."""
+    if GEMMA_NORM_LOG.exists() and (LONG / "gemma4_norm_v3_long_projection" / "consequence.json").exists():
+        return False
+    if not GEMMA_NORM_LOG.exists():
+        return False
+    lines = GEMMA_NORM_LOG.read_text(errors="replace").splitlines()
+    starts = [i for i, line in enumerate(lines) if "START Gemma v3 long" in line]
+    if not starts:
+        return False
+    tail = lines[starts[-1] + 1 :]
+    return not any("COMPLETE Gemma v3 long" in line or "UNRESOLVED Gemma v3 long" in line for line in tail)
+
+
 def final_label(direct: dict[str, Any], paired: dict[str, Any], formation_path: str = "") -> str:
     loss_audit = direct.get("loss_audit", {}) or paired.get("loss_audit", {}) or {}
     any_loss = bool(loss_audit.get("any_period_split") or paired.get("loss_separation_observed"))
@@ -538,9 +553,17 @@ def main() -> None:
             candidate_payload = read(refreshed) or {}
             if candidate_payload.get("status") == "COMPLETE":
                 long_path = refreshed
-        if name == "Gemma4 RMSNorm" and not long_path.exists():
+        gemma_norm_pending = name == "Gemma4 RMSNorm" and gemma_norm_retry_is_in_progress()
+        if name == "Gemma4 RMSNorm" and (gemma_norm_pending or not long_path.exists()):
             projection_unresolved = LONG / "unresolved/gemma4_norm_v3_long_projection_unresolved.json"
-            if projection_unresolved.exists():
+            if gemma_norm_retry_is_in_progress():
+                direct = {
+                    "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                    "long_direct": "UNRESOLVED",
+                    "reason": "A same-process Gemma RMSNorm 4096-step retry is currently running; the earlier runtime failure is not treated as a negative.",
+                    "artifact": str((LONG / "gemma4_norm_v3_long_projection" / "consequence.json").relative_to(ROOT)),
+                }
+            elif projection_unresolved.exists():
                 unresolved = read(projection_unresolved) or {}
                 direct = {
                     "status": unresolved.get("status", "UNRESOLVED_LONG_REPLAY_RESOURCE"),
