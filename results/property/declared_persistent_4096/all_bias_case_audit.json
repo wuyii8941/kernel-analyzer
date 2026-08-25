@@ -20,7 +20,8 @@
     "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": 5,
     "UNRESOLVED_FORMATION": 1,
     "UNRESOLVED_LONG_REPLAY": 2,
-    "UNRESOLVED_LONG_REPLAY_PENDING": 206,
+    "UNRESOLVED_LONG_REPLAY_PENDING": 205,
+    "UNRESOLVED_PILOT_REPLAY_RESOURCE": 1,
     "UNRESOLVED_REPLAY_BLOCKED": 18
   },
   "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
@@ -1111,22 +1112,22 @@
     {
       "case": "llama32_text128_scan_0001",
       "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "final_label": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0001/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/unresolved/llama32_text128_scan_0001_pilot.json",
         "long_direct": "UNRESOLVED",
-        "reason": "Frozen Gemma/Llama target requires a parameter-reachable same-process F+B replay before it can be called a bias case.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "reason": "Target pilot failed or could not allocate resources; no negative label is assigned.",
+        "status": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
         "steps": null
       },
       "matrix_case_id": "llama32_text128_scan_0001",
       "model": "Llama-3.2-3B",
       "operator_or_region": "BACKWARD triton_poi_fused__to_copy_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view [out_ptr0]",
       "paired_consequence": {
-        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_0001/consequence.json",
+        "artifact": "results/property/declared_persistent_4096/operator_scan_targets/unresolved/llama32_text128_scan_0001_pilot.json",
         "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "status": "UNRESOLVED_PILOT_REPLAY_RESOURCE",
         "steps": null
       },
       "paired_sha256": null,

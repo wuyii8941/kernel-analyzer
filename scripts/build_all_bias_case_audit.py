@@ -553,6 +553,8 @@ def final_label(direct: dict[str, Any], paired: dict[str, Any], formation_path: 
         return "NOT_RUN"
     if direct.get("status") == "UNRESOLVED_LONG_REPLAY_PENDING":
         return "UNRESOLVED_LONG_REPLAY_PENDING"
+    if direct.get("status") == "UNRESOLVED_PILOT_REPLAY_RESOURCE":
+        return "UNRESOLVED_PILOT_REPLAY_RESOURCE"
     if str(direct.get("status", "")).startswith("UNRESOLVED"):
         return "UNRESOLVED_LONG_REPLAY"
     return "UNRESOLVED"
@@ -877,6 +879,8 @@ def main() -> None:
             and ((d / "short_screen.json").exists() or (d / "formation.json").exists())
         ]
         pilot_dir = completed_pilots[-1] if completed_pilots else None
+        pilot_failure_path = LONG / "operator_scan_targets" / "unresolved" / f"{case_id}_pilot.json"
+        pilot_failure = read(pilot_failure_path)
         if path.exists():
             direct = long_row(path)
             paired = paired_row(path)
@@ -933,6 +937,20 @@ def main() -> None:
                     "artifact": str((pilot_dir / "short_screen.json").relative_to(ROOT)),
                 }
                 paired = {"status": "NOT_ESCALATED", "loss_separation_observed": False, "steps": 0}
+        elif pilot_failure is not None:
+            direct = {
+                "status": pilot_failure.get("status", "UNRESOLVED_PILOT_REPLAY_RESOURCE"),
+                "long_direct": "UNRESOLVED",
+                "reason": pilot_failure.get("claim_boundary", "pilot replay failed"),
+                "steps": None,
+                "artifact": str(pilot_failure_path.relative_to(ROOT)),
+            }
+            paired = {
+                "status": pilot_failure.get("status", "UNRESOLVED_PILOT_REPLAY_RESOURCE"),
+                "loss_separation_observed": False,
+                "steps": None,
+                "artifact": str(pilot_failure_path.relative_to(ROOT)),
+            }
         else:
             direct = {
                 "status": "UNRESOLVED_LONG_REPLAY_PENDING",
@@ -1315,6 +1333,7 @@ def main() -> None:
         "SCREENED_NO_CONFIRMED_DIRECT_BIAS": "短程筛查未确认直接 bias",
         "UNRESOLVED_LONG_REPLAY_PENDING": "已通过短程 consequence 筛查，4096 步仍未完成",
         "UNRESOLVED_REPLAY_BLOCKED": "没有同阶段、同实现族和同端点的可重放程序，未决",
+        "UNRESOLVED_PILOT_REPLAY_RESOURCE": "短程重放失败或资源不足，未决",
     }
     for row in rows:
         d, p = row["long_direct"], row["paired_consequence"]
