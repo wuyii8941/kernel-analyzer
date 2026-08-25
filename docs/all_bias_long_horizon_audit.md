@@ -1,8 +1,8 @@
 # 所有历史偏差候选的长程复核
 
-仓库中有 **23 个唯一主矩阵 case ID**；本审计逐行复核 **25 个 extended candidate rows**（其中包含历史候选、Llama/Ministral 同族复现、Gemma4，以及 12 个结果盲抽的长程 consequence 候选）。合并后表共有 **28 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。
+仓库中有 **23 个唯一主矩阵 case ID**；本审计逐行复核 **26 个 extended candidate rows**（其中包含历史候选、Llama/Ministral 同族复现、Gemma4、12 个结果盲抽的长程 consequence 候选，以及单独追踪的 Gemma GELU consequence 候选）。合并后表共有 **28 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。
 
-按当前口径，最终计入 **6 个持久性 bias 案例**：其中直接长程方向案例 **5 个**，反馈维持型案例 **1 个**。另有 **3 个**虽没有持久 bias 组件、但确实出现长程配对 loss 分叉；因此当前共有 **9 个训练结果相关记录**，但不能把后果对照改称为持久性 bias。未决/不可安全重放共 **15 个**，不作阴性判断。
+按当前口径，最终计入 **6 个持久性 bias 案例**：其中直接长程方向案例 **5 个**，反馈维持型案例 **1 个**。另有 **3 个**虽没有持久 bias 组件、但确实出现长程配对 loss 分叉；因此当前共有 **9 个训练结果相关记录**，但不能把后果对照改称为持久性 bias。未决/不可安全重放共 **16 个**，不作阴性判断。
 
 持久性 bias 的必要条件是 bias 本身在 4096 步仍然存在：直接源方向或反馈有效更新方向至少有一个通过长程检验。配对训练中的参数或 loss 分叉是后果证据，不足以单独把一个没有持久 bias 组件的记录升级为案例。这里不要求两条训练轨迹收敛到不同的最终 loss，也不作这种声称。
 
@@ -33,8 +33,8 @@
 | Qwen3-1.7B | Qwen backward cell 0654; input LayerNorm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | Qwen3-1.7B | Qwen backward cell 0745; attention q-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | Qwen3-1.7B | Qwen backward cell 0747; attention k-norm carrier | feedback-sustained candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
+| Gemma-4 E2B | GELU/loss backward region 1401; projection carrier | response asymmetry / feedback candidate | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | google/gemma-4-E2B | case-stage matrix row | complete roster row; no confirmed long-source gate | NOT_ESCALATED | 未测 | 没有可达载体，不适用 |
-| google/gemma-4-E2B | case-stage matrix row | complete roster row; no confirmed long-source gate | NOT_ESCALATED | 未测 | 反馈对照，没有直接 bias 门 |
 | google/gemma-4-E2B | case-stage matrix row | complete roster row; no confirmed long-source gate | NOT_ESCALATED | 未测 | 没有可达载体，不适用 |
 
 ## 口径

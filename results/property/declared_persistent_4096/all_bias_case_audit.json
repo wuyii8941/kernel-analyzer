@@ -4,14 +4,13 @@
   "definition": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. A loss split alone is consequence-only and never establishes persistent bias. Different converged losses are not required or claimed.",
   "direct_persistent_case_count": 5,
   "endpoint_population_count": 1562,
-  "extended_candidate_count": 25,
-  "extended_candidate_note": "The extended roster includes the historical candidates, Llama/Ministral family replication rows, Gemma4, and the 12 result-blind 32-step consequence candidates. The latter are not negatives until their long replay is complete.",
+  "extended_candidate_count": 26,
+  "extended_candidate_note": "The extended roster includes the historical candidates, Llama/Ministral family replication rows, Gemma4, the 12 result-blind 32-step consequence candidates, and the separately tracked Gemma GELU consequence candidate. These rows are not negatives until their long replay is complete.",
   "final_case_count": 6,
   "grouping_rule": "Repeated concrete endpoint occurrences are grouped by the frozen case-stage matrix ID; they are not silently dropped, but they do not count as independent cases.",
   "historical_candidate_count": 11,
   "label_counts": {
     "ABSTAIN_NOT_REPLAYABLE": 1,
-    "FEEDBACK_CONTROL_NO_DIRECT_GATE": 1,
     "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": 1,
     "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": 3,
     "NOT_APPLICABLE_NO_CARRIER_EFFECT": 2,
@@ -19,7 +18,7 @@
     "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": 5,
     "UNRESOLVED_FORMATION": 1,
     "UNRESOLVED_LONG_REPLAY": 3,
-    "UNRESOLVED_LONG_REPLAY_PENDING": 10
+    "UNRESOLVED_LONG_REPLAY_PENDING": 11
   },
   "long_direct_rule": "one-sided sign-flip p<=0.05 and at least 75% of late rolling windows directional",
   "long_loss_split_without_direct_count": 3,
@@ -744,6 +743,31 @@
       "short_regime": "FEEDBACK_SUSTAINED"
     },
     {
+      "case": "gemma4_random_gelu_loss_backward",
+      "direct_sha256": null,
+      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "formation_path": "response asymmetry / feedback candidate",
+      "long_direct": {
+        "artifact": "results/property/declared_persistent_4096/gemma4_random_gelu_loss_backward_long/consequence.json",
+        "long_direct": "UNRESOLVED",
+        "reason": "The dedicated Gemma GELU 4096-step retry is queued or running; no negative label is assigned.",
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "model": "Gemma-4 E2B",
+      "operator_or_region": "GELU/loss backward region 1401; projection carrier",
+      "paired_consequence": {
+        "artifact": "results/property/declared_persistent_4096/gemma4_random_gelu_loss_backward_long/consequence.json",
+        "loss_separation_observed": false,
+        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+        "steps": null
+      },
+      "paired_sha256": null,
+      "scope": "additional_outcome_candidate",
+      "short_consequence_artifact": "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_loss_backward.consequence.json",
+      "short_regime": "feedback-sustained 32-step consequence candidate"
+    },
+    {
       "case": "gemma4_random_gelu_backward1860",
       "direct_sha256": null,
       "final_label": "NOT_APPLICABLE_NO_CARRIER_EFFECT",
@@ -752,26 +776,6 @@
         "long_direct": "NOT_RUN",
         "reason": [
           "NOT_APPLICABLE_NO_OBSERVED_CARRIER_EFFECT"
-        ],
-        "status": "NOT_ESCALATED"
-      },
-      "model": "google/gemma-4-E2B",
-      "operator_or_region": "case-stage matrix row",
-      "paired_consequence": {
-        "status": "NOT_RUN"
-      },
-      "paired_sha256": null,
-      "scope": "roster_control_or_unresolved"
-    },
-    {
-      "case": "gemma4_random_gelu_loss_backward",
-      "direct_sha256": null,
-      "final_label": "FEEDBACK_CONTROL_NO_DIRECT_GATE",
-      "formation_path": "complete roster row; no confirmed long-source gate",
-      "long_direct": {
-        "long_direct": "NOT_RUN",
-        "reason": [
-          "COMPLETE_NEW_IMPL_FEEDBACK_CONTROL"
         ],
         "status": "NOT_ESCALATED"
       },
@@ -806,11 +810,12 @@
   ],
   "schema": "all-historical-bias-candidates-long-audit-v1",
   "scope_counts": {
+    "additional_outcome_candidate": 1,
     "expanded_bias_candidate": 12,
     "historical_candidate": 13,
-    "roster_control_or_unresolved": 3
+    "roster_control_or_unresolved": 2
   },
   "unindexed_historical_candidate_count": 3,
   "unique_matrix_case_count": 23,
-  "unresolved_or_abstain_count": 15
+  "unresolved_or_abstain_count": 16
 }

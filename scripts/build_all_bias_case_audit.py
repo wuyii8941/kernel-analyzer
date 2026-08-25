@@ -36,6 +36,10 @@ RETRY_SCHEDULED_IDS = {
     "multishape-backward-cell-0508",
 }
 
+GEMMA_GELU_LONG = LONG / "gemma4_random_gelu_loss_backward_long" / "consequence.json"
+GEMMA_GELU_LOG = LONG / "expanded_controls/logs/gemma4_random_gelu_loss_backward_long.log"
+GEMMA_GELU_UNRESOLVED = LONG / "unresolved/gemma4_random_gelu_loss_backward_long_unresolved.json"
+
 
 def sha(path: Path) -> str | None:
     if not path.exists():
@@ -413,6 +417,18 @@ EXPANDED_CANDIDATES = [
     ("multishape-backward-cell-0747", "Qwen3-1.7B", "Qwen backward cell 0747; attention k-norm carrier", "feedback-sustained candidate"),
 ]
 
+# A separate held-out Gemma row with a real 32-step consequence artifact.  It
+# is kept outside the historical/12-row denominators until its 4096-step
+# replay finishes.
+ADDITIONAL_OUTCOME_CANDIDATES = [
+    (
+        "gemma4_random_gelu_loss_backward",
+        "Gemma-4 E2B",
+        "GELU/loss backward region 1401; projection carrier",
+        "response asymmetry / feedback candidate",
+    ),
+]
+
 
 def expanded_long_path(case_id: str) -> Path:
     return LONG / "expanded_controls" / f"{case_id}_4096.json"
@@ -429,6 +445,17 @@ def retry_is_in_progress(case_id: str) -> bool:
         return False
     tail = lines[starts[-1] + 1 :]
     return not any("FAILED " in line or "COMPLETE " in line for line in tail)
+
+
+def gemma_gelu_retry_is_in_progress() -> bool:
+    """A queued/active Gemma GELU retry is not a negative result."""
+    if GEMMA_GELU_LONG.exists() or not GEMMA_GELU_LOG.exists():
+        return False
+    lines = GEMMA_GELU_LOG.read_text(errors="replace").splitlines()
+    return bool(lines) and not any(
+        "COMPLETE Gemma GELU long" in line or "UNRESOLVED Gemma GELU long" in line
+        for line in lines
+    )
 
 
 def final_label(direct: dict[str, Any], paired: dict[str, Any], formation_path: str = "") -> str:
@@ -477,6 +504,7 @@ def main() -> None:
     }
     expanded_ids = {case_id for case_id, *_ in EXPANDED_CANDIDATES}
     known.update(expanded_ids)
+    known.update(case_id for case_id, *_ in ADDITIONAL_OUTCOME_CANDIDATES)
     for name, model, region, path, long_path, paired_path in CASES:
         unresolved_paths = {
             "Llama lm_head dX": LONG / "unresolved/llama32_lmhead_4096_unresolved.json",
@@ -670,6 +698,85 @@ def main() -> None:
             "short_regime": consequence_rows.get(case_id, {}).get("regime"),
         })
 
+    # The Gemma GELU/loss row is a genuine residual-nonzero, parameter-
+    # reachable held-out consequence candidate, but it was not part of the
+    # original 12-row mechanical sample.  Keep it visible while the dedicated
+    # 4096 retry is running; an old runtime failure is never converted into a
+    # negative label.
+    for case_id, model, region, formation_path in ADDITIONAL_OUTCOME_CANDIDATES:
+        path = GEMMA_GELU_LONG
+        if path.exists():
+            direct = long_row(path)
+            loss_audit = direct.get("loss_audit", {}) or {}
+            paired = {
+                "status": "COMPLETE_IN_LONG_REPLAY",
+                "loss_separation_observed": bool(loss_audit.get("any_period_split")),
+                "steps": direct.get("steps"),
+                "parameter_distance": direct.get("final_drift_l2"),
+                "final_loss_gap": direct.get("paired_loss_gap_final"),
+                "recent_loss_gap_mean": direct.get("paired_loss_gap_mean_last_512"),
+                "recent_loss_gap_std": direct.get("paired_loss_gap_std_last_512"),
+                "loss_audit": loss_audit,
+                "artifact": direct.get("artifact"),
+            }
+        elif gemma_gelu_retry_is_in_progress():
+            direct = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "long_direct": "UNRESOLVED",
+                "reason": "The dedicated Gemma GELU 4096-step retry is queued or running; no negative label is assigned.",
+                "steps": None,
+                "artifact": str(path.relative_to(ROOT)),
+            }
+            paired = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "loss_separation_observed": False,
+                "steps": None,
+                "artifact": str(path.relative_to(ROOT)),
+            }
+        elif GEMMA_GELU_UNRESOLVED.exists():
+            unresolved = read(GEMMA_GELU_UNRESOLVED) or {}
+            direct = {
+                "status": unresolved.get("status", "UNRESOLVED_LONG_REPLAY"),
+                "long_direct": "UNRESOLVED",
+                "reason": unresolved.get("claim_boundary", "Gemma GELU long replay unavailable"),
+                "steps": unresolved.get("steps_completed"),
+                "artifact": str(GEMMA_GELU_UNRESOLVED.relative_to(ROOT)),
+            }
+            paired = {
+                "status": unresolved.get("status", "UNRESOLVED_LONG_REPLAY"),
+                "loss_separation_observed": False,
+                "steps": unresolved.get("steps_completed"),
+                "artifact": str(GEMMA_GELU_UNRESOLVED.relative_to(ROOT)),
+            }
+        else:
+            direct = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "long_direct": "UNRESOLVED",
+                "reason": "A dedicated 4096-step Gemma GELU replay has been scheduled but has not started yet.",
+                "steps": None,
+                "artifact": str(path.relative_to(ROOT)),
+            }
+            paired = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "loss_separation_observed": False,
+                "steps": None,
+                "artifact": str(path.relative_to(ROOT)),
+            }
+        rows.append({
+            "case": case_id,
+            "model": model,
+            "operator_or_region": region,
+            "formation_path": formation_path,
+            "long_direct": direct,
+            "paired_consequence": paired,
+            "scope": "additional_outcome_candidate",
+            "final_label": final_label(direct, paired, formation_path),
+            "direct_sha256": sha(path),
+            "paired_sha256": sha(path),
+            "short_consequence_artifact": str((ROOT / "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_loss_backward.consequence.json").relative_to(ROOT)),
+            "short_regime": "feedback-sustained 32-step consequence candidate",
+        })
+
     # Keep the complete 23-case roster visible.  Rows that never passed the
     # nonzero, parameter-reachable direct-bias gate are recorded as screened
     # negatives or unresolved; they are not silently dropped and are not
@@ -735,13 +842,14 @@ def main() -> None:
         "coherent_endpoint_witness_count": coherent_endpoint_count,
         "grouping_rule": "Repeated concrete endpoint occurrences are grouped by the frozen case-stage matrix ID; they are not silently dropped, but they do not count as independent cases.",
         "historical_candidate_count": 11,
-        "extended_candidate_count": len(CASES) + len(EXPANDED_CANDIDATES),
-        "extended_candidate_note": "The extended roster includes the historical candidates, Llama/Ministral family replication rows, Gemma4, and the 12 result-blind 32-step consequence candidates. The latter are not negatives until their long replay is complete.",
+        "extended_candidate_count": len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES),
+        "extended_candidate_note": "The extended roster includes the historical candidates, Llama/Ministral family replication rows, Gemma4, the 12 result-blind 32-step consequence candidates, and the separately tracked Gemma GELU consequence candidate. These rows are not negatives until their long replay is complete.",
         "unindexed_historical_candidate_count": len(historical_ids - matrix_ids),
         "scope_counts": {
             "historical_candidate": sum(r.get("scope") == "historical_candidate" for r in rows),
             "roster_control_or_unresolved": sum(r.get("scope") == "roster_control_or_unresolved" for r in rows),
             "expanded_bias_candidate": sum(r.get("scope") == "expanded_bias_candidate" for r in rows),
+            "additional_outcome_candidate": sum(r.get("scope") == "additional_outcome_candidate" for r in rows),
         },
         "final_case_count": sum(
             r["final_label"] in {
@@ -784,7 +892,7 @@ def main() -> None:
     lines = [
         "# 所有历史偏差候选的长程复核",
         "",
-        f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(CASES) + len(EXPANDED_CANDIDATES)} 个 extended candidate rows**（其中包含历史候选、Llama/Ministral 同族复现、Gemma4，以及 12 个结果盲抽的长程 consequence 候选）。合并后表共有 **{len(rows)} 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
+        f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(CASES) + len(EXPANDED_CANDIDATES) + len(ADDITIONAL_OUTCOME_CANDIDATES)} 个 extended candidate rows**（其中包含历史候选、Llama/Ministral 同族复现、Gemma4、12 个结果盲抽的长程 consequence 候选，以及单独追踪的 Gemma GELU consequence 候选）。合并后表共有 **{len(rows)} 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
         "",
         f"按当前口径，最终计入 **{payload['final_case_count']} 个持久性 bias 案例**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**。另有 **{payload['long_loss_split_without_direct_count']} 个**虽没有持久 bias 组件、但确实出现长程配对 loss 分叉；因此当前共有 **{payload['outcome_relevant_case_count']} 个训练结果相关记录**，但不能把后果对照改称为持久性 bias。未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
         "",
