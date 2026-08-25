@@ -1,6 +1,6 @@
 # 所有偏差候选的 4096 步复核摘要
 
-审计表包含 100 行：23 个主矩阵案例、11 个历史候选，以及新增模型的复核行。
+审计表包含 226 行：23 个主矩阵案例、11 个历史候选，以及新增模型的复核行。
 严格持久性 bias 标签要求 bias-bearing 的直接作用或反馈作用本身在长程仍有方向；如果一个早先已有 bias 证据的候选在长程出现配对 loss 分叉，即使直接 bias 后来停止，也计入结果受影响的 bias 记录，但不计入严格持久性组件数量。两条轨迹不需要收敛到不同的最终 loss。
 
 | 模型 | 算子或位置 | 长程状态 | 结果 |
@@ -31,12 +31,138 @@
 | Qwen3-1.7B | Qwen backward cell 0745; attention q-norm carrier | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
 | Qwen3-1.7B | Qwen backward cell 0747; attention k-norm carrier | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
 | Gemma-4 E2B | GELU/loss backward region 1401; projection carrier | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
-| Gemma-4 E2B | backward:671 triton_red_fused__to_copy_mul_pow_sum_view_1 [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
-| Gemma-4 E2B | forward:17 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_10 [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
-| Gemma-4 E2B | forward:22 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_12 [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
-| Llama-3.2-3B | forward:20 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_11 [in_out_ptr0] | UNRESOLVED_PARAMETER_BINDING | 运行环境或资源未决 |
-| Llama-3.2-3B | forward:449 triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view_13 [out_ptr0] | UNRESOLVED_PARAMETER_BINDING | 运行环境或资源未决 |
-| Llama-3.2-3B | forward:32 triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_12 [in_out_ptr0] | UNRESOLVED_PARAMETER_BINDING | 运行环境或资源未决 |
+| Llama-3.2-3B | BACKWARD triton_per_fused__softmax__softmax_backward_data__to_copy_mul_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_poi_fused__to_copy_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_poi_fused__unsafe_view_mul_silu_silu_backward_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_poi_fused__unsafe_view_mul_silu_silu_backward_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_poi_fused__unsafe_view_mul_silu [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_index_le_lift_fresh_mul_prepare_softmax_online_scalar_tensor_view_where [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_index_le_lift_fresh_mul_prepare_softmax_online_scalar_tensor_view_where [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy_mul_sum_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_poi_fused_embedding_dense_backward [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_red_fused__to_copy_add_embedding_mean_mul_pow_rsqrt [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy_add_mul_sum_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_poi_fused_clone_squeeze_sum_transpose_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_mul_sum_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_mul_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_red_fused__log_softmax__log_softmax_backward_data__to_copy__unsafe_view_arange_eq_expand_nll_loss_backward_nll_loss_forward_scalar_tensor_slice_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_poi_fused__to_copy_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_slice_backward_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy_add_mul_sum_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B | BACKWARD triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy_add_mul_pow_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow [in_out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_select_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_mul_pow_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_mul_pow_sum_view [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_mul_pow_sum_view [out_ptr3] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__softmax__softmax_backward_data__to_copy_add_arange_bitwise_and_eq_expand_gt_index_le_lift_fresh_mul_new_ones_scalar_tensor_sub_unsqueeze_view_where [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_expand_gt_index_le_lift_fresh_mul_new_ones_prepare_softmax_online_scalar_tensor_sub_unsqueeze_view_where [out_ptr3] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_expand_gt_index_le_lift_fresh_mul_new_ones_prepare_softmax_online_scalar_tensor_sub_unsqueeze_view_where [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused_add_squeeze_sum_transpose_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_div_embedding_dense_backward_expand_gelu_mul_nll_loss_forward_pow_select_backward_sum_view [out_ptr3] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow [in_out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused_add_squeeze_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_transpose_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_mul_pow_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [out_ptr3] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_per_fused__to_copy__unsafe_view_add_mean_mul_pow_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused_sum_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_div_expand_mul_pow_squeeze_sum_transpose_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_poi_fused__unsafe_view_gelu_mul_select [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_div_expand_mul_pow_squeeze_sum_transpose_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused_add_squeeze_sum_transpose_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy_add_div_embedding_dense_backward_expand_mul_nll_loss_forward_pow_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_select_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy_add_mul_pow_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy_add_bitwise_or_embedding_eq_mean_mul_pow_scalar_tensor_where [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy_add_bitwise_or_embedding_eq_mean_mul_pow_scalar_tensor_where [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_red_fused__to_copy_add_bitwise_or_embedding_eq_mean_mul_pow_scalar_tensor_where [out_ptr3] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_poi_fused__unsafe_view_gelu_gelu_backward_mul_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy_add_mul_pow_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_per_fused_sum_transpose_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_poi_fused__unsafe_view_gelu_mul [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [out_ptr3] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mean_mul_neg_pow_sin_slice_transpose_unsqueeze_view [in_out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [out_ptr3] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__log_softmax__log_softmax_backward_data__to_copy__unsafe_view_arange_div_eq_expand_mul_nll_loss_backward_nll_loss_forward_scalar_tensor_slice_tanh_tanh_backward_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy_mul_pow_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy_mul_pow_sum_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_per_fused__to_copy__unsafe_view_add_embedding_mean_mul_pow_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | FORWARD triton_per_fused__to_copy__unsafe_view_add_embedding_mean_mul_pow_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Gemma-4 E2B | BACKWARD triton_poi_fused__to_copy__unsafe_view_add_mul_pow_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_per_fused__softmax__softmax_backward_data__to_copy_mul_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_poi_fused__to_copy_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_slice_backward_squeeze_sum_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_poi_fused__unsafe_view_mul_silu_silu_backward_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_poi_fused__unsafe_view_mul_silu_silu_backward_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_poi_fused__unsafe_view_mul_silu [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_index_le_lift_fresh_mul_prepare_softmax_online_scalar_tensor_view_where [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_index_le_lift_fresh_mul_prepare_softmax_online_scalar_tensor_view_where [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_per_fused__to_copy_mul_sum_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_poi_fused_embedding_dense_backward [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr2] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_red_fused__to_copy_add_embedding_mean_mul_pow_rsqrt [out_ptr1] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_poi_fused_clone_squeeze_sum_transpose_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_red_fused__log_softmax__log_softmax_backward_data__to_copy__unsafe_view_arange_eq_expand_nll_loss_backward_nll_loss_forward_scalar_tensor_slice_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_red_fused__to_copy__unsafe_view_add_div_expand_mul_pow_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_poi_fused__to_copy_add_arange_bmm_cat_clone_cos_expand_mul_neg_sin_slice_slice_backward_transpose_unsqueeze_view [out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
+| Llama-3.2-3B (text512) | BACKWARD triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view [in_out_ptr0] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
 | Mamba-130M | STATE_SPACE_RECURRENT_BACKWARD backward:21457:out_ptr0 [backbone.layers.19.norm.weight] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
 | DeepSeek-R1-Qwen3-8B | NORMALIZATION_BACKWARD backward:1306:output_0 [model.layers.18.input_layernorm.weight] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |
 | Qwen3-1.7B | NORMALIZATION_BACKWARD backward:681:output_0 [model.layers.23.input_layernorm.weight] | UNRESOLVED_LONG_REPLAY_PENDING | UNRESOLVED_LONG_REPLAY_PENDING |

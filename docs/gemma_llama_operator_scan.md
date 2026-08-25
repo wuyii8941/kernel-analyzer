@@ -58,9 +58,3 @@
 | FORWARD | `triton_red_fused__to_copy_add_embedding_mean_mul_pow_rsqrt` | `out_ptr1` | 1.085 | 0.2578 |
 
 当前结果：Gemma 115 行、Llama text128 的 64 行和 text512 的 63 行都完成了首轮扫描，但没有新增通过冻结升级门的候选。部分行虽然有非零差异，却没有合法的参数可达 repair/长程重放边界；这些行明确记为未决，不能当作阴性。若后续要扩大分母，应先建立合法 repair、载体和 live replay，而不是把 pattern-screen 直接当作训练 bias 证据。
-
-## 本轮已冻结的 exact F+B 复核入口
-
-为了不把首轮筛查当成结论，我们又按“同一阶段、同一生成程序、同一输出端点”冻结了 6 个重放入口：Gemma 3 个、Llama 3 个。它们的完整清单在 [`operator_scan_target_manifest.json`](../results/property/declared_persistent_4096/operator_scan_target_manifest.json)，使用的仍是与历史案例相同的参数载体、candidate/repair 对照、短筛和 4096 步长程流程。
-
-这 6 行在完成重放前统一标为 `UNRESOLVED_LONG_REPLAY_PENDING`。首轮方向分数（哪怕大于 1）只决定优先级，不决定 bias；只有参数确实可达、修复对照合法、并完成长程配对后，才会进入最终案例统计。

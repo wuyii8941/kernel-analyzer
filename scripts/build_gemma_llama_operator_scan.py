@@ -15,6 +15,8 @@ ELIGIBILITY = {
     "Gemma-4 E2B": ROOT / "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/eligibility_freeze.json",
 }
 OUT = ROOT / "results/property/declared_persistent_4096/operator_scan_gemma_llama.json"
+TARGET_MANIFEST = ROOT / "results/property/declared_persistent_4096/operator_scan_target_manifest.json"
+BLOCKED_REPLAY = ROOT / "results/property/declared_persistent_4096/operator_scan_replay_blocked.json"
 MD = ROOT / "docs/gemma_llama_operator_scan.md"
 
 
@@ -85,6 +87,8 @@ def main() -> None:
             ],
             "claim_boundary": "No row passed the frozen multiple-comparison gate; nominal p-values and A>1 are retained as scan evidence, not promoted to bias cases. Nonzero rows without a legal replay remain unresolved, not negative.",
         })
+    target_manifest = json.loads(TARGET_MANIFEST.read_text()) if TARGET_MANIFEST.exists() else {}
+    blocked_replay = json.loads(BLOCKED_REPLAY.read_text()) if BLOCKED_REPLAY.exists() else {}
     result = {
         "schema": "gemma-llama-unseen-operator-scan-v1",
         "selection_rule": "Use the existing outcome-blind pattern screens; inspect all rows and escalate only screen_positive_bh_q_0_10=true.",
@@ -100,6 +104,12 @@ def main() -> None:
             for model in models
             if model["nonzero_new_impl_rows_requiring_legal_replay"]
         ],
+        "expanded_replay": {
+            "manifest": str(TARGET_MANIFEST.relative_to(ROOT)) if TARGET_MANIFEST.exists() else None,
+            "target_count": len(target_manifest.get("rows", [])),
+            "blocked_no_matching_program": len(blocked_replay.get("rows", [])),
+            "claim_boundary": "A target manifest means only that the scan row has a fresh-compile replay target; it is not a positive verdict. Pilot and 4096-step results remain separate.",
+        },
         "claim_boundary": "This scan found no new candidate that met the frozen escalation gate. It does not prove safety for rows with nominal p-values or without a legal repair/parameter carrier.",
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
