@@ -65,6 +65,9 @@ def long_row(path: Path) -> dict[str, Any]:
                 "local_A4096": levels.get("local", {}).get("coherence_amplification"),
                 "feedback_A4096": levels.get("feedback", {}).get("coherence_amplification"),
                 "final_drift_l2": payload.get("cumulative", {}).get("actual", {}).get("resultant_l2"),
+                "paired_loss_gap_final": payload.get("loss_audit", {}).get("final_gap"),
+                "paired_loss_gap_mean_last_512": payload.get("loss_audit", {}).get("last_512_mean"),
+                "paired_loss_gap_std_last_512": None,
                 "artifact": str(path.relative_to(ROOT)),
             }
     if "statistics" in payload and "levels" in payload.get("statistics", {}):
@@ -85,6 +88,10 @@ def long_row(path: Path) -> dict[str, Any]:
                 "local_A4096": payload["statistics"]["levels"].get("local", {}).get("coherence_amplification"),
                 "feedback_A4096": payload["statistics"]["levels"].get("feedback", {}).get("coherence_amplification"),
                 "final_drift_l2": payload.get("final_master_drift_l2"),
+                "paired_loss_gap_final": payload.get("loss_audit", {}).get("final_gap"),
+                "paired_loss_gap_mean_last_512": payload.get("loss_audit", {}).get("last_512_mean"),
+                "paired_loss_gap_std_last_512": None,
+                "loss_audit": payload.get("loss_audit", {}),
                 "artifact": str(path.relative_to(ROOT)),
             }
     # The common runner writes a top-level status only in the completed artifact.
@@ -271,6 +278,32 @@ CASES = [
     ("Gemma4 RMSNorm", "Gemma-4 E2B", "RMSNorm / projection feedback region", "response asymmetry / feedback candidate", ROOT / "results/property/declared_persistent_4096/gemma4_norm_4096_v4.json", ROOT / "results/property/declared_persistent_4096/gemma4_norm_4096_v4.json"),
 ]
 
+# The 12 rows below were not chosen after seeing a 4096-step result.  They
+# were mechanically drawn from the frozen result-blind screen-negative pool,
+# but their 32-step consequence files showed an actual/feedback separation.
+# Under the broader audit rule they are valid long-consequence candidates,
+# not negatives.  Keep their exact runtime provenance here so an interrupted
+# replay remains visible as unresolved instead of disappearing into the
+# screen-negative count.
+EXPANDED_CANDIDATES = [
+    ("multishape-backward-cell-0057", "DeepSeek-R1-Qwen3-8B", "DeepSeek backward cell 0057; post-attention LayerNorm carrier", "feedback-sustained candidate"),
+    ("multishape-backward-cell-0103", "DeepSeek-R1-Qwen3-8B", "DeepSeek backward cell 0103; input LayerNorm carrier", "feedback-sustained candidate"),
+    ("multishape-backward-cell-0153", "DeepSeek-R1-Qwen3-8B", "DeepSeek backward cell 0153; attention k-norm carrier", "feedback-sustained candidate"),
+    ("multishape-backward-cell-0190", "DeepSeek-R1-Qwen3-8B", "DeepSeek backward cell 0190; attention q-norm carrier", "feedback-sustained candidate"),
+    ("multishape-backward-cell-0191", "DeepSeek-R1-Qwen3-8B", "DeepSeek backward cell 0191; attention q-norm carrier", "feedback-sustained candidate"),
+    ("multishape-backward-cell-0450", "Mamba-130M", "Mamba backward cell 0450; dt-projection bias carrier", "feedback-sustained candidate"),
+    ("multishape-backward-cell-0501", "Phi-4-mini", "Phi backward cell 0501; post-attention LayerNorm carrier", "feedback-sustained candidate"),
+    ("multishape-backward-cell-0508", "Phi-4-mini", "Phi backward cell 0508; post-attention LayerNorm carrier", "feedback-sustained candidate"),
+    ("multishape-backward-cell-0543", "Phi-4-mini", "Phi backward cell 0543; final norm carrier", "small mixed candidate"),
+    ("multishape-backward-cell-0654", "Qwen3-1.7B", "Qwen backward cell 0654; input LayerNorm carrier", "feedback-sustained candidate"),
+    ("multishape-backward-cell-0745", "Qwen3-1.7B", "Qwen backward cell 0745; attention q-norm carrier", "feedback-sustained candidate"),
+    ("multishape-backward-cell-0747", "Qwen3-1.7B", "Qwen backward cell 0747; attention k-norm carrier", "feedback-sustained candidate"),
+]
+
+
+def expanded_long_path(case_id: str) -> Path:
+    return LONG / "expanded_controls" / f"{case_id}_4096.json"
+
 
 def final_label(direct: dict[str, Any], paired: dict[str, Any], formation_path: str = "") -> str:
     loss_audit = direct.get("loss_audit", {}) or paired.get("loss_audit", {}) or {}
@@ -293,7 +326,7 @@ def final_label(direct: dict[str, Any], paired: dict[str, Any], formation_path: 
         # still a real training consequence, even when the direct source
         # direction itself diffuses.  Keep this label separate so it is never
         # mistaken for a persistent-local-source case.
-        if paired.get("status") == "COMPLETE_LIVE_PAIRED_LOSS_AUDIT" and paired.get("loss_separation_observed"):
+        if str(paired.get("status", "")).startswith("COMPLETE") and paired.get("loss_separation_observed"):
             return "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE"
         return "NO_ROBUST_LONG_DIRECT_BIAS"
     if direct.get("status") == "NOT_RUN":
@@ -302,6 +335,8 @@ def final_label(direct: dict[str, Any], paired: dict[str, Any], formation_path: 
         if "no direct source" in formation_path:
             return "NOT_ESCALATED_NO_DIRECT_SOURCE"
         return "NOT_RUN"
+    if direct.get("status") == "UNRESOLVED_LONG_REPLAY_PENDING":
+        return "UNRESOLVED_LONG_REPLAY_PENDING"
     if str(direct.get("status", "")).startswith("UNRESOLVED"):
         return "UNRESOLVED_LONG_REPLAY"
     return "UNRESOLVED"
@@ -315,6 +350,8 @@ def main() -> None:
         "qwen3vl_silu_backward", "layer23_qproj_attention_state_region",
         "gemma4_norm", "deepseek8b_seq64_l35_attention_dv",
     }
+    expanded_ids = {case_id for case_id, *_ in EXPANDED_CANDIDATES}
+    known.update(expanded_ids)
     for name, model, region, path, long_path, paired_path in CASES:
         unresolved_paths = {
             "Llama lm_head dX": LONG / "unresolved/llama32_lmhead_4096_unresolved.json",
@@ -395,6 +432,75 @@ def main() -> None:
             "paired_sha256": sha(paired_path) if paired_path else None,
         })
 
+    # These rows passed the result-blind 32-step consequence screen and are
+    # therefore valid long-audit candidates.  Until a 4096-step artifact is
+    # present they remain explicitly unresolved, never screen negatives.
+    consequence_summary_path = ROOT / "results/property/joint_bias_formation_v1/consequence_summary.json"
+    consequence_rows = {}
+    if consequence_summary_path.exists():
+        summary = json.loads(consequence_summary_path.read_text())
+        consequence_rows = {str(row.get("case_id")): row for row in summary.get("rows", [])}
+    for case_id, model, region, formation_path in EXPANDED_CANDIDATES:
+        path = expanded_long_path(case_id)
+        unresolved_path = LONG / "unresolved" / f"{case_id}_4096_unresolved.json"
+        if path.exists():
+            direct = long_row(path)
+            loss_audit = direct.get("loss_audit", {}) or {}
+            paired = {
+                "status": "COMPLETE_IN_LONG_REPLAY",
+                "loss_separation_observed": bool(loss_audit.get("any_period_split")),
+                "steps": direct.get("steps"),
+                "parameter_distance": direct.get("final_drift_l2"),
+                "final_loss_gap": direct.get("paired_loss_gap_final"),
+                "recent_loss_gap_mean": direct.get("paired_loss_gap_mean_last_512"),
+                "recent_loss_gap_std": direct.get("paired_loss_gap_std_last_512"),
+                "loss_audit": loss_audit,
+                "artifact": direct.get("artifact"),
+            }
+        elif unresolved_path.exists():
+            unresolved = read(unresolved_path) or {}
+            direct = {
+                "status": unresolved.get("status", "UNRESOLVED_LONG_REPLAY"),
+                "long_direct": "UNRESOLVED",
+                "reason": unresolved.get("reason", "long replay unavailable"),
+                "steps": unresolved.get("steps_completed"),
+                "artifact": str(unresolved_path.relative_to(ROOT)),
+            }
+            paired = {
+                "status": unresolved.get("status", "UNRESOLVED_LONG_REPLAY"),
+                "loss_separation_observed": False,
+                "steps": unresolved.get("steps_completed"),
+                "artifact": str(unresolved_path.relative_to(ROOT)),
+            }
+        else:
+            direct = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "long_direct": "UNRESOLVED",
+                "reason": "The 32-step result-blind consequence candidate still requires a 4096-step live candidate/repair replay.",
+                "steps": None,
+                "artifact": str(path.relative_to(ROOT)),
+            }
+            paired = {
+                "status": "UNRESOLVED_LONG_REPLAY_PENDING",
+                "loss_separation_observed": False,
+                "steps": None,
+                "artifact": str(path.relative_to(ROOT)),
+            }
+        rows.append({
+            "case": case_id,
+            "model": model,
+            "operator_or_region": region,
+            "formation_path": formation_path,
+            "long_direct": direct,
+            "paired_consequence": paired,
+            "scope": "expanded_bias_candidate",
+            "final_label": final_label(direct, paired, formation_path),
+            "direct_sha256": sha(path),
+            "paired_sha256": sha(path),
+            "short_consequence_artifact": consequence_rows.get(case_id, {}).get("source"),
+            "short_regime": consequence_rows.get(case_id, {}).get("regime"),
+        })
+
     # Keep the complete 23-case roster visible.  Rows that never passed the
     # nonzero, parameter-reachable direct-bias gate are recorded as screened
     # negatives or unresolved; they are not silently dropped and are not
@@ -460,12 +566,13 @@ def main() -> None:
         "coherent_endpoint_witness_count": coherent_endpoint_count,
         "grouping_rule": "Repeated concrete endpoint occurrences are grouped by the frozen case-stage matrix ID; they are not silently dropped, but they do not count as independent cases.",
         "historical_candidate_count": 11,
-        "extended_candidate_count": len(CASES),
-        "extended_candidate_note": "13 rows = 11 historical candidates plus Llama and Ministral lm_head family replication rows; Gemma4 is included in the extended candidate list, not a new source-positive.",
+        "extended_candidate_count": len(CASES) + len(EXPANDED_CANDIDATES),
+        "extended_candidate_note": "The extended roster includes the historical candidates, Llama/Ministral family replication rows, Gemma4, and the 12 result-blind 32-step consequence candidates. The latter are not negatives until their long replay is complete.",
         "unindexed_historical_candidate_count": len(historical_ids - matrix_ids),
         "scope_counts": {
             "historical_candidate": sum(r.get("scope") == "historical_candidate" for r in rows),
             "roster_control_or_unresolved": sum(r.get("scope") == "roster_control_or_unresolved" for r in rows),
+            "expanded_bias_candidate": sum(r.get("scope") == "expanded_bias_candidate" for r in rows),
         },
         "final_case_count": sum(
             r["final_label"] in {
@@ -496,7 +603,7 @@ def main() -> None:
     lines = [
         "# 所有历史偏差候选的长程复核",
         "",
-        f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(CASES)} 个 extended candidate rows**（其中 11 个来自历史候选，另含 Llama、Ministral 的同族复现行）。合并后表共有 **{len(rows)} 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
+        f"仓库中有 **{matrix_count} 个唯一主矩阵 case ID**；本审计逐行复核 **{len(CASES) + len(EXPANDED_CANDIDATES)} 个 extended candidate rows**（其中包含历史候选、Llama/Ministral 同族复现、Gemma4，以及 12 个结果盲抽的长程 consequence 候选）。合并后表共有 **{len(rows)} 行**。这些数字分别表示覆盖分母、候选分母和逐行审计行数，不能混用。",
         "",
         f"按当前口径，最终计入 **{payload['final_case_count']} 个**：其中直接长程方向案例 **{payload['direct_persistent_case_count']} 个**，反馈维持型案例 **{sum(r['final_label'] == 'FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT' for r in rows)} 个**，直接方向未持续但有长程配对 loss 分叉 **{payload['long_loss_split_without_direct_count']} 个**；未决/不可安全重放共 **{payload['unresolved_or_abstain_count']} 个**，不作阴性判断。",
         "",
@@ -521,6 +628,7 @@ def main() -> None:
         "FEEDBACK_CONTROL_NO_DIRECT_GATE": "反馈对照，没有直接 bias 门",
         "NOT_APPLICABLE_NO_CARRIER_EFFECT": "没有可达载体，不适用",
         "SCREENED_NO_CONFIRMED_DIRECT_BIAS": "短程筛查未确认直接 bias",
+        "UNRESOLVED_LONG_REPLAY_PENDING": "已通过短程 consequence 筛查，4096 步仍未完成",
     }
     for row in rows:
         d, p = row["long_direct"], row["paired_consequence"]
