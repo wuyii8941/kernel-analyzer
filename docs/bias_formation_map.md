@@ -34,8 +34,12 @@ normal, and unresolved roles are provenance-only; they do not become
 `LOCAL_BIAS`, `GRADIENT_BIAS`, or `UPDATE_BIAS` merely because an older T1–T4
 or SEUP artifact exists. The current measured cells are recorded in
 `bias_transition_matrix.csv`: Phi is
-`LOCAL_CENTERED → GRADIENT_BIAS → UPDATE_BIAS`, saved-P is centered through all
-three layers, and Liger remains unresolved on confirmation.
+`LOCAL_CENTERED → GRADIENT_BIAS → UPDATE_BIAS`, and saved-P is centered through all
+three layers. The older formation package still records Liger as unresolved
+under its separate open-loop confirmation gate; that historical label is not a
+long-horizon negative result. The authoritative current long-horizon labels
+are in `docs/liger_silu_long_horizon_recheck.md` and
+`results/property/declared_persistent_4096/all_bias_case_audit.json`.
 
 The final compact package is under
 `results/property/bias_formation_final/`. It contains the fail-closed

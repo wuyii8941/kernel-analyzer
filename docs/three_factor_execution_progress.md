@@ -21,7 +21,11 @@ The earlier zero-response Phi dry-run was an implementation error: it replayed B
 ## Remaining blockers
 
 1. Most cases do not retain raw endpoint residuals and exact `+epsilon/-epsilon` response arms; generic attribution therefore remains unresolved.
-2. The Liger RN→SR result cannot be interpreted until the RN metric is reconciled with the historical `A≈2.315` artifact.
+2. The separate Liger RN→SR screen remains inconclusive because its RN arm was
+   already diffusive (`A=0.9419`); it is not the canonical long-horizon Liger
+   audit. The canonical warm-state 4096-step direct audit is complete and
+   reports `A=14.018`, with its own paired loss audit. The two artifacts answer
+   different questions and must not be combined.
 3. The 16-step prefix→32-step predictor backtest, the remaining screen-negative groups, live candidate/repair consequence reruns, and held-out confirmation remain open. The DeepSeek seq64 capture is formation-only and must not be reported as a persistence result.
 
 The 12 screen-negative rows are now mechanically bound to eight exact model/shape plan files under `results/property/joint_bias_formation_v1/negative_consequence_plans/`; this binding is not a consequence result. The generic open-loop capture runner cannot be relabeled as a live optimizer trajectory runner.

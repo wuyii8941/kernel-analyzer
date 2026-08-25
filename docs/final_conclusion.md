@@ -44,8 +44,8 @@ operator becomes a parameter-update error that keeps accumulating.
   prove one universal property for every operator.
 - Liger, Phi, Qwen, Llama and Ministral have a robust 4096-step direct audit
   and an observed paired parameter/loss split under controlled one-carrier
-  training. SiLU has long-run feedback separation and a recorded paired loss
-  gap, but is not a direct-source case. Qwen64 `v_proj`, Qwen seq64 `v_proj`
+  training. SiLU has a feedback-sustained long-horizon bias and a recorded
+  paired loss gap, but is not a direct-source case. Qwen64 `v_proj`, Qwen seq64 `v_proj`
   and saved-P are separate long-loss-split consequence cases whose direct
   source directions are not persistent. These remain controlled runs, not
   full-parameter training.

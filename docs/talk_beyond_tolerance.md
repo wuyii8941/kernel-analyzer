@@ -123,7 +123,7 @@ Golden et al. (2024) 也做过类似的对比，追踪了 FlashAttention 的权�
 | 7 | Mamba-130M | `in_proj` GEMM | seq64 输入投影 forward/backward | 编译 BF16 GEMM 算术与输出舍入 vs 联合修复 | 算子输出；部分 backward 状态 | **4096 步未形成稳健长程方向；历史修复范围仍不完全一致** |
 | 8 | Qwen3-1.7B | softmax | layer 27 attention backward 的 saved-P | 保存概率 vs 重新计算概率 | AdamW 对正负梯度的响应不同 | **4096 步未形成稳健直接方向；短程轨迹分离主要用于机制定位** |
 | 9 | Qwen3-1.7B | attention `q_proj` | layer 23 attention backward | backward 保存状态差异 | 修复 `S_bwd` 后方向消失 | **历史机制定位成立；4096 步因实现身份变化拒绝判断** |
-| 10 | Qwen3-VL | SiLU | 编译后 SiLU backward | 融合分解 vs reference | 本步作用不持续 | **4096 步实际反馈 `A=3.100`；配对 loss gap 已记录** |
+| 10 | Qwen3-VL | SiLU | 编译后 SiLU backward | 融合分解 vs reference | 本步作用不持续 | **4096 步反馈 `A=3.100` 仍保持；配对 loss gap 已记录，因此是反馈维持型持久 bias** |
 | 11 | Gemma 4 | RMSNorm / 投影反馈区域 | 新实现路径 | 编译实现 vs reference | 本步作用不持续 | **长程重放未完成，单独记为未决，不是阴性结果** |
 | 12 | DeepSeek-8B | attention `dV` BMM | layer 35 attention backward | BF16 BMM vs FP32 | gradient 中出现 | **只确认固定状态下的方向；缺同一对照的长程确认** |
 | 13 | Llama 3.2 3B | `lm_head` 矩阵乘 | backward 的 `dX` | 与 #2/#3 同一实现族 | `A4096=5.881`，有配对 loss gap | **长程直接 bias；同族复现，不是新实现类** |
@@ -316,7 +316,7 @@ Phi `lm_head dX` 的局部误差本身方向不强（输出 A = 2.07），但经
 | Mamba `in_proj` | 1.110 | 33/64 有方向 | 配对 live 阶段未安全产出 | 未形成稳健长程方向；后果阶段未决 |
 | Qwen saved-P | 1.195 | 28/64 有方向 | **已观察；live 参数距离 0.123，末步 loss gap -0.00228，后 512 步均值 -0.00015** | **直接方向未持续，但有长程 loss 分叉的后果案例** |
 | Qwen `v_proj` | 0.981 | 32/64 A>1 | **已观察；live 参数距离 0.302，末步 loss gap +0.000371，后 512 步均值 -0.000615** | **直接方向未持续，但有长程 loss 分叉的后果案例** |
-| Qwen3-VL SiLU | **3.100（反馈）** | 长程反馈维持 | **已观察；参数距离 0.888，末步 loss gap -7.95e-9** | **反馈维持型最终案例** |
+| Qwen3-VL SiLU | **3.100（反馈）** | 长程反馈维持 | **已观察；参数距离 0.888，末步 loss gap -7.95e-9** | **反馈维持型持久 bias，且有 loss 分叉** |
 | layer-23 attention | — | — | 未测 | 实现身份变化，拒绝判断 |
 | Gemma4 RMSNorm | — | — | 兼容长程重放在第 294 步后未产出完整结果 | 保持未决，不能判阴性 |
 | DeepSeek layer-35 `dV` | — | — | 未测 | 形成阶段未确认，未升级长程 |
@@ -444,7 +444,7 @@ AdamW 同时用一阶历史平均和二阶平方平均处理梯度。我们把�
 
 **第三**：方向可以在算子计算中产生、在反向传播中放大、又被优化器消掉。**完整的测试必须覆盖整条链。**
 
-**第四**：我们把这个思路做成了“短程筛查 → 4096 步长程复核”的两级流程。当前 Liger、Phi、Qwen、Llama 和 Ministral 的声明案例保留直接方向，SiLU 显示长程反馈维持并有配对 loss gap；Qwen64 `v_proj`、Qwen seq64 `v_proj` 和 saved-P 的直接方向未保持，但 live 轨迹出现长程 loss 分叉，因此单列为后果案例。Mamba 的 4096 步直接审计未超过自身随机基线，独立 live 阶段未安全产出；Gemma4 的兼容重放在第 294 步后未形成完整结果，二者都保留为未决/非阳性。其他未能安全重放或形成证据不足的案例保持未决。
+**第四**：我们把这个思路做成了“短程筛查 → 4096 步长程复核”的两级流程。当前 Liger、Phi、Qwen、Llama 和 Ministral 的声明案例保留直接持久方向，SiLU 显示反馈维持型持久 bias 并有配对 loss gap；Qwen64 `v_proj`、Qwen seq64 `v_proj` 和 saved-P 的直接方向未保持，但 live 轨迹出现长程 loss 分叉，因此单列为后果案例。Mamba 的 4096 步直接审计未超过自身随机基线，独立 live 阶段未安全产出；Gemma4 的兼容重放在第 294 步后未形成完整结果，二者都保留为未决/非阳性。其他未能安全重放或形成证据不足的案例保持未决。
 
 > 当两个实现都通过传统数值检查时，这套方法先找出值得深测的差异，再用长程实验判断训练系统是否持续记住它。
 

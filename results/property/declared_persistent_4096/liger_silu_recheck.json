@@ -1,0 +1,58 @@
+{
+  "schema": "kernel-analyzer-liger-silu-long-horizon-recheck-v1",
+  "authority": "4096-step long-horizon audit; earlier 16/32-step and cross-protocol values are historical and are not mixed into these labels",
+  "criteria": {
+    "direct_persistent": "4096-step direct update direction passes its own long-horizon sign-flip/window evidence",
+    "feedback_persistent": "direct source may be diffuse, but feedback remains directional at 4096 steps and paired parameter/loss separation is observed",
+    "unresolved_is_not_negative": true,
+    "different_converged_losses_not_required": true
+  },
+  "cases": [
+    {
+      "case_id": "liger_fused_ce_t128",
+      "model": "Qwen3-1.7B",
+      "operator_or_region": "fused CE dW accumulation",
+      "direct": {
+        "steps": 4096,
+        "A4096_exact_full_coordinate": 14.018456804811636,
+        "late_window_count": 64,
+        "late_windows_directional": 64,
+        "sign_flip_null_upper_95": 1.1629214895391766,
+        "one_sided_p": 0.000999000999000999
+      },
+      "paired_consequence": {
+        "parameter_distance_l2": 9.266324996948242,
+        "final_loss_gap_candidate_minus_repair": -0.13049191236495972,
+        "last_512_loss_gap_mean": 0.0006728400081801311
+      },
+      "final_label": "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT"
+    },
+    {
+      "case_id": "qwen3vl_silu_backward",
+      "model": "Qwen3-VL-Reranker-2B",
+      "operator_or_region": "SiLU backward",
+      "direct": {
+        "steps": 4096,
+        "local_A4096": 1.0170143222848727,
+        "local_final_drift_cosine": 0.005518734545253217
+      },
+      "feedback": {
+        "A4096": 3.1003987449351644,
+        "feedback_final_drift_cosine": 0.9999968445524042,
+        "final_drift_l2": 0.8884283900260925
+      },
+      "paired_consequence": {
+        "final_loss_gap_candidate_minus_repair": -7.947285496356926e-09,
+        "last_512_loss_gap_mean": 4.9280933604733956e-08,
+        "last_512_loss_gap_std": 1.286888539562174e-07
+      },
+      "final_label": "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT"
+    }
+  ],
+  "source_artifacts": [
+    "results/property/declared_persistent_4096/liger_fused_ce.json",
+    "results/property/paired_loss_4096/liger_fused_ce.json",
+    "results/property/declared_persistent_4096/qwen3vl_silu_4096_with_loss.json",
+    "results/property/declared_persistent_4096/all_bias_case_audit.json"
+  ]
+}
