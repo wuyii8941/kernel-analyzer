@@ -2,7 +2,7 @@
   "aggregate_long_bias_missing_window_count": 2,
   "all_long_replay_pending_candidate_count": 31,
   "all_long_replay_required_candidate_count": 126,
-  "candidate_loss_split_count": 58,
+  "candidate_loss_split_count": 59,
   "case_count": 301,
   "coherent_endpoint_witness_count": 57,
   "definition": "A final persistent-bias case requires a bias-bearing component itself to survive the 4096-step horizon: either robust direct source direction, or robust feedback effective-update direction, and a paired parameter/loss split when the corresponding consequence run is available. Separately, any earlier bias candidate that produces a paired loss split during the long replay is counted as outcome_relevant, even if its direct bias component later stops; it is not promoted to the stricter persistent-component count. Different converged losses are not required or claimed.",
@@ -10,13 +10,13 @@
   "endpoint_population_count": 1562,
   "extended_candidate_count": 176,
   "extended_candidate_note": "The extended roster includes historical candidates, Llama/Ministral family replication rows, Gemma4, the earlier 12 result-blind consequence candidates, the separately tracked Gemma GELU consequence candidate, 69 frozen short-screen candidates, 57 legacy coherent F+B candidates, and 150 mechanically enumerated Gemma/Llama exact target replays. None of these rows is a negative before its required replay is complete.",
-  "final_case_count": 7,
+  "final_case_count": 8,
   "grouping_rule": "Repeated concrete endpoint occurrences are grouped by the frozen case-stage matrix ID; they are not silently dropped, but they do not count as independent cases.",
   "historical_candidate_count": 11,
   "label_counts": {
     "ABSTAIN_NOT_REPLAYABLE": 1,
     "AGGREGATE_LONG_BIAS_WITH_PAIRED_LOSS_SPLIT_LATE_WINDOW_NOT_EXPORTED": 2,
-    "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": 2,
+    "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": 3,
     "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": 4,
     "NOT_APPLICABLE_NO_CARRIER_EFFECT": 2,
     "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT": 3,
@@ -24,7 +24,7 @@
     "SHORT_SCREEN_CANDIDATE_WITH_PAIRED_LOSS_SPLIT_FORMATION_NOT_CONFIRMED": 35,
     "UNRESOLVED_FORMATION": 1,
     "UNRESOLVED_LONG_REPLAY": 24,
-    "UNRESOLVED_LONG_REPLAY_PENDING": 207,
+    "UNRESOLVED_LONG_REPLAY_PENDING": 206,
     "UNRESOLVED_PILOT_REPLAY_RESOURCE": 8
   },
   "legacy_coherent_candidate_universe": {
@@ -314,16 +314,16 @@
   "operator_scan_target_replay": {
     "blocked_no_matching_program": 0,
     "claim_boundary": "Rows are selected before target replay results. Pattern-screen amplification alone is never promoted to a bias case.",
-    "completed": 1,
-    "long_replay_completed": 1,
+    "completed": 2,
+    "long_replay_completed": 2,
     "long_replay_required_after_pilot_or_frozen_screen": 16,
     "manifest": "results/property/declared_persistent_4096/operator_scan_target_manifest.json",
-    "pending_or_unresolved": 149,
+    "pending_or_unresolved": 148,
     "pilot_completed": 29,
     "rows": 150,
     "total_nonzero_scan_rows_in_manifest_or_blocked": 150
   },
-  "outcome_relevant_case_count": 11,
+  "outcome_relevant_case_count": 12,
   "rolling_window_confirmed_persistent_count": 4,
   "rows": [
     {
@@ -1839,26 +1839,65 @@
     },
     {
       "case": "llama32_text128_scan_extern_66dd86f10775",
-      "direct_sha256": null,
-      "final_label": "UNRESOLVED_LONG_REPLAY_PENDING",
+      "direct_sha256": "4fd633502608087ef227295b11d0e41d8b7036bb0384467a66807b952f5f60af",
+      "final_label": "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT",
       "formation_path": "new operator scan; exact generated target replay",
       "long_direct": {
+        "A4096": 4.344519010679829,
         "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_extern_66dd86f10775/consequence.json",
-        "long_direct": "UNRESOLVED",
-        "reason": "The frozen scan has bias evidence or the target pilot is risk-positive; its 4096-step consequence is still required.",
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": 16
+        "feedback_A4096": 4.344519010679829,
+        "local_A4096": 1.0288971812845533,
+        "long_direct": "FEEDBACK_SUSTAINED",
+        "loss_audit": {
+          "any_period_split": true,
+          "final_gap": 0.0017528533935546875,
+          "last_512_max_abs": 0.012246847152709961,
+          "last_512_mean": 8.512649219483137e-05,
+          "max_abs_gap": 0.016544580459594727,
+          "recorded": true,
+          "tolerance": 1e-08
+        },
+        "measurement_geometry": "COUNT_SKETCH_256",
+        "null95": 1.1854938355630353,
+        "p": 0.0004997501249375312,
+        "paired_loss_gap_final": 0.0017528533935546875,
+        "paired_loss_gap_mean_last_512": 8.512649219483137e-05,
+        "status": "COMPLETE_4096",
+        "steps": 4096,
+        "verdict": "FEEDBACK_SUSTAINED_SEPARATION",
+        "window_evidence": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_extern_66dd86f10775/short_screen.json"
       },
       "matrix_case_id": "llama32_text128_scan_extern_66dd86f10775",
       "model": "Llama-3.2-3B",
       "operator_or_region": "BACKWARD extern_kernels.mm [output]",
       "paired_consequence": {
         "artifact": "results/property/declared_persistent_4096/operator_scan_targets/llama32_text128_scan_extern_66dd86f10775/consequence.json",
-        "loss_separation_observed": false,
-        "status": "UNRESOLVED_LONG_REPLAY_PENDING",
-        "steps": 16
+        "final_loss_gap": 0.0017528533935546875,
+        "final_recorded_loss_gap": 0.0017528533935546875,
+        "loss_audit": {
+          "any_period_split": true,
+          "final_gap": 0.0017528533935546875,
+          "final_recorded_gap": 0.0017528533935546875,
+          "last_512_max_abs": 0.012246847152709961,
+          "last_512_mean": 8.512649219483137e-05,
+          "max_abs_gap": 0.016544580459594727,
+          "recorded": true,
+          "recorded_steps": 4096,
+          "split_step_count": 4094,
+          "split_threshold": 1e-08,
+          "tolerance": 1e-08
+        },
+        "loss_max_abs_gap": 0.016544580459594727,
+        "loss_recorded_steps": 4096,
+        "loss_separation_observed": true,
+        "loss_split_step_count": 4094,
+        "parameter_distance": null,
+        "recent_loss_gap_mean": 8.512649219483137e-05,
+        "recent_loss_gap_std": 0.0034484342118571085,
+        "status": "COMPLETE_LONG_HORIZON",
+        "steps": 4096
       },
-      "paired_sha256": null,
+      "paired_sha256": "4fd633502608087ef227295b11d0e41d8b7036bb0384467a66807b952f5f60af",
       "scope": "operator_scan_candidate",
       "screen_metadata": {
         "screen_amplification": 1.1103167001807224,
@@ -12346,9 +12385,9 @@
       }
     ]
   },
-  "total_candidate_pending_or_unresolved_count": 237,
+  "total_candidate_pending_or_unresolved_count": 236,
   "total_candidate_replay_denominator_count": 276,
   "unindexed_historical_candidate_count": 3,
   "unique_matrix_case_count": 23,
-  "unresolved_or_abstain_count": 241
+  "unresolved_or_abstain_count": 240
 }

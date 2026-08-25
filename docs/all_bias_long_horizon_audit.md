@@ -2,11 +2,11 @@
 
 仓库中有 **23 个唯一主矩阵 case ID**；本审计逐行复核 **301 行**。其中 26 行是已命名的 extended candidates，69 行来自后续 backward 短筛候选池，57 行来自更早的全量 T3/F+B 方向信号，另外还包含 Gemma/Llama 新目标和 roster/control 行。这些来源可能重叠，因此分别报告来源分母和逐行审计分母，不能相加冒充独立案例数。
 
-当前有 **7 个**4096 步 bias + loss 记录：其中 **4 个**同时具备后半程窗口证据，另有 **2 个**旧 held-out 记录只保存了4096步整段统计，后半程窗口尚未单独导出。另有 **4 个**早先已有 bias 证据、并在长程中出现配对 loss 分叉，但 bias 组件后来未保持；它们仍计为 **结果受影响的 bias 记录**，不能升级为持久性 bias。当前共有 **11 个训练结果相关记录**。未决/不可安全重放共 **241 个**，不作阴性判断。
+当前有 **8 个**4096 步 bias + loss 记录：其中 **4 个**同时具备后半程窗口证据，另有 **2 个**旧 held-out 记录只保存了4096步整段统计，后半程窗口尚未单独导出。另有 **4 个**早先已有 bias 证据、并在长程中出现配对 loss 分叉，但 bias 组件后来未保持；它们仍计为 **结果受影响的 bias 记录**，不能升级为持久性 bias。当前共有 **12 个训练结果相关记录**。未决/不可安全重放共 **240 个**，不作阴性判断。
 
-三类追加候选的统一重放分母是 **276 个**：冻结短筛候选 69 个、旧的 coherent F+B 候选 57 个，以及 Gemma/Llama exact target 150 个。当前仍有 **237 个**待完成或未决；这些记录不计入 bias 案例数，也不改判为阴性。
+三类追加候选的统一重放分母是 **276 个**：冻结短筛候选 69 个、旧的 coherent F+B 候选 57 个，以及 Gemma/Llama exact target 150 个。当前仍有 **236 个**待完成或未决；这些记录不计入 bias 案例数，也不改判为阴性。
 
-Gemma/Llama 的追加首轮扫描另有 **242 行**，其中冻结升级门通过 **0 行**；残差非零行中目前有 **150 个**绑定到可尝试的 exact F+B 目标，另有 **0 行**没有同阶段、同实现族和同端点的可重放程序。已经完成 16 步 exact pilot **29 个**，其中按冻结首筛或 pilot 结果需要长程升级 **16 个**，已经完成长程重放 **1 个**。
+Gemma/Llama 的追加首轮扫描另有 **242 行**，其中冻结升级门通过 **0 行**；残差非零行中目前有 **150 个**绑定到可尝试的 exact F+B 目标，另有 **0 行**没有同阶段、同实现族和同端点的可重放程序。已经完成 16 步 exact pilot **29 个**，其中按冻结首筛或 pilot 结果需要长程升级 **16 个**，已经完成长程重放 **2 个**。
 短筛候选图中有 **69 个**候选（其中 **50 个**已有确认材料，其余将用长程候选/修复回放完成首次确认）。这些候选全部要求长程复核；尚未完成的候选统一标为未决，不得写成阴性。
 旧的全量 T3/F+B 结果中另有 **57 个**具体 endpoint 曾出现方向信号；它们与上述 backward 候选池不重合，目前 **57 个**都已绑定到可执行的 4096 步计划。旧标签只负责把它们送入复核，不能直接当作长程成功。
 
@@ -48,7 +48,7 @@ Gemma/Llama 的追加首轮扫描另有 **242 行**，其中冻结升级门通�
 | Llama-3.2-3B | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
 | Llama-3.2-3B | FORWARD triton_poi_fused__to_copy__unsafe_view_add_arange_bmm_cat_cos_expand_mul_neg_sin_slice_transpose_unsqueeze_view [out_ptr1] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
 | Llama-3.2-3B | FORWARD triton_poi_fused__unsafe_view_mul_silu [out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
-| Llama-3.2-3B | BACKWARD extern_kernels.mm [output] | new operator scan; exact generated target replay | UNRESOLVED_LONG_REPLAY_PENDING | 配对长程阶段未能安全完成，未决 | 已通过短程 consequence 筛查，4096 步仍未完成 |
+| Llama-3.2-3B | BACKWARD extern_kernels.mm [output] | new operator scan; exact generated target replay | COMPLETE_4096 | 是；4094/4096 步，最大绝对 loss gap 0.0165 | 反馈维持型 bias，且有 loss 分叉 |
 | Llama-3.2-3B | FORWARD triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_index_le_lift_fresh_mul_prepare_softmax_online_scalar_tensor_view_where [in_out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
 | Llama-3.2-3B | FORWARD triton_per_fused__softmax__to_copy_add_arange_bitwise_and_eq_index_le_lift_fresh_mul_prepare_softmax_online_scalar_tensor_view_where [out_ptr2] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |
 | Llama-3.2-3B | FORWARD triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt [in_out_ptr0] | new operator scan; exact generated target replay | UNRESOLVED_PARAMETER_BINDING | 配对长程阶段未能安全完成，未决 | 长程运行环境不再可重放，未决 |

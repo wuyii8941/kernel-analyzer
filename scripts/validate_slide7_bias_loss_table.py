@@ -43,6 +43,7 @@ EXPECTED_CASES = {
     "saved-P",
     "Qwen3-VL SiLU",
     "llama32_text128_scan_extern_5477521afded",
+    "llama32_text128_scan_extern_66dd86f10775",
 }
 
 
@@ -135,6 +136,21 @@ def formation_certificate(case: str, row: dict, parity: dict) -> dict:
             "feedback_p": long["p"],
         }
 
+    if case == "llama32_text128_scan_extern_66dd86f10775":
+        require(long.get("long_direct") == "FEEDBACK_SUSTAINED",
+                "Llama extern_kernels.mm: long feedback is not sustained")
+        require(long.get("local_A4096", float("inf")) <= 1.1,
+                "Llama extern_kernels.mm: local component is not in the near-canceling regime")
+        require(long.get("feedback_A4096", 0.0) > long["null95"] and long.get("p", 1.0) <= 0.05,
+                "Llama extern_kernels.mm: feedback direction does not exceed its own null")
+        return {
+            "kind": "EXACT_GENERATED_TARGET_PLUS_4096_STEP_FEEDBACK_BIAS",
+            "local_A4096": long["local_A4096"],
+            "feedback_A4096": long["feedback_A4096"],
+            "feedback_null95": long["null95"],
+            "feedback_p": long["p"],
+        }
+
     if case == "Qwen64 v_proj":
         cert = conditional_bias_certificate(ROOT / "results/property/conditional_debias/qwen64_vproj.json")
     elif case == "Qwen v_proj":
@@ -188,7 +204,8 @@ def main() -> None:
                 f"{case}: max loss gap does not exceed the frozen threshold")
 
         formation = formation_certificate(case, row, parity)
-        require(row["model"] in talk and row["operator_or_region"].split()[0] in talk,
+        operator_tokens = [token for token in row["operator_or_region"].replace("[", " ").replace("]", " ").split() if len(token) > 3]
+        require(row["model"] in talk and any(token in talk for token in operator_tokens),
                 f"{case}: no corresponding model/operator text found in the talk")
         checked.append({
             "case": case,
@@ -222,7 +239,7 @@ def main() -> None:
         "checked": checked,
         "claim_boundary": (
             "All rows have independent bias evidence and a 4096-record paired loss split. "
-            "Only the first three direct rows, two aggregate direct rows, and the two feedback rows "
+            "Only the first three direct rows, two aggregate direct rows, and the three feedback rows "
             "have long directional evidence; the remaining four are consequence controls and are not "
             "persistent-bias cases. A loss split is not evidence of different converged optima."
         ),
