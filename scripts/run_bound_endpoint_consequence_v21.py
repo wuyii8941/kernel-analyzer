@@ -427,11 +427,11 @@ def main() -> None:
         coordinates = int(initial.numel())
         sketch_buckets = torch.randint(
             0, sketch_dimension, (coordinates,), generator=generator,
-            dtype=torch.int64,
+            dtype=torch.int64, device="cpu",
         ).to(device)
         sketch_signs = torch.randint(
             0, 2, (coordinates,), generator=generator,
-            dtype=torch.float32,
+            dtype=torch.float32, device="cpu",
         ).mul_(2).sub_(1).to(device)
     local_vectors: list[torch.Tensor] = []
     feedback_vectors: list[torch.Tensor] = []
