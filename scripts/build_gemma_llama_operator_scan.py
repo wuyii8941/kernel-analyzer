@@ -114,7 +114,7 @@ def main() -> None:
             lines.append(f"| {item['phase']} | `{item['operation']}` | {float(item['amplification']):.3f} | {float(item['p_value']):.4f} |")
         lines.append("")
     lines += [
-        "当前结果：Gemma 115 行、Llama 64 行都完成了首轮扫描，但没有新增通过冻结升级门的候选。部分行虽然有非零差异，却没有合法的参数可达 repair/长程重放边界；这些行明确记为未决，不能当作阴性。若后续要扩大分母，应先建立合法 repair、载体和 live replay，而不是把 pattern-screen 直接当作训练 bias 证据。",
+        "当前结果：Gemma 115 行、Llama text128 的 64 行和 text512 的 63 行都完成了首轮扫描，但没有新增通过冻结升级门的候选。部分行虽然有非零差异，却没有合法的参数可达 repair/长程重放边界；这些行明确记为未决，不能当作阴性。若后续要扩大分母，应先建立合法 repair、载体和 live replay，而不是把 pattern-screen 直接当作训练 bias 证据。",
         "",
     ]
     MD.write_text("\n".join(lines))
