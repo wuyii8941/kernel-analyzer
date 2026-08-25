@@ -19,19 +19,33 @@ MD = ROOT / "docs/gemma_llama_operator_scan.md"
 
 
 def main() -> None:
+    # The text512 Llama scan is appended only after its independent frozen
+    # screen is complete.  It has no exact same-dtype repair package yet, so
+    # its nonzero rows remain unresolved rather than being called negative.
+    text512 = ROOT / "results/property/declared_persistent_4096/llama32_3b_text512_pattern_screen.json"
+    if text512.exists():
+        SOURCES["Llama-3.2-3B (text512)"] = text512
     models = []
     for model, path in SOURCES.items():
         payload = json.loads(path.read_text())
         rows = payload.get("rows", [])
-        eligibility = json.loads(ELIGIBILITY[model].read_text())
-        eligible_rows = [
-            row for row in eligibility.get("all_rows", [])
-            if row.get("eligibility") == "ELIGIBLE_NONZERO_NEW_IMPL"
-        ]
+        eligibility_path = ELIGIBILITY.get(model)
+        if eligibility_path is not None and eligibility_path.exists():
+            eligibility = json.loads(eligibility_path.read_text())
+            eligible_rows = [
+                row for row in eligibility.get("all_rows", [])
+                if row.get("eligibility") == "ELIGIBLE_NONZERO_NEW_IMPL"
+            ]
+        else:
+            eligible_rows = [
+                row for row in rows
+                if row.get("amplification") is not None and float(row.get("amplification", 0.0)) > 0.0
+            ]
         ranked = sorted(rows, key=lambda row: (float(row.get("p_value", 1.0)), -float(row.get("amplification", 0.0))))
         models.append({
             "model": model,
             "source": str(path.relative_to(ROOT)),
+            "state_protocol": "existing frozen screen" if model != "Llama-3.2-3B (text512)" else "new frozen text512 screen",
             "screened_rows": len(rows),
             "bh_positive_rows": sum(bool(row.get("screen_positive_bh_q_0_10", False)) for row in rows),
             "unseen_operator_rows_not_escalated": sum(not row.get("screen_positive_bh_q_0_10", False) for row in rows),
@@ -62,7 +76,7 @@ def main() -> None:
                 }
                 for row in ranked[:10]
             ],
-            "claim_boundary": "No row passed the frozen multiple-comparison gate; nominal p-values and A>1 are retained as scan evidence, not promoted to bias cases. Nonzero new-implementation rows without a legal replay remain unresolved, not negative.",
+            "claim_boundary": "No row passed the frozen multiple-comparison gate; nominal p-values and A>1 are retained as scan evidence, not promoted to bias cases. Nonzero rows without a legal replay remain unresolved, not negative.",
         })
     result = {
         "schema": "gemma-llama-unseen-operator-scan-v1",
