@@ -43,4 +43,4 @@ Qwen3-VL、Gemma 3、OLMoE、Llama 3.2、Ministral 3、Gemma 4 都有真实实�
 算子输出差异 -> 参数梯度差异 -> SGD/AdamW 更新差异 -> 32 步参数轨迹
 ```
 
-这段 sample-completion 快照保留作历史审计，不能覆盖当前长程审计。当前统一的长程口径见 [`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)：23 个唯一主矩阵 ID、11 个历史候选加 2 个同族复现行、28 行合并审计和 6 个已确认的长程持久性 bias 案例；另有 3 个仅 loss 分叉的后果对照。不同协议仍不能把记录简单相加。
+这段 sample-completion 快照保留作历史审计，不能覆盖当前长程审计。当前统一的长程口径见 [`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)：23 个唯一主矩阵 ID、100 条逐行审计记录、69 条冻结短程候选长程任务和 6 个已确认的长程持久性 bias 案例；另有 3 个仅 loss 分叉的后果对照。不同协议仍不能把记录简单相加，新增候选完成前不改判为阴性。

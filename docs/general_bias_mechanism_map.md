@@ -74,8 +74,8 @@ predictor therefore emits five explicit abstentions and no score.
 That fail-closed result is recorded in
 `results/property/joint_bias_formation_v1/joint_predictor_evaluation_v1.json`.
 
-The separate all-candidate long-horizon audit now has 23 unique matrix IDs,
-11 historical candidates and 28 merged rows. It confirms five direct cases
+The separate all-candidate long-horizon audit now has 23 unique matrix IDs and
+100 row-level records, including 69 frozen short-screen candidates. It confirms five direct cases
 (Liger, Phi/Qwen `lm_head dX`, and the Llama/Ministral family replicas) and one
 feedback-sustained case (Qwen3-VL SiLU with a paired loss gap). These are long-horizon case labels,
 not a universal predictor result.

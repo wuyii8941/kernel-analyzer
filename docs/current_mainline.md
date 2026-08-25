@@ -4,9 +4,9 @@
 
 ## 当前案例总数（长程复核口径）
 
-仓库中有 **23 个唯一主矩阵 case ID、28 条合并后的审计记录**。其中 **13 条**是历史或同族复现候选，另有 **12 条**是结果盲抽、32 步已经出现实际/反馈分离、正在等待 4096 步的补充候选；剩余 3 条是其他 roster/control 或未决记录。这几个数字分别表示覆盖分母、候选分母和逐行审计数，不能互相替代。
+仓库中有 **23 个唯一主矩阵 case ID、100 条逐行审计记录**。其中 69 条来自冻结的短程候选池，全部已经建立 4096 步长程任务；其余记录包括历史案例、同族复现、Gemma/Llama 定向目标和控制项。这几个数字分别表示矩阵分母、候选分母和逐行审计数，不能互相替代。
 
-当前有 **6 个已确认的长程持久性 bias 案例**：5 个直接作用长程成立（Liger fused CE、Phi `lm_head dX`、Qwen `lm_head dX`、Llama `lm_head dX`、Ministral `lm_head dX`），1 个反馈维持型长程案例（Qwen3-VL SiLU）。另有 3 个记录出现了长程配对 loss 分叉，但直接 bias 没有保持，因此只作为“长程后果对照”，不计入持久性 bias。6 个持久性案例和 3 个后果对照都不包含正在排队的 12 条补充候选；补充候选在长程完成前不算阴性。持久性 bias 要求 bias-bearing 的直接作用或反馈作用本身跨越 4096 步保持；loss 分叉是后果证据，不能单独升级一个案例。无法安全重放的记录单独标为未决，不会被当成负例。完整逐行表见 [`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)。
+当前有 **6 个已确认的长程持久性 bias 案例**：5 个直接作用长程成立（Liger fused CE、Phi `lm_head dX`、Qwen `lm_head dX`、Llama `lm_head dX`、Ministral `lm_head dX`），1 个反馈维持型长程案例（Qwen3-VL SiLU）。另有 3 个记录出现了长程配对 loss 分叉，但直接 bias 没有保持，因此只作为“长程后果对照”，不计入持久性 bias。69 条新增短程候选已经全部建立长程任务，完成前保持未决，不改判为阴性。持久性 bias 要求 bias-bearing 的直接作用或反馈作用本身跨越 4096 步保持；loss 分叉是后果证据，不能单独升级一个案例。无法安全重放的记录单独标为未决，不会被当成负例。完整逐行表见 [`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)。
 
 ## 我们在问什么
 
@@ -87,7 +87,7 @@ A_X(T)=\frac{\left\|\sum_{t=1}^{T}X_t\right\|}
 
 这支持“便宜的优先级筛查”，不支持“通用安全分类”或长期结论。没有被 16 步筛查升级的行也不能直接判为安全。
 
-Gemma 4 的 115 行和 Llama 3.2 的 64 行未重复算子首轮扫描没有产生新的通过冻结升级门的候选；nominal 信号保留在 `docs/gemma_llama_operator_scan.md`，不被直接当成 bias。12 条结果盲抽、32 步已出现实际/反馈分离的补充候选则进入独立 4096 步队列，完成前保持未决。
+Gemma 4 的 115 行和 Llama 3.2 的 64 行未重复算子首轮扫描没有产生新的通过冻结升级门的候选；nominal 信号保留在 `docs/gemma_llama_operator_scan.md`，不被直接当成 bias。冻结短程候选池中的 69 条记录已经进入统一 4096 步队列，完成前保持未决。
 
 ## 4096 步长程复核（当前权威结果）
 
