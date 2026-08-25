@@ -12,6 +12,18 @@ LOG_ROOT="$ROOT/results/property/declared_persistent_4096/expanded_controls/logs
 FAIL_ROOT="$ROOT/results/property/declared_persistent_4096/expanded_controls/retry_failures"
 mkdir -p "$LOG_ROOT" "$FAIL_ROOT"
 
+wait_for_gpu() {
+  local gpu="$1" log="$2"
+  while true; do
+    local free
+    free=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits |
+      awk -F, -v g="$gpu" '$1+0==g {gsub(/ /,"",$2); print $2}')
+    if [[ -n "$free" && "$free" -ge 12000 ]]; then return 0; fi
+    echo "[$(date -Is)] WAIT_GPU gpu=$gpu free_memory=${free:-unknown}" >>"$log"
+    sleep 120
+  done
+}
+
 run_case() {
   local gpu="$1" arch="$2" model="$3" input="$4" release="$5" plan="$6" id="$7" checkpoint="$8" extra="${9:-}"
   local output="$ROOT/results/property/declared_persistent_4096/expanded_controls/${id}_4096.json"
@@ -52,6 +64,7 @@ PY
     local extra_args=( $extra )
     cmd+=("${extra_args[@]}")
   fi
+  wait_for_gpu "$gpu" "$log"
   echo "[$(date -Is)] START $id gpu=$gpu compact=yes resume=$([[ -s "$compact_checkpoint" ]] && echo yes || echo no)" >>"$log"
   if CUDA_VISIBLE_DEVICES="$gpu" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
       OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
@@ -204,6 +217,20 @@ case "$QUEUE" in
       "$ROOT/results/coverage/runtime_releases/mamba_seq64_r2" \
       "$ROOT/results/property/joint_bias_formation_v1/negative_consequence_plans/mamba_seq64.json" \
       multishape-backward-cell-0450 /data1/tzh/cache/bias_long_expanded/multishape-backward-cell-0450.pt
+    ;;
+  deepseek0191)
+    run_case "$GPU" deepseek8b /data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B \
+      "$ROOT/results/property/tcmp_allop_v1/input_banks/deepseek8b_seq64_trajectory4096.json" \
+      "$ROOT/results/coverage/runtime_releases/deepseek8b_seq64_r1" \
+      "$ROOT/results/property/joint_bias_formation_v1/negative_consequence_plans/deepseek8b_seq64.json" \
+      multishape-backward-cell-0191 /data1/tzh/cache/bias_long_expanded/multishape-backward-cell-0191.pt
+    ;;
+  phi0543)
+    run_case "$GPU" phi /data1/tzh/models/microsoft/Phi-4-mini-instruct \
+      "$ROOT/results/property/declared_persistent_4096/expanded_controls/input_banks/phi4_seq256_cycled_4224.json" \
+      "$ROOT/results/coverage/runtime_releases/phi4_seq256_r1" \
+      "$ROOT/results/property/joint_bias_formation_v1/negative_consequence_plans/phi4_seq256.json" \
+      multishape-backward-cell-0543 /data1/tzh/cache/bias_long_expanded/multishape-backward-cell-0543.pt "--allow-graph-breaks"
     ;;
   *) echo "unknown queue: $QUEUE" >&2; exit 2;;
 esac
