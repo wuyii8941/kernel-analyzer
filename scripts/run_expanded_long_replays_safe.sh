@@ -13,13 +13,13 @@ FAIL_ROOT="$ROOT/results/property/declared_persistent_4096/expanded_controls/ret
 mkdir -p "$LOG_ROOT" "$FAIL_ROOT"
 
 wait_for_gpu() {
-  local gpu="$1" log="$2"
+  local gpu="$1" log="$2" required_free="${3:-12000}"
   while true; do
     local free
     free=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits |
       awk -F, -v g="$gpu" '$1+0==g {gsub(/ /,"",$2); print $2}')
-    if [[ -n "$free" && "$free" -ge 12000 ]]; then return 0; fi
-    echo "[$(date -Is)] WAIT_GPU gpu=$gpu free_memory=${free:-unknown}" >>"$log"
+    if [[ -n "$free" && "$free" -ge "$required_free" ]]; then return 0; fi
+    echo "[$(date -Is)] WAIT_GPU gpu=$gpu free_memory=${free:-unknown} required=${required_free}" >>"$log"
     sleep 120
   done
 }
@@ -64,7 +64,12 @@ PY
     local extra_args=( $extra )
     cmd+=("${extra_args[@]}")
   fi
-  wait_for_gpu "$gpu" "$log"
+  local required_free=12000
+  # DeepSeek-8B needs nearly a full 48-GiB card for one compact replay;
+  # merely having 12 GiB free can let it start beside another model and fail
+  # halfway through.  Smaller models keep the lower shared-GPU threshold.
+  [[ "$arch" == "deepseek8b" ]] && required_free=40000
+  wait_for_gpu "$gpu" "$log" "$required_free"
   echo "[$(date -Is)] START $id gpu=$gpu compact=yes resume=$([[ -s "$compact_checkpoint" ]] && echo yes || echo no)" >>"$log"
   if CUDA_VISIBLE_DEVICES="$gpu" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
       OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
