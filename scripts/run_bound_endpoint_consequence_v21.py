@@ -248,6 +248,7 @@ def main() -> None:
         torch.cuda.manual_seed_all(seed)
         if not repair_arm:
             candidate_endpoint: dict[str, torch.Tensor] = {}
+            candidate_loss = None
 
             def candidate_sink(observed_id: str, tensor: torch.Tensor, metadata: Any) -> None:
                 if observed_id != task_id or candidate_endpoint:
@@ -265,17 +266,17 @@ def main() -> None:
                 )
                 with candidate_observer:
                     model.zero_grad(set_to_none=True)
-                    candidate(values).backward()
+                    candidate_loss = candidate(values)
+                    candidate_loss.backward()
                 candidate_observer.validate()
             else:
                 model.zero_grad(set_to_none=True)
-                candidate(values).backward()
+                candidate_loss = candidate(values)
+                candidate_loss.backward()
             torch.cuda.synchronize(device)
             if carrier.grad is None:
                 raise RuntimeError("candidate carrier gradient is absent")
-            loss_value = float(candidate(values).detach().float().cpu())
-            # The preceding call is intentionally a fresh loss-only forward;
-            # it does not change the captured gradient or optimizer state.
+            loss_value = float(candidate_loss.detach().float().cpu())
             return (
                 carrier.grad.detach().float().clone(),
                 0,
@@ -334,6 +335,7 @@ def main() -> None:
                     before.detach().float() - target.detach().float()
                 ).cpu().reshape(-1).clone()
 
+        repair_loss = None
         model.zero_grad(set_to_none=True)
         observer = SameDtypeSemanticCandidateObserver(
             modules=modules,
@@ -342,12 +344,17 @@ def main() -> None:
             task_rows=[task], sink=repair_sink, include_unresolved_tasks=True,
         )
         with observer:
-            candidate(values).backward()
+            repair_loss = candidate(values)
+            repair_loss.backward()
         torch.cuda.synchronize(device)
         observer.validate()
         if carrier.grad is None or "changed" not in delivered:
             raise RuntimeError("repair did not reach the endpoint/carrier")
-        repair_loss_value = float(reference_loss.detach().float().cpu()) if reference is not None else float(candidate(values).detach().float().cpu())
+        repair_loss_value = (
+            float(reference_loss.detach().float().cpu())
+            if reference is not None
+            else float(repair_loss.detach().float().cpu())
+        )
         return (
             carrier.grad.detach().float().clone(), delivered["changed"],
             delivered.get("endpoint_delta"), delivered.get("endpoint_pair"),
