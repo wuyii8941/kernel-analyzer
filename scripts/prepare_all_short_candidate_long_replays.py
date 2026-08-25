@@ -81,9 +81,12 @@ def main() -> None:
             bank = ROOT / "results/property/declared_persistent_4096/qwen_seq128_bank_4224.json"
         if model_key == "phi4" and seq == 64:
             bank = ROOT / "results/property/declared_persistent_4096/phi_seq64_bank_4224.json"
+        if model_key == "mamba" and seq == 256:
+            bank = ROOT / "results/property/declared_persistent_4096/mamba_seq256_bank_cycled_4224.json"
         reasons = []
+        warnings = []
         if not candidate.get("confirmation_available"):
-            reasons.append("SHORT_CONFIRMATION_NOT_AVAILABLE")
+            warnings.append("SHORT_CONFIRMATION_NOT_AVAILABLE_LONG_REPLAY_IS_FIRST_EXACT_CONFIRMATION")
         if not release.exists():
             reasons.append("RUNTIME_RELEASE_MISSING")
         elif not release_has_task(release, str(candidate.get("task_id"))):
@@ -122,7 +125,8 @@ def main() -> None:
             "confirmation_outcome": candidate.get("confirmation_outcome"),
             "runnable": runnable,
             "status": "READY_FOR_LONG_REPLAY" if runnable else "RECAPTURE_REQUIRED",
-            "reasons": reasons,
+        "reasons": reasons,
+            "warnings": warnings,
             "release_dir": str(release.relative_to(ROOT)) if release.exists() else None,
             "input_bank": str(bank.relative_to(ROOT)) if bank.exists() else None,
             "case_plan": str(plan_path.relative_to(ROOT)) if runnable else None,
@@ -137,7 +141,7 @@ def main() -> None:
         "summary": {
             "candidate_count": len(rows),
             "ready_for_long_replay": sum(row["runnable"] for row in rows),
-            "recapture_required": sum(not row["runnable"] for row in rows),
+        "recapture_required": sum(not row["runnable"] for row in rows),
             "confirmation_available": sum(row["confirmation_available"] for row in rows),
         },
         "claim_boundary": "READY rows must be run; RECAPTURE_REQUIRED rows are unresolved and cannot be called negative.",
