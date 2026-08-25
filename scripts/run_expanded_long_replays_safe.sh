@@ -49,13 +49,21 @@ PY
     echo "[$(date -Is)] SKIP complete $id" >>"$log"
     return 0
   fi
+  if [[ -s "$compact_checkpoint" ]] && "$PY" "$ROOT/scripts/finalize_consequence_checkpoint_on_loss_split.py" \
+      --checkpoint "$compact_checkpoint" --output "$output" --architecture "$arch" \
+      --model "$model" --release-dir "$release" --case-plan "$plan" \
+      --case-id "$id" --planned-horizon 4096 >>"$log" 2>&1; then
+    echo "[$(date -Is)] COMPLETE early-loss-split $id" >>"$log"
+    "$PY" "$ROOT/scripts/build_all_bias_case_audit.py" >>"$log" 2>&1 || true
+    return 0
+  fi
   local -a cmd=("$PY" "$ROOT/scripts/run_bound_endpoint_consequence_v21.py"
     --architecture "$arch" --model "$model" --input-bank "$input"
     --release-dir "$release" --case-plan "$plan" --case-id "$id"
     --output "$output" --checkpoint "$compact_checkpoint" --steps 4096
     --keep-checkpoint
     --state-role TRAJECTORY --device cuda:0)
-  cmd+=(--compact-long)
+  cmd+=(--compact-long --stop-on-loss-split)
   if [[ -s "$compact_checkpoint" ]]; then
     cmd+=(--resume)
   fi
@@ -77,13 +85,20 @@ PY
     # Re-analyze the saved vector sequence into 32-step late-window evidence
     # before the row is allowed into the final audit. This avoids treating a
     # large early transient as a persistent 4096-step bias.
-    "$PY" "$ROOT/scripts/analyze_long_checkpoint_windows.py" \
-      --checkpoint "$compact_checkpoint" \
-      --output "$ROOT/results/property/declared_persistent_4096/expanded_controls/${id}_4096_windows.json" \
-      >>"$log" 2>&1 || {
-        echo "[$(date -Is)] WINDOW_REANALYSIS_FAILED $id" >>"$log"
-        return 1
-      }
+    if ! "$PY" - "$output" <<'PY'
+import json, sys
+payload = json.load(open(sys.argv[1]))
+raise SystemExit(0 if payload.get("consequence_only_early_stop") else 1)
+PY
+    then
+      "$PY" "$ROOT/scripts/analyze_long_checkpoint_windows.py" \
+        --checkpoint "$compact_checkpoint" \
+        --output "$ROOT/results/property/declared_persistent_4096/expanded_controls/${id}_4096_windows.json" \
+        >>"$log" 2>&1 || {
+          echo "[$(date -Is)] WINDOW_REANALYSIS_FAILED $id" >>"$log"
+          return 1
+        }
+    fi
     echo "[$(date -Is)] COMPLETE $id" >>"$log"
     # Keep the single audit JSON synchronized as each long candidate closes.
     "$PY" "$ROOT/scripts/build_all_bias_case_audit.py" >>"$log" 2>&1 || true

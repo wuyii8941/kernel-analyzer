@@ -109,6 +109,25 @@ def long_row(path: Path) -> dict[str, Any]:
             "reason": payload.get("reason", "long replay unavailable"),
             "artifact": str(path.relative_to(ROOT)),
         }
+    if payload.get("consequence_only_early_stop"):
+        loss_audit = measured_loss_audit(payload)
+        return {
+            "status": payload.get("status", "COMPLETE_PAIRED_LOSS_SPLIT"),
+            "long_direct": "NOT_MEASURED_CONSEQUENCE_ONLY",
+            "steps": int(payload.get("steps", 0)),
+            "planned_horizon_steps": int(payload.get("planned_horizon_steps", 4096)),
+            "loss_audit": loss_audit,
+            "final_drift_l2": payload.get("final_drift_l2"),
+            "paired_loss_gap_final": loss_audit.get("final_recorded_gap"),
+            "paired_loss_gap_mean_last_512": None,
+            "paired_loss_gap_std_last_512": None,
+            "artifact": str(path.relative_to(ROOT)),
+            "claim_boundary": (
+                "The 4096-step paired consequence test reached its predeclared "
+                "terminal condition early. It proves a loss consequence for "
+                "the prior bias candidate but does not measure persistence."
+            ),
+        }
     # The generic bound-endpoint runner stores the three paths under
     # statistics.levels.  It does not keep 4096 rolling windows, so use its
     # frozen sign-flip null and mark the window check as unavailable rather
@@ -672,6 +691,8 @@ def final_label(direct: dict[str, Any], paired: dict[str, Any], formation_path: 
         return "PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT"
     if direct.get("long_direct") == "ROBUST":
         return "ROBUST_LONG_DIRECT_BIAS_LOSS_NOT_RUN"
+    if direct.get("long_direct") == "NOT_MEASURED_CONSEQUENCE_ONLY" and any_loss:
+        return "BIAS_WITH_PAIRED_LOSS_SPLIT_PERSISTENCE_NOT_MEASURED"
     if direct.get("status") == "ABSTAIN":
         return "ABSTAIN_NOT_REPLAYABLE"
     if direct.get("long_direct") == "NOT_ROBUST":
@@ -925,7 +946,12 @@ def main() -> None:
             "long_direct": direct,
             "paired_consequence": paired,
             "scope": "expanded_bias_candidate",
-            "final_label": final_label(direct, paired, formation_path),
+            "final_label": (
+                "SCREEN_CONTROL_WITH_PAIRED_LOSS_SPLIT_PERSISTENCE_NOT_MEASURED"
+                if direct.get("long_direct") == "NOT_MEASURED_CONSEQUENCE_ONLY"
+                and paired.get("loss_separation_observed")
+                else final_label(direct, paired, formation_path)
+            ),
             "direct_sha256": sha(path),
             "paired_sha256": sha(path),
             "short_consequence_artifact": consequence_rows.get(case_id, {}).get("source"),
@@ -1211,6 +1237,8 @@ def main() -> None:
                 "artifact": direct.get("artifact"),
             }
             final = final_label(direct, paired, "short-screen candidate long replay")
+            if direct.get("long_direct") == "NOT_MEASURED_CONSEQUENCE_ONLY" and paired.get("loss_separation_observed"):
+                final = "SHORT_SCREEN_CANDIDATE_WITH_PAIRED_LOSS_SPLIT_FORMATION_NOT_CONFIRMED"
         elif candidate_failure_path.exists():
             unresolved = read(candidate_failure_path) or {}
             direct = {
@@ -1301,6 +1329,8 @@ def main() -> None:
                 "artifact": direct.get("artifact"),
             }
             final = final_label(direct, paired, "legacy coherent F+B endpoint")
+            if direct.get("long_direct") == "NOT_MEASURED_CONSEQUENCE_ONLY" and paired.get("loss_separation_observed"):
+                final = "LEGACY_COHERENT_BIAS_WITH_PAIRED_LOSS_SPLIT_PERSISTENCE_NOT_MEASURED"
         elif failure_path.exists():
             failure = read(failure_path) or {}
             direct = {
@@ -1534,6 +1564,11 @@ def main() -> None:
             r["final_label"] == "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE"
             for r in rows
         ),
+        "candidate_loss_split_count": sum(
+            bool((r.get("paired_consequence", {}).get("loss_audit", {}) or {}).get("any_period_split"))
+            or bool(r.get("paired_consequence", {}).get("loss_separation_observed"))
+            for r in rows
+        ),
         # Keep the two scientific questions separate: a persistent bias
         # component is the primary case count, while a paired long-run loss
         # split is a secondary outcome count even when its source component
@@ -1545,6 +1580,8 @@ def main() -> None:
                 "ROBUST_LONG_DIRECT_BIAS_LOSS_NOT_RUN",
                 "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT",
                 "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE",
+                "BIAS_WITH_PAIRED_LOSS_SPLIT_PERSISTENCE_NOT_MEASURED",
+                "LEGACY_COHERENT_BIAS_WITH_PAIRED_LOSS_SPLIT_PERSISTENCE_NOT_MEASURED",
             }
             for r in rows
         ),
@@ -1577,6 +1614,10 @@ def main() -> None:
         "AGGREGATE_LONG_BIAS_WITH_PAIRED_LOSS_SPLIT_LATE_WINDOW_NOT_EXPORTED": "4096 步整段 bias + loss 分叉；后半程窗口尚未导出",
         "FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT": "反馈维持型 bias，且有 loss 分叉",
         "LONG_LOSS_SPLIT_WITHOUT_DIRECT_PERSISTENCE": "结果受影响的 bias 候选：有长程 loss 分叉，但直接 bias 组件未保持",
+        "BIAS_WITH_PAIRED_LOSS_SPLIT_PERSISTENCE_NOT_MEASURED": "bias 候选已触发配对 loss 分叉；按冻结终点早停，持久性未测",
+        "LEGACY_COHERENT_BIAS_WITH_PAIRED_LOSS_SPLIT_PERSISTENCE_NOT_MEASURED": "旧 F+B bias endpoint 已触发配对 loss 分叉；持久性未测",
+        "SCREEN_CONTROL_WITH_PAIRED_LOSS_SPLIT_PERSISTENCE_NOT_MEASURED": "结果盲控制项出现配对 loss 分叉；没有独立 bias 形成标签",
+        "SHORT_SCREEN_CANDIDATE_WITH_PAIRED_LOSS_SPLIT_FORMATION_NOT_CONFIRMED": "短筛候选出现配对 loss 分叉；bias 形成尚未独立确认",
         "FEEDBACK_SUSTAINED_LOSS_NOT_RECORDED": "反馈维持，但 loss 尚未记录",
         "ROBUST_LONG_DIRECT_BIAS_LOSS_NOT_RUN": "长程方向成立，loss 尚未测",
         "NO_ROBUST_LONG_DIRECT_BIAS": "长程未保持",
@@ -1607,6 +1648,8 @@ def main() -> None:
             )
         elif d.get("long_direct") == "NOT_ROBUST":
             direct = f"A4096={d.get('A4096', 0):.3f}，p={d.get('p', 1):.3f}"
+        elif d.get("long_direct") == "NOT_MEASURED_CONSEQUENCE_ONLY":
+            direct = f"第 {d.get('steps', 0)} 步达到 loss 分叉终点；未测 4096 步持续性"
         else:
             direct = d.get("status", "—")
         if p.get("loss_separation_observed"):

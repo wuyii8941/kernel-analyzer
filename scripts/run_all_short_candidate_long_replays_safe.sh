@@ -82,6 +82,14 @@ for row in "${rows[@]}"; do
   if is_complete "$output"; then
     echo "[$(date -Is)] skip complete $case_id" >>"$log"; continue
   fi
+  if [[ -s "$checkpoint" ]] && "$PY" "$ROOT/scripts/finalize_consequence_checkpoint_on_loss_split.py" \
+      --checkpoint "$checkpoint" --output "$output" --architecture "$arch" \
+      --model "$model" --release-dir "$ROOT/$release" --case-plan "$ROOT/$plan" \
+      --case-id "$case_id" --planned-horizon 4096 >>"$log" 2>&1; then
+    echo "[$(date -Is)] COMPLETE early-loss-split $case_id" >>"$log"
+    "$PY" "$ROOT/scripts/build_all_bias_case_audit.py" >>"$log" 2>&1 || true
+    continue
+  fi
   wait_for_gpu
   # Another queue may have completed this case while this shard was waiting
   # for memory.  Recheck at the last safe point before starting a costly
@@ -94,14 +102,20 @@ for row in "${rows[@]}"; do
     --architecture "$arch" --model "$model" --input-bank "$ROOT/$input"
     --release-dir "$ROOT/$release" --case-plan "$ROOT/$plan" --case-id "$case_id"
     --output "$output" --checkpoint "$checkpoint" --steps 4096 --keep-checkpoint
-    --state-role TRAJECTORY --device cuda:0 --compact-long)
+    --state-role TRAJECTORY --device cuda:0 --compact-long --stop-on-loss-split)
   [[ -s "$checkpoint" ]] && cmd+=(--resume)
   [[ "$arch" == "phi" ]] && cmd+=(--allow-graph-breaks)
   if CUDA_VISIBLE_DEVICES="$GPU" TORCHINDUCTOR_COMPILE_THREADS=1 TORCHINDUCTOR_WORKER_START=subprocess \
       OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
       "${cmd[@]}" >>"$log" 2>&1; then
-    "$PY" "$ROOT/scripts/analyze_long_checkpoint_windows.py" --checkpoint "$checkpoint" \
-      --output "$OUT_ROOT/${case_id}_4096_windows.json" >>"$log" 2>&1 || true
+    if ! "$PY" - "$output" <<'PY'
+import json, sys
+raise SystemExit(0 if json.load(open(sys.argv[1])).get("consequence_only_early_stop") else 1)
+PY
+    then
+      "$PY" "$ROOT/scripts/analyze_long_checkpoint_windows.py" --checkpoint "$checkpoint" \
+        --output "$OUT_ROOT/${case_id}_4096_windows.json" >>"$log" 2>&1 || true
+    fi
     echo "[$(date -Is)] COMPLETE case=$case_id" >>"$log"
     "$PY" "$ROOT/scripts/build_all_bias_case_audit.py" >>"$log" 2>&1 || true
   else

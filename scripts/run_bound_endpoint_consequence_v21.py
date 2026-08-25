@@ -140,6 +140,16 @@ def main() -> None:
         "--compact-long", action="store_true",
         help="Store a 256-bin CountSketch per step instead of complete carrier vectors.",
     )
+    parser.add_argument(
+        "--stop-on-loss-split", action="store_true",
+        help=(
+            "Treat a recorded |candidate_loss-repair_loss| > 1e-8 as a "
+            "terminal consequence result. The run is still predeclared with "
+            "--steps as its maximum horizon, but an early result proves only "
+            "that the prior bias candidate affected loss; it does not measure "
+            "4096-step persistence."
+        ),
+    )
     parser.add_argument("--recurrence-tolerance", type=float, default=1e-6)
     parser.add_argument("--recurrence-relative-tolerance", type=float, default=1e-5)
     parser.add_argument(
@@ -500,7 +510,15 @@ def main() -> None:
         feedback_vectors.append(torch.tensor(row["derived_feedback_vector"], dtype=torch.float64))
         actual_vectors.append(torch.tensor(row["derived_actual_vector"], dtype=torch.float64))
 
-    for index in range(start_step, args.steps):
+    early_loss_split = bool(
+        args.stop_on_loss_split
+        and any(
+            abs(float(row.get("metadata", {}).get("paired_loss_gap", 0.0))) > 1e-8
+            for row in saved_rows
+        )
+    )
+    iteration_indices = () if early_loss_split else range(start_step, args.steps)
+    for index in iteration_indices:
         state = states[index]
         step = index + 1
         seed = 51000 + index
@@ -570,6 +588,10 @@ def main() -> None:
                 "paired_loss_gap": loss_cc - loss_rr,
             },
         }
+        should_stop = bool(
+            args.stop_on_loss_split
+            and abs(float(raw_row["metadata"]["paired_loss_gap"])) > 1e-8
+        )
         if args.raw_stage_output is not None:
             raw_candidate_gradient_vectors.append(gc_c.detach().float().cpu().reshape(-1))
             raw_repair_gradient_vectors.append(gr_c.detach().float().cpu().reshape(-1))
@@ -614,7 +636,7 @@ def main() -> None:
         repair_master = next_repair_master
         candidate_m, candidate_v = next_cm, next_cv
         repair_m, repair_v = next_rm, next_rv
-        if step % args.checkpoint_every == 0 or step == args.steps:
+        if step % args.checkpoint_every == 0 or step == args.steps or should_stop:
             atomic_torch_save({
                 "case_id": args.case_id, "state_ids": state_ids,
                 "compact_long": compact_long,
@@ -638,7 +660,12 @@ def main() -> None:
         # turning allocator maintenance into a fifth arm.
         if step % 32 == 0:
             torch.cuda.empty_cache()
+        if should_stop:
+            early_loss_split = True
+            break
 
+    measured_state_ids = [str(row["step_id"]) for row in saved_rows]
+    measured_steps = len(saved_rows)
     if trace is not None:
         result = trace.finalize()
     else:
@@ -652,18 +679,31 @@ def main() -> None:
             "uses_candidate_measurements": True,
             "uses_historical_verdicts": False,
             "verdict_blind": True,
-            "step_ids": list(state_ids),
-            "step_count": len(state_ids),
+            "step_ids": measured_state_ids,
+            "step_count": measured_steps,
             "recurrence_tolerance": args.recurrence_tolerance,
             "four_counterfactual_arms_required": True,
             "missing_step_ids": [],
         }
     loss_records = [row.get("metadata", {}) for row in saved_rows]
     loss_gaps = [float(row.get("paired_loss_gap", 0.0)) for row in loss_records]
-    if compact_long:
+    if early_loss_split and measured_steps < 2:
+        statistics = {
+            "schema": "kernel-analyzer-consequence-only-statistics-v1",
+            "state_ids": measured_state_ids,
+            "level_ids": [],
+            "levels": {},
+            "resultant_cosines": {},
+            "not_computed_reason": (
+                "The paired-loss terminal condition was reached before the "
+                "minimum two-row Gram audit. No persistence statistic is "
+                "reported or inferred."
+            ),
+        }
+    elif compact_long:
         statistics = {
             "schema": "kernel-analyzer-aligned-level-statistics-v1",
-            "state_ids": list(state_ids),
+            "state_ids": measured_state_ids,
             "level_ids": ["local", "feedback", "actual"],
             "measurement_geometry": "COUNT_SKETCH_256",
             "levels": {},
@@ -677,7 +717,7 @@ def main() -> None:
         for index, (name, values) in enumerate(arrays.items()):
             gram = values @ values.T
             statistics["levels"][name] = path_statistics_from_gram(
-                gram, state_ids=state_ids, sign_flip_draws=1000,
+                gram, state_ids=measured_state_ids, sign_flip_draws=1000,
                 seed=20260820 + index,
             )
             del gram
@@ -694,7 +734,7 @@ def main() -> None:
             for vector in triple
         ])
         statistics = aligned_level_statistics_from_gram(
-            (matrix @ matrix.T).numpy(), state_ids=state_ids,
+            (matrix @ matrix.T).numpy(), state_ids=measured_state_ids,
             level_ids=("local", "feedback", "actual"), sign_flip_draws=4000,
             seed=20260820,
         )
@@ -703,6 +743,8 @@ def main() -> None:
     )
     if max_relative > args.recurrence_relative_tolerance:
         result["status"] = "INVALID_RECURRENCE_RELATIVE"
+    if early_loss_split:
+        result["status"] = "COMPLETE_PAIRED_LOSS_SPLIT"
     result.update({
         "runner": "scripts/run_bound_endpoint_consequence_v21.py",
         "architecture": args.architecture,
@@ -711,8 +753,13 @@ def main() -> None:
         "case_plan": str(args.case_plan),
         "carrier": carrier_name,
         "carrier_coordinates": int(carrier.numel()),
-        "steps": args.steps,
-        "trajectory_status": "COMPLETE" if args.steps >= 4096 else ("COMPLETE" if args.steps == 32 else "ENGINEERING_DRY_RUN"),
+        "steps": measured_steps,
+        "planned_horizon_steps": args.steps,
+        "trajectory_status": (
+            "EARLY_STOP_CONFIRMED_LOSS_SPLIT" if early_loss_split else
+            ("COMPLETE" if measured_steps >= args.steps else "ENGINEERING_DRY_RUN")
+        ),
+        "consequence_only_early_stop": bool(early_loss_split),
         "optimizer": {
             "name": "AdamW", "learning_rate": args.learning_rate,
             "betas": [0.9, 0.95], "epsilon": 1e-8, "weight_decay": 0.0,
@@ -729,6 +776,8 @@ def main() -> None:
         "recurrence_relative_tolerance": args.recurrence_relative_tolerance,
         "loss_audit": {
             "recorded": bool(loss_records),
+            "recorded_steps": len(loss_gaps),
+            "split_step_count": sum(abs(value) > 1e-8 for value in loss_gaps),
             "any_period_split": any(abs(value) > 1e-8 for value in loss_gaps),
             "max_abs_gap": max((abs(value) for value in loss_gaps), default=0.0),
             "final_gap": loss_gaps[-1] if loss_gaps else None,
@@ -740,7 +789,13 @@ def main() -> None:
         "claim_boundary": (
             "Four real counterfactual arms on one declared parameter carrier. "
             "Formation labels are not read or emitted. A 32-step result is a "
-            "bounded one-parameter consequence, not full-model training safety."
+            "bounded one-parameter consequence, not full-model training safety. "
+            + (
+                "This run stopped at the first predeclared paired-loss split; "
+                "it establishes an outcome consequence for an independently "
+                "identified bias candidate, not long-horizon persistence."
+                if early_loss_split else ""
+            )
         ),
     })
     args.output.parent.mkdir(parents=True, exist_ok=True)
