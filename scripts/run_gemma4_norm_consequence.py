@@ -101,7 +101,17 @@ def main() -> None:
     # is part of wrapper provenance, not an experimental randomization knob.
     configure_candidate_runtime(args.runtime_seed)
     model = load_model("gemma4", args.model, device)
-    carrier = dict(model.named_parameters())[args.carrier]
+    parameters = dict(model.named_parameters())
+    if args.carrier not in parameters:
+        raise RuntimeError(f"declared carrier absent: {args.carrier}")
+    # This replay measures one declared carrier.  Keeping every other Gemma
+    # parameter trainable makes autograd retain multi-gigabyte gradients and
+    # optimizer intermediates that are never observed, causing a valid long
+    # replay to fail from memory pressure.  Freezing the unobserved weights
+    # preserves the exact carrier update while making the run reproducible.
+    for name, parameter in parameters.items():
+        parameter.requires_grad_(name == args.carrier)
+    carrier = parameters[args.carrier]
     start = len(PyCodeCache.modules)
     candidate = torch.compile(LossStep(model), backend="inductor", fullgraph=False, dynamic=False)
     # Warm with the same first trajectory state used by the frozen release.

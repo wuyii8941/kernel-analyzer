@@ -21,9 +21,9 @@ mkdir -p "$LOG_ROOT" "$OUT_ROOT" "$FAIL_ROOT" "$CACHE_ROOT"
 
 wait_for_gpu() {
   while true; do
-    used=$(nvidia-smi --query-gpu=index,memory.used --format=csv,noheader,nounits | awk -F, -v g="$GPU" '$1+0==g {gsub(/ /,"",$2); print $2}')
-    if [[ -n "$used" && "$used" -lt 3000 ]]; then return 0; fi
-    echo "[$(date -Is)] waiting gpu=$GPU memory=${used:-unknown}" >>"$LOG_ROOT/queue_gpu${GPU}.log"
+    free=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | awk -F, -v g="$GPU" '$1+0==g {gsub(/ /,"",$2); print $2}')
+    if [[ -n "$free" && "$free" -ge 12000 ]]; then return 0; fi
+    echo "[$(date -Is)] waiting gpu=$GPU free_memory=${free:-unknown}" >>"$LOG_ROOT/queue_gpu${GPU}.log"
     sleep 120
   done
 }

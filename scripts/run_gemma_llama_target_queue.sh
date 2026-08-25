@@ -52,6 +52,18 @@ run_one() {
     local suffix=0
     while [[ -e "$pilot" ]]; do suffix=$((suffix + 1)); pilot="$base/${case_id}_pilot_retry${suffix}"; done
   fi
+
+  # A previous attempt may have created a partial rebind directory and then
+  # failed before writing prediction.json.  The runner intentionally refuses
+  # to overwrite output directories, so always choose a fresh suffix instead
+  # of turning a recoverable retry into a duplicate-directory failure.
+  fresh_output_dir() {
+    local requested="$1" candidate="$1" suffix=0
+    while [[ -e "$candidate" && ! -f "$candidate/prediction.json" ]]; do
+      suffix=$((suffix + 1)); candidate="${requested}_retry${suffix}"
+    done
+    printf '%s\n' "$candidate"
+  }
   # A zero-energy Llama pilot can mean that the historical target is real but
   # the chosen final-norm carrier is downstream of the changed value (or the
   # fresh compiler rebound the callsite to a different semantic region).  Try
@@ -65,6 +77,7 @@ raise SystemExit(0 if rows and all(x.get("status") == "UNRESOLVED_ZERO_ENERGY" f
 PY
     then
       rebind="$base/${case_id}_pilot_rebind_embed"
+      rebind=$(fresh_output_dir "$rebind")
       if [[ ! -f "$rebind/prediction.json" ]]; then
         wait_for_gpu
         echo "[$(date -Is)] rebind pilot $case_id carrier=model.embed_tokens.weight" >>"$LOG"
@@ -107,6 +120,7 @@ PY
       for fallback in model.layers.0.input_layernorm.weight model.embed_tokens.weight; do
         tag="${fallback//./_}"
         rebind="$base/${case_id}_pilot_rebind_${tag}"
+        rebind=$(fresh_output_dir "$rebind")
         if [[ -f "$rebind/prediction.json" ]]; then pilot="$rebind"; break; fi
         wait_for_gpu
         echo "[$(date -Is)] rebind after target failure $case_id carrier=$fallback" >>"$LOG"
