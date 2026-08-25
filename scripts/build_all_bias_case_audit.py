@@ -27,6 +27,7 @@ LONG = ROOT / "results/property/declared_persistent_4096"
 PAIRED = ROOT / "results/property/paired_loss_4096"
 OUT = ROOT / "results/property/declared_persistent_4096/all_bias_case_audit.json"
 MD = ROOT / "docs/all_bias_long_horizon_audit.md"
+MANIFEST = LONG / "expanded_controls/manifest.json"
 
 
 def sha(path: Path) -> str | None:
@@ -661,6 +662,27 @@ def main() -> None:
         "",
     ]
     MD.write_text("\n".join(lines))
+    manifest_rows = []
+    for row in rows:
+        if row.get("scope") != "expanded_bias_candidate":
+            continue
+        manifest_rows.append({
+            "case_id": row["case"],
+            "model": row["model"],
+            "operator_or_region": row["operator_or_region"],
+            "short_consequence_artifact": row.get("short_consequence_artifact"),
+            "short_regime": row.get("short_regime"),
+            "long_artifact": str(expanded_long_path(row["case"]).relative_to(ROOT)),
+            "unresolved_artifact": str((LONG / "unresolved" / f"{row['case']}_4096_unresolved.json").relative_to(ROOT)),
+            "status": row["final_label"],
+            "claim_boundary": "Only a completed 4096-step candidate/repair replay with an observed paired loss or parameter split can promote this row; missing or failed runtime remains unresolved.",
+        })
+    MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+    MANIFEST.write_text(json.dumps({
+        "schema": "expanded-long-replay-manifest-v1",
+        "selection": "All 12 mechanically sampled 32-step consequence rows with actual/feedback separation.",
+        "rows": manifest_rows,
+    }, indent=2, sort_keys=True) + "\n")
     print(json.dumps({"output": str(OUT), "final_case_count": payload["final_case_count"], "case_count": len(rows)}, ensure_ascii=False))
 
 
