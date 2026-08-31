@@ -1,0 +1,15 @@
+{
+  "schema": "kernel-analyzer-anchor-unified-profile-protocol-v1",
+  "status": "FROZEN_BEFORE_NEW_RESULTS",
+  "cases": ["liger_fused_ce_t128", "phi4_seq64_lmhead_dx"],
+  "stages": ["LOCAL", "GRADIENT", "ADAMW_UPDATE"],
+  "states": {"calibration": 16, "confirmation": 16, "order": "existing frozen bank order"},
+  "optimizer": {"name": "AdamW", "learning_rate": 0.0001, "betas": [0.9, 0.95], "epsilon": 1e-8, "initial_moments": "zero then advanced only by repair"},
+  "effects": ["additive held-out", "repair-aligned", "orthogonal held-out"],
+  "uncertainty": {"state_bootstrap_draws": 4000, "sign_flip_draws": 4000},
+  "multiple_testing": "Holm across 2 cases x 3 stages x 3 effect types",
+  "large_vector_geometry": "fixed value-blind CountSketch 4096",
+  "repair_rms_floor_in_stored_coordinates": 1e-12,
+  "decision_boundary": "effect size and 95% interval are primary; multiplicity-corrected p is supporting evidence; no SAFE label",
+  "interventions": {"liger": "BF16 accumulator versus FP32 accumulator", "phi": "deterministic BF16 versus stochastic rounding under the same optimizer/state path"}
+}

@@ -212,9 +212,16 @@ D_{t+1}-D_t=L_t+B_t,
   AdamW 协议中，deterministic BF16 的短程方向超过自身随机基线；四个真实
   stochastic-rounding 重复回到各自随机范围，前三个的误差能量与 natural 基本
   相当。
-- **Liger fused CE**：BF16 chunk accumulation 有明确 source-side 信号，换
-  FP32 accumulator 后方向下降；已有 4096 步直接作用和 loss 分叉。不过统一
-  16+16 formation confirmation 仍未闭合，因此不把机制证据倒写成统一总体结论。
+- **Liger fused CE**：已经用与 Phi 相同的 16 calibration + 16 confirmation、
+  cold-start AdamW 协议重测。local、gradient 和 AdamW update 都留下可复现的
+  residual direction；AdamW update 的平均方向效应为正常 update RMS 的 0.0327%，
+  95% 区间为 0.0266%–0.0401%。candidate 是 BF16 chunk accumulation，repair 是
+  保持 BF16 接口的 FP32 accumulator，因此 accumulator precision 的 matched
+  intervention 已闭合。已有 4096 步直接作用和 loss 分叉。
+- **统一 Phi / Liger 结果**：两个 anchor 的三阶段效应量、区间和 18 项 Holm 校正
+  见 [`unified_measurement_round.md`](unified_measurement_round.md)。Phi 的同协议
+  随机舍入干预中，natural 方向分数为 1.02971，四个随机舍入重复均回到约 1.000；
+  前三个重复的更新误差能量仍为 natural 的 99.8%–101.6%。
 - **Qwen `lm_head dX`**：gradient direction 在 cold-start AdamW 的 32 步中被
   压低，但 warm-state 4096 步中重新出现。optimizer verdict 必须和训练状态一起
   描述。
@@ -227,6 +234,11 @@ D_{t+1}-D_t=L_t+B_t,
   消失；softmax 的 gradient 信号在 AdamW 后消失；BMM 的固定方向不稳定，但
   local repair-relative scaling 通过完整 Holm 校正。这说明现有案例不只包含固定
   低秩方向。完整数字见 [`three_mechanism_profiles.md`](three_mechanism_profiles.md)。
+- **DeepSeek layer-35 attention `dV`**：已有事前冻结的 32-state unseen
+  confirmation。candidate 相对 repair 的 `v_proj.weight` gradient 在同状态正常
+  gradient 方向上平均缩小 0.370%，95% 区间为 0.059%–0.664%；3 个候选中只有
+  这一项复现，2 个控制项均未误报。它是 gradient-stage、stateless SGD 映射下的
+  证据，不能和上面的 AdamW update 数字混为同一协议。
 
 ### 当前长程计数
 
@@ -249,16 +261,18 @@ D_{t+1}-D_t=L_t+B_t,
 
 ## 10. 下一阶段实验
 
-1. 先用合成 update differences 检查误报率、检出能力和置信区间覆盖；覆盖固定
-   平均方向、相对正常 update 的缩放、零均值大方差、正负交替、重尾和相关状态。
-2. 统一保存 joint `G_uu`、`G_rr`、`G_ur`，使 local、gradient、update 都能由
+1. 合成数据自检已经覆盖固定平均方向、相对正常 update 的缩放、零均值大方差、
+   正负交替、重尾、稀疏方向和低 repair energy；独立 synthetic states 下的结果
+   通过 go/no-go gate。下一步补相关 state cluster 和多 run 的区间校准。
+2. 继续统一保存 joint `G_uu`、`G_rr`、`G_ur`，使 local、gradient、update 都能由
    同一份 artifact 重算效应量、held-out direction 和置信区间。
-3. 已完成 normalization、softmax backward 和 attention BMM 的首批统一补测；
-   下一批优先重采 Phi、Liger、Qwen `lm_head dX`、Qwen `v_proj`、Mamba `in_proj`；
-   saved-P / SiLU 另存 response contrast。
-4. 在揭示 confirmation 结果前冻结等价性范围、检验组和 Holm 校正规则。
-5. 对 Phi stochastic rounding、Liger accumulator 和 response cases 先写预测，
-   再做干预；同时报告方向效应与误差能量。
+3. Phi、Liger、normalization、softmax backward 和 attention BMM 已完成统一补测；
+   下一批优先重采 Qwen `lm_head dX`、Qwen `v_proj`、Mamba `in_proj`；saved-P /
+   SiLU 另存 response contrast。
+4. DeepSeek `dV` 的冻结 unseen-state gradient confirmation 已完成。今后的 held-out
+   pool 继续要求先冻结等价性范围、检验组和 Holm 规则，再揭示结果。
+5. Phi stochastic rounding 和 Liger accumulator 已完成同目标协议的 matched
+   intervention；下一步只需为 response cases 先写预测再干预。
 6. 现有 4096 步结果只负责 consequence；需要更强 loss 结论时，以独立 training
    runs 为统计单位。
 

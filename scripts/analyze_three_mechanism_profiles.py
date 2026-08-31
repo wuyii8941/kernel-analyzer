@@ -67,8 +67,8 @@ def _profile(u: list[np.ndarray], r: list[np.ndarray], *, seed: int) -> dict:
         raise ValueError("zero calibration direction")
     direction = mean_cal / norm
     repair_scale = math.sqrt(float(np.mean(np.sum(confirmation_r * confirmation_r, axis=1))))
-    if repair_scale <= 0.0:
-        raise ValueError("zero repair-side scale")
+    if repair_scale <= 1e-12:
+        raise ValueError("repair-side scale is below the frozen 1e-12 RMS floor")
     signed = confirmation_u @ direction / repair_scale
     repair_energy = np.sum(confirmation_r * confirmation_r, axis=1)
     usable = repair_energy > max(float(np.median(repair_energy)) * 1e-12, 1e-30)

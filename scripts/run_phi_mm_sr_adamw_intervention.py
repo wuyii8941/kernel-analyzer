@@ -36,6 +36,10 @@ def main() -> None:
     parser.add_argument("--sr-repeats", type=int, default=4, choices=(4,))
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--state-path", choices=("natural", "repair"), default="natural",
+        help="Which arm advances the shared master/moments between matched states.",
+    )
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
 
@@ -124,7 +128,13 @@ def main() -> None:
             "natural_update_error_l2": float(torch.linalg.vector_norm(natural).item()),
             "sr_update_error_l2": sr_norms,
         })
-        master.add_(update_n); first, second = next_first, next_second
+        if args.state_path == "natural":
+            master.add_(update_n); first, second = next_first, next_second
+        else:
+            master.add_(update_r)
+            _, first, second = adam_delta(
+                grad_r, first, second, step, learning_rate=1e-4, beta1=0.9, beta2=0.95,
+            )
         if not args.quiet:
             print(json.dumps({"event": "PHI_ADAMW_SR_STEP", **rows[-1]}), flush=True)
 
@@ -145,7 +155,11 @@ def main() -> None:
                           "betas": [0.9, 0.95], "epsilon": 1e-8,
                           "initial_moments": "ZERO_THEN_EVOLVED_NORMALLY"},
             "state_order": state_ids, "carrier": "model.norm.weight",
-            "state_path": "NATURAL_CANDIDATE_ADVANCES_MASTER_AND_MOMENTS",
+            "state_path": (
+                "NATURAL_CANDIDATE_ADVANCES_MASTER_AND_MOMENTS"
+                if args.state_path == "natural"
+                else "FP32_CAST_REPAIR_ADVANCES_MASTER_AND_MOMENTS"
+            ),
             "arms": ["DETERMINISTIC_BF16", "FP32_CAST_REPAIR", "NO_OP_SHAM",
                      "STOCHASTIC_ROUNDING_X4"],
         },

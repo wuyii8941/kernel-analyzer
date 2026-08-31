@@ -51,6 +51,7 @@ class MMRepair:
         self.calls = 0
         self.local = None
         self.local_vector = None
+        self.repair_vector = None
         self.natural_vector = None
 
     def __enter__(self) -> "MMRepair":
@@ -113,6 +114,7 @@ class MMRepair:
                 # residual.  Keep only the current state in host memory; the
                 # reducer stores a digest/Gram, not raw vectors.
                 self.local_vector = delta.detach().float().cpu().numpy().reshape(-1)
+                self.repair_vector = cast.detach().float().cpu().numpy().reshape(-1)
                 self.calls += 1
                 return result
 
