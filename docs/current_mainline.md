@@ -107,8 +107,14 @@ u_i^{\perp}=u_i-u_i^{\parallel}.
 
 当我们需要对一组随机状态作总体结论时，用 calibration states 冻结平均方向，
 再在 untouched confirmation states 上报告带符号的 held-out effect 和置信区间。
-同一训练 run 内连续状态不能冒充独立 runs。对多个阶段和多个案例同时作显著性
+同一训练 run 内连续状态全部算一个 training unit，不能冒充独立 runs。v2 要求
+calibration 与 confirmation 各至少 8 个互不重叠的独立 training units；不满足时
+只报告固定测试集合上的结果，不生成总体置信区间。对多个阶段和多个案例同时作
 判断时，预先声明检验组并用 Holm 控制误报；效应量和置信区间仍是主结果。
+
+v2 同时修正了大向量摘要：不再按固定周期折叠坐标，而是保存带 seed 的 value-blind
+CountSketch。headline 大向量结果还需要额外 seeds 或完整向量 Gram 复核。完整规则见
+[`training_bias_profile_v2.md`](training_bias_profile_v2.md)。
 
 ## 5. 训练数值等价性
 
@@ -207,6 +213,11 @@ D_{t+1}-D_t=L_t+B_t,
 
 ### 已有代表结果
 
+下面的 16+16 结果是在方法开发阶段得到的固定-suite/短程证据。它们保留全部数据和
+机制价值，但连续状态来自一条 repair-driven trajectory；在 v2 独立 training-unit
+重采前，原有逐状态“95% 区间”不能解释为跨独立 training runs 的总体区间，也不能
+据此签发 training-equivalence 结论。
+
 - **Phi `lm_head dX`**：现有统一 formation artifact 是
   `LOCAL_CENTERED -> GRADIENT_BIASED -> UPDATE_BIASED`。同一 cold-start
   AdamW 协议中，deterministic BF16 的短程方向超过自身随机基线；四个真实
@@ -244,7 +255,8 @@ D_{t+1}-D_t=L_t+B_t,
   local repair-relative scaling 通过完整 Holm 校正。这说明现有案例不只包含固定
   低秩方向。完整数字见 [`three_mechanism_profiles.md`](three_mechanism_profiles.md)。
 - **五个补充案例**：Qwen `lm_head`、Qwen `v_proj`、Mamba `in_proj`、saved-P 和
-  SiLU 已完成统一分半统计与两个预先冻结的 Holm 检验组。完整数字和解释见
+  SiLU 已完成 v1 统一分半统计与两个分开的 Holm 检验组。它们是回溯开发证据，
+  不是 v2 的独立 training-unit confirmation。完整数字和解释见
   [`extended_unified_profiles.md`](extended_unified_profiles.md)。
 - **DeepSeek layer-35 attention `dV`**：已有事前冻结的 32-state unseen
   confirmation。candidate 相对 repair 的 `v_proj.weight` gradient 在同状态正常
@@ -273,15 +285,17 @@ D_{t+1}-D_t=L_t+B_t,
 
 ## 10. 下一阶段实验
 
-1. 合成数据自检已经覆盖固定平均方向、相对正常 update 的缩放、零均值大方差、
-   正负交替、重尾、稀疏方向和低 repair energy；独立 synthetic states 下的结果
-   通过 go/no-go gate。下一步补相关 state cluster 和多 run 的区间校准。
-2. 继续统一保存 joint `G_uu`、`G_rr`、`G_ur`，使 local、gradient、update 都能由
-   同一份 artifact 重算效应量、held-out direction 和置信区间。
+1. Training Bias Profile v2 已在独立 run-like clusters（每个 cluster 含 4 个相关
+   步骤）上通过合成 go/no-go：四类零均值场景整体误报率为 1.5%–5%，区间覆盖率为
+   92%–98%，两类目标 effect 检出率均为 100%。下一步必须用独立 training units
+   重采真实案例，不能继续把一条轨迹的 32 步当成 32 个独立样本。
+2. 新 artifact 统一保存 joint `G_uu`、`G_rr`、`G_ur`、`inference_unit_id` 和 sketch
+   schema/seed/dimension。旧固定 sketch 结果不删除，也不自动升级成 v2 结果。
 3. Phi、Liger、Qwen `lm_head dX`、Qwen `v_proj`、Mamba `in_proj`、normalization、
    softmax backward 和 attention BMM 已完成统一补测；saved-P / SiLU 也已按独立
-   response contrast 重算。下一步不再为解释旧案例继续扩张，而是在完全冻结的方法
-   下运行一个新的 held-out implementation pool。
+   response contrast 重算。下一步先用 v2 重采 Liger、Phi、Qwen `lm_head dX`、
+   Qwen `v_proj` 和 Mamba `in_proj`；每个 headline 大向量同时使用三个冻结 sketch
+   seeds 或完整 Gram。完成后才运行新的 held-out implementation pool。
 4. DeepSeek `dV` 的冻结 unseen-state gradient confirmation 已完成。今后的 held-out
    pool 继续要求先冻结等价性范围、检验组和 Holm 规则，再揭示结果。
 5. Phi stochastic rounding 和 Liger accumulator 已完成同目标协议的 matched
@@ -306,3 +320,4 @@ D_{t+1}-D_t=L_t+B_t,
 - 16/32 步未升级等于安全；
 - 4096 步方向等于 loss 已收敛到不同值；
 - 单条训练轨迹等价于独立 runs 的总体结论。
+- v1 的逐状态区间等价于 v2 的独立 training-unit 区间。

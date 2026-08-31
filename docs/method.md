@@ -81,14 +81,23 @@ g=\frac{\sum_i\langle u_i,r_i\rangle}{\sum_i\|r_i\|^2}.
 \]
 
 它在 local、gradient、update 三层含义不同，不能跨阶段当作同一个缩放系数。
+对一个固定测试集合，上式直接在全部 confirmation states 上计算。需要外推到新的
+训练状态时，先在每个独立 training unit 内计算同一加权量，再以 training unit 为
+统计单位；不再平均每一步各自的比例。
 
 ## 5. 统计单位与多重比较
 
-- fixed suite：报告该 suite 的精确均值，不外推到随机训练总体；
-- random matched states：用 untouched confirmation states 计算 held-out signed
-  effect 和置信区间；
-- 同一 run 的连续 states：按 run/cluster 处理，不能假装彼此独立；
+- fixed suite：报告该 suite 的精确均值，不生成总体置信区间；
+- random matched states：calibration 和 confirmation 必须来自互不重叠的独立
+  training units，当前 v2 最少各需要 8 个；
+- 同一 run 的连续 states：全部算一个 training unit。若同一 run 同时出现在
+  calibration 和 confirmation，只保留描述结果，不作总体判断；
 - long-run loss：独立 training run 才是总体推断单位。
+
+v2 对独立 training-unit effects 报告 Student 区间，并使用 studentized sign-flip
+作为辅助检验。最终确认同时要求：区间不跨零、Holm 校正后通过，以及从 calibration
+学到的 additive/residual 方向在 confirmation 中没有反转。规则见
+[`training_bias_profile_v2.md`](training_bias_profile_v2.md)。
 
 若同一论文表中同时判断多个 cases 或 stages，预先声明 confirmatory family 与
 discovery family，主报告 Holm 校正；同时保留效应量、置信区间和未校正数值。
@@ -150,7 +159,21 @@ repair_provenance, optimizer, moment_state, parameter_scope,
 claim_scope, run_id, cluster_id, calibration_state_ids,
 confirmation_state_ids, G_uu, G_rr, G_ur,
 per_state_effect_energy, per_state_repair_energy, sham_result,
-effect_size, confidence_interval, adjusted_p_value, decision
+effect_size, confidence_interval, adjusted_p_value, decision,
+inference_unit_id, sketch_schema, sketch_seed, sketch_dimension
 ```
 
 旧 artifact 不具备字段时保持 `PARTIAL_IDENTITY` 或 `UNRESOLVED`，不从相近运行补值。
+
+## 10. v1 与 v2 的边界
+
+已有 Liger、Phi、Qwen、Mamba、saved-P 和 SiLU 的 16+16 数字来自 v1。它们仍是有效
+的固定 suite 与机制观察，但其中连续状态来自一条 repair-driven trajectory，不能把
+逐状态区间解释成独立训练总体的区间。
+
+v2 不重写这些历史 JSON。新结果必须：
+
+- 显式声明独立 training unit；
+- 使用 `SPLITMIX64_COUNT_SKETCH_V2` 或完整向量 Gram；
+- 在看到 empirical result 前提交 protocol、检验组和判定规则；
+- 对 headline 大向量结果使用至少两个额外 sketch seeds，或用完整向量复核。

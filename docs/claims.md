@@ -33,10 +33,10 @@
 
 | 主张 | 判定门槛 | 证据 | 状态 |
 |---|---|---|---|
-| 误差能量与可复现平均方向必须分开报告。 | 每层同时报告 `E||u||²`、mean effect、normal-update scale。 | [`method.md`](method.md); existing RMS/direction comparisons | `SUPPORTED_AS_METHOD`; 统一 CI 表仍 `PLANNED` |
-| Aligned scaling 与剩余 residual direction 应分开。 | 保存 `G_uu`、`G_rr`、`G_ur`，报告加权 aligned effect 和 perpendicular mean。 | [`method.md`](method.md) | `PLANNED`；不得预写 residual 普遍有方向 |
-| 论文级总体判断要报告效应量与置信区间。 | calibration/confirmation 分离；连续 states 按 run/cluster；CI 覆盖通过合成验证。 | [`method.md`](method.md) | `PLANNED` |
-| 多案例、多阶段判断需要控制总体误报。 | 预先声明 confirmatory/discovery families；Holm 为主。 | existing v4 Holm audit; [`method.md`](method.md) | `SUPPORTED` 于 15-row 旧表；新统一 profile 待重算 |
+| 误差能量与可复现平均方向必须分开报告。 | 每层同时报告 `E||u||²`、mean effect、normal-update scale。 | [`method.md`](method.md); existing RMS/direction comparisons | `SUPPORTED_AS_METHOD`; v1 empirical 数字保持探索性 |
+| Aligned scaling 与剩余 residual direction 应分开。 | 保存 `G_uu`、`G_rr`、`G_ur`，报告加权 aligned effect 和 perpendicular mean。 | [`training_bias_profile_v2.md`](training_bias_profile_v2.md) | `METHOD_VALIDATED_SYNTHETICALLY`；真实案例待 v2 重采，不得预写 residual 普遍有方向 |
+| 论文级总体判断要报告效应量与置信区间。 | calibration/confirmation training units 分离；连续 states 不拆开；CI coverage 通过相关-cluster 合成验证。 | [`training_bias_profile_v2.md`](training_bias_profile_v2.md); `results/property/training_bias_profile_v2/synthetic_validation.json` | `METHOD_VALIDATED_SYNTHETICALLY`；empirical population inference 仍 `PLANNED` |
+| 多案例、多阶段判断需要控制总体误报。 | 预先提交 confirmatory/discovery families；Holm 为主。 | v2 protocol; [`method.md`](method.md) | `SUPPORTED_AS_METHOD`；新 empirical family 尚未运行 |
 | Training equivalence 是相对 protocol 的操作性结论。 | update effect CI 落入预声明工程范围，且声明 consequence endpoint 不失败。 | [`current_mainline.md`](current_mainline.md) | `PLANNED_FRAMEWORK`，不是现成通用 verifier |
 
 ## Orbit mean

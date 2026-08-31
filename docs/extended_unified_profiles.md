@@ -1,7 +1,12 @@
 # 五个补充案例的统一结果
 
 本轮补充了三个普通 candidate-repair 案例，以及两个严格正负响应案例。普通实现的
-27 个检验和正负响应的 6 个检验分别在结果揭示前冻结，并分别使用 Holm 校正。
+27 个检验和正负响应的 6 个检验分别使用 Holm 校正。
+
+> **v2 边界：** 这是方法开发阶段的 v1 固定-suite 结果。protocol、finalizer 与结果
+> 位于同一 Git commit，且 32 个状态沿连续 repair trajectory 推进，因此不能称为
+> 可审计的事前总体确认。表中数值仍描述该 suite；独立 training-unit 区间与多-seed
+> 大向量复核需按 [`training_bias_profile_v2.md`](training_bias_profile_v2.md) 重采。
 
 所有结果都使用前 16 个状态发现方向、后 16 个状态确认。对于“平均方向”和
 “去掉正常缩放后的方向”，后半状态必须继续沿前半状态发现的方向；显著但反向不算

@@ -3,11 +3,18 @@
 本页记录本轮已经完成的四项工作。所有数字来自机器 JSON；短程方向只称为
 “32 个状态中的可复现方向”，不冒充长程训练结论。
 
+> **v2 边界：** 本页是方法开发阶段的 v1 固定-suite 结果。32 个状态沿一条
+> repair-driven trajectory 推进，因此下列逐状态区间不能解释为独立 training runs
+> 的总体区间；protocol 与结果也没有以两个独立 Git commits 形成可审计的事前冻结。
+> 数字和干预结果全部保留，但总体确认需按
+> [`training_bias_profile_v2.md`](training_bias_profile_v2.md) 重采。
+
 ## 1. Liger 与 Phi 使用同一把尺子
 
-两个案例都使用 16 个 calibration states 和 16 个 untouched confirmation states，
+两个案例都使用 16 个 calibration states 和 16 个不参与选方向的后半 states，
 同时测量 local output、parameter gradient 和 cold-start AdamW update。18 个检验
-在结果揭示前被定义为同一个检验组，并统一使用 Holm 校正。
+在该轮分析中被定义为同一个检验组，并统一使用 Holm 校正。它是完整的回溯敏感性
+分析，不再称为可审计的事前确认组。
 
 下表给出相对正常 training signal 的效应量和 95% 区间。`residual direction` 表示
 去掉“只是把正常 signal 放大或缩小”之后，仍留下的新方向。
@@ -57,8 +64,8 @@ update 过小。
 - 正常 update 过小时 200/200 次选择 `ABSTAIN`；
 - 每次同时检查三个分支，并在单次实验内使用 Holm 校正。
 
-这组结果支持进入真实案例测量，但只覆盖独立 synthetic states。相关训练状态的区间
-校准仍需按 run 或 state cluster 处理，不能由本结果外推。
+这组旧结果只覆盖独立 synthetic states，且 GO 门没有真正检查区间覆盖率。它已经由
+v2 的相关-cluster 合成验证替代，不再作为当前统计方法的 go/no-go 证据。
 
 ## 4. 冻结的 DeepSeek 未见状态确认
 
@@ -77,8 +84,9 @@ SGD 映射下的确认，不是 AdamW update 结果，也不是 4096-step loss �
 
 ## 5. 本轮结论边界
 
-本轮已经闭合：统一三阶段测量、效应量与区间、完整 Holm 校正、Phi 同 AdamW 协议
-的因果干预、合成数据自检，以及一个已有的冻结未见状态确认。
+本轮已经闭合：统一三阶段测量的工程路径、完整 Holm 回溯分析、Phi 同 AdamW 协议
+的因果干预，以及一个已有的冻结未见状态确认。v1 的逐状态区间与合成自检已由 v2
+替代，不能继续承担独立 training-unit 总体推断。
 
 它仍不等于通用安全判断。下一批最有价值的工作是用同一协议测 Qwen `lm_head dX`、
 Qwen `v_proj`、Mamba `in_proj`，并把 saved-P / SiLU 的严格正负 response 保存成逐状态

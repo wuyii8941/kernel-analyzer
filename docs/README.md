@@ -7,9 +7,11 @@
 1. [当前科研主线](current_mainline.md)：唯一的研究问题、定义、当前数字和下一步。
 2. [统一实验方法](method.md)：candidate/repair、成因分解、三阶段测量、统计输出与
    orbit predictor 的限制。
-3. [正式讲稿](talk_beyond_tolerance.md)：面向非本项目听众的报告版本。
-4. [证据账本](claims.md)：每条可写主张、证据门槛和当前状态。
-5. [长程机器审计](../results/property/declared_persistent_4096/all_bias_case_audit.json)：
+3. [Training Bias Profile v2](training_bias_profile_v2.md)：独立 training unit、统一
+   判定规则和大向量摘要的当前版本。
+4. [正式讲稿](talk_beyond_tolerance.md)：面向非本项目听众的报告版本。
+5. [证据账本](claims.md)：每条可写主张、证据门槛和当前状态。
+6. [长程机器审计](../results/property/declared_persistent_4096/all_bias_case_audit.json)：
    当前 4096-step 结果、标签和 unresolved 记录。`all_bias_long_horizon_audit.md`
    是人类可读表，整理期间不能覆盖机器 JSON。
 
