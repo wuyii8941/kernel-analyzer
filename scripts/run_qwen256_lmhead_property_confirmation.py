@@ -25,6 +25,7 @@ for path in (ROOT, ROOT / "src", ROOT / "archive/round1_code/src"):
 from kernel_analyzer.persistence_property import path_statistics_from_gram, semantic_orbit_statistics_from_gram  # noqa: E402
 from kernel_analyzer.reduction_orbit import frozen_permutations, gemm_reduction_orbit  # noqa: E402
 from scripts.generated_nontriton_fp32_observer import fp32_external_reference  # noqa: E402
+from scripts.generated_contrast_observer import _source_identity  # noqa: E402
 from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime  # noqa: E402
 from scripts.run_generated_fp32_screen import load_model, tensor_digest  # noqa: E402
 
@@ -38,14 +39,17 @@ class ShapeObserver:
     def __init__(self, modules: list[Any], mode: str, permutations: list[torch.Tensor],
                  *, left_shape: tuple[int, int] = LEFT,
                  right_shape: tuple[int, int] = RIGHT,
-                 selected_permutation: torch.Tensor | None = None) -> None:
+                 selected_permutation: torch.Tensor | None = None,
+                 target_sha: str | None = None) -> None:
         self.modules = modules; self.mode = mode; self.permutations = permutations
         self.left_shape = left_shape; self.right_shape = right_shape
         self.selected_permutation = selected_permutation
+        self.target_sha = target_sha
         self.restores: list[tuple[Any, Any]] = []; self.calls = 0
         self.orbit: dict[str, Any] | None = None; self.changed_l2 = 0.0
         self.local_vector: torch.Tensor | None = None
         self.repair_vector: torch.Tensor | None = None
+        self.seen: list[dict[str, Any]] = []
 
     def __enter__(self) -> "ShapeObserver":
         seen: set[int] = set()
@@ -56,10 +60,21 @@ class ShapeObserver:
             seen.add(id(namespace)); original = namespace.mm
 
             def wrapped(*args: Any, _original: Any = original, **kwargs: Any) -> Any:
+                filename, line, digest = _source_identity()
+                if self.target_sha is not None and digest != self.target_sha:
+                    return _original(*args, **kwargs)
                 result = _original(*args, **kwargs)
                 if tuple(args[0].shape) != self.left_shape or tuple(args[1].shape) != self.right_shape:
                     return result
                 actual = kwargs.get("out", result); before = actual.detach().float().clone()
+                self.seen.append({
+                    "source_sha": digest,
+                    "source_line": line,
+                    "source_file": filename,
+                    "left_shape": list(args[0].shape),
+                    "right_shape": list(args[1].shape),
+                    "output_shape": list(actual.shape),
+                })
                 if self.mode == "orbit":
                     self.orbit = gemm_reduction_orbit(
                         args[0], args[1], permutations=self.permutations,
@@ -72,6 +87,11 @@ class ShapeObserver:
                     self.repair_vector = delivered.detach().float().cpu()
                     actual.copy_(delivered)
                     self.changed_l2 = float(torch.linalg.vector_norm(before - actual.float()).item())
+                elif self.mode == "sham":
+                    self.local_vector = torch.zeros_like(before).detach().cpu()
+                    self.repair_vector = before.detach().cpu()
+                    actual.copy_(before.to(actual.dtype))
+                    self.changed_l2 = 0.0
                 elif self.mode == "permuted":
                     if self.selected_permutation is None:
                         raise RuntimeError("permuted endpoint needs a frozen permutation")

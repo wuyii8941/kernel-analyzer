@@ -1,0 +1,14 @@
+{
+  "schema": "kernel-analyzer-training-bias-profile-v2-empirical-protocol-amendment",
+  "status": "FROZEN_BEFORE_FIVE_CASE_RECAPTURE",
+  "amends": "empirical_protocol.json and empirical_protocol_amendment_1.json",
+  "reason": "The base protocol named AdamW but did not state weight decay. No empirical case result was produced before this clarification.",
+  "optimizer_clarification": {
+    "name": "AdamW",
+    "weight_decay": 0.0,
+    "betas": [0.9, 0.95],
+    "epsilon": 1e-8,
+    "moments": "zero at every independently evaluated input state"
+  },
+  "claim_boundary": "The experiment isolates AdamW moment normalization without a weight-decay term. It must not be described as evidence for nonzero weight decay or warm optimizer moments."
+}
