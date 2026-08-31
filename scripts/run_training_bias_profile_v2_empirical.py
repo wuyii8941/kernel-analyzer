@@ -54,7 +54,7 @@ CONFIG = {
         "architecture": "phi",
         "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
         "bank": "results/coverage/phi4_seq64_input_bank.json",
-        "carrier": "model.model.norm.weight",
+        "carrier": "model.norm.weight",
         "lr": 1e-4,
         "kind": "PHI_LMHEAD",
     },
