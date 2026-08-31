@@ -1,0 +1,43 @@
+{
+  "schema": "kernel-analyzer-training-bias-profile-v2-protocol",
+  "status": "METHOD_FREEZE_BEFORE_EMPIRICAL_RECAPTURE",
+  "primary_endpoint": "TARGET_OPTIMIZER_UPDATE",
+  "explanation_stages": ["LOCAL", "PARAMETER_GRADIENT", "TARGET_OPTIMIZER_UPDATE"],
+  "contrasts": {
+    "ordinary": "candidate minus declared repair from the same complete training state",
+    "antithetic_response": "0.5 * (response(+delta) + response(-delta) - 2 * response(0))"
+  },
+  "effects": {
+    "additive": "calibration mean direction evaluated on untouched confirmation training units",
+    "repair_aligned": "energy-weighted candidate-minus-repair gain relative to the repair signal",
+    "residual_direction": "confirmation effect after removing same-state repair-aligned gain, projected on a calibration-only residual direction"
+  },
+  "inference": {
+    "fixed_suite": "descriptive effects only; no population confidence interval",
+    "population_unit": "independent training run or independently captured training-state cluster",
+    "minimum_calibration_units": 8,
+    "minimum_confirmation_units": 8,
+    "calibration_confirmation_units_must_be_disjoint": true,
+    "consecutive_steps_from_one_trajectory_are_one_unit": true,
+    "confidence_interval": "two-sided 95% Student interval over independent-unit effects",
+    "supporting_test": "studentized sign-flip over independent-unit effects",
+    "multiplicity": "Holm within a family committed before results"
+  },
+  "decision": {
+    "additive_and_residual_must_repeat_calibration_direction": true,
+    "repair_aligned_may_be_positive_or_negative": true,
+    "confirmation_requires": [
+      "95% interval excludes zero",
+      "Holm-adjusted p <= 0.05",
+      "direction rule is satisfied"
+    ],
+    "no_safe_label": true
+  },
+  "large_vector_summary": {
+    "schema": "SPLITMIX64_COUNT_SKETCH_V2",
+    "primary_dimension": 4096,
+    "primary_seed": 20260831,
+    "required_robustness": "repeat selected headline effects with at least two additional seeds or exact full-vector Gram"
+  },
+  "legacy_boundary": "All v1 intervals and fixed-sketch results remain exploratory and are not silently relabeled under v2."
+}

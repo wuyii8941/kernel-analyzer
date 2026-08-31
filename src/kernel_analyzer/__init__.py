@@ -112,6 +112,7 @@ from .reference_relative_oracle import (
     ReferenceRelativeObservation,
     certify_reference_relative,
 )
+from .training_bias_profile import holm_adjusted_p, matched_training_bias_profile
 from .tcmp_campaign import (
     ModelCampaignSpec,
     ModelCellSpec,
@@ -148,6 +149,8 @@ __all__ = [
     "benjamini_hochberg",
     "exact_sign_flip_statistics",
     "holm_rejections",
+    "holm_adjusted_p",
+    "matched_training_bias_profile",
     "derive_signed_rounding_error",
     "signed_event_transport",
     "signed_transport_certificate",

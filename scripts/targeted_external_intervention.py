@@ -13,6 +13,7 @@ from typing import Any, Callable, Iterable, Mapping
 import torch
 
 from forkcert.directional_error_sketch import fixed_flat_coordinate_indices
+from kernel_analyzer.short_persistence import count_sketch_chunks
 from scripts.generated_nontriton_fp32_observer import fp32_external_reference
 
 
@@ -23,17 +24,32 @@ def _source_identity() -> tuple[str, int, str]:
     return caller.f_code.co_filename, line, hashlib.sha256(source.encode()).hexdigest()
 
 
-def _count_sketch(value: torch.Tensor, *, dimension: int = 4096) -> torch.Tensor:
+COUNT_SKETCH_V2_SEED = 20260831
+
+
+def _count_sketch(
+    value: torch.Tensor,
+    *,
+    dimension: int = 4096,
+    seed: int = COUNT_SKETCH_V2_SEED,
+) -> torch.Tensor:
+    """Return the v2 value-blind sketch without periodic coordinate aliasing."""
+
     flat = value.detach().float().reshape(-1)
-    result = torch.zeros(dimension, dtype=torch.float64, device=flat.device)
-    for start in range(0, flat.numel(), 1_000_000):
-        stop = min(flat.numel(), start + 1_000_000)
-        indices = torch.arange(start, stop, dtype=torch.int64, device=flat.device)
-        # Two fixed integer hashes; selection is independent of tensor values.
-        buckets = torch.remainder(indices * 1103515245 + 12345, dimension)
-        signs = torch.where(torch.bitwise_and(indices * 214013 + 2531011, 1) == 0, 1.0, -1.0)
-        result.scatter_add_(0, buckets, flat[start:stop].double() * signs)
-    return result.float().cpu()
+    chunks = (
+        flat[start:min(flat.numel(), start + 1_000_000)].cpu().numpy()
+        for start in range(0, flat.numel(), 1_000_000)
+    )
+    result, coordinate_count = count_sketch_chunks(
+        chunks, projection_dim=dimension, seed=seed,
+    )
+    if coordinate_count != flat.numel():
+        raise RuntimeError("CountSketch did not consume the complete vector")
+    # short_persistence normalizes its persistence sketch by sqrt(dimension).
+    # Restore the standard CountSketch scale here because this path also stores
+    # effect and repair norms. Ratios remain invariant either way.
+    result *= dimension ** 0.5
+    return torch.from_numpy(result).float()
 
 
 class TargetedExternalIntervention:
@@ -116,7 +132,10 @@ class TargetedExternalIntervention:
                     "signed_delta_values": (candidate_sample - reference_cast_sample).tolist(),
                 }
                 compact_metrics["same_dtype_count_sketch"] = {
-                    "selection_rule": "FIXED_VALUE_BLIND_COUNT_SKETCH_4096",
+                    "schema": "SPLITMIX64_COUNT_SKETCH_V2",
+                    "selection_rule": "FIXED_VALUE_BLIND_HASH_BEFORE_READING_VALUES",
+                    "projection_dimension": 4096,
+                    "projection_seed": COUNT_SKETCH_V2_SEED,
                     "tensor_numel": int(candidate.numel()),
                     "effect": _count_sketch(candidate.detach().float() - reference_cast.detach().float()).tolist(),
                     "repair": _count_sketch(reference_cast).tolist(),
