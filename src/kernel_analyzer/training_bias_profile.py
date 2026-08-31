@@ -125,6 +125,7 @@ def matched_training_bias_profile(
     minimum_independent_units: int = 8,
     signflip_draws: int = 4000,
     seed: int = 0,
+    include_joint_gram: bool = False,
 ) -> dict:
     """Measure one matched effect at one training stage.
 
@@ -204,6 +205,12 @@ def matched_training_bias_profile(
         "repair_aligned_effect": aligned_suite,
         "residual_direction_heldout_effect": float(residual_values.mean()),
     }
+    if include_joint_gram:
+        suite["joint_gram"] = {
+            "effect_effect": (u @ u.T).tolist(),
+            "repair_repair": (r @ r.T).tolist(),
+            "effect_repair": (u @ r.T).tolist(),
+        }
 
     if inference_unit_ids is None:
         return {

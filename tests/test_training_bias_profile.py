@@ -93,6 +93,36 @@ def test_rotating_repair_aligned_effect_is_detected_without_fixed_direction() ->
     assert aligned["raw_confirmed"]
 
 
+def test_profile_can_emit_joint_gram_without_changing_decision() -> None:
+    rng = np.random.default_rng(17)
+    repair = rng.normal(size=(32, 24))
+    effect = 0.02 + 0.005 * rng.normal(size=(32, 24))
+    cal, conf = _split()
+    without = matched_training_bias_profile(
+        effect,
+        repair,
+        calibration_indices=cal,
+        confirmation_indices=conf,
+        inference_unit_ids=_independent_units(),
+        signflip_draws=999,
+        seed=19,
+    )
+    with_gram = matched_training_bias_profile(
+        effect,
+        repair,
+        calibration_indices=cal,
+        confirmation_indices=conf,
+        inference_unit_ids=_independent_units(),
+        signflip_draws=999,
+        seed=19,
+        include_joint_gram=True,
+    )
+    assert with_gram["population_inference"] == without["population_inference"]
+    gram = with_gram["suite"]["joint_gram"]
+    assert np.asarray(gram["effect_effect"]).shape == (len(effect), len(effect))
+    assert np.allclose(np.asarray(gram["effect_repair"]), effect @ repair.T)
+
+
 def test_declared_aligned_effect_is_energy_weighted() -> None:
     repair = np.ones((32, 1))
     effect = np.zeros((32, 1))

@@ -135,10 +135,15 @@ SCENARIOS = (
 
 
 def main() -> None:
+    global STATES_PER_UNIT
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--trials", type=int, default=200)
+    parser.add_argument("--states-per-unit", type=int, default=STATES_PER_UNIT)
     args = parser.parse_args()
+    if args.states_per_unit < 1:
+        raise ValueError("states per unit must be positive")
+    STATES_PER_UNIT = args.states_per_unit
     rows = {}
     for scenario in SCENARIOS:
         detections = {branch: 0 for branch in BRANCHES}
