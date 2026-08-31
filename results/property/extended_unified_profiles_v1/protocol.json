@@ -1,0 +1,41 @@
+{
+  "schema": "kernel-analyzer-extended-unified-profile-protocol-v1",
+  "status": "FROZEN_BEFORE_NEW_RESULTS",
+  "frozen_at": "2026-08-31T22:04:44+08:00",
+  "ordinary_implementation_family": {
+    "cases": [
+      "qwen_seq128_lmhead_dx",
+      "qwen128_vproj_output",
+      "mamba_seq64_in_proj"
+    ],
+    "stages": ["LOCAL", "GRADIENT", "ADAMW_UPDATE"],
+    "effect_types": ["ADDITIVE", "REPAIR_ALIGNED", "RESIDUAL_DIRECTION"],
+    "holm_family_size": 27
+  },
+  "response_family": {
+    "cases": ["qwen_saved_p_seq128", "qwen3vl_silu_backward"],
+    "contrast": "ANTITHETIC_RESPONSE_REMAINDER",
+    "effect_types": ["ADDITIVE", "ODD_RESPONSE_ALIGNED", "RESIDUAL_DIRECTION"],
+    "holm_family_size": 6
+  },
+  "state_protocol": {
+    "states": 32,
+    "calibration": 16,
+    "confirmation": 16,
+    "state_path": "FP32_CAST_REPAIR_ADVANCES_MASTER_AND_ADAMW_MOMENTS",
+    "optimizer": {
+      "name": "AdamW",
+      "betas": [0.9, 0.95],
+      "epsilon": 1e-8,
+      "initial_moments": "ZERO_THEN_REPAIR_EVOLVED"
+    }
+  },
+  "statistics": {
+    "bootstrap_draws": 4000,
+    "signflip_draws": 4000,
+    "repair_rms_floor": 1e-12,
+    "sketch_dimension": 4096,
+    "threshold_changes_after_results": "FORBIDDEN"
+  },
+  "claim_boundary": "Short-state stagewise effects under exact declared repairs. This protocol does not establish long-run convergence or universal prevalence."
+}

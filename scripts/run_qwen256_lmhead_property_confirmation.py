@@ -44,6 +44,8 @@ class ShapeObserver:
         self.selected_permutation = selected_permutation
         self.restores: list[tuple[Any, Any]] = []; self.calls = 0
         self.orbit: dict[str, Any] | None = None; self.changed_l2 = 0.0
+        self.local_vector: torch.Tensor | None = None
+        self.repair_vector: torch.Tensor | None = None
 
     def __enter__(self) -> "ShapeObserver":
         seen: set[int] = set()
@@ -65,7 +67,10 @@ class ShapeObserver:
                     )
                 elif self.mode == "fp32":
                     high = fp32_external_reference("mm", args, kwargs)
-                    actual.copy_(high.to(actual.dtype))
+                    delivered = high.to(actual.dtype)
+                    self.local_vector = (before - delivered.float()).detach().cpu()
+                    self.repair_vector = delivered.detach().float().cpu()
+                    actual.copy_(delivered)
                     self.changed_l2 = float(torch.linalg.vector_norm(before - actual.float()).item())
                 elif self.mode == "permuted":
                     if self.selected_permutation is None:

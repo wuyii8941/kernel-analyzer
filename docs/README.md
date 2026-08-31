@@ -28,6 +28,7 @@
 - [正负成因分解](effective_antithetic_symmetry.md)
 - [Normalization、softmax backward、attention BMM 的统一三阶段补测](three_mechanism_profiles.md)
 - [Liger/Phi 统一重测、干预、统计自检与 DeepSeek 未见确认](unified_measurement_round.md)
+- [Qwen lm-head/v-proj、Mamba in-proj、saved-P 与 SiLU 的统一补测](extended_unified_profiles.md)
 - [Reduction orbit predictor protocol](persistence_property_protocol.md)
 - [Phi 同协议随机舍入干预](phi_adamw_source_intervention.md)
 - [直接作用、反馈和实际变化](direct_persistence_evidence.md)

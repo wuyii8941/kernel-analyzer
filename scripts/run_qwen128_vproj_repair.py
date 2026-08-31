@@ -67,6 +67,8 @@ class VProjRepair:
         self.restores: list[tuple[Any, Any]] = []
         self.calls = 0
         self.local: dict[str, Any] | None = None
+        self.local_vector: torch.Tensor | None = None
+        self.repair_vector: torch.Tensor | None = None
         self.seen: list[dict[str, Any]] = []
 
     def __enter__(self) -> "VProjRepair":
@@ -113,6 +115,8 @@ class VProjRepair:
                 delivered = reference.to(candidate.dtype)
                 candidate.copy_(delivered)
                 delta = before.float() - delivered.float()
+                self.local_vector = delta.detach().cpu()
+                self.repair_vector = delivered.detach().float().cpu()
                 candidate_error = before.float() - reference.float()
                 delivered_error = delivered.float() - reference.float()
                 candidate_sse = float(

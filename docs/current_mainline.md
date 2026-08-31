@@ -222,18 +222,30 @@ D_{t+1}-D_t=L_t+B_t,
   见 [`unified_measurement_round.md`](unified_measurement_round.md)。Phi 的同协议
   随机舍入干预中，natural 方向分数为 1.02971，四个随机舍入重复均回到约 1.000；
   前三个重复的更新误差能量仍为 natural 的 99.8%–101.6%。
-- **Qwen `lm_head dX`**：gradient direction 在 cold-start AdamW 的 32 步中被
-  压低，但 warm-state 4096 步中重新出现。optimizer verdict 必须和训练状态一起
-  描述。
-- **saved-P / SiLU**：严格 `+delta/-delta` response replay 显示 downstream
-  response 不完全镜像。saved-P 的直接方向未通过 4096 步门；SiLU 是反馈维持型
-  长程案例。
+- **Qwen `lm_head dX`**：统一 16+16 结果显示 local、gradient 和 AdamW update
+  的平均方向均在后半状态复现；AdamW update 效应只有正常 update RMS 的
+  0.000400%，95% 区间为 0.000215%–0.000619%。因此 AdamW 是强烈压低，而不是
+  完全消除。warm-state 4096 步中也有直接方向；optimizer verdict 仍必须和训练
+  状态一起描述。
+- **Qwen `v_proj`**：local、gradient 和 AdamW update 均未通过统一 16+16 确认。
+  它是“局部差异不等于跨状态平均方向”的负例。
+- **Mamba `in_proj`**：local 未确认平均方向；gradient 相对正常 gradient 平均缩小
+  0.967%，95% 区间为 0.383%–1.786%，但 AdamW update 中消失。这提供了
+  backward 产生、optimizer 消除的非 Transformer 例子。
+- **saved-P / SiLU**：saved-P 的严格 `+delta/-delta` response remainder 在后半
+  状态复现，效应为正常 odd response 尺度的 2.90%，95% 区间为 1.17%–4.93%。
+  SiLU 的逐状态 response 不是严格镜像，但后半状态方向与前半相反，未通过统一
+  方向确认；它保留为 cold-start / phase-sensitive 案例。saved-P 的直接方向未通过
+  4096 步门；SiLU 的长程结果主要由 feedback 维持。
 - **三类统一补测**：Gemma normalization、Llama softmax backward 和 Llama
   attention BMM 已按相同的 16 calibration + 16 confirmation 协议完成 local、
   gradient、cold-start AdamW update 三层测量。Gemma 的 local 方向到 gradient
   消失；softmax 的 gradient 信号在 AdamW 后消失；BMM 的固定方向不稳定，但
   local repair-relative scaling 通过完整 Holm 校正。这说明现有案例不只包含固定
   低秩方向。完整数字见 [`three_mechanism_profiles.md`](three_mechanism_profiles.md)。
+- **五个补充案例**：Qwen `lm_head`、Qwen `v_proj`、Mamba `in_proj`、saved-P 和
+  SiLU 已完成统一分半统计与两个预先冻结的 Holm 检验组。完整数字和解释见
+  [`extended_unified_profiles.md`](extended_unified_profiles.md)。
 - **DeepSeek layer-35 attention `dV`**：已有事前冻结的 32-state unseen
   confirmation。candidate 相对 repair 的 `v_proj.weight` gradient 在同状态正常
   gradient 方向上平均缩小 0.370%，95% 区间为 0.059%–0.664%；3 个候选中只有
@@ -266,13 +278,15 @@ D_{t+1}-D_t=L_t+B_t,
    通过 go/no-go gate。下一步补相关 state cluster 和多 run 的区间校准。
 2. 继续统一保存 joint `G_uu`、`G_rr`、`G_ur`，使 local、gradient、update 都能由
    同一份 artifact 重算效应量、held-out direction 和置信区间。
-3. Phi、Liger、normalization、softmax backward 和 attention BMM 已完成统一补测；
-   下一批优先重采 Qwen `lm_head dX`、Qwen `v_proj`、Mamba `in_proj`；saved-P /
-   SiLU 另存 response contrast。
+3. Phi、Liger、Qwen `lm_head dX`、Qwen `v_proj`、Mamba `in_proj`、normalization、
+   softmax backward 和 attention BMM 已完成统一补测；saved-P / SiLU 也已按独立
+   response contrast 重算。下一步不再为解释旧案例继续扩张，而是在完全冻结的方法
+   下运行一个新的 held-out implementation pool。
 4. DeepSeek `dV` 的冻结 unseen-state gradient confirmation 已完成。今后的 held-out
    pool 继续要求先冻结等价性范围、检验组和 Holm 规则，再揭示结果。
 5. Phi stochastic rounding 和 Liger accumulator 已完成同目标协议的 matched
-   intervention；下一步只需为 response cases 先写预测再干预。
+   intervention；saved-P 已形成稳定 response-side 证据，后续机制干预可作为增强项，
+   不再阻塞当前主线。
 6. 现有 4096 步结果只负责 consequence；需要更强 loss 结论时，以独立 training
    runs 为统计单位。
 
