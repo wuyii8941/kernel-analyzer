@@ -1,0 +1,32 @@
+{
+  "schema": "kernel-analyzer-training-bias-profile-v2-empirical-protocol-amendment",
+  "status": "FROZEN_BEFORE_FIVE_CASE_RECAPTURE",
+  "amends": "empirical_protocol.json",
+  "reason": "With eight confirmation units, a two-sided sign-flip test has only 256 sign patterns. Its minimum attainable exact p-value cannot survive the originally declared 45-test Holm family. No empirical case result was produced before this amendment.",
+  "state_design_replacement": {
+    "source": "existing frozen 32-state input bank for each case",
+    "independent_input_state_units": 32,
+    "calibration_units": "bank-order states 0 through 15",
+    "confirmation_units": "bank-order states 16 through 31",
+    "reset_rule": "restore the same pretrained checkpoint, declared carrier value, and zero AdamW moments before every state",
+    "claim_boundary": "units are independently sampled frozen inputs conditional on one checkpoint and cold-start AdamW; they are not independent checkpoints or training runs"
+  },
+  "multiplicity_replacement": {
+    "primary_family": "five cases times three predeclared effect branches at the ADAMW_UPDATE endpoint",
+    "primary_test_count": 15,
+    "explanation_family": "five cases times LOCAL and PARAMETER_GRADIENT times three predeclared effect branches",
+    "explanation_test_count": 30,
+    "method": "Holm family-wise adjustment separately within the primary and explanation families",
+    "headline_boundary": "only ADAMW_UPDATE belongs to the primary training-equivalence result; LOCAL and PARAMETER_GRADIENT locate where an effect appears or disappears"
+  },
+  "optimizer_boundary": "This amendment measures cold-start AdamW from zero moments at each state. It does not claim behavior under warm moments.",
+  "unchanged": [
+    "five cases",
+    "three effect branches",
+    "three large-vector summary seeds",
+    "calibration-only direction selection",
+    "confirmation-only inference",
+    "repair and sham gates",
+    "no SAFE label"
+  ]
+}
