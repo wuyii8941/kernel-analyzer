@@ -1,5 +1,8 @@
 # 新实现检查说明
 
+> 本页保留 v3/v4 短程 held-out 记录。它不是当前 301-row long-run audit 的总表，
+> 也不提供通用 unseen-implementation recall。
+
 Gemma 4 在运行轨迹前被登记为新实现。它与后来的 atlas-derived pool 分开保存，因为后者缺少完整 repair 和 state 身份。
 
 ## 第一个 Gemma 目标

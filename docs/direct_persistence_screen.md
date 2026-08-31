@@ -1,5 +1,9 @@
 # Cold-start AdamW Direct Persistence Screen
 
+> **当前角色：**这是统一方法中的短程排序组件。当前论文主方法还会报告三阶段
+> effect size、置信区间和 long-run consequence；短筛本身不定义 training
+> equivalence 或 persistent bias。
+
 这是一套短程分诊流程，不是“安全证明”。它只回答一个问题：
 
 > 在声明好的 AdamW 训练设置下，一个算子和 repair 的有效更新差异，是否值得进入更昂贵的长程检查？

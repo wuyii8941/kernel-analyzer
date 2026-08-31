@@ -27,7 +27,8 @@
 | 791 | 后续搜索中的“算子区域 + 反向路径”组合 | 属于另一轮搜索，不与 804 一一对应 |
 | 493 | 791 个组合去重后得到的不同实现模式 | 用于后续不重复地选择候选 |
 | 6 | 历史 strict repair/carrier/trajectory records | 证据历史计数 |
-| 6 | 当前长程持久性 bias 案例（5 个直接方向 + 1 个反馈维持） | 只有 bias 本身跨长程保持才计入；另有 4 个仅 loss 分叉的后果对照 |
+| 43 | 当前 machine audit 中同时有 long-run bias evidence 与 paired loss split 的行 | 分为 3 条 late-window direct、8 条 aggregate direct 和 32 条 feedback-sustained；只有 4 条现有显式 late-window confirmation |
+| 105 | 更宽的 outcome-relevant rows | 包含 persistence 尚未测量的历史候选，不能全算 final persistent cases |
 
 因此，“全量覆盖”只表示 1,562 个 endpoint 都完成了 F+B 绑定和第一轮数值处置。只有继续通过单算子修复、参数可达和轨迹门槛的少量记录，才进入 32 步实验。
 
@@ -43,4 +44,4 @@ Qwen3-VL、Gemma 3、OLMoE、Llama 3.2、Ministral 3、Gemma 4 都有真实实�
 算子输出差异 -> 参数梯度差异 -> SGD/AdamW 更新差异 -> 32 步参数轨迹
 ```
 
-这段 sample-completion 快照保留作历史审计，不能覆盖当前长程审计。当前统一的长程口径见 [`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)：23 个唯一主矩阵 ID、244 条逐行审计记录、69 条冻结短程候选长程任务和 6 个已确认的长程持久性 bias 案例；另有 4 个仅 loss 分叉的后果对照。不同协议仍不能把记录简单相加，新增候选完成前不改判为阴性。
+这段 sample-completion 快照保留作历史审计，不能覆盖当前长程审计。当前机器口径见 `results/property/declared_persistent_4096/all_bias_case_audit.json`：23 个唯一主矩阵 ID、301 条逐行记录；43 条有 long-run bias evidence 与 paired loss split，但只有 4 条目前有显式 late-window confirmation。更宽的 105 条 outcome-relevant records 含 persistence 尚未测量的历史候选，不能全部叫 final persistent cases。不同协议仍不能把记录简单相加，未决记录不改判为阴性。

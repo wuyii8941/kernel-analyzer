@@ -1,6 +1,7 @@
 # Direct Persistence 证据表
 
 > 本表是 cold-start 32 步的 direct/feedback/actual 归因表，用来解释短程参数分离由哪一部分组成。它不分配当前长程标签；长程结果见 `results/property/declared_persistent_4096/summary.md`。
+> 当前论文顺序和统计定义见 `docs/current_mainline.md` 与 `docs/method.md`。
 
 ## Direct、feedback 和 actual 必须分开
 

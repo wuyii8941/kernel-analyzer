@@ -1,9 +1,11 @@
 # Flash-style case 机制报告
 
 > Historical evidence report. Its 7/48 invocation counts are not the current
-> persistent-bias headline. The current paper count is 3 operator-local
-> source/transport persistence cases; see `docs/current_mainline.md` and
-> `results/property/joint_bias_formation_v1/source_persistence_reclassification.json`.
+> long-horizon headline. Current labels come from `docs/current_mainline.md`
+> and the machine audit under `results/property/declared_persistent_4096/`:
+> 43 rows currently have long-run bias evidence plus paired loss separation,
+> while only four have explicit late-window confirmation. This file must not
+> override those labels or treat every outcome-relevant candidate as final.
 
 更新时间：2026-08-17。
 

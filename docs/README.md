@@ -1,56 +1,50 @@
 # 文档入口
 
-这份目录同时保留当前结论和历次实验记录。为避免把历史口径当成当前结论，请按下面顺序阅读。
+## 当前论文口径
 
-## 当前有效文档
+按以下顺序阅读：
 
-1. [正式讲稿](talk_beyond_tolerance.md)：18–20 分钟的 Property + Oracle 报告版本，包含三张图和数据边界。
-2. [当前主结论](current_mainline.md)：唯一的论文主线和数字口径。
-3. [Phi 同协议因果干预](phi_adamw_source_intervention.md)：cold-start AdamW 下 natural、sham 和四个随机舍入臂。
-4. [v4 简单说明](direct_persistence_v4_simple_summary.md)：面向非本项目读者的短版说明。
-5. [短程筛查方法](direct_persistence_screen.md)：16/32 步筛查、4096 步复核和输出含义。
-6. [证据表](direct_persistence_evidence.md)：直接作用、训练状态反馈和实际参数变化的分解。
-7. [optimizer 结论](direct_persistence_optimizer.md)：optimizer 能改变结果，但不是已确认的统一根因。
-8. [完成度矩阵](direct_persistence_v4_completion_matrix.md)：哪些已完成、哪些没有完成。
-9. [长程未决项](unresolved_long_replays.md)：无法安全重放的记录及其原因；它们不被当成阴性。
+1. [当前科研主线](current_mainline.md)：唯一的研究问题、定义、当前数字和下一步。
+2. [统一实验方法](method.md)：candidate/repair、成因分解、三阶段测量、统计输出与
+   orbit predictor 的限制。
+3. [正式讲稿](talk_beyond_tolerance.md)：面向非本项目听众的报告版本。
+4. [证据账本](claims.md)：每条可写主张、证据门槛和当前状态。
+5. [长程机器审计](../results/property/declared_persistent_4096/all_bias_case_audit.json)：
+   当前 4096-step 结果、标签和 unresolved 记录。`all_bias_long_horizon_audit.md`
+   是人类可读表，整理期间不能覆盖机器 JSON。
 
-机器可读的当前状态由以下文件给出：
+上述五份文件使用同一顺序：
 
-- `results/property/direct_persistence_v4/completion_audit.json`
-- `results/property/direct_persistence_v4/execution_status.json`
-- `results/property/direct_persistence_v4/summary.json`
+```text
+方向怎样形成
+→ local / gradient / update 在哪里出现
+→ 效应量和不确定性
+→ 短程筛查
+→ 长程参数与 loss 后果
+```
 
-## 当前数字
+## 详细证据
 
-- 全量首轮检查：`1,562/1,562` 个具体输出位置。
-- 历史无状态 SGD 记录：3 个有界案例；它们不是 3 个独立实现机制。
-- 统一 cold-start AdamW 回溯集：15 行。
-- 统一 cold-start AdamW 的 32 步筛查阳性：Liger 和 Phi `lm_head dX`；它们是短程结果，不是最终长期计数。
-- Phi 已在同一 cold-start AdamW 协议下完成 stochastic-rounding source intervention：natural 显著，四个随机舍入重复均回到各自随机抵消范围。
-- 结果盲候选 `0543`：总体校正后保持未决，不算正例，也不算负例。
-- warm-state 4096 步复核：Liger `A=14.018`、Phi `lm_head dX` `A=46.090`、Qwen `lm_head dX` `A=6.488`、Llama `A=5.881` 和 Ministral `A=5.050` 均有稳健长程直接方向；Qwen3-VL SiLU 为反馈维持型长程案例并记录到配对 loss gap；Qwen64 `v_proj`、Qwen seq64 `v_proj` 和 saved-P 的直接方向未保持，但 live 配对 loss 已长程分叉，作为后果案例单列；Mamba 的直接长程审计已完成但未超过自身随机基线，live 配对 loss 审计也已完成并观察到分叉；Gemma4 的兼容重放仍在补跑，layer-23 和 DeepSeek `dV` 仍保持未决。冻结短程候选池的 69 条记录已经进入 4096 步队列，完成前不算阴性。Gemma/Llama 的未重复算子扫描没有新增通过冻结升级门的候选。
-- 完整审计口径：23 个唯一主矩阵 ID、244 条逐行审计记录，另有 69 条冻结短程候选正在进行 4096 步复核。当前 6 个长程持久性 bias 案例（5 个直接、1 个反馈维持）；另有 4 个只有 live loss 分叉的后果对照，不计入持久性 bias。69 条新增候选完成前保持未决，无法安全重放的行也单独保留为未决。
-- 未见实现检查：较早冻结的 Gemma v3 有 1 个直接抵消、状态反馈持续的控制；v4 又完成 3 个新目标，其中 1 个是状态反馈对照、2 个没有可测参数作用。两轮都没有直接持续正例。
-- 通用全算子 Oracle：尚未建立。
+- [正负成因分解](effective_antithetic_symmetry.md)
+- [Normalization、softmax backward、attention BMM 的统一三阶段补测](three_mechanism_profiles.md)
+- [Reduction orbit predictor protocol](persistence_property_protocol.md)
+- [Phi 同协议随机舍入干预](phi_adamw_source_intervention.md)
+- [直接作用、反馈和实际变化](direct_persistence_evidence.md)
+- [Optimizer 对照](direct_persistence_optimizer.md)
+- [短程筛查](direct_persistence_screen.md)
+- [未见实现检查](direct_persistence_heldout.md)
+- [当前限制](direct_persistence_limitations.md)
+- [完成度矩阵](direct_persistence_v4_completion_matrix.md)
+- [无法安全重放的记录](unresolved_long_replays.md)
+- [覆盖总表](coverage_table_v1.md)
+- [模型覆盖审计](model_coverage_audit.md)
+- [分母定义](denominator.md)
+- [历史计数变更](gate_history.md)
 
-## 当前结论
+## 证据保留规则
 
-当前成果是一套有明确使用条件的两级方法：先在 moments 从零开始并随后正常更新的 AdamW 设置下，用 16/32 步检查算子直接造成的参数更新差异；再对声明的重点案例 warm up 128 步并运行 4096 步，用累计量和后半程滚动窗口判断长程方向。最终参数分离仍需拆成算子直接作用和训练状态反馈。
-
-它可以用来决定哪些实现优先进入长程检查，但短筛没有升级不等于长期安全。4096 步也不是 loss 收敛实验；若要声称最终训练后果，还需要全参数训练与稳定 loss 窗口。
-
-## 已决定停止扩展的项目
-
-以下项目不再视为当前稿件的必做项：
-
-- 扩大未见实现池；
-- 补齐整个历史样本的 ULP、`rtol/atol` 和完整严重度；
-- 没有前瞻正例时强行做 catch-and-fix；
-- 继续寻找一个对所有算子都成立的静态 property；
-- 启动已经冻结但尚未运行的 v4.1 新一轮实验。
-
-这些工作只有在未来要声称“跨未见实现泛化”“完整 tolerance 对比”或“自动决定是否修复”时才需要。
-
-## 历史文档
-
-文件名含 `v1`、`v2`、`v22`、`v3`、`property_search` 或 `round` 的文档主要记录协议演化和历史实验。它们保留用于审计，但不能覆盖本页和 [当前主结论](current_mainline.md) 的计数与结论。
+- `results/` 中的 JSON、CSV、压缩审计表和原始测量不得因文档收口而删除。
+- 旧文档中的短程 `positive` 只表示该旧协议下的观察，不能覆盖当前长程标签。
+- 旧文档中的 `property` 或 `Oracle` 名称不能被解释为通用安全判断。
+- 数字冲突时，以 [当前科研主线](current_mainline.md)、长程机器审计和具体结果 JSON
+  为准。

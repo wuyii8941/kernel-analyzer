@@ -86,7 +86,7 @@ def main() -> None:
         help="Use the permissive Gemma-style compile.  The generic Llama replay keeps the frozen full-graph protocol by default.",
     )
     parser.add_argument("--runtime-seed", type=int, default=24000)
-    parser.add_argument("--steps", type=int, choices=(2, 8, 16), default=16,
+    parser.add_argument("--steps", type=int, choices=(2, 8, 16, 32), default=16,
                         help="open-loop formation states")
     parser.add_argument(
         "--consequence-steps", type=int, choices=(2, 8, 16, 32, 4096),

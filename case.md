@@ -6,10 +6,12 @@
 > [docs/current_mainline.md](docs/current_mainline.md), with the complete merged
 > audit in [docs/all_bias_long_horizon_audit.md](docs/all_bias_long_horizon_audit.md).
 > The common cold-start AdamW table is a 16/32-step screen, not the final
-> long-horizon list. The current audit has 23 unique matrix IDs, 11 historical
-> candidates, 26 merged rows, and 4 final cases: three direct long-horizon
-> cases (Liger, Phi `lm_head dX`, Qwen `lm_head dX`) and one feedback-sustained
-> long-horizon case (Qwen3-VL SiLU). No universal all-operator Oracle is claimed.
+> long-horizon list. The current machine audit has 23 unique matrix IDs and
+> 301 row-level records. Forty-three rows have long-run bias evidence plus a
+> paired loss split, but only four currently include explicit late-window
+> confirmation; 105 outcome-relevant rows use a broader label that includes
+> candidates whose persistence is not yet measured. No universal all-operator
+> Oracle is claimed.
 
 ## Historical stateless-SGD source-persistence headline (2026-08-22)
 
@@ -274,16 +276,12 @@ have no T2/T3/T4 follow-up artifacts yet; therefore they add **zero strict
 cases** at this point. Normal non-accumulating controls remain in the denominator
 but are not called cases.
 
-The property study is now correctly defined at the complete F+B/T3 layer, not
-by T4 accumulation.  Its 1,562-endpoint population currently contains 57 T3
-coherent F+B endpoints, 588 completed normal references, and 917 unresolved
-endpoints.  The earlier 41 T4-pass versus 15 T4-fail split is not a property
-comparison because all 56 already pass T3.  The candidate is Signed Transport
-Coherence: schedule-derived signed arithmetic residuals transported through
-complete analytic F+B derivatives have a common cross-state component above a
-nonlinear remainder and reference margin.  It is formalized but not yet
-claimed; see `results/property/hypothesis_matrix.json` and
-`docs/property_hypotheses.md`.
+The historical property study operated at the complete F+B/T3 layer, not by
+T4 accumulation. Its old counts remain audit history and do not define the
+current paper method. The current formation decomposition, three-stage
+measurement and reduction-only orbit predictor are defined in
+`docs/current_mainline.md`, `docs/method.md`, and
+`docs/persistence_property_protocol.md`.
 
 ## Dual-track audit status
 

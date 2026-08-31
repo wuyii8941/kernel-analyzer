@@ -1,5 +1,8 @@
 # Direct Persistence v4：简单说明
 
+> 历史短程说明。当前科研主线、长程计数和训练等价性定义见
+> `docs/current_mainline.md`；本页数据不能覆盖当前 301-row machine audit。
+
 ## 这轮实验在回答什么
 
 我们不再只看“误差有多大”。我们把同一个实现和修复版放在相同的输入、参数和优化器状态下，观察两者产生的更新差异是否会连续地朝同一个方向累积。
@@ -36,7 +39,7 @@
 
 ## 长程结果优先于短程标签
 
-当前长程协议先 warm up 128 步，再测 4096 步同状态直接更新。所有历史候选的逐行结果见 `docs/all_bias_long_horizon_audit.md`；当前审计表为 244 行，其中 6 行满足持久性 bias 口径；另有 4 行只有 loss 分叉的后果对照；69 条冻结短程候选仍在长程队列中，完成前保持未决：
+当前长程协议先 warm up 128 步，再测 4096 步同状态直接更新。本页后续表格只保留 v4 当时的代表行，不能当作当前总计。最新机器审计为 301 行；43 行有 long-run bias evidence 与 paired loss split，但只有 4 行目前有显式 late-window confirmation。完整逐行结果见 `results/property/declared_persistent_4096/all_bias_case_audit.json`：
 
 | 案例 | A4096 | 后半程 32 步窗口 | 当前长程判断 |
 |---|---:|---:|---|

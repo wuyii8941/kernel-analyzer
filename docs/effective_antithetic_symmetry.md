@@ -1,4 +1,8 @@
-# Effective antithetic symmetry: working bias-formation hypothesis
+# Effective antithetic symmetry: formation decomposition
+
+> **Current role.** This is the detailed evidence note for the exact
+> source/response decomposition. The paper-facing order and terminology are
+> defined in `docs/current_mainline.md` and `docs/method.md`.
 
 > **Horizon note.** The fixed-condition and 32-step experiments in this
 > document describe bias formation and short-horizon directionality. They are
@@ -82,20 +86,22 @@ E[F_c(epsilon) | c]
   + integral p_a(epsilon) F_o(epsilon) d epsilon.
 ```
 
-The two omitted cross terms vanish by parity.  Therefore, relative to a
-predeclared semantic antithetic operation, bias has only two irreducible
-formation channels:
+The two omitted cross terms vanish by parity. Therefore, relative to a
+predeclared residual boundary and antithetic operation, the measured mean has
+two exact terms:
 
-1. **event-pairing asymmetry** (`p_a F_o`): opposite residual events do not
-   occur with matched conditional mass.  This includes source/schedule
-   asymmetry and residual--transport pairing asymmetry;
+1. **source/event-pairing asymmetry** (`p_a F_o`): opposite residual events do
+   not occur with matched conditional mass. Reduction order is one example,
+   but quantization grids, truncation, saturation, underflow, scaling
+   contracts, saved-state mismatch, and residual--training-state pairing can
+   also contribute;
 2. **response rectification** (`p_s F_e`): even perfectly matched
    `+epsilon/-epsilon` events are mapped to updates that are not opposites.
    Nonlinear backward regions and stateful optimizers can create this term.
 
-This is the proposed Bias Formation Map.  It is not an enumeration of places
-where error can occur.  It is an exact two-term budget explaining how a
-zero-centered variation can fail to cancel.  The antithetic operation and
+This is an exact two-term accounting identity at the selected boundary. It is
+not an exhaustive list of low-level floating-point mechanisms, and one
+low-level mechanism can affect both terms. The antithetic operation and
 condition must be fixed from the mathematical F+B boundary before inspecting
 the measured drift; otherwise the decomposition is merely post-hoc.
 

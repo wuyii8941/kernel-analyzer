@@ -1,197 +1,280 @@
-# 当前主结论
+# 当前科研主线
 
-这是项目唯一的论文主线。旧轮次文档保留用于审计，但不能用来改变这里的案例数量和结论。
+这是项目唯一的论文口径。案例计数和标签以
+`results/property/declared_persistent_4096/all_bias_case_audit.json` 为准；人类可读
+逐行表与旧实验文档只用于追溯，不能覆盖机器 JSON 的计数。
 
-## 当前案例总数（长程复核口径）
+## 一句话结论
 
-仓库中有 **23 个唯一主矩阵 case ID、244 条逐行审计记录**。其中 69 条来自冻结的短程候选池，全部已经建立 4096 步长程任务；其余记录包括历史案例、同族复现、Gemma/Llama 定向目标和控制项。这几个数字分别表示矩阵分母、候选分母和逐行审计数，不能互相替代。
+普通 tolerance 告诉我们两个浮点结果相差多大。本项目进一步检查：
 
-当前有 **6 个已确认的长程持久性 bias 案例**：5 个直接作用长程成立（Liger fused CE、Phi `lm_head dX`、Qwen `lm_head dX`、Llama `lm_head dX`、Ministral `lm_head dX`），1 个反馈维持型长程案例（Qwen3-VL SiLU）。另有 **4 个**记录出现了长程配对 loss 分叉，但直接 bias 没有保持，因此只作为“长程后果对照”，不计入持久性 bias。69 条新增短程候选已经全部建立长程任务，完成前保持未决，不改判为阴性。持久性 bias 要求 bias-bearing 的直接作用或反馈作用本身跨越 4096 步保持；loss 分叉是后果证据，不能单独升级一个案例。无法安全重放的记录单独标为未决，不会被当成负例。完整逐行表见 [`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)。
+> 一个具体训练实现相对声明的 repair，是否在真实 backward 和目标 optimizer
+> 后留下可复现的参数更新方向，以及这个方向是否在长程配对训练中留下参数或
+> loss 分叉。
 
-## 我们在问什么
+因此我们把“误差能量”“平均方向”和“训练后果”分开报告，不再用一个 RMS、
+一个 16/32 步分数或最终参数距离代替全部结论。
 
-一个 LLM 训练算子的实现会产生很小的数值差异。我们要判断的不是“误差是否足够小”，而是：
+## 1. 测试合同
 
-> 这个差异经过真实反向计算和 optimizer 后，会不会连续改变模型参数，并且长期不抵消？
+每个结论都相对于一个声明的协议：
 
-## 每一步分开测三件事
+- 一个具体 candidate implementation；
+- 一个只改变目标边界的 repair；
+- 相同的模型参数、输入、saved tensors、RNG、optimizer state 和训练步；
+- 真实 local output、actual backward 和目标 optimizer；
+- 明确的参数范围、状态集合与测量长度。
 
-candidate 和 repair 从相同参数、输入和 optimizer 状态开始。repair 只改变被检查的算子。
+若 repair 同时改变多个不可分离的训练语义区域，结论属于整个区域。证据不足时
+输出 `ABSTAIN` 或 `UNRESOLVED`，不补造阴性。
 
-在第 `t` 步，我们把两条训练轨迹之间新增的参数差异写成：
+## 2. 方向从哪里形成
+
+先固定一个 residual boundary，记 residual 为 `e`，它在真实 backward 和
+optimizer 后造成的参数更新差为 `F_s(e)`。把 residual distribution 和 response
+各自拆成正负对称与不对称部分，可得精确恒等式：
 
 \[
-D_{t+1}-D_t=L_t+B_t.
+\int F_s(e)\,dP_s(e)
+=
+\int F_s^{\mathrm{odd}}(e)\,dP_s^{\mathrm{asym}}(e)
++
+\int F_s^{\mathrm{even}}(e)\,dP_s^{\mathrm{sym}}(e).
 \]
 
-- `L_t`：在同一训练状态下，只由 candidate/repair 算子差异造成的参数更新差异。
-- `B_t`：两条轨迹此前已经分开后，由参数和 optimizer 状态不同产生的额外差异。
-- `D_{t+1}-D_t`：这一训练步实际新增的参数差异。
+这给出两个互补来源：
 
-因此，最终参数分开不等于算子本身每一步都在同向推动。必须分别报告 `L`、`B` 和 `D`。
+1. **source-side asymmetry**：进入 downstream 之前，正负 residual 的数量、
+   大小或它们与训练状态的配对已经不平衡。来源可以是 reduction order、量化
+   网格、截断、饱和、underflow、scaling contract 或 saved-state mismatch。
+2. **response-side rectification**：即使输入被严格构造成 `+e/-e`，真实 backward
+   或 optimizer 仍没有产生互为相反数的参数更新。
 
-方向性分数为：
+这是相对于所选 residual boundary 的精确两项分解，**不是底层浮点机制的穷尽
+分类**。一种底层机制也可能同时改变两项。
+
+## 3. 三阶段测量负责定位
+
+对同一个 matched state，分别记录：
+
+```text
+算子或语义区域的 output difference
+                ↓
+实际 parameter-gradient difference
+                ↓
+目标 optimizer 的 parameter-update difference
+```
+
+它们回答：
+
+- local 已有平均方向：source boundary 已经留下平均结构；
+- local 近似抵消、gradient 出现方向：backward transport 或 response 改变了结构；
+- gradient 有方向、update 变弱：optimizer 抑制了方向；
+- 严格 `+e/-e` 的 update 仍不互为相反数：downstream response 不保持镜像抵消。
+
+真正写入训练参数的是 update，因此 update 是主要正确性端点；local 和 gradient
+用于定位方向在哪里形成、增强或消失。
+
+## 4. 每个阶段统一报告什么
+
+对第 `i` 个 matched state 和某一阶段，定义：
 
 \[
-A_X(T)=\frac{\left\|\sum_{t=1}^{T}X_t\right\|}
+u_i=Y_i^C-Y_i^R,
+\qquad
+r_i=Y_i^R.
+\]
+
+每层至少报告三类量：
+
+1. **总误差能量**：`E||u_i||²`；
+2. **可复现平均效应**：`||E[u_i]||`，以及相对正常 training update 的比例；
+3. **不确定性**：效应量的置信区间，而不是只给一个是否过线的标签。
+
+为了区分“只是把正常信号整体放大/缩小”和“出现新的方向”，再写成：
+
+\[
+u_i^{\parallel}
+=
+\frac{\langle u_i,r_i\rangle}{\|r_i\|^2}r_i,
+\qquad
+u_i^{\perp}=u_i-u_i^{\parallel}.
+\]
+
+这里 `parallel` 表示相对当前 repair signal 的缩放，`perpendicular` 表示不能由
+一个标量缩放解释的 residual。三阶段使用相同分解，但 local、gradient 和 update
+上的缩放含义不同，不能把三个数当成同一个物理参数。
+
+当我们需要对一组随机状态作总体结论时，用 calibration states 冻结平均方向，
+再在 untouched confirmation states 上报告带符号的 held-out effect 和置信区间。
+同一训练 run 内连续状态不能冒充独立 runs。对多个阶段和多个案例同时作显著性
+判断时，预先声明检验组并用 Holm 控制误报；效应量和置信区间仍是主结果。
+
+## 5. 训练数值等价性
+
+在声明协议下，只有当 update effect 的置信区间整体落入预先声明的工程范围，
+且声明的训练后果检查没有失败，才称 candidate 与 repair 在该协议下
+`TRAINING_EQUIVALENT`。
+
+否则区分：
+
+- `DETECTABLE_BUT_SMALL`：方向可复现，但低于工程范围；
+- `MATERIAL_EFFECT`：效应区间超过工程范围；
+- `INCONCLUSIVE`：现有状态不足以区分零效应与工程上重要的效应；
+- `ABSTAIN`：repair、状态绑定或参数可达性不成立。
+
+这是一套待用统一统计实验闭合的操作性定义，不是当前已经验证过所有模型的通用
+安全 Oracle。
+
+## 6. Orbit mean：只用于 reduction 类 source predictor
+
+对 reduction、summation 或 reassociation 一类实现，预先声明一组数学等价的
+schedule `pi ~ nu`：
+
+\[
+m_{\mathrm{orb}}(a;\nu)
+=
+\mathbb E_{\pi\sim\nu}
+\left[\operatorname{fl}_{\pi}(a)-y^\star(a)\right].
+\]
+
+它检查：在一组等价 reduction schedules 上，source residual 的平均是否仍为
+非零。它是一个 **source-side candidate predictor**，边界如下：
+
+- 只用于 reduction / summation / reassociation，不覆盖一般 backward、量化、
+  saved-state 或 optimizer 机制；
+- `m_orb != 0` 不表示每一种 schedule 都同号，也不表示不存在更好的 schedule；
+- 它通常需要运行多个等价 schedule，不是“一次 forward 的免费静态判断”；
+- 它不能替代 local → gradient → update 和训练后果检查。
+
+当前预注册的 Liger 实验是：冻结一组合法 chunk/reduction schedules，先计算
+BF16 accumulator 的 `m_orb`，事前预测它与 local-stage mean effect 方向对齐；
+再换成 FP32 accumulator，预测二者同步下降。成功后只支持这一 source mechanism
+的预测价值，不升级成通用静态 Oracle。
+
+## 7. 严格正负响应实验
+
+对 saved-P、SiLU 等 response 问题，在同一 state 上构造：
+
+\[
+u_i^{\mathrm{resp}}
+=
+\tfrac12\left(Y_i^+ + Y_i^- - 2Y_i^0\right).
+\]
+
+如果它的平均不为零，说明严格相反的输入经过 backward / optimizer 后仍留下同向
+剩余。它与普通 candidate-repair difference 使用同一统计代码，但必须保留不同
+的 `contrast_id`，不能混进同一个 prevalence 分母。
+
+## 8. 短程筛查与长程后果
+
+16/32 步只用于便宜排序和机制定位。描述性方向分数为：
+
+\[
+A_X(T)=
+\frac{\left\|\sum_{t=1}^{T}X_t\right\|}
 {\sqrt{\sum_{t=1}^{T}\|X_t\|^2}}.
 \]
 
-`A` 接近 1 表示不同训练步大致抵消，明显大于 1 表示它们更倾向于同向累积。16/32 步只用于筛查和定位；是否能称为长程方向，优先看 4096 步及其滚动窗口。`A` 是连续测量，不是所有模型共享的安全阈值。
+它必须和本行的随机符号基线、prefix 和 rolling windows 一起解释。`A=1` 或
+`A=2` 都不是所有训练任务共享的安全常数。
 
-## 覆盖范围
+长程配对训练还要拆开：
 
-四个核心模型、三个序列长度的全量首轮检查包含：
+\[
+D_{t+1}-D_t=L_t+B_t,
+\]
+
+其中 `L_t` 是同状态下目标实现的直接 update difference，`B_t` 是两条训练轨迹
+分开后由 weights 和 optimizer state 不同带来的反馈。最终参数或 loss 分叉不能
+反推目标算子每一步都在同向推动。
+
+4096 步结果是当前的长程 consequence evidence，不是 loss 收敛证明，也不是完整
+全参数训练的总体推断。
+
+## 9. 当前证据
+
+### 覆盖
+
+四个核心模型、三个序列长度完成了全量 F+B 与首轮数值检查：
 
 - 466,419 次 eager 调用；
 - 70,171 次被测编译实现调用；
-- 186,807 个已连接真实 forward 和 backward 的计算单元；
-- 1,562 个进入首轮数值检查的具体输出位置。
+- 186,807 个绑定真实 forward/backward 的计算单元；
+- 1,562/1,562 个具体 output positions 得到首轮处置。
 
-1,562 个位置已经全部得到首轮结果：1,390 个通过，172 个拒绝。这里的“全量”只指 forward/backward 绑定和首轮数值检查，不代表 1,562 个位置都完成了 repair、参数可达性和 32 步训练实验。
+这不是 1,562 个 32 步或 4096 步训练实验。
 
-## 历史无状态 SGD 短程定位结果
+### 已有代表结果
 
-三个有界记录显示，算子或 backward 产生的更新差异在 32 个有序状态和无状态 SGD 映射下具有短程方向：
+- **Phi `lm_head dX`**：现有统一 formation artifact 是
+  `LOCAL_CENTERED -> GRADIENT_BIASED -> UPDATE_BIASED`。同一 cold-start
+  AdamW 协议中，deterministic BF16 的短程方向超过自身随机基线；四个真实
+  stochastic-rounding 重复回到各自随机范围，前三个的误差能量与 natural 基本
+  相当。
+- **Liger fused CE**：BF16 chunk accumulation 有明确 source-side 信号，换
+  FP32 accumulator 后方向下降；已有 4096 步直接作用和 loss 分叉。不过统一
+  16+16 formation confirmation 仍未闭合，因此不把机制证据倒写成统一总体结论。
+- **Qwen `lm_head dX`**：gradient direction 在 cold-start AdamW 的 32 步中被
+  压低，但 warm-state 4096 步中重新出现。optimizer verdict 必须和训练状态一起
+  描述。
+- **saved-P / SiLU**：严格 `+delta/-delta` response replay 显示 downstream
+  response 不完全镜像。saved-P 的直接方向未通过 4096 步门；SiLU 是反馈维持型
+  长程案例。
+- **三类统一补测**：Gemma normalization、Llama softmax backward 和 Llama
+  attention BMM 已按相同的 16 calibration + 16 confirmation 协议完成 local、
+  gradient、cold-start AdamW update 三层测量。Gemma 的 local 方向到 gradient
+  消失；softmax 的 gradient 信号在 AdamW 后消失；BMM 的固定方向不稳定，但
+  local repair-relative scaling 通过完整 Holm 校正。这说明现有案例不只包含固定
+  低秩方向。完整数字见 [`three_mechanism_profiles.md`](three_mechanism_profiles.md)。
 
-| 记录 | 算子输出 A | 参数梯度 A | SGD 参数更新 A |
-|---|---:|---:|---:|
-| Liger fused CE，seq128 | 2.984 | 2.931 | 2.931 |
-| Phi-4 `lm_head dX`，seq64 | 2.074 | 4.701 | 4.701 |
-| Qwen `lm_head dX` family，seq256 companion | 1.008 | 1.698 | 1.698 |
+### 当前长程计数
 
-这不是三个独立机制。Liger 是融合累加案例；Phi 和 Qwen 属于同一个 `lm_head` 输入梯度矩阵乘法家族。Qwen 的这组历史 seq256 SGD 数据也不能和后来的 seq128 AdamW 数据拼成一个 exact case。
+当前机器审计包含 23 个唯一主矩阵 case ID、301 条逐行记录：
 
-## 统一 AdamW 的 16/32 步筛查结果
+- 43 条记录同时有 long-run bias 证据与 paired loss split；
+- 其中 3 条是已导出后半程窗口的 direct cases；
+- 8 条有整段 long-run direct evidence，但 late-window statistics 尚未单独导出；
+- 32 条为 feedback-sustained cases；
+- 目前只有 4 条记录具有显式 late rolling-window confirmation；
+- 另有 5 条出现 paired loss split，但 direct bias 未通过 long-run gate；
+- 更宽的 `outcome_relevant` 口径为 105 条，其中包含 57 条尚未测量 4096-step
+  persistence 的历史 coherent candidates，不能全部称为 final persistent cases；
+- 45 条为 unresolved 或 abstain，其余还包括不适用与未完成 persistence 复核的记录。
 
-为了公平比较，我们把三个历史行和十二个结果盲控制行统一到同一 cold-start AdamW 设置：moments 从零开始，之后正常更新。
+这些数字来自
+`results/property/declared_persistent_4096/all_bias_case_audit.json`。人类可读逐行表见
+[`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)；若文字表正在更新，
+以机器 JSON 的字段和每行 artifact 为准。
 
-15 行回溯集中：
+## 10. 下一阶段实验
 
-| 行 | 直接更新 A16 | 直接更新 A32 | 本行随机符号 95% 上界 | 当前结论 |
-|---|---:|---:|---:|---|
-| Liger fused CE | 1.338 | 1.720 | 1.116 | 32 步短程方向，进入长程复核 |
-| Phi-4 `lm_head dX` | 1.013 | 1.029 | 1.004 | 32 步小幅方向，进入长程复核 |
-| Qwen seq128 `lm_head dX` | 0.971 | 0.957 | 1.045 | 此 cold-start 32 步窗口内抵消 |
-| 结果盲 Phi row `0543` | 1.007 | 1.014 | 1.011 | 总体校正后未决 |
+1. 先用合成 update differences 检查误报率、检出能力和置信区间覆盖；覆盖固定
+   平均方向、相对正常 update 的缩放、零均值大方差、正负交替、重尾和相关状态。
+2. 统一保存 joint `G_uu`、`G_rr`、`G_ur`，使 local、gradient、update 都能由
+   同一份 artifact 重算效应量、held-out direction 和置信区间。
+3. 已完成 normalization、softmax backward 和 attention BMM 的首批统一补测；
+   下一批优先重采 Phi、Liger、Qwen `lm_head dX`、Qwen `v_proj`、Mamba `in_proj`；
+   saved-P / SiLU 另存 response contrast。
+4. 在揭示 confirmation 结果前冻结等价性范围、检验组和 Holm 校正规则。
+5. 对 Phi stochastic rounding、Liger accumulator 和 response cases 先写预测，
+   再做干预；同时报告方向效应与误差能量。
+6. 现有 4096 步结果只负责 consequence；需要更强 loss 结论时，以独立 training
+   runs 为统计单位。
 
-`0543` 的单行结果略过门槛，但没有通过十二行 discovery family 的 Holm 校正。因此它不是确认正例，也不能改标成负例。
+## 11. 当前能说与不能说
 
-短程筛查只看前 16 步：
+当前可以说：
 
-- 15 行中升级 5 行；
-- 没漏掉 3 个名义正例；
-- 额外升级 2 个控制项；
-- 回溯 AUROC 为 `0.944`；
-- 同层更新 RMS 的回溯 AUROC 为 `0.528`。
+> 对具体 LLM training implementation，误差大小与训练提交后的平均方向是两类
+> 不同信息。matched local/backward/optimizer measurement 能定位方向在哪里形成、
+> 被压制或留下；短程筛查可排序，长程配对实验负责检查后果。
 
-这支持“便宜的优先级筛查”，不支持“通用安全分类”或长期结论。没有被 16 步筛查升级的行也不能直接判为安全。
+当前不能说：
 
-Gemma 4 的 115 行和 Llama 3.2 的 64 行未重复算子首轮扫描没有产生新的通过冻结升级门的候选；nominal 信号保留在 `docs/gemma_llama_operator_scan.md`，不被直接当成 bias。冻结短程候选池中的 69 条记录已经进入统一 4096 步队列，完成前保持未决。
-
-## 4096 步长程复核（当前权威结果）
-
-当前长期结论以 warm up 128 步后的 4096 步同状态直接更新实验为准。每一步都在同一个自然训练状态下比较 candidate 和 exact repair；它测直接作用，不包含两条轨迹分开后的反馈。
-
-| 案例 | 4096 步方向分数 | 后半程 32 步窗口 | 当前长期结论 |
-|---|---:|---:|---|
-| Liger fused CE | 14.018 | 64/64 的 `A>1` | **直接作用长程成立**；参数距离 9.266，末步 loss gap -0.1305 |
-| Qwen seq128 `lm_head dX` | 6.488 | 64/64 的 `A>1` | 长程直接方向成立 |
-| Phi-4 `lm_head dX` | 46.090 | 64/64 超过自身随机上界 | 长程直接方向成立 |
-| Llama-3.2 `lm_head dX` | 5.881 | 长程方向超过自身随机上界 | 同一实现族在新模型上的长程直接方向 |
-| Ministral-3 `lm_head dX` | 5.050 | 长程方向超过自身随机上界 | 同一实现族在新模型上的长程直接方向 |
-| Mamba `in_proj` | 0.935 | 未超过自身随机基线 | 没有形成稳健长程方向；但已观察到长程配对 loss 分叉 |
-| Qwen saved-P | 1.195 | 28/64 的 `A>1` | 直接方向未保持，但 live loss 已长程分叉 |
-| Qwen seq64 `v_proj` | 1.000 | 长程结果不超过自身随机基线 | 直接方向未保持，但 live loss 已长程分叉 |
-| Qwen seq128 `v_proj` | 0.981 | 长程结果不超过自身随机基线 | 直接方向未保持，但 live 参数距离 0.302、loss gap 已长程分叉 |
-| layer-23 attention state | — | — | 历史实现无法精确重放，拒绝判断 |
-| Qwen3-VL SiLU | 3.100（实际反馈） | 长程反馈维持 | **反馈维持型长程案例**；参数距离 0.888，末步 loss gap -7.95e-09，后半程平均 gap 4.93e-08 |
-| Gemma4 RMSNorm/反馈区域 | 未决 | 未决 | 兼容运行环境在第 294 步后未产出完整结果，保留为未决，不是阴性 |
-| layer-23 attention state | — | — | 历史实现无法精确重放，拒绝判断 |
-| DeepSeek layer-35 `dV` | — | — | 只有形成阶段证据，长程未确认 |
-
-因此，旧的“Qwen 被 AdamW 抵消”不是案例的永久标签。它只描述 cold-start 32 步窗口。新实验在相同算子边界上先 warm up 128 步，第一段 32 步已经为 `A=1.084`，随后累计值从 `A128=1.350`、`A1024=2.950` 增长到 `A4096=6.488`。这说明 verdict 取决于训练状态和 optimizer state。
-
-4096 步仍不是 loss 收敛实验，也不是完整全参数训练。它把“短程方向”升级为“在声明的 warm-state 长程协议中仍有直接方向”，或者在 SiLU 这类案例中确认反馈分离跨越了长程窗口。loss gap 是配对后果信号，不要求两条轨迹达到不同的收敛终点。
-
-## optimizer 会改变短程结果，但不是永久标签
-
-方向差异在进入 optimizer 前已经存在。相同梯度差异经过不同更新映射后，方向性会被保留或压低：
-
-| 案例 | 梯度差异 A32 | captured AdamW A32 | 每步重置 moments A32 |
-|---|---:|---:|---:|
-| Liger | 2.838 | 1.681 | 1.828 |
-| Phi | 4.683 | 1.030 | 1.014 |
-| Qwen | 1.343 | 0.961 | 1.000 |
-
-因此可以说：optimizer 是数值差异进入实际参数更新时必须测量的一环。不能说 AdamW 是这些数值误差的统一来源。
-
-Qwen 的 4096 步结果进一步说明，optimizer 的影响必须和当前训练状态一起描述：cold-start 32 步中 AdamW 将方向压低到 `0.961`，但 warm-state 长程协议中方向重新出现并累积到 `6.488`。现有实验同时改变了 moments、参数状态和输入序列，因此还不能把这一变化单独归因于 moments。
-
-Phi 的两组实验必须分开：
-
-- 旧的 `A=3.325 -> 0.956` 是无状态 SGD 下的随机舍入干预；新的同协议 AdamW 实验复现 natural `A=1.02959`，并将四个 stochastic-rounding 重复降到约 `1.000`，从而闭合了此前的协议缺口；
-- `A=1.029` 是 32 步 cold-start AdamW 下的直接更新结果。
-
-旧实验只支持 SGD 协议；新实验才为 AdamW 结果提供同协议的 source 干预证据。
-
-## 32 步直接作用与训练状态反馈
-
-三个可重算案例的 32 步结果是：
-
-| 案例 | 直接作用 A | 状态反馈 A | 实际参数变化 A | 直接作用沿最终方向的份额 | 状态反馈份额 |
-|---|---:|---:|---:|---:|---:|
-| Liger | 1.720 | 3.494 | 3.489 | 0.0046 | 0.9954 |
-| Phi | 1.029 | 5.075 | 1.711 | 0.4393 | 0.5607 |
-| Qwen | 0.957 | 1.191 | 1.508 | -0.0862 | 1.0862 |
-
-份额是带符号投影，所以可以小于 0 或大于 1。这里说明最终分离主要由训练状态反馈维持，但不能因为反馈的 `A` 更高就声称其绝对贡献一定更大；表中的累计长度和沿最终方向投影才用于判断贡献。
-
-在机械选择的十二行控制样本中，十一行的直接作用接近抵消，但状态反馈仍维持最终分离；一行同时包含两者。这进一步证明最终参数距离不能替代直接作用检查。
-
-## 新实现检查
-
-未见实现检查分两轮：较早冻结的 Gemma v3 有一行直接作用 `A32=1.0003`、状态反馈 `A32=3.2340`；它是直接抵消、状态反馈持续的控制。v4 随后又完成三个新目标：
-
-- 0 个直接持续正例；
-- 1 个状态反馈对照；
-- 2 个没有可测参数作用的目标，记为不适用，而不是负例。
-
-因此两轮检查都没有直接持续正例。它们能说明方法会诚实输出“反馈型”或“不适用”，但不能计算跨未见实现的 recall 或 AUROC，也不能证明整个模型安全。
-
-v4.1 是身份字段更完整的新实验入口，目前状态为 `NOT_STARTED_NEW_FREEZE`。它没有产生新的科学结果，当前稿件也不要求启动它。
-
-## 当前可以写入论文的结论
-
-> 输出误差大小不能判断一个 LLM 训练实现是否会长期形成方向。更直接的办法是在真实 backward 和实际 optimizer 下先做短程筛查，再对升级项做长程同状态复核，并把最终参数分离拆成算子直接作用和训练状态反馈。
-
-当前证据支持一个 **短程方向筛查 + 4096 步长程复核** 的两级流程。短筛用于节省成本；长期标签只来自长程实验。目前 Liger、Phi、Qwen、Llama 和 Ministral 在声明的 warm-state 4096 步协议中保留直接方向；SiLU 显示长程反馈维持并有配对 loss gap；Qwen64 `v_proj`、Qwen seq64 `v_proj` 和 saved-P 的直接方向未保持，虽然 live candidate/repair 轨迹出现长程 loss 分叉，但它们没有持久 bias 组件，只作为后果对照；Mamba 的直接长程审计已完成但未超过自身随机基线，同时已完成 live 配对 loss 审计并观察到分叉；Gemma4、layer-23 和 DeepSeek `dV` 仍按逐行审计结果保留未决。
-
-## 当前不能声称
-
-- 已经得到所有算子都适用的 Oracle 或 property；
-- 16 步未升级等于算子安全；
-- 所有最终参数分离都由算子直接 bias 造成；
-- AdamW 是统一根因；
-- 三个新 Gemma 控制项足以估计未见实现上的准确率；
-- 当前结果代表完整全参数训练的 loss collapse。
-- 4096 步直接方向等于 loss 已经收敛到不同值。
-
-## 当前停止决定
-
-当前稿件不再要求扩大模型池；本轮只把已经出现过方向性或轨迹分离的候选补做长程复核。无法在现有资源和冻结修复边界下安全重放的记录会保留为未决，不会被强行归为无 bias。
-
-当前状态和数据入口：
-
-- [文档入口](README.md)
-- [v4 完成审计](../results/property/direct_persistence_v4/completion_audit.json)
-- [v4 执行状态](../results/property/direct_persistence_v4/execution_status.json)
-- [v4.1 未运行状态](../results/property/direct_persistence_v4_1/execution_status.json)
-- [覆盖汇总](../results/coverage/coverage_table_v1.json)
-## 长程案例总审计
-
-所有历史上曾被认为可能有偏差的候选，都集中登记在
-[`all_bias_long_horizon_audit.md`](all_bias_long_horizon_audit.md)，机器可读原始表为
-`results/property/declared_persistent_4096/all_bias_case_audit.json`。
-
-直接源案例的口径已经收紧为：4096 步直接方向仍然稳定，并且配对训练中已经观察到参数和 loss 分叉。反馈维持型案例另用 4096 步实际反馈分离和配对参数/loss gap 标记，不能冒充直接源 bias。这里不要求两条轨迹收敛到不同的最终 loss。
+- 已经得到对所有实现都适用的静态 property 或安全 Oracle；
+- residual direction 在多数算子上普遍存在；
+- orbit mean 能预测 reduction 之外的机制；
+- 16/32 步未升级等于安全；
+- 4096 步方向等于 loss 已收敛到不同值；
+- 单条训练轨迹等价于独立 runs 的总体结论。

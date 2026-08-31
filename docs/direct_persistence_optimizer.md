@@ -1,5 +1,8 @@
 # 当前数据对 optimizer 的结论
 
+> 本页是 optimizer-stage 的详细证据，不单独定义 bias。当前统一口径先区分
+> source/response formation，再比较 local、gradient 和 update。
+
 当前证据不能说明 AdamW 是数值 bias 的原始来源。它说明 optimizer 会改变一个梯度差异最终如何进入参数更新：有时保留，有时压低。
 
 ## Phi

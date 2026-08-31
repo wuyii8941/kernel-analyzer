@@ -1,5 +1,9 @@
 # Qwen3-VL all-op F+B result
 
+> Historical Qwen3-VL evidence note. Current SiLU classification and project
+> terminology are defined in `docs/current_mainline.md` and the long-run
+> machine audit; this note preserves the original F+B derivation only.
+
 ## Scope
 
 This round covers one natural Qwen3-VL-Reranker-2B multimodal loss step. The

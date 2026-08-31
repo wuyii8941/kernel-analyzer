@@ -1,5 +1,11 @@
 # TCMP experiment checkpoint
 
+> Historical experiment checkpoint. Its 8-row roster and property-search
+> decisions are provenance, not the current case count or paper method. Current
+> definitions live in `docs/current_mainline.md` and `docs/method.md`; current
+> long-run counts live in the machine audit under
+> `results/property/declared_persistent_4096/`.
+
 ## Current decision (2026-08-21)
 
 - The existing systematic ledger contains **8 complete paired F+B trajectory
@@ -451,8 +457,8 @@ per-seed traces remain beside each held-out model's consequence artifacts.
 ## Final decision checkpoint (2026-08-21)
 
 The machine-readable decision matrix is
-`results/property/tcmp_allop_v1/final_decision_matrix.json`, with the concise
-claim and remaining scope in `docs/final_conclusion.md`. The current result is
+`results/property/tcmp_allop_v1/final_decision_matrix.json`, with the current
+claim and remaining scope in `docs/current_mainline.md`. The historical result is
 a conditional predictor for the exact LM-head reduction/VJP family: it
 generalizes across two new operand distributions, but the frozen search found
 zero new-implementation positive cases. New semantic families contribute

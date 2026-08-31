@@ -500,7 +500,9 @@ class GeneratedFP32Observer:
                         promoted_pointers[name].to(dtype=candidate_pointers[name].dtype),
                         sample_size=self.sample_size,
                         metric_chunk_elements=self.metric_chunk_elements,
-                        retain_sampled_values=False,
+                        # The fixed sample is the compact local-stage vector
+                        # used by the unified 32-state transport profile.
+                        retain_sampled_values=True,
                     )
                     for name in output_names
                 }

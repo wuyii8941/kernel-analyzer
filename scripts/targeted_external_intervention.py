@@ -12,6 +12,7 @@ from typing import Any, Callable, Iterable, Mapping
 
 import torch
 
+from forkcert.directional_error_sketch import fixed_flat_coordinate_indices
 from scripts.generated_nontriton_fp32_observer import fp32_external_reference
 
 
@@ -20,6 +21,19 @@ def _source_identity() -> tuple[str, int, str]:
     line = int(caller.f_lineno)
     source = linecache.getline(caller.f_code.co_filename, line).strip()
     return caller.f_code.co_filename, line, hashlib.sha256(source.encode()).hexdigest()
+
+
+def _count_sketch(value: torch.Tensor, *, dimension: int = 4096) -> torch.Tensor:
+    flat = value.detach().float().reshape(-1)
+    result = torch.zeros(dimension, dtype=torch.float64, device=flat.device)
+    for start in range(0, flat.numel(), 1_000_000):
+        stop = min(flat.numel(), start + 1_000_000)
+        indices = torch.arange(start, stop, dtype=torch.int64, device=flat.device)
+        # Two fixed integer hashes; selection is independent of tensor values.
+        buckets = torch.remainder(indices * 1103515245 + 12345, dimension)
+        signs = torch.where(torch.bitwise_and(indices * 214013 + 2531011, 1) == 0, 1.0, -1.0)
+        result.scatter_add_(0, buckets, flat[start:stop].double() * signs)
+    return result.float().cpu()
 
 
 class TargetedExternalIntervention:
@@ -84,6 +98,28 @@ class TargetedExternalIntervention:
                     "max_abs": float(error.abs().max()),
                     "reference_cast_changed_coordinates": int(torch.count_nonzero(cast_delta)),
                     "reference_cast_max_abs_change": float(cast_delta.abs().max()),
+                }
+                # Keep a value-blind, fixed-coordinate view of large GEMM/BMM
+                # outputs.  This is small enough for 32-state formation tests
+                # and, unlike RMS alone, preserves signed direction.
+                positions = fixed_flat_coordinate_indices(
+                    int(candidate.numel()), sample_size=256,
+                ).to(candidate.device)
+                candidate_sample = candidate.detach().reshape(-1)[positions].float().cpu()
+                reference_cast_sample = reference_cast.detach().reshape(-1)[positions].float().cpu()
+                compact_metrics["same_dtype_directional_sketch"] = {
+                    "selection_rule": "EVENLY_SPACED_FLAT_POSITIONS_FIXED_BEFORE_READING_VALUES",
+                    "tensor_numel": int(candidate.numel()),
+                    "flat_coordinate_indices": positions.cpu().tolist(),
+                    "candidate_values": candidate_sample.tolist(),
+                    "reference_values": reference_cast_sample.tolist(),
+                    "signed_delta_values": (candidate_sample - reference_cast_sample).tolist(),
+                }
+                compact_metrics["same_dtype_count_sketch"] = {
+                    "selection_rule": "FIXED_VALUE_BLIND_COUNT_SKETCH_4096",
+                    "tensor_numel": int(candidate.numel()),
+                    "effect": _count_sketch(candidate.detach().float() - reference_cast.detach().float()).tolist(),
+                    "repair": _count_sketch(reference_cast).tolist(),
                 }
                 candidate_before = candidate.detach().float().cpu().clone() if self.capture_tensors else None
                 reference_cpu = reference.detach().float().cpu().clone() if self.capture_tensors else None

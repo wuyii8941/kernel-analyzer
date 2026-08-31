@@ -1,5 +1,9 @@
 # v4 完成度矩阵
 
+> 这是 v4 短程计划的完成记录，不是当前所有 long-run exact-target runs 的完成
+> 矩阵。当前计数以 `results/property/declared_persistent_4096/all_bias_case_audit.json`
+> 为准。
+
 这张表按原始计划逐项记录当前证据。`PARTIAL` 和 `ABSTAIN` 是有意保留的结果，不表示把缺失数据当成通过。
 
 当前 16/32 步 v4 计划已经按有界结论收口；长期标签由单独的 4096 步复核覆盖。表中的“仍缺什么”表示升级更强主张所需的未来证据，不表示短程 v4 没有完成。
