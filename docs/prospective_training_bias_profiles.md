@@ -78,4 +78,3 @@ AdamW 普遍放大所有数值差异。
 - `results/property/training_bias_profile_v2/prospective_batch_2/summary.json`
 - `results/property/training_bias_profile_v2/prospective_batch_1/consequence/deepseek_norm_4096.json`
 - `results/property/training_bias_profile_v2/prospective_batch_2/consequence/deepseek_attn_projection_4096.json`
-
