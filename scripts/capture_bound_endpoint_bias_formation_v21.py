@@ -47,6 +47,12 @@ from scripts.run_generated_fp32_screen import file_digest, load_model  # noqa: E
 from scripts.run_same_dtype_semantic_oracle import load  # noqa: E402
 from scripts.generated_nontriton_fp32_observer import fp32_external_reference  # noqa: E402
 from scripts.same_dtype_semantic_observer import SameDtypeSemanticCandidateObserver  # noqa: E402
+from scripts.run_heldout_lmhead_consequence import adam_delta  # noqa: E402
+from scripts.run_training_bias_profile_v2_empirical import (  # noqa: E402
+    _append_contrast as append_v2_contrast,
+    _finish_stages as finish_v2_stages,
+    _new_stage_store as new_v2_stage_store,
+)
 
 
 LR = 1.0e-4
@@ -216,6 +222,14 @@ def main() -> None:
     parser.add_argument("--engineering-reach-only", action="store_true")
     parser.add_argument("--screening-gram", action="store_true")
     parser.add_argument("--extended-confirmation", action="store_true")
+    parser.add_argument(
+        "--training-bias-profile-v2-output-dir", type=Path,
+        help=(
+            "Also emit the frozen cold-start AdamW three-stage profile used by "
+            "Training Bias Profile v2. This is additive: the historical SGD "
+            "formation certificate remains unchanged."
+        ),
+    )
     parser.add_argument("--allow-graph-breaks", action="store_true")
     parser.add_argument(
         "--capture-antithetic-response", action="store_true",
@@ -376,6 +390,10 @@ def main() -> None:
         task_id: [] for task_id in task_ids
     }
     reach_rows: dict[str, list[dict[str, Any]]] = {task_id: [] for task_id in task_ids}
+    v2_stores = (
+        {task_id: new_v2_stage_store() for task_id in task_ids}
+        if args.training_bias_profile_v2_output_dir is not None else None
+    )
     args.spool_dir.mkdir(parents=True, exist_ok=True)
 
     for state_index, state in enumerate(states[:args.states]):
@@ -479,6 +497,29 @@ def main() -> None:
             repair_gradient = parameters[carrier].grad.detach().float().cpu().clone()
             gradient_delta = baseline_gradients[carrier] - repair_gradient
             update_delta = -LR * gradient_delta
+            if v2_stores is not None:
+                zeros = torch.zeros_like(repair_gradient)
+                candidate_update, _, _ = adam_delta(
+                    baseline_gradients[carrier], zeros, zeros, 1,
+                    learning_rate=LR, beta1=0.9, beta2=0.95,
+                )
+                repair_update, _, _ = adam_delta(
+                    repair_gradient, zeros, zeros, 1,
+                    learning_rate=LR, beta1=0.9, beta2=0.95,
+                )
+                append_v2_contrast(
+                    v2_stores[task_id], "LOCAL",
+                    observed_locals[task_id],
+                    references[task_id].detach().float().cpu(),
+                )
+                append_v2_contrast(
+                    v2_stores[task_id], "PARAMETER_GRADIENT",
+                    gradient_delta, repair_gradient,
+                )
+                append_v2_contrast(
+                    v2_stores[task_id], "ADAMW_UPDATE",
+                    candidate_update - repair_update, repair_update,
+                )
             if args.capture_antithetic_response:
                 reflected: dict[str, Any] = {}
 
@@ -871,6 +912,45 @@ def main() -> None:
         print(json.dumps({"event": "FORMATION_CASE_COMPLETE", "case": case_id,
                           "first_confirmed_bias_stage": first_confirmed,
                           "output": str(target)}), flush=True)
+        if v2_stores is not None:
+            args.training_bias_profile_v2_output_dir.mkdir(parents=True, exist_ok=True)
+            v2_target = args.training_bias_profile_v2_output_dir / f"{case_id}.json"
+            v2_payload = {
+                "schema": "kernel-analyzer-training-bias-profile-v2-raw-case",
+                "status": "COMPLETE",
+                "case_id": case_id,
+                "case_key": case_id,
+                "source_task_id": task_id,
+                "input_bank": str(args.state_bank or args.input_bank),
+                "state_ids": state_ids,
+                "calibration_state_ids": state_ids[:16],
+                "confirmation_state_ids": state_ids[16:32],
+                "optimizer": {
+                    "name": "AdamW", "weight_decay": 0.0, "lr": LR,
+                    "betas": [0.9, 0.95], "epsilon": 1e-8,
+                    "moments": "ZERO_AT_EVERY_INPUT_STATE",
+                },
+                "carrier": case["carrier"],
+                "runtime_boundary": {
+                    "task_id": task_id,
+                    "exact_aot_endpoint_id": tasks[task_id]["exact_aot_endpoint_id"],
+                    "frozen_release_id": args.release_dir.name,
+                },
+                "determinism": {
+                    "all_exact": True,
+                    "basis": "candidate and observation-only sham gradients are bitwise equal at every state",
+                },
+                "stages": finish_v2_stages(v2_stores[task_id]),
+                "claim_boundary": (
+                    "32 frozen input states at one checkpoint under cold-start "
+                    "AdamW with zero weight decay; not a warm-moment or independent-run result."
+                ),
+            }
+            v2_target.write_text(json.dumps(v2_payload, indent=2, sort_keys=True) + "\n")
+            print(json.dumps({
+                "event": "TRAINING_BIAS_PROFILE_V2_CASE_COMPLETE",
+                "case": case_id, "output": str(v2_target),
+            }), flush=True)
     shutil.rmtree(args.spool_dir)
 
 

@@ -1,0 +1,28 @@
+{
+  "schema": "kernel-analyzer-training-bias-profile-v2-prospective-batch-v1",
+  "status": "FROZEN_BEFORE_NEW_PROFILE_MEASUREMENT",
+  "selection_source": "results/property/tcmp_allop_v1/semantic_family_heldout_pool_v1.json",
+  "selection_rule": "After batch 1, select the earliest exact-runtime-executable ATTENTION_PROJECTION_BACKWARD record not used in method development or batch 1.",
+  "cases": [
+    {
+      "pool_rank": 15,
+      "model": "deepseek8b",
+      "sequence_length": 128,
+      "task_id": "backward:1256:out_ptr0",
+      "family": "ATTENTION_PROJECTION_BACKWARD"
+    }
+  ],
+  "measurement": {
+    "states": 32,
+    "calibration_states": 16,
+    "confirmation_states": 16,
+    "stages": ["LOCAL_ENDPOINT", "PARAMETER_GRADIENT", "EFFECTIVE_UPDATE"],
+    "primary_update_mapping": "cold-start AdamW, beta1=0.9, beta2=0.95, epsilon=1e-8, weight_decay=0"
+  },
+  "analysis": {
+    "branches_for_every_case": ["additive mean direction", "change aligned with the normal repair update", "remaining direction after removing aligned scaling"],
+    "primary_family": "three update-stage branches for the one frozen case",
+    "multiplicity": "Holm family-wise correction"
+  },
+  "reporting_rule": "Report the row regardless of outcome; failure to execute is an abstention."
+}

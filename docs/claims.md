@@ -25,7 +25,9 @@
 | 主张 | 判定门槛 | 证据 | 状态 |
 |---|---|---|---|
 | 所选 residual boundary 上的平均 update 可精确拆成 source asymmetry 与 response rectification 两项。 | 预声明 `e -> -e`，对 event distribution 和 response 作奇偶分解。 | [`effective_antithetic_symmetry.md`](effective_antithetic_symmetry.md); [`method.md`](method.md) | `SUPPORTED_AS_IDENTITY`；不是底层机制穷尽分类 |
-| 方向或稳定缩放可能在 local、gradient 或 update 阶段形成、增强或消失。 | 同一 matched inputs 和 contrast 保存三层完整向量或 Gram，并用同一三分支规则。 | `results/property/training_bias_profile_v2/five_case_summary.json`; [`five_case_training_bias_profile_v2.md`](five_case_training_bias_profile_v2.md) | `SUPPORTED_FOR_FIVE_DEVELOPMENT_CASES`；不是 prevalence 或 held-out 泛化结果 |
+| 方向或稳定缩放可能在 local、gradient 或 update 阶段形成、增强或消失。 | 同一 matched inputs 和 contrast 保存三层完整向量或 Gram，并用同一三分支规则。 | `results/property/training_bias_profile_v2/five_case_summary.json`; prospective batch summaries; [`five_case_training_bias_profile_v2.md`](five_case_training_bias_profile_v2.md); [`prospective_training_bias_profiles.md`](prospective_training_bias_profiles.md) | `SUPPORTED_FOR_FIVE_DEVELOPMENT_CASES_AND_BOUNDED_NEW_BATCHES`；不是 prevalence 或通用泛化结果 |
+| 新 DeepSeek normalization 与 attention-projection backward 在 cold-start AdamW 下反复缩小正常 update。 | 16 个 calibration + 16 个 confirmation states；三分支统一测量；各自冻结组内 Holm 校正；完整 repair/sham 绑定。 | prospective batch 1/2 raw and summary JSON | `SUPPORTED_FOR_TWO_BOUNDED_CASES`：分别为 `−13.68%` 与 `−10.69%`；不能外推到所有 DeepSeek 算子或 warm moments |
+| 上述两个新 update effect 会造成配对 loss 分叉。 | 四臂 live replay；形成证据独立存在；loss split 是事前停止条件。 | prospective batch 1/2 consequence JSON | `SUPPORTED_AS_TRAJECTORY_NON_IDENTITY`：两项均在 step 1 停止；不是 4096-step persistence 或最终质量结论 |
 | Phi 显示 backward 可放大剩余共同方向，而 AdamW 可把它变成相对正常 update 的缩小。 | 三阶段使用同一 32-window protocol；gradient residual 与 update aligned branch 分别通过解释/主要 Holm 组。 | same v2 five-case summary | `BOUNDED`：一个 checkpoint、cold-start AdamW |
 | 严格正负 residual 仍可能得到不相反的 update。 | 同一 state、weights 和 moments 下 exact `+delta/-delta` replay，response remainder 非零。 | saved-P / SiLU artifacts; [`effective_antithetic_symmetry.md`](effective_antithetic_symmetry.md) | `SUPPORTED_CASE_LEVEL` |
 
@@ -36,7 +38,7 @@
 | 误差能量与可复现平均方向必须分开报告。 | 每层同时报告 `E||u||²`、mean effect、normal-update scale。 | [`method.md`](method.md); existing RMS/direction comparisons | `SUPPORTED_AS_METHOD`; v1 empirical 数字保持探索性 |
 | Aligned scaling 与剩余 residual direction 应分开。 | 保存 `G_uu`、`G_rr`、`G_ur`，对所有案例同时运行固定方向、aligned scaling 和 residual direction。 | [`training_bias_profile_v2.md`](training_bias_profile_v2.md); five-case raw/summary JSON | `SUPPORTED_FOR_FIVE_DEVELOPMENT_CASES`：Liger 为 residual direction；Phi、v-proj、Mamba 为 update scaling；不得预写普遍发生率 |
 | 论文级判断要报告效应量与区间。 | calibration/confirmation 分离；区间范围必须与输入抽样方式一致。 | [`training_bias_profile_v2.md`](training_bias_profile_v2.md); `single_state_unit_validation.json`; five-case summary | `SUPPORTED_FOR_FROZEN_WINDOW_SUITE`；不是独立-run 或随机总体区间 |
-| 多案例、多阶段判断需要控制总体误报。 | 结果揭示前冻结检验组；update 与解释阶段分开作 Holm。 | empirical protocol/amendments; five-case summary | `COMPLETED`：15 项 update 主组、30 项 local/gradient 解释组 |
+| 多案例、多阶段判断需要控制总体误报。 | 结果揭示前冻结检验组；update 与解释阶段分开作 Holm；无法判断项不从分母移除。 | empirical protocol/amendments; five-case summary; prospective batch 1/2 protocols and summaries | `COMPLETED`：开发组 15/30 项；新 batch 1 为 12/24 项且两项 abstain 以 p=1 保留；batch 2 为 3/6 项 |
 | Training equivalence 是相对 protocol 的操作性结论。 | update effect CI 落入预声明工程范围，且声明 consequence endpoint 不失败。 | [`current_mainline.md`](current_mainline.md) | `PLANNED_FRAMEWORK`，不是现成通用 verifier |
 
 ## Orbit mean

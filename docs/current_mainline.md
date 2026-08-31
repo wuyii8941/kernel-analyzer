@@ -244,6 +244,25 @@ Qwen `lm_head` 则显示 gradient 中的方向可以在当前 AdamW 条件下消
 remainder；DeepSeek `dV` 是 gradient-stage、stateless SGD 的冻结未见状态确认。它们
 不能混进上述五例 AdamW update 检验组。
 
+### 方法冻结后的新案例
+
+Training Bias Profile v2 冻结后又运行了两个独立批次。第一批四项保留了一个确认项、
+一个完整负例和两个无法判断；第二批预先固定一个 attention projection 项并完成确认。
+
+| 新案例 | cold-start AdamW update | 配对训练后果 |
+|---|---|---|
+| DeepSeek normalization backward | 正常 update 缩小 `13.68%`，区间 `[11.55%, 15.82%]` | 第 1 步 loss gap `0.00950384` |
+| DeepSeek attention projection backward | 正常 update 缩小 `10.69%`，区间 `[9.37%, 12.02%]` | 第 1 步 loss gap `0.00934792` |
+| Phi loss / CE backward | 三个 update 分支均未确认 | 未升级后果实验 |
+| Mamba recurrent backward | 环境无法完成精确编译，无法判断 | 未运行 |
+| Qwen attention-state backward | 冻结 source-binding 文件损坏，无法判断 | 未运行 |
+
+两个 DeepSeek 结果表明新方法能在不同 backward 家族和参数位置发现随正常 update
+旋转的稳定缩小；Phi 负例表明它不会把任何非零 residual 都升级。两个 loss 实验达到
+事前停止条件后在第 1 步结束，因此只证明轨迹不再相同，不是 4096 步持续性或最终
+训练质量结论。详细证据见
+[`prospective_training_bias_profiles.md`](prospective_training_bias_profiles.md)。
+
 ### 当前长程计数
 
 当前机器审计包含 23 个唯一主矩阵 case ID、301 条逐行记录：
@@ -267,8 +286,9 @@ remainder；DeepSeek `dV` 是 gradient-stage、stateless SGD 的冻结未见状�
 
 1. 五个开发案例的 v2 重采已经完成。停止围绕它们调整分支、阈值或校正组；任何后续
    解释都必须从冻结 JSON 生成。
-2. 下一批建立完全未参与方法开发的 implementation pool。候选来源、抽样规则、repair、
-   输入银行、optimizer、三个分支、整体校正组和无法判断条件必须先提交，再揭示结果。
+2. 方法冻结后的前两批新案例已经完成并保持原样。下一批应优先修复 Qwen source-binding
+   运行包和 Mamba fast scan 环境，然后冻结跨 checkpoint / warm-moment 的新输入；
+   不能用替换失败项的方式提高成功率。
 3. 新 pool 不以“找到新正例”为成功条件。positive、negative 和无法判断都完整报告；
    若全为 negative，只报告升级率和无法判断率，不补造 recall 或泛化准确率。
 4. 对 held-out 中确认的项目，才做 prediction-first 干预：先根据 local → gradient →

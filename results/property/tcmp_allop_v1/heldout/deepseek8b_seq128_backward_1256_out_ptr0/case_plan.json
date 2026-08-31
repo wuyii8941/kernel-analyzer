@@ -1,0 +1,42 @@
+{
+  "case_id": "deepseek8b_seq128_backward_1256_out_ptr0",
+  "cases": [
+    {
+      "carrier": "model.layers.18.self_attn.v_proj.weight",
+      "case_id": "deepseek8b_seq128_backward_1256_out_ptr0",
+      "claim_boundary": "Exact ATTENTION_PROJECTION_BACKWARD endpoint backward:1256:out_ptr0; the complete F+B boundary and declared parameter reach must be validated by the runner before any formation verdict.",
+      "reference_method": "AOT_REPLAY",
+      "task_id": "backward:1256:out_ptr0"
+    }
+  ],
+  "closure_task": "backward:1256:out_ptr0",
+  "complete_fb_unit_required": true,
+  "implementation_kind": "TRITON",
+  "metadata_binding": {
+    "exact_aot_endpoint_id": "backward:graph0:clone_197",
+    "has_exact_downstream_closure": true,
+    "member_count": 12,
+    "nearest_carrier": {
+      "aliases": [
+        "model.layers.18.self_attn.v_proj.weight"
+      ],
+      "aot_distance": 4,
+      "gradient_source_node": "mm_501",
+      "name": "model.layers.18.self_attn.v_proj.weight",
+      "shape": [
+        1024,
+        4096
+      ]
+    },
+    "pool_cell_id": "multishape-backward-cell-0014",
+    "pool_rank": 15,
+    "semantic_region_executable": true
+  },
+  "model": "deepseek8b",
+  "region_symbol": "triton_poi_fused_clone_squeeze_sum_transpose_view_7",
+  "schema": "kernel-analyzer-tcmp-case-plan-v2",
+  "sequence_length": 128,
+  "source_family": "ATTENTION_PROJECTION_BACKWARD",
+  "source_internal_region": "backward:1256:out_ptr0",
+  "task_id": "backward:1256:out_ptr0"
+}

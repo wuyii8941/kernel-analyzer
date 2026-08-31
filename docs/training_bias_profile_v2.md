@@ -91,5 +91,12 @@ update 百分比直接解释为传播倍率。完整区间、原始 p 值、Holm
 [`empirical_protocol_amendment_3.json`](../results/property/training_bias_profile_v2/empirical_protocol_amendment_3.json)
 只收紧这一表述，没有改变任何数值、阈值或标签。
 
-下一步不是继续调这五例，而是在方法和判断规则不变的前提下，运行完全未参与方法
-开发的新 implementation pool。
+方法冻结后的第一轮新案例已经开始执行，结果见
+[`prospective_training_bias_profiles.md`](prospective_training_bias_profiles.md)。第一批
+四项得到一个确认 update effect、一个完整负例和两个无法判断；第二批 attention
+projection 得到另一个确认 effect。两个 DeepSeek 案例都表现为相对正常 update 的
+稳定缩小，而不是固定参数方向。它们有首次 loss 分叉后果，但不是 4096 步持续性结果。
+
+这仍不是完整的未见实现泛化评估：新案例没有参与 v2 方法开发，但部分训练家族在仓库
+历史中已有工程探针。下一步应修复 Qwen 运行包、补齐 Mamba fast scan 环境，并冻结
+跨 checkpoint / warm-moment 的新批次，而不是回头调整这两批的规则。

@@ -1,0 +1,66 @@
+{
+  "schema": "kernel-analyzer-training-bias-profile-v2-prospective-batch-v1",
+  "status": "FROZEN_BEFORE_NEW_PROFILE_MEASUREMENT",
+  "selection_source": "results/property/tcmp_allop_v1/semantic_family_heldout_pool_v1.json",
+  "selection_rule": "Scan frozen_pool_rank upward; retain the earliest exact-runtime-executable record from each distinct model and training family; exclude every case used to develop Training Bias Profile v2.",
+  "cases": [
+    {
+      "pool_rank": 0,
+      "model": "mamba",
+      "sequence_length": 256,
+      "task_id": "backward:31724:out_ptr0",
+      "family": "STATE_SPACE_RECURRENT_BACKWARD"
+    },
+    {
+      "pool_rank": 2,
+      "model": "deepseek8b",
+      "sequence_length": 256,
+      "task_id": "backward:1714:in_out_ptr0",
+      "family": "NORMALIZATION_BACKWARD"
+    },
+    {
+      "pool_rank": 4,
+      "model": "qwen",
+      "sequence_length": 64,
+      "task_id": "backward:1000:output_0",
+      "family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD"
+    },
+    {
+      "pool_rank": 7,
+      "model": "phi4",
+      "sequence_length": 64,
+      "task_id": "backward:495:out_ptr1",
+      "family": "LOSS_CE_BACKWARD"
+    }
+  ],
+  "measurement": {
+    "states": 32,
+    "calibration_states": 16,
+    "confirmation_states": 16,
+    "stages": [
+      "LOCAL_ENDPOINT",
+      "PARAMETER_GRADIENT",
+      "EFFECTIVE_UPDATE"
+    ],
+    "primary_update_mapping": "cold-start AdamW, beta1=0.9, beta2=0.95, epsilon=1e-8, weight_decay=0",
+    "required_checks": [
+      "candidate and repair start from the same complete state",
+      "repair changes only the declared implementation boundary",
+      "candidate repeat is deterministic",
+      "declared parameter is reached",
+      "all finite nonzero and zero results are retained",
+      "failed boundaries produce ABSTAIN rather than an estimated value"
+    ]
+  },
+  "analysis": {
+    "branches_for_every_case": [
+      "additive mean direction",
+      "change aligned with the normal repair update",
+      "remaining direction after removing aligned scaling"
+    ],
+    "primary_family": "all three update-stage branches for all four frozen cases",
+    "multiplicity": "Holm family-wise correction",
+    "interpretation_rule": "A new form is reported only when a held-out update-stage branch survives the frozen family correction. Local and gradient stages explain where it appeared; they do not replace the update verdict."
+  },
+  "reporting_rule": "Report all four rows, including centered, unresolved, and abstaining cases. This batch estimates method behavior on these frozen cases, not prevalence over all LLM operators."
+}
