@@ -33,6 +33,7 @@ sys.path[:0] = [
     str(ROOT / "scripts"),
 ]
 
+from kernel_analyzer.short_persistence import count_sketch_chunks  # noqa: E402
 from kernel_analyzer.training_bias_profile import matched_training_bias_profile  # noqa: E402
 from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime  # noqa: E402
 from scripts.run_generated_fp32_screen import load_model, tensor_digest  # noqa: E402
@@ -40,7 +41,6 @@ from scripts.run_heldout_lmhead_consequence import adam_delta  # noqa: E402
 from scripts.run_phi64_lmhead_dx_repair import MMRepair  # noqa: E402
 from scripts.run_qwen128_vproj_repair import VProjRepair  # noqa: E402
 from scripts.run_qwen256_lmhead_property_confirmation import ShapeObserver  # noqa: E402
-from scripts.targeted_external_intervention import _count_sketch  # noqa: E402
 
 
 SKETCH_DIMENSION = 4096
@@ -114,12 +114,25 @@ def _compact_views(value: torch.Tensor | np.ndarray) -> tuple[dict[str, np.ndarr
     coordinates = int(flat.numel())
     if coordinates <= SKETCH_DIMENSION:
         return {"EXACT": flat.cpu().numpy().copy()}, coordinates
-    return {
-        f"SKETCH_SEED_{seed}": _count_sketch(
-            flat, dimension=SKETCH_DIMENSION, seed=seed,
-        ).cpu().numpy().copy()
-        for seed in SKETCH_SEEDS
-    }, coordinates
+    # Transfer a large tensor to host once, then replay the same frozen chunk
+    # boundaries for all three value-blind hashes.  This is numerically
+    # identical to three calls to _count_sketch but avoids three PCIe scans.
+    host = flat.cpu().numpy()
+    result: dict[str, np.ndarray] = {}
+    for seed in SKETCH_SEEDS:
+        chunks = (
+            host[start:min(coordinates, start + 1_000_000)]
+            for start in range(0, coordinates, 1_000_000)
+        )
+        sketch, consumed = count_sketch_chunks(
+            chunks, projection_dim=SKETCH_DIMENSION, seed=seed,
+        )
+        if consumed != coordinates:
+            raise RuntimeError("CountSketch did not consume the complete vector")
+        result[f"SKETCH_SEED_{seed}"] = (
+            sketch * SKETCH_DIMENSION**0.5
+        ).astype(np.float32)
+    return result, coordinates
 
 
 def _new_stage_store() -> dict[str, dict[str, dict[str, Any]]]:
@@ -457,6 +470,8 @@ def run_liger(device: torch.device) -> dict[str, Any]:
     ).to(device).eval()
     model.config.use_cache = False
     parameter = model.model.embed_tokens.weight
+    for candidate_parameter in model.parameters():
+        candidate_parameter.requires_grad_(candidate_parameter is parameter)
     base = parameter.detach().float().clone()
     candidate_module = LigerFusedLinearCrossEntropyLoss(
         ignore_index=-100, reduction="mean", accum_dtype=None,
