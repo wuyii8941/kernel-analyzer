@@ -213,56 +213,36 @@ D_{t+1}-D_t=L_t+B_t,
 
 ### 已有代表结果
 
-下面的 16+16 结果是在方法开发阶段得到的固定-suite/短程证据。它们保留全部数据和
-机制价值，但连续状态来自一条 repair-driven trajectory；在 v2 独立 training-unit
-重采前，原有逐状态“95% 区间”不能解释为跨独立 training runs 的总体区间，也不能
-据此签发 training-equivalence 结论。
+Training Bias Profile v2 已对五个开发案例完成统一重采。每例使用 32 个冻结且不重叠
+的输入窗口，前 16 个确定方向、后 16 个检查；每个窗口恢复同一 checkpoint 和零
+AdamW moments。主要检验是 `5 cases × 3 update branches = 15` 项，local/gradient
+的 30 项只用于解释，两组分别使用 Holm 校正。大向量要求三个预先声明的摘要方向
+一致。输入银行并非已证明的随机总体，因此区间只描述这组冻结窗口。
 
-- **Phi `lm_head dX`**：现有统一 formation artifact 是
-  `LOCAL_CENTERED -> GRADIENT_BIASED -> UPDATE_BIASED`。同一 cold-start
-  AdamW 协议中，deterministic BF16 的短程方向超过自身随机基线；四个真实
-  stochastic-rounding 重复回到各自随机范围，前三个的误差能量与 natural 基本
-  相当。
-- **Liger fused CE**：已经用与 Phi 相同的 16 calibration + 16 confirmation、
-  cold-start AdamW 协议重测。local、gradient 和 AdamW update 都留下可复现的
-  residual direction；AdamW update 的平均方向效应为正常 update RMS 的 0.0327%，
-  95% 区间为 0.0266%–0.0401%。candidate 是 BF16 chunk accumulation，repair 是
-  保持 BF16 接口的 FP32 accumulator，因此 accumulator precision 的 matched
-  intervention 已闭合。已有 4096 步直接作用和 loss 分叉。
-- **统一 Phi / Liger 结果**：两个 anchor 的三阶段效应量、区间和 18 项 Holm 校正
-  见 [`unified_measurement_round.md`](unified_measurement_round.md)。Phi 的同协议
-  随机舍入干预中，natural 方向分数为 1.02971，四个随机舍入重复均回到约 1.000；
-  前三个重复的更新误差能量仍为 natural 的 99.8%–101.6%。
-- **Qwen `lm_head dX`**：统一 16+16 结果显示 local、gradient 和 AdamW update
-  的平均方向均在后半状态复现；AdamW update 效应只有正常 update RMS 的
-  0.000400%，95% 区间为 0.000215%–0.000619%。因此 AdamW 是强烈压低，而不是
-  完全消除。warm-state 4096 步中也有直接方向；optimizer verdict 仍必须和训练
-  状态一起描述。
-- **Qwen `v_proj`**：local、gradient 和 AdamW update 均未通过统一 16+16 确认。
-  它是“局部差异不等于跨状态平均方向”的负例。
-- **Mamba `in_proj`**：local 未确认平均方向；gradient 相对正常 gradient 平均缩小
-  0.967%，95% 区间为 0.383%–1.786%，但 AdamW update 中消失。这提供了
-  backward 产生、optimizer 消除的非 Transformer 例子。
-- **saved-P / SiLU**：saved-P 的严格 `+delta/-delta` response remainder 在后半
-  状态复现，效应为正常 odd response 尺度的 2.90%，95% 区间为 1.17%–4.93%。
-  SiLU 的逐状态 response 不是严格镜像，但后半状态方向与前半相反，未通过统一
-  方向确认；它保留为 cold-start / phase-sensitive 案例。saved-P 的直接方向未通过
-  4096 步门；SiLU 的长程结果主要由 feedback 维持。
-- **三类统一补测**：Gemma normalization、Llama softmax backward 和 Llama
-  attention BMM 已按相同的 16 calibration + 16 confirmation 协议完成 local、
-  gradient、cold-start AdamW update 三层测量。Gemma 的 local 方向到 gradient
-  消失；softmax 的 gradient 信号在 AdamW 后消失；BMM 的固定方向不稳定，但
-  local repair-relative scaling 通过完整 Holm 校正。这说明现有案例不只包含固定
-  低秩方向。完整数字见 [`three_mechanism_profiles.md`](three_mechanism_profiles.md)。
-- **五个补充案例**：Qwen `lm_head`、Qwen `v_proj`、Mamba `in_proj`、saved-P 和
-  SiLU 已完成 v1 统一分半统计与两个分开的 Holm 检验组。它们是回溯开发证据，
-  不是 v2 的独立 training-unit confirmation。完整数字和解释见
-  [`extended_unified_profiles.md`](extended_unified_profiles.md)。
-- **DeepSeek layer-35 attention `dV`**：已有事前冻结的 32-state unseen
-  confirmation。candidate 相对 repair 的 `v_proj.weight` gradient 在同状态正常
-  gradient 方向上平均缩小 0.370%，95% 区间为 0.059%–0.664%；3 个候选中只有
-  这一项复现，2 个控制项均未误报。它是 gradient-stage、stateless SGD 映射下的
-  证据，不能和上面的 AdamW update 数字混为同一协议。
+| 案例 | local / gradient 中首先看到什么 | cold-start AdamW update | 4096 步对照 |
+|---|---|---|---|
+| Liger fused CE | local 已有剩余共同方向，gradient 保留 | 剩余方向 `0.0151%`，区间 `[0.00614%, 0.0240%]` | 固定方向稳健，且有 paired loss split |
+| Phi `lm_head dX` | local 较弱，backward 将剩余方向放大 | 正常 update 缩小 `0.1506%`，区间 `[0.0966%, 0.2046%]` | 固定方向稳健，且有 paired loss split |
+| Qwen `lm_head dX` | gradient 出现剩余共同方向 | 三个分支均未确认 | warm/long-run 协议中固定方向稳健 |
+| Qwen `v_proj` | local、gradient 均未确认 | 正常 update 缩小 `6.04%`，区间 `[3.44%, 8.64%]` | 固定方向不稳健，但有 loss split |
+| Mamba `in_proj` | local 只有极小缩放，gradient 未确认 | 正常 update 缩小 `3.12%`，区间 `[2.86%, 3.37%]` | 固定方向不稳健，但有 loss split |
+
+这五例不是同一种低秩偏差：Liger 是去掉正常 update 缩放后仍存在的共同方向；Phi、
+Qwen `v_proj` 和 Mamba 的 update 主要表现为随各自正常 update 方向旋转的稳定缩小；
+Qwen `lm_head` 则显示 gradient 中的方向可以在当前 AdamW 条件下消失。
+
+短窗口与 4096 步并不矛盾，它们问的是不同问题。Qwen `v_proj` 和 Mamba 的稳定缩小
+不要求固定参数方向跨状态相同；Qwen `lm_head` 的 cold-start 与 warm/long-run 条件也
+不同。任何案例都不能脱离 optimizer state、输入集合和 horizon 获得永久标签。
+
+完整结果、区间、原始 p 值、Holm 校正值和三 seed 审计见
+[`five_case_training_bias_profile_v2.md`](five_case_training_bias_profile_v2.md)。历史 v1
+结果继续保留在 `unified_measurement_round.md`、`extended_unified_profiles.md` 和
+`three_mechanism_profiles.md` 中，但不覆盖 v2 结果。
+
+另外两类证据仍保持不同 contrast：saved-P / SiLU 使用严格 `+delta/-delta` response
+remainder；DeepSeek `dV` 是 gradient-stage、stateless SGD 的冻结未见状态确认。它们
+不能混进上述五例 AdamW update 检验组。
 
 ### 当前长程计数
 
@@ -285,24 +265,19 @@ D_{t+1}-D_t=L_t+B_t,
 
 ## 10. 下一阶段实验
 
-1. Training Bias Profile v2 已在独立 run-like clusters（每个 cluster 含 4 个相关
-   步骤）上通过合成 go/no-go：四类零均值场景整体误报率为 1.5%–5%，区间覆盖率为
-   92%–98%，两类目标 effect 检出率均为 100%。下一步必须用独立 training units
-   重采真实案例，不能继续把一条轨迹的 32 步当成 32 个独立样本。
-2. 新 artifact 统一保存 joint `G_uu`、`G_rr`、`G_ur`、`inference_unit_id` 和 sketch
-   schema/seed/dimension。旧固定 sketch 结果不删除，也不自动升级成 v2 结果。
-3. Phi、Liger、Qwen `lm_head dX`、Qwen `v_proj`、Mamba `in_proj`、normalization、
-   softmax backward 和 attention BMM 已完成统一补测；saved-P / SiLU 也已按独立
-   response contrast 重算。下一步先用 v2 重采 Liger、Phi、Qwen `lm_head dX`、
-   Qwen `v_proj` 和 Mamba `in_proj`；每个 headline 大向量同时使用三个冻结 sketch
-   seeds 或完整 Gram。完成后才运行新的 held-out implementation pool。
-4. DeepSeek `dV` 的冻结 unseen-state gradient confirmation 已完成。今后的 held-out
-   pool 继续要求先冻结等价性范围、检验组和 Holm 规则，再揭示结果。
-5. Phi stochastic rounding 和 Liger accumulator 已完成同目标协议的 matched
-   intervention；saved-P 已形成稳定 response-side 证据，后续机制干预可作为增强项，
-   不再阻塞当前主线。
-6. 现有 4096 步结果只负责 consequence；需要更强 loss 结论时，以独立 training
-   runs 为统计单位。
+1. 五个开发案例的 v2 重采已经完成。停止围绕它们调整分支、阈值或校正组；任何后续
+   解释都必须从冻结 JSON 生成。
+2. 下一批建立完全未参与方法开发的 implementation pool。候选来源、抽样规则、repair、
+   输入银行、optimizer、三个分支、整体校正组和无法判断条件必须先提交，再揭示结果。
+3. 新 pool 不以“找到新正例”为成功条件。positive、negative 和无法判断都完整报告；
+   若全为 negative，只报告升级率和无法判断率，不补造 recall 或泛化准确率。
+4. 对 held-out 中确认的项目，才做 prediction-first 干预：先根据 local → gradient →
+   update profile 写下修复应改变哪一层，再运行修复，不允许看到结果后换解释。
+5. 等价性工程范围仍未冻结，因此五例只能叫 detectable update effect，不能签发
+   `TRAINING_EQUIVALENT` 或 `MATERIAL_EFFECT`。工程范围应由正常训练 update、loss
+   敏感度和实际修复成本共同确定，且在 held-out 结果揭示前冻结。
+6. 现有 4096 步继续只负责 paired consequence；若要声称跨训练 run 的 material loss
+   影响，必须以独立 training runs 为统计单位。
 
 ## 11. 当前能说与不能说
 
@@ -310,7 +285,9 @@ D_{t+1}-D_t=L_t+B_t,
 
 > 对具体 LLM training implementation，误差大小与训练提交后的平均方向是两类
 > 不同信息。matched local/backward/optimizer measurement 能定位方向在哪里形成、
-> 被压制或留下；短程筛查可排序，长程配对实验负责检查后果。
+> 被压制或留下。五个开发案例还表明，系统效应既可以是在固定参数坐标中留下共同
+> 方向，也可以是反复缩小会随输入变化的正常 update。短程检查负责描述结构，长程
+> 配对实验负责检查后果。
 
 当前不能说：
 
@@ -321,3 +298,6 @@ D_{t+1}-D_t=L_t+B_t,
 - 4096 步方向等于 loss 已收敛到不同值；
 - 单条训练轨迹等价于独立 runs 的总体结论。
 - v1 的逐状态区间等价于 v2 的独立 training-unit 区间。
+- 五个开发案例中 4/5 的 update 确认率代表自然发生比例或 held-out 泛化能力；
+- Qwen `v_proj` 与 Mamba 的稳定 update 缩小等于 4096 步固定方向持久；
+- 尚未冻结工程范围时签发 training-equivalent 或 material-effect 标签。

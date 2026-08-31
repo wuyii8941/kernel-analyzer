@@ -7,8 +7,8 @@
 1. [当前科研主线](current_mainline.md)：唯一的研究问题、定义、当前数字和下一步。
 2. [统一实验方法](method.md)：candidate/repair、成因分解、三阶段测量、统计输出与
    orbit predictor 的限制。
-3. [Training Bias Profile v2](training_bias_profile_v2.md)：独立 training unit、统一
-   判定规则和大向量摘要的当前版本。
+3. [Training Bias Profile v2](training_bias_profile_v2.md)：统一三分支、整体误报控制、
+   大向量摘要和五例当前结果。
 4. [正式讲稿](talk_beyond_tolerance.md)：面向非本项目听众的报告版本。
 5. [证据账本](claims.md)：每条可写主张、证据门槛和当前状态。
 6. [长程机器审计](../results/property/declared_persistent_4096/all_bias_case_audit.json)：
@@ -27,6 +27,7 @@
 
 ## 详细证据
 
+- [五案例 Training Bias Profile v2 统一结果](five_case_training_bias_profile_v2.md)
 - [正负成因分解](effective_antithetic_symmetry.md)
 - [Normalization、softmax backward、attention BMM 的统一三阶段补测](three_mechanism_profiles.md)
 - [Liger/Phi 统一重测、干预、统计自检与 DeepSeek 未见确认](unified_measurement_round.md)

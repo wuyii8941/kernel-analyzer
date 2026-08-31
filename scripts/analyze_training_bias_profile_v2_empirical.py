@@ -26,6 +26,11 @@ CASES = (
 PRIMARY_STAGE = "ADAMW_UPDATE"
 EXPLANATION_STAGES = ("LOCAL", "PARAMETER_GRADIENT")
 PRIMARY_VIEW = "SKETCH_SEED_20260831"
+EMPIRICAL_CLAIM_BOUNDARY = (
+    "32 frozen non-overlapping input windows at one checkpoint under cold-start "
+    "AdamW with zero weight decay; not a random population sample, warm-moment, "
+    "or independent-run result."
+)
 
 
 def _primary_view(views: dict[str, Any]) -> str:
@@ -162,13 +167,14 @@ def main() -> None:
             "stages": stages,
             "optimizer": payload["optimizer"],
             "carrier": payload["carrier"],
-            "claim_boundary": payload["claim_boundary"],
+            "claim_boundary": EMPIRICAL_CLAIM_BOUNDARY,
         }
 
     output = {
         "schema": "kernel-analyzer-training-bias-profile-v2-five-case-summary",
         "status": "COMPLETE",
         "result_selection": "rules frozen before empirical recapture",
+        "claim_scope": "FROZEN_INPUT_WINDOW_SUITE_AT_ONE_CHECKPOINT",
         "multiplicity": {
             "primary_family": "five cases x three branches at ADAMW_UPDATE",
             "primary_tests": len(primary_raw),
@@ -178,7 +184,7 @@ def main() -> None:
         },
         "cases": cases,
         "boundaries": [
-            "The population is frozen input states at one checkpoint, not independent training runs.",
+            "The evidence unit is a frozen non-overlapping input window at one checkpoint; the deterministic banks are not claimed to be random population samples.",
             "The optimizer is cold-start AdamW with zero weight decay and zero moments at every state.",
             "A non-confirmed branch is not a SAFE verdict.",
             "LOCAL and PARAMETER_GRADIENT locate effects but are not the primary training-equivalence endpoint.",

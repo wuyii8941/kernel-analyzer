@@ -68,4 +68,5 @@ def test_v4_protocol_is_frozen_before_heldout_and_never_safe():
 def test_phi_protocols_remain_separate_in_v4_summary():
     summary = load("summary.json")
     assert "stateless-SGD" in summary["phi_sr_scope"]
-    assert "AdamW A=1.029" in summary["phi_sr_scope"]
+    assert "cold-start AdamW" in summary["phi_sr_scope"]
+    assert "natural A=1.02959" in summary["phi_sr_scope"]

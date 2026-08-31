@@ -103,6 +103,11 @@ v2 对独立 training-unit effects 报告 Student 区间，并使用 studentized
 discovery family，主报告 Holm 校正；同时保留效应量、置信区间和未校正数值。
 没有通过校正的候选保持 unresolved，不自动改成 negative。
 
+当前五案例的输入银行由冻结且不重叠的输入窗口组成，部分采用确定性选取，不能证明
+是更大训练总体的随机样本。因此这次区间只作为“后 16 个窗口之间是否稳定”的确认门，
+结论范围止于声明的窗口集合和 checkpoint；不能解释为跨 checkpoint 或独立 runs 的
+总体区间。
+
 ## 6. Orbit mean 的限制
 
 仅对 reduction、summation、reassociation 类 source，冻结合法 schedule distribution
@@ -167,13 +172,18 @@ inference_unit_id, sketch_schema, sketch_seed, sketch_dimension
 
 ## 10. v1 与 v2 的边界
 
-已有 Liger、Phi、Qwen、Mamba、saved-P 和 SiLU 的 16+16 数字来自 v1。它们仍是有效
-的固定 suite 与机制观察，但其中连续状态来自一条 repair-driven trajectory，不能把
-逐状态区间解释成独立训练总体的区间。
+Liger、Phi、Qwen、Mamba、saved-P 和 SiLU 的早期 16+16 数字属于 v1。它们仍是有效
+的固定-suite 与机制观察，但不覆盖 v2 结果。
 
-v2 不重写这些历史 JSON。新结果必须：
+v2 已按同一协议重采 Liger、Phi `lm_head dX`、Qwen `lm_head dX`、Qwen `v_proj`
+和 Mamba `in_proj`。它们全部满足：
 
-- 显式声明独立 training unit；
+- 32 个冻结输入窗口、16/16 分离；
 - 使用 `SPLITMIX64_COUNT_SKETCH_V2` 或完整向量 Gram；
 - 在看到 empirical result 前提交 protocol、检验组和判定规则；
-- 对 headline 大向量结果使用至少两个额外 sketch seeds，或用完整向量复核。
+- 对大向量结果使用两个额外 sketch seeds，或用完整向量复核；
+- update 的 15 项与 local/gradient 的 30 项分别作 Holm 校正；
+- 只把 update 作为主要训练端点。
+
+完整结果见 [`five_case_training_bias_profile_v2.md`](five_case_training_bias_profile_v2.md)。
+下一步保持方法不变，转向结果未知的 held-out implementation pool。

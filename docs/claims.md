@@ -25,8 +25,8 @@
 | 主张 | 判定门槛 | 证据 | 状态 |
 |---|---|---|---|
 | 所选 residual boundary 上的平均 update 可精确拆成 source asymmetry 与 response rectification 两项。 | 预声明 `e -> -e`，对 event distribution 和 response 作奇偶分解。 | [`effective_antithetic_symmetry.md`](effective_antithetic_symmetry.md); [`method.md`](method.md) | `SUPPORTED_AS_IDENTITY`；不是底层机制穷尽分类 |
-| 方向可能在 local、gradient 或 update 阶段形成、增强或消失。 | 同一 matched states 和同一 contrast 保存三层完整向量或 Gram。 | `results/property/bias_formation_v2/`; Phi formation artifacts | `SUPPORTED_CASE_LEVEL`；统一多案例 profile 仍 `PLANNED` |
-| Phi 显示 backward 可把 local-centered difference 变成 gradient/update direction。 | confirmation states 上 local centered，gradient/update 有方向。 | Phi v2.1 formation artifact; [`current_mainline.md`](current_mainline.md) | `BOUNDED` |
+| 方向或稳定缩放可能在 local、gradient 或 update 阶段形成、增强或消失。 | 同一 matched inputs 和 contrast 保存三层完整向量或 Gram，并用同一三分支规则。 | `results/property/training_bias_profile_v2/five_case_summary.json`; [`five_case_training_bias_profile_v2.md`](five_case_training_bias_profile_v2.md) | `SUPPORTED_FOR_FIVE_DEVELOPMENT_CASES`；不是 prevalence 或 held-out 泛化结果 |
+| Phi 显示 backward 可放大剩余共同方向，而 AdamW 可把它变成相对正常 update 的缩小。 | 三阶段使用同一 32-window protocol；gradient residual 与 update aligned branch 分别通过解释/主要 Holm 组。 | same v2 five-case summary | `BOUNDED`：一个 checkpoint、cold-start AdamW |
 | 严格正负 residual 仍可能得到不相反的 update。 | 同一 state、weights 和 moments 下 exact `+delta/-delta` replay，response remainder 非零。 | saved-P / SiLU artifacts; [`effective_antithetic_symmetry.md`](effective_antithetic_symmetry.md) | `SUPPORTED_CASE_LEVEL` |
 
 ## 统一统计与训练等价性
@@ -34,9 +34,9 @@
 | 主张 | 判定门槛 | 证据 | 状态 |
 |---|---|---|---|
 | 误差能量与可复现平均方向必须分开报告。 | 每层同时报告 `E||u||²`、mean effect、normal-update scale。 | [`method.md`](method.md); existing RMS/direction comparisons | `SUPPORTED_AS_METHOD`; v1 empirical 数字保持探索性 |
-| Aligned scaling 与剩余 residual direction 应分开。 | 保存 `G_uu`、`G_rr`、`G_ur`，报告加权 aligned effect 和 perpendicular mean。 | [`training_bias_profile_v2.md`](training_bias_profile_v2.md) | `METHOD_VALIDATED_SYNTHETICALLY`；真实案例待 v2 重采，不得预写 residual 普遍有方向 |
-| 论文级总体判断要报告效应量与置信区间。 | calibration/confirmation training units 分离；连续 states 不拆开；CI coverage 通过相关-cluster 合成验证。 | [`training_bias_profile_v2.md`](training_bias_profile_v2.md); `results/property/training_bias_profile_v2/synthetic_validation.json` | `METHOD_VALIDATED_SYNTHETICALLY`；empirical population inference 仍 `PLANNED` |
-| 多案例、多阶段判断需要控制总体误报。 | 预先提交 confirmatory/discovery families；Holm 为主。 | v2 protocol; [`method.md`](method.md) | `SUPPORTED_AS_METHOD`；新 empirical family 尚未运行 |
+| Aligned scaling 与剩余 residual direction 应分开。 | 保存 `G_uu`、`G_rr`、`G_ur`，对所有案例同时运行固定方向、aligned scaling 和 residual direction。 | [`training_bias_profile_v2.md`](training_bias_profile_v2.md); five-case raw/summary JSON | `SUPPORTED_FOR_FIVE_DEVELOPMENT_CASES`：Liger 为 residual direction；Phi、v-proj、Mamba 为 update scaling；不得预写普遍发生率 |
+| 论文级判断要报告效应量与区间。 | calibration/confirmation 分离；区间范围必须与输入抽样方式一致。 | [`training_bias_profile_v2.md`](training_bias_profile_v2.md); `single_state_unit_validation.json`; five-case summary | `SUPPORTED_FOR_FROZEN_WINDOW_SUITE`；不是独立-run 或随机总体区间 |
+| 多案例、多阶段判断需要控制总体误报。 | 结果揭示前冻结检验组；update 与解释阶段分开作 Holm。 | empirical protocol/amendments; five-case summary | `COMPLETED`：15 项 update 主组、30 项 local/gradient 解释组 |
 | Training equivalence 是相对 protocol 的操作性结论。 | update effect CI 落入预声明工程范围，且声明 consequence endpoint 不失败。 | [`current_mainline.md`](current_mainline.md) | `PLANNED_FRAMEWORK`，不是现成通用 verifier |
 
 ## Orbit mean

@@ -419,8 +419,9 @@ def run_compiled(case: str, device: torch.device) -> dict[str, Any]:
         },
         "stages": _finish_stages(store),
         "claim_boundary": (
-            "32 independent frozen input states at one checkpoint under cold-start "
-            "AdamW with zero weight decay; not warm-moment or independent-run evidence."
+            "32 frozen non-overlapping input windows at one checkpoint under cold-start "
+            "AdamW with zero weight decay; not a random population sample, warm-moment, "
+            "or independent-run result."
         ),
     }
 
@@ -596,8 +597,9 @@ def run_liger(device: torch.device) -> dict[str, Any]:
         },
         "stages": _finish_stages(store),
         "claim_boundary": (
-            "32 independent frozen input states at one checkpoint under cold-start "
-            "AdamW with zero weight decay; not warm-moment or independent-run evidence."
+            "32 frozen non-overlapping input windows at one checkpoint under cold-start "
+            "AdamW with zero weight decay; not a random population sample, warm-moment, "
+            "or independent-run result."
         ),
     }
 

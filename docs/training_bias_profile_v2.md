@@ -1,75 +1,95 @@
 # Training Bias Profile v2
 
-这版方法修正了 v1 中两个会高估证据的问题：连续训练步骤被当成独立样本，以及大
-向量按固定周期折叠。
+这版方法用同一套规则回答一个问题：candidate 相对 repair 造成的差异，在算子输出、
+parameter gradient 和 AdamW update 中，究竟表现为哪一种可重复结构。
 
-## 一组状态上实际发生了什么
+## 统一输入和三种测量
 
-对同一完整训练状态，计算：
+对同一完整训练状态，定义：
 
 ```text
 u = candidate - repair
 r = repair 侧正常信号
 ```
 
-local、gradient 和 optimizer update 都使用同一计算。每层报告：
+local、gradient 和 optimizer update 都计算以下三项：
 
-- implementation difference 的总能量；
-- calibration 找到的平均方向是否在 confirmation 中重复；
-- candidate 是否反复放大或缩小同状态的正常 repair signal；
-- 去掉这种缩放后，是否仍留下可重复方向。
+1. **固定方向**：前 16 个输入窗口找到一个平均方向，后 16 个窗口检查该方向是否重复；
+2. **随正常信号缩放**：candidate 是否反复放大或缩小同一状态的 repair signal；
+3. **剩余方向**：去掉每个状态上的缩放后，是否还留下可重复的平均方向。
 
-如果只运行了一条连续训练轨迹，这些数字精确描述该测试集合，但不生成“其他训练也
-如此”的置信区间。
+三个分支对所有案例同时运行，不按案例挑选。真正写入参数的是 AdamW update，所以
+update 层是主要结果；local 和 gradient 只解释结构在哪里出现、增强或消失。
 
-## 什么时候允许外推
+## 冻结判定规则
 
-只有同时满足以下条件才进行总体判断：
+五例使用 32 个冻结且不重叠的输入窗口：前 16 个只用于确定方向，后 16 个用于检查。
+每个窗口都恢复同一 checkpoint、同一 carrier 和零初始化 AdamW moments；AdamW 在该
+窗口内正常计算一次 update，`weight_decay=0`。
 
-1. calibration 与 confirmation 来自互不重叠的独立 training runs 或独立捕获的
-   training-state clusters；
-2. 两边至少各有 8 个独立单位；
-3. 一个单位内可以包含多个连续步骤，但这些步骤始终一起进入统计计算；
-4. 判定规则和多重比较组在结果揭晓前提交到 Git。
+确认一个分支必须同时满足：
 
-确认一项 effect 需要同时满足：
+- 后 16 个窗口的 95% 区间不跨零；
+- Holm 整体校正后 `p <= 0.05`；
+- 大向量的三个预先声明 CountSketch seeds 方向一致，或使用完整向量；
+- 固定方向与剩余方向不能相对前 16 个窗口反转。
 
-- 95% 区间不跨零；
-- Holm 校正后通过；
-- additive 和 residual direction 在 confirmation 中没有相对 calibration 反转。
-
-短筛未通过不输出 `SAFE`。
-
-## 大向量怎样处理
-
-v1 的固定折叠会让相隔 4096 个位置的坐标反复碰撞。v2 改用带冻结 seed 的
-SplitMix64 CountSketch，并在 artifact 中保存算法、seed、dimension 和原坐标数。
-
-一个 headline 结果还必须满足以下任一项：
-
-- 至少三个预先声明的 sketch seeds 得出一致方向；
-- 在完整向量 Gram 上复核。
+主要检验组是 `5 cases × 3 update branches = 15` 项。local 和 gradient 组成另一组
+`5 × 2 × 3 = 30` 项，只用于解释。规则在任何五例数值揭示之前提交；结果不通过时
+只写“本协议未确认”，不输出 `SAFE`。
 
 ## 合成验证
 
-v2 的验证直接调用生产统计代码，而不是另写一套较宽松规则。每个独立单位包含 4 个
-相关步骤，200 次重复得到：
+实际五例使用一个输入窗口作为一个统计单位，因此 go/no-go 采用相同的单窗口设计。
+每个场景重复 200 次：
 
-| 场景 | 整体误报或检出率 | 零效应区间覆盖率 |
+| 场景 | 至少一个分支误报或检出 | 零效应区间覆盖率 |
 |---|---:|---:|
-| 相关但零均值 | 1.5% | 94.0%–95.0% |
-| 重尾且零均值 | 5.0% | 92.0%–92.5% |
-| 偏斜且零均值 | 4.5% | 93.5%–95.0% |
-| training units 间正负交替 | 1.5% | 97.0%–98.0% |
+| 零均值 | 1.5% | 93.5%–97.0% |
+| 重尾零均值 | 1.5% | 95.0%–96.5% |
+| 偏斜零均值 | 4.0% | 93.5%–95.0% |
+| 正负交替 | 2.0% | 96.5%–98.5% |
 | 固定平均方向 | 100% 检出 | — |
 | 随正常 update 旋转的缩放 | 100% 检出 | — |
-| repair 过小 | 200/200 abstain | — |
+| repair 过小 | 200/200 无法判断 | — |
 
 机器结果：
-[`synthetic_validation.json`](../results/property/training_bias_profile_v2/synthetic_validation.json)。
+[`single_state_unit_validation.json`](../results/property/training_bias_profile_v2/single_state_unit_validation.json)。
 
-## 当前边界
+## 五例统一结果
 
-合成验证说明 v2 值得进入 empirical recapture，不说明它已经跨模型、算子和 optimizer
-泛化。已有 v1 案例保持探索性结果；下一步先重采 Liger、Phi、Qwen `lm_head dX`、
-Qwen `v_proj` 和 Mamba `in_proj`，然后才运行完全未参与方法开发的 held-out pool。
+| 案例 | local | gradient | AdamW update 主要结果 |
+|---|---|---|---|
+| Liger fused CE | 剩余方向 `0.326%` | 剩余方向 `0.300%` | 剩余方向 `0.0151%`，95% 区间 `[0.00614%, 0.0240%]` |
+| Phi `lm_head dX` | 剩余方向 `0.0375%` | 剩余方向 `0.372%` | 正常 update 缩小 `0.1506%`，区间 `[0.0966%, 0.2046%]` |
+| Qwen `lm_head dX` | 很小的同向缩放 | 剩余方向 `0.00491%` | 三个分支均未确认 |
+| Qwen `v_proj` | 未确认 | 未确认 | 正常 update 缩小 `6.04%`，区间 `[3.44%, 8.64%]` |
+| Mamba `in_proj` | 极小缩放 | 未确认 | 正常 update 缩小 `3.12%`，区间 `[2.86%, 3.37%]` |
+
+以上百分比都相对于本阶段 repair signal；三个阶段的分母不同，不能把 local 百分比与
+update 百分比直接解释为传播倍率。完整区间、原始 p 值、Holm 校正值和三 seed 结果见
+[`five_case_summary.json`](../results/property/training_bias_profile_v2/five_case_summary.json)，
+人类可读审计见 [`five_case_training_bias_profile_v2.md`](five_case_training_bias_profile_v2.md)。
+
+## 这组结果说明什么
+
+- 五例并非同一种固定低秩偏差。Liger 在去掉正常 update 缩放后仍有共同方向；Phi、
+  Qwen `v_proj` 和 Mamba 主要表现为反复缩小各自状态下会旋转的正常 update。
+- Qwen `lm_head dX` 在 gradient 中有共同方向，但 cold-start AdamW update 未确认，
+  说明 gradient 不能代替目标 optimizer 的结果。
+- Qwen `v_proj` 和 Mamba 的 4096 步固定参数方向没有通过各自长程随机基线，但本次
+  发现了随正常 update 旋转的稳定缩小。两种判断对象不同，不能都叫持久固定方向。
+- 这五例是方法开发和解释集合，不是自然流行率样本，也不能证明跨模型泛化。
+
+## 证据范围
+
+输入窗口来自冻结数据银行，部分由确定性规则选择。它们互不重叠，但不能据此声称是
+某个未定义训练总体的随机样本。因此这里的区间只描述一个 checkpoint 上这组输入窗口
+之间的变化，不外推到其他 checkpoint、warm optimizer moments 或独立训练 runs。
+
+事前协议曾把窗口写成独立抽样单位；结果揭示后的
+[`empirical_protocol_amendment_3.json`](../results/property/training_bias_profile_v2/empirical_protocol_amendment_3.json)
+只收紧这一表述，没有改变任何数值、阈值或标签。
+
+下一步不是继续调这五例，而是在方法和判断规则不变的前提下，运行完全未参与方法
+开发的新 implementation pool。
