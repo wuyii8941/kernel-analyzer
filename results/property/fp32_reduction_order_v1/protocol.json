@@ -1,0 +1,64 @@
+{
+  "schema": "kernel-analyzer-fp32-reduction-order-protocol-v1",
+  "status": "FROZEN_BEFORE_EMPIRICAL_RESULTS",
+  "frozen_at_commit": "30383b420f1d227d8b41a38b34f16d8479c5690f",
+  "question": "Can two mathematically equivalent FP32 reduction orders produce a repeatable training update difference?",
+  "case": {
+    "case_id": "qwen3_1p7b_final_rmsnorm_weight_gradient_fp32_order",
+    "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+    "model_dtype": "FP32",
+    "sequence_length": 128,
+    "parameter": "model.norm.weight",
+    "training_boundary": "final RMSNorm output through the actual tied lm_head and causal-language-model loss, followed by the final RMSNorm backward",
+    "state_order_source": "results/trajectory/liger_protocol.json",
+    "state_count": 32,
+    "calibration_count": 16,
+    "confirmation_count": 16
+  },
+  "implementations": {
+    "candidate": "FP32 left-to-right sum of per-token final-RMSNorm weight-gradient contributions",
+    "repair": "FP32 deterministic balanced-tree sum of the same contributions",
+    "matched_sham": "repeat candidate with the same FP32 left-to-right implementation",
+    "diagnostic_reference": "FP64 sum of the same per-token contribution tensor",
+    "later_randomized_configuration": "frozen legal permutations followed by the same FP32 sequential reducer; run only if the primary update result is confirmed"
+  },
+  "invariants": [
+    "candidate and repair receive identical FP32 operands",
+    "candidate and repair have bitwise identical forward outputs",
+    "candidate and repair have bitwise identical hidden-state gradients",
+    "matched sham repeats candidate exactly",
+    "the only allowed difference is the FP32 addition order used for the RMSNorm weight gradient",
+    "FP64 is diagnostic only and is not one of the two primary implementations"
+  ],
+  "optimizer": {
+    "name": "AdamW",
+    "learning_rate": 0.0001,
+    "betas": [0.9, 0.95],
+    "epsilon": 1e-08,
+    "weight_decay": 0.0,
+    "initial_moments": "zero, then evolved only with the balanced-tree repair gradients"
+  },
+  "primary_result": "AdamW update difference",
+  "explanation_results": [
+    "RMSNorm forward output difference",
+    "RMSNorm weight-gradient difference"
+  ],
+  "tested_effects": [
+    "fixed additive direction",
+    "repair-aligned scaling",
+    "remaining direction after same-state scaling removal"
+  ],
+  "confirmation_rule": {
+    "confidence_interval": "95% interval on the 16 untouched confirmation inputs excludes zero",
+    "multiplicity": "Holm correction across the three AdamW update effects",
+    "adjusted_p_max": 0.05,
+    "calibration_direction_must_not_reverse": true,
+    "no_safe_label": true
+  },
+  "next_steps_if_confirmed": [
+    "run frozen randomized-order configuration and matched sham",
+    "repeat with natural warm AdamW moments, moments reset, and stateless SGD",
+    "run a complete 4096-step paired trajectory without stopping at the first loss difference"
+  ],
+  "stop_if_not_confirmed": "Record SOURCE_PREDICTOR_NOT_CONFIRMED for this declared order pair; do not search for a more favorable order using the same confirmation inputs."
+}
