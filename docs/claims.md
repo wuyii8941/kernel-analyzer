@@ -40,7 +40,7 @@
 | Aligned scaling 与剩余 residual direction 应分开。 | 保存 `G_uu`、`G_rr`、`G_ur`，对所有案例同时运行固定方向、aligned scaling 和 residual direction。 | [`training_bias_profile_v2.md`](training_bias_profile_v2.md); five-case raw/summary JSON | `SUPPORTED_FOR_FIVE_DEVELOPMENT_CASES`：Liger 为 residual direction；Phi、v-proj、Mamba 为 update scaling；不得预写普遍发生率 |
 | 论文级判断要报告效应量与区间。 | calibration/confirmation 分离；区间范围必须与输入抽样方式一致。 | [`training_bias_profile_v2.md`](training_bias_profile_v2.md); `single_state_unit_validation.json`; five-case summary | `SUPPORTED_FOR_FROZEN_WINDOW_SUITE`；不是独立-run 或随机总体区间 |
 | 多案例、多阶段判断需要控制总体误报。 | 结果揭示前冻结检验组；update 与解释阶段分开作 Holm；无法判断项不从分母移除。 | empirical protocol/amendments; five-case summary; prospective batch 1/2 protocols and summaries | `COMPLETED`：开发组 15/30 项；新 batch 1 为 12/24 项且两项 abstain 以 p=1 保留；batch 2 为 3/6 项 |
-| Training equivalence 是相对声明设置的操作性结论。 | update effect CI 落入预声明工程范围，且声明训练后果检查不失败。 | `results/property/training_equivalence_v1/`; [`current_mainline.md`](current_mainline.md) | `METHOD_COMPLETE`：合成数据验证通过；工程范围已冻结用于新的 16 项验证，但不是所有 LLM 训练共享的安全阈值 |
+| 固定输入集合上的 update 等价是相对声明设置的操作性结论。 | 覆盖全部坐标的 update RMS 比例低于范围，三个方向区间也全部在各自范围内；只有保存完整向量时才允许签逐位零差异。 | `results/property/training_equivalence_v2/`; `results/property/generalization_benchmark_v1/equivalence_v2.json`; [`current_mainline.md`](current_mainline.md) | `METHOD_COMPLETE_FOR_FIXED_SUITE_UPDATE`：完整向量反例验证通过；大向量使用三个冻结随机摘要，不等于随机训练状态总体或完整训练质量等价。`1%` 范围是结果揭示后的方法修正，不冒充事前冻结 |
 
 ## Orbit mean
 
@@ -77,7 +77,7 @@
 | Phi 的方向不只是误差能量下降造成。 | 同一 cold-start AdamW；natural/sham；多个 SR seeds；至少能量近似匹配的 repeats 方向消失。 | [`phi_adamw_source_intervention.md`](phi_adamw_source_intervention.md) | `SUPPORTED_CASE_LEVEL` |
 | AdamW 会改变 direction verdict，但不是统一误差来源。 | 同一 gradient contrast 比较 SGD、captured AdamW、moment ablation。 | [`direct_persistence_optimizer.md`](direct_persistence_optimizer.md) | `SUPPORTED_CASE_LEVEL` |
 | DeepSeek 的大缩小效应依赖 AdamW 历史状态。 | 两个正例与一个 Phi 负例统一比较 cold、warm 8、warm 32、warm 后重置 moments 和 SGD；45 项整体 Holm 校正。 | `results/property/optimizer_condition_benchmark_v1/summary.json` | `SUPPORTED_FOR_TWO_DEEPSEEK_CASES`：cold 为 `−10.69%/−13.68%`，warm 后不足 `1%`，重置 moments 后恢复为 `−9.03%/−15.13%`；Phi 五种设置均未确认 |
-| 冻结方法可以在未参与方法开发的训练位置发现 update 缩小，也能给出等价或无法判断。 | 16 项预先冻结；15 项有效测量；48 项统一 Holm 校正；三项工程范围在结果揭示前冻结。 | `results/property/generalization_benchmark_v1/summary.json`; `results/property/generalization_benchmark_v1/equivalence.json` | `SUPPORTED_FOR_THIS_FROZEN_BENCHMARK`：9 项确认缩小，4 项等价，2 项数据不足，1 项无法判断；不是跨所有模型与 checkpoint 的准确率 |
+| 冻结方法可以在未参与方法开发的训练位置发现 update 缩小；修正后的总体 update 检查可以阻止未知方向的大差异被误签为等价。 | 16 项预先冻结；15 项有效测量；48 项统一 Holm 校正；结果揭示后增加覆盖全部坐标的 update RMS 兜底并保留修正记录。 | `results/property/generalization_benchmark_v1/summary.json`; `results/property/generalization_benchmark_v1/equivalence_v2.json` | `SUPPORTED_FOR_THIS_FROZEN_BENCHMARK`：9 项确认方向或缩放效应；3 项通过固定输入 update 等价，其中 2 项的三个冻结摘要均为零；3 项总体 update 比例超范围；1 项无法判断。不是跨所有模型与 checkpoint 的准确率 |
 | Liger 的统一 orbit predictor 已闭合。 | 必须完成本页前述 BF16/FP32 confirmation prediction。 | 当前只有 chunk/accumulator 机制证据 | `UNRESOLVED` |
 
 ## 当前计数

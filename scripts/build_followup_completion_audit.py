@@ -50,9 +50,14 @@ def main() -> None:
             {"COMPLETE"},
         ),
         one(
-            "training-equivalence synthetic calibration",
-            "results/property/training_equivalence_v1/synthetic_validation.json",
+            "fixed-suite update-equivalence full-vector validation",
+            "results/property/training_equivalence_v2/synthetic_validation.json",
             {"GO"},
+        ),
+        one(
+            "corrected fixed-suite update-equivalence decisions",
+            "results/property/generalization_benchmark_v1/equivalence_v2.json",
+            {"COMPLETE"},
         ),
         one(
             "pure-FP32 summation-order prediction",

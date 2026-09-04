@@ -29,6 +29,7 @@
 
 - [五案例 Training Bias Profile v2 统一结果](five_case_training_bias_profile_v2.md)
 - [方法冻结后的新案例结果](prospective_training_bias_profiles.md)
+- [修正后的固定输入 update 等价结果](../results/property/generalization_benchmark_v1/equivalence_v2.json)
 - [正负成因分解](effective_antithetic_symmetry.md)
 - [Normalization、softmax backward、attention BMM 的统一三阶段补测](three_mechanism_profiles.md)
 - [Liger/Phi 统一重测、干预、统计自检与 DeepSeek 未见确认](unified_measurement_round.md)

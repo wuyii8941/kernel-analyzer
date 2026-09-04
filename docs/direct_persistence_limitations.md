@@ -23,8 +23,10 @@
 
 当前已经完成一个 16 项验证集合，覆盖 DeepSeek、Qwen、Phi 和 Mamba 的多个 training
 位置，并使用一套 48 项整体校正规则。15 项得到有效测量，9 项确认 update 缩小，
-4 项落入冻结工程范围，2 项现有数据不足；Mamba seq256 对无法复现冻结 backward 图的
-位置保留无法判断。Gemma 4 另有两个历史冻结位置
+修正后的总体 update 证书给出 3 项通过固定输入 update 等价、3 项总体 update 比例
+超过范围；其中两个 Mamba seq128 案例的三个冻结随机摘要均为零，但不能称为逐位
+相同。Mamba seq256 对无法复现冻结 backward 图的位置保留无法判断。
+旧三方向证书中的 Mamba seq64 等价标签已经撤销。Gemma 4 另有两个历史冻结位置
 完成统一方法接入，结果均为阴性。它们支持方法可以跨模型运行，但还不是严格的
 `NEW_IMPL / NEW_MODEL` 前瞻发现集合，也不能据此报告通用 recall 或自然发生比例。
 
@@ -52,8 +54,9 @@
 
 Qwen seq64 的旧 `capture.json` 曾被一个 PyTorch checkpoint 覆盖；相同冻结任务清单
 在正确的 r2 运行记录下已完整重跑。Mamba seq64 和两个 seq128 位置已经完成，其中
-seq128 的 AdamW update difference 逐位为零；seq256 虽能匹配具体输出，但实际
-backward 图哈希与冻结记录不同，因此保留为无法判断。没有用别的案例替换。
+seq128 的 AdamW update difference 在三个冻结全坐标摘要中均为零；由于没有保留
+原向量，不能写成逐位相同。seq256 虽能匹配具体输出，但实际 backward 图哈希与冻结
+记录不同，因此保留为无法判断。没有用别的案例替换。
 
 ## 写作时的最终边界
 

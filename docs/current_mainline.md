@@ -118,20 +118,39 @@ CountSketch。headline 大向量结果还需要额外 seeds 或完整向量 Gram
 
 ## 5. 训练数值等价性
 
-在声明协议下，只有当 update effect 的置信区间整体落入预先声明的工程范围，
-且声明的训练后果检查没有失败，才称 candidate 与 repair 在该协议下
-`TRAINING_EQUIVALENT`。
+三个方向指标只能说明差异表现为什么，不能排除其他方向。当前证书因此增加一个必须
+通过、覆盖全部坐标的 update 总体检查：
+
+\[
+s_{\mathrm{full}}
+=
+\sqrt{
+\frac{\sum_i\|u_i\|^2}
+{\sum_i\|r_i\|^2}
+}.
+\]
+
+只有当这个比例低于工程范围，而且固定方向、相对正常 update 的缩放、去掉缩放后的
+剩余方向三项区间也全部落入各自范围，才称 candidate 与 repair 在这组固定输入上
+`FIXED_SUITE_UPDATE_EQUIVALENT`。只有保存完整向量并验证 update difference 逐位为零，
+才单独记为 `EXACT_UPDATE_IDENTITY_ON_FIXED_SUITE`。
 
 否则区分：
 
-- `DETECTABLE_BUT_SMALL`：方向可复现，但低于工程范围；
 - `MATERIAL_EFFECT`：效应区间超过工程范围；
+- `FIXED_SUITE_UPDATE_ENERGY_EXCEEDS_MARGIN`：三个方向指标可能很小，但完整 update
+  difference 的总体比例已经超过范围；
 - `INCONCLUSIVE`：现有状态不足以区分零效应与工程上重要的效应；
 - `ABSTAIN`：repair、状态绑定或参数可达性不成立。
 
-这套判定已通过合成数据检查，并已冻结三项工程范围，用于新的 16 项验证。它仍然
-只是声明模型、参数位置、optimizer 和输入集合下的判断，不是所有 LLM 训练共享的
-安全阈值。
+新增的总体 update 范围修复了旧三方向证书的方向盲区：后 16 个输入即使出现与
+前 16 个输入方向垂直的新差异，也不能再被错误放行。五类完整向量测试已经通过。
+完整 update 的 `1%` 范围是在 16 项结果揭示后加入的保守修正，来源是已有最大缩放
+范围，不冒充事前冻结。当前标签只适用于声明模型、参数位置、optimizer 和这组固定
+输入，不是随机训练状态总体、完整训练质量或所有 LLM 共享的安全结论。大向量没有
+保留原向量，而是取三个事先固定的全坐标随机摘要中最保守的结果；因此不能把摘要为
+零写成逐位相同。本次验证没有
+预先声明训练后果门槛，因此机器记录明确写 `NOT_DECLARED`。
 
 ## 6. Orbit mean：只用于 reduction 类 source predictor
 
@@ -295,12 +314,16 @@ Phi 的原尺度变化为 `-3.7365e-6`，约为随机方向中位数的 `9.55` �
 
 统一的 16 项冻结验证也已完成：15 项得到有效测量，Mamba seq256 因实际 backward 图
 与冻结记录不一致而保留为无法判断。48 项整体 Holm 校正后，9 项确认了正常 AdamW
-update 被稳定缩小，覆盖 DeepSeek、Qwen 和 Phi；4 项的三个效应区间均落入冻结工程
-范围；2 项现有数据不足。Mamba seq128 两个位置的 AdamW update difference 在 32 个
-状态中逐位为零，因此属于有直接证据的等价结果，不是把“不显著”当成等价。确认的
-缩小效应从 `1.289%` 到 `15.818%`。完整结果见
+update 被稳定缩小，覆盖 DeepSeek、Qwen 和 Phi。修正后的证书给出：3 项同时通过总体
+update 范围和三个方向范围；其中两个 Mamba seq128 案例在三个预先固定的全坐标摘要
+中均为零，不能进一步写成逐位相同。另有 3 项总体 update 比例超过 `1%`，不能签为
+等价；1 项无法判断。原来三方向证书中的 Mamba seq64 被重新归类，因为三个摘要中的
+最大比例为 `2.142%`。两个 Phi 案例虽然方向区间仍不足以确认稳定方向，但最大比例约
+为 `22.33%` 和 `21.74%`，同样不能签为等价。
+确认的缩小效应从 `1.289%` 到 `15.818%`，并未被这次修正推翻。完整结果见
 `results/property/generalization_benchmark_v1/summary.json` 与
-`results/property/generalization_benchmark_v1/equivalence.json`。
+`results/property/generalization_benchmark_v1/equivalence_v2.json`；旧
+`equivalence.json` 仅保留为修正前记录。
 
 ### 当前长程计数
 
@@ -333,10 +356,11 @@ update 被稳定缩小，覆盖 DeepSeek、Qwen 和 Phi；4 项的三个效应�
    若全为 negative，只报告升级率和无法判断率，不补造 recall 或泛化准确率。
 4. 对 held-out 中确认的项目，才做 prediction-first 干预：先根据 local → gradient →
    update profile 写下修复应改变哪一层，再运行修复，不允许看到结果后换解释。
-5. 三项等价性工程范围已在新的 16 项验证揭示前冻结，并通过 2,000 次/场景的合成
-   数据检查。它可以给该冻结验证签发 `EQUIVALENT_UNDER_PROTOCOL`、
-   `DETECTABLE_BUT_SMALL`、`MATERIAL_EFFECT`、`INCONCLUSIVE` 或 `ABSTAIN`；这些范围
-   不是所有 LLM 训练共享的阈值，也不回填旧五例的历史标签。
+5. 三个方向范围在新的 16 项验证揭示前冻结；完整 update 的 `1%` 范围是在揭示后为
+   修复方向盲区而加入。修正后的证书只签发固定输入集合上的 update 结论，并已通过
+   完整 Gram 路径的方向漂移、巨大零均值差异、剩余方向、repair 能量不均和范围边界
+   测试。大向量取三个冻结随机摘要中的最大结果，不声称逐位相同；它也不签发随机
+   训练状态总体或完整训练质量等价。
 6. 现有 4096 步继续只负责 paired consequence；若要声称跨训练 run 的 material loss
    影响，必须以独立 training runs 为统计单位。
 

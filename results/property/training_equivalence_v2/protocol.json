@@ -1,0 +1,26 @@
+{
+  "schema": "kernel-analyzer-fixed-suite-update-equivalence-protocol-v2",
+  "status": "POST_REVEAL_METHOD_CORRECTION",
+  "supersedes": "results/property/training_equivalence_v1/protocol.json",
+  "primary_stage": "ADAMW_UPDATE",
+  "claim_scope": "FIXED_SUITE_UPDATE",
+  "engineering_margins": {
+    "additive": 0.001,
+    "repair_aligned": 0.01,
+    "residual_direction": 0.001,
+    "full_update_rms": 0.01
+  },
+  "full_update_rms_margin_rationale": "The all-coordinate envelope is set to 1% because it must not be tighter than the already declared 1% repair-aligned scaling allowance. It was added after benchmark results were revealed and is not presented as prospectively frozen.",
+  "full_update_measurement": "Exact Gram for vectors with at most 4096 coordinates; otherwise the maximum RMS ratio from three independently seeded, value-blind CountSketch summaries fixed before measurement.",
+  "aligned_estimand": "sum_i inner_product(effect_i, repair_i) / sum_i squared_norm(repair_i)",
+  "profile_interval_scope": "empirical variation across the frozen confirmation windows; not a random-state-population confidence guarantee",
+  "material_consequence_status": "NOT_DECLARED",
+  "decision_rule": {
+    "exact_identity": "all confirmation update differences are exactly zero in a saved exact-vector representation; zero CountSketch summaries are not called bitwise identity",
+    "fixed_suite_update_equivalent": "full update RMS is below 1% and all three profile intervals are strictly inside their declared margins",
+    "energy_exceeds_margin": "full update RMS is above 1%",
+    "inconclusive": "the full update RMS equals its boundary or a profile interval crosses its margin",
+    "abstain": "the repair, state binding, parameter reach, or saved Gram is invalid"
+  },
+  "claim_boundary": "This revision certifies update differences on the observed fixed input suite only. Large-vector certificates rely on three frozen randomized all-coordinate summaries rather than retained exact vectors. It does not certify a random training-state population, long-run loss, or complete training equivalence."
+}

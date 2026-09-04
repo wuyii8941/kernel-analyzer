@@ -89,9 +89,13 @@ AdamW 普遍放大所有数值差异。
 最终结果是：
 
 - 9 项确认了相对正常 update 的稳定缩小，来自 DeepSeek、Qwen 和 Phi；
-- 4 项的三个效应区间都落入预先冻结的工程范围，包括 Mamba seq64 和两个 Mamba
-  seq128 位置；后两个位置的 AdamW update difference 在 32 个状态中逐位为零；
-- 2 项现有区间仍不足以判断是否落入工程范围；
+- 修正后的证书中，两个 Mamba seq128 位置和 Qwen seq256 loss/CE backward 同时通过
+  总体 update 的 `1%` 范围和三个方向范围；两个 Mamba 案例的三个冻结全坐标摘要均为
+  零，但因未保留原向量，不能称为逐位相同；
+- Mamba seq64 的三个方向区间虽小，但三个摘要中的最大 update 比例为 `2.142%`，
+  不再签为等价；
+- 两个 Phi 案例的方向区间仍不足以确认稳定方向，但最大 update 比例约为 `22.33%`
+  和 `21.74%`，不能签为等价；
 - 1 项因 backward 图不一致而无法判断。
 
 确认结果中的正常 update 缩小范围为 `1.289%` 到 `15.818%`。其中值得单独指出：
@@ -107,5 +111,6 @@ AdamW 普遍放大所有数值差异。
 这轮扩大了模型和训练位置范围，但仍使用现有四个核心模型、同一个 checkpoint 类型
 和 cold-start AdamW。它证明冻结方法不是只对开发案例有效，不证明跨所有模型、
 checkpoint 或真实 warm optimizer state 都保持相同标签。机器结果见
-`results/property/generalization_benchmark_v1/summary.json` 和
-`results/property/generalization_benchmark_v1/equivalence.json`。
+`results/property/generalization_benchmark_v1/summary.json` 和修正后的
+`results/property/generalization_benchmark_v1/equivalence_v2.json`。旧
+`equivalence.json` 保留为三方向证书的历史结果，不能再作为当前等价标签。

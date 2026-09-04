@@ -1,8 +1,8 @@
-"""Protocol-relative training numerical equivalence decisions.
+"""Protocol-relative fixed-suite update-equivalence decisions.
 
-The decision uses simultaneous confidence intervals for the three frozen
-update effects.  Absence of statistical significance is never treated as
-equivalence.
+The corrected decision combines three directional summaries with a mandatory
+all-coordinate energy summary.  Absence of statistical significance is never
+treated as equivalence.
 """
 
 from __future__ import annotations
@@ -15,6 +15,34 @@ import numpy as np
 
 
 BRANCHES = ("additive", "repair_aligned", "residual_direction")
+
+
+def fixed_suite_total_rms_from_joint_gram(
+    joint_gram: Mapping[str, Sequence[Sequence[float]]],
+    *,
+    calibration_count: int = 16,
+) -> float:
+    """Return the exact confirmation-suite effect RMS / repair-update RMS.
+
+    Unlike the three directional summaries, this quantity sees every direction
+    represented by the saved update vectors.
+    """
+
+    uu = np.asarray(joint_gram["effect_effect"], dtype=np.float64)
+    rr = np.asarray(joint_gram["repair_repair"], dtype=np.float64)
+    if uu.shape != rr.shape or uu.ndim != 2 or uu.shape[0] != uu.shape[1]:
+        raise ValueError("effect and repair Gram matrices must share one square shape")
+    count = uu.shape[0]
+    if not 1 < calibration_count < count - 1:
+        raise ValueError("calibration split leaves too few confirmation states")
+    conf = np.arange(calibration_count, count)
+    effect_energy = float(np.trace(uu[np.ix_(conf, conf)]))
+    repair_energy = float(np.trace(rr[np.ix_(conf, conf)]))
+    if repair_energy <= 0.0:
+        raise ValueError("confirmation repair energy must be positive")
+    if effect_energy < 0.0:
+        raise ValueError("confirmation effect energy must be nonnegative")
+    return math.sqrt(effect_energy / repair_energy)
 
 
 def _t_critical(df: int, probability: float) -> float:
@@ -66,7 +94,15 @@ def simultaneous_intervals_from_joint_gram(
     additive = uu[np.ix_(conf, cal)].mean(axis=1) / calibration_norm / repair_scale
 
     gain = np.diag(ur) / repair_energy
-    aligned = gain[conf]
+    # The declared aligned estimand is the energy-weighted ratio of sums.
+    # Linearized samples retain that center while allowing the existing
+    # studentized interval calculation to account for state-to-state variation.
+    aligned_numerator = np.diag(ur)[conf]
+    aligned_denominator = repair_energy[conf]
+    aligned_center = float(aligned_numerator.sum() / aligned_denominator.sum())
+    aligned = aligned_center + (
+        aligned_numerator - aligned_center * aligned_denominator
+    ) / float(aligned_denominator.mean())
     residual_gram = (
         uu
         - ur * gain[None, :]
@@ -87,6 +123,93 @@ def simultaneous_intervals_from_joint_gram(
         half = critical * float(samples.std(ddof=1) / math.sqrt(samples.size))
         intervals[name] = [center - half, center + half]
     return intervals
+
+
+def classify_fixed_suite_update_equivalence(
+    intervals: Mapping[str, Sequence[float]],
+    margins: Mapping[str, float],
+    *,
+    total_rms: float,
+    total_rms_margin: float,
+    consequence_status: str = "NOT_DECLARED",
+    exact_identity_verified: bool = False,
+    valid_protocol: bool = True,
+) -> dict:
+    """Classify update equivalence on one declared finite input suite.
+
+    The total-RMS envelope is mandatory and closes directions not represented
+    by the three predeclared profile summaries.  This is not a claim about a
+    random state population or downstream training quality.
+    """
+
+    if not valid_protocol:
+        return {
+            "decision": "ABSTAIN",
+            "reason": "PROTOCOL_OR_REPAIR_INVALID",
+            "claim_scope": "FIXED_SUITE_UPDATE",
+            "material_consequence_status": consequence_status,
+        }
+    total_rms = float(total_rms)
+    total_rms_margin = float(total_rms_margin)
+    if not math.isfinite(total_rms) or total_rms < 0.0:
+        raise ValueError("total_rms must be finite and nonnegative")
+    if not math.isfinite(total_rms_margin) or total_rms_margin <= 0.0:
+        raise ValueError("total_rms_margin must be finite and positive")
+    if consequence_status not in {"NOT_DECLARED", "PASSED", "FAILED"}:
+        raise ValueError("unknown material consequence status")
+
+    profile = classify_training_equivalence(intervals, margins)
+    envelope_inside = total_rms < total_rms_margin
+    envelope_beyond = total_rms > total_rms_margin
+    exact_identity = total_rms == 0.0 and bool(exact_identity_verified)
+
+    failure_reasons = []
+    if envelope_beyond:
+        failure_reasons.append("FULL_UPDATE_RMS_EXCEEDS_ITS_MARGIN")
+    elif not envelope_inside:
+        failure_reasons.append("FULL_UPDATE_RMS_IS_ON_ITS_MARGIN")
+    if profile["decision"] == "MATERIAL_EFFECT":
+        failure_reasons.append(profile["reason"])
+    elif profile["decision"] == "INCONCLUSIVE":
+        failure_reasons.append(profile["reason"])
+    if consequence_status == "FAILED":
+        failure_reasons.append("PREDECLARED_TRAINING_CONSEQUENCE_FAILED")
+
+    if consequence_status == "FAILED":
+        decision = "MATERIAL_CONSEQUENCE"
+        reason = "PREDECLARED_TRAINING_CONSEQUENCE_FAILED"
+    elif profile["decision"] == "MATERIAL_EFFECT":
+        decision = "MATERIAL_EFFECT"
+        reason = profile["reason"]
+    elif envelope_beyond:
+        decision = "FIXED_SUITE_UPDATE_ENERGY_EXCEEDS_MARGIN"
+        reason = "FULL_UPDATE_RMS_EXCEEDS_ITS_MARGIN"
+    elif not envelope_inside:
+        decision = "INCONCLUSIVE"
+        reason = "FULL_UPDATE_RMS_IS_ON_ITS_MARGIN"
+    elif profile["decision"] == "INCONCLUSIVE":
+        decision = "INCONCLUSIVE"
+        reason = profile["reason"]
+    elif exact_identity:
+        decision = "EXACT_UPDATE_IDENTITY_ON_FIXED_SUITE"
+        reason = "ALL_CONFIRMATION_UPDATE_DIFFERENCES_ARE_ZERO"
+    else:
+        decision = "FIXED_SUITE_UPDATE_EQUIVALENT"
+        reason = "FULL_UPDATE_RMS_AND_ALL_PROFILE_INTERVALS_ARE_INSIDE_MARGINS"
+
+    return {
+        "decision": decision,
+        "reason": reason,
+        "failure_reasons": failure_reasons,
+        "claim_scope": "FIXED_SUITE_UPDATE",
+        "material_consequence_status": consequence_status,
+        "full_update_rms": total_rms,
+        "full_update_rms_margin": total_rms_margin,
+        "full_update_rms_inside_margin": envelope_inside,
+        "exact_identity_verified": exact_identity,
+        "profile_decision": profile["decision"],
+        "branches": profile["branches"],
+    }
 
 
 def _interval(value: Sequence[float], name: str) -> tuple[float, float]:
