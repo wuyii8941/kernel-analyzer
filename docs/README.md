@@ -40,7 +40,6 @@
 - [短程筛查](direct_persistence_screen.md)
 - [未见实现检查](direct_persistence_heldout.md)
 - [当前限制](direct_persistence_limitations.md)
-- [完成度矩阵](direct_persistence_v4_completion_matrix.md)
 - [无法安全重放的记录](unresolved_long_replays.md)
 - [覆盖总表](coverage_table_v1.md)
 - [模型覆盖审计](model_coverage_audit.md)

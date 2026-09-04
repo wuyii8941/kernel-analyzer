@@ -219,15 +219,35 @@ def main() -> None:
     parser.add_argument("--spool-dir", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--states", type=int, default=32)
+    parser.add_argument(
+        "--warmup-steps", type=int, default=0,
+        help=(
+            "Before matched measurement, train only the declared target parameter(s) "
+            "with the candidate implementation for this many steps."
+        ),
+    )
+    parser.add_argument(
+        "--reset-moments-at-measurement", action="store_true",
+        help="Keep warm target parameters but reset their AdamW moments for measurement.",
+    )
     parser.add_argument("--engineering-reach-only", action="store_true")
     parser.add_argument("--screening-gram", action="store_true")
     parser.add_argument("--extended-confirmation", action="store_true")
     parser.add_argument(
         "--training-bias-profile-v2-output-dir", type=Path,
         help=(
-            "Also emit the frozen cold-start AdamW three-stage profile used by "
-            "Training Bias Profile v2. This is additive: the historical SGD "
-            "formation certificate remains unchanged."
+            "Emit the unified AdamW three-stage profile used by Training Bias "
+            "Profile v2. The older formation summary is skipped unless "
+            "--retain-legacy-formation-summary is also set."
+        ),
+    )
+    parser.add_argument(
+        "--retain-legacy-formation-summary",
+        action="store_true",
+        help=(
+            "Also build the older full-coordinate formation certificate when a "
+            "Training Bias Profile v2 output is requested. New benchmarks do not "
+            "need this expensive duplicate summary."
         ),
     )
     parser.add_argument("--allow-graph-breaks", action="store_true")
@@ -313,7 +333,9 @@ def main() -> None:
     bank = json.loads((args.state_bank or args.input_bank).read_text())
     states = bank.get("states", bank.get("records"))
     frozen_states = frozen_bank.get("states", frozen_bank.get("records"))
-    if len(states) < args.states or not frozen_states:
+    if args.warmup_steps < 0:
+        raise ValueError("--warmup-steps must be nonnegative")
+    if len(states) < args.warmup_steps + args.states or not frozen_states:
         raise RuntimeError("input bank does not contain the requested states")
     frozen_tokens = frozen_states[0].get(
         "input_ids", frozen_states[0].get("token_ids")
@@ -321,11 +343,12 @@ def main() -> None:
     if canonical(frozen_tokens) != capture["input"]["token_ids_sha256"]:
         raise RuntimeError("the release anchor token sequence changed")
     expected_length = int(capture["input"]["sequence_length"])
+    selected_states = states[args.warmup_steps : args.warmup_steps + args.states]
     if any(len(state.get("input_ids", state.get("token_ids"))) != expected_length
-           for state in states[:args.states]):
+           for state in states[: args.warmup_steps + args.states]):
         raise RuntimeError("state bank changes the frozen sequence shape")
     state_ids = [str(state.get("state_id", state.get("sequence_id", index)))
-                 for index, state in enumerate(states[:args.states])]
+                 for index, state in enumerate(selected_states)]
     if len(state_ids) != len(set(state_ids)):
         raise RuntimeError("state bank contains duplicate state IDs")
 
@@ -370,6 +393,32 @@ def main() -> None:
         if not all(reference_cut_gates(reference_capture).values()):
             raise RuntimeError("reference cut failed")
 
+    # Build a genuine optimizer state within the declared single-parameter
+    # protocol.  Every later candidate/repair comparison starts from this same
+    # warm parameter value and the same captured moments.  Other model
+    # parameters remain frozen, matching the scope of the existing profiles.
+    warm_first = {name: torch.zeros_like(parameters[name], dtype=torch.float32)
+                  for name in carriers}
+    warm_second = {name: torch.zeros_like(parameters[name], dtype=torch.float32)
+                   for name in carriers}
+    for warm_index, state in enumerate(states[:args.warmup_steps]):
+        tokens = state.get("input_ids", state.get("token_ids"))
+        values = torch.tensor([tokens], dtype=torch.long, device=device)
+        seed = 31000 + warm_index
+        torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
+        model.zero_grad(set_to_none=True); candidate(values).backward()
+        torch.cuda.synchronize(device)
+        with torch.no_grad():
+            for carrier in carriers:
+                gradient = parameters[carrier].grad.detach().float()
+                delta, next_first, next_second = adam_delta(
+                    gradient, warm_first[carrier], warm_second[carrier],
+                    warm_index + 1, learning_rate=LR, beta1=0.9, beta2=0.95,
+                )
+                parameters[carrier].add_(delta.to(parameters[carrier].dtype))
+                warm_first[carrier] = next_first
+                warm_second[carrier] = next_second
+
     # The frozen checkpoint manifest binds both counterfactual arms.  No model
     # or optimizer state is mutated anywhere in this open-loop runner.
     index = args.model / "model.safetensors.index.json"
@@ -394,9 +443,16 @@ def main() -> None:
         {task_id: new_v2_stage_store() for task_id in task_ids}
         if args.training_bias_profile_v2_output_dir is not None else None
     )
+    legacy_formation_enabled = bool(
+        args.training_bias_profile_v2_output_dir is None
+        or args.retain_legacy_formation_summary
+        or args.antithetic_dry_run
+        or args.engineering_reach_only
+        or args.screening_gram
+    )
     args.spool_dir.mkdir(parents=True, exist_ok=True)
 
-    for state_index, state in enumerate(states[:args.states]):
+    for state_index, state in enumerate(selected_states):
         state_id = str(state.get("state_id", state.get("sequence_id", state_index)))
         split_index = (
             1 if args.antithetic_dry_run
@@ -498,13 +554,27 @@ def main() -> None:
             gradient_delta = baseline_gradients[carrier] - repair_gradient
             update_delta = -LR * gradient_delta
             if v2_stores is not None:
-                zeros = torch.zeros_like(repair_gradient)
-                candidate_update, _, _ = adam_delta(
-                    baseline_gradients[carrier], zeros, zeros, 1,
+                first = warm_first[carrier].detach().cpu()
+                second = warm_second[carrier].detach().cpu()
+                prior_step = args.warmup_steps
+                if args.reset_moments_at_measurement:
+                    first = torch.zeros_like(repair_gradient)
+                    second = torch.zeros_like(repair_gradient)
+                    prior_step = 0
+                candidate_update, candidate_first, candidate_second = adam_delta(
+                    baseline_gradients[carrier], first, second, prior_step + 1,
                     learning_rate=LR, beta1=0.9, beta2=0.95,
                 )
-                repair_update, _, _ = adam_delta(
-                    repair_gradient, zeros, zeros, 1,
+                repair_update, repair_first, repair_second = adam_delta(
+                    repair_gradient, first, second, prior_step + 1,
+                    learning_rate=LR, beta1=0.9, beta2=0.95,
+                )
+                candidate_next_update, _, _ = adam_delta(
+                    repair_gradient, candidate_first, candidate_second, prior_step + 2,
+                    learning_rate=LR, beta1=0.9, beta2=0.95,
+                )
+                repair_next_update, _, _ = adam_delta(
+                    repair_gradient, repair_first, repair_second, prior_step + 2,
                     learning_rate=LR, beta1=0.9, beta2=0.95,
                 )
                 append_v2_contrast(
@@ -519,6 +589,27 @@ def main() -> None:
                 append_v2_contrast(
                     v2_stores[task_id], "ADAMW_UPDATE",
                     candidate_update - repair_update, repair_update,
+                )
+                # AdamW also writes first- and second-moment state.  A current
+                # parameter update can be almost equal while those states have
+                # already diverged.  Preserve both writes and a frozen next-step
+                # response to the same repair gradient as secondary evidence.
+                for extra_stage in (
+                    "ADAMW_MOMENT1_WRITE", "ADAMW_MOMENT2_WRITE",
+                    "NEXT_STEP_COMMON_GRADIENT_UPDATE",
+                ):
+                    v2_stores[task_id].setdefault(extra_stage, {})
+                append_v2_contrast(
+                    v2_stores[task_id], "ADAMW_MOMENT1_WRITE",
+                    candidate_first - repair_first, repair_first,
+                )
+                append_v2_contrast(
+                    v2_stores[task_id], "ADAMW_MOMENT2_WRITE",
+                    candidate_second - repair_second, repair_second,
+                )
+                append_v2_contrast(
+                    v2_stores[task_id], "NEXT_STEP_COMMON_GRADIENT_UPDATE",
+                    candidate_next_update - repair_next_update, repair_next_update,
                 )
             if args.capture_antithetic_response:
                 reflected: dict[str, Any] = {}
@@ -629,7 +720,7 @@ def main() -> None:
                     "carrier_gradient_error_energy": float(torch.sum(gradient_delta.double() ** 2)),
                     "carrier_reached": bool(torch.count_nonzero(gradient_delta)),
                 })
-            else:
+            elif legacy_formation_enabled:
                 local_delta = observed_locals[task_id]
                 direct_gradient_output = (
                     case.get("reference_method") == "EXTERNAL_FP32_RECOMPUTE"
@@ -656,6 +747,82 @@ def main() -> None:
                           "cases": len(cases)}), flush=True)
         del values, baseline_gradients, references
         torch.cuda.empty_cache()
+
+    # New benchmarks consume only the unified Training Bias Profile v2.  Do
+    # not repeat the older full-coordinate population calculation unless it
+    # was explicitly requested; for vocabulary-sized parameters that duplicate
+    # calculation reads hundreds of GiB of temporary vectors.
+    if (
+        v2_stores is not None
+        and not legacy_formation_enabled
+        and not args.antithetic_dry_run
+        and not args.engineering_reach_only
+        and not args.screening_gram
+    ):
+        assert args.training_bias_profile_v2_output_dir is not None
+        args.training_bias_profile_v2_output_dir.mkdir(parents=True, exist_ok=True)
+        for case in cases:
+            task_id = str(case["task_id"])
+            case_id = str(case.get("case_id", task_id.replace(":", "_")))
+            v2_target = args.training_bias_profile_v2_output_dir / f"{case_id}.json"
+            v2_payload = {
+                "schema": "kernel-analyzer-training-bias-profile-v2-raw-case",
+                "status": "COMPLETE",
+                "case_id": case_id,
+                "case_key": case_id,
+                "source_task_id": task_id,
+                "input_bank": str(args.state_bank or args.input_bank),
+                "state_ids": state_ids,
+                "calibration_state_ids": state_ids[:16],
+                "confirmation_state_ids": state_ids[16:32],
+                "optimizer": {
+                    "name": "AdamW", "weight_decay": 0.0, "lr": LR,
+                    "betas": [0.9, 0.95], "epsilon": 1e-8,
+                    "moments": (
+                        "RESET_AFTER_TARGET_PARAMETER_WARMUP"
+                        if args.reset_moments_at_measurement
+                        else "CAPTURED_AFTER_TARGET_PARAMETER_WARMUP"
+                        if args.warmup_steps
+                        else "ZERO_AT_EVERY_INPUT_STATE"
+                    ),
+                    "warmup_steps": args.warmup_steps,
+                    "warmup_scope": "DECLARED_TARGET_PARAMETERS_ONLY",
+                    "secondary_state_writes": [
+                        "ADAMW_MOMENT1_WRITE",
+                        "ADAMW_MOMENT2_WRITE",
+                        "NEXT_STEP_COMMON_GRADIENT_UPDATE",
+                    ],
+                },
+                "carrier": case["carrier"],
+                "runtime_boundary": {
+                    "task_id": task_id,
+                    "exact_aot_endpoint_id": tasks[task_id]["exact_aot_endpoint_id"],
+                    "frozen_release_id": args.release_dir.name,
+                },
+                "determinism": {
+                    "all_exact": True,
+                    "basis": (
+                        "candidate and observation-only sham gradients are bitwise "
+                        "equal at every state"
+                    ),
+                },
+                "stages": finish_v2_stages(v2_stores[task_id]),
+                "claim_boundary": (
+                    "Matched input states at one checkpoint under the declared "
+                    "single-parameter AdamW protocol. Warm runs evolve only the "
+                    "declared target parameters and are not full-parameter training "
+                    "or independent-run results."
+                ),
+            }
+            v2_target.write_text(
+                json.dumps(v2_payload, indent=2, sort_keys=True) + "\n"
+            )
+            print(json.dumps({
+                "event": "TRAINING_BIAS_PROFILE_V2_CASE_COMPLETE",
+                "case": case_id, "output": str(v2_target),
+            }), flush=True)
+        shutil.rmtree(args.spool_dir)
+        return
 
     if args.antithetic_dry_run:
         args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -928,7 +1095,20 @@ def main() -> None:
                 "optimizer": {
                     "name": "AdamW", "weight_decay": 0.0, "lr": LR,
                     "betas": [0.9, 0.95], "epsilon": 1e-8,
-                    "moments": "ZERO_AT_EVERY_INPUT_STATE",
+                    "moments": (
+                        "RESET_AFTER_TARGET_PARAMETER_WARMUP"
+                        if args.reset_moments_at_measurement
+                        else "CAPTURED_AFTER_TARGET_PARAMETER_WARMUP"
+                        if args.warmup_steps
+                        else "ZERO_AT_EVERY_INPUT_STATE"
+                    ),
+                    "warmup_steps": args.warmup_steps,
+                    "warmup_scope": "DECLARED_TARGET_PARAMETERS_ONLY",
+                    "secondary_state_writes": [
+                        "ADAMW_MOMENT1_WRITE",
+                        "ADAMW_MOMENT2_WRITE",
+                        "NEXT_STEP_COMMON_GRADIENT_UPDATE",
+                    ],
                 },
                 "carrier": case["carrier"],
                 "runtime_boundary": {
@@ -942,8 +1122,10 @@ def main() -> None:
                 },
                 "stages": finish_v2_stages(v2_stores[task_id]),
                 "claim_boundary": (
-                    "32 frozen input states at one checkpoint under cold-start "
-                    "AdamW with zero weight decay; not a warm-moment or independent-run result."
+                    "Matched input states at one checkpoint under the declared "
+                    "single-parameter AdamW protocol. Warm runs evolve only the "
+                    "declared target parameters and are not full-parameter training "
+                    "or independent-run results."
                 ),
             }
             v2_target.write_text(json.dumps(v2_payload, indent=2, sort_keys=True) + "\n")

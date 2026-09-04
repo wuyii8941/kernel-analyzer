@@ -1,0 +1,42 @@
+{
+  "case_id": "phi4_seq128_backward_1032_output_0",
+  "cases": [
+    {
+      "carrier": "model.layers.5.self_attn.qkv_proj.weight",
+      "case_id": "phi4_seq128_backward_1032_output_0",
+      "claim_boundary": "Exact ATTENTION_STATE_OR_TRANSPORT_BACKWARD endpoint backward:1032:output_0; the complete F+B boundary and declared parameter reach must be validated by the runner before any formation verdict.",
+      "reference_method": "AOT_REPLAY",
+      "task_id": "backward:1032:output_0"
+    }
+  ],
+  "closure_task": "backward:1032:output_0",
+  "complete_fb_unit_required": true,
+  "implementation_kind": "EXTERN",
+  "metadata_binding": {
+    "exact_aot_endpoint_id": "backward:graph0:backward_g1__bmm_170",
+    "has_exact_downstream_closure": true,
+    "member_count": 22,
+    "nearest_carrier": {
+      "aliases": [
+        "model.layers.5.self_attn.qkv_proj.weight"
+      ],
+      "aot_distance": 17,
+      "gradient_source_node": "backward_g1__mm_342",
+      "name": "model.layers.5.self_attn.qkv_proj.weight",
+      "shape": [
+        5120,
+        3072
+      ]
+    },
+    "pool_cell_id": "multishape-backward-cell-0487",
+    "pool_rank": 58,
+    "semantic_region_executable": true
+  },
+  "model": "phi4",
+  "region_symbol": "bmm",
+  "schema": "kernel-analyzer-tcmp-case-plan-v2",
+  "sequence_length": 128,
+  "source_family": "ATTENTION_STATE_OR_TRANSPORT_BACKWARD",
+  "source_internal_region": "backward:1032:output_0",
+  "task_id": "backward:1032:output_0"
+}

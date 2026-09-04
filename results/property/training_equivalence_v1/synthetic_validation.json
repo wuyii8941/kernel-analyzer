@@ -1,0 +1,86 @@
+{
+  "claim_boundary": "This validates decision behavior under declared synthetic distributions. The margins are an engineering contract for the next held-out benchmark, not universal constants for all LLM training.",
+  "gates": {
+    "false_equivalence_lte_0_05": true,
+    "material_effect_power_gte_0_90": true,
+    "small_centered_equivalence_gte_0_90": true
+  },
+  "independent_unit_count": 16,
+  "interval_rule": "95% Bonferroni simultaneous intervals across three update effects",
+  "margins": {
+    "additive": 0.001,
+    "repair_aligned": 0.01,
+    "residual_direction": 0.001
+  },
+  "rows": {
+    "detectable_inside_margin": {
+      "decision_counts": {
+        "DETECTABLE_BUT_SMALL": 2000
+      },
+      "decision_rates": {
+        "DETECTABLE_BUT_SMALL": 1.0
+      },
+      "trials": 2000
+    },
+    "just_outside_additive_margin": {
+      "decision_counts": {
+        "INCONCLUSIVE": 1770,
+        "MATERIAL_EFFECT": 230
+      },
+      "decision_rates": {
+        "INCONCLUSIVE": 0.885,
+        "MATERIAL_EFFECT": 0.115
+      },
+      "trials": 2000
+    },
+    "material_additive": {
+      "decision_counts": {
+        "INCONCLUSIVE": 1,
+        "MATERIAL_EFFECT": 1999
+      },
+      "decision_rates": {
+        "INCONCLUSIVE": 0.0005,
+        "MATERIAL_EFFECT": 0.9995
+      },
+      "trials": 2000
+    },
+    "material_aligned": {
+      "decision_counts": {
+        "MATERIAL_EFFECT": 2000
+      },
+      "decision_rates": {
+        "MATERIAL_EFFECT": 1.0
+      },
+      "trials": 2000
+    },
+    "one_uncertain_branch": {
+      "decision_counts": {
+        "DETECTABLE_BUT_SMALL": 42,
+        "EQUIVALENT_UNDER_PROTOCOL": 8,
+        "INCONCLUSIVE": 1947,
+        "MATERIAL_EFFECT": 3
+      },
+      "decision_rates": {
+        "DETECTABLE_BUT_SMALL": 0.021,
+        "EQUIVALENT_UNDER_PROTOCOL": 0.004,
+        "INCONCLUSIVE": 0.9735,
+        "MATERIAL_EFFECT": 0.0015
+      },
+      "trials": 2000
+    },
+    "small_centered": {
+      "decision_counts": {
+        "DETECTABLE_BUT_SMALL": 119,
+        "EQUIVALENT_UNDER_PROTOCOL": 1881
+      },
+      "decision_rates": {
+        "DETECTABLE_BUT_SMALL": 0.0595,
+        "EQUIVALENT_UNDER_PROTOCOL": 0.9405
+      },
+      "trials": 2000
+    }
+  },
+  "schema": "kernel-analyzer-training-equivalence-validation-v1",
+  "status": "GO",
+  "trials_per_scenario": 2000
+}

@@ -1,0 +1,42 @@
+{
+  "case_id": "deepseek8b_seq128_backward_664_in_out_ptr0",
+  "cases": [
+    {
+      "carrier": "model.layers.35.mlp.down_proj.weight",
+      "case_id": "deepseek8b_seq128_backward_664_in_out_ptr0",
+      "claim_boundary": "Exact LOSS_HEAD_BACKWARD endpoint backward:664:in_out_ptr0; the complete F+B boundary and declared parameter reach must be validated by the runner before any formation verdict.",
+      "reference_method": "AOT_REPLAY",
+      "task_id": "backward:664:in_out_ptr0"
+    }
+  ],
+  "closure_task": "backward:664:in_out_ptr0",
+  "complete_fb_unit_required": true,
+  "implementation_kind": "TRITON",
+  "metadata_binding": {
+    "exact_aot_endpoint_id": "backward:graph0:convert_element_type_1095",
+    "has_exact_downstream_closure": true,
+    "member_count": 1,
+    "nearest_carrier": {
+      "aliases": [
+        "model.layers.35.mlp.down_proj.weight"
+      ],
+      "aot_distance": 3,
+      "gradient_source_node": "mm_255",
+      "name": "model.layers.35.mlp.down_proj.weight",
+      "shape": [
+        4096,
+        12288
+      ]
+    },
+    "pool_cell_id": "multishape-backward-cell-0032",
+    "pool_rank": 14,
+    "semantic_region_executable": true
+  },
+  "model": "deepseek8b",
+  "region_symbol": "triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view_3",
+  "schema": "kernel-analyzer-tcmp-case-plan-v2",
+  "sequence_length": 128,
+  "source_family": "LOSS_HEAD_BACKWARD",
+  "source_internal_region": "backward:664:in_out_ptr0",
+  "task_id": "backward:664:in_out_ptr0"
+}

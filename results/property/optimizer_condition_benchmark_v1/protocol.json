@@ -1,0 +1,82 @@
+{
+  "cases": [
+    {
+      "case_id": "deepseek8b_seq256_backward_1714_in_out_ptr0",
+      "model": "deepseek8b",
+      "role": "previously_confirmed_update_effect",
+      "sequence_length": 256,
+      "target_parameter": "model.layers.6.self_attn.o_proj.weight",
+      "task_id": "backward:1714:in_out_ptr0"
+    },
+    {
+      "case_id": "deepseek8b_seq128_backward_1256_out_ptr0",
+      "model": "deepseek8b",
+      "role": "previously_confirmed_update_effect",
+      "sequence_length": 128,
+      "target_parameter": "model.layers.18.self_attn.v_proj.weight",
+      "task_id": "backward:1256:out_ptr0"
+    },
+    {
+      "case_id": "phi4_seq64_backward_495_out_ptr1",
+      "model": "phi4",
+      "role": "previously_centered_control",
+      "sequence_length": 64,
+      "target_parameter": "model.embed_tokens.weight",
+      "task_id": "backward:495:out_ptr1"
+    }
+  ],
+  "claim_boundary": "This benchmark varies the checkpoint and AdamW state of one declared target parameter. It is not full-parameter pretraining and does not estimate a universal rate.",
+  "conditions": [
+    {
+      "name": "cold_start",
+      "reset_moments": false,
+      "warmup_steps": 0
+    },
+    {
+      "name": "warm_step_8",
+      "reset_moments": false,
+      "warmup_steps": 8
+    },
+    {
+      "name": "warm_step_32",
+      "reset_moments": false,
+      "warmup_steps": 32
+    },
+    {
+      "name": "warm_step_32_moments_reset",
+      "reset_moments": true,
+      "warmup_steps": 32
+    },
+    {
+      "name": "stateless_sgd_at_warm_step_32",
+      "source": "the matched gradient difference and repair gradient from warm_step_32",
+      "warmup_steps": 32
+    }
+  ],
+  "fixed_boundaries": [
+    "the same previously frozen case ID is used",
+    "candidate and repair begin each measurement from identical parameters and moments",
+    "the warmup input states do not overlap the 32 measurement input states",
+    "no result may be replaced by a different case after measurement"
+  ],
+  "measurement": {
+    "calibration_states": 16,
+    "confirmation_states": 16,
+    "effects": [
+      "additive",
+      "repair_aligned",
+      "residual_direction"
+    ],
+    "explanation_stages": [
+      "declared implementation output",
+      "parameter gradient"
+    ],
+    "matched_states_per_condition": 32,
+    "multiplicity": "Holm correction over all case x condition x update-effect tests",
+    "primary_stage": "actual AdamW update of the declared target parameter",
+    "scope": "only the declared target parameter is updated during warmup"
+  },
+  "question": "Do previously measured update effects remain when the declared target parameter and its AdamW moments have progressed beyond the first step?",
+  "schema": "kernel-analyzer-optimizer-condition-benchmark-v1",
+  "status": "FROZEN_BEFORE_FOLLOWUP_MEASUREMENT"
+}

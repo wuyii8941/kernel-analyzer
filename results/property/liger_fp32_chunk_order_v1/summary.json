@@ -1,0 +1,123 @@
+{
+  "claim_boundary": "This confirms a short matched-state direction caused by FP32 addition order. It does not by itself establish a long full-training loss consequence.",
+  "comparison": "Both implementations use FP32; only dW chunk-addition order differs.",
+  "multiplicity": {
+    "method": "Holm family-wise correction",
+    "test_count": 6
+  },
+  "schema": "kernel-analyzer-liger-fp32-chunk-order-summary-v1",
+  "source_artifact": "results/property/liger_fp32_chunk_order_v1/result.json",
+  "source_prediction": {
+    "confirmation_count": 16,
+    "confirmation_positive_count": 15,
+    "confirmation_projection_mean": 2.1902311491211311e-07,
+    "direction_repeated": true
+  },
+  "stages": {
+    "ADAMW_UPDATE": {
+      "additive": {
+        "confidence_interval_95": [
+          6.532329919100139e-10,
+          1.142755872869541e-09
+        ],
+        "confirmed": true,
+        "estimate": 8.979944323897774e-10,
+        "holm_adjusted_p": 0.0014996250937265685,
+        "raw_p": 0.00024993751562109475
+      },
+      "repair_aligned": {
+        "confidence_interval_95": [
+          6.204481289550215e-10,
+          1.196097661406458e-09
+        ],
+        "confirmed": true,
+        "estimate": 9.082728951807398e-10,
+        "holm_adjusted_p": 0.001999500124968758,
+        "raw_p": 0.0004998750312421895
+      },
+      "residual_direction": {
+        "confidence_interval_95": [
+          2.1300433916555631e-10,
+          3.605529028514947e-10
+        ],
+        "confirmed": true,
+        "estimate": 2.867786210085255e-10,
+        "holm_adjusted_p": 0.0014996250937265685,
+        "raw_p": 0.00024993751562109475
+      }
+    },
+    "PARAMETER_GRADIENT": {
+      "additive": {
+        "confidence_interval_95": [
+          1.3142875421529133e-08,
+          4.986500938312057e-08
+        ],
+        "confirmed": true,
+        "estimate": 3.150394240232485e-08,
+        "holm_adjusted_p": 0.011247188202949263,
+        "raw_p": 0.003749062734316421
+      },
+      "repair_aligned": {
+        "confidence_interval_95": [
+          -3.30749969204203e-08,
+          3.69713952669334e-09
+        ],
+        "confirmed": false,
+        "estimate": -1.4688928696863479e-08,
+        "holm_adjusted_p": 0.1139715071232192,
+        "raw_p": 0.1139715071232192
+      },
+      "residual_direction": {
+        "confidence_interval_95": [
+          1.1347160661943993e-08,
+          4.672690487609305e-08
+        ],
+        "confirmed": true,
+        "estimate": 2.903703276901852e-08,
+        "holm_adjusted_p": 0.011497125718570358,
+        "raw_p": 0.005748562859285179
+      }
+    }
+  },
+  "status": "COMPLETE",
+  "update_equivalence": {
+    "branches": {
+      "additive": {
+        "crosses_margin": false,
+        "detectable_inside_margin": true,
+        "entirely_beyond_materiality_margin": false,
+        "equivalence_margin": 0.001,
+        "inside_equivalence_region": true,
+        "simultaneous_confidence_interval": [
+          5.886751584755201e-10,
+          1.2073137063040348e-09
+        ]
+      },
+      "repair_aligned": {
+        "crosses_margin": false,
+        "detectable_inside_margin": true,
+        "entirely_beyond_materiality_margin": false,
+        "equivalence_margin": 0.01,
+        "inside_equivalence_region": true,
+        "simultaneous_confidence_interval": [
+          5.445319908578592e-10,
+          1.27201379950362e-09
+        ]
+      },
+      "residual_direction": {
+        "crosses_margin": false,
+        "detectable_inside_margin": true,
+        "entirely_beyond_materiality_margin": false,
+        "equivalence_margin": 0.001,
+        "inside_equivalence_region": true,
+        "simultaneous_confidence_interval": [
+          1.9354576844611505e-10,
+          3.8001147357093606e-10
+        ]
+      }
+    },
+    "decision": "DETECTABLE_BUT_SMALL",
+    "material_consequence_failed": false,
+    "reason": "ALL_INTERVALS_ARE_INSIDE_MARGINS_AND_AT_LEAST_ONE_EXCLUDES_ZERO"
+  }
+}

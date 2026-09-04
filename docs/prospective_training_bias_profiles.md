@@ -78,3 +78,34 @@ AdamW 普遍放大所有数值差异。
 - `results/property/training_bias_profile_v2/prospective_batch_2/summary.json`
 - `results/property/training_bias_profile_v2/prospective_batch_1/consequence/deepseek_norm_4096.json`
 - `results/property/training_bias_profile_v2/prospective_batch_2/consequence/deepseek_attn_projection_4096.json`
+
+## 统一的 16 项冻结验证
+
+在前两批之后，我们又从既有冻结候选池中按不读取数值结果的规则选定 16 个训练
+位置，并把 16 项、三个 AdamW update 效应放进同一个 48 项 Holm 校正组。最终 15 项
+完成测量，Mamba seq256 的实际 backward 图与冻结记录不一致，因此保留为无法判断，
+没有换案例。
+
+最终结果是：
+
+- 9 项确认了相对正常 update 的稳定缩小，来自 DeepSeek、Qwen 和 Phi；
+- 4 项的三个效应区间都落入预先冻结的工程范围，包括 Mamba seq64 和两个 Mamba
+  seq128 位置；后两个位置的 AdamW update difference 在 32 个状态中逐位为零；
+- 2 项现有区间仍不足以判断是否落入工程范围；
+- 1 项因 backward 图不一致而无法判断。
+
+确认结果中的正常 update 缩小范围为 `1.289%` 到 `15.818%`。其中值得单独指出：
+
+| 模型与训练位置 | 正常 update 变化 | 95% 区间 |
+|---|---:|---:|
+| DeepSeek seq128 attention-state backward | −15.818% | [−19.590%, −12.047%] |
+| DeepSeek seq256 normalization backward | −13.464% | [−16.803%, −10.125%] |
+| Qwen seq256 attention-state backward | −12.984% | [−18.971%, −6.997%] |
+| Qwen seq128 attention-projection backward | −5.882% | [−7.035%, −4.730%] |
+| Phi seq256 normalization backward | −2.583% | [−2.907%, −2.259%] |
+
+这轮扩大了模型和训练位置范围，但仍使用现有四个核心模型、同一个 checkpoint 类型
+和 cold-start AdamW。它证明冻结方法不是只对开发案例有效，不证明跨所有模型、
+checkpoint 或真实 warm optimizer state 都保持相同标签。机器结果见
+`results/property/generalization_benchmark_v1/summary.json` 和
+`results/property/generalization_benchmark_v1/equivalence.json`。

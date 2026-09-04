@@ -745,6 +745,10 @@ def drive(args: argparse.Namespace) -> None:
         "XDG_CACHE_HOME": "/data1/tzh/cache/xdg",
     })
     script = Path(__file__).resolve()
+    worker_gpus = [item.strip() for item in args.worker_gpus.split(",")]
+    if len(worker_gpus) != len(ARMS) or any(not item for item in worker_gpus):
+        raise RuntimeError("--worker-gpus must name one physical GPU for each training configuration")
+    compare_gpu = str(args.compare_gpu)
     stop_step = (
         protocol["trajectory"]["steps"]
         if args.stop_step is None
@@ -764,7 +768,7 @@ def drive(args: argparse.Namespace) -> None:
         }
         pair_path = results / f"pair_step{tag}.json"
         processes = []
-        for gpu, arm in enumerate(ARMS):
+        for gpu, arm in zip(worker_gpus, ARMS):
             prefix = "default" if arm == ARMS[0] else "repair"
             command = [
                 sys.executable, str(script), "worker",
@@ -784,7 +788,7 @@ def drive(args: argparse.Namespace) -> None:
                     "--input-checkpoint", str(checkpoints / f"{prefix}_step{previous_tag}.pt"),
                 ])
             arm_env = dict(environment)
-            arm_env["CUDA_VISIBLE_DEVICES"] = str(gpu)
+            arm_env["CUDA_VISIBLE_DEVICES"] = gpu
             log_path = logs / f"{prefix}_step{tag}.log"
             handle = log_path.open("w", encoding="utf-8")
             process = subprocess.Popen(command, cwd=ROOT, env=arm_env, stdout=handle, stderr=subprocess.STDOUT)
@@ -799,7 +803,7 @@ def drive(args: argparse.Namespace) -> None:
         if failures:
             raise RuntimeError(f"trajectory workers failed at step {step}: {failures}")
         pair_env = dict(environment)
-        pair_env["CUDA_VISIBLE_DEVICES"] = "2"
+        pair_env["CUDA_VISIBLE_DEVICES"] = compare_gpu
         pair_log = logs / f"pair_step{tag}.log"
         command = [
             sys.executable, str(script), "compare",
@@ -883,6 +887,14 @@ def parser() -> argparse.ArgumentParser:
     drive_parser.add_argument("--checkpoint-dir", type=Path, default=DEFAULT_CHECKPOINTS)
     drive_parser.add_argument("--start-step", type=int, default=0)
     drive_parser.add_argument("--stop-step", type=int)
+    drive_parser.add_argument(
+        "--worker-gpus", default="0,1",
+        help="Comma-separated physical GPUs for candidate and repair training.",
+    )
+    drive_parser.add_argument(
+        "--compare-gpu", default="2",
+        help="Physical GPU used to compare the two saved training states.",
+    )
     drive_parser.set_defaults(function=drive)
     return result
 

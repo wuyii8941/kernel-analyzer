@@ -1,0 +1,43 @@
+{
+  "case_id": "mamba_seq256_backward_18748_out_ptr0",
+  "cases": [
+    {
+      "carrier": "backbone.embeddings.weight",
+      "case_id": "mamba_seq256_backward_18748_out_ptr0",
+      "claim_boundary": "Exact LOSS_CE_BACKWARD endpoint backward:18748:out_ptr0; the complete F+B boundary and declared parameter reach must be validated by the runner before any formation verdict.",
+      "reference_method": "AOT_REPLAY",
+      "task_id": "backward:18748:out_ptr0"
+    }
+  ],
+  "closure_task": "backward:18748:out_ptr0",
+  "complete_fb_unit_required": true,
+  "implementation_kind": "TRITON",
+  "metadata_binding": {
+    "exact_aot_endpoint_id": "backward:graph0:sum_4",
+    "has_exact_downstream_closure": true,
+    "member_count": 1,
+    "nearest_carrier": {
+      "aliases": [
+        "backbone.embeddings.weight",
+        "lm_head.weight"
+      ],
+      "aot_distance": 9,
+      "gradient_source_node": "add_31010",
+      "name": "backbone.embeddings.weight",
+      "shape": [
+        50280,
+        768
+      ]
+    },
+    "pool_cell_id": "multishape-backward-cell-0284",
+    "pool_rank": 91,
+    "semantic_region_executable": true
+  },
+  "model": "mamba",
+  "region_symbol": "triton_red_fused__log_softmax_backward_data_arange_eq_expand_nll_loss_backward_nll_loss_forward_scalar_tensor_slice_view_0",
+  "schema": "kernel-analyzer-tcmp-case-plan-v2",
+  "sequence_length": 256,
+  "source_family": "LOSS_CE_BACKWARD",
+  "source_internal_region": "backward:18748:out_ptr0",
+  "task_id": "backward:18748:out_ptr0"
+}

@@ -138,7 +138,7 @@ def main() -> None:
     parser.add_argument("--allow-graph-breaks", action="store_true")
     parser.add_argument(
         "--compact-long", action="store_true",
-        help="Store a 256-bin CountSketch per step instead of complete carrier vectors.",
+        help="Store a 256-bin CountSketch per step instead of complete target-parameter vectors.",
     )
     parser.add_argument(
         "--stop-on-loss-split", action="store_true",
@@ -168,7 +168,7 @@ def main() -> None:
     args = parser.parse_args()
     if args.checkpoint_every < 1:
         raise ValueError("--checkpoint-every must be positive")
-    compact_long = bool(args.compact_long and args.steps >= 256)
+    compact_long = bool(args.compact_long)
     if args.resume and args.three_stage_output is not None:
         raise ValueError(
             "--resume cannot be combined with --three-stage-output because the "
@@ -297,7 +297,7 @@ def main() -> None:
         float,
     ]:
         with torch.no_grad():
-            carrier.copy_(master.to(carrier.dtype))
+            carrier.copy_(master.to(device=carrier.device, dtype=carrier.dtype))
         tokens = state.get("input_ids", state.get("token_ids"))
         values = torch.tensor([tokens], dtype=torch.long, device=device)
         torch.manual_seed(seed)
@@ -333,8 +333,11 @@ def main() -> None:
             if carrier.grad is None:
                 raise RuntimeError("candidate carrier gradient is absent")
             loss_value = float(candidate_loss.detach().float().cpu())
+            measured_gradient = carrier.grad.detach().float().clone()
+            if offload_optimizer_state:
+                measured_gradient = measured_gradient.cpu()
             return (
-                carrier.grad.detach().float().clone(),
+                measured_gradient,
                 0,
                 None,
                 candidate_endpoint.get(task_id),
@@ -411,13 +414,23 @@ def main() -> None:
             if reference is not None
             else float(repair_loss.detach().float().cpu())
         )
+        measured_gradient = carrier.grad.detach().float().clone()
+        if offload_optimizer_state:
+            measured_gradient = measured_gradient.cpu()
         return (
-            carrier.grad.detach().float().clone(), delivered["changed"],
+            measured_gradient, delivered["changed"],
             delivered.get("endpoint_delta"), delivered.get("endpoint_pair"),
             repair_loss_value,
         )
 
+    # Vocabulary-sized target parameters make six FP32 AdamW state tensors
+    # plus four matched gradients exceed a 48 GiB GPU.  Compact runs do not
+    # need those optimizer-state tensors on the GPU: only the model backward
+    # does.  Offload them without changing any arithmetic or saved result.
+    offload_optimizer_state = bool(compact_long and carrier.numel() >= 100_000_000)
     initial = carrier.detach().float().clone()
+    if offload_optimizer_state:
+        initial = initial.cpu()
     candidate_master = initial.clone()
     repair_master = initial.clone()
     candidate_m = torch.zeros_like(initial)
@@ -427,19 +440,30 @@ def main() -> None:
     start_step = 0
     saved_rows: list[dict[str, Any]] = []
     if args.resume:
-        checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=False)
+        restored_state_device = torch.device("cpu") if offload_optimizer_state else device
+        checkpoint = torch.load(
+            args.checkpoint,
+            map_location=("cpu" if offload_optimizer_state else device),
+            weights_only=False,
+        )
         if checkpoint.get("case_id") != args.case_id or checkpoint.get("state_ids") != state_ids:
             raise RuntimeError("checkpoint does not match the frozen case/trajectory")
-        candidate_master = checkpoint["candidate_master"].to(device)
-        repair_master = checkpoint["repair_master"].to(device)
-        candidate_m = checkpoint["candidate_m"].to(device)
-        candidate_v = checkpoint["candidate_v"].to(device)
-        repair_m = checkpoint["repair_m"].to(device)
-        repair_v = checkpoint["repair_v"].to(device)
+        candidate_master = checkpoint["candidate_master"].to(restored_state_device)
+        repair_master = checkpoint["repair_master"].to(restored_state_device)
+        candidate_m = checkpoint["candidate_m"].to(restored_state_device)
+        candidate_v = checkpoint["candidate_v"].to(restored_state_device)
+        repair_m = checkpoint["repair_m"].to(restored_state_device)
+        repair_v = checkpoint["repair_v"].to(restored_state_device)
         start_step = int(checkpoint["next_step"])
         saved_rows = list(checkpoint["rows"])
 
-    projection = deterministic_projection(args.case_id, initial.numel(), device).reshape(initial.shape)
+    # A full-size projection is only needed when the complete vectors are
+    # exported.  Constructing it for compact runs wastes several GiB for large
+    # embedding parameters without contributing to the measurement.
+    projection = (
+        deterministic_projection(args.case_id, initial.numel(), device).reshape(initial.shape)
+        if not compact_long else None
+    )
     trace = None if compact_long else BiasConsequenceTrace(args.case_id, state_ids, args.recurrence_tolerance)
     sketch_dimension = 256
     sketch_buckets = None
@@ -456,12 +480,15 @@ def main() -> None:
         # supplied, which then rejects this CPU generator.  ``random_`` on a
         # preallocated CPU tensor keeps the generator/device contract
         # unambiguous and preserves the frozen seed.
+        # Keep recording-only maps on CPU.  For a vocabulary-sized parameter,
+        # the int64 bucket map and float32 sign map otherwise consume several
+        # GiB of GPU memory and can prevent the real backward pass from running.
         sketch_buckets = torch.empty(
             (coordinates,), dtype=torch.int64, device="cpu"
-        ).random_(0, sketch_dimension, generator=generator).to(device)
+        ).random_(0, sketch_dimension, generator=generator)
         sketch_signs = torch.empty(
             (coordinates,), dtype=torch.float32, device="cpu"
-        ).random_(0, 2, generator=generator).mul_(2).sub_(1).to(device)
+        ).random_(0, 2, generator=generator).mul_(2).sub_(1)
     local_vectors: list[torch.Tensor] = []
     feedback_vectors: list[torch.Tensor] = []
     actual_vectors: list[torch.Tensor] = []
@@ -482,16 +509,61 @@ def main() -> None:
     raw_repair_moments: list[torch.Tensor] = []
     raw_repair_second_moments: list[torch.Tensor] = []
 
-    def arm(value: torch.Tensor) -> dict[str, Any]:
+    def measured_adam_delta(
+        gradient_value: torch.Tensor,
+        first_value: torch.Tensor,
+        second_value: torch.Tensor,
+        step_value: int,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        if not offload_optimizer_state:
+            return adam_delta(
+                gradient_value, first_value, second_value, step_value,
+                learning_rate=args.learning_rate,
+            )
+        # Keep the large tensors in host memory, but execute the declared
+        # AdamW pointwise formula on the GPU in fixed contiguous chunks.  The
+        # formula has no cross-coordinate reduction, so chunking changes
+        # storage pressure, not optimizer semantics.
+        chunk_coordinates = 4_194_304
+        flat_g = gradient_value.reshape(-1)
+        flat_m = first_value.reshape(-1)
+        flat_v = second_value.reshape(-1)
+        out = torch.empty_like(flat_g)
+        next_m = torch.empty_like(flat_m)
+        next_v = torch.empty_like(flat_v)
+        for start in range(0, flat_g.numel(), chunk_coordinates):
+            stop = min(start + chunk_coordinates, flat_g.numel())
+            delta_chunk, m_chunk, v_chunk = adam_delta(
+                flat_g[start:stop].to(device),
+                flat_m[start:stop].to(device),
+                flat_v[start:stop].to(device),
+                step_value,
+                learning_rate=args.learning_rate,
+            )
+            out[start:stop].copy_(delta_chunk.cpu())
+            next_m[start:stop].copy_(m_chunk.cpu())
+            next_v[start:stop].copy_(v_chunk.cpu())
+            del delta_chunk, m_chunk, v_chunk
+        return (
+            out.reshape(gradient_value.shape),
+            next_m.reshape(first_value.shape),
+            next_v.reshape(second_value.shape),
+        )
+
+    def summarize_vector(value: torch.Tensor) -> dict[str, Any]:
         if compact_long:
             assert sketch_buckets is not None and sketch_signs is not None
-            sketch = compact_sketch(value, sketch_buckets, sketch_signs, sketch_dimension)
+            recorded = value.detach().float().cpu().reshape(-1)
+            sketch = compact_sketch(
+                recorded, sketch_buckets, sketch_signs, sketch_dimension
+            )
             return {
                 "coordinate_count": int(value.numel()),
                 "sketch_dimension": sketch_dimension,
                 "sketch": sketch.detach().cpu().tolist(),
                 "norm": float(torch.linalg.vector_norm(value).item()),
             }
+        assert projection is not None
         flat = value.detach().double().reshape(-1)
         signed = float(torch.dot(flat, projection.double().reshape(-1)))
         return {"vector": flat.cpu().tolist(), "signed_value": signed}
@@ -528,21 +600,17 @@ def main() -> None:
         gr_c, changed_rc, endpoint_c, endpoint_pair_c, _loss_rc = gradient(candidate_master, state, True, seed)
         gc_r, changed_cr, _, _, _loss_cr = gradient(repair_master, state, False, seed)
         gr_r, changed_rr, endpoint_r, _, loss_rr = gradient(repair_master, state, True, seed)
-        raw_uc_c, next_cm, next_cv = adam_delta(
+        raw_uc_c, next_cm, next_cv = measured_adam_delta(
             gc_c, candidate_m, candidate_v, step,
-            learning_rate=args.learning_rate,
         )
-        raw_ur_c, _, _ = adam_delta(
+        raw_ur_c, _, _ = measured_adam_delta(
             gr_c, candidate_m, candidate_v, step,
-            learning_rate=args.learning_rate,
         )
-        raw_uc_r, _, _ = adam_delta(
+        raw_uc_r, _, _ = measured_adam_delta(
             gc_r, repair_m, repair_v, step,
-            learning_rate=args.learning_rate,
         )
-        raw_ur_r, next_rm, next_rv = adam_delta(
+        raw_ur_r, next_rm, next_rv = measured_adam_delta(
             gr_r, repair_m, repair_v, step,
-            learning_rate=args.learning_rate,
         )
         next_candidate_master = candidate_master + raw_uc_c
         next_repair_master = repair_master + raw_ur_r
@@ -560,21 +628,30 @@ def main() -> None:
         )
         if compact_long:
             assert sketch_buckets is not None and sketch_signs is not None
-            local_stored = compact_sketch(local, sketch_buckets, sketch_signs, sketch_dimension).double().cpu()
-            feedback_stored = compact_sketch(feedback, sketch_buckets, sketch_signs, sketch_dimension).double().cpu()
-            actual_stored = compact_sketch(actual, sketch_buckets, sketch_signs, sketch_dimension).double().cpu()
+            local_stored = compact_sketch(
+                local.detach().float().cpu().reshape(-1),
+                sketch_buckets, sketch_signs, sketch_dimension,
+            ).double()
+            feedback_stored = compact_sketch(
+                feedback.detach().float().cpu().reshape(-1),
+                sketch_buckets, sketch_signs, sketch_dimension,
+            ).double()
+            actual_stored = compact_sketch(
+                actual.detach().float().cpu().reshape(-1),
+                sketch_buckets, sketch_signs, sketch_dimension,
+            ).double()
         else:
             local_stored = local.detach().double().cpu().reshape(-1)
             feedback_stored = feedback.detach().double().cpu().reshape(-1)
             actual_stored = actual.detach().double().cpu().reshape(-1)
         raw_row = {
             "step_id": state_ids[index],
-            "candidate_at_candidate_state": arm(uc_c),
-            "repair_at_candidate_state": arm(ur_c),
-            "candidate_at_repair_state": arm(uc_r),
-            "repair_at_repair_state": arm(ur_r),
-            "drift_before": arm(drift_before),
-            "drift_after": arm(drift_after),
+            "candidate_at_candidate_state": summarize_vector(uc_c),
+            "repair_at_candidate_state": summarize_vector(ur_c),
+            "candidate_at_repair_state": summarize_vector(uc_r),
+            "repair_at_repair_state": summarize_vector(ur_r),
+            "drift_before": summarize_vector(drift_before),
+            "drift_after": summarize_vector(drift_after),
             "derived_local_vector": local_stored.tolist(),
             "derived_feedback_vector": feedback_stored.tolist(),
             "derived_actual_vector": actual_stored.tolist(),
@@ -772,6 +849,11 @@ def main() -> None:
         },
         "statistics": statistics,
         "measurement_geometry": "COUNT_SKETCH_256" if compact_long else "FULL_COORDINATE",
+        "optimizer_state_device": "cpu" if offload_optimizer_state else str(device),
+        "optimizer_execution": (
+            "gpu_pointwise_chunks_4194304_coordinates"
+            if offload_optimizer_state else "gpu_full_tensor"
+        ),
         "final_drift_l2": float(torch.linalg.vector_norm(candidate_master - repair_master).item()),
         "max_recurrence_relative": max_relative,
         "recurrence_relative_tolerance": args.recurrence_relative_tolerance,

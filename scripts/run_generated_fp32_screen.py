@@ -19,13 +19,12 @@ from PIL import Image
 from torch._inductor.codecache import PyCodeCache
 from transformers import (
     AutoModelForCausalLM, AutoProcessor, Gemma3ForConditionalGeneration,
-    MambaForCausalLM, Mistral3ForConditionalGeneration,
+    Mistral3ForConditionalGeneration,
 )
 try:
     from transformers import Gemma4ForConditionalGeneration
 except ImportError:  # Older test/runtime environments do not ship Gemma 4.
     Gemma4ForConditionalGeneration = None
-from transformers.models.mamba import modeling_mamba
 
 from qwen_candidate_step import LossStep, configure_candidate_runtime
 
@@ -116,6 +115,27 @@ def artifact_binding(path: Path) -> str:
 
 def load_model(architecture: str, path: Path, device: torch.device) -> torch.nn.Module:
     if architecture == "mamba":
+        # The frozen releases use Transformers' explicit PyTorch path.  Hide
+        # optional mamba-ssm while the lazy model module is imported so an
+        # unrelated extension install cannot change the compiled graph (or
+        # prevent import under an older Triton runtime).
+        from transformers.utils import import_utils
+
+        original_availability_check = import_utils.is_mamba_ssm_available
+        import_utils.is_mamba_ssm_available = lambda: False
+        try:
+            from transformers import MambaForCausalLM
+        finally:
+            import_utils.is_mamba_ssm_available = original_availability_check
+        from transformers.models.mamba import modeling_mamba
+
+        # The frozen coverage releases were produced through Transformers'
+        # explicit PyTorch path.  Keep that exact path even when optional
+        # mamba-ssm extensions happen to be installed in the environment.
+        modeling_mamba.selective_scan_fn = None
+        modeling_mamba.mamba_inner_fn = None
+        modeling_mamba.selective_state_update = None
+
         model = MambaForCausalLM.from_pretrained(path, dtype=torch.bfloat16, local_files_only=True)
     elif architecture == "gemma3":
         model = Gemma3ForConditionalGeneration.from_pretrained(

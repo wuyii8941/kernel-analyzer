@@ -1,0 +1,43 @@
+{
+  "case_id": "qwen_seq256_backward_1492_out_ptr1",
+  "cases": [
+    {
+      "carrier": "model.embed_tokens.weight",
+      "case_id": "qwen_seq256_backward_1492_out_ptr1",
+      "claim_boundary": "Exact LOSS_CE_BACKWARD endpoint backward:1492:out_ptr1; the complete F+B boundary and declared parameter reach must be validated by the runner before any formation verdict.",
+      "reference_method": "AOT_REPLAY",
+      "task_id": "backward:1492:out_ptr1"
+    }
+  ],
+  "closure_task": "backward:1492:out_ptr1",
+  "complete_fb_unit_required": true,
+  "implementation_kind": "TRITON",
+  "metadata_binding": {
+    "exact_aot_endpoint_id": "backward:graph0:where_5",
+    "has_exact_downstream_closure": true,
+    "member_count": 1,
+    "nearest_carrier": {
+      "aliases": [
+        "lm_head.weight",
+        "model.embed_tokens.weight"
+      ],
+      "aot_distance": 3,
+      "gradient_source_node": "add_703",
+      "name": "model.embed_tokens.weight",
+      "shape": [
+        151936,
+        2048
+      ]
+    },
+    "pool_cell_id": "multishape-backward-cell-0682",
+    "pool_rank": 42,
+    "semantic_region_executable": true
+  },
+  "model": "qwen",
+  "region_symbol": "triton_red_fused__to_copy_add_div_embedding_dense_backward_expand_mul_nll_loss_forward_pow_sum_view_22",
+  "schema": "kernel-analyzer-tcmp-case-plan-v2",
+  "sequence_length": 256,
+  "source_family": "LOSS_CE_BACKWARD",
+  "source_internal_region": "backward:1492:out_ptr1",
+  "task_id": "backward:1492:out_ptr1"
+}

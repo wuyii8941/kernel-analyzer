@@ -1,0 +1,574 @@
+{
+  "architecture": "deepseek8b",
+  "carrier": "model.layers.18.self_attn.v_proj.weight",
+  "carrier_coordinates": 4194304,
+  "case_id": "deepseek8b_seq128_backward_1256_out_ptr0",
+  "case_plan": "/data1/tzh/kernel-analyzer/results/property/tcmp_allop_v1/heldout/deepseek8b_seq128_backward_1256_out_ptr0/case_plan.json",
+  "claim_boundary": "Four real counterfactual arms on one declared parameter carrier. Formation labels are not read or emitted. A 32-step result is a bounded one-parameter consequence, not full-model training safety. ",
+  "compact_long_horizon": true,
+  "consequence_only_early_stop": false,
+  "final_drift_l2": 0.31205418705940247,
+  "four_counterfactual_arms_required": true,
+  "loss_audit": {
+    "any_period_split": true,
+    "final_gap": -0.007510662078857422,
+    "last_512_max_abs": 0.02901744842529297,
+    "last_512_mean": -0.00015853345394134521,
+    "max_abs_gap": 0.02901744842529297,
+    "recorded": true,
+    "recorded_steps": 32,
+    "split_step_count": 32,
+    "tolerance": 1e-08
+  },
+  "max_recurrence_relative": 1.8828960055706282e-07,
+  "measurement_geometry": "COUNT_SKETCH_256",
+  "measurement_kind": "candidate_repair_closed_loop_consequence",
+  "missing_step_ids": [],
+  "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+  "optimizer": {
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "epsilon": 1e-08,
+    "learning_rate": 0.0001,
+    "name": "AdamW",
+    "weight_decay": 0.0
+  },
+  "optimizer_execution": "gpu_full_tensor",
+  "optimizer_state_device": "cuda:0",
+  "planned_horizon_steps": 32,
+  "projection": {
+    "kind": "candidate_blind_fixed_rademacher",
+    "primary_verdict_uses_projection": false,
+    "seed_rule": "sha256(case_id)"
+  },
+  "recurrence_relative_tolerance": 1e-05,
+  "recurrence_tolerance": 1e-06,
+  "release": "/data1/tzh/kernel-analyzer/results/coverage/runtime_releases/deepseek8b_seq128_r1",
+  "runner": "scripts/run_bound_endpoint_consequence_v21.py",
+  "schema": "kernel-analyzer-bias-consequence-certificate-v2_1",
+  "statistics": {
+    "level_ids": [
+      "local",
+      "feedback",
+      "actual"
+    ],
+    "levels": {
+      "actual": {
+        "above_sign_flip_95": true,
+        "coherence_amplification": 2.5211823881171442,
+        "coherence_fraction_of_max": 0.4456862908114317,
+        "diffusive_scale_l2": 0.12728369333533218,
+        "energy": 0.016201138589082884,
+        "final_amplification_is_order_invariant": true,
+        "lag_correlation": [
+          {
+            "lag": 1,
+            "mean_inner_product": 0.00022313025423978551,
+            "normalized_correlation": 0.6225728663016353,
+            "pairs": 31
+          },
+          {
+            "lag": 2,
+            "mean_inner_product": 0.00016280717046998774,
+            "normalized_correlation": 0.47203787448551826,
+            "pairs": 30
+          },
+          {
+            "lag": 3,
+            "mean_inner_product": 0.0001436124694495095,
+            "normalized_correlation": 0.47502232571037234,
+            "pairs": 29
+          },
+          {
+            "lag": 4,
+            "mean_inner_product": 0.0001257648802617159,
+            "normalized_correlation": 0.45777138579149884,
+            "pairs": 28
+          },
+          {
+            "lag": 5,
+            "mean_inner_product": 0.00011201511081633116,
+            "normalized_correlation": 0.43756400640797993,
+            "pairs": 27
+          },
+          {
+            "lag": 6,
+            "mean_inner_product": 0.00010234948325391192,
+            "normalized_correlation": 0.4252196692323444,
+            "pairs": 26
+          },
+          {
+            "lag": 7,
+            "mean_inner_product": 9.16852789949449e-05,
+            "normalized_correlation": 0.4034237554844956,
+            "pairs": 25
+          },
+          {
+            "lag": 8,
+            "mean_inner_product": 8.568325701587997e-05,
+            "normalized_correlation": 0.39444052755669834,
+            "pairs": 24
+          }
+        ],
+        "lag_curve_and_prefix_are_order_sensitive": true,
+        "path_l2": 0.5266727521675683,
+        "prefix": {
+          "1": {
+            "coherence_amplification": 1.0,
+            "coherence_fraction_of_max": 1.0,
+            "diffusive_scale_l2": 0.08688207892888762,
+            "resultant_l2": 0.08688207892888762
+          },
+          "16": {
+            "coherence_amplification": 2.0570365919394367,
+            "coherence_fraction_of_max": 0.5142591479848592,
+            "diffusive_scale_l2": 0.12133402433376253,
+            "resultant_l2": 0.24958852790181957
+          },
+          "2": {
+            "coherence_amplification": 1.1084141233349798,
+            "coherence_fraction_of_max": 0.7837671429731065,
+            "diffusive_scale_l2": 0.09490644962236933,
+            "resultant_l2": 0.10519564915701393
+          },
+          "32": {
+            "coherence_amplification": 2.5211823881171442,
+            "coherence_fraction_of_max": 0.4456862908114317,
+            "diffusive_scale_l2": 0.12728369333533218,
+            "resultant_l2": 0.32090540593154304
+          },
+          "4": {
+            "coherence_amplification": 1.218114946985276,
+            "coherence_fraction_of_max": 0.609057473492638,
+            "diffusive_scale_l2": 0.10842707450418564,
+            "resultant_l2": 0.13207664011143463
+          },
+          "8": {
+            "coherence_amplification": 1.606219292470247,
+            "coherence_fraction_of_max": 0.567884276889185,
+            "diffusive_scale_l2": 0.11687821983003202,
+            "resultant_l2": 0.18773205156057604
+          }
+        },
+        "resultant_l2": 0.32090540593154304,
+        "resultant_over_path": 0.6093070215059133,
+        "schema": "kernel-analyzer-path-statistics-v1",
+        "sign_flip_null": {
+          "draws": 1000,
+          "median": 0.9460163952116165,
+          "one_sided_p": 0.000999000999000999,
+          "seed": 20260822,
+          "upper_95": 1.3154392339087817,
+          "upper_99": 1.5051120662473954
+        },
+        "state_ids": [
+          "deepseek8b_seq128_trajectory4096-trajectory-2560",
+          "deepseek8b_seq128_trajectory4096-trajectory-2561",
+          "deepseek8b_seq128_trajectory4096-trajectory-2562",
+          "deepseek8b_seq128_trajectory4096-trajectory-2563",
+          "deepseek8b_seq128_trajectory4096-trajectory-2564",
+          "deepseek8b_seq128_trajectory4096-trajectory-2565",
+          "deepseek8b_seq128_trajectory4096-trajectory-2566",
+          "deepseek8b_seq128_trajectory4096-trajectory-2567",
+          "deepseek8b_seq128_trajectory4096-trajectory-2568",
+          "deepseek8b_seq128_trajectory4096-trajectory-2569",
+          "deepseek8b_seq128_trajectory4096-trajectory-2570",
+          "deepseek8b_seq128_trajectory4096-trajectory-2571",
+          "deepseek8b_seq128_trajectory4096-trajectory-2572",
+          "deepseek8b_seq128_trajectory4096-trajectory-2573",
+          "deepseek8b_seq128_trajectory4096-trajectory-2574",
+          "deepseek8b_seq128_trajectory4096-trajectory-2575",
+          "deepseek8b_seq128_trajectory4096-trajectory-2576",
+          "deepseek8b_seq128_trajectory4096-trajectory-2577",
+          "deepseek8b_seq128_trajectory4096-trajectory-2578",
+          "deepseek8b_seq128_trajectory4096-trajectory-2579",
+          "deepseek8b_seq128_trajectory4096-trajectory-2580",
+          "deepseek8b_seq128_trajectory4096-trajectory-2581",
+          "deepseek8b_seq128_trajectory4096-trajectory-2582",
+          "deepseek8b_seq128_trajectory4096-trajectory-2583",
+          "deepseek8b_seq128_trajectory4096-trajectory-2584",
+          "deepseek8b_seq128_trajectory4096-trajectory-2585",
+          "deepseek8b_seq128_trajectory4096-trajectory-2586",
+          "deepseek8b_seq128_trajectory4096-trajectory-2587",
+          "deepseek8b_seq128_trajectory4096-trajectory-2588",
+          "deepseek8b_seq128_trajectory4096-trajectory-2589",
+          "deepseek8b_seq128_trajectory4096-trajectory-2590",
+          "deepseek8b_seq128_trajectory4096-trajectory-2591"
+        ],
+        "steps": 32
+      },
+      "feedback": {
+        "above_sign_flip_95": true,
+        "coherence_amplification": 3.3486386920896156,
+        "coherence_fraction_of_max": 0.5919612817300546,
+        "diffusive_scale_l2": 0.07572363368380587,
+        "energy": 0.005734068698279219,
+        "final_amplification_is_order_invariant": true,
+        "lag_correlation": [
+          {
+            "lag": 1,
+            "mean_inner_product": 0.00013397102168795653,
+            "normalized_correlation": 0.7929315779456476,
+            "pairs": 31
+          },
+          {
+            "lag": 2,
+            "mean_inner_product": 0.00011694269180070154,
+            "normalized_correlation": 0.6927424530159413,
+            "pairs": 30
+          },
+          {
+            "lag": 3,
+            "mean_inner_product": 0.00010125322969344901,
+            "normalized_correlation": 0.6426977557068719,
+            "pairs": 29
+          },
+          {
+            "lag": 4,
+            "mean_inner_product": 9.044733171695878e-05,
+            "normalized_correlation": 0.6087497108397587,
+            "pairs": 28
+          },
+          {
+            "lag": 5,
+            "mean_inner_product": 8.116566978283297e-05,
+            "normalized_correlation": 0.5751864732537547,
+            "pairs": 27
+          },
+          {
+            "lag": 6,
+            "mean_inner_product": 7.330073562013174e-05,
+            "normalized_correlation": 0.5423452810692354,
+            "pairs": 26
+          },
+          {
+            "lag": 7,
+            "mean_inner_product": 6.633420790616127e-05,
+            "normalized_correlation": 0.5091993258955111,
+            "pairs": 25
+          },
+          {
+            "lag": 8,
+            "mean_inner_product": 6.104119124087672e-05,
+            "normalized_correlation": 0.47991857124055676,
+            "pairs": 24
+          }
+        ],
+        "lag_curve_and_prefix_are_order_sensitive": true,
+        "path_l2": 0.3795933973501179,
+        "prefix": {
+          "1": {
+            "coherence_amplification": 0.0,
+            "coherence_fraction_of_max": 0.0,
+            "diffusive_scale_l2": 0.0,
+            "resultant_l2": 0.0
+          },
+          "16": {
+            "coherence_amplification": 2.723634075154475,
+            "coherence_fraction_of_max": 0.6809085187886188,
+            "diffusive_scale_l2": 0.06700631843088808,
+            "resultant_l2": 0.1825006921290181
+          },
+          "2": {
+            "coherence_amplification": 1.0,
+            "coherence_fraction_of_max": 0.7071067811865475,
+            "diffusive_scale_l2": 0.02614016514647031,
+            "resultant_l2": 0.02614016514647031
+          },
+          "32": {
+            "coherence_amplification": 3.3486386920896156,
+            "coherence_fraction_of_max": 0.5919612817300546,
+            "diffusive_scale_l2": 0.07572363368380587,
+            "resultant_l2": 0.2535710896592128
+          },
+          "4": {
+            "coherence_amplification": 1.1654930575723816,
+            "coherence_fraction_of_max": 0.5827465287861908,
+            "diffusive_scale_l2": 0.0427611503853151,
+            "resultant_l2": 0.049837823907893326
+          },
+          "8": {
+            "coherence_amplification": 1.9445435264155009,
+            "coherence_fraction_of_max": 0.6874999569204014,
+            "diffusive_scale_l2": 0.05932993204210564,
+            "resultant_l2": 0.11536963527514812
+          }
+        },
+        "resultant_l2": 0.2535710896592128,
+        "resultant_over_path": 0.6680071134781398,
+        "schema": "kernel-analyzer-path-statistics-v1",
+        "sign_flip_null": {
+          "draws": 1000,
+          "median": 0.9019421423022114,
+          "one_sided_p": 0.000999000999000999,
+          "seed": 20260821,
+          "upper_95": 1.5369984205201355,
+          "upper_99": 1.7933686876680621
+        },
+        "state_ids": [
+          "deepseek8b_seq128_trajectory4096-trajectory-2560",
+          "deepseek8b_seq128_trajectory4096-trajectory-2561",
+          "deepseek8b_seq128_trajectory4096-trajectory-2562",
+          "deepseek8b_seq128_trajectory4096-trajectory-2563",
+          "deepseek8b_seq128_trajectory4096-trajectory-2564",
+          "deepseek8b_seq128_trajectory4096-trajectory-2565",
+          "deepseek8b_seq128_trajectory4096-trajectory-2566",
+          "deepseek8b_seq128_trajectory4096-trajectory-2567",
+          "deepseek8b_seq128_trajectory4096-trajectory-2568",
+          "deepseek8b_seq128_trajectory4096-trajectory-2569",
+          "deepseek8b_seq128_trajectory4096-trajectory-2570",
+          "deepseek8b_seq128_trajectory4096-trajectory-2571",
+          "deepseek8b_seq128_trajectory4096-trajectory-2572",
+          "deepseek8b_seq128_trajectory4096-trajectory-2573",
+          "deepseek8b_seq128_trajectory4096-trajectory-2574",
+          "deepseek8b_seq128_trajectory4096-trajectory-2575",
+          "deepseek8b_seq128_trajectory4096-trajectory-2576",
+          "deepseek8b_seq128_trajectory4096-trajectory-2577",
+          "deepseek8b_seq128_trajectory4096-trajectory-2578",
+          "deepseek8b_seq128_trajectory4096-trajectory-2579",
+          "deepseek8b_seq128_trajectory4096-trajectory-2580",
+          "deepseek8b_seq128_trajectory4096-trajectory-2581",
+          "deepseek8b_seq128_trajectory4096-trajectory-2582",
+          "deepseek8b_seq128_trajectory4096-trajectory-2583",
+          "deepseek8b_seq128_trajectory4096-trajectory-2584",
+          "deepseek8b_seq128_trajectory4096-trajectory-2585",
+          "deepseek8b_seq128_trajectory4096-trajectory-2586",
+          "deepseek8b_seq128_trajectory4096-trajectory-2587",
+          "deepseek8b_seq128_trajectory4096-trajectory-2588",
+          "deepseek8b_seq128_trajectory4096-trajectory-2589",
+          "deepseek8b_seq128_trajectory4096-trajectory-2590",
+          "deepseek8b_seq128_trajectory4096-trajectory-2591"
+        ],
+        "steps": 32
+      },
+      "local": {
+        "above_sign_flip_95": false,
+        "coherence_amplification": 1.0228762964108449,
+        "coherence_fraction_of_max": 0.18082069137677234,
+        "diffusive_scale_l2": 0.10456120724521757,
+        "energy": 0.010933046060577338,
+        "final_amplification_is_order_invariant": true,
+        "lag_correlation": [
+          {
+            "lag": 1,
+            "mean_inner_product": -4.297269012712897e-07,
+            "normalized_correlation": -0.002607353641210302,
+            "pairs": 31
+          },
+          {
+            "lag": 2,
+            "mean_inner_product": -1.8166054366944204e-06,
+            "normalized_correlation": -0.01162626039285928,
+            "pairs": 30
+          },
+          {
+            "lag": 3,
+            "mean_inner_product": 6.411314984194166e-07,
+            "normalized_correlation": 0.009860647814820309,
+            "pairs": 29
+          },
+          {
+            "lag": 4,
+            "mean_inner_product": 1.1029688324980773e-06,
+            "normalized_correlation": 0.020968081435341453,
+            "pairs": 28
+          },
+          {
+            "lag": 5,
+            "mean_inner_product": 2.2025011109761468e-07,
+            "normalized_correlation": 0.004805584508898666,
+            "pairs": 27
+          },
+          {
+            "lag": 6,
+            "mean_inner_product": 1.4152510559064562e-06,
+            "normalized_correlation": 0.02974355924436708,
+            "pairs": 26
+          },
+          {
+            "lag": 7,
+            "mean_inner_product": -9.776288296119093e-07,
+            "normalized_correlation": -0.024985069809365133,
+            "pairs": 25
+          },
+          {
+            "lag": 8,
+            "mean_inner_product": 1.7896401337528698e-06,
+            "normalized_correlation": 0.04987385840027638,
+            "pairs": 24
+          }
+        ],
+        "lag_curve_and_prefix_are_order_sensitive": true,
+        "path_l2": 0.27268092573851765,
+        "prefix": {
+          "1": {
+            "coherence_amplification": 1.0,
+            "coherence_fraction_of_max": 1.0,
+            "diffusive_scale_l2": 0.08688207892888762,
+            "resultant_l2": 0.08688207892888762
+          },
+          "16": {
+            "coherence_amplification": 1.0087590934993629,
+            "coherence_fraction_of_max": 0.2521897733748407,
+            "diffusive_scale_l2": 0.10348482465644118,
+            "resultant_l2": 0.10439125791137212
+          },
+          "2": {
+            "coherence_amplification": 1.0134262796147178,
+            "coherence_fraction_of_max": 0.7166005945482211,
+            "diffusive_scale_l2": 0.09281390115180767,
+            "resultant_l2": 0.0940600465408046
+          },
+          "32": {
+            "coherence_amplification": 1.0228762964108449,
+            "coherence_fraction_of_max": 0.18082069137677234,
+            "diffusive_scale_l2": 0.10456120724521757,
+            "resultant_l2": 0.10695318041523495
+          },
+          "4": {
+            "coherence_amplification": 0.9905223917344491,
+            "coherence_fraction_of_max": 0.49526119586722456,
+            "diffusive_scale_l2": 0.10224767286405509,
+            "resultant_l2": 0.10127860947458539
+          },
+          "8": {
+            "coherence_amplification": 0.9997197670032083,
+            "coherence_fraction_of_max": 0.3534543132671019,
+            "diffusive_scale_l2": 0.10304419958363005,
+            "resultant_l2": 0.10301532319877872
+          }
+        },
+        "resultant_l2": 0.10695318041523495,
+        "resultant_over_path": 0.39222831639421574,
+        "schema": "kernel-analyzer-path-statistics-v1",
+        "sign_flip_null": {
+          "draws": 1000,
+          "median": 0.9951269914383922,
+          "one_sided_p": 0.2217782217782218,
+          "seed": 20260820,
+          "upper_95": 1.0394904529133688,
+          "upper_99": 1.0471732790867057
+        },
+        "state_ids": [
+          "deepseek8b_seq128_trajectory4096-trajectory-2560",
+          "deepseek8b_seq128_trajectory4096-trajectory-2561",
+          "deepseek8b_seq128_trajectory4096-trajectory-2562",
+          "deepseek8b_seq128_trajectory4096-trajectory-2563",
+          "deepseek8b_seq128_trajectory4096-trajectory-2564",
+          "deepseek8b_seq128_trajectory4096-trajectory-2565",
+          "deepseek8b_seq128_trajectory4096-trajectory-2566",
+          "deepseek8b_seq128_trajectory4096-trajectory-2567",
+          "deepseek8b_seq128_trajectory4096-trajectory-2568",
+          "deepseek8b_seq128_trajectory4096-trajectory-2569",
+          "deepseek8b_seq128_trajectory4096-trajectory-2570",
+          "deepseek8b_seq128_trajectory4096-trajectory-2571",
+          "deepseek8b_seq128_trajectory4096-trajectory-2572",
+          "deepseek8b_seq128_trajectory4096-trajectory-2573",
+          "deepseek8b_seq128_trajectory4096-trajectory-2574",
+          "deepseek8b_seq128_trajectory4096-trajectory-2575",
+          "deepseek8b_seq128_trajectory4096-trajectory-2576",
+          "deepseek8b_seq128_trajectory4096-trajectory-2577",
+          "deepseek8b_seq128_trajectory4096-trajectory-2578",
+          "deepseek8b_seq128_trajectory4096-trajectory-2579",
+          "deepseek8b_seq128_trajectory4096-trajectory-2580",
+          "deepseek8b_seq128_trajectory4096-trajectory-2581",
+          "deepseek8b_seq128_trajectory4096-trajectory-2582",
+          "deepseek8b_seq128_trajectory4096-trajectory-2583",
+          "deepseek8b_seq128_trajectory4096-trajectory-2584",
+          "deepseek8b_seq128_trajectory4096-trajectory-2585",
+          "deepseek8b_seq128_trajectory4096-trajectory-2586",
+          "deepseek8b_seq128_trajectory4096-trajectory-2587",
+          "deepseek8b_seq128_trajectory4096-trajectory-2588",
+          "deepseek8b_seq128_trajectory4096-trajectory-2589",
+          "deepseek8b_seq128_trajectory4096-trajectory-2590",
+          "deepseek8b_seq128_trajectory4096-trajectory-2591"
+        ],
+        "steps": 32
+      }
+    },
+    "measurement_geometry": "COUNT_SKETCH_256",
+    "resultant_cosines": {
+      "feedback__actual": 0.9575711389224426,
+      "local__actual": 0.7301610941638613,
+      "local__feedback": 0.5022633709492549
+    },
+    "schema": "kernel-analyzer-aligned-level-statistics-v1",
+    "state_ids": [
+      "deepseek8b_seq128_trajectory4096-trajectory-2560",
+      "deepseek8b_seq128_trajectory4096-trajectory-2561",
+      "deepseek8b_seq128_trajectory4096-trajectory-2562",
+      "deepseek8b_seq128_trajectory4096-trajectory-2563",
+      "deepseek8b_seq128_trajectory4096-trajectory-2564",
+      "deepseek8b_seq128_trajectory4096-trajectory-2565",
+      "deepseek8b_seq128_trajectory4096-trajectory-2566",
+      "deepseek8b_seq128_trajectory4096-trajectory-2567",
+      "deepseek8b_seq128_trajectory4096-trajectory-2568",
+      "deepseek8b_seq128_trajectory4096-trajectory-2569",
+      "deepseek8b_seq128_trajectory4096-trajectory-2570",
+      "deepseek8b_seq128_trajectory4096-trajectory-2571",
+      "deepseek8b_seq128_trajectory4096-trajectory-2572",
+      "deepseek8b_seq128_trajectory4096-trajectory-2573",
+      "deepseek8b_seq128_trajectory4096-trajectory-2574",
+      "deepseek8b_seq128_trajectory4096-trajectory-2575",
+      "deepseek8b_seq128_trajectory4096-trajectory-2576",
+      "deepseek8b_seq128_trajectory4096-trajectory-2577",
+      "deepseek8b_seq128_trajectory4096-trajectory-2578",
+      "deepseek8b_seq128_trajectory4096-trajectory-2579",
+      "deepseek8b_seq128_trajectory4096-trajectory-2580",
+      "deepseek8b_seq128_trajectory4096-trajectory-2581",
+      "deepseek8b_seq128_trajectory4096-trajectory-2582",
+      "deepseek8b_seq128_trajectory4096-trajectory-2583",
+      "deepseek8b_seq128_trajectory4096-trajectory-2584",
+      "deepseek8b_seq128_trajectory4096-trajectory-2585",
+      "deepseek8b_seq128_trajectory4096-trajectory-2586",
+      "deepseek8b_seq128_trajectory4096-trajectory-2587",
+      "deepseek8b_seq128_trajectory4096-trajectory-2588",
+      "deepseek8b_seq128_trajectory4096-trajectory-2589",
+      "deepseek8b_seq128_trajectory4096-trajectory-2590",
+      "deepseek8b_seq128_trajectory4096-trajectory-2591"
+    ]
+  },
+  "status": "COMPLETE",
+  "step_count": 32,
+  "step_ids": [
+    "deepseek8b_seq128_trajectory4096-trajectory-2560",
+    "deepseek8b_seq128_trajectory4096-trajectory-2561",
+    "deepseek8b_seq128_trajectory4096-trajectory-2562",
+    "deepseek8b_seq128_trajectory4096-trajectory-2563",
+    "deepseek8b_seq128_trajectory4096-trajectory-2564",
+    "deepseek8b_seq128_trajectory4096-trajectory-2565",
+    "deepseek8b_seq128_trajectory4096-trajectory-2566",
+    "deepseek8b_seq128_trajectory4096-trajectory-2567",
+    "deepseek8b_seq128_trajectory4096-trajectory-2568",
+    "deepseek8b_seq128_trajectory4096-trajectory-2569",
+    "deepseek8b_seq128_trajectory4096-trajectory-2570",
+    "deepseek8b_seq128_trajectory4096-trajectory-2571",
+    "deepseek8b_seq128_trajectory4096-trajectory-2572",
+    "deepseek8b_seq128_trajectory4096-trajectory-2573",
+    "deepseek8b_seq128_trajectory4096-trajectory-2574",
+    "deepseek8b_seq128_trajectory4096-trajectory-2575",
+    "deepseek8b_seq128_trajectory4096-trajectory-2576",
+    "deepseek8b_seq128_trajectory4096-trajectory-2577",
+    "deepseek8b_seq128_trajectory4096-trajectory-2578",
+    "deepseek8b_seq128_trajectory4096-trajectory-2579",
+    "deepseek8b_seq128_trajectory4096-trajectory-2580",
+    "deepseek8b_seq128_trajectory4096-trajectory-2581",
+    "deepseek8b_seq128_trajectory4096-trajectory-2582",
+    "deepseek8b_seq128_trajectory4096-trajectory-2583",
+    "deepseek8b_seq128_trajectory4096-trajectory-2584",
+    "deepseek8b_seq128_trajectory4096-trajectory-2585",
+    "deepseek8b_seq128_trajectory4096-trajectory-2586",
+    "deepseek8b_seq128_trajectory4096-trajectory-2587",
+    "deepseek8b_seq128_trajectory4096-trajectory-2588",
+    "deepseek8b_seq128_trajectory4096-trajectory-2589",
+    "deepseek8b_seq128_trajectory4096-trajectory-2590",
+    "deepseek8b_seq128_trajectory4096-trajectory-2591"
+  ],
+  "steps": 32,
+  "trajectory_status": "COMPLETE",
+  "uses_candidate_measurements": true,
+  "uses_historical_verdicts": false,
+  "verdict_blind": true
+}

@@ -1,0 +1,42 @@
+{
+  "case_id": "phi4_seq256_backward_613_in_out_ptr0",
+  "cases": [
+    {
+      "carrier": "model.layers.26.self_attn.o_proj.weight",
+      "case_id": "phi4_seq256_backward_613_in_out_ptr0",
+      "claim_boundary": "Exact NORMALIZATION_BACKWARD endpoint backward:613:in_out_ptr0; the complete F+B boundary and declared parameter reach must be validated by the runner before any formation verdict.",
+      "reference_method": "AOT_REPLAY",
+      "task_id": "backward:613:in_out_ptr0"
+    }
+  ],
+  "closure_task": "backward:613:in_out_ptr0",
+  "complete_fb_unit_required": true,
+  "implementation_kind": "TRITON",
+  "metadata_binding": {
+    "exact_aot_endpoint_id": "backward:graph0:backward_g1__add_331",
+    "has_exact_downstream_closure": true,
+    "member_count": 22,
+    "nearest_carrier": {
+      "aliases": [
+        "model.layers.26.self_attn.o_proj.weight"
+      ],
+      "aot_distance": 3,
+      "gradient_source_node": "backward_g1__mm_172",
+      "name": "model.layers.26.self_attn.o_proj.weight",
+      "shape": [
+        3072,
+        3072
+      ]
+    },
+    "pool_cell_id": "multishape-backward-cell-0541",
+    "pool_rank": 16,
+    "semantic_region_executable": true
+  },
+  "model": "phi4",
+  "region_symbol": "triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view_4",
+  "schema": "kernel-analyzer-tcmp-case-plan-v2",
+  "sequence_length": 256,
+  "source_family": "NORMALIZATION_BACKWARD",
+  "source_internal_region": "backward:613:in_out_ptr0",
+  "task_id": "backward:613:in_out_ptr0"
+}

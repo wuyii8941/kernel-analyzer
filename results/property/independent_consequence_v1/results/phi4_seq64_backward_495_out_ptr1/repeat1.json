@@ -1,0 +1,574 @@
+{
+  "architecture": "phi",
+  "carrier": "model.embed_tokens.weight",
+  "carrier_coordinates": 614596608,
+  "case_id": "phi4_seq64_backward_495_out_ptr1",
+  "case_plan": "/data1/tzh/kernel-analyzer/results/property/tcmp_allop_v1/heldout/phi4_seq64_backward_495_out_ptr1/case_plan.json",
+  "claim_boundary": "Four real counterfactual arms on one declared parameter carrier. Formation labels are not read or emitted. A 32-step result is a bounded one-parameter consequence, not full-model training safety. ",
+  "compact_long_horizon": true,
+  "consequence_only_early_stop": false,
+  "final_drift_l2": 0.4453223943710327,
+  "four_counterfactual_arms_required": true,
+  "loss_audit": {
+    "any_period_split": true,
+    "final_gap": 0.006301164627075195,
+    "last_512_max_abs": 0.04894256591796875,
+    "last_512_mean": -0.00022274255752563477,
+    "max_abs_gap": 0.04894256591796875,
+    "recorded": true,
+    "recorded_steps": 32,
+    "split_step_count": 32,
+    "tolerance": 1e-08
+  },
+  "max_recurrence_relative": 4.41501656105435e-08,
+  "measurement_geometry": "COUNT_SKETCH_256",
+  "measurement_kind": "candidate_repair_closed_loop_consequence",
+  "missing_step_ids": [],
+  "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+  "optimizer": {
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "epsilon": 1e-08,
+    "learning_rate": 0.0001,
+    "name": "AdamW",
+    "weight_decay": 0.0
+  },
+  "optimizer_execution": "gpu_pointwise_chunks_4194304_coordinates",
+  "optimizer_state_device": "cpu",
+  "planned_horizon_steps": 32,
+  "projection": {
+    "kind": "candidate_blind_fixed_rademacher",
+    "primary_verdict_uses_projection": false,
+    "seed_rule": "sha256(case_id)"
+  },
+  "recurrence_relative_tolerance": 1e-05,
+  "recurrence_tolerance": 1e-06,
+  "release": "/data1/tzh/kernel-analyzer/results/coverage/runtime_releases/phi4_seq64_r1",
+  "runner": "scripts/run_bound_endpoint_consequence_v21.py",
+  "schema": "kernel-analyzer-bias-consequence-certificate-v2_1",
+  "statistics": {
+    "level_ids": [
+      "local",
+      "feedback",
+      "actual"
+    ],
+    "levels": {
+      "actual": {
+        "above_sign_flip_95": true,
+        "coherence_amplification": 2.998963860673369,
+        "coherence_fraction_of_max": 0.5301469206038819,
+        "diffusive_scale_l2": 0.1538586962472426,
+        "energy": 0.023672498410901268,
+        "final_amplification_is_order_invariant": true,
+        "lag_correlation": [
+          {
+            "lag": 1,
+            "mean_inner_product": 0.0005288161336215727,
+            "normalized_correlation": 0.7697700328981264,
+            "pairs": 31
+          },
+          {
+            "lag": 2,
+            "mean_inner_product": 0.00044204323907675897,
+            "normalized_correlation": 0.6731982631643317,
+            "pairs": 30
+          },
+          {
+            "lag": 3,
+            "mean_inner_product": 0.00038816571627140357,
+            "normalized_correlation": 0.600588292055831,
+            "pairs": 29
+          },
+          {
+            "lag": 4,
+            "mean_inner_product": 0.00033244797662722764,
+            "normalized_correlation": 0.5281446938146709,
+            "pairs": 28
+          },
+          {
+            "lag": 5,
+            "mean_inner_product": 0.0002847597582002822,
+            "normalized_correlation": 0.46105991940679725,
+            "pairs": 27
+          },
+          {
+            "lag": 6,
+            "mean_inner_product": 0.00025384732328868404,
+            "normalized_correlation": 0.4128482810706473,
+            "pairs": 26
+          },
+          {
+            "lag": 7,
+            "mean_inner_product": 0.0002251150953521516,
+            "normalized_correlation": 0.36610635994130697,
+            "pairs": 25
+          },
+          {
+            "lag": 8,
+            "mean_inner_product": 0.00019731964483375662,
+            "normalized_correlation": 0.3254104675289149,
+            "pairs": 24
+          }
+        ],
+        "lag_curve_and_prefix_are_order_sensitive": true,
+        "path_l2": 0.8136760959074684,
+        "prefix": {
+          "1": {
+            "coherence_amplification": 1.0,
+            "coherence_fraction_of_max": 1.0,
+            "diffusive_scale_l2": 0.06299457976299067,
+            "resultant_l2": 0.06299457976299067
+          },
+          "16": {
+            "coherence_amplification": 2.374413081986601,
+            "coherence_fraction_of_max": 0.5936032704966503,
+            "diffusive_scale_l2": 0.13213872763310766,
+            "resultant_l2": 0.3137519235291152
+          },
+          "2": {
+            "coherence_amplification": 1.1383198633186984,
+            "coherence_fraction_of_max": 0.8049136945119955,
+            "diffusive_scale_l2": 0.07922298809190131,
+            "resultant_l2": 0.09018110097647197
+          },
+          "32": {
+            "coherence_amplification": 2.998963860673369,
+            "coherence_fraction_of_max": 0.5301469206038819,
+            "diffusive_scale_l2": 0.1538586962472426,
+            "resultant_l2": 0.46141666969580186
+          },
+          "4": {
+            "coherence_amplification": 1.3913920985683699,
+            "coherence_fraction_of_max": 0.6956960492841849,
+            "diffusive_scale_l2": 0.09507957514517983,
+            "resultant_l2": 0.1322929695922408
+          },
+          "8": {
+            "coherence_amplification": 1.8534705177094855,
+            "coherence_fraction_of_max": 0.655300785900859,
+            "diffusive_scale_l2": 0.11352382040519979,
+            "resultant_l2": 0.2104130541787843
+          }
+        },
+        "resultant_l2": 0.46141666969580186,
+        "resultant_over_path": 0.5670765947489188,
+        "schema": "kernel-analyzer-path-statistics-v1",
+        "sign_flip_null": {
+          "draws": 1000,
+          "median": 0.9358448195512161,
+          "one_sided_p": 0.000999000999000999,
+          "seed": 20260822,
+          "upper_95": 1.3726065039389048,
+          "upper_99": 1.5843275993430543
+        },
+        "state_ids": [
+          "phi4_seq64_trajectory4096-trajectory-1024",
+          "phi4_seq64_trajectory4096-trajectory-1025",
+          "phi4_seq64_trajectory4096-trajectory-1026",
+          "phi4_seq64_trajectory4096-trajectory-1027",
+          "phi4_seq64_trajectory4096-trajectory-1028",
+          "phi4_seq64_trajectory4096-trajectory-1029",
+          "phi4_seq64_trajectory4096-trajectory-1030",
+          "phi4_seq64_trajectory4096-trajectory-1031",
+          "phi4_seq64_trajectory4096-trajectory-1032",
+          "phi4_seq64_trajectory4096-trajectory-1033",
+          "phi4_seq64_trajectory4096-trajectory-1034",
+          "phi4_seq64_trajectory4096-trajectory-1035",
+          "phi4_seq64_trajectory4096-trajectory-1036",
+          "phi4_seq64_trajectory4096-trajectory-1037",
+          "phi4_seq64_trajectory4096-trajectory-1038",
+          "phi4_seq64_trajectory4096-trajectory-1039",
+          "phi4_seq64_trajectory4096-trajectory-1040",
+          "phi4_seq64_trajectory4096-trajectory-1041",
+          "phi4_seq64_trajectory4096-trajectory-1042",
+          "phi4_seq64_trajectory4096-trajectory-1043",
+          "phi4_seq64_trajectory4096-trajectory-1044",
+          "phi4_seq64_trajectory4096-trajectory-1045",
+          "phi4_seq64_trajectory4096-trajectory-1046",
+          "phi4_seq64_trajectory4096-trajectory-1047",
+          "phi4_seq64_trajectory4096-trajectory-1048",
+          "phi4_seq64_trajectory4096-trajectory-1049",
+          "phi4_seq64_trajectory4096-trajectory-1050",
+          "phi4_seq64_trajectory4096-trajectory-1051",
+          "phi4_seq64_trajectory4096-trajectory-1052",
+          "phi4_seq64_trajectory4096-trajectory-1053",
+          "phi4_seq64_trajectory4096-trajectory-1054",
+          "phi4_seq64_trajectory4096-trajectory-1055"
+        ],
+        "steps": 32
+      },
+      "feedback": {
+        "above_sign_flip_95": true,
+        "coherence_amplification": 3.3351263334572825,
+        "coherence_fraction_of_max": 0.5895726116253678,
+        "diffusive_scale_l2": 0.12943128379304944,
+        "energy": 0.016752457224316904,
+        "final_amplification_is_order_invariant": true,
+        "lag_correlation": [
+          {
+            "lag": 1,
+            "mean_inner_product": 0.00043680288452300586,
+            "normalized_correlation": 0.843538224019642,
+            "pairs": 31
+          },
+          {
+            "lag": 2,
+            "mean_inner_product": 0.000381344463244891,
+            "normalized_correlation": 0.7485913406591908,
+            "pairs": 30
+          },
+          {
+            "lag": 3,
+            "mean_inner_product": 0.00033506433024246514,
+            "normalized_correlation": 0.6706651540735215,
+            "pairs": 29
+          },
+          {
+            "lag": 4,
+            "mean_inner_product": 0.0002954135034612748,
+            "normalized_correlation": 0.6012159002784525,
+            "pairs": 28
+          },
+          {
+            "lag": 5,
+            "mean_inner_product": 0.00025811208846560345,
+            "normalized_correlation": 0.531514968788724,
+            "pairs": 27
+          },
+          {
+            "lag": 6,
+            "mean_inner_product": 0.0002281331793693455,
+            "normalized_correlation": 0.47189603179750594,
+            "pairs": 26
+          },
+          {
+            "lag": 7,
+            "mean_inner_product": 0.00020052682930796296,
+            "normalized_correlation": 0.41576774439877434,
+            "pairs": 25
+          },
+          {
+            "lag": 8,
+            "mean_inner_product": 0.00017718002129755775,
+            "normalized_correlation": 0.3707749743747524,
+            "pairs": 24
+          }
+        ],
+        "lag_curve_and_prefix_are_order_sensitive": true,
+        "path_l2": 0.7047950304505995,
+        "prefix": {
+          "1": {
+            "coherence_amplification": 0.0,
+            "coherence_fraction_of_max": 0.0,
+            "diffusive_scale_l2": 0.0,
+            "resultant_l2": 0.0
+          },
+          "16": {
+            "coherence_amplification": 2.6471092770783495,
+            "coherence_fraction_of_max": 0.6617773192695874,
+            "diffusive_scale_l2": 0.10389896201551538,
+            "resultant_l2": 0.27503190623008184
+          },
+          "2": {
+            "coherence_amplification": 1.0,
+            "coherence_fraction_of_max": 0.7071067811865475,
+            "diffusive_scale_l2": 0.031999743408618136,
+            "resultant_l2": 0.031999743408618136
+          },
+          "32": {
+            "coherence_amplification": 3.3351263334572825,
+            "coherence_fraction_of_max": 0.5895726116253678,
+            "diffusive_scale_l2": 0.12943128379304944,
+            "resultant_l2": 0.43166968295138197
+          },
+          "4": {
+            "coherence_amplification": 1.385582551414371,
+            "coherence_fraction_of_max": 0.6927912757071855,
+            "diffusive_scale_l2": 0.05709636434444285,
+            "resultant_l2": 0.07911172618485765
+          },
+          "8": {
+            "coherence_amplification": 2.0425196384165205,
+            "coherence_fraction_of_max": 0.7221397435155084,
+            "diffusive_scale_l2": 0.08027740667682137,
+            "resultant_l2": 0.16396817965855714
+          }
+        },
+        "resultant_l2": 0.43166968295138197,
+        "resultant_over_path": 0.6124754918822296,
+        "schema": "kernel-analyzer-path-statistics-v1",
+        "sign_flip_null": {
+          "draws": 1000,
+          "median": 0.9091957454602968,
+          "one_sided_p": 0.000999000999000999,
+          "seed": 20260821,
+          "upper_95": 1.4914626913840174,
+          "upper_99": 1.7524100562667464
+        },
+        "state_ids": [
+          "phi4_seq64_trajectory4096-trajectory-1024",
+          "phi4_seq64_trajectory4096-trajectory-1025",
+          "phi4_seq64_trajectory4096-trajectory-1026",
+          "phi4_seq64_trajectory4096-trajectory-1027",
+          "phi4_seq64_trajectory4096-trajectory-1028",
+          "phi4_seq64_trajectory4096-trajectory-1029",
+          "phi4_seq64_trajectory4096-trajectory-1030",
+          "phi4_seq64_trajectory4096-trajectory-1031",
+          "phi4_seq64_trajectory4096-trajectory-1032",
+          "phi4_seq64_trajectory4096-trajectory-1033",
+          "phi4_seq64_trajectory4096-trajectory-1034",
+          "phi4_seq64_trajectory4096-trajectory-1035",
+          "phi4_seq64_trajectory4096-trajectory-1036",
+          "phi4_seq64_trajectory4096-trajectory-1037",
+          "phi4_seq64_trajectory4096-trajectory-1038",
+          "phi4_seq64_trajectory4096-trajectory-1039",
+          "phi4_seq64_trajectory4096-trajectory-1040",
+          "phi4_seq64_trajectory4096-trajectory-1041",
+          "phi4_seq64_trajectory4096-trajectory-1042",
+          "phi4_seq64_trajectory4096-trajectory-1043",
+          "phi4_seq64_trajectory4096-trajectory-1044",
+          "phi4_seq64_trajectory4096-trajectory-1045",
+          "phi4_seq64_trajectory4096-trajectory-1046",
+          "phi4_seq64_trajectory4096-trajectory-1047",
+          "phi4_seq64_trajectory4096-trajectory-1048",
+          "phi4_seq64_trajectory4096-trajectory-1049",
+          "phi4_seq64_trajectory4096-trajectory-1050",
+          "phi4_seq64_trajectory4096-trajectory-1051",
+          "phi4_seq64_trajectory4096-trajectory-1052",
+          "phi4_seq64_trajectory4096-trajectory-1053",
+          "phi4_seq64_trajectory4096-trajectory-1054",
+          "phi4_seq64_trajectory4096-trajectory-1055"
+        ],
+        "steps": 32
+      },
+      "local": {
+        "above_sign_flip_95": false,
+        "coherence_amplification": 1.025571640955563,
+        "coherence_fraction_of_max": 0.18129716547807345,
+        "diffusive_scale_l2": 0.08112296882580691,
+        "energy": 0.006580936071112841,
+        "final_amplification_is_order_invariant": true,
+        "lag_correlation": [
+          {
+            "lag": 1,
+            "mean_inner_product": 8.010065119906305e-06,
+            "normalized_correlation": 0.06369548789368364,
+            "pairs": 31
+          },
+          {
+            "lag": 2,
+            "mean_inner_product": -1.2572370888306002e-06,
+            "normalized_correlation": -0.015534326455956836,
+            "pairs": 30
+          },
+          {
+            "lag": 3,
+            "mean_inner_product": 3.385407179302331e-06,
+            "normalized_correlation": 0.04501624336296199,
+            "pairs": 29
+          },
+          {
+            "lag": 4,
+            "mean_inner_product": 5.094532617246195e-08,
+            "normalized_correlation": 0.0007934306096798371,
+            "pairs": 28
+          },
+          {
+            "lag": 5,
+            "mean_inner_product": -2.8362826411977994e-06,
+            "normalized_correlation": -0.04760704617415513,
+            "pairs": 27
+          },
+          {
+            "lag": 6,
+            "mean_inner_product": 6.544450863468141e-07,
+            "normalized_correlation": 0.009178843047445153,
+            "pairs": 26
+          },
+          {
+            "lag": 7,
+            "mean_inner_product": -1.9520973928689937e-06,
+            "normalized_correlation": -0.02601778312126493,
+            "pairs": 25
+          },
+          {
+            "lag": 8,
+            "mean_inner_product": -1.9137155983182388e-06,
+            "normalized_correlation": -0.03307773886727154,
+            "pairs": 24
+          }
+        ],
+        "lag_curve_and_prefix_are_order_sensitive": true,
+        "path_l2": 0.2717678503119373,
+        "prefix": {
+          "1": {
+            "coherence_amplification": 1.0,
+            "coherence_fraction_of_max": 1.0,
+            "diffusive_scale_l2": 0.06299457976299067,
+            "resultant_l2": 0.06299457976299067
+          },
+          "16": {
+            "coherence_amplification": 1.026833296141238,
+            "coherence_fraction_of_max": 0.2567083240353095,
+            "diffusive_scale_l2": 0.07953826166963807,
+            "resultant_l2": 0.08167253539957874
+          },
+          "2": {
+            "coherence_amplification": 1.0378300143144916,
+            "coherence_fraction_of_max": 0.7338566408407087,
+            "diffusive_scale_l2": 0.07217098005874596,
+            "resultant_l2": 0.07490120926745922
+          },
+          "32": {
+            "coherence_amplification": 1.025571640955563,
+            "coherence_fraction_of_max": 0.18129716547807345,
+            "diffusive_scale_l2": 0.08112296882580691,
+            "resultant_l2": 0.08319741625786979
+          },
+          "4": {
+            "coherence_amplification": 1.0490971871518264,
+            "coherence_fraction_of_max": 0.5245485935759132,
+            "diffusive_scale_l2": 0.07499069779957662,
+            "resultant_l2": 0.07867253012408851
+          },
+          "8": {
+            "coherence_amplification": 1.0386730100371817,
+            "coherence_fraction_of_max": 0.367226364416367,
+            "diffusive_scale_l2": 0.0779475233217181,
+            "resultant_l2": 0.08096198867351236
+          }
+        },
+        "resultant_l2": 0.08319741625786979,
+        "resultant_over_path": 0.30613413677289325,
+        "schema": "kernel-analyzer-path-statistics-v1",
+        "sign_flip_null": {
+          "draws": 1000,
+          "median": 1.002766356899036,
+          "one_sided_p": 0.32667332667332666,
+          "seed": 20260820,
+          "upper_95": 1.0699570847841222,
+          "upper_99": 1.0876421412298156
+        },
+        "state_ids": [
+          "phi4_seq64_trajectory4096-trajectory-1024",
+          "phi4_seq64_trajectory4096-trajectory-1025",
+          "phi4_seq64_trajectory4096-trajectory-1026",
+          "phi4_seq64_trajectory4096-trajectory-1027",
+          "phi4_seq64_trajectory4096-trajectory-1028",
+          "phi4_seq64_trajectory4096-trajectory-1029",
+          "phi4_seq64_trajectory4096-trajectory-1030",
+          "phi4_seq64_trajectory4096-trajectory-1031",
+          "phi4_seq64_trajectory4096-trajectory-1032",
+          "phi4_seq64_trajectory4096-trajectory-1033",
+          "phi4_seq64_trajectory4096-trajectory-1034",
+          "phi4_seq64_trajectory4096-trajectory-1035",
+          "phi4_seq64_trajectory4096-trajectory-1036",
+          "phi4_seq64_trajectory4096-trajectory-1037",
+          "phi4_seq64_trajectory4096-trajectory-1038",
+          "phi4_seq64_trajectory4096-trajectory-1039",
+          "phi4_seq64_trajectory4096-trajectory-1040",
+          "phi4_seq64_trajectory4096-trajectory-1041",
+          "phi4_seq64_trajectory4096-trajectory-1042",
+          "phi4_seq64_trajectory4096-trajectory-1043",
+          "phi4_seq64_trajectory4096-trajectory-1044",
+          "phi4_seq64_trajectory4096-trajectory-1045",
+          "phi4_seq64_trajectory4096-trajectory-1046",
+          "phi4_seq64_trajectory4096-trajectory-1047",
+          "phi4_seq64_trajectory4096-trajectory-1048",
+          "phi4_seq64_trajectory4096-trajectory-1049",
+          "phi4_seq64_trajectory4096-trajectory-1050",
+          "phi4_seq64_trajectory4096-trajectory-1051",
+          "phi4_seq64_trajectory4096-trajectory-1052",
+          "phi4_seq64_trajectory4096-trajectory-1053",
+          "phi4_seq64_trajectory4096-trajectory-1054",
+          "phi4_seq64_trajectory4096-trajectory-1055"
+        ],
+        "steps": 32
+      }
+    },
+    "measurement_geometry": "COUNT_SKETCH_256",
+    "resultant_cosines": {
+      "feedback__actual": 0.9848454379653377,
+      "local__actual": 0.4361758681070108,
+      "local__feedback": 0.2734989569516854
+    },
+    "schema": "kernel-analyzer-aligned-level-statistics-v1",
+    "state_ids": [
+      "phi4_seq64_trajectory4096-trajectory-1024",
+      "phi4_seq64_trajectory4096-trajectory-1025",
+      "phi4_seq64_trajectory4096-trajectory-1026",
+      "phi4_seq64_trajectory4096-trajectory-1027",
+      "phi4_seq64_trajectory4096-trajectory-1028",
+      "phi4_seq64_trajectory4096-trajectory-1029",
+      "phi4_seq64_trajectory4096-trajectory-1030",
+      "phi4_seq64_trajectory4096-trajectory-1031",
+      "phi4_seq64_trajectory4096-trajectory-1032",
+      "phi4_seq64_trajectory4096-trajectory-1033",
+      "phi4_seq64_trajectory4096-trajectory-1034",
+      "phi4_seq64_trajectory4096-trajectory-1035",
+      "phi4_seq64_trajectory4096-trajectory-1036",
+      "phi4_seq64_trajectory4096-trajectory-1037",
+      "phi4_seq64_trajectory4096-trajectory-1038",
+      "phi4_seq64_trajectory4096-trajectory-1039",
+      "phi4_seq64_trajectory4096-trajectory-1040",
+      "phi4_seq64_trajectory4096-trajectory-1041",
+      "phi4_seq64_trajectory4096-trajectory-1042",
+      "phi4_seq64_trajectory4096-trajectory-1043",
+      "phi4_seq64_trajectory4096-trajectory-1044",
+      "phi4_seq64_trajectory4096-trajectory-1045",
+      "phi4_seq64_trajectory4096-trajectory-1046",
+      "phi4_seq64_trajectory4096-trajectory-1047",
+      "phi4_seq64_trajectory4096-trajectory-1048",
+      "phi4_seq64_trajectory4096-trajectory-1049",
+      "phi4_seq64_trajectory4096-trajectory-1050",
+      "phi4_seq64_trajectory4096-trajectory-1051",
+      "phi4_seq64_trajectory4096-trajectory-1052",
+      "phi4_seq64_trajectory4096-trajectory-1053",
+      "phi4_seq64_trajectory4096-trajectory-1054",
+      "phi4_seq64_trajectory4096-trajectory-1055"
+    ]
+  },
+  "status": "COMPLETE",
+  "step_count": 32,
+  "step_ids": [
+    "phi4_seq64_trajectory4096-trajectory-1024",
+    "phi4_seq64_trajectory4096-trajectory-1025",
+    "phi4_seq64_trajectory4096-trajectory-1026",
+    "phi4_seq64_trajectory4096-trajectory-1027",
+    "phi4_seq64_trajectory4096-trajectory-1028",
+    "phi4_seq64_trajectory4096-trajectory-1029",
+    "phi4_seq64_trajectory4096-trajectory-1030",
+    "phi4_seq64_trajectory4096-trajectory-1031",
+    "phi4_seq64_trajectory4096-trajectory-1032",
+    "phi4_seq64_trajectory4096-trajectory-1033",
+    "phi4_seq64_trajectory4096-trajectory-1034",
+    "phi4_seq64_trajectory4096-trajectory-1035",
+    "phi4_seq64_trajectory4096-trajectory-1036",
+    "phi4_seq64_trajectory4096-trajectory-1037",
+    "phi4_seq64_trajectory4096-trajectory-1038",
+    "phi4_seq64_trajectory4096-trajectory-1039",
+    "phi4_seq64_trajectory4096-trajectory-1040",
+    "phi4_seq64_trajectory4096-trajectory-1041",
+    "phi4_seq64_trajectory4096-trajectory-1042",
+    "phi4_seq64_trajectory4096-trajectory-1043",
+    "phi4_seq64_trajectory4096-trajectory-1044",
+    "phi4_seq64_trajectory4096-trajectory-1045",
+    "phi4_seq64_trajectory4096-trajectory-1046",
+    "phi4_seq64_trajectory4096-trajectory-1047",
+    "phi4_seq64_trajectory4096-trajectory-1048",
+    "phi4_seq64_trajectory4096-trajectory-1049",
+    "phi4_seq64_trajectory4096-trajectory-1050",
+    "phi4_seq64_trajectory4096-trajectory-1051",
+    "phi4_seq64_trajectory4096-trajectory-1052",
+    "phi4_seq64_trajectory4096-trajectory-1053",
+    "phi4_seq64_trajectory4096-trajectory-1054",
+    "phi4_seq64_trajectory4096-trajectory-1055"
+  ],
+  "steps": 32,
+  "trajectory_status": "COMPLETE",
+  "uses_candidate_measurements": true,
+  "uses_historical_verdicts": false,
+  "verdict_blind": true
+}

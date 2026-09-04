@@ -1,0 +1,73 @@
+{
+  "case": {
+    "candidate_minus_repair_l2": 9.185909895207353e-05,
+    "evaluation_state_count": 32,
+    "model": "/data1/tzh/models/microsoft/Phi-4-mini-instruct",
+    "parameter": "model.norm.weight"
+  },
+  "claim_boundary": "This is a controlled loss sensitivity test around the saved repair parameter. It does not claim that future training follows a straight parameter-space line.",
+  "interpretation": "This controlled test reports whether the measured parameter displacement follows a loss-sensitive direction relative to norm-matched random directions. The sign and scale dependence are reported directly; no straight-line perturbation is treated as a prediction of future training.",
+  "observations": {
+    "measured_loss_change_signs": [
+      "negative",
+      "negative",
+      "negative",
+      "positive"
+    ],
+    "scales_outside_sampled_random_range": [
+      1.0,
+      10.0,
+      100.0,
+      1000.0
+    ]
+  },
+  "rows": [
+    {
+      "measured_absolute_over_random_median": 9.552380952380952,
+      "measured_direction_loss_change": -3.7364661693573e-06,
+      "measured_outside_random_range": true,
+      "normal_training_direction_loss_change": -1.2356787919998169e-05,
+      "opposite_direction_loss_change": 3.5874545574188232e-06,
+      "random_direction_absolute_change_median": 3.91155481338501e-07,
+      "random_direction_loss_change_max": 3.427267074584961e-07,
+      "random_direction_loss_change_min": -7.152557373046875e-07,
+      "scale": 1.0
+    },
+    {
+      "measured_absolute_over_random_median": 20.76036866359447,
+      "measured_direction_loss_change": -3.3564865589141846e-05,
+      "measured_outside_random_range": true,
+      "normal_training_direction_loss_change": -0.0001204460859298706,
+      "opposite_direction_loss_change": 3.5114586353302e-05,
+      "random_direction_absolute_change_median": 1.6167759895324707e-06,
+      "random_direction_loss_change_max": 2.0675361156463623e-06,
+      "random_direction_loss_change_min": -2.78279185295105e-06,
+      "scale": 10.0
+    },
+    {
+      "measured_absolute_over_random_median": 12.991050186926476,
+      "measured_direction_loss_change": -0.0002135932445526123,
+      "measured_outside_random_range": true,
+      "normal_training_direction_loss_change": -0.0011781640350818634,
+      "opposite_direction_loss_change": 0.0004762709140777588,
+      "random_direction_absolute_change_median": 1.6441568732261658e-05,
+      "random_direction_loss_change_max": 2.267211675643921e-05,
+      "random_direction_loss_change_min": -2.9947608709335327e-05,
+      "scale": 100.0
+    },
+    {
+      "measured_absolute_over_random_median": 54.805308349358256,
+      "measured_direction_loss_change": 0.009130697697401047,
+      "measured_outside_random_range": true,
+      "normal_training_direction_loss_change": -0.009300652891397476,
+      "opposite_direction_loss_change": 0.017168954014778137,
+      "random_direction_absolute_change_median": 0.00016660243272781372,
+      "random_direction_loss_change_max": 0.0002930760383605957,
+      "random_direction_loss_change_min": -0.00026062875986099243,
+      "scale": 1000.0
+    }
+  ],
+  "schema": "kernel-analyzer-loss-direction-stress-summary-v1",
+  "source": "results/property/loss_direction_stress_v1/phi_lmhead.json",
+  "status": "COMPLETE"
+}

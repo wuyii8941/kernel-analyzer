@@ -1,0 +1,574 @@
+{
+  "architecture": "deepseek8b",
+  "carrier": "model.layers.18.self_attn.v_proj.weight",
+  "carrier_coordinates": 4194304,
+  "case_id": "deepseek8b_seq128_backward_1256_out_ptr0",
+  "case_plan": "/data1/tzh/kernel-analyzer/results/property/tcmp_allop_v1/heldout/deepseek8b_seq128_backward_1256_out_ptr0/case_plan.json",
+  "claim_boundary": "Four real counterfactual arms on one declared parameter carrier. Formation labels are not read or emitted. A 32-step result is a bounded one-parameter consequence, not full-model training safety. ",
+  "compact_long_horizon": true,
+  "consequence_only_early_stop": false,
+  "final_drift_l2": 0.2200383096933365,
+  "four_counterfactual_arms_required": true,
+  "loss_audit": {
+    "any_period_split": true,
+    "final_gap": 0.005075812339782715,
+    "last_512_max_abs": 0.01939225196838379,
+    "last_512_mean": -0.00031683221459388733,
+    "max_abs_gap": 0.01939225196838379,
+    "recorded": true,
+    "recorded_steps": 32,
+    "split_step_count": 32,
+    "tolerance": 1e-08
+  },
+  "max_recurrence_relative": 1.1207945591008698e-07,
+  "measurement_geometry": "COUNT_SKETCH_256",
+  "measurement_kind": "candidate_repair_closed_loop_consequence",
+  "missing_step_ids": [],
+  "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+  "optimizer": {
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "epsilon": 1e-08,
+    "learning_rate": 0.0001,
+    "name": "AdamW",
+    "weight_decay": 0.0
+  },
+  "optimizer_execution": "gpu_full_tensor",
+  "optimizer_state_device": "cuda:0",
+  "planned_horizon_steps": 32,
+  "projection": {
+    "kind": "candidate_blind_fixed_rademacher",
+    "primary_verdict_uses_projection": false,
+    "seed_rule": "sha256(case_id)"
+  },
+  "recurrence_relative_tolerance": 1e-05,
+  "recurrence_tolerance": 1e-06,
+  "release": "/data1/tzh/kernel-analyzer/results/coverage/runtime_releases/deepseek8b_seq128_r1",
+  "runner": "scripts/run_bound_endpoint_consequence_v21.py",
+  "schema": "kernel-analyzer-bias-consequence-certificate-v2_1",
+  "statistics": {
+    "level_ids": [
+      "local",
+      "feedback",
+      "actual"
+    ],
+    "levels": {
+      "actual": {
+        "above_sign_flip_95": true,
+        "coherence_amplification": 1.9672763982465629,
+        "coherence_fraction_of_max": 0.3477686204170979,
+        "diffusive_scale_l2": 0.10829557541337215,
+        "energy": 0.011727931654113373,
+        "final_amplification_is_order_invariant": true,
+        "lag_correlation": [
+          {
+            "lag": 1,
+            "mean_inner_product": 0.00011921275010582055,
+            "normalized_correlation": 0.563743148379197,
+            "pairs": 31
+          },
+          {
+            "lag": 2,
+            "mean_inner_product": 8.970325800007926e-05,
+            "normalized_correlation": 0.5328724989362821,
+            "pairs": 30
+          },
+          {
+            "lag": 3,
+            "mean_inner_product": 6.916523234870514e-05,
+            "normalized_correlation": 0.4541136919731898,
+            "pairs": 29
+          },
+          {
+            "lag": 4,
+            "mean_inner_product": 5.6302637938582985e-05,
+            "normalized_correlation": 0.40645729351688303,
+            "pairs": 28
+          },
+          {
+            "lag": 5,
+            "mean_inner_product": 4.958394795280037e-05,
+            "normalized_correlation": 0.36730077026148816,
+            "pairs": 27
+          },
+          {
+            "lag": 6,
+            "mean_inner_product": 4.194455156733401e-05,
+            "normalized_correlation": 0.3257867245882109,
+            "pairs": 26
+          },
+          {
+            "lag": 7,
+            "mean_inner_product": 3.5628815625627535e-05,
+            "normalized_correlation": 0.2827246692853595,
+            "pairs": 25
+          },
+          {
+            "lag": 8,
+            "mean_inner_product": 2.845267654650865e-05,
+            "normalized_correlation": 0.23394181840415534,
+            "pairs": 24
+          }
+        ],
+        "lag_curve_and_prefix_are_order_sensitive": true,
+        "path_l2": 0.4034561930090914,
+        "prefix": {
+          "1": {
+            "coherence_amplification": 1.0,
+            "coherence_fraction_of_max": 1.0,
+            "diffusive_scale_l2": 0.08636299079328204,
+            "resultant_l2": 0.08636299079328204
+          },
+          "16": {
+            "coherence_amplification": 1.6844338004256447,
+            "coherence_fraction_of_max": 0.4211084501064112,
+            "diffusive_scale_l2": 0.10365254492809013,
+            "resultant_l2": 0.17459585017701276
+          },
+          "2": {
+            "coherence_amplification": 1.1025864801217025,
+            "coherence_fraction_of_max": 0.7796463769386622,
+            "diffusive_scale_l2": 0.09331250084775601,
+            "resultant_l2": 0.10288510186108069
+          },
+          "32": {
+            "coherence_amplification": 1.9672763982465629,
+            "coherence_fraction_of_max": 0.3477686204170979,
+            "diffusive_scale_l2": 0.10829557541337215,
+            "resultant_l2": 0.2130473295452578
+          },
+          "4": {
+            "coherence_amplification": 1.2756066609371155,
+            "coherence_fraction_of_max": 0.6378033304685577,
+            "diffusive_scale_l2": 0.09766262812564369,
+            "resultant_l2": 0.12457909896169557
+          },
+          "8": {
+            "coherence_amplification": 1.462237863529652,
+            "coherence_fraction_of_max": 0.5169791545047732,
+            "diffusive_scale_l2": 0.10101892967139374,
+            "resultant_l2": 0.14771370389875094
+          }
+        },
+        "resultant_l2": 0.2130473295452578,
+        "resultant_over_path": 0.5280556680919681,
+        "schema": "kernel-analyzer-path-statistics-v1",
+        "sign_flip_null": {
+          "draws": 1000,
+          "median": 0.958249184970628,
+          "one_sided_p": 0.000999000999000999,
+          "seed": 20260822,
+          "upper_95": 1.2487714493318778,
+          "upper_99": 1.3605292047480704
+        },
+        "state_ids": [
+          "deepseek8b_seq128_trajectory4096-trajectory-1024",
+          "deepseek8b_seq128_trajectory4096-trajectory-1025",
+          "deepseek8b_seq128_trajectory4096-trajectory-1026",
+          "deepseek8b_seq128_trajectory4096-trajectory-1027",
+          "deepseek8b_seq128_trajectory4096-trajectory-1028",
+          "deepseek8b_seq128_trajectory4096-trajectory-1029",
+          "deepseek8b_seq128_trajectory4096-trajectory-1030",
+          "deepseek8b_seq128_trajectory4096-trajectory-1031",
+          "deepseek8b_seq128_trajectory4096-trajectory-1032",
+          "deepseek8b_seq128_trajectory4096-trajectory-1033",
+          "deepseek8b_seq128_trajectory4096-trajectory-1034",
+          "deepseek8b_seq128_trajectory4096-trajectory-1035",
+          "deepseek8b_seq128_trajectory4096-trajectory-1036",
+          "deepseek8b_seq128_trajectory4096-trajectory-1037",
+          "deepseek8b_seq128_trajectory4096-trajectory-1038",
+          "deepseek8b_seq128_trajectory4096-trajectory-1039",
+          "deepseek8b_seq128_trajectory4096-trajectory-1040",
+          "deepseek8b_seq128_trajectory4096-trajectory-1041",
+          "deepseek8b_seq128_trajectory4096-trajectory-1042",
+          "deepseek8b_seq128_trajectory4096-trajectory-1043",
+          "deepseek8b_seq128_trajectory4096-trajectory-1044",
+          "deepseek8b_seq128_trajectory4096-trajectory-1045",
+          "deepseek8b_seq128_trajectory4096-trajectory-1046",
+          "deepseek8b_seq128_trajectory4096-trajectory-1047",
+          "deepseek8b_seq128_trajectory4096-trajectory-1048",
+          "deepseek8b_seq128_trajectory4096-trajectory-1049",
+          "deepseek8b_seq128_trajectory4096-trajectory-1050",
+          "deepseek8b_seq128_trajectory4096-trajectory-1051",
+          "deepseek8b_seq128_trajectory4096-trajectory-1052",
+          "deepseek8b_seq128_trajectory4096-trajectory-1053",
+          "deepseek8b_seq128_trajectory4096-trajectory-1054",
+          "deepseek8b_seq128_trajectory4096-trajectory-1055"
+        ],
+        "steps": 32
+      },
+      "feedback": {
+        "above_sign_flip_95": true,
+        "coherence_amplification": 2.910737299427347,
+        "coherence_fraction_of_max": 0.5145505206694237,
+        "diffusive_scale_l2": 0.053619399251001704,
+        "energy": 0.002875039976038322,
+        "final_amplification_is_order_invariant": true,
+        "lag_correlation": [
+          {
+            "lag": 1,
+            "mean_inner_product": 6.488262478561752e-05,
+            "normalized_correlation": 0.7827626721304731,
+            "pairs": 31
+          },
+          {
+            "lag": 2,
+            "mean_inner_product": 5.209614374403841e-05,
+            "normalized_correlation": 0.6769965182525065,
+            "pairs": 30
+          },
+          {
+            "lag": 3,
+            "mean_inner_product": 4.4501371017533834e-05,
+            "normalized_correlation": 0.5993505090777306,
+            "pairs": 29
+          },
+          {
+            "lag": 4,
+            "mean_inner_product": 3.773222625193761e-05,
+            "normalized_correlation": 0.5251672874102892,
+            "pairs": 28
+          },
+          {
+            "lag": 5,
+            "mean_inner_product": 3.178034601010798e-05,
+            "normalized_correlation": 0.4503528022160092,
+            "pairs": 27
+          },
+          {
+            "lag": 6,
+            "mean_inner_product": 2.755553546011546e-05,
+            "normalized_correlation": 0.40080269170342764,
+            "pairs": 26
+          },
+          {
+            "lag": 7,
+            "mean_inner_product": 2.424742327194156e-05,
+            "normalized_correlation": 0.3601173157324388,
+            "pairs": 25
+          },
+          {
+            "lag": 8,
+            "mean_inner_product": 2.1115927443333795e-05,
+            "normalized_correlation": 0.31971987470788477,
+            "pairs": 24
+          }
+        ],
+        "lag_curve_and_prefix_are_order_sensitive": true,
+        "path_l2": 0.2747877646096527,
+        "prefix": {
+          "1": {
+            "coherence_amplification": 0.0,
+            "coherence_fraction_of_max": 0.0,
+            "diffusive_scale_l2": 0.0,
+            "resultant_l2": 0.0
+          },
+          "16": {
+            "coherence_amplification": 2.4184844055840604,
+            "coherence_fraction_of_max": 0.6046211013960151,
+            "diffusive_scale_l2": 0.04565524803676153,
+            "resultant_l2": 0.11041650540998003
+          },
+          "2": {
+            "coherence_amplification": 1.0,
+            "coherence_fraction_of_max": 0.7071067811865475,
+            "diffusive_scale_l2": 0.022539774724014618,
+            "resultant_l2": 0.022539774724014618
+          },
+          "32": {
+            "coherence_amplification": 2.910737299427347,
+            "coherence_fraction_of_max": 0.5145505206694237,
+            "diffusive_scale_l2": 0.053619399251001704,
+            "resultant_l2": 0.15607198537277742
+          },
+          "4": {
+            "coherence_amplification": 1.427276690862963,
+            "coherence_fraction_of_max": 0.7136383454314815,
+            "diffusive_scale_l2": 0.032874930367566696,
+            "resultant_l2": 0.04692162182737093
+          },
+          "8": {
+            "coherence_amplification": 1.8609558582139731,
+            "coherence_fraction_of_max": 0.6579472534159658,
+            "diffusive_scale_l2": 0.039993918263773465,
+            "resultant_l2": 0.07442691648590004
+          }
+        },
+        "resultant_l2": 0.15607198537277742,
+        "resultant_over_path": 0.5679728338504594,
+        "schema": "kernel-analyzer-path-statistics-v1",
+        "sign_flip_null": {
+          "draws": 1000,
+          "median": 0.9455299400876815,
+          "one_sided_p": 0.000999000999000999,
+          "seed": 20260821,
+          "upper_95": 1.4077212056234119,
+          "upper_99": 1.590974832442378
+        },
+        "state_ids": [
+          "deepseek8b_seq128_trajectory4096-trajectory-1024",
+          "deepseek8b_seq128_trajectory4096-trajectory-1025",
+          "deepseek8b_seq128_trajectory4096-trajectory-1026",
+          "deepseek8b_seq128_trajectory4096-trajectory-1027",
+          "deepseek8b_seq128_trajectory4096-trajectory-1028",
+          "deepseek8b_seq128_trajectory4096-trajectory-1029",
+          "deepseek8b_seq128_trajectory4096-trajectory-1030",
+          "deepseek8b_seq128_trajectory4096-trajectory-1031",
+          "deepseek8b_seq128_trajectory4096-trajectory-1032",
+          "deepseek8b_seq128_trajectory4096-trajectory-1033",
+          "deepseek8b_seq128_trajectory4096-trajectory-1034",
+          "deepseek8b_seq128_trajectory4096-trajectory-1035",
+          "deepseek8b_seq128_trajectory4096-trajectory-1036",
+          "deepseek8b_seq128_trajectory4096-trajectory-1037",
+          "deepseek8b_seq128_trajectory4096-trajectory-1038",
+          "deepseek8b_seq128_trajectory4096-trajectory-1039",
+          "deepseek8b_seq128_trajectory4096-trajectory-1040",
+          "deepseek8b_seq128_trajectory4096-trajectory-1041",
+          "deepseek8b_seq128_trajectory4096-trajectory-1042",
+          "deepseek8b_seq128_trajectory4096-trajectory-1043",
+          "deepseek8b_seq128_trajectory4096-trajectory-1044",
+          "deepseek8b_seq128_trajectory4096-trajectory-1045",
+          "deepseek8b_seq128_trajectory4096-trajectory-1046",
+          "deepseek8b_seq128_trajectory4096-trajectory-1047",
+          "deepseek8b_seq128_trajectory4096-trajectory-1048",
+          "deepseek8b_seq128_trajectory4096-trajectory-1049",
+          "deepseek8b_seq128_trajectory4096-trajectory-1050",
+          "deepseek8b_seq128_trajectory4096-trajectory-1051",
+          "deepseek8b_seq128_trajectory4096-trajectory-1052",
+          "deepseek8b_seq128_trajectory4096-trajectory-1053",
+          "deepseek8b_seq128_trajectory4096-trajectory-1054",
+          "deepseek8b_seq128_trajectory4096-trajectory-1055"
+        ],
+        "steps": 32
+      },
+      "local": {
+        "above_sign_flip_95": false,
+        "coherence_amplification": 1.0189321070804,
+        "coherence_fraction_of_max": 0.18012345062131205,
+        "diffusive_scale_l2": 0.09407926846424897,
+        "energy": 0.00885090875476823,
+        "final_amplification_is_order_invariant": true,
+        "lag_correlation": [
+          {
+            "lag": 1,
+            "mean_inner_product": 2.851951265753591e-06,
+            "normalized_correlation": 0.02798960070952934,
+            "pairs": 31
+          },
+          {
+            "lag": 2,
+            "mean_inner_product": 2.906543678401723e-06,
+            "normalized_correlation": 0.050005957070784916,
+            "pairs": 30
+          },
+          {
+            "lag": 3,
+            "mean_inner_product": 9.168929067239063e-07,
+            "normalized_correlation": 0.015836063302640153,
+            "pairs": 29
+          },
+          {
+            "lag": 4,
+            "mean_inner_product": 8.378940377296165e-07,
+            "normalized_correlation": 0.01936321406614889,
+            "pairs": 28
+          },
+          {
+            "lag": 5,
+            "mean_inner_product": 1.4344023277634067e-06,
+            "normalized_correlation": 0.03384470209245651,
+            "pairs": 27
+          },
+          {
+            "lag": 6,
+            "mean_inner_product": 7.626661401867366e-07,
+            "normalized_correlation": 0.021616263344333565,
+            "pairs": 26
+          },
+          {
+            "lag": 7,
+            "mean_inner_product": -4.158603987258579e-07,
+            "normalized_correlation": -0.01158638861728154,
+            "pairs": 25
+          },
+          {
+            "lag": 8,
+            "mean_inner_product": -1.7446046476775559e-06,
+            "normalized_correlation": -0.060799323111373475,
+            "pairs": 24
+          }
+        ],
+        "lag_curve_and_prefix_are_order_sensitive": true,
+        "path_l2": 0.2335016682746304,
+        "prefix": {
+          "1": {
+            "coherence_amplification": 1.0,
+            "coherence_fraction_of_max": 1.0,
+            "diffusive_scale_l2": 0.08636299079328204,
+            "resultant_l2": 0.08636299079328204
+          },
+          "16": {
+            "coherence_amplification": 1.0215630087715013,
+            "coherence_fraction_of_max": 0.2553907521928753,
+            "diffusive_scale_l2": 0.09313395478287885,
+            "resultant_l2": 0.09514220306678667
+          },
+          "2": {
+            "coherence_amplification": 1.012718745562565,
+            "coherence_fraction_of_max": 0.7161002924220236,
+            "diffusive_scale_l2": 0.09039858592481023,
+            "resultant_l2": 0.09154834253840356
+          },
+          "32": {
+            "coherence_amplification": 1.0189321070804,
+            "coherence_fraction_of_max": 0.18012345062131205,
+            "diffusive_scale_l2": 0.09407926846424897,
+            "resultant_l2": 0.09586038724885981
+          },
+          "4": {
+            "coherence_amplification": 1.026169657524924,
+            "coherence_fraction_of_max": 0.513084828762462,
+            "diffusive_scale_l2": 0.09184853987696705,
+            "resultant_l2": 0.0942521847097116
+          },
+          "8": {
+            "coherence_amplification": 1.0314387251419872,
+            "coherence_fraction_of_max": 0.36466865846315333,
+            "diffusive_scale_l2": 0.09279450179033284,
+            "resultant_l2": 0.09571184262680675
+          }
+        },
+        "resultant_l2": 0.09586038724885981,
+        "resultant_over_path": 0.41053405723900305,
+        "schema": "kernel-analyzer-path-statistics-v1",
+        "sign_flip_null": {
+          "draws": 1000,
+          "median": 1.0021819445577087,
+          "one_sided_p": 0.2127872127872128,
+          "seed": 20260820,
+          "upper_95": 1.035862460824355,
+          "upper_99": 1.0419423220595443
+        },
+        "state_ids": [
+          "deepseek8b_seq128_trajectory4096-trajectory-1024",
+          "deepseek8b_seq128_trajectory4096-trajectory-1025",
+          "deepseek8b_seq128_trajectory4096-trajectory-1026",
+          "deepseek8b_seq128_trajectory4096-trajectory-1027",
+          "deepseek8b_seq128_trajectory4096-trajectory-1028",
+          "deepseek8b_seq128_trajectory4096-trajectory-1029",
+          "deepseek8b_seq128_trajectory4096-trajectory-1030",
+          "deepseek8b_seq128_trajectory4096-trajectory-1031",
+          "deepseek8b_seq128_trajectory4096-trajectory-1032",
+          "deepseek8b_seq128_trajectory4096-trajectory-1033",
+          "deepseek8b_seq128_trajectory4096-trajectory-1034",
+          "deepseek8b_seq128_trajectory4096-trajectory-1035",
+          "deepseek8b_seq128_trajectory4096-trajectory-1036",
+          "deepseek8b_seq128_trajectory4096-trajectory-1037",
+          "deepseek8b_seq128_trajectory4096-trajectory-1038",
+          "deepseek8b_seq128_trajectory4096-trajectory-1039",
+          "deepseek8b_seq128_trajectory4096-trajectory-1040",
+          "deepseek8b_seq128_trajectory4096-trajectory-1041",
+          "deepseek8b_seq128_trajectory4096-trajectory-1042",
+          "deepseek8b_seq128_trajectory4096-trajectory-1043",
+          "deepseek8b_seq128_trajectory4096-trajectory-1044",
+          "deepseek8b_seq128_trajectory4096-trajectory-1045",
+          "deepseek8b_seq128_trajectory4096-trajectory-1046",
+          "deepseek8b_seq128_trajectory4096-trajectory-1047",
+          "deepseek8b_seq128_trajectory4096-trajectory-1048",
+          "deepseek8b_seq128_trajectory4096-trajectory-1049",
+          "deepseek8b_seq128_trajectory4096-trajectory-1050",
+          "deepseek8b_seq128_trajectory4096-trajectory-1051",
+          "deepseek8b_seq128_trajectory4096-trajectory-1052",
+          "deepseek8b_seq128_trajectory4096-trajectory-1053",
+          "deepseek8b_seq128_trajectory4096-trajectory-1054",
+          "deepseek8b_seq128_trajectory4096-trajectory-1055"
+        ],
+        "steps": 32
+      }
+    },
+    "measurement_geometry": "COUNT_SKETCH_256",
+    "resultant_cosines": {
+      "feedback__actual": 0.9106331564862246,
+      "local__actual": 0.7398572787110138,
+      "local__feedback": 0.39574194878062585
+    },
+    "schema": "kernel-analyzer-aligned-level-statistics-v1",
+    "state_ids": [
+      "deepseek8b_seq128_trajectory4096-trajectory-1024",
+      "deepseek8b_seq128_trajectory4096-trajectory-1025",
+      "deepseek8b_seq128_trajectory4096-trajectory-1026",
+      "deepseek8b_seq128_trajectory4096-trajectory-1027",
+      "deepseek8b_seq128_trajectory4096-trajectory-1028",
+      "deepseek8b_seq128_trajectory4096-trajectory-1029",
+      "deepseek8b_seq128_trajectory4096-trajectory-1030",
+      "deepseek8b_seq128_trajectory4096-trajectory-1031",
+      "deepseek8b_seq128_trajectory4096-trajectory-1032",
+      "deepseek8b_seq128_trajectory4096-trajectory-1033",
+      "deepseek8b_seq128_trajectory4096-trajectory-1034",
+      "deepseek8b_seq128_trajectory4096-trajectory-1035",
+      "deepseek8b_seq128_trajectory4096-trajectory-1036",
+      "deepseek8b_seq128_trajectory4096-trajectory-1037",
+      "deepseek8b_seq128_trajectory4096-trajectory-1038",
+      "deepseek8b_seq128_trajectory4096-trajectory-1039",
+      "deepseek8b_seq128_trajectory4096-trajectory-1040",
+      "deepseek8b_seq128_trajectory4096-trajectory-1041",
+      "deepseek8b_seq128_trajectory4096-trajectory-1042",
+      "deepseek8b_seq128_trajectory4096-trajectory-1043",
+      "deepseek8b_seq128_trajectory4096-trajectory-1044",
+      "deepseek8b_seq128_trajectory4096-trajectory-1045",
+      "deepseek8b_seq128_trajectory4096-trajectory-1046",
+      "deepseek8b_seq128_trajectory4096-trajectory-1047",
+      "deepseek8b_seq128_trajectory4096-trajectory-1048",
+      "deepseek8b_seq128_trajectory4096-trajectory-1049",
+      "deepseek8b_seq128_trajectory4096-trajectory-1050",
+      "deepseek8b_seq128_trajectory4096-trajectory-1051",
+      "deepseek8b_seq128_trajectory4096-trajectory-1052",
+      "deepseek8b_seq128_trajectory4096-trajectory-1053",
+      "deepseek8b_seq128_trajectory4096-trajectory-1054",
+      "deepseek8b_seq128_trajectory4096-trajectory-1055"
+    ]
+  },
+  "status": "COMPLETE",
+  "step_count": 32,
+  "step_ids": [
+    "deepseek8b_seq128_trajectory4096-trajectory-1024",
+    "deepseek8b_seq128_trajectory4096-trajectory-1025",
+    "deepseek8b_seq128_trajectory4096-trajectory-1026",
+    "deepseek8b_seq128_trajectory4096-trajectory-1027",
+    "deepseek8b_seq128_trajectory4096-trajectory-1028",
+    "deepseek8b_seq128_trajectory4096-trajectory-1029",
+    "deepseek8b_seq128_trajectory4096-trajectory-1030",
+    "deepseek8b_seq128_trajectory4096-trajectory-1031",
+    "deepseek8b_seq128_trajectory4096-trajectory-1032",
+    "deepseek8b_seq128_trajectory4096-trajectory-1033",
+    "deepseek8b_seq128_trajectory4096-trajectory-1034",
+    "deepseek8b_seq128_trajectory4096-trajectory-1035",
+    "deepseek8b_seq128_trajectory4096-trajectory-1036",
+    "deepseek8b_seq128_trajectory4096-trajectory-1037",
+    "deepseek8b_seq128_trajectory4096-trajectory-1038",
+    "deepseek8b_seq128_trajectory4096-trajectory-1039",
+    "deepseek8b_seq128_trajectory4096-trajectory-1040",
+    "deepseek8b_seq128_trajectory4096-trajectory-1041",
+    "deepseek8b_seq128_trajectory4096-trajectory-1042",
+    "deepseek8b_seq128_trajectory4096-trajectory-1043",
+    "deepseek8b_seq128_trajectory4096-trajectory-1044",
+    "deepseek8b_seq128_trajectory4096-trajectory-1045",
+    "deepseek8b_seq128_trajectory4096-trajectory-1046",
+    "deepseek8b_seq128_trajectory4096-trajectory-1047",
+    "deepseek8b_seq128_trajectory4096-trajectory-1048",
+    "deepseek8b_seq128_trajectory4096-trajectory-1049",
+    "deepseek8b_seq128_trajectory4096-trajectory-1050",
+    "deepseek8b_seq128_trajectory4096-trajectory-1051",
+    "deepseek8b_seq128_trajectory4096-trajectory-1052",
+    "deepseek8b_seq128_trajectory4096-trajectory-1053",
+    "deepseek8b_seq128_trajectory4096-trajectory-1054",
+    "deepseek8b_seq128_trajectory4096-trajectory-1055"
+  ],
+  "steps": 32,
+  "trajectory_status": "COMPLETE",
+  "uses_candidate_measurements": true,
+  "uses_historical_verdicts": false,
+  "verdict_blind": true
+}

@@ -1,0 +1,41 @@
+{
+  "case_id": "qwen_seq64_backward_540_out_ptr1",
+  "cases": [
+    {
+      "carrier": "model.layers.27.self_attn.q_norm.weight",
+      "case_id": "qwen_seq64_backward_540_out_ptr1",
+      "claim_boundary": "Exact NORMALIZATION_BACKWARD endpoint backward:540:out_ptr1; the complete F+B boundary and declared parameter reach must be validated by the runner before any formation verdict.",
+      "reference_method": "AOT_REPLAY",
+      "task_id": "backward:540:out_ptr1"
+    }
+  ],
+  "closure_task": "backward:540:out_ptr1",
+  "complete_fb_unit_required": true,
+  "implementation_kind": "TRITON",
+  "metadata_binding": {
+    "exact_aot_endpoint_id": "backward:graph0:mul_436",
+    "has_exact_downstream_closure": true,
+    "member_count": 2,
+    "nearest_carrier": {
+      "aliases": [
+        "model.layers.27.self_attn.q_norm.weight"
+      ],
+      "aot_distance": 2,
+      "gradient_source_node": "view_772",
+      "name": "model.layers.27.self_attn.q_norm.weight",
+      "shape": [
+        128
+      ]
+    },
+    "pool_cell_id": "multishape-backward-cell-0766",
+    "pool_rank": 5,
+    "semantic_region_executable": true
+  },
+  "model": "qwen",
+  "region_symbol": "triton_per_fused__to_copy__unsafe_view_add_arange_bmm_cat_clone_cos_div_expand_mul_neg_pow_sin_slice_slice_backward_sum_transpose_unsqueeze_view_10",
+  "schema": "kernel-analyzer-tcmp-case-plan-v2",
+  "sequence_length": 64,
+  "source_family": "NORMALIZATION_BACKWARD",
+  "source_internal_region": "backward:540:out_ptr1",
+  "task_id": "backward:540:out_ptr1"
+}

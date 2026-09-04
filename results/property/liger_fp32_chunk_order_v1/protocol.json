@@ -1,0 +1,45 @@
+{
+  "schema": "kernel-analyzer-liger-fp32-chunk-order-protocol-v1",
+  "status": "FROZEN_BEFORE_EMPIRICAL_RESULTS",
+  "question": "Can the order of 64 mathematically equivalent FP32 dW additions create a repeatable training-update effect?",
+  "case": {
+    "case_id": "liger_fused_ce_fp32_chunk_order",
+    "model": "/data1/tzh/models/Qwen/Qwen3-1.7B",
+    "model_dtype": "FP32",
+    "sequence_length": 128,
+    "target_parameter": "model.embed_tokens.weight",
+    "state_count": 32,
+    "calibration_count": 16,
+    "confirmation_count": 16
+  },
+  "implementations": {
+    "candidate": "Liger fused CE with FP32 inputs, FP32 dW accumulator, and the original chunk order",
+    "repair": "the same computation with the 64 dW chunks added in reverse order",
+    "matched_sham": "repeat the original chunk order",
+    "diagnostic_schedules": [
+      "original order",
+      "reverse order",
+      "even chunk IDs followed by odd chunk IDs",
+      "one seed-frozen permutation"
+    ]
+  },
+  "invariants": [
+    "both primary implementations use FP32 throughout the declared region",
+    "the forward loss and hidden-state gradient must be bitwise equal",
+    "only the order of dW additions may differ",
+    "the same chunk order is used for every state",
+    "the matched sham must reproduce the candidate exactly"
+  ],
+  "primary_result": "candidate-minus-repair AdamW update effect on the target parameter",
+  "tested_effects": [
+    "fixed additive direction",
+    "repair-aligned scaling",
+    "remaining direction after same-state scaling removal"
+  ],
+  "prediction": {
+    "source_predictor": "mean residual over the four predeclared equivalent chunk schedules",
+    "success": "the predictor direction learned on the first 16 states has positive projection on candidate-minus-repair dW differences in the untouched final 16 states",
+    "failure": "record SOURCE_PREDICTOR_NOT_CONFIRMED and do not search for a more favorable order on these states"
+  },
+  "claim_boundary": "One Liger fused-CE training region, one Qwen checkpoint, one target parameter, and 32 fixed inputs; not a long-run or cross-model result."
+}

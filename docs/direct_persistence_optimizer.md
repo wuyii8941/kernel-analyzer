@@ -50,6 +50,27 @@ Qwen 在 step 0、8、16 分别使用各自真实权重、输入和 moments 测�
 
 三个阶段都接近抵消。这只是同状态响应检查，不是新的 32 步 live trajectory，也不能外推成所有模型的 optimizer 规律。
 
+## 统一的 checkpoint 与 optimizer 状态检查
+
+后续实验固定了三个训练位置，并对每个位置使用同一套 32 个测量输入和 45 项整体
+Holm 校正。这里的百分比表示 candidate 相对 repair 反复改变正常参数 update 的比例；
+负数表示缩小。
+
+| 模型与训练位置 | cold-start AdamW | warm 8 步 | warm 32 步 | warm 32 步后重置 moments | warm 32 步的 SGD |
+|---|---:|---:|---:|---:|---:|
+| DeepSeek seq128 attention projection | **−10.69%** | **−0.187%** | **−0.307%** | **−9.03%** | **−1.33%** |
+| DeepSeek seq256 normalization | **−13.68%** | **−0.641%** | −0.547%（未确认） | **−15.13%** | +0.704%（未确认） |
+| Phi loss / CE backward | +0.079%（未确认） | −0.078%（未确认） | −0.054%（未确认） | −0.216%（未确认） | −0.026%（未确认） |
+
+这组结果把边界说得更清楚：两个 DeepSeek 位置在 moments 从零开始时有约 11%–14%
+的缩小，真实推进 8 或 32 步后降到不足 1%；在同一 warm checkpoint 重置 moments，
+大效应又恢复。因而它既不是只由 kernel 决定的永久标签，也不能只归因于参数值；
+当前 AdamW 历史状态是效应大小的重要条件。Phi 负例在五种设置下都没有被升级。
+
+机器结果：
+
+- `results/property/optimizer_condition_benchmark_v1/summary.json`
+
 ## warm-state 4096 步更新
 
 后续长程实验先 warm up 128 步，再测量 4096 步同状态 direct update。Qwen 的分数为：

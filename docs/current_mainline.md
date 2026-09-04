@@ -129,8 +129,9 @@ CountSketch。headline 大向量结果还需要额外 seeds 或完整向量 Gram
 - `INCONCLUSIVE`：现有状态不足以区分零效应与工程上重要的效应；
 - `ABSTAIN`：repair、状态绑定或参数可达性不成立。
 
-这是一套待用统一统计实验闭合的操作性定义，不是当前已经验证过所有模型的通用
-安全 Oracle。
+这套判定已通过合成数据检查，并已冻结三项工程范围，用于新的 16 项验证。它仍然
+只是声明模型、参数位置、optimizer 和输入集合下的判断，不是所有 LLM 训练共享的
+安全阈值。
 
 ## 6. Orbit mean：只用于 reduction 类 source predictor
 
@@ -153,10 +154,11 @@ m_{\mathrm{orb}}(a;\nu)
 - 它通常需要运行多个等价 schedule，不是“一次 forward 的免费静态判断”；
 - 它不能替代 local → gradient → update 和训练后果检查。
 
-当前预注册的 Liger 实验是：冻结一组合法 chunk/reduction schedules，先计算
-BF16 accumulator 的 `m_orb`，事前预测它与 local-stage mean effect 方向对齐；
-再换成 FP32 accumulator，预测二者同步下降。成功后只支持这一 source mechanism
-的预测价值，不升级成通用静态 Oracle。
+当前已完成一个更直接的 Liger 检查：两个实现都使用 FP32，只改变 `dW` 分块结果的
+加法顺序。前 16 个输入确定预测方向，后 16 个输入中 15 个沿同一方向；gradient 和
+AdamW update 的结果在整体校正后仍成立。这个效应非常小，只能说明“同一精度下的
+求和顺序也可能留下可重复方向”，不能据此声称存在长程 loss 后果，也不能升级成
+通用静态 Oracle。
 
 ## 7. 严格正负响应实验
 
@@ -263,6 +265,43 @@ Training Bias Profile v2 冻结后又运行了两个独立批次。第一批四�
 训练质量结论。详细证据见
 [`prospective_training_bias_profiles.md`](prospective_training_bias_profiles.md)。
 
+### 后续状态与训练后果检查
+
+为了判断 cold-start 结果能否代表后续训练，我们对两个 DeepSeek 正例和一个 Phi
+负例固定了五种设置。两个 DeepSeek 位置在 moments 从零开始时分别缩小正常 update
+约 `10.69%` 和 `13.68%`；真实推进 8 或 32 步后都降到不足 `1%`。在同一 warm
+checkpoint 重置 moments，大效应分别恢复到 `9.03%` 和 `15.13%`。Phi 在五种设置
+下都没有确认效应。这说明当前效应明显依赖 AdamW 历史状态，不能给 kernel 一个脱离
+checkpoint 和 optimizer state 的永久标签。完整 45 项整体校正结果见
+`results/property/optimizer_condition_benchmark_v1/summary.json`。
+
+三项训练位置还各自使用四组互不重叠的 32 步输入流做了配对训练。三项的实际参数
+分离和反馈方向均在 `4/4` 输入流中超过各自随机抵消范围，但同状态直接作用均为
+`0/4`。稳定窗口的平均 loss gap 在三个案例中都跨过零；因此当前结果支持“轨迹和
+参数不再相同，且分离主要由反馈维持”，不支持稳定的 loss 变好或变坏。这里四组输入
+流来自同一个预训练 checkpoint，也不是四次完整预训练。机器结果见
+`results/property/independent_consequence_v1/summary.json`。
+
+我们还直接检查了已测参数偏移是否沿 loss 敏感方向。Liger 的测得方向在原尺度上使
+平均评估 loss 增加 `1.1998e-4`，绝对变化约为同长度随机方向中位数的 `1039` 倍；
+Phi 的原尺度变化为 `-3.7365e-6`，约为随机方向中位数的 `9.55` 倍，并在放大到
+`1000` 倍后改变符号。它们说明测得方向不是任意随机方向，但只是保存参数附近的
+局部敏感性检查，不能把直线放大当作未来训练轨迹。
+
+最后，Gemma 4 的两个历史冻结位置已在与原记录一致的运行环境中接入统一方法：一个
+位置的 gradient 和 AdamW update 与 repair 完全相同，另一个位置的所有区间均跨零。
+这是跨模型、新实现方法接入的两个负例，不是新选择的前瞻发现集合。机器结果见
+`results/property/generalization_benchmark_v1/gemma4_method_bridge_result.json`。
+
+统一的 16 项冻结验证也已完成：15 项得到有效测量，Mamba seq256 因实际 backward 图
+与冻结记录不一致而保留为无法判断。48 项整体 Holm 校正后，9 项确认了正常 AdamW
+update 被稳定缩小，覆盖 DeepSeek、Qwen 和 Phi；4 项的三个效应区间均落入冻结工程
+范围；2 项现有数据不足。Mamba seq128 两个位置的 AdamW update difference 在 32 个
+状态中逐位为零，因此属于有直接证据的等价结果，不是把“不显著”当成等价。确认的
+缩小效应从 `1.289%` 到 `15.818%`。完整结果见
+`results/property/generalization_benchmark_v1/summary.json` 与
+`results/property/generalization_benchmark_v1/equivalence.json`。
+
 ### 当前长程计数
 
 当前机器审计包含 23 个唯一主矩阵 case ID、301 条逐行记录：
@@ -286,16 +325,18 @@ Training Bias Profile v2 冻结后又运行了两个独立批次。第一批四�
 
 1. 五个开发案例的 v2 重采已经完成。停止围绕它们调整分支、阈值或校正组；任何后续
    解释都必须从冻结 JSON 生成。
-2. 方法冻结后的前两批新案例已经完成并保持原样。下一批应优先修复 Qwen source-binding
-   运行包和 Mamba fast scan 环境，然后冻结跨 checkpoint / warm-moment 的新输入；
-   不能用替换失败项的方式提高成功率。
+2. 方法冻结后的前两批和统一 16 项验证均已完成。Qwen 原冻结案例已经用同一冻结 ID
+   恢复；Mamba seq64/128 已完成，seq256 因 backward 图不一致保留无法判断。后续若
+   扩展，应冻结跨模型、checkpoint 和 warm optimizer state 的新输入，不能用替换失败
+   项的方式提高成功率。
 3. 新 pool 不以“找到新正例”为成功条件。positive、negative 和无法判断都完整报告；
    若全为 negative，只报告升级率和无法判断率，不补造 recall 或泛化准确率。
 4. 对 held-out 中确认的项目，才做 prediction-first 干预：先根据 local → gradient →
    update profile 写下修复应改变哪一层，再运行修复，不允许看到结果后换解释。
-5. 等价性工程范围仍未冻结，因此五例只能叫 detectable update effect，不能签发
-   `TRAINING_EQUIVALENT` 或 `MATERIAL_EFFECT`。工程范围应由正常训练 update、loss
-   敏感度和实际修复成本共同确定，且在 held-out 结果揭示前冻结。
+5. 三项等价性工程范围已在新的 16 项验证揭示前冻结，并通过 2,000 次/场景的合成
+   数据检查。它可以给该冻结验证签发 `EQUIVALENT_UNDER_PROTOCOL`、
+   `DETECTABLE_BUT_SMALL`、`MATERIAL_EFFECT`、`INCONCLUSIVE` 或 `ABSTAIN`；这些范围
+   不是所有 LLM 训练共享的阈值，也不回填旧五例的历史标签。
 6. 现有 4096 步继续只负责 paired consequence；若要声称跨训练 run 的 material loss
    影响，必须以独立 training runs 为统计单位。
 
@@ -320,4 +361,4 @@ Training Bias Profile v2 冻结后又运行了两个独立批次。第一批四�
 - v1 的逐状态区间等价于 v2 的独立 training-unit 区间。
 - 五个开发案例中 4/5 的 update 确认率代表自然发生比例或 held-out 泛化能力；
 - Qwen `v_proj` 与 Mamba 的稳定 update 缩小等于 4096 步固定方向持久；
-- 尚未冻结工程范围时签发 training-equivalent 或 material-effect 标签。
+- 把当前冻结的工程范围解释成所有模型、optimizer 和训练任务共享的安全阈值。

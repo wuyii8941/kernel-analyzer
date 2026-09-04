@@ -122,9 +122,10 @@ m_{\mathrm{orb}}(a;\nu)
 它是 source-side candidate predictor，需要多个等价 schedules。它不表示每种
 schedule 同号，也不能代替 backward、optimizer 或长程训练。
 
-Liger 的预注册检查是：BF16 `m_orb` 与 local mean direction 对齐；改用 FP32
-accumulator 后二者同步下降。只有这一预测在 confirmation states 成立时，才支持
-reduction-family predictor。
+当前 Liger 检查让两个实现都使用 FP32，只改变 `dW` 分块结果的加法顺序。前 16 个
+输入确定预测方向，后 16 个输入负责检查。它支持这一种 reduction 来源的预测价值，
+不覆盖量化、saved state、一般 backward 或 optimizer 机制。BF16 与 FP32 accumulator
+同步下降的更强联合预测仍不能由这项结果代替。
 
 ## 7. Response contrast
 

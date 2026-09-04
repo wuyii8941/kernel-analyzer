@@ -1,0 +1,34 @@
+{
+  "schema": "kernel-analyzer-training-equivalence-protocol-v1",
+  "status": "FROZEN_BEFORE_GENERALIZATION_BENCHMARK_V1",
+  "primary_stage": "ADAMW_UPDATE",
+  "effects": [
+    "additive",
+    "repair_aligned",
+    "residual_direction"
+  ],
+  "engineering_margins": {
+    "additive": 0.001,
+    "repair_aligned": 0.01,
+    "residual_direction": 0.001
+  },
+  "margin_interpretation": {
+    "additive": "0.1% of the normal repair update RMS",
+    "repair_aligned": "1% repeated scaling of the normal repair update",
+    "residual_direction": "0.1% of the normal repair update RMS after removing same-state scaling"
+  },
+  "uncertainty": "95% simultaneous intervals across all three primary update effects",
+  "decision_rule": {
+    "equivalent_under_protocol": "all three simultaneous intervals lie strictly inside their engineering margins and no predeclared material training consequence fails",
+    "material_effect": "at least one simultaneous interval lies entirely beyond its engineering margin",
+    "detectable_but_small": "all intervals lie inside their margins and at least one excludes zero",
+    "inconclusive": "at least one interval crosses an engineering margin",
+    "abstain": "the repair, state binding, parameter reach, or uncertainty unit is invalid"
+  },
+  "sensitivity_multipliers_to_report": [
+    0.5,
+    1.0,
+    2.0
+  ],
+  "claim_boundary": "These are protocol-specific engineering margins frozen for the next benchmark. They are not universal constants and do not retrospectively relabel previously revealed cases."
+}

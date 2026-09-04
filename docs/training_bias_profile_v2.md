@@ -24,7 +24,7 @@ update 层是主要结果；local 和 gradient 只解释结构在哪里出现、
 ## 冻结判定规则
 
 五例使用 32 个冻结且不重叠的输入窗口：前 16 个只用于确定方向，后 16 个用于检查。
-每个窗口都恢复同一 checkpoint、同一 carrier 和零初始化 AdamW moments；AdamW 在该
+每个窗口都恢复同一 checkpoint、同一目标参数和零初始化 AdamW 历史状态；AdamW 在该
 窗口内正常计算一次 update，`weight_decay=0`。
 
 确认一个分支必须同时满足：
@@ -91,12 +91,16 @@ update 百分比直接解释为传播倍率。完整区间、原始 p 值、Holm
 [`empirical_protocol_amendment_3.json`](../results/property/training_bias_profile_v2/empirical_protocol_amendment_3.json)
 只收紧这一表述，没有改变任何数值、阈值或标签。
 
-方法冻结后的第一轮新案例已经开始执行，结果见
+方法冻结后的新案例结果见
 [`prospective_training_bias_profiles.md`](prospective_training_bias_profiles.md)。第一批
 四项得到一个确认 update effect、一个完整负例和两个无法判断；第二批 attention
 projection 得到另一个确认 effect。两个 DeepSeek 案例都表现为相对正常 update 的
 稳定缩小，而不是固定参数方向。它们有首次 loss 分叉后果，但不是 4096 步持续性结果。
 
+随后完成的统一 16 项冻结验证中，15 项得到有效测量：9 项确认 update 缩小，4 项在
+冻结工程范围内等价，2 项现有数据不足；Mamba seq256 因实际 backward 图不一致保留
+无法判断。Qwen 原冻结位置与 Mamba seq64/128 均使用原案例完成，没有用替代案例补位。
+
 这仍不是完整的未见实现泛化评估：新案例没有参与 v2 方法开发，但部分训练家族在仓库
-历史中已有工程探针。下一步应修复 Qwen 运行包、补齐 Mamba fast scan 环境，并冻结
-跨 checkpoint / warm-moment 的新批次，而不是回头调整这两批的规则。
+历史中已有工程检查。跨 checkpoint 和真实 AdamW 历史状态的检查单独报告，不能回头
+改变这些冻结规则。

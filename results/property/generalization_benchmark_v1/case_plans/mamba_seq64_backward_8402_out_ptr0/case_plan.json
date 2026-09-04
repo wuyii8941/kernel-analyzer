@@ -1,0 +1,42 @@
+{
+  "case_id": "mamba_seq64_backward_8402_out_ptr0",
+  "cases": [
+    {
+      "carrier": "backbone.layers.0.mixer.A_log",
+      "case_id": "mamba_seq64_backward_8402_out_ptr0",
+      "claim_boundary": "Exact STATE_SPACE_RECURRENT_BACKWARD endpoint backward:8402:out_ptr0; the complete F+B boundary and declared parameter reach must be validated by the runner before any formation verdict.",
+      "reference_method": "AOT_REPLAY",
+      "task_id": "backward:8402:out_ptr0"
+    }
+  ],
+  "closure_task": "backward:8402:out_ptr0",
+  "complete_fb_unit_required": true,
+  "implementation_kind": "TRITON",
+  "metadata_binding": {
+    "exact_aot_endpoint_id": "backward:graph0:add_7711",
+    "has_exact_downstream_closure": true,
+    "member_count": 64,
+    "nearest_carrier": {
+      "aliases": [
+        "backbone.layers.0.mixer.A_log"
+      ],
+      "aot_distance": 72,
+      "gradient_source_node": "mul_7028",
+      "name": "backbone.layers.0.mixer.A_log",
+      "shape": [
+        1536,
+        16
+      ]
+    },
+    "pool_cell_id": "multishape-backward-cell-0425",
+    "pool_rank": 1,
+    "semantic_region_executable": true
+  },
+  "model": "mamba",
+  "region_symbol": "triton_poi_fused__to_copy__unsafe_view_add_bmm_exp_mul_neg_select_softplus_transpose_unsqueeze_zeros_84",
+  "schema": "kernel-analyzer-tcmp-case-plan-v2",
+  "sequence_length": 64,
+  "source_family": "STATE_SPACE_RECURRENT_BACKWARD",
+  "source_internal_region": "backward:8402:out_ptr0",
+  "task_id": "backward:8402:out_ptr0"
+}

@@ -1,0 +1,37 @@
+{
+  "schema": "kernel-analyzer-gemma4-method-bridge-protocol-v1",
+  "status": "FROZEN_BEFORE_UNIFIED_PROFILE_MEASUREMENT",
+  "model": "google/gemma-4-E2B",
+  "implementation_relation": "NEW_IMPL_NEW_MODEL_METHOD_BRIDGE",
+  "input_bank": "results/property/tcmp_allop_v1/input_banks/gemma4_e2b_text128_trajectory32.json",
+  "runtime_release": "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/runtime_release_rebound_current",
+  "exact_reach": "results/property/tcmp_allop_v1/heldout/gemma4_e2b_text128/random_recall_exact_reach.json",
+  "cases": [
+    {
+      "region": "backward:1880",
+      "output": "in_out_ptr0",
+      "training_location": "attention softmax backward"
+    },
+    {
+      "region": "backward:1401",
+      "output": "out_ptr3",
+      "training_location": "GELU and loss backward region"
+    }
+  ],
+  "measurement": {
+    "states": 32,
+    "calibration_states": 16,
+    "confirmation_states": 16,
+    "stages": [
+      "parameter gradient",
+      "cold-start AdamW parameter update"
+    ],
+    "effects": [
+      "fixed parameter direction",
+      "scaling relative to the normal update",
+      "remaining direction after scaling is removed"
+    ]
+  },
+  "selection_boundary": "These implementation positions were frozen in earlier Gemma work. The run checks transfer of the unified measurement to a new model and implementation family; it is not a newly selected prospective discovery set.",
+  "replacement_policy": "A failed position remains unresolved and is not replaced after measurement."
+}

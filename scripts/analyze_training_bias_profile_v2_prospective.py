@@ -32,7 +32,13 @@ EXPLANATION_STAGES = ("LOCAL", "PARAMETER_GRADIENT")
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--protocol", type=Path, required=True)
-    parser.add_argument("--raw-dir", type=Path, required=True)
+    parser.add_argument(
+        "--raw-dir",
+        type=Path,
+        action="append",
+        required=True,
+        help="Directory containing raw case JSON; repeat to overlay recovered cases.",
+    )
     parser.add_argument("--status-dir", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -43,8 +49,14 @@ def main() -> None:
     status_rows: dict[str, dict[str, Any]] = {}
     for row in frozen:
         case_id = f"{row['model']}_seq{row['sequence_length']}_{row['task_id'].replace(':', '_')}"
-        path = args.raw_dir / f"{case_id}.json"
-        if path.exists():
+        matching_paths = [directory / f"{case_id}.json" for directory in args.raw_dir]
+        existing_paths = [path for path in matching_paths if path.exists()]
+        if len(existing_paths) > 1:
+            raise RuntimeError(
+                f"case appears in more than one raw directory: {case_id}: {existing_paths}"
+            )
+        if existing_paths:
+            path = existing_paths[0]
             payload = json.loads(path.read_text())
             if payload.get("status") != "COMPLETE":
                 raise RuntimeError(f"incomplete raw artifact: {path}")
@@ -88,7 +100,7 @@ def main() -> None:
             cases[case_id] = {
                 "model": row["model"],
                 "family": row["family"],
-                "pool_rank": row["pool_rank"],
+                "pool_rank": row.get("pool_rank", row.get("frozen_pool_rank")),
                 "primary_update_result": "ABSTAIN",
                 "reason": status.get("reason", "MEASUREMENT_NOT_COMPLETE"),
                 "status_artifact": status or None,
@@ -114,7 +126,7 @@ def main() -> None:
         cases[case_id] = {
             "model": row["model"],
             "family": row["family"],
-            "pool_rank": row["pool_rank"],
+            "pool_rank": row.get("pool_rank", row.get("frozen_pool_rank")),
             "carrier": payload["carrier"],
             "primary_update_result": (
                 "CONFIRMED_TRAINING_UPDATE_EFFECT"
@@ -127,8 +139,9 @@ def main() -> None:
     result = {
         "schema": "kernel-analyzer-training-bias-profile-v2-prospective-batch-summary",
         "status": (
-            "COMPLETE_ALL_FROZEN_CASES"
-            if len(payloads) == len(frozen) else "COMPLETE_WITH_ABSTENTIONS"
+            "COMPLETE"
+            if len(payloads) == len(frozen)
+            else "COMPLETE_WITH_EXPLICIT_ABSTENTIONS"
         ),
         "selection": "frozen before new profile measurement",
         "protocol": str(args.protocol),

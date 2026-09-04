@@ -1,0 +1,574 @@
+{
+  "architecture": "deepseek8b",
+  "carrier": "model.layers.18.self_attn.v_proj.weight",
+  "carrier_coordinates": 4194304,
+  "case_id": "deepseek8b_seq128_backward_1256_out_ptr0",
+  "case_plan": "/data1/tzh/kernel-analyzer/results/property/tcmp_allop_v1/heldout/deepseek8b_seq128_backward_1256_out_ptr0/case_plan.json",
+  "claim_boundary": "Four real counterfactual arms on one declared parameter carrier. Formation labels are not read or emitted. A 32-step result is a bounded one-parameter consequence, not full-model training safety. ",
+  "compact_long_horizon": true,
+  "consequence_only_early_stop": false,
+  "final_drift_l2": 0.2794288098812103,
+  "four_counterfactual_arms_required": true,
+  "loss_audit": {
+    "any_period_split": true,
+    "final_gap": 0.008505105972290039,
+    "last_512_max_abs": 0.02999711036682129,
+    "last_512_mean": 0.0050886571407318115,
+    "max_abs_gap": 0.02999711036682129,
+    "recorded": true,
+    "recorded_steps": 32,
+    "split_step_count": 32,
+    "tolerance": 1e-08
+  },
+  "max_recurrence_relative": 1.7813289277536544e-07,
+  "measurement_geometry": "COUNT_SKETCH_256",
+  "measurement_kind": "candidate_repair_closed_loop_consequence",
+  "missing_step_ids": [],
+  "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+  "optimizer": {
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "epsilon": 1e-08,
+    "learning_rate": 0.0001,
+    "name": "AdamW",
+    "weight_decay": 0.0
+  },
+  "optimizer_execution": "gpu_full_tensor",
+  "optimizer_state_device": "cuda:0",
+  "planned_horizon_steps": 32,
+  "projection": {
+    "kind": "candidate_blind_fixed_rademacher",
+    "primary_verdict_uses_projection": false,
+    "seed_rule": "sha256(case_id)"
+  },
+  "recurrence_relative_tolerance": 1e-05,
+  "recurrence_tolerance": 1e-06,
+  "release": "/data1/tzh/kernel-analyzer/results/coverage/runtime_releases/deepseek8b_seq128_r1",
+  "runner": "scripts/run_bound_endpoint_consequence_v21.py",
+  "schema": "kernel-analyzer-bias-consequence-certificate-v2_1",
+  "statistics": {
+    "level_ids": [
+      "local",
+      "feedback",
+      "actual"
+    ],
+    "levels": {
+      "actual": {
+        "above_sign_flip_95": true,
+        "coherence_amplification": 2.4914724994493542,
+        "coherence_fraction_of_max": 0.4404342748751088,
+        "diffusive_scale_l2": 0.11939163935611577,
+        "energy": 0.014254363548140811,
+        "final_amplification_is_order_invariant": true,
+        "lag_correlation": [
+          {
+            "lag": 1,
+            "mean_inner_product": 0.00020192628315633467,
+            "normalized_correlation": 0.5655681414530056,
+            "pairs": 31
+          },
+          {
+            "lag": 2,
+            "mean_inner_product": 0.00016063404230121873,
+            "normalized_correlation": 0.5569103761909965,
+            "pairs": 30
+          },
+          {
+            "lag": 3,
+            "mean_inner_product": 0.00013585633412606062,
+            "normalized_correlation": 0.5419022077617416,
+            "pairs": 29
+          },
+          {
+            "lag": 4,
+            "mean_inner_product": 0.00011504240945412165,
+            "normalized_correlation": 0.5090905499463909,
+            "pairs": 28
+          },
+          {
+            "lag": 5,
+            "mean_inner_product": 9.87106510193036e-05,
+            "normalized_correlation": 0.4715713754307846,
+            "pairs": 27
+          },
+          {
+            "lag": 6,
+            "mean_inner_product": 8.620414888093796e-05,
+            "normalized_correlation": 0.4341618149787404,
+            "pairs": 26
+          },
+          {
+            "lag": 7,
+            "mean_inner_product": 7.597888163695364e-05,
+            "normalized_correlation": 0.3926695237356938,
+            "pairs": 25
+          },
+          {
+            "lag": 8,
+            "mean_inner_product": 6.870233758086026e-05,
+            "normalized_correlation": 0.35825693654961727,
+            "pairs": 24
+          }
+        ],
+        "lag_curve_and_prefix_are_order_sensitive": true,
+        "path_l2": 0.47650434443672285,
+        "prefix": {
+          "1": {
+            "coherence_amplification": 1.0,
+            "coherence_fraction_of_max": 1.0,
+            "diffusive_scale_l2": 0.0743108754038588,
+            "resultant_l2": 0.0743108754038588
+          },
+          "16": {
+            "coherence_amplification": 2.16381384409547,
+            "coherence_fraction_of_max": 0.5409534610238675,
+            "diffusive_scale_l2": 0.1160722227957317,
+            "resultant_l2": 0.2511586826003381
+          },
+          "2": {
+            "coherence_amplification": 1.0225900352325765,
+            "coherence_fraction_of_max": 0.7230803482867454,
+            "diffusive_scale_l2": 0.09305509055302044,
+            "resultant_l2": 0.09515720832718376
+          },
+          "32": {
+            "coherence_amplification": 2.4914724994493542,
+            "coherence_fraction_of_max": 0.4404342748751088,
+            "diffusive_scale_l2": 0.11939163935611577,
+            "resultant_l2": 0.29746098611993765
+          },
+          "4": {
+            "coherence_amplification": 1.3447095818873476,
+            "coherence_fraction_of_max": 0.6723547909436738,
+            "diffusive_scale_l2": 0.10447626781593233,
+            "resultant_l2": 0.1404902384119129
+          },
+          "8": {
+            "coherence_amplification": 1.7527888983077389,
+            "coherence_fraction_of_max": 0.61970445799095,
+            "diffusive_scale_l2": 0.1110374031016577,
+            "resultant_l2": 0.19462512745350694
+          }
+        },
+        "resultant_l2": 0.29746098611993765,
+        "resultant_over_path": 0.624256608765167,
+        "schema": "kernel-analyzer-path-statistics-v1",
+        "sign_flip_null": {
+          "draws": 1000,
+          "median": 0.9236911731657167,
+          "one_sided_p": 0.000999000999000999,
+          "seed": 20260822,
+          "upper_95": 1.4136004751637998,
+          "upper_99": 1.6388196243648596
+        },
+        "state_ids": [
+          "deepseek8b_seq128_trajectory4096-trajectory-256",
+          "deepseek8b_seq128_trajectory4096-trajectory-257",
+          "deepseek8b_seq128_trajectory4096-trajectory-258",
+          "deepseek8b_seq128_trajectory4096-trajectory-259",
+          "deepseek8b_seq128_trajectory4096-trajectory-260",
+          "deepseek8b_seq128_trajectory4096-trajectory-261",
+          "deepseek8b_seq128_trajectory4096-trajectory-262",
+          "deepseek8b_seq128_trajectory4096-trajectory-263",
+          "deepseek8b_seq128_trajectory4096-trajectory-264",
+          "deepseek8b_seq128_trajectory4096-trajectory-265",
+          "deepseek8b_seq128_trajectory4096-trajectory-266",
+          "deepseek8b_seq128_trajectory4096-trajectory-267",
+          "deepseek8b_seq128_trajectory4096-trajectory-268",
+          "deepseek8b_seq128_trajectory4096-trajectory-269",
+          "deepseek8b_seq128_trajectory4096-trajectory-270",
+          "deepseek8b_seq128_trajectory4096-trajectory-271",
+          "deepseek8b_seq128_trajectory4096-trajectory-272",
+          "deepseek8b_seq128_trajectory4096-trajectory-273",
+          "deepseek8b_seq128_trajectory4096-trajectory-274",
+          "deepseek8b_seq128_trajectory4096-trajectory-275",
+          "deepseek8b_seq128_trajectory4096-trajectory-276",
+          "deepseek8b_seq128_trajectory4096-trajectory-277",
+          "deepseek8b_seq128_trajectory4096-trajectory-278",
+          "deepseek8b_seq128_trajectory4096-trajectory-279",
+          "deepseek8b_seq128_trajectory4096-trajectory-280",
+          "deepseek8b_seq128_trajectory4096-trajectory-281",
+          "deepseek8b_seq128_trajectory4096-trajectory-282",
+          "deepseek8b_seq128_trajectory4096-trajectory-283",
+          "deepseek8b_seq128_trajectory4096-trajectory-284",
+          "deepseek8b_seq128_trajectory4096-trajectory-285",
+          "deepseek8b_seq128_trajectory4096-trajectory-286",
+          "deepseek8b_seq128_trajectory4096-trajectory-287"
+        ],
+        "steps": 32
+      },
+      "feedback": {
+        "above_sign_flip_95": true,
+        "coherence_amplification": 3.2228353819946225,
+        "coherence_fraction_of_max": 0.5697221883140837,
+        "diffusive_scale_l2": 0.07462047464504595,
+        "energy": 0.0055682152362519464,
+        "final_amplification_is_order_invariant": true,
+        "lag_correlation": [
+          {
+            "lag": 1,
+            "mean_inner_product": 0.0001312076372534482,
+            "normalized_correlation": 0.7944792797210535,
+            "pairs": 31
+          },
+          {
+            "lag": 2,
+            "mean_inner_product": 0.00010768375458352055,
+            "normalized_correlation": 0.7348494053084058,
+            "pairs": 30
+          },
+          {
+            "lag": 3,
+            "mean_inner_product": 9.124735621267196e-05,
+            "normalized_correlation": 0.6783043638659514,
+            "pairs": 29
+          },
+          {
+            "lag": 4,
+            "mean_inner_product": 7.800236613240475e-05,
+            "normalized_correlation": 0.6217763184410731,
+            "pairs": 28
+          },
+          {
+            "lag": 5,
+            "mean_inner_product": 6.913255292539888e-05,
+            "normalized_correlation": 0.579719299687412,
+            "pairs": 27
+          },
+          {
+            "lag": 6,
+            "mean_inner_product": 6.123836386952032e-05,
+            "normalized_correlation": 0.5265471484660216,
+            "pairs": 26
+          },
+          {
+            "lag": 7,
+            "mean_inner_product": 5.666118140039128e-05,
+            "normalized_correlation": 0.4918113727748314,
+            "pairs": 25
+          },
+          {
+            "lag": 8,
+            "mean_inner_product": 5.266398937993681e-05,
+            "normalized_correlation": 0.4651776102711669,
+            "pairs": 24
+          }
+        ],
+        "lag_curve_and_prefix_are_order_sensitive": true,
+        "path_l2": 0.3492261324439283,
+        "prefix": {
+          "1": {
+            "coherence_amplification": 0.0,
+            "coherence_fraction_of_max": 0.0,
+            "diffusive_scale_l2": 0.0,
+            "resultant_l2": 0.0
+          },
+          "16": {
+            "coherence_amplification": 2.7257849824575096,
+            "coherence_fraction_of_max": 0.6814462456143774,
+            "diffusive_scale_l2": 0.06987097938939381,
+            "resultant_l2": 0.19045326632920784
+          },
+          "2": {
+            "coherence_amplification": 1.0,
+            "coherence_fraction_of_max": 0.7071067811865475,
+            "diffusive_scale_l2": 0.02224546051235444,
+            "resultant_l2": 0.02224546051235444
+          },
+          "32": {
+            "coherence_amplification": 3.2228353819946225,
+            "coherence_fraction_of_max": 0.5697221883140837,
+            "diffusive_scale_l2": 0.07462047464504595,
+            "resultant_l2": 0.2404895059072867
+          },
+          "4": {
+            "coherence_amplification": 1.4213528426451363,
+            "coherence_fraction_of_max": 0.7106764213225681,
+            "diffusive_scale_l2": 0.051066841132380206,
+            "resultant_l2": 0.07258399980841618
+          },
+          "8": {
+            "coherence_amplification": 2.110551568113595,
+            "coherence_fraction_of_max": 0.7461926629285122,
+            "diffusive_scale_l2": 0.06237738549509798,
+            "resultant_l2": 0.13165068877150526
+          }
+        },
+        "resultant_l2": 0.2404895059072867,
+        "resultant_over_path": 0.6886354816127618,
+        "schema": "kernel-analyzer-path-statistics-v1",
+        "sign_flip_null": {
+          "draws": 1000,
+          "median": 0.86983063555677,
+          "one_sided_p": 0.000999000999000999,
+          "seed": 20260821,
+          "upper_95": 1.5562356215201532,
+          "upper_99": 1.8238488784678124
+        },
+        "state_ids": [
+          "deepseek8b_seq128_trajectory4096-trajectory-256",
+          "deepseek8b_seq128_trajectory4096-trajectory-257",
+          "deepseek8b_seq128_trajectory4096-trajectory-258",
+          "deepseek8b_seq128_trajectory4096-trajectory-259",
+          "deepseek8b_seq128_trajectory4096-trajectory-260",
+          "deepseek8b_seq128_trajectory4096-trajectory-261",
+          "deepseek8b_seq128_trajectory4096-trajectory-262",
+          "deepseek8b_seq128_trajectory4096-trajectory-263",
+          "deepseek8b_seq128_trajectory4096-trajectory-264",
+          "deepseek8b_seq128_trajectory4096-trajectory-265",
+          "deepseek8b_seq128_trajectory4096-trajectory-266",
+          "deepseek8b_seq128_trajectory4096-trajectory-267",
+          "deepseek8b_seq128_trajectory4096-trajectory-268",
+          "deepseek8b_seq128_trajectory4096-trajectory-269",
+          "deepseek8b_seq128_trajectory4096-trajectory-270",
+          "deepseek8b_seq128_trajectory4096-trajectory-271",
+          "deepseek8b_seq128_trajectory4096-trajectory-272",
+          "deepseek8b_seq128_trajectory4096-trajectory-273",
+          "deepseek8b_seq128_trajectory4096-trajectory-274",
+          "deepseek8b_seq128_trajectory4096-trajectory-275",
+          "deepseek8b_seq128_trajectory4096-trajectory-276",
+          "deepseek8b_seq128_trajectory4096-trajectory-277",
+          "deepseek8b_seq128_trajectory4096-trajectory-278",
+          "deepseek8b_seq128_trajectory4096-trajectory-279",
+          "deepseek8b_seq128_trajectory4096-trajectory-280",
+          "deepseek8b_seq128_trajectory4096-trajectory-281",
+          "deepseek8b_seq128_trajectory4096-trajectory-282",
+          "deepseek8b_seq128_trajectory4096-trajectory-283",
+          "deepseek8b_seq128_trajectory4096-trajectory-284",
+          "deepseek8b_seq128_trajectory4096-trajectory-285",
+          "deepseek8b_seq128_trajectory4096-trajectory-286",
+          "deepseek8b_seq128_trajectory4096-trajectory-287"
+        ],
+        "steps": 32
+      },
+      "local": {
+        "above_sign_flip_95": false,
+        "coherence_amplification": 0.9941746473948352,
+        "coherence_fraction_of_max": 0.17574690871415818,
+        "diffusive_scale_l2": 0.09414215808773693,
+        "energy": 0.008862745929416452,
+        "final_amplification_is_order_invariant": true,
+        "lag_correlation": [
+          {
+            "lag": 1,
+            "mean_inner_product": -2.982022028315523e-06,
+            "normalized_correlation": -0.01950518394588009,
+            "pairs": 31
+          },
+          {
+            "lag": 2,
+            "mean_inner_product": 3.201051293626795e-07,
+            "normalized_correlation": 0.006269917233134537,
+            "pairs": 30
+          },
+          {
+            "lag": 3,
+            "mean_inner_product": 1.5018857743504057e-06,
+            "normalized_correlation": 0.029388104765185483,
+            "pairs": 29
+          },
+          {
+            "lag": 4,
+            "mean_inner_product": -1.1142009813409758e-06,
+            "normalized_correlation": -0.03320973735153803,
+            "pairs": 28
+          },
+          {
+            "lag": 5,
+            "mean_inner_product": 1.110188553209533e-06,
+            "normalized_correlation": 0.03115263618907205,
+            "pairs": 27
+          },
+          {
+            "lag": 6,
+            "mean_inner_product": -1.6656924370383644e-06,
+            "normalized_correlation": -0.04211839358136945,
+            "pairs": 26
+          },
+          {
+            "lag": 7,
+            "mean_inner_product": 1.6577603370973847e-06,
+            "normalized_correlation": 0.032279104009054406,
+            "pairs": 25
+          },
+          {
+            "lag": 8,
+            "mean_inner_product": -1.296372782861993e-06,
+            "normalized_correlation": -0.022889877102306003,
+            "pairs": 24
+          }
+        ],
+        "lag_curve_and_prefix_are_order_sensitive": true,
+        "path_l2": 0.23951427245150644,
+        "prefix": {
+          "1": {
+            "coherence_amplification": 1.0,
+            "coherence_fraction_of_max": 1.0,
+            "diffusive_scale_l2": 0.0743108754038588,
+            "resultant_l2": 0.0743108754038588
+          },
+          "16": {
+            "coherence_amplification": 0.9946389805520489,
+            "coherence_fraction_of_max": 0.24865974513801223,
+            "diffusive_scale_l2": 0.09355585542031655,
+            "resultant_l2": 0.09305430065993853
+          },
+          "2": {
+            "coherence_amplification": 0.9909036892680276,
+            "coherence_fraction_of_max": 0.7006747181841898,
+            "diffusive_scale_l2": 0.09080488892990161,
+            "resultant_l2": 0.08997889944421299
+          },
+          "32": {
+            "coherence_amplification": 0.9941746473948352,
+            "coherence_fraction_of_max": 0.17574690871415818,
+            "diffusive_scale_l2": 0.09414215808773693,
+            "resultant_l2": 0.09359374682186469
+          },
+          "4": {
+            "coherence_amplification": 0.9943874086219728,
+            "coherence_fraction_of_max": 0.4971937043109864,
+            "diffusive_scale_l2": 0.09177083909709097,
+            "resultant_l2": 0.09125576687682033
+          },
+          "8": {
+            "coherence_amplification": 0.9891249378749946,
+            "coherence_fraction_of_max": 0.3497084755060656,
+            "diffusive_scale_l2": 0.0922852755638666,
+            "resultant_l2": 0.0912816674588863
+          }
+        },
+        "resultant_l2": 0.09359374682186469,
+        "resultant_over_path": 0.390764800209617,
+        "schema": "kernel-analyzer-path-statistics-v1",
+        "sign_flip_null": {
+          "draws": 1000,
+          "median": 0.9966869556158255,
+          "one_sided_p": 0.5774225774225774,
+          "seed": 20260820,
+          "upper_95": 1.0288014413768105,
+          "upper_99": 1.0416318786771468
+        },
+        "state_ids": [
+          "deepseek8b_seq128_trajectory4096-trajectory-256",
+          "deepseek8b_seq128_trajectory4096-trajectory-257",
+          "deepseek8b_seq128_trajectory4096-trajectory-258",
+          "deepseek8b_seq128_trajectory4096-trajectory-259",
+          "deepseek8b_seq128_trajectory4096-trajectory-260",
+          "deepseek8b_seq128_trajectory4096-trajectory-261",
+          "deepseek8b_seq128_trajectory4096-trajectory-262",
+          "deepseek8b_seq128_trajectory4096-trajectory-263",
+          "deepseek8b_seq128_trajectory4096-trajectory-264",
+          "deepseek8b_seq128_trajectory4096-trajectory-265",
+          "deepseek8b_seq128_trajectory4096-trajectory-266",
+          "deepseek8b_seq128_trajectory4096-trajectory-267",
+          "deepseek8b_seq128_trajectory4096-trajectory-268",
+          "deepseek8b_seq128_trajectory4096-trajectory-269",
+          "deepseek8b_seq128_trajectory4096-trajectory-270",
+          "deepseek8b_seq128_trajectory4096-trajectory-271",
+          "deepseek8b_seq128_trajectory4096-trajectory-272",
+          "deepseek8b_seq128_trajectory4096-trajectory-273",
+          "deepseek8b_seq128_trajectory4096-trajectory-274",
+          "deepseek8b_seq128_trajectory4096-trajectory-275",
+          "deepseek8b_seq128_trajectory4096-trajectory-276",
+          "deepseek8b_seq128_trajectory4096-trajectory-277",
+          "deepseek8b_seq128_trajectory4096-trajectory-278",
+          "deepseek8b_seq128_trajectory4096-trajectory-279",
+          "deepseek8b_seq128_trajectory4096-trajectory-280",
+          "deepseek8b_seq128_trajectory4096-trajectory-281",
+          "deepseek8b_seq128_trajectory4096-trajectory-282",
+          "deepseek8b_seq128_trajectory4096-trajectory-283",
+          "deepseek8b_seq128_trajectory4096-trajectory-284",
+          "deepseek8b_seq128_trajectory4096-trajectory-285",
+          "deepseek8b_seq128_trajectory4096-trajectory-286",
+          "deepseek8b_seq128_trajectory4096-trajectory-287"
+        ],
+        "steps": 32
+      }
+    },
+    "measurement_geometry": "COUNT_SKETCH_256",
+    "resultant_cosines": {
+      "feedback__actual": 0.9614598035776625,
+      "local__actual": 0.7077394397670695,
+      "local__feedback": 0.48622127433995066
+    },
+    "schema": "kernel-analyzer-aligned-level-statistics-v1",
+    "state_ids": [
+      "deepseek8b_seq128_trajectory4096-trajectory-256",
+      "deepseek8b_seq128_trajectory4096-trajectory-257",
+      "deepseek8b_seq128_trajectory4096-trajectory-258",
+      "deepseek8b_seq128_trajectory4096-trajectory-259",
+      "deepseek8b_seq128_trajectory4096-trajectory-260",
+      "deepseek8b_seq128_trajectory4096-trajectory-261",
+      "deepseek8b_seq128_trajectory4096-trajectory-262",
+      "deepseek8b_seq128_trajectory4096-trajectory-263",
+      "deepseek8b_seq128_trajectory4096-trajectory-264",
+      "deepseek8b_seq128_trajectory4096-trajectory-265",
+      "deepseek8b_seq128_trajectory4096-trajectory-266",
+      "deepseek8b_seq128_trajectory4096-trajectory-267",
+      "deepseek8b_seq128_trajectory4096-trajectory-268",
+      "deepseek8b_seq128_trajectory4096-trajectory-269",
+      "deepseek8b_seq128_trajectory4096-trajectory-270",
+      "deepseek8b_seq128_trajectory4096-trajectory-271",
+      "deepseek8b_seq128_trajectory4096-trajectory-272",
+      "deepseek8b_seq128_trajectory4096-trajectory-273",
+      "deepseek8b_seq128_trajectory4096-trajectory-274",
+      "deepseek8b_seq128_trajectory4096-trajectory-275",
+      "deepseek8b_seq128_trajectory4096-trajectory-276",
+      "deepseek8b_seq128_trajectory4096-trajectory-277",
+      "deepseek8b_seq128_trajectory4096-trajectory-278",
+      "deepseek8b_seq128_trajectory4096-trajectory-279",
+      "deepseek8b_seq128_trajectory4096-trajectory-280",
+      "deepseek8b_seq128_trajectory4096-trajectory-281",
+      "deepseek8b_seq128_trajectory4096-trajectory-282",
+      "deepseek8b_seq128_trajectory4096-trajectory-283",
+      "deepseek8b_seq128_trajectory4096-trajectory-284",
+      "deepseek8b_seq128_trajectory4096-trajectory-285",
+      "deepseek8b_seq128_trajectory4096-trajectory-286",
+      "deepseek8b_seq128_trajectory4096-trajectory-287"
+    ]
+  },
+  "status": "COMPLETE",
+  "step_count": 32,
+  "step_ids": [
+    "deepseek8b_seq128_trajectory4096-trajectory-256",
+    "deepseek8b_seq128_trajectory4096-trajectory-257",
+    "deepseek8b_seq128_trajectory4096-trajectory-258",
+    "deepseek8b_seq128_trajectory4096-trajectory-259",
+    "deepseek8b_seq128_trajectory4096-trajectory-260",
+    "deepseek8b_seq128_trajectory4096-trajectory-261",
+    "deepseek8b_seq128_trajectory4096-trajectory-262",
+    "deepseek8b_seq128_trajectory4096-trajectory-263",
+    "deepseek8b_seq128_trajectory4096-trajectory-264",
+    "deepseek8b_seq128_trajectory4096-trajectory-265",
+    "deepseek8b_seq128_trajectory4096-trajectory-266",
+    "deepseek8b_seq128_trajectory4096-trajectory-267",
+    "deepseek8b_seq128_trajectory4096-trajectory-268",
+    "deepseek8b_seq128_trajectory4096-trajectory-269",
+    "deepseek8b_seq128_trajectory4096-trajectory-270",
+    "deepseek8b_seq128_trajectory4096-trajectory-271",
+    "deepseek8b_seq128_trajectory4096-trajectory-272",
+    "deepseek8b_seq128_trajectory4096-trajectory-273",
+    "deepseek8b_seq128_trajectory4096-trajectory-274",
+    "deepseek8b_seq128_trajectory4096-trajectory-275",
+    "deepseek8b_seq128_trajectory4096-trajectory-276",
+    "deepseek8b_seq128_trajectory4096-trajectory-277",
+    "deepseek8b_seq128_trajectory4096-trajectory-278",
+    "deepseek8b_seq128_trajectory4096-trajectory-279",
+    "deepseek8b_seq128_trajectory4096-trajectory-280",
+    "deepseek8b_seq128_trajectory4096-trajectory-281",
+    "deepseek8b_seq128_trajectory4096-trajectory-282",
+    "deepseek8b_seq128_trajectory4096-trajectory-283",
+    "deepseek8b_seq128_trajectory4096-trajectory-284",
+    "deepseek8b_seq128_trajectory4096-trajectory-285",
+    "deepseek8b_seq128_trajectory4096-trajectory-286",
+    "deepseek8b_seq128_trajectory4096-trajectory-287"
+  ],
+  "steps": 32,
+  "trajectory_status": "COMPLETE",
+  "uses_candidate_measurements": true,
+  "uses_historical_verdicts": false,
+  "verdict_blind": true
+}

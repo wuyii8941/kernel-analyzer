@@ -1,0 +1,41 @@
+{
+  "case_id": "deepseek8b_seq256_backward_659_output_0",
+  "cases": [
+    {
+      "carrier": "model.norm.weight",
+      "case_id": "deepseek8b_seq256_backward_659_output_0",
+      "claim_boundary": "Exact LOSS_CE_BACKWARD endpoint backward:659:output_0; the complete F+B boundary and declared parameter reach must be validated by the runner before any formation verdict.",
+      "reference_method": "AOT_REPLAY",
+      "task_id": "backward:659:output_0"
+    }
+  ],
+  "closure_task": "backward:659:output_0",
+  "complete_fb_unit_required": true,
+  "implementation_kind": "EXTERN",
+  "metadata_binding": {
+    "exact_aot_endpoint_id": "backward:graph0:mm_254",
+    "has_exact_downstream_closure": true,
+    "member_count": 1,
+    "nearest_carrier": {
+      "aliases": [
+        "model.norm.weight"
+      ],
+      "aot_distance": 4,
+      "gradient_source_node": "view_954",
+      "name": "model.norm.weight",
+      "shape": [
+        4096
+      ]
+    },
+    "pool_cell_id": "multishape-backward-cell-0092",
+    "pool_rank": 10,
+    "semantic_region_executable": true
+  },
+  "model": "deepseek8b",
+  "region_symbol": "mm",
+  "schema": "kernel-analyzer-tcmp-case-plan-v2",
+  "sequence_length": 256,
+  "source_family": "LOSS_CE_BACKWARD",
+  "source_internal_region": "backward:659:output_0",
+  "task_id": "backward:659:output_0"
+}
