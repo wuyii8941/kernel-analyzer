@@ -364,6 +364,21 @@ def train(args: argparse.Namespace, protocol: dict[str, Any]) -> None:
     model, target_name = build_model(protocol, device)
     modules = make_loss_modules(protocol, device)
     master, first, second = initialize_optimizer_state(model)
+    global_start_step = 0
+    if args.resume is not None:
+        saved = torch.load(args.resume, map_location=device, weights_only=True)
+        if saved["mode"] != args.mode or int(saved["stream"]) != args.stream:
+            raise RuntimeError("resume checkpoint mode or stream does not match this run")
+        global_start_step = int(saved["steps_completed"])
+        for collection_name, destination in (
+            ("master", master), ("first", first), ("second", second),
+        ):
+            source = saved[collection_name]
+            if source.keys() != destination.keys():
+                raise RuntimeError(f"resume checkpoint {collection_name} keys do not match")
+            for name in destination:
+                destination[name].copy_(source[name].to(device=device, dtype=torch.float32))
+        materialize(model, master)
     initial_target_digest = tensor_sha256(master[target_name])
     direction = None
     if args.mode in {"COHERENT_DIRECTION", "BALANCED_DIRECTION"}:
@@ -387,18 +402,22 @@ def train(args: argparse.Namespace, protocol: dict[str, Any]) -> None:
     first_nonfinite_step = None
     started = time.monotonic()
     for index in range(args.steps):
-        step = index + 1
+        step = global_start_step + index + 1
         inputs, labels, offsets = batch_from_stream(
             train_tokens,
             batch_size=int(protocol["model"]["batch_size"]),
             sequence_length=int(protocol["model"]["sequence_length"]),
             stream=args.stream,
-            step=index,
+            step=global_start_step + index,
             seed=int(protocol["data"]["sampling_seed"]),
             repeat_within_batch=bool(protocol["data"].get("repeat_within_batch", False)),
             device=device,
         )
-        lr = learning_rate(protocol, step, args.steps)
+        lr = (
+            float(args.constant_learning_rate)
+            if args.constant_learning_rate is not None
+            else learning_rate(protocol, step, global_start_step + args.steps)
+        )
         candidate_gradient = None
         if args.mode in INJECTION_MODES and args.mode != "ZERO":
             materialize(model, master)
@@ -424,7 +443,7 @@ def train(args: argparse.Namespace, protocol: dict[str, Any]) -> None:
             )
             natural_effect_norm = float(torch.linalg.vector_norm(effect).item())
             sign = balanced_sign(
-                index,
+                global_start_step + index,
                 block_size=int(protocol["injection"]["balance_block_steps"]),
                 seed=int(protocol["injection"]["sign_seed"]),
             ) if args.mode.startswith("BALANCED_") else 1
@@ -503,7 +522,7 @@ def train(args: argparse.Namespace, protocol: dict[str, Any]) -> None:
             "master": {name: value.cpu() for name, value in master.items()},
             "first": {name: value.cpu() for name, value in first.items()},
             "second": {name: value.cpu() for name, value in second.items()},
-            "steps_completed": len(rows),
+            "steps_completed": global_start_step + len(rows),
             "mode": args.mode,
             "multiplier": args.multiplier,
             "stream": args.stream,
@@ -517,6 +536,8 @@ def train(args: argparse.Namespace, protocol: dict[str, Any]) -> None:
         "multiplier": args.multiplier,
         "stream": args.stream,
         "steps_requested": args.steps,
+        "global_start_step": global_start_step,
+        "global_end_step": global_start_step + len(rows),
         "steps_completed": len(rows),
         "first_nonfinite_step": first_nonfinite_step,
         "target_parameter": target_name,
@@ -570,6 +591,8 @@ def main() -> None:
         "/data1/tzh/cache/kernel-analyzer/single_point_collapse_v1/checkpoint.pt"
     ))
     parser.add_argument("--no-checkpoint", action="store_true")
+    parser.add_argument("--resume", type=Path)
+    parser.add_argument("--constant-learning-rate", type=float)
     args = parser.parse_args()
     protocol = load_protocol(args.protocol)
     if args.command == "calibrate":

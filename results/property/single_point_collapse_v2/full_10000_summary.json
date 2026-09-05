@@ -1,0 +1,35 @@
+{
+  "schema": "kernel-analyzer-liger-single-boundary-full-10000-summary-v1",
+  "status": "COMPLETE",
+  "stream": 1,
+  "source_step_range": [1, 4096],
+  "continuation_step_range": [4097, 10000],
+  "steps": 10000,
+  "training_loss_difference": {
+    "whole_10000_mean": 0.005744955217838288,
+    "steps_1_4096_mean": 0.0012048909848090261,
+    "steps_4097_10000_mean": 0.008894701677609265,
+    "final_128_mean": 0.0008235173299908638,
+    "maximum_128_mean": 0.01605317648500204,
+    "minimum_128_mean": -0.006536048837006092,
+    "maximum_128_mean_loss_ratio": 1.0087558364304707,
+    "final_128_mean_loss_ratio": 1.0004821694369832
+  },
+  "validation_loss": {
+    "candidate_at_4096": 2.03887040913105,
+    "repair_at_4096": 2.0110915303230286,
+    "difference_at_4096": 0.027778878808021545,
+    "candidate_at_10000": 1.8211491107940674,
+    "repair_at_10000": 1.8444041013717651,
+    "difference_at_10000": -0.023254990577697754
+  },
+  "final_parameters": {
+    "relative_l2_difference_at_4096": 0.19687089850863024,
+    "relative_l2_difference_at_10000": 0.23500797431357773,
+    "l2_difference_at_10000": 88.14631115081738,
+    "maximum_absolute_difference_at_10000": 0.2713256776332855
+  },
+  "collapse": false,
+  "conclusion": "Parameter trajectories continue to separate, but the training-loss gap approaches zero late in training and the validation-loss difference reverses sign. This is trajectory non-identity, not sustained degradation or catastrophic instability.",
+  "claim_boundary": "One frozen paired trajectory with a constant post-4096 learning rate; not an independent-run population estimate."
+}

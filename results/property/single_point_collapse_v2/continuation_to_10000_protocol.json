@@ -1,0 +1,21 @@
+{
+  "schema": "kernel-analyzer-liger-single-boundary-continuation-protocol-v1",
+  "status": "FROZEN_BEFORE_CONTINUATION_RESULTS",
+  "frozen_at": "2026-09-05T09:05:00+08:00",
+  "source_protocol": "results/property/single_point_collapse_v2/protocol.json",
+  "source_candidate_checkpoint": "/data1/tzh/cache/kernel-analyzer/single_point_collapse_v2/natural_candidate.pt",
+  "source_repair_checkpoint": "/data1/tzh/cache/kernel-analyzer/single_point_collapse_v2/natural_repair.pt",
+  "source_step": 4096,
+  "target_step": 10000,
+  "additional_steps": 5904,
+  "stream": 1,
+  "learning_rate": {
+    "policy": "constant_after_source_checkpoint",
+    "value": 0.0001
+  },
+  "data_policy": "Continue the frozen stream with global step indices 4096 through 9999; do not repeat the first 4096 batches.",
+  "state_policy": "Resume all FP32 master parameters and both AdamW moment tensors without reset.",
+  "primary_question": "Does the candidate-minus-repair loss difference remain, disappear, or grow between steps 4097 and 10000?",
+  "collapse_definition": "Use the source protocol's nonfinite and sustained 128-step mean loss-ratio criteria.",
+  "claim_boundary": "This is one paired continuation. It establishes the behavior of this frozen trajectory, not a run-population average."
+}
