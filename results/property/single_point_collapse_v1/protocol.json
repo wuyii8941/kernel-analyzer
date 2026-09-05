@@ -1,0 +1,98 @@
+{
+  "schema": "kernel-analyzer-liger-single-boundary-collapse-protocol-v1",
+  "status": "FROZEN_BEFORE_EMPIRICAL_RESULTS",
+  "frozen_at": "2026-09-05T01:10:00+08:00",
+  "purpose": "Test whether the measured Liger fused-cross-entropy implementation effect can cause a reproducible training collapse, first under controlled amplification and then without amplification.",
+  "data": {
+    "path": "/data1/tzh/cache/kernel-analyzer/single_point_collapse_v1/tinyshakespeare.txt",
+    "sha256": "86c4e6aa9db7c042ec79f339dcb96d42b0075e16b8fc2e86bf0ca57e2dc565ed",
+    "train_fraction": 0.9,
+    "sampling_seed": 20260905
+  },
+  "model": {
+    "architecture": "GPT2LMHeadModel initialized from scratch",
+    "layers": 4,
+    "heads": 4,
+    "embedding_dimension": 256,
+    "vocab_size": 8192,
+    "sequence_length": 256,
+    "batch_size": 8,
+    "initialization_seed": 20260905,
+    "dropout": 0.0,
+    "tied_input_output_embedding": true
+  },
+  "implementation": {
+    "target_parameter": "transformer.wte.weight",
+    "candidate": "Liger fused linear cross entropy with BF16 dW chunk accumulation",
+    "repair": "The same Liger implementation and chunking with FP32 dW accumulation",
+    "expected_dW_chunks": 32,
+    "changed_boundary": "Only the accumulation dtype of the fused loss weight gradient"
+  },
+  "optimizer": {
+    "name": "AdamW with FP32 master parameters and moments",
+    "betas": [0.9, 0.95],
+    "epsilon": 1e-8,
+    "weight_decay": 0.0,
+    "peak_learning_rate": 0.0003,
+    "minimum_learning_rate": 0.00003,
+    "warmup_steps": 100,
+    "gradient_clip_norm": null
+  },
+  "calibration": {
+    "state_count": 32,
+    "calibration_count": 16,
+    "stream": 900,
+    "purpose": "Freeze one direction and measure the natural candidate-minus-repair AdamW update scale before collapse searches."
+  },
+  "injection": {
+    "balance_block_steps": 32,
+    "sign_seed": 20260905,
+    "modes": [
+      "ZERO",
+      "COHERENT_DIRECTION",
+      "BALANCED_DIRECTION",
+      "LIGER_SHAPED",
+      "BALANCED_LIGER_SHAPED"
+    ],
+    "interpretation": "Injected experiments establish susceptibility to a measured implementation-shaped update. They do not establish natural candidate collapse."
+  },
+  "discovery": {
+    "steps": 2048,
+    "stream": 0,
+    "multiplier_schedule": [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096],
+    "maximum_relative_injection_rms": 1.0,
+    "rule": "Increase the multiplier in the frozen order. Stop after the first reproducible collapse bracket or when the relative injected RMS exceeds the cap."
+  },
+  "confirmation": {
+    "streams": [101, 102, 103, 104, 105],
+    "steps": 4096,
+    "required_reproductions": 4,
+    "repair_stability_steps_after_candidate_failure": 512
+  },
+  "validation": {
+    "batches": 8,
+    "sampling_seed": 20260906,
+    "checkpoints_for_sustained_loss_rule": 3
+  },
+  "collapse_definition": {
+    "nonfinite": "Candidate develops a non-finite loss, gradient, update, or parameter while the matched repair remains finite for at least 512 additional steps.",
+    "sustained_loss": {
+      "ema_window_steps": 128,
+      "candidate_to_repair_ratio": 1.5,
+      "minimum_sustained_steps": 256,
+      "additional_requirements": [
+        "The gap exceeds repair-versus-repair variability.",
+        "Validation loss is worse at three frozen checkpoints.",
+        "The candidate does not recover before the frozen horizon."
+      ]
+    }
+  },
+  "outcome_labels": [
+    "NATURAL_SINGLE_BOUNDARY_COLLAPSE",
+    "AMPLIFIED_LIGER_EFFECT_COLLAPSE_ONLY",
+    "GENERIC_DIRECTIONAL_INJECTION_COLLAPSE_ONLY",
+    "NO_COLLAPSE_WITHIN_DECLARED_PROTOCOLS",
+    "INVALID_OR_UNRESOLVED"
+  ],
+  "claim_boundary": "The small-model search is a controlled full-parameter susceptibility experiment. Only repeated unamplified NATURAL_CANDIDATE failure against stable NATURAL_REPAIR supports a natural single-boundary collapse claim."
+}

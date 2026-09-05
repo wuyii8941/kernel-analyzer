@@ -11,3 +11,9 @@ Do not interpret a screen-positive endpoint as a case.  Read
 
 Raw tensors and compiler products are intentionally kept outside the
 repository under `/data1/tzh`.
+
+`property/single_point_collapse_v1/` and `property/single_point_collapse_v2/`
+contain the frozen protocols and JSON records for the Liger single-boundary
+collapse attempt.  Their `summary.json` files are the compact machine-readable
+conclusions; the corresponding model checkpoints remain outside Git under
+`/data1/tzh/cache/kernel-analyzer/`.
