@@ -1,0 +1,33 @@
+{
+  "checks": {
+    "conventional_candidate_actual_write": true,
+    "method_validation": true,
+    "mixed_liger_actual_write": true,
+    "paired_training_validation": true,
+    "selected_gemma_case_retained": true,
+    "selected_llama_case_retained": true,
+    "triton_attention_actual_write": true,
+    "triton_normalization_actual_write": true
+  },
+  "claim_boundary": "Completion means every task in the bounded protocol has a valid result or a retained execution reason. It does not convert the two unavailable held-out Triton cases into negative results or prove cross-model universality.",
+  "declared_abstentions": [
+    {
+      "case_id": "gemma4_text128_scan_0037",
+      "missing_path": "results/property/three_mechanism_profiles_v1/runs/gemma4_text128_scan_0037/runtime_release/same_dtype_tasks.json.gz",
+      "replacement_used": false,
+      "schema": "kernel-analyzer-training-numerical-analysis-execution-status-v1",
+      "scientific_interpretation": "No new bias or equivalence result. Historical evidence is retained unchanged.",
+      "status": "ABSTAIN_RUNTIME_PACKAGE_INCOMPLETE_FOR_SHARED_RUNNER"
+    },
+    {
+      "case_id": "llama32_text128_scan_0000",
+      "missing_path": "results/property/three_mechanism_profiles_v1/runs/llama32_text128_scan_0000_profile_carrier/runtime_release/same_dtype_tasks.json.gz",
+      "replacement_used": false,
+      "schema": "kernel-analyzer-training-numerical-analysis-execution-status-v1",
+      "scientific_interpretation": "No new bias or equivalence result. Historical evidence is retained unchanged.",
+      "status": "ABSTAIN_RUNTIME_PACKAGE_INCOMPLETE_FOR_SHARED_RUNNER"
+    }
+  ],
+  "schema": "kernel-analyzer-training-numerical-analysis-completion-v1",
+  "status": "COMPLETE_WITH_DECLARED_ABSTENTIONS"
+}

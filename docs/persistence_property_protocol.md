@@ -1,5 +1,8 @@
 # Reduction orbit predictor protocol
 
+> 版本定位（2026-09-05）：Reduction 来源预测的专门协议，不是通用静态 Oracle，也不代替 bias 到 loss 的验证。
+> 当前证据连接见[案例地图](case_evidence_map.md)，研究定义见[主线](current_mainline.md)。
+
 本页只定义 reduction / summation / reassociation 类实现的候选预测量。当前统一
 主方法见 [`method.md`](method.md)。Orbit mean 不是通用 property，也不负责判断
 backward、optimizer 或长程训练后果。

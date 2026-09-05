@@ -1,6 +1,12 @@
 # Bias case protocol
 
-The project reports two separate verdicts.  They answer different scientific
+> Historical classification protocol, retained for its original results and API
+> consumers. Current research claims follow [the mainline](current_mainline.md)
+> and [case evidence map](case_evidence_map.md): mathematical bias evidence and
+> matched loss consequences, with persistence reported separately. The labels
+> below are not the only possible successful research outcomes.
+
+This historical protocol reports two separate verdicts. They answer different scientific
 questions and neither substitutes for the other.
 
 ## Flash-style case track
@@ -19,9 +25,9 @@ Required evidence is:
    and reachable gradients; a matched sham or exact non-target controls pass.
 4. **Real carrier** — the effect reaches a real parameter-gradient or weight
    carrier, not merely an internal tensor.
-5. **Paired trajectory** — candidate and repair are evaluated at the same
-   current weights before each update; the mechanism remains active and live
-   weights diverge directionally.
+5. **Paired trajectory** — same-state counterfactual evaluations measure local
+   implementation effects; the two live trajectories share an initial state
+   and then evolve separately. Their current weights need not remain equal.
 
 This track does not require one fixed error vector across unrelated natural
 inputs.  A failure of the cross-state track cannot revoke a complete

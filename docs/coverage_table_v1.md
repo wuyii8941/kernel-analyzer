@@ -1,5 +1,8 @@
 # 模型和算子覆盖总表
 
+> 版本定位（2026-09-05）：首轮覆盖及历史补测快照。1,562 是输出位置数，旧长程计数不是成因与 loss 全部闭合的案例数。
+> 当前证据连接见[案例地图](case_evidence_map.md)，研究定义见[主线](current_mainline.md)。
+
 这张表专门解决“有结果”与“完成全算子普查”混在一起的问题。机器可读版本是 [`coverage_table_v1.json`](../results/coverage/coverage_table_v1.json)。
 
 ## 已经有明确分母的部分

@@ -1,8 +1,7 @@
 # Qwen3-VL all-op F+B result
 
-> Historical Qwen3-VL evidence note. Current SiLU classification and project
-> terminology are defined in `docs/current_mainline.md` and the long-run
-> machine audit; this note preserves the original F+B derivation only.
+> 历史 Qwen3-VL 单轮记录，保留 SiLU 推导和当时的固定方向阴性结果。
+> 后续响应与反馈结果见 [案例地图](docs/case_evidence_map.md)，不由本页旧标签覆盖。
 
 ## Scope
 

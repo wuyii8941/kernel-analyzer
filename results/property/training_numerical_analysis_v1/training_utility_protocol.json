@@ -1,0 +1,22 @@
+{
+  "schema": "kernel-analyzer-training-utility-protocol-v1",
+  "status": "FROZEN_BEFORE_STREAM_111_RESULTS",
+  "frozen_at": "2026-09-05T23:12:38+08:00",
+  "case_id": "liger_fused_ce_t128_small_gpt2",
+  "purpose": "One additional independent paired run of the mechanism-guided accumulation-precision change under the already frozen high-stress protocol.",
+  "candidate": "Liger fused linear cross entropy with BF16 dW chunk accumulation",
+  "reference": "Same implementation and chunking with FP32 dW accumulation",
+  "stream": 111,
+  "steps": 4096,
+  "primary_training_endpoint": "mean validation loss on the eight frozen validation batches at step 4096",
+  "secondary_endpoints": [
+    "training loss trajectory non-identity",
+    "parameter trajectory non-identity"
+  ],
+  "interpretation": "One new pair supplements, but does not turn the historical streams into a population-level quality guarantee. A positive, negative, or unresolved validation-loss result is retained.",
+  "source_sha256": {
+    "results/property/single_point_collapse_v2/protocol.json": "ec6d4707c980de3cf833a4f7e988d22e6e871f59b00cf8ed73cb48f2c7089f55",
+    "scripts/run_liger_single_boundary_collapse.py": "816b2aabec05f2771026558d7ddcca875ba615e4a2efd726a1cd82cb28d55a25",
+    "/data1/tzh/cache/kernel-analyzer/single_point_collapse_v2/frozen_direction.pt": "317382fcfa4cc6a09e2c3bdf15be001147d1c88f01275116431cd3588154551f"
+  }
+}

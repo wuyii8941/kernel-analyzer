@@ -1,5 +1,8 @@
 # 新实现检查说明
 
+> 版本定位（2026-09-05）：按该轮冻结设置报告的检查，不覆盖后来所有跨模型实验。
+> 当前证据连接见[案例地图](case_evidence_map.md)，研究定义见[主线](current_mainline.md)。
+
 > 本页保留 v3/v4 短程 held-out 记录。它不是当前 301-row long-run audit 的总表，
 > 也不提供通用 unseen-implementation recall。
 

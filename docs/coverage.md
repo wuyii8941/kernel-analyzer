@@ -1,5 +1,8 @@
 # Coverage status
 
+> 版本定位（2026-09-05）：首轮覆盖与旧 T1–T4 队列快照。待办状态按原文件解释，不自动触发当前科研任务；VJP 绑定不等于非零 bias 证明。
+> 当前证据连接见[案例地图](case_evidence_map.md)。
+
 The declared denominator is four models × three sequence lengths = 12 cells:
 Qwen3-1.7B, Mamba-130M, Phi-4-mini, and DeepSeek-R1-Qwen3-8B at 64, 128,
 and 256 tokens.

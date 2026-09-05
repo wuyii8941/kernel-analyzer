@@ -16,6 +16,22 @@ ROOT = Path(__file__).resolve().parents[1]
 ARCHITECTURES = {"phi4": "phi"}
 
 
+def _complete_result(path: Path) -> bool:
+    """Do not treat a stale, failed, or malformed file as completed work."""
+
+    if not path.is_file():
+        return False
+    try:
+        payload = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return False
+    return (
+        payload.get("schema") == "kernel-analyzer-training-bias-profile-v2-raw-case"
+        and payload.get("status") == "COMPLETE"
+        and bool(payload.get("runtime_boundary"))
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--index", type=Path, required=True)
@@ -48,7 +64,7 @@ def main() -> None:
             args.output_root / "raw" / f"{case['case_id']}.json"
             for case in json.loads(Path(row["case_plan"]).read_text())["cases"]
         ]
-        if args.skip_existing and expected and all(path.exists() for path in expected):
+        if args.skip_existing and expected and all(_complete_result(path) for path in expected):
             print(json.dumps({"event": "GROUP_SKIPPED_COMPLETE", "group": group}), flush=True)
             continue
         command = [

@@ -1,5 +1,8 @@
 # Direct Persistence 证据表
 
+> 版本定位（2026-09-05）：历史 32 步归因记录。短程直接作用与后续自然训练的数学成因、loss 证据分开。
+> 当前证据连接见[案例地图](case_evidence_map.md)，研究定义见[主线](current_mainline.md)。
+
 > 本表是 cold-start 32 步的 direct/feedback/actual 归因表，用来解释短程参数分离由哪一部分组成。它不分配当前长程标签；长程结果见 `results/property/declared_persistent_4096/summary.md`。
 > 当前论文顺序和统计定义见 `docs/current_mainline.md` 与 `docs/method.md`。
 

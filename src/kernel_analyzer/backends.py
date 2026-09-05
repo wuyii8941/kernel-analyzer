@@ -35,7 +35,9 @@ class CandidateRuntime(ABC):
         frozen state rows.  Each state supplies either ``transported_error`` or
         complete scalar ``event_errors`` plus matching
         ``reference_transport_directions``.  Candidate tensor values and T1--T4
-        results are forbidden.
+        results are forbidden in this optional predictor only. Dynamic matched
+        measurements below intentionally read both candidate and reference
+        outputs; a missing predictor does not invalidate those measurements.
         """
         return {}
 
@@ -57,7 +59,10 @@ class CandidateRuntime(ABC):
 
 
 class NumericalCandidateBackend(CandidateBackend):
-    """Generic automatic T1-T4 evaluator over a runtime instrumentation plugin."""
+    """Historical T1--T4 evaluator over a runtime instrumentation plugin.
+
+    Retained for replay compatibility, not a universal bias/loss-case verdict.
+    """
 
     def __init__(self, candidate_id: str, runtime: CandidateRuntime,
                  bootstrap_samples: int = 2000, hypothesis: str = "raw",

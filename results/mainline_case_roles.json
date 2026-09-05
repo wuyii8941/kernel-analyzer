@@ -1,0 +1,216 @@
+{
+  "cases": [
+    {
+      "actual_backend_evidence": {
+        "target_kind": "TRITON",
+        "target_region_id": "forward:17",
+        "target_symbol": "triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_10"
+      },
+      "artifact": "results/property/three_mechanism_profiles_v1/runs/gemma4_text128_scan_0037/prediction.json",
+      "artifact_sha256": "fdb428243f490de8edbe6a8eb5994c2f9784ae8cd4d2dc94cf9e09645a485eae",
+      "artifact_status": "PREDICTION_FROZEN_BEFORE_CONSEQUENCE",
+      "candidate_role": "TRITON_CANDIDATE",
+      "carrier": "model.language_model.per_layer_model_projection.weight",
+      "case_id": "gemma4_text128_scan_0037",
+      "claim_boundary": "Source prediction is frozen before the paired trajectory; feedback is outside this source branch.",
+      "data_availability": {
+        "actual_parameter_write": false,
+        "joint_gram": false,
+        "original_coordinate_statistics": false
+      },
+      "formation_artifact": "results/property/three_mechanism_profiles_v1/runs/gemma4_text128_scan_0037/formation.json",
+      "formation_artifact_sha256": "9fd28032093c14181f11cb880d9fb70914583b39b1a4b8bf1e67c9d79824fc42",
+      "formation_status": "COMPLETE",
+      "measurement_geometry": [
+        "LEGACY_CASE_SPECIFIC"
+      ],
+      "purpose": "FIRST_TRITON_FAMILY",
+      "semantic_family": "normalization/reduction"
+    },
+    {
+      "actual_backend_evidence": {
+        "target_kind": "TRITON",
+        "target_region_id": "backward:504",
+        "target_symbol": "triton_per_fused__softmax__softmax_backward_data__to_copy_mul_view_8"
+      },
+      "artifact": "results/property/three_mechanism_profiles_v1/runs/llama32_text128_scan_0000_profile_carrier/prediction.json",
+      "artifact_sha256": "d9c0961cdf3d91d5d2a6a65eeeeefac9dca9201eacececf874668ce8b7dbb9c8",
+      "artifact_status": "PREDICTION_FROZEN_BEFORE_CONSEQUENCE",
+      "candidate_role": "TRITON_CANDIDATE",
+      "carrier": "model.layers.0.input_layernorm.weight",
+      "case_id": "llama32_text128_scan_0000",
+      "claim_boundary": "Source prediction is frozen before the paired trajectory; feedback is outside this source branch.",
+      "data_availability": {
+        "actual_parameter_write": false,
+        "joint_gram": false,
+        "original_coordinate_statistics": false
+      },
+      "formation_artifact": "results/property/three_mechanism_profiles_v1/runs/llama32_text128_scan_0000_profile_carrier/formation.json",
+      "formation_artifact_sha256": "5ee6617c451676ee7d160341c233101b3ac7e5a20fc34ffdb15236b1f3cc9576",
+      "formation_status": "COMPLETE",
+      "measurement_geometry": [
+        "LEGACY_CASE_SPECIFIC"
+      ],
+      "purpose": "SECOND_TRITON_FAMILY",
+      "semantic_family": "softmax backward"
+    },
+    {
+      "actual_backend_evidence": {
+        "runtime_identity_count": 32,
+        "source_sha256": "0b64e2991ea83ece0c28dd561e0ed4e29ab2e7ab1da25a9d256865c582e1aee5",
+        "unique_runtime_identities": [
+          {
+            "left_shape": [
+              64,
+              200064
+            ],
+            "output_shape": [
+              64,
+              3072
+            ],
+            "right_shape": [
+              200064,
+              3072
+            ],
+            "source_file": "/data1/tzh/cache/torchinductor/dg/cdgqnxs5kfrg6vjo6ppnm6iw2cg3smxw5klm4s3gygrnzhh7xios.py",
+            "source_line": 229,
+            "source_sha": "0b64e2991ea83ece0c28dd561e0ed4e29ab2e7ab1da25a9d256865c582e1aee5",
+            "source_text": "extern_kernels.mm(reinterpret_tensor(buf1, (64, 200064), (200064, 1), 0), primals_2, out=buf2)"
+          }
+        ]
+      },
+      "artifact": "results/property/training_bias_profile_v2/five_case_raw/phi.json",
+      "artifact_sha256": "8f17524444ef4f3aac2539214dd8a0797309ec314e5ef60d1b54847c59b3dcbb",
+      "artifact_status": "COMPLETE",
+      "candidate_role": "CONVENTIONAL_EXTERNAL_MM_CANDIDATE",
+      "carrier": "model.norm.weight",
+      "case_id": "phi4_seq64_lmhead_dx",
+      "claim_boundary": "32 independent frozen input states at one checkpoint under cold-start AdamW with zero weight decay; not warm-moment or independent-run evidence.",
+      "data_availability": {
+        "actual_parameter_write": false,
+        "joint_gram": true,
+        "original_coordinate_statistics": false
+      },
+      "measurement_geometry": [
+        "COUNT_SKETCH",
+        "FULL_VECTOR"
+      ],
+      "new_measurement": {
+        "artifact": "results/property/training_numerical_analysis_v1/recapture/phi.json",
+        "artifact_sha256": "522b05a48387bf42d7082e6a86ceac715d78443f42e8d04c354d9cc1e859d2f3",
+        "original_coordinate_statistics": true,
+        "primary_update_endpoint": "PARAMETER_WRITE",
+        "status": "COMPLETE"
+      },
+      "purpose": "CONVENTIONAL_IMPLEMENTATION_FAMILY",
+      "semantic_family": "lm_head backward matrix multiplication"
+    },
+    {
+      "actual_backend_evidence": {
+        "endpoint": "returned dW accumulator at tuple index 4",
+        "function": "liger_kernel.ops.fused_linear_cross_entropy.fused_linear_cross_entropy_forward"
+      },
+      "artifact": "results/property/training_bias_profile_v2/five_case_raw/liger.json",
+      "artifact_sha256": "72d7b1b51311ed090f7be32747910c68cfe6cb5e8a53948f1eb851ca0ec0aeb3",
+      "artifact_status": "COMPLETE",
+      "candidate_role": "MIXED_TRAINING_COMPUTATION",
+      "carrier": "model.model.embed_tokens.weight (tied lm_head weight)",
+      "case_id": "liger_fused_ce_t128",
+      "claim_boundary": "32 independent frozen input states at one checkpoint under cold-start AdamW with zero weight decay; not warm-moment or independent-run evidence.",
+      "data_availability": {
+        "actual_parameter_write": false,
+        "joint_gram": true,
+        "original_coordinate_statistics": false
+      },
+      "measurement_geometry": [
+        "COUNT_SKETCH"
+      ],
+      "new_measurement": {
+        "artifact": "results/property/training_numerical_analysis_v1/recapture/liger.json",
+        "artifact_sha256": "775075732141a91ddcaa0d35139986e49e6b9cbc16b25d6dcaa60f9c15372333",
+        "original_coordinate_statistics": true,
+        "primary_update_endpoint": "PARAMETER_WRITE",
+        "status": "COMPLETE"
+      },
+      "purpose": "MECHANISM_AND_CONSEQUENCE_SUPPORT",
+      "semantic_family": "fused cross entropy and weight-gradient accumulation"
+    },
+    {
+      "actual_backend_evidence": {
+        "binding_status": "EXACT_CANDIDATE_BUFFER_TO_AOT_SEMANTIC_ENDPOINT",
+        "exact_aot_endpoint_id": "backward:graph0:add_802",
+        "frozen_release_id": "deepseek8b_seq256_r1",
+        "implementation_kind": "TRITON",
+        "phase": "BACKWARD",
+        "runtime_plan": "results/coverage/runtime_releases/deepseek8b_seq256_r1/same_dtype_tasks.json.gz",
+        "runtime_plan_sha256": "6045554120261d86d1cd29dc9da9de8cae345178031b6d6c772ee586fcd136f6",
+        "symbol": "triton_red_fused__to_copy_add_div_expand_mul_pow_sum_view_6",
+        "task_id": "backward:1714:in_out_ptr0"
+      },
+      "artifact": "results/property/training_bias_profile_v2/prospective_batch_1/raw/deepseek8b_seq256_backward_1714_in_out_ptr0.json",
+      "artifact_sha256": "561de24b592667a2ff048aa8713137f13a3fb56c6c3aaac563ecabb9caef2a58",
+      "artifact_status": "COMPLETE",
+      "candidate_role": "COMPILED_TRAINING_CANDIDATE",
+      "carrier": "model.layers.6.self_attn.o_proj.weight",
+      "case_id": "deepseek8b_seq256_backward_1714_in_out_ptr0",
+      "claim_boundary": "32 frozen input states at one checkpoint under cold-start AdamW with zero weight decay; not a warm-moment or independent-run result.",
+      "data_availability": {
+        "actual_parameter_write": false,
+        "joint_gram": true,
+        "original_coordinate_statistics": false
+      },
+      "measurement_geometry": [
+        "COUNT_SKETCH"
+      ],
+      "new_measurement": {
+        "artifact": "results/property/training_numerical_analysis_v1/recapture/deepseek8b_seq256_backward_1714_in_out_ptr0.json",
+        "artifact_sha256": "e0b63ef6751d3af043ab3ebd2b8fb3a8155c30ef78f15676a391330654553b9f",
+        "original_coordinate_statistics": true,
+        "primary_update_endpoint": "PARAMETER_WRITE",
+        "status": "COMPLETE"
+      },
+      "purpose": "STATE_DEPENDENCE_PIPELINE_VALIDATION",
+      "semantic_family": "normalization backward"
+    },
+    {
+      "actual_backend_evidence": {
+        "binding_status": "EXACT_CANDIDATE_BUFFER_TO_AOT_SEMANTIC_ENDPOINT",
+        "exact_aot_endpoint_id": "backward:graph0:clone_197",
+        "frozen_release_id": "deepseek8b_seq128_r1",
+        "implementation_kind": "TRITON",
+        "phase": "BACKWARD",
+        "runtime_plan": "results/coverage/runtime_releases/deepseek8b_seq128_r1/same_dtype_tasks.json.gz",
+        "runtime_plan_sha256": "a444af12145b46609ada4d7a36e3a320cac172668b0b3aa0216e1dc11ceaef73",
+        "symbol": "triton_poi_fused_clone_squeeze_sum_transpose_view_7",
+        "task_id": "backward:1256:out_ptr0"
+      },
+      "artifact": "results/property/training_bias_profile_v2/prospective_batch_2/raw/deepseek8b_seq128_backward_1256_out_ptr0.json",
+      "artifact_sha256": "a278d0bae3468d98f2703d96c853f957fa10784fd6e6731b91712e6e89ff3aa5",
+      "artifact_status": "COMPLETE",
+      "candidate_role": "COMPILED_TRAINING_CANDIDATE",
+      "carrier": "model.layers.18.self_attn.v_proj.weight",
+      "case_id": "deepseek8b_seq128_backward_1256_out_ptr0",
+      "claim_boundary": "32 frozen input states at one checkpoint under cold-start AdamW with zero weight decay; not a warm-moment or independent-run result.",
+      "data_availability": {
+        "actual_parameter_write": false,
+        "joint_gram": true,
+        "original_coordinate_statistics": false
+      },
+      "measurement_geometry": [
+        "COUNT_SKETCH"
+      ],
+      "new_measurement": {
+        "artifact": "results/property/training_numerical_analysis_v1/recapture/deepseek8b_seq128_backward_1256_out_ptr0.json",
+        "artifact_sha256": "92486b69bd16d8eee15fe0756ae176cd1b7ef2286d99b398ff6ef248e6dcefef",
+        "original_coordinate_statistics": true,
+        "primary_update_endpoint": "PARAMETER_WRITE",
+        "status": "COMPLETE"
+      },
+      "purpose": "STATE_DEPENDENCE_PIPELINE_VALIDATION",
+      "semantic_family": "attention projection backward"
+    }
+  ],
+  "generation_rule": "Declared roles plus fields extracted from retained machine artifacts",
+  "schema": "kernel-analyzer-mainline-case-roles-v1",
+  "source_commit_baseline": "c726911af41efc3d8cccb62dc4cdbf1d3f99341b"
+}

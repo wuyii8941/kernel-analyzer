@@ -1,35 +1,42 @@
-# Liger 与 SiLU：长程口径复核
+# Liger 与 SiLU：历史 4096 步复核
 
-本页只引用 4096 步长程结果。早期 16/32 步、不同优化器或不同修复边界的数字仍保留在历史文档中，但不覆盖下面的长程标签。
+本页保留该轮直接/反馈和 loss 数据，不是当前所有实验的总表。
+核心案例按[数学成因与 loss 连接](case_evidence_map.md)整理；
+“后期仍有直接 bias”是另外一项更强结论。
 
-## Liger fused CE
+## Liger fused CE：历史 Qwen 设置
 
-- **直接作用**：4096 步 `A=14.018`；后半程 64 个 32 步窗口全部保持方向；自身符号翻转随机基线的 95% 上界为 `1.163`，整体单侧 `p=0.000999`。
-- **配对训练后果**：参数距离 `9.2663`；第 4096 步 loss gap（candidate − repair）为 `-0.13049`，后 512 步平均 gap 为 `+0.000673`。
-- **统一标签**：`PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT`。
-- **含义**：Liger 的方向在 fused CE 的低精度分块累加阶段已经出现，并在长程直接更新审计中保持；配对 loss 分叉作为后果单独记录。
+- 直接作用：4096 步 A=14.018；后半程 64 个 32 步窗口均有方向；
+  自身随机基线 95% 上界 1.163，单侧 p=0.000999。
+- 独立配对后果记录：参数距离 9.2663；第 4096 步 loss 差（被测 − 参考）
+  −0.13049；后 512 步平均差 +0.000673。
+- 原标签：`PERSISTENT_BIAS_WITH_PAIRED_LOSS_SPLIT`。
+
+直接重放和配对训练分别给证据，不把 loss 差的正负解释成直接偏差的符号。
+新小型 GPT-2 全参数训练到 10000 步是[另一组设置](liger_single_boundary_collapse_experiment.md)，
+不能用其 loss 数字替换本页，更不能把本页 A 值搬到新实验。
 
 ## Qwen3-VL SiLU backward
 
-- **局部直接作用**：4096 步 `A=1.017`，接近扩散，不能把它写成持续的局部 source bias。
-- **反馈作用**：4096 步 `A=3.100`，最终实际分离 `0.8884`；反馈方向与最终分离 cosine 为 `0.999997`，局部方向 cosine 仅 `0.00552`。
-- **配对训练后果**：第 4096 步 loss gap 为 `-7.95e-9`；后 512 步平均 gap 为 `+4.93e-8`，标准差 `1.29e-7`。
-- **统一标签**：`FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT`。
-- **含义**：SiLU 不是直接源方向案例；它是一个长程反馈维持案例。它仍计入最终 bias 案例，因为有效分离在长程保持，并且观察到了配对 loss 分叉。
+- 直接作用：4096 步 A=1.017，不能写成持续的局部直接方向。
+- 反馈：A=3.100，最终实际分离 0.8884；反馈与最终分离 cosine 0.999997，
+  局部方向 cosine 0.00552。
+- loss 差：第 4096 步 −7.95e-9；后 512 步平均 +4.93e-8，标准差 1.29e-7。
+- 原标签：`FEEDBACK_SUSTAINED_BIAS_WITH_PAIRED_LOSS_SPLIT`。
 
-## 统一规则
+这是很小的 loss 非同一与反馈维持证据，不是已证明稳定质量损害。
+SiLU 正负响应的非镜像证据另有实验，不能仅凭反馈方向推出自然源 bias 的完整成因。
 
-1. 32 步只能叫短程方向性，不能单独叫持久性 bias。
-2. 直接作用在 4096 步保持方向，标为直接持久 bias。
-3. 直接作用不保持、但反馈有效更新在 4096 步保持，并且配对参数或 loss 出现分叉，标为反馈维持的持久 bias；它不冒充直接 source bias。
-4. 只有 loss 分叉、但没有任何 bias-bearing 组件在长程保持的记录，只能作为“长程后果对照”，不能算持久性 bias。saved-P 和两个 v_proj 属于这一类。
-5. 无法安全重放的实验标为未决，不改写成阴性。
+## 如何使用旧标签
 
-这里的“持久”指 bias 本身跨越了 4096 步测量窗口，而不是只看最终参数距离或某一次 loss gap。loss gap 是后果证据；它不能单独把一个没有持久 bias 的记录升级为案例。
+bias 成因已建立且对应配对 loss 分叉的材料应保留，即使后期直接作用不持续。
+若只有 loss 分叉、没有独立 bias 证据，则仍是后果对照。
+本页旧“持久”标签只说明该测量长度内的规则；不是任意更长时间的定理，
+也不要求所有核心案例都通过同一个固定方向门槛。未决不改成阴性。
 
 原始证据：
 
-- `results/property/declared_persistent_4096/liger_fused_ce.json`
-- `results/property/paired_loss_4096/liger_fused_ce.json`
-- `results/property/declared_persistent_4096/qwen3vl_silu_4096_with_loss.json`
-- `results/property/declared_persistent_4096/all_bias_case_audit.json`
+- [Liger 直接测量](../results/property/declared_persistent_4096/liger_fused_ce.json)
+- [Liger 配对 loss](../results/property/paired_loss_4096/liger_fused_ce.json)
+- [SiLU 直接/反馈/loss](../results/property/declared_persistent_4096/qwen3vl_silu_4096_with_loss.json)
+- [历史全表](../results/property/declared_persistent_4096/all_bias_case_audit.json)

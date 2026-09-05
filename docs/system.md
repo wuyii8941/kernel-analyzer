@@ -1,5 +1,10 @@
 # Automated analysis system
 
+> Historical execution/API guide. The commands and T1--T4 records remain for
+> reproduction; this is not the current definition of a mathematically explained
+> bias with loss consequences. See [the mainline](current_mainline.md) and
+> [method](method.md). A VJP identity proves the derivative path, not nonzero bias.
+
 ## Runtime release identity
 
 A generated candidate is identified by both exact forward/backward wrapper
@@ -37,7 +42,9 @@ reference operands, the declared arithmetic schedule, analytic event-to-gradient
 transport and a reference margin. The engine derives compact event-factor
 certificates, rejects candidate/verdict/identity leakage, and writes an explicit
 abstention for every unit whose factors are unavailable. T4 is not accessible as
-a property label.
+a property label. This reference-only restriction belongs to that optional
+predictor, not to dynamic candidate/reference measurements. Missing predictor
+factors do not erase a valid measurement or mechanism experiment.
 
 Run identity hashes provider/backend source code and every retained evidence
 file. Resume rejects stale provenance. Reports store proof units, unresolved

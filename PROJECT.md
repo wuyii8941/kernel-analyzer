@@ -1,79 +1,43 @@
-# Project map and live status
+# 项目地图
 
-## Purpose
+## 研究中心
 
-The project asks how a concrete LLM training implementation difference becomes
-a parameter-update direction and a paired training consequence. The unit is
-one concrete forward invocation and the actual backward program that consumes
-its saved tensors and cotangent. Historical T1--T4 labels remain in artifacts;
-the current paper order is formation decomposition, local/gradient/update
-measurement, short screening, and long-run consequence.
+**统一测量具体实现的总差异、方向与缩放，在声明范围内判断，并用数学机制指导
+局部修改和训练验证。**
+详细定义只维护在 [当前主线](docs/current_mainline.md) 和 [实验方法](docs/method.md)；
+本页不再复制各代实验计数。
 
-## Live denominator
+数学推导、三阶段测量、等价范围检查和训练验证各回答不同问题。阴性、未决和仅有
+部分机制证据的记录也是有效分析结果，不能冒充已经证明训练收益的案例。
 
-- Four models × three shapes: 12 cells.
-- Full-coordinate directional endpoints: 1,562 / 1,562 audited.
-- T1: 1,390 pass, 172 reject, 0 pending.
-- Historical short-horizon headline: **3 operator-local source/transport
-  direction records** (Liger fused CE, Phi `lm_head dX`, and Qwen
-  `lm_head dX`). It is not the current long-horizon count.
-- Current long-horizon machine audit: **23 unique matrix IDs and 301 row-level
-  records**. There are 43 rows with long-run bias evidence plus paired loss
-  separation: 3 direct rows with exported late windows, 8 aggregate direct
-  rows without exported late-window statistics, and 32 feedback-sustained
-  rows. Only 4 rows currently have explicit late rolling-window confirmation.
-  Five more rows have paired loss separation without robust long direct bias.
-  The broader outcome-relevant count is 105, but it includes historical
-  candidates whose 4096-step persistence has not been measured and must not be
-  called final persistent cases. Forty-five rows are unresolved or abstain.
-- Historical audit registries contain 6 strict F+B/repair/carrier/trajectory
-  records and 8 paired-separation records. Those are provenance counts, not
-  counts of confirmed persistent operator-local bias.
-- The historical 48-endpoint pre-deduplication snapshot is superseded as a
-  strict-case count; endpoint instances never substitute for independent
-  mechanisms or complete current gates.
-- Mamba seq64 T2: 43 complete (9 pass, 34 reject); T3: 0 carrier survivors.
-- Mamba seq256 T2: the 58-row small shard is complete (57 pass, 1 reject).
-  The 524-row large shard is still pending; therefore the seq256 cell has no
-  cell-level T2 completion marker and must not enter T3 yet.
+## 目录用途
 
-These numbers are intentionally conservative.  Pending rows remain in the
-denominator and are not called normal controls or cases.
+| 路径 | 用途 |
+|---|---|
+| `src/` | 重放、数值测量、统计计算和历史兼容接口 |
+| `scripts/` | 对应各次冻结实验的采集与复算脚本 |
+| `tests/` | 实现、数值恒等式与判定边界检查 |
+| [docs/README.md](docs/README.md) | 当前文档及历史资料的统一入口 |
+| [docs/case_evidence_map.md](docs/case_evidence_map.md) | 案例、比较边界、证据来源与缺口 |
+| `results/` | 原实验协议、JSON/CSV、阴性、未决与复算结果 |
+| `case.md`、`cases_flash_style.md`、`round2.md` | 保留在原路径的历史案例与推导；不再定义当前结论 |
+| `archive/` | 本地历史材料，不作为唯一可发布证据 |
 
-The corrected short-screen evaluation contains 15 declared rows. Its 16-step
-parameter-update direction score is a retrospective prioritization result,
-not a long-horizon label or universal accuracy. Qwen did not escalate in its
-cold-start short window but is robust in the separate warm-state 4096-step
-review, so non-escalation cannot be interpreted as long-term safety. The
-current `NEW_IMPL` Gemma validation is source-negative with Adam-state feedback
-and adds no long-horizon direct positive.
+## 使用现有代码
 
-## Directory map
+- T1–T4 是旧的逐级筛查和累积证据接口。仍有调用者，保留兼容；四项通过不等于
+  已证明某个 bias 成因，也不等于已经测得 loss 分叉。
+- `ConcreteFBProof` 证明实际 backward 与声明的导数路径对应，不证明误差均值非零。
+- `training_bias_profile` 系列用于测量和定位；不同协议版本分别复现，不合并标签。
+- `training_equivalence` v1 仅检查选定方向；v2 增加总体 RMS。完整 Gram 与随机摘要
+  的保证不同，详见 [方法](docs/method.md)；历史标签不得直接改称全训练安全。
+- 只读取参考数据的预测器是特定机制的补充。真实 candidate/reference 重放不受这一
+  限制，也不要求每个有效实验先有静态预测器。
 
-| Path | Role | Retention |
-|---|---|---|
-| `src/` | reusable analyzer library | keep |
-| `scripts/` | capture, proof, audit, T1--T4 runners | keep |
-| `tests/` | unit tests | keep |
-| `case.md`, `cases_flash_style.md` | case registry and Flash-style logic | keep |
-| `docs/coverage.md`, `docs/denominator.md`, `docs/bias_protocol.md` | compact protocol/status references | keep |
-| `docs/current_mainline.md`, `docs/method.md`, `docs/claims.md`, `docs/gate_history.md` | current mainline, method, claim ledger, and gate/count provenance | keep |
-| `docs/effective_antithetic_symmetry.md`, `docs/persistence_property_protocol.md` | detailed formation decomposition and reduction-only orbit predictor | keep |
-| `docs/three_mechanism_profiles.md` | one protocol applied to normalization, softmax backward, and attention BMM | keep |
-| `docs/l23_qproj_tile.md` | detailed mathematical case derivation | keep |
-| `results/coverage/` | frozen inputs, releases, ledgers, T1--T4 evidence | keep; remove only validated intermediates |
-| `results/final/` | compact historical derivations and summaries | keep |
-| `archive/` | old round material, ignored by git | optional historical archive |
+## 清理原则
 
-The large T1 artifacts and runtime releases are required to resume the
-remaining Mamba seq256 T2 denominator.  They must not be removed during a
-cleanup.
+删除或合并重复叙事，而不是删掉反例。原始结果、冻结输入、运行环境记录、推导、
+未决项和阴性全部保留。旧脚本仍被导入、被复现说明引用或唯一对应历史结果时，不删。
+旧状态计数从项目入口移除，转到各自协议的结果索引；不是改变原实验的成功标准。
 
-## Safe cleanup policy
-
-Delete generated build products, Python bytecode caches, stale partial files,
-and intermediate artifacts whose final union is present and whose filenames
-are not referenced by the runners.  Never delete a frozen input bank, a
-runtime release, a full-coordinate artifact, an F+B proof ledger, a causal /
-carrier / trajectory result, or a mathematical derivation merely because it
-is large.
+不在 `/home` 写入文件。临时文件与缓存使用 `/data1/tzh` 或 `/tmp`。

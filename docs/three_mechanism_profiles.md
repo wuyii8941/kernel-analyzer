@@ -1,5 +1,8 @@
 # 三类实现的统一测量结果
 
+> 版本定位（2026-09-05）：本轮测量记录；不是三种成因全部已连接到 loss 的声明。
+> 当前证据连接见[案例地图](case_evidence_map.md)，研究定义见[主线](current_mainline.md)。
+
 这份结果回答一个具体问题：除了 Liger 和 `lm_head dX`，normalization、softmax
 backward 和 attention BMM 能否用同一套方法比较？答案是可以，而且三者表现不同。
 

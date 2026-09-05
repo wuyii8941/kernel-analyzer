@@ -1,56 +1,64 @@
-# 文档入口
+# 文档与版本入口
 
-## 当前论文口径
+## 当前研究口径
 
-按以下顺序阅读：
+只在以下文档维护当前研究定义，避免多份“唯一主线”互相覆盖：
 
-1. [当前科研主线](current_mainline.md)：唯一的研究问题、定义、当前数字和下一步。
-2. [统一实验方法](method.md)：candidate/repair、成因分解、三阶段测量、统计输出与
-   orbit predictor 的限制。
-3. [Training Bias Profile v2](training_bias_profile_v2.md)：统一三分支、整体误报控制、
-   大向量摘要和五例当前结果。
-4. [正式讲稿](talk_beyond_tolerance.md)：面向非本项目听众的报告版本。
-5. [证据账本](claims.md)：每条可写主张、证据门槛和当前状态。
-6. [长程机器审计](../results/property/declared_persistent_4096/all_bias_case_audit.json)：
-   当前 4096-step 结果、标签和 unresolved 记录。`all_bias_long_horizon_audit.md`
-   是人类可读表，整理期间不能覆盖机器 JSON。
+1. [当前主线](current_mainline.md)：**实现与参考 → 三阶段测量 → 有界判断 → 修改与训练验证**。
+2. [统一分析 v1 结果](training_numerical_analysis_v1.md)：新采集、实际参数写入及无法执行状态。
+3. [实验方法](method.md)：比较对象、推导条件、三阶段测量和训练后果。
+4. [案例与证据地图](case_evidence_map.md)：每类证据的来源、配置和缺口。
+5. [主张账本](claims.md)：什么已经支持，什么不能推出。
+6. [研究出发点与贡献边界](novelty_positioning.md)。
 
-上述五份文件使用同一顺序：
+[讲稿](talk_beyond_tolerance.md)由用户单独维护，本轮未改。它不是实验状态数据库；
+其中旧数字或标签以对应实验协议与上述来源说明理解，不因本轮整理静默改写。
 
-```text
-方向怎样形成
-→ local / gradient / update 在哪里出现
-→ 效应量和不确定性
-→ 短程筛查
-→ 长程参数与 loss 后果
-```
+## 数学推导：保留，不因为版本旧而删除
 
-## 详细证据
+- [误差与正负响应的精确分解](effective_antithetic_symmetry.md)
+- [矩阵乘与输出舍入分别修改](source_aligned_repair.md)
+- [attention 保存状态与 backward](l23_qproj_tile.md)
+- [Phi 同 AdamW 的随机舍入干预](phi_adamw_source_intervention.md)
+- [求和顺序的来源预测](persistence_property_protocol.md)
 
-- [五案例 Training Bias Profile v2 统一结果](five_case_training_bias_profile_v2.md)
-- [方法冻结后的新案例结果](prospective_training_bias_profiles.md)
-- [修正后的固定输入 update 等价结果](../results/property/generalization_benchmark_v1/equivalence_v2.json)
-- [正负成因分解](effective_antithetic_symmetry.md)
-- [Normalization、softmax backward、attention BMM 的统一三阶段补测](three_mechanism_profiles.md)
-- [Liger/Phi 统一重测、干预、统计自检与 DeepSeek 未见确认](unified_measurement_round.md)
-- [Qwen lm-head/v-proj、Mamba in-proj、saved-P 与 SiLU 的统一补测](extended_unified_profiles.md)
-- [Reduction orbit predictor protocol](persistence_property_protocol.md)
-- [Phi 同协议随机舍入干预](phi_adamw_source_intervention.md)
-- [直接作用、反馈和实际变化](direct_persistence_evidence.md)
-- [Optimizer 对照](direct_persistence_optimizer.md)
-- [短程筛查](direct_persistence_screen.md)
-- [未见实现检查](direct_persistence_heldout.md)
-- [当前限制](direct_persistence_limitations.md)
-- [无法安全重放的记录](unresolved_long_replays.md)
-- [覆盖总表](coverage_table_v1.md)
-- [模型覆盖审计](model_coverage_audit.md)
-- [分母定义](denominator.md)
-- [历史计数变更](gate_history.md)
+推导给出成立条件；公式存在不自动证明某个案例非零。各页保留原实验数字和范围，
+后续现状通过案例地图连接。
 
-## 证据保留规则
+## 测量与实验记录：按版本读取
 
-- `results/` 中的 JSON、CSV、压缩审计表和原始测量不得因文档收口而删除。
-- 旧文档中的短程 `positive` 只表示该旧协议下的观察，不能覆盖当前长程标签。
-- 旧文档中的 `property` 或 `Oracle` 名称不能被解释为通用安全判断。
-- 数字冲突时，以 [当前科研主线](current_mainline.md)、长程机器审计和具体结果 JSON
-  为准。
+| 记录 | 用途与当前解释 |
+|---|---|
+| [三类实现补测](three_mechanism_profiles.md)、[统一轮次](unified_measurement_round.md)、[扩展轮次](extended_unified_profiles.md) | 各轮测量与干预，不覆盖后续同名案例 |
+| [Profile v2 方法](training_bias_profile_v2.md)、[五例结果](five_case_training_bias_profile_v2.md) | 每个固定输入从零 moments 单独测量；不是 32 步自然连续训练 |
+| [新案例批次](prospective_training_bias_profiles.md) | 依各批冻结规则解释，早期未决不代表以后一直未运行 |
+| [16 项原始汇总](../results/property/generalization_benchmark_v1/summary.json) | 冻结验证集；不能自动计为成因与 loss 已闭合的案例数 |
+| [等价 v2](../results/property/generalization_benchmark_v1/equivalence_v2.json) | 原数据上的方法修订；完整 Gram 与随机摘要保证不同 |
+| [optimizer 状态对照](../results/property/optimizer_condition_benchmark_v1/summary.json) | warm/reset 区分参数与 moments 条件 |
+| [四输入流训练后果](../results/property/independent_consequence_v1/summary.json) | 同一 checkpoint、指定参数，非独立全参数预训练 |
+| [最新 Liger 全参数训练](liger_single_boundary_collapse_experiment.md) | 2048、4096、10000 步设置及 loss 符号反转 |
+
+## 历史记录：保留证据，不继续定义成功标准
+
+- [旧案例登记](../case.md)、[旧 Flash-style 登记与推导](../cases_flash_style.md)、
+  [Qwen3-VL 原始 SiLU 分析](../round2.md)
+- [旧分类协议](bias_protocol.md)、[旧系统入口](system.md)
+- [32 步归因](direct_persistence_evidence.md)、[optimizer 对照](direct_persistence_optimizer.md)、
+  [短筛](direct_persistence_screen.md)、[held-out](direct_persistence_heldout.md)、
+  [当轮限制](direct_persistence_limitations.md)
+- [历史 4096 逐行机器审计](../results/property/declared_persistent_4096/all_bias_case_audit.json)、
+  [可读表](all_bias_long_horizon_audit.md)、[Liger/SiLU 历史复核](liger_silu_long_horizon_recheck.md)
+- [无法重放项](unresolved_long_replays.md)、[计数变更](gate_history.md)
+
+这些路径保留是为了引用和复现；后续修订不回写成事前决定。
+历史审计中的 301 行不是整个仓库至今所有实验的全集，旧“持续”标签也不替代数学成因。
+
+## 覆盖与维护
+
+- [首轮覆盖](coverage_table_v1.md)、[分母](denominator.md)、[模型覆盖](model_coverage_audit.md)
+- [本轮整理记录](mainline_cleanup_20260905.md)
+- [结果目录说明](../results/README.md)、[项目地图](../PROJECT.md)
+
+原始结果、冻结协议、阴性、未决及推导全部保留。按时间追加的实验可能使用不同模型、
+参考、optimizer 或参数范围；不能选一个最新数字覆盖所有旧协议。
+当前结论引用具体 JSON 和源码，而不是从旧 Markdown 反推实验事实。

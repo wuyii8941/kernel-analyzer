@@ -1,4 +1,9 @@
-"""Stable public interfaces for kernel-analyzer plugins and reports."""
+"""Public replay interfaces, including the historical T1--T4 certificate.
+
+T1--T4 records retain their original screening/accumulation semantics for
+reproduction. A completed certificate is not a proof of nonzero numerical bias
+or a loss-consequence result; see docs/current_mainline.md for those claims.
+"""
 
 from __future__ import annotations
 
@@ -19,7 +24,10 @@ TIERS = ("T1_LOCAL", "T2_CAUSAL", "T3_COHERENT", "T4_ACCUMULATION")
 
 @dataclass(frozen=True)
 class ConcreteFBProof:
-    """Invocation-specific proof that an executed backward realizes a VJP."""
+    """Invocation-specific proof that an executed backward realizes a VJP.
+
+    This validates the derivative path, not a nonzero implementation-bias mean.
+    """
 
     saved_tensor_origins_exact: bool
     cotangent_edge_exact: bool

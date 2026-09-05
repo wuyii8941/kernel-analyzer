@@ -1,5 +1,8 @@
 # Cold-start AdamW Direct Persistence Screen
 
+> 版本定位（2026-09-05）：历史短筛评估。排序与升级规则不是数学 bias 证明或当前案例全集。
+> 当前证据连接见[案例地图](case_evidence_map.md)，研究定义见[主线](current_mainline.md)。
+
 > **当前角色：**这是统一方法中的短程排序组件。当前论文主方法还会报告三阶段
 > effect size、置信区间和 long-run consequence；短筛本身不定义 training
 > equivalence 或 persistent bias。

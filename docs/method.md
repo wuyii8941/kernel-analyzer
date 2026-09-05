@@ -1,229 +1,229 @@
-# 统一实验方法
+# 实验方法：训练数值偏差分析与等价性检验
 
-本页只定义当前方法。历史 T1–T4 名称仍可在审计 artifact 中出现，但论文主线按
-“成因分解 → 三阶段测量 → 短程筛查 → 长程后果”组织。
+本页定义当前如何连接数学推导与实验。[成因推导](effective_antithetic_symmetry.md)
+保留详细公式；各代结果继续按原协议解释，不通过本页改写历史成功标准。
 
-## 1. Candidate、repair 与 matched state
+## 1. 确定比较对象和真实执行位置
 
-测试单元是一个具体 forward invocation，加上真实消费其 saved tensors 和
-cotangent 的 backward。candidate 与 repair 必须共享：
+研究一个具体算子调用，或输入输出边界明确的计算区域。记录模型、训练位置、
+实际执行代码、数据类型、参考实现、参数范围、optimizer、状态与数据顺序。
 
-- weights、inputs、saved tensors 和 RNG；
-- optimizer moments、step、scheduler 和 loss scaler；
-- 除声明 implementation boundary 外的全部代码路径。
+Triton、ATen/CUDA、外部矩阵乘法和混合路径均可被测；不能根据 Python 函数名、
+库名或源码语言推断差异发生在哪里。参考实现定义比较基准，不自动代表绝对真值。
+高精度变体和改变顺序的变体先称“参考/干预”，经验证改善目标问题后才称“修复”。
 
-若边界不能闭合、参数不可达或 state identity 无法确认，结果为 `ABSTAIN`。
+区分两种实验：
 
-## 2. 先分解方向形成的两项来源
+- **自然训练比较**：共享进入被测计算前的参数、输入、随机状态、optimizer 历史、
+  scheduler 和 loss scaler。两种实现自然生成的内部 saved tensors 可以不同；
+  这可能就是待研究的作用路径。
+- **固定中间输入的局部比较**：额外固定进入 backward 的 saved tensors 和上游
+  gradient，只替换声明的局部实现。这测局部直接作用，不等于完整自然训练比较。
 
-在预先声明的 residual boundary 上，令 `F_s(e)` 表示 residual `e` 经真实
-backward 和 optimizer 后造成的 update difference。正负奇偶分解给出：
+配对长训练只要求共同起点，之后参数和 moments 正常演化；不能一边要求轨迹分叉，
+一边声称每步两条真实轨迹的状态都相同。同状态直接作用靠额外重放测量。
+边界或状态无法核实时保留未决，不猜测为零差异。
+
+## 2. 写出 bias 的成因和成立条件
+
+对选定误差位置，令 \(e\) 是被测值相对参考值的差异，\(F_s(e)\) 是它在训练状态
+\(s\) 下经真实 backward/optimizer 产生的额外更新，且 \(F_s(0)=0\)。
+
+先给出具体算子的误差传播公式，再说明哪些条件导致不抵消。普通 VJP 正确性证明、
+误差传播恒等式和“平均 bias 非零”的结论分开写；不能因有前两者就自动得到后者。
+
+对于可积响应，令 \(P_s^-\) 是 \(P_s\) 在 \(e\mapsto-e\) 下的分布，
+\(P_s^{sym}=(P_s+P_s^-)/2\)、\(P_s^{asym}=(P_s-P_s^-)/2\)，并定义
+\(F_s^{odd/even}(e)=[F_s(e)\mp F_s(-e)]/2\)。则：
 
 \[
 \int F_s(e)\,dP_s(e)
 =
-\int F_s^{\mathrm{odd}}(e)\,dP_s^{\mathrm{asym}}(e)
+\int F_s^{odd}(e)\,dP_s^{asym}(e)
 +
-\int F_s^{\mathrm{even}}(e)\,dP_s^{\mathrm{sym}}(e).
+\int F_s^{even}(e)\,dP_s^{sym}(e).
 \]
 
-- 第一项是 source-side asymmetry：residual 事件或它们与训练状态的配对不平衡；
-- 第二项是 response-side rectification：严格 `+e/-e` 经过 downstream 后不再
-  互为相反数。
+- 第一项：正负误差、或它们与状态的配对不平衡。
+- 第二项：正负误差即使对称，得到的响应也不互为相反数。
 
-这只是所选 boundary 上的精确两项账本，不穷尽量化、截断、饱和、underflow、
-reduction order、scaling 或 saved-state 等底层成因。
+这是条件于选定状态与误差位置的精确分解；其非零性需要具体机制和条件支持。
+对称分布加奇函数响应足以抵消，但“局部均值为零”远弱于这些条件。
+不能仅凭某层统计上未检出方向，就排除与 backward 状态的配对作用。
 
-## 3. 同一 matched contrast 测三阶段
+若使用光滑函数的导数传播解释，要声明其适用区间；离散舍入、截断或执行路径切换
+不能自动套用光滑积分公式。此时直接使用真实有限差值。
 
-对 state `i` 和 stage `k`：
+## 3. 三阶段测量
+
+对状态 \(i\) 和阶段 \(k\)：
 
 \[
-u_{i,k}=Y_{i,k}^{C}-Y_{i,k}^{R},
-\qquad
-r_{i,k}=Y_{i,k}^{R}.
+u_{i,k}=Y^C_{i,k}-Y^R_{i,k},\qquad r_{i,k}=Y^R_{i,k}.
 \]
 
-`k` 依次为：
+分别记录算子输出、真实参数 gradient、optimizer 计算出的 update，以及声明参数表示
+上的实际写入。实际参数写入是主要测量位置；公式 update 与前两层用于解释。
 
-1. local output；
-2. parameter gradient；
-3. target optimizer update。
+每层同时报告：
 
-update 是主要正确性端点；前两层用于判断方向是在 source、backward 还是 optimizer
-阶段形成或消失。
+- 差异总能量 \(Q=\mathbb E\|u\|^2\)；
+- 平均差异 \(\mu=\mathbb E u\) 及其训练尺度 \(\|\mu\|/\sqrt{\mathbb E\|r\|^2}\)；
+- 随正常计算方向改变的相对缩放；
+- 去掉该缩放之后，是否还有共同方向。
 
-## 4. 统一统计输出
+在二阶矩存在时，\(Q=\|\mu\|^2+\mathbb E\|u-\mu\|^2\)。
+总能量大不自动证明 bias；平均方向小也不能排除每步都系统缩放正常 update。
 
-每层保存并报告：
-
-- total effect energy `E||u||²`；
-- mean effect `||E[u]||`；
-- normal training scale `E||r||²`；
-- mean effect / normal update RMS；
-- 与 repair signal 对齐的缩放分量；
-- 去掉缩放后的 residual mean；
-- calibration/confirmation split、效应量和置信区间。
-
-三个方向指标用于解释差异是固定方向、随正常 update 缩放，还是去掉缩放后仍有
-共同方向。它们不能排除其他方向，因此不能单独签发等价结论。对固定的后 16 个
-输入，还必须计算覆盖全部坐标的 update difference 总体比例：
+当 \(\|r_i\|\) 大于事前规定的下限时：
 
 \[
-s_{\mathrm{full}}
-=
-\sqrt{
-\frac{\sum_i\|u_i\|^2}
-{\sum_i\|r_i\|^2}
-}.
-\]
-
-这个量直接由 `G_uu` 与 `G_rr` 的对角线求和得到，不依赖前 16 个输入学到的方向。
-不超过 4096 个坐标时保存完整向量 Gram；更大的向量使用三个事先固定、彼此独立的
-CountSketch，并取三者中最大的比例。后者是覆盖全部坐标的随机摘要，不等于保留原
-向量。它的作用是防止后 16 个输入出现全新、与原方向垂直的大差异仍被放行。
-
-对 repair energy 高于预声明 floor 的 state：
-
-\[
-u_i^{\parallel}
-=\frac{\langle u_i,r_i\rangle}{\|r_i\|^2}r_i,
-\qquad
-u_i^{\perp}=u_i-u_i^{\parallel}.
-\]
-
-整体 aligned effect 使用稳定的加权形式：
-
-\[
+u_i^\parallel=\frac{\langle u_i,r_i\rangle}{\|r_i\|^2}r_i,\quad
+q_i=u_i-u_i^\parallel,\quad
 g=\frac{\sum_i\langle u_i,r_i\rangle}{\sum_i\|r_i\|^2}.
 \]
 
-它在 local、gradient、update 三层含义不同，不能跨阶段当作同一个缩放系数。
-对一个固定测试集合，上式直接在全部 confirmation states 上计算。需要外推到新的
-训练状态时，先在每个独立 training unit 内计算同一加权量，再以 training unit 为
-统计单位；不再平均每一步各自的比例。
+\(g\) 是整体加权缩放，不是逐状态比例的普通平均。
+每步 \(q_i\perp r_i\)，不代表 \(q_i\) 在不同状态间无平均方向或与训练过程独立。
+local、gradient、update 的这些量含义不同，不能直接把跨层比例当成传递系数。
 
-## 5. 固定输入集合上的 update 等价
-
-当前证书只判断声明的后 16 个输入，不外推到随机训练状态总体或完整训练质量。只有
-同时满足下面两项，才返回 `FIXED_SUITE_UPDATE_EQUIVALENT`：
-
-1. `s_full` 小于完整 update 的工程范围；
-2. 固定方向、相对正常 update 的缩放、去掉缩放后的剩余方向，三项区间都落入各自
-   工程范围。
-
-只有在保存完整向量且所有 update difference 逐位为零时，才单独返回
-`EXACT_UPDATE_IDENTITY_ON_FIXED_SUITE`。三个随机摘要都为零不能写成逐位相同。若
-总体 update 比例超过范围，即使三个方向指标都很小，也不能返回等价。训练后果若未
-预先声明，机器结果必须写
-`material_consequence_status = NOT_DECLARED`，不能默认成已经检查并通过。
-
-完整 update 的 `1%` 范围是在看到 16 项验证结果后，为修复已发现的方向盲区而加入；
-它取已有最大缩放范围 `1%`，避免新增兜底条件比原合同更严格。这个修正明确标为
-post-reveal，不冒充事前冻结，也不是所有 LLM 训练共享的安全常数。旧三方向证书保留
-作历史记录，但不再作为当前等价结论。
-
-## 6. 统计单位与多重比较
-
-- fixed suite：报告该 suite 的精确均值，不生成总体置信区间；
-- random matched states：calibration 和 confirmation 必须来自互不重叠的独立
-  training units，当前 v2 最少各需要 8 个；
-- 同一 run 的连续 states：全部算一个 training unit。若同一 run 同时出现在
-  calibration 和 confirmation，只保留描述结果，不作总体判断；
-- long-run loss：独立 training run 才是总体推断单位。
-
-v2 对独立 training-unit effects 报告 Student 区间，并使用 studentized sign-flip
-作为辅助检验。最终确认同时要求：区间不跨零、Holm 校正后通过，以及从 calibration
-学到的 additive/residual 方向在 confirmation 中没有反转。规则见
-[`training_bias_profile_v2.md`](training_bias_profile_v2.md)。
-
-若同一论文表中同时判断多个 cases 或 stages，预先声明 confirmatory family 与
-discovery family，主报告 Holm 校正；同时保留效应量、置信区间和未校正数值。
-没有通过校正的候选保持 unresolved，不自动改成 negative。
-
-当前五案例的输入银行由冻结且不重叠的输入窗口组成，部分采用确定性选取，不能证明
-是更大训练总体的随机样本。因此这次区间只作为“后 16 个窗口之间是否稳定”的确认门，
-结论范围止于声明的窗口集合和 checkpoint；不能解释为跨 checkpoint 或独立 runs 的
-总体区间。
-
-## 7. Orbit mean 的限制
-
-仅对 reduction、summation、reassociation 类 source，冻结合法 schedule distribution
-`nu`：
+若独立单位 (j) 内包含多个相关状态 (t)，先按事前声明的非负权重汇总：
 
 \[
-m_{\mathrm{orb}}(a;\nu)
-=\mathbb E_{\pi\sim\nu}
-\left[\operatorname{fl}_{\pi}(a)-y^\star(a)\right].
+U_j=\sum_t w_{jt}u_{jt},\quad
+X_j=\sum_t w_{jt}\|u_{jt}\|^2,\quad
+B_j=\sum_t w_{jt}\|r_{jt}\|^2,\quad
+A_j=\sum_t w_{jt}\langle u_{jt},r_{jt}\rangle,
+\qquad \sum_t w_{jt}=1.
 \]
 
-它是 source-side candidate predictor，需要多个等价 schedules。它不表示每种
-schedule 同号，也不能代替 backward、optimizer 或长程训练。
+总体量使用 (Q=\mathbb E X_j/\mathbb E B_j)、
+(M=\|\mathbb E U_j\|^2/\mathbb E B_j) 和
+(\beta_\parallel=\mathbb E A_j/\mathbb E B_j)。这要求先汇总分子、分母，不能把
+每个单位的比例直接平均。默认单位内等权；其他权重必须在结果揭示前声明。
 
-当前 Liger 检查让两个实现都使用 FP32，只改变 `dW` 分块结果的加法顺序。前 16 个
-输入确定预测方向，后 16 个输入负责检查。它支持这一种 reduction 来源的预测价值，
-不覆盖量化、saved state、一般 backward 或 optimizer 机制。BF16 与 FP32 accumulator
-同步下降的更强联合预测仍不能由这项结果代替。
+## 4. 测量能力与统计范围
 
-## 8. Response contrast
+前一批状态发现方向，后一批状态检查它是否重现。确认投影小只能说明这个方向小，
+不能推出整个高维平均向量小。旧 \(A\)、正负翻转基线、各代 profile 都按原协议保留，
+不单独构成数学成因证明。
 
-对严格正负重放，保存独立的 contrast：
+- 固定输入集合：直接报告该集合的均值、能量和窗口变化。
+- 随机状态总体：需要明确状态如何产生、哪些训练流独立，区间才有对应总体含义。
+- 同一训练流的连续步不是独立样本；随机舍入重复也不能冒充新的独立训练状态。
+- 长程 loss 的总体判断以独立训练运行作单位。单条轨迹可证明该次分叉，不能估计
+  所有运行中的稳定质量变化。
+
+历史固定窗口的 Student 区间是其原协议的经验稳定性规则，不称“95% 总体安全保证”。
+需要总体推断时另行检查抽样、相关性、矩条件与分母不确定性。正负翻转也有对称性等
+假设，不因使用该算法就自动成立。
+
+多案例和多阶段判断按事前检验组保留 Holm 等校正；修订后的重新分析注明时间。
+未通过显著性校正不等于等价。区间和效应量帮助避免误读，不替代成因与训练后果。
+
+## 5. 完整能量、随机摘要和等价检查
+
+等价性判断是框架的正式输出之一，但不取代 bias 的机制解释或训练结果。
+
+固定确认集合可计算：
 
 \[
-u_i^{\mathrm{resp}}
-=\tfrac12(Y_i^+ + Y_i^- -2Y_i^0).
+s_{\rm rms}
+=\sqrt{\frac{\sum_i\|u_i\|^2}{\sum_i\|r_i\|^2}}.
 \]
 
-它与 candidate-repair contrast 使用同一统计输出，但不同 `contrast_id`、不同
-prevalence denominator。
+若 Gram 来自原坐标，它可由对角线直接复算；仍需说明浮点累加精度。
+若 Gram 来自 CountSketch，只能复算摘要空间的该比例。
+**三个随机摘要取最大值，不是原向量能量的确定性上界或已经校准的概率上界。**
+分子与分母均有摘要误差，零摘要也不能证明原 update 逐位相同。
 
-## 9. 短程与长程
+新采集应在原坐标块可用时，用声明的累加精度保存每状态的
+\(\|u_i\|^2,\|r_i\|^2,\langle u_i,r_i\rangle\)，同时保留误差处理和执行来源。
+这不要求永久保存大向量。仅有旧摘要的结果不补造这些量，不自动改历史 JSON 标签。
 
-16/32 步的 `A(T)`、prefix、lag 和本行 sign-flip null 只用于筛查与描述。长期
-结论来自声明的 4096 步实验和 late rolling windows。
-
-四臂实验拆分：
+对随机状态总体和 RMS 范围 (delta_Q)，基本判断写成单位级标量：
 
 \[
-\text{actual increment}=\text{direct effect}+\text{feedback effect}.
+D_j=X_j-\delta_Q^2B_j,\qquad \mathbb E D_j<0.
 \]
 
-interaction 只检查 direct effect 是否依赖当前 trajectory state，不加入上述恒等式。
+相对缩放范围 (|\beta_\parallel|<\delta_\beta) 写成
+(A_j-\delta_\beta B_j) 与 (-A_j-\delta_\beta B_j) 两个均值不等式。
+当前实现使用独立单位上的 studentized 近似时，结论明确依赖独立性、非退化方差及
+所需矩条件；它不是任意重尾分布下的有限样本定理。
 
-loss split 是 consequence evidence，不单独证明 direct bias；4096 步也不等于 loss
-收敛。
+等价检查 v1 只检查三个选定方向；v2 加入总体 RMS 并修正加权缩放。v2 的固定集合
+标签仍区分完整 Gram 和摘要估计，不能统称完整训练等价。
+其中 1% RMS 阈值是结果揭示后的工程政策修正，不是数学必须，也不是新前瞻实验。
 
-## 10. 最小机器可读字段
+总体 RMS 超范围不自动证明有 bias；通过有限集合的检查也不证明未来训练质量等价。
+后果未声明时使用 NOT_DECLARED，不能默认“已经检查且通过”。
+多项等价都通过的组合逻辑不能弥补无效区间、错误测量或漏掉的方向。
 
-每条统一记录至少包含：
+## 6. 用成因修改检验解释
 
-```text
-case_id, contrast_id, stage, model, implementation_boundary,
-repair_provenance, optimizer, moment_state, parameter_scope,
-claim_scope, run_id, cluster_id, calibration_state_ids,
-confirmation_state_ids, G_uu, G_rr, G_ur,
-per_state_effect_energy, per_state_repair_energy, sham_result,
-effect_size, confidence_interval, full_update_rms, full_update_rms_margin,
-material_consequence_status, adjusted_p_value, decision,
-inference_unit_id, sketch_schema, sketch_seed, sketch_dimension
-```
+在实际改动前写清楚：改哪个数值选择，推导预测哪一项改变，其他条件如何保持。
+no-op 对照检查替换机制自身；能量近似匹配的对照帮助区分方向变化与幅度变化。
 
-旧 artifact 不具备字段时保持 `PARTIAL_IDENTITY` 或 `UNRESOLVED`，不从相近运行补值。
+普通实现比较使用 \(Y^C-Y^R\)。严格正负响应实验使用：
 
-## 11. v1 与 v2 的边界
+\[
+u_i^{resp}=\tfrac12(Y_i^++Y_i^- -2Y_i^0).
+\]
 
-Liger、Phi、Qwen、Mamba、saved-P 和 SiLU 的早期 16+16 数字属于 v1。它们仍是有效
-的固定-suite 与机制观察，但不覆盖 v2 结果。
+两者可以使用同一计算代码，但回答不同问题，分开记录。
+随机舍入在局部无偏的条件不能自动推出经过非线性 optimizer 后无偏。
+SGD 的干预不能代替 AdamW 干预，cold-start 的结果不能代替真实 warm 状态。
 
-v2 已按同一协议重采 Liger、Phi `lm_head dX`、Qwen `lm_head dX`、Qwen `v_proj`
-和 Mamba `in_proj`。它们全部满足：
+对 reduction 类还可定义：
 
-- 32 个冻结输入窗口、16/16 分离；
-- 使用 `SPLITMIX64_COUNT_SKETCH_V2` 或完整向量 Gram；
-- 在看到 empirical result 前提交 protocol、检验组和判定规则；
-- 对大向量结果使用两个额外 sketch seeds，或用完整向量复核；
-- update 的 15 项与 local/gradient 的 30 项分别作 Holm 校正；
-- 只把 update 作为主要训练端点。
+\[
+m_{\rm orb}(a;\nu)=
+\mathbb E_{\pi\sim\nu}[\operatorname{fl}_\pi(a)-y^\star(a)].
+\]
 
-完整结果见 [`five_case_training_bias_profile_v2.md`](five_case_training_bias_profile_v2.md)。
-下一步保持方法不变，转向结果未知的 held-out implementation pool。
+它是多种声明顺序下的平均误差，不是一次 forward 得到的通用静态预测器，
+也不保证每一种顺序同号。已有 FP32 对 FP32 的顺序结果不能代替
+BF16/FP32 累加精度的联合预测验证。
+
+## 7. 配对训练与实际价值
+
+同一起点和数据顺序，除声明实现外其余训练条件一致。
+记录训练 loss、共同验证集 loss、参数距离和测量长度；数值很小的分叉应同时
+给出无改动重复的变化尺度，无法区分时如实说明。
+
+若要区分本步实现作用与后续反馈，对两个轨迹状态分别重放两种实现。
+以 \(Y^{CC},Y^{RC},Y^{CR},Y^{RR}\) 表示“实现、状态”：
+
+\[
+D=\tfrac12[(Y^{CC}-Y^{RC})+(Y^{CR}-Y^{RR})],
+\quad
+F=\tfrac12[(Y^{CC}-Y^{CR})+(Y^{RC}-Y^{RR})].
+\]
+
+\[
+Y^{CC}-Y^{RR}=D+F,\qquad
+I=\tfrac12[(Y^{CC}-Y^{RC})-(Y^{CR}-Y^{RR})].
+\]
+
+\(I\) 只检查实现作用是否随状态变化，不再加进右侧。
+累计贡献用沿实际分离方向的带符号投影；更高的方向分数不代表更大贡献。
+直接作用和反馈是加性归因，不自动等于各自独立的因果责任。
+
+后期窗口用于判断 bias 本身是否继续出现，避免早期偏移一直留在累计量里。
+没有重放就标记“未拆分”，不能用日志中的占位零代替测量。
+10000 步的新 Liger 训练属于这种未逐步拆分的后果实验。
+
+loss 分叉、稳定质量降低、训练成本变化和训练崩溃分别报告。bias 成因已建立且配对
+loss 不同，可以成为机制案例；应用主张还需要独立配对训练中的预声明质量、成本或
+稳定性结果。不要求 loss 始终恶化或训练崩溃。
+单参数和全参数实验不混称；同名库在不同模型下的结果不能拼成同一条运行。
+
+## 8. 证据保存和历史兼容
+
+保存实现/参考来源、变更位置、实际执行身份、初始状态、参数范围、训练长度、
+输入顺序、统计单位、坐标或摘要类型及其版本。完整 joint Gram 使用
+\(G_{uu},G_{rr},G_{ur}\)，不要把两个不相连的分区 Gram 当成完整联合信息。
+
+来源缺失则标记未知，不从相近实验补值。旧 T1–T4、旧预测器和旧等价标签保留作
+历史复现；不让这些接口重新定义当前训练数值偏差分析与有界判断的问题。

@@ -1,18 +1,8 @@
 # Flash-style case 机制报告
 
-> Historical evidence report. Its 7/48 invocation counts are not the current
-> long-horizon headline. Current labels come from `docs/current_mainline.md`
-> and the machine audit under `results/property/declared_persistent_4096/`:
-> 43 rows currently have long-run bias evidence plus paired loss separation,
-> while only four have explicit late-window confirmation. This file must not
-> override those labels or treat every outcome-relevant candidate as final.
-
-更新时间：2026-08-17。
-
-本文只整理已有证据，不提出共同 property。参照方法是 Qiu 和 Yao 的
-[Flash Attention 低精度训练分析](https://arxiv.org/abs/2510.04212)。论文先复现训练失败，
-再定位到具体 forward 数值误差，推导其进入 backward 和权重梯度的路径，识别有偏舍入与
-相似低秩更新方向，最后用数学等价的定向修改完成长训练稳定化验证。
+> 历史机制登记。保留公式、对照与当时门槛；旧 7/48 等计数不是当前独立成因数。
+> 当前依据 [主线](docs/current_mainline.md) 和 [案例地图](docs/case_evidence_map.md)。
+> 新案例不要求 loss 分叉或最终崩溃；旧持续性门槛也不替代当前统一分析与有界判断。
 
 ## 1. 统一证据链
 

@@ -1,12 +1,16 @@
 # 五案例统一训练偏差检查
 
+> 这是五个开发案例的冻结测量记录。成因与 loss 后果的连接见
+> [案例地图](case_evidence_map.md)；本表不替代具体非零 bias 的推导。
+
 本页只汇总同一套 Training Bias Profile v2 下的五个开发案例。所有判断规则、案例、
 输入顺序、三个测量分支和整体校正组都在结果揭示前冻结。
 
 ## 实验条件
 
 - 每例 32 个冻结且不重叠的输入窗口；前 16 个确定方向，后 16 个检查；
-- 每个窗口都从同一 pretrained checkpoint 和零 AdamW moments 开始；
+- 每个窗口都从同一 pretrained checkpoint 和零 AdamW moments 开始，单独计算一次
+  update（`ZERO_AT_EVERY_INPUT_STATE`），不是连续 32 步训练；
 - `AdamW(betas=(0.9, 0.95), eps=1e-8, weight_decay=0)`；
 - candidate 重复运行在 32/32 个窗口上逐位一致；
 - 大参数向量使用三个预先声明的 4096 维 CountSketch，确认结果要求三者方向一致；
@@ -35,7 +39,7 @@
 |---|---|---|---|---|
 | Liger | 共同剩余方向 `0.326%` | 共同剩余方向 `0.300%` | 共同剩余方向 `0.0151%` | 方向在低精度累加处已经存在，backward 保留，AdamW 大幅压低但未完全消除 |
 | Phi | 共同剩余方向 `0.0375%` | 放大到 `0.372%` | 固定方向未确认，改为缩小正常 update `0.1506%` | backward 增强剩余方向；AdamW 改变了它的表现形式 |
-| Qwen `lm_head` | 极小缩放 | 共同剩余方向 `0.00491%` | 无分支确认 | backward 产生共同方向，cold-start AdamW 抵消 |
+| Qwen `lm_head` | 极小缩放 | 共同剩余方向 `0.00491%` | 无分支确认 | gradient 中检出方向；当前零 moments 单步 update 未确认，不等于已证明完全抵消 |
 | Qwen `v_proj` | 无分支确认 | 无分支确认 | 缩小正常 update `6.04%` | 在当前窗口集合中，系统结构首次明确出现在 optimizer update |
 | Mamba `in_proj` | 极小缩放 | 无分支确认 | 缩小正常 update `3.12%` | 非 Transformer 案例同样可出现 optimizer 阶段的稳定缩放 |
 
@@ -55,15 +59,15 @@
 | Qwen `v_proj` | update 缩小确认 | `A=0.981 < null95 1.424` | `0.134` | 稳定缩小不等于固定方向持久；有 loss 分叉但不能归因于持续 direct direction |
 | Mamba `in_proj` | update 缩小确认 | `A=0.935 < null95 1.167` | `0.0471` | 同上 |
 
-这张对照是方法没有围着旧结果调参的重要检查：新方法没有机械复现旧的三正两负，
-而是区分了固定方向和随正常 update 旋转的缩放。
+这张表比较不同协议与不同测量对象，不能仅凭标签不同证明方法没有过拟合。
+冻结记录与结果未知的验证另行检查；这里保留固定方向和相对缩放的区别。
 
 ## 当前能说什么
 
 可以说：
 
 > 在同一套 cold-start AdamW、同一三阶段测量和整体误报控制下，五个开发案例出现了
-> 固定/剩余方向、随正常 update 缩放、被 optimizer 抵消三种不同结果。
+> 固定/剩余方向、随正常 update 缩放、update 未确认三种不同结果。
 
 不能说：
 

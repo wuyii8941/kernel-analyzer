@@ -40,6 +40,7 @@ from kernel_analyzer.reference_relative_oracle import (  # noqa: E402
     ReferenceRelativeObservation,
     certify_reference_relative,
 )
+from kernel_analyzer.update_write import parameter_write_delta  # noqa: E402
 from scripts.aot_capture import AOTForwardBackwardCapture  # noqa: E402
 from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime  # noqa: E402
 from scripts.run_frozen_candidate_fp32_screen import wrapper_modules  # noqa: E402
@@ -51,6 +52,7 @@ from scripts.run_heldout_lmhead_consequence import adam_delta  # noqa: E402
 from scripts.run_training_bias_profile_v2_empirical import (  # noqa: E402
     _append_contrast as append_v2_contrast,
     _finish_stages as finish_v2_stages,
+    _new_original_statistics as new_v2_original_statistics,
     _new_stage_store as new_v2_stage_store,
 )
 
@@ -207,7 +209,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--architecture",
-        choices=("qwen", "phi", "mamba", "deepseek8", "deepseek8b"),
+        choices=(
+            "qwen", "phi", "mamba", "deepseek8", "deepseek8b",
+            "gemma4", "generic",
+        ),
         required=True,
     )
     parser.add_argument("--model", type=Path, required=True)
@@ -440,7 +445,11 @@ def main() -> None:
     }
     reach_rows: dict[str, list[dict[str, Any]]] = {task_id: [] for task_id in task_ids}
     v2_stores = (
-        {task_id: new_v2_stage_store() for task_id in task_ids}
+        {task_id: new_v2_stage_store(include_parameter_write=True) for task_id in task_ids}
+        if args.training_bias_profile_v2_output_dir is not None else None
+    )
+    v2_original_statistics = (
+        {task_id: new_v2_original_statistics() for task_id in task_ids}
         if args.training_bias_profile_v2_output_dir is not None else None
     )
     legacy_formation_enabled = bool(
@@ -577,18 +586,28 @@ def main() -> None:
                     repair_gradient, repair_first, repair_second, prior_step + 2,
                     learning_rate=LR, beta1=0.9, beta2=0.95,
                 )
+                assert v2_original_statistics is not None
+                statistics = v2_original_statistics[task_id]
                 append_v2_contrast(
                     v2_stores[task_id], "LOCAL",
                     observed_locals[task_id],
                     references[task_id].detach().float().cpu(),
+                    statistics,
                 )
                 append_v2_contrast(
                     v2_stores[task_id], "PARAMETER_GRADIENT",
-                    gradient_delta, repair_gradient,
+                    gradient_delta, repair_gradient, statistics,
                 )
                 append_v2_contrast(
                     v2_stores[task_id], "ADAMW_UPDATE",
-                    candidate_update - repair_update, repair_update,
+                    candidate_update - repair_update, repair_update, statistics,
+                )
+                base_stored = parameters[carrier].detach().cpu()
+                candidate_write = parameter_write_delta(base_stored, candidate_update)
+                repair_write = parameter_write_delta(base_stored, repair_update)
+                append_v2_contrast(
+                    v2_stores[task_id], "PARAMETER_WRITE",
+                    candidate_write - repair_write, repair_write, statistics,
                 )
                 # AdamW also writes first- and second-moment state.  A current
                 # parameter update can be almost equal while those states have
@@ -807,6 +826,9 @@ def main() -> None:
                     ),
                 },
                 "stages": finish_v2_stages(v2_stores[task_id]),
+                "original_coordinate_statistics": v2_original_statistics[task_id],
+                "primary_update_endpoint": "PARAMETER_WRITE",
+                "secondary_update_endpoint": "ADAMW_UPDATE",
                 "claim_boundary": (
                     "Matched input states at one checkpoint under the declared "
                     "single-parameter AdamW protocol. Warm runs evolve only the "

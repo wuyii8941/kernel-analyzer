@@ -1,5 +1,8 @@
 # 所有历史偏差候选的长程复核
 
+> 版本定位（2026-09-05）：历史 4096 步审计快照。表中“当前/最终”仅指该机器审计；未覆盖后来所有实验，尤其新 Liger 10000 步全参数训练。旧持久性标签不重新定义核心案例。
+> 当前证据连接见[案例地图](case_evidence_map.md)，研究定义见[主线](current_mainline.md)。
+
 仓库中有 **23 个唯一主矩阵 case ID**；本审计逐行复核 **301 行**。其中包含历史案例、69 行冻结短筛候选、57 行旧 coherent F+B 候选、150 行 Gemma/Llama exact targets，以及 roster/control rows。这些来源可能重叠，因此分别报告来源分母和逐行审计分母，不能相加冒充独立案例数。
 
 当前机器标签中有 **43 行**同时具备 long-run bias evidence 和 paired loss split：

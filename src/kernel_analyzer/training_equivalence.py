@@ -1,8 +1,14 @@
 """Protocol-relative fixed-suite update-equivalence decisions.
 
-The corrected decision combines three directional summaries with a mandatory
-all-coordinate energy summary.  Absence of statistical significance is never
-treated as equivalence.
+The v2 decision combines three directional summaries with a mandatory energy
+summary. Its interpretation depends on measurement provenance: an exact Gram
+represents the retained coordinates, while a CountSketch Gram represents only
+the sketch. A maximum across sketches is not a certified original-space norm
+bound. Absence of statistical significance is never treated as equivalence.
+
+The v1 classifier is retained for historical compatibility and internal use;
+its three projections alone do not establish full-vector equivalence. Neither
+version proves a bias mechanism or training-loss equivalence.
 """
 
 from __future__ import annotations
@@ -17,15 +23,98 @@ import numpy as np
 BRANCHES = ("additive", "repair_aligned", "residual_direction")
 
 
+def _one_sided_mean_bounds(values: Sequence[float], alpha: float) -> tuple[float, float]:
+    samples = np.asarray(values, dtype=np.float64)
+    if samples.ndim != 1 or samples.size < 2 or not np.isfinite(samples).all():
+        raise ValueError("one-sided inference requires at least two finite independent units")
+    if not 0.0 < alpha < 0.5:
+        raise ValueError("alpha must lie in (0, 0.5)")
+    center = float(samples.mean())
+    half = _t_critical(samples.size - 1, 1.0 - alpha) * float(
+        samples.std(ddof=1) / math.sqrt(samples.size)
+    )
+    return center - half, center + half
+
+
+def population_total_energy_equivalence(
+    effect_energy_by_unit: Sequence[float],
+    repair_energy_by_unit: Sequence[float],
+    *,
+    rms_margin: float,
+    alpha: float = 0.05,
+) -> dict:
+    """Test E[X] < margin^2 E[B] without freezing a sample denominator.
+
+    This is an asymptotic studentized-mean procedure over declared independent
+    units.  Callers remain responsible for its independence and moment
+    conditions; consecutive steps from one trajectory are not separate units.
+    """
+
+    x = np.asarray(effect_energy_by_unit, dtype=np.float64)
+    b = np.asarray(repair_energy_by_unit, dtype=np.float64)
+    if x.shape != b.shape or np.any(x < 0.0) or np.any(b < 0.0):
+        raise ValueError("effect and repair energies must be matched and nonnegative")
+    if rms_margin <= 0.0 or not math.isfinite(rms_margin):
+        raise ValueError("rms_margin must be finite and positive")
+    difference = x - float(rms_margin) ** 2 * b
+    lower, upper = _one_sided_mean_bounds(difference, alpha)
+    estimate = math.sqrt(float(x.mean() / b.mean())) if b.mean() > 0.0 else math.inf
+    decision = "EQUIVALENT" if upper < 0.0 else "NON_EQUIVALENT" if lower > 0.0 else "INCONCLUSIVE"
+    return {
+        "decision": decision,
+        "rms_ratio_estimate": estimate,
+        "margin": float(rms_margin),
+        "mean_boundary_difference": float(difference.mean()),
+        "one_sided_mean_bounds": [lower, upper],
+        "alpha": float(alpha),
+        "independent_unit_count": int(x.size),
+        "assumption_scope": "ASYMPTOTIC_STUDENTIZED_INDEPENDENT_UNITS",
+    }
+
+
+def population_aligned_equivalence(
+    effect_repair_inner_by_unit: Sequence[float],
+    repair_energy_by_unit: Sequence[float],
+    *,
+    margin: float,
+    alpha: float = 0.05,
+) -> dict:
+    """Test |E[A]/E[B]| < margin using two matched mean inequalities."""
+
+    a = np.asarray(effect_repair_inner_by_unit, dtype=np.float64)
+    b = np.asarray(repair_energy_by_unit, dtype=np.float64)
+    if a.shape != b.shape or np.any(b < 0.0):
+        raise ValueError("inner products and repair energies must be matched")
+    if margin <= 0.0 or not math.isfinite(margin) or b.mean() <= 0.0:
+        raise ValueError("margin and mean repair energy must be positive")
+    positive = a - float(margin) * b
+    negative = -a - float(margin) * b
+    positive_bounds = _one_sided_mean_bounds(positive, alpha)
+    negative_bounds = _one_sided_mean_bounds(negative, alpha)
+    equivalent = positive_bounds[1] < 0.0 and negative_bounds[1] < 0.0
+    outside = positive_bounds[0] > 0.0 or negative_bounds[0] > 0.0
+    return {
+        "decision": "EQUIVALENT" if equivalent else "NON_EQUIVALENT" if outside else "INCONCLUSIVE",
+        "ratio_of_means_estimate": float(a.mean() / b.mean()),
+        "margin": float(margin),
+        "positive_boundary_bounds": list(positive_bounds),
+        "negative_boundary_bounds": list(negative_bounds),
+        "alpha": float(alpha),
+        "independent_unit_count": int(a.size),
+        "assumption_scope": "ASYMPTOTIC_STUDENTIZED_INDEPENDENT_UNITS",
+    }
+
+
 def fixed_suite_total_rms_from_joint_gram(
     joint_gram: Mapping[str, Sequence[Sequence[float]]],
     *,
     calibration_count: int = 16,
 ) -> float:
-    """Return the exact confirmation-suite effect RMS / repair-update RMS.
+    """Return the confirmation RMS ratio in the supplied Gram's vector space.
 
     Unlike the three directional summaries, this quantity sees every direction
-    represented by the saved update vectors.
+    represented by the saved update vectors. If they are sketches, this is not
+    an exact original-coordinate ratio or an upper bound on that ratio.
     """
 
     uu = np.asarray(joint_gram["effect_effect"], dtype=np.float64)
@@ -126,7 +215,7 @@ def simultaneous_intervals_from_joint_gram(
 
 
 def classify_fixed_suite_update_equivalence(
-    intervals: Mapping[str, Sequence[float]],
+    intervals: Mapping[str, Sequence[float]] | None,
     margins: Mapping[str, float],
     *,
     total_rms: float,
@@ -158,7 +247,14 @@ def classify_fixed_suite_update_equivalence(
     if consequence_status not in {"NOT_DECLARED", "PASSED", "FAILED"}:
         raise ValueError("unknown material consequence status")
 
-    profile = classify_training_equivalence(intervals, margins)
+    profile = (
+        classify_training_equivalence(intervals, margins)
+        if intervals is not None else {
+            "decision": "NOT_ASSESSED",
+            "reason": "PROFILE_DIRECTION_NOT_IDENTIFIABLE",
+            "branches": {},
+        }
+    )
     envelope_inside = total_rms < total_rms_margin
     envelope_beyond = total_rms > total_rms_margin
     exact_identity = total_rms == 0.0 and bool(exact_identity_verified)
@@ -170,7 +266,7 @@ def classify_fixed_suite_update_equivalence(
         failure_reasons.append("FULL_UPDATE_RMS_IS_ON_ITS_MARGIN")
     if profile["decision"] == "MATERIAL_EFFECT":
         failure_reasons.append(profile["reason"])
-    elif profile["decision"] == "INCONCLUSIVE":
+    elif profile["decision"] in {"INCONCLUSIVE", "NOT_ASSESSED"} and not exact_identity:
         failure_reasons.append(profile["reason"])
     if consequence_status == "FAILED":
         failure_reasons.append("PREDECLARED_TRAINING_CONSEQUENCE_FAILED")
@@ -187,12 +283,12 @@ def classify_fixed_suite_update_equivalence(
     elif not envelope_inside:
         decision = "INCONCLUSIVE"
         reason = "FULL_UPDATE_RMS_IS_ON_ITS_MARGIN"
-    elif profile["decision"] == "INCONCLUSIVE":
-        decision = "INCONCLUSIVE"
-        reason = profile["reason"]
     elif exact_identity:
         decision = "EXACT_UPDATE_IDENTITY_ON_FIXED_SUITE"
         reason = "ALL_CONFIRMATION_UPDATE_DIFFERENCES_ARE_ZERO"
+    elif profile["decision"] in {"INCONCLUSIVE", "NOT_ASSESSED"}:
+        decision = "INCONCLUSIVE"
+        reason = profile["reason"]
     else:
         decision = "FIXED_SUITE_UPDATE_EQUIVALENT"
         reason = "FULL_UPDATE_RMS_AND_ALL_PROFILE_INTERVALS_ARE_INSIDE_MARGINS"

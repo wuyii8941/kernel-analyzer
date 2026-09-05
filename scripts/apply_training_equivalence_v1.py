@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Apply frozen engineering equivalence ranges to measured update profiles."""
+"""Legacy three-projection analysis; not a full-vector equivalence certificate.
+
+Retained for historical consumers. Use apply_training_equivalence_v2.py for
+the energy-aware reanalysis, with its exact-Gram/sketch scope limitations.
+Reproducing an original v1 calculation also requires its original code commit.
+"""
 
 from __future__ import annotations
 
@@ -26,6 +31,11 @@ def main() -> None:
     parser.add_argument("--summary", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    print(
+        "Historical v1: three selected projections do not certify full-vector "
+        "equivalence. Retain the original protocol and code-version scope.",
+        file=sys.stderr,
+    )
     source = json.loads(args.summary.read_text())
     cases = {}
     for case_id, item in source["cases"].items():

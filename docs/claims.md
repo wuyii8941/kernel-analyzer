@@ -1,103 +1,75 @@
-# 证据账本
+# 主张账本
 
-本页按论文主张组织，不按实验轮次组织。术语和计数以
-[`current_mainline.md`](current_mainline.md) 为准。
+中心是 **具体训练实现的数值偏差分析、声明范围内的 update 判断，以及诊断指导的
+局部修改**。数字及原始文件集中在
+[案例地图](case_evidence_map.md)，本页不再维护另一份竞争性的案例计数。
+“已测量”“成因得到支持”“loss 分叉”“长期直接作用”分别判断。
 
-状态含义：
+## 数学解释与实验
 
-- `SUPPORTED`：当前证据足以支持带范围的表述；
-- `BOUNDED`：有案例级证据，但不能推广；
-- `PLANNED`：方法已定义，统一实验尚未完成；
-- `UNRESOLVED`：现有 artifact 或统计能力不足；
-- `NOT_SUPPORTED`：当前证据不支持该主张。
+| 主张 | 当前判断 | 证据边界 |
+|---|---|---|
+| 源误差/状态配对不平衡、正负响应不对称可在选定位置精确分解 | 已有推导 | 恒等式不自动证明某个具体案例非零；须给出成因与条件 |
+| 实际 backward 可绑定到声明的数学导数 | 已有案例级与覆盖证据 | VJP 证明不等于 bias 非零证明，也不等于所有位置已做训练实验 |
+| Liger 累加精度会影响真实 gradient 和训练轨迹 | 机制修改与训练证据支持 | 历史 Qwen 和新小型 GPT-2 分开，实际误差位置不由库名决定 |
+| Phi 的来源干预可改变短程方向，而不靠系统降低能量解释 | 同 AdamW 实验支持 | 三次能量近似匹配重复仍失去短程方向；不能说四次能量都不下降，也不能自动推广到所有状态 |
+| backward/optimizer 会改变 bias 表现 | 多组条件测量支持 | 不能由“这一层检出、上一层未检出”单独证明唯一根因 |
+| saved-P / SiLU 的严格正负输入产生非镜像更新 | 响应实验支持 | 人工响应剩余与自然 candidate/reference 差异不同，不混在同一分母 |
+| DeepSeek 两个位置的大 update 缩小依赖 moments | cold/warm/reset 对照支持 | 限于声明位置与参数；不是所有 DeepSeek 实现的成因定理 |
+| FP32 求和顺序可用于一个具体来源预测 | 已有有界补充结果 | 不是通用静态预测，也没有对应的长程 loss 验证 |
 
-## 方法与覆盖
+上述来源见[案例地图 L1–O1](case_evidence_map.md)及[方法](method.md)。
+详细数学条件保留在[成因推导](effective_antithetic_symmetry.md)、
+[按来源修改](source_aligned_repair.md)和[attention 推导](l23_qproj_tile.md)。
 
-| 主张 | 判定门槛 | 证据 | 状态 |
-|---|---|---|---|
-| 测试单元是 concrete forward 加 actual backward。 | saved tensors、cotangent、真实 VJP、参数可达和 repair boundary 全部绑定。 | `results/coverage/cases/directional_candidate_math_registry.json.gz`; [`method.md`](method.md) | `SUPPORTED`（冻结四模型范围） |
-| 所有实际调用保留在分母。 | 无法判断、多处合并和重复实现模式不从分母静默删除。 | `results/coverage/cases/full_coordinate_audit.json.gz`; [`denominator.md`](denominator.md) | `SUPPORTED`：1,562/1,562 个具体输出位置有首轮处置 |
-| 全量首轮检查不等于全量长程实验。 | coverage census 与 repair/trajectory funnel 分列。 | [`coverage_table_v1.md`](coverage_table_v1.md); [`current_mainline.md`](current_mainline.md) | `SUPPORTED` |
-| Candidate/repair 使用同一完整训练状态。 | weights、inputs、RNG、saved states、optimizer moments、scheduler 等逐项相同。 | per-case certificates; [`bias_protocol.md`](bias_protocol.md) | `SUPPORTED_CASE_LEVEL` |
+## bias 与训练后果
 
-## 形成与三阶段测量
+| 主张 | 当前判断 | 应怎样写 |
+|---|---|---|
+| 已有 bias 证据和配对 loss 分叉 | 多条案例级材料存在 | 注明实际实现对照、参数范围、训练状态和长度，不把所有材料压成一个计数 |
+| 有些直接作用在后期窗口仍有方向 | 历史 4096 审计中有记录 | 只对已测窗口说持续；整段统计不能代替后期窗口 |
+| 直接作用不持续但反馈维持分离 | 有记录 | 不伪装成持续的算子直接源；成因证据仍可保留 |
+| loss 分叉本身证明目标算子存在数学 bias | 不成立 | 必须另外有成因与更新证据 |
+| 新 Liger 全参数训练至 10000 步仍有 loss 分叉 | 已测单条延续支持 | 验证 loss 差由 +0.02778 变为 −0.02325，参数距离由 19.69% 增至 23.50% |
+| 同一 Liger 结果证明持续恶化或正在崩溃 | 不支持 | 测得范围内未见声明崩溃，不能外推任何更长时间；loss 符号反转不否定分叉 |
+| 10000 步证明后期直接 bias 的强度 | 未测 | 该延续没有逐步同状态直接/反馈重放，占位零不能作零测量 |
+| loss 方向放大检查证明未来训练会恶化 | 不成立 | 它是保存参数附近的敏感性检查，不是未来轨迹 |
+| 三位置 × 四输入流证明稳定质量降低 | 不支持 | 同一预训练 checkpoint 的指定参数实验；窗口平均 loss 差区间跨零 |
+| 新冻结的 Liger 第三条 4096 步数据流证明可重复质量变化 | 不支持 | 新差为 −0.00946，与两条历史正差方向相反；三条描述性区间 [−0.03820,+0.06923] 跨零 |
+| 所有案例必须出现 loss 分叉、收敛到不同值或崩溃才算分析有效 | 不采用 | 有效的阴性、等价、未决和无法测量结果都保留；训练后果只对选定案例验证 |
 
-| 主张 | 判定门槛 | 证据 | 状态 |
-|---|---|---|---|
-| 所选 residual boundary 上的平均 update 可精确拆成 source asymmetry 与 response rectification 两项。 | 预声明 `e -> -e`，对 event distribution 和 response 作奇偶分解。 | [`effective_antithetic_symmetry.md`](effective_antithetic_symmetry.md); [`method.md`](method.md) | `SUPPORTED_AS_IDENTITY`；不是底层机制穷尽分类 |
-| 方向或稳定缩放可能在 local、gradient 或 update 阶段形成、增强或消失。 | 同一 matched inputs 和 contrast 保存三层完整向量或 Gram，并用同一三分支规则。 | `results/property/training_bias_profile_v2/five_case_summary.json`; prospective batch summaries; [`five_case_training_bias_profile_v2.md`](five_case_training_bias_profile_v2.md); [`prospective_training_bias_profiles.md`](prospective_training_bias_profiles.md) | `SUPPORTED_FOR_FIVE_DEVELOPMENT_CASES_AND_BOUNDED_NEW_BATCHES`；不是 prevalence 或通用泛化结果 |
-| 新 DeepSeek normalization 与 attention-projection backward 在 cold-start AdamW 下反复缩小正常 update。 | 16 个 calibration + 16 个 confirmation states；三分支统一测量；各自冻结组内 Holm 校正；完整 repair/sham 绑定。 | prospective batch 1/2 raw and summary JSON | `SUPPORTED_FOR_TWO_BOUNDED_CASES`：分别为 `−13.68%` 与 `−10.69%`；不能外推到所有 DeepSeek 算子或 warm moments |
-| 上述两个新 update effect 会造成配对 loss 分叉。 | 四臂 live replay；形成证据独立存在；loss split 是事前停止条件。 | prospective batch 1/2 consequence JSON | `SUPPORTED_AS_TRAJECTORY_NON_IDENTITY`：两项均在 step 1 停止；不是 4096-step persistence 或最终质量结论 |
-| 统一方法能接入 Gemma 4 的不同模型与实现位置。 | 使用历史冻结的两个位置、相同 16+16 测量和原记录一致的运行环境；不因结果替换位置。 | `results/property/generalization_benchmark_v1/gemma4_method_bridge_result.json` | `SUPPORTED_AS_METHOD_BRIDGE_WITH_NEGATIVE_RESULTS`：一个位置 candidate/repair 完全相同，另一个所有区间跨零；不是新选择的前瞻发现集合 |
-| Phi 显示 backward 可放大剩余共同方向，而 AdamW 可把它变成相对正常 update 的缩小。 | 三阶段使用同一 32-window protocol；gradient residual 与 update aligned branch 分别通过解释/主要 Holm 组。 | same v2 five-case summary | `BOUNDED`：一个 checkpoint、cold-start AdamW |
-| 严格正负 residual 仍可能得到不相反的 update。 | 同一 state、weights 和 moments 下 exact `+delta/-delta` replay，response remainder 非零。 | saved-P / SiLU artifacts; [`effective_antithetic_symmetry.md`](effective_antithetic_symmetry.md) | `SUPPORTED_CASE_LEVEL` |
+最新数据见[10000 步说明](liger_single_boundary_collapse_experiment.md)；
+其余按[案例地图](case_evidence_map.md)找到各自原始结果。
 
-## 统一统计与训练等价性
+## 测量与判定工具
 
-| 主张 | 判定门槛 | 证据 | 状态 |
-|---|---|---|---|
-| 误差能量与可复现平均方向必须分开报告。 | 每层同时报告 `E||u||²`、mean effect、normal-update scale。 | [`method.md`](method.md); existing RMS/direction comparisons | `SUPPORTED_AS_METHOD`; v1 empirical 数字保持探索性 |
-| Aligned scaling 与剩余 residual direction 应分开。 | 保存 `G_uu`、`G_rr`、`G_ur`，对所有案例同时运行固定方向、aligned scaling 和 residual direction。 | [`training_bias_profile_v2.md`](training_bias_profile_v2.md); five-case raw/summary JSON | `SUPPORTED_FOR_FIVE_DEVELOPMENT_CASES`：Liger 为 residual direction；Phi、v-proj、Mamba 为 update scaling；不得预写普遍发生率 |
-| 论文级判断要报告效应量与区间。 | calibration/confirmation 分离；区间范围必须与输入抽样方式一致。 | [`training_bias_profile_v2.md`](training_bias_profile_v2.md); `single_state_unit_validation.json`; five-case summary | `SUPPORTED_FOR_FROZEN_WINDOW_SUITE`；不是独立-run 或随机总体区间 |
-| 多案例、多阶段判断需要控制总体误报。 | 结果揭示前冻结检验组；update 与解释阶段分开作 Holm；无法判断项不从分母移除。 | empirical protocol/amendments; five-case summary; prospective batch 1/2 protocols and summaries | `COMPLETED`：开发组 15/30 项；新 batch 1 为 12/24 项且两项 abstain 以 p=1 保留；batch 2 为 3/6 项 |
-| 固定输入集合上的 update 等价是相对声明设置的操作性结论。 | 覆盖全部坐标的 update RMS 比例低于范围，三个方向区间也全部在各自范围内；只有保存完整向量时才允许签逐位零差异。 | `results/property/training_equivalence_v2/`; `results/property/generalization_benchmark_v1/equivalence_v2.json`; [`current_mainline.md`](current_mainline.md) | `METHOD_COMPLETE_FOR_FIXED_SUITE_UPDATE`：完整向量反例验证通过；大向量使用三个冻结随机摘要，不等于随机训练状态总体或完整训练质量等价。`1%` 范围是结果揭示后的方法修正，不冒充事前冻结 |
+| 主张 | 当前判断 |
+|---|---|
+| 三阶段测量能区分能量、固定方向、相对缩放和剩余方向 | 已实现并有多组测量；这些几何不是自动增加的独立根因 |
+| 五例 profile v2 等于一条从零 moments 连续训练 32 步 | 不成立；每个输入从零 moments 单独测量 |
+| 16/32 步方向分数定义持久 bias | 不成立；它只是有限窗口测量或短筛 |
+| 旧短筛 AUROC 是通用准确率 | 不成立；原 15 行结果是回溯排序 |
+| 未显著等于安全/等价 | 不成立 |
+| 完整 Gram 可复算有限集合的能量 | 可以，需标明坐标范围及数值精度 |
+| 三个 CountSketch 比例最大值是原向量严格上界 | 未建立此保证；仅保留摘要估计解释 |
+| 等价 v2 已修复三个投影看不到未知方向的问题 | 完整坐标测量下加入能量条件；摘要数据不能因此升级为原空间保证 |
+| 等价 v2 的 1% RMS 范围是理论必须、且旧验证集事前冻结 | 不成立；它是结果揭示后的工程政策修正 |
+| 固定输入窗口的经验区间是总体置信保证 | 不成立；总体推断需有相应独立单位与假设 |
+| 更新有限集合内近似相同等于完整训练质量相同 | 不成立；未声明后果记录为 NOT_DECLARED |
+| Phi cold-start AdamW 公式 update 的方向等于已写入 BF16 参数的方向 | 不成立；新 32 状态重采中公式 update RMS 比为 5.47%，实际参数写入差异逐位为零 |
+| DeepSeek 两个 cold-start 位置的公式 update 差异真实写入参数 | 新重采支持；写入 RMS 比为 53.04% / 46.02%，缩放区间为 −16.76% 至 −12.15% / −12.08% 至 −9.34% |
+| Liger 的统一新重采再次确认强固定方向 | 不支持；公式 update RMS 为 0.653%，实际 BF16 写入 RMS 为 4.936%，但 actual-write additive/residual 区间跨零，只确认小幅相对缩放 |
+| 新协议可回写成历史前瞻结论 | 不允许；旧结果重新计算仍是重新分析 |
 
-## Orbit mean
+具体工具版本见[文档入口](README.md)。这些限定不撤销原始观察，也不让等价性工具
+重新成为论文中心。
 
-| 主张 | 判定门槛 | 证据 | 状态 |
-|---|---|---|---|
-| 多种等价求和顺序的平均差异可作为 reduction 类来源预测。 | 先在前 16 个输入确定方向，再在后 16 个输入检查；两个实现都使用 FP32，只改变 Liger `dW` 的分块加法顺序。 | `results/property/liger_fp32_chunk_order_v1/`; [`persistence_property_protocol.md`](persistence_property_protocol.md) | `SUPPORTED_FOR_ONE_BOUNDED_CASE`：后 16 个输入中 15 个沿预测方向；gradient 与 AdamW update 的方向结果通过 Holm 校正；效应很小且没有长程训练后果结论 |
-| Orbit mean 是通用静态 Oracle。 | 必须覆盖非 reduction mechanisms 且无需 downstream measurement。 | 无 | `NOT_SUPPORTED` |
-| Liger 的 BF16 求和顺序平均差异与 local mean 对齐，换 FP32 accumulator 后二者同步下降。 | 事前冻结求和顺序清单、方向和干预预测。 | 当前新增的是“FP32 对 FP32、只换顺序”的实验，不是这项 BF16/FP32 联合干预 | `NOT_TESTED_AS_STATED`；不能用新的纯 FP32 结果替代这项更强主张 |
+## 对外表述
 
-## 短程筛查
+> 我们在相同起始状态下比较具体训练实现，沿 local、gradient 和实际参数写入分析
+> 总差异、方向与缩放，在声明范围内给出判断，并用针对性修改和配对训练检查诊断
+> 的实际价值。已有结果包括方向、缩放、状态依赖、阴性与无法判断等不同情况；
+> 分析有效不要求出现 loss 分叉，loss 分叉也不等于持续质量降低。
 
-| 主张 | 判定门槛 | 证据 | 状态 |
-|---|---|---|---|
-| 16/32 步方向性可用于安排后续实验优先级。 | 同一 optimizer、同一测量长度、每行自己的随机抵消范围；未升级不输出 SAFE。 | 校正后的 15 行 AdamW 案例集合；[`direct_persistence_screen.md`](direct_persistence_screen.md) | `SUPPORTED_AS_RETROSPECTIVE_TRIAGE` |
-| 短程方向性比同层 update RMS 更有排序信息。 | 同一 15 行案例集合比较。 | direction AUROC `0.944`; RMS AUROC `0.528` | `SUPPORTED_FOR_RETROSPECTIVE_15_ROWS` |
-| 16/32 步足以定义长期 persistent bias。 | 同协议长程确认不能出现反转。 | Qwen cold-start vs warm-state 结果构成反例 | `NOT_SUPPORTED` |
-
-## 长程与训练后果
-
-| 主张 | 判定门槛 | 证据 | 状态 |
-|---|---|---|---|
-| Direct long-run bias 已在多条记录中出现。 | 4096 same-state direct updates、case-specific null；late windows 若未导出必须单列。 | `results/property/declared_persistent_4096/all_bias_case_audit.json` | `SUPPORTED_CASE_LEVEL`：3 条 direct rows 有 late windows，另 8 条只有 aggregate long-run evidence |
-| Feedback-sustained long-run bias 已在多条记录中出现。 | direct/feedback 分开，feedback direction 与 paired loss split 同时存在。 | same machine audit and per-row artifacts | `SUPPORTED_CASE_LEVEL`：32 条 machine labels；只有具备 late windows 的行可进一步称 window-confirmed |
-| Loss split 本身证明目标算子 direct bias 持续。 | 必须同时有 direct bias-bearing component。 | v_proj、Mamba、saved-P consequence controls 反驳该推断 | `NOT_SUPPORTED` |
-| 4096 步证明 loss 收敛到不同终点。 | 独立 full-training runs 和预声明稳定窗口。 | 当前无 | `NOT_SUPPORTED` |
-| 最终参数变化必须拆成 direct 与 feedback。 | 四臂 recurrence 关闭，实际变化等于 direct + feedback；interaction 只作依赖性诊断。 | [`direct_persistence_evidence.md`](direct_persistence_evidence.md) | `SUPPORTED_CASE_LEVEL` |
-| 已测参数偏移不是任意随机的 loss 方向。 | 在保存的 repair 参数附近，将测得方向与同长度随机方向作相同尺度的 loss 检查。 | `results/property/loss_direction_stress_v1/` | `SUPPORTED_FOR_TWO_LOCAL_SENSITIVITY_TESTS`：Liger 原尺度 loss 变化为随机方向中位数的约 `1039` 倍；Phi 为约 `9.55` 倍；不是未来训练直线外推 |
-| 三个训练位置的配对轨迹在不同输入流中稳定分开。 | 每项四组互不重叠的 32 步输入流；分别检查 direct、feedback、actual 和 loss。 | `results/property/independent_consequence_v1/summary.json` | `SUPPORTED_AS_TRAJECTORY_NON_IDENTITY`：三项 actual/feedback 均为 `4/4`，direct 均为 `0/4`；稳定窗口平均 loss gap 均跨零，不支持稳定质量方向 |
-
-## 干预与机制
-
-| 主张 | 判定门槛 | 证据 | 状态 |
-|---|---|---|---|
-| Phi 的方向不只是误差能量下降造成。 | 同一 cold-start AdamW；natural/sham；多个 SR seeds；至少能量近似匹配的 repeats 方向消失。 | [`phi_adamw_source_intervention.md`](phi_adamw_source_intervention.md) | `SUPPORTED_CASE_LEVEL` |
-| AdamW 会改变 direction verdict，但不是统一误差来源。 | 同一 gradient contrast 比较 SGD、captured AdamW、moment ablation。 | [`direct_persistence_optimizer.md`](direct_persistence_optimizer.md) | `SUPPORTED_CASE_LEVEL` |
-| DeepSeek 的大缩小效应依赖 AdamW 历史状态。 | 两个正例与一个 Phi 负例统一比较 cold、warm 8、warm 32、warm 后重置 moments 和 SGD；45 项整体 Holm 校正。 | `results/property/optimizer_condition_benchmark_v1/summary.json` | `SUPPORTED_FOR_TWO_DEEPSEEK_CASES`：cold 为 `−10.69%/−13.68%`，warm 后不足 `1%`，重置 moments 后恢复为 `−9.03%/−15.13%`；Phi 五种设置均未确认 |
-| 冻结方法可以在未参与方法开发的训练位置发现 update 缩小；修正后的总体 update 检查可以阻止未知方向的大差异被误签为等价。 | 16 项预先冻结；15 项有效测量；48 项统一 Holm 校正；结果揭示后增加覆盖全部坐标的 update RMS 兜底并保留修正记录。 | `results/property/generalization_benchmark_v1/summary.json`; `results/property/generalization_benchmark_v1/equivalence_v2.json` | `SUPPORTED_FOR_THIS_FROZEN_BENCHMARK`：9 项确认方向或缩放效应；3 项通过固定输入 update 等价，其中 2 项的三个冻结摘要均为零；3 项总体 update 比例超范围；1 项无法判断。不是跨所有模型与 checkpoint 的准确率 |
-| Liger 的统一 orbit predictor 已闭合。 | 必须完成本页前述 BF16/FP32 confirmation prediction。 | 当前只有 chunk/accumulator 机制证据 | `UNRESOLVED` |
-
-## 当前计数
-
-- 23 个唯一主矩阵 case IDs；
-- 301 条逐行长程审计记录；
-- 43 条 `long-run bias + paired loss split` machine labels：3 条 late-window direct、
-  8 条 aggregate direct without exported late windows、32 条 feedback-sustained；
-- 4 条目前具有显式 late rolling-window confirmation；
-- 5 条只有 paired loss split、direct bias 未通过 long-run gate；
-- 105 条更宽的 outcome-relevant records 中包含 persistence 尚未测量的历史候选，
-  不能全部叫 final persistent cases；
-- 45 条 unresolved/abstain 继续保留在分母。
-
-## 当前最安全的论文表述
-
-> 在具体 LLM training implementation 上，tensor error magnitude 与真实 optimizer
-> update 中的可复现平均方向是不同信息。通过 matched candidate/repair replay，
-> 可以先用 source/response 分解解释方向怎样形成，再用 local、gradient、update
-> 三阶段测量定位它在哪里出现，最后用 paired long-run training 区分 direct effect、
-> feedback 和 loss consequence。
-
-不能升级为“已建立通用全算子安全 Oracle”或“所有正交 residual 都有方向”。
+不声称任意算子已经证明安全，不声称所有正交剩余都有方向，也不宣称已有全部数学
+推导在每个模型与训练状态都成立。

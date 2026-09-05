@@ -1,0 +1,49 @@
+{
+  "claim_scope": "The frozen 32-state suite and declared parameter only. Population inference requires separately declared independent units. Training outcome is not declared.",
+  "confirmation_cases": [
+    {
+      "case_id": "phi4_seq64_lmhead_dx",
+      "role": "CONVENTIONAL_CANDIDATE"
+    },
+    {
+      "case_id": "gemma4_text128_scan_0037",
+      "role": "TRITON_NORMALIZATION_REDUCTION"
+    },
+    {
+      "case_id": "llama32_text128_scan_0000",
+      "role": "TRITON_SOFTMAX_BACKWARD"
+    }
+  ],
+  "fixed_suite_margins": {
+    "additive": 0.001,
+    "full_update_rms": 0.01,
+    "policy": "Historical engineering margins retained; not universal constants.",
+    "repair_aligned": 0.01,
+    "residual_direction": 0.001
+  },
+  "primary_stage": "PARAMETER_WRITE",
+  "required_measurements": [
+    "original_coordinate_effect_energy",
+    "original_coordinate_repair_energy",
+    "original_coordinate_effect_repair_inner_product",
+    "actual_stored_parameter_write",
+    "runtime_execution_identity"
+  ],
+  "schema": "kernel-analyzer-training-numerical-analysis-protocol-v1",
+  "secondary_stages": [
+    "LOCAL",
+    "PARAMETER_GRADIENT",
+    "ADAMW_UPDATE"
+  ],
+  "selection_basis": "Existing bound cases selected for implementation-family coverage, not by new parameter-write outcome. Liger remains a mixed-path support case.",
+  "source_sha256": {
+    "scripts/capture_bound_endpoint_bias_formation_v21.py": "d64ad417fd25e73605c1cab59e3ebe8eb52a6a898bb9fff6bb5abd2623cb090e",
+    "scripts/recompute_training_numerical_report.py": "93675b16049c7241fade04e96b9588ba9e518c0df0335d3ba2c3d0d2ed28b9f7",
+    "scripts/run_training_bias_profile_v2_empirical.py": "7d3006144121564f59ee7c2e55cb3d6dd2561cd21f1fd2d5b78b264acc17b02f",
+    "src/kernel_analyzer/short_persistence.py": "c86e0f2512b96d411acdaded1105dc51a75c2e5eeb5785f7091d4470576316d0",
+    "src/kernel_analyzer/training_bias_profile.py": "5aa5bc2b4ada641292575018d260d1509da3475948d2a2c4d3429d0bb2eae794",
+    "src/kernel_analyzer/training_equivalence.py": "8b769c54364f423ac2159b1a7bd45adb0fb5632785b2cfbd843935177e556ab1"
+  },
+  "status": "FROZEN_BEFORE_NEW_RECAPTURE_RESULTS",
+  "unresolved_policy": "Retain the original case ID and reason; do not replace it."
+}

@@ -1,5 +1,8 @@
 # 当前数据对 optimizer 的结论
 
+> 版本定位（2026-09-05）：历史 optimizer 对照。状态和长度属于本轮，不能给同名算子永久标签。
+> 当前证据连接见[案例地图](case_evidence_map.md)，研究定义见[主线](current_mainline.md)。
+
 > 本页是 optimizer-stage 的详细证据，不单独定义 bias。当前统一口径先区分
 > source/response formation，再比较 local、gradient 和 update。
 

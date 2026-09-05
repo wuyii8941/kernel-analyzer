@@ -89,6 +89,45 @@ def _groups(indices: np.ndarray, unit_ids: Sequence[str]) -> list[np.ndarray]:
     return [np.asarray(members[unit], dtype=np.int64) for unit in ordered]
 
 
+def _normalized_state_weights(
+    count: int, state_weights: Sequence[float] | None
+) -> np.ndarray:
+    weights = np.ones(count, dtype=np.float64) if state_weights is None else np.asarray(
+        state_weights, dtype=np.float64
+    )
+    if weights.shape != (count,) or not np.isfinite(weights).all() or np.any(weights < 0.0):
+        raise ValueError("state_weights must be one finite nonnegative value per state")
+    return weights
+
+
+def _unit_summaries(
+    groups: Sequence[np.ndarray],
+    u: np.ndarray,
+    r: np.ndarray,
+    residual: np.ndarray | None,
+    weights: np.ndarray,
+) -> list[dict[str, np.ndarray | float]]:
+    """Aggregate correlated states before treating units as independent."""
+
+    summaries = []
+    for group in groups:
+        local = weights[group]
+        total = float(local.sum())
+        if total <= 0.0:
+            raise ValueError("every inference unit must have positive total state weight")
+        local = local / total
+        item: dict[str, np.ndarray | float] = {
+            "U": np.sum(u[group] * local[:, None], axis=0),
+            "X": float(np.sum(np.sum(u[group] * u[group], axis=1) * local)),
+            "B": float(np.sum(np.sum(r[group] * r[group], axis=1) * local)),
+            "A": float(np.sum(np.sum(u[group] * r[group], axis=1) * local)),
+        }
+        if residual is not None:
+            item["V"] = np.sum(residual[group] * local[:, None], axis=0)
+        summaries.append(item)
+    return summaries
+
+
 def _branch_result(
     unit_values: np.ndarray,
     *,
@@ -104,11 +143,12 @@ def _branch_result(
         "estimate": estimate,
         "confidence_interval_95": [lower, upper],
         "raw_studentized_signflip_p": p_value,
+        "signflip_role": "DIAGNOSTIC_REQUIRES_UNIT_LEVEL_SIGN_SYMMETRY",
+        "inference_basis": "ASYMPTOTIC_STUDENTIZED_MEAN_INTERVAL",
         "independent_unit_count": int(unit_values.size),
         "confirmation_direction_matches_calibration": direction_repeats,
         "raw_confirmed": bool(
-            p_value <= 0.05
-            and (lower > 0.0 or upper < 0.0)
+            (lower > 0.0 or upper < 0.0)
             and direction_repeats
         ),
     }
@@ -121,6 +161,7 @@ def matched_training_bias_profile(
     calibration_indices: Sequence[int],
     confirmation_indices: Sequence[int],
     inference_unit_ids: Sequence[str] | None,
+    state_weights: Sequence[float] | None = None,
     repair_rms_floor: float = 1e-12,
     minimum_independent_units: int = 8,
     signflip_draws: int = 4000,
@@ -148,6 +189,7 @@ def matched_training_bias_profile(
         raise ValueError("calibration and confirmation states overlap")
     if min(cal.min(), conf.min()) < 0 or max(cal.max(), conf.max()) >= len(u):
         raise ValueError("split index is outside the state matrix")
+    weights = _normalized_state_weights(len(u), state_weights)
 
     repair_scale = math.sqrt(float(np.mean(np.sum(r[conf] * r[conf], axis=1))))
     if repair_scale <= repair_rms_floor:
@@ -159,9 +201,10 @@ def matched_training_bias_profile(
 
     calibration_mean = u[cal].mean(axis=0)
     calibration_norm = float(np.linalg.norm(calibration_mean))
+    additive_direction_identifiable = calibration_norm > 0.0
     additive_direction = (
         calibration_mean / calibration_norm
-        if calibration_norm > 0.0
+        if additive_direction_identifiable
         else np.zeros(u.shape[1], dtype=np.float64)
     )
     additive_values = u[conf] @ additive_direction / repair_scale
@@ -169,24 +212,23 @@ def matched_training_bias_profile(
     repair_energy = np.sum(r * r, axis=1)
     relative_floor = max(float(np.median(repair_energy[conf])) * 1e-12, repair_rms_floor**2)
     usable = repair_energy > relative_floor
-    if np.count_nonzero(usable[conf]) != conf.size or np.count_nonzero(usable[cal]) != cal.size:
-        return {
-            "status": "ABSTAIN_PER_STATE_REPAIR_SCALE",
-            "repair_rms": repair_scale,
-            "usable_calibration_states": int(np.count_nonzero(usable[cal])),
-            "usable_confirmation_states": int(np.count_nonzero(usable[conf])),
-        }
-
-    per_state_gain = np.sum(u * r, axis=1) / repair_energy
-    residual = u - per_state_gain[:, None] * r
-    residual_mean = residual[cal].mean(axis=0)
-    residual_norm = float(np.linalg.norm(residual_mean))
+    per_state_gain = np.divide(
+        np.sum(u * r, axis=1), repair_energy,
+        out=np.zeros(len(u), dtype=np.float64), where=usable,
+    )
+    residual = u - per_state_gain[:, None] * r if np.all(usable) else None
+    residual_mean = residual[cal].mean(axis=0) if residual is not None else np.zeros(u.shape[1])
+    residual_norm = float(np.linalg.norm(residual_mean)) if residual is not None else 0.0
+    residual_direction_identifiable = residual is not None and residual_norm > 0.0
     residual_direction = (
         residual_mean / residual_norm
-        if residual_norm > 0.0
+        if residual_direction_identifiable
         else np.zeros(u.shape[1], dtype=np.float64)
     )
-    residual_values = residual[conf] @ residual_direction / repair_scale
+    residual_values = (
+        residual[conf] @ residual_direction / repair_scale
+        if residual is not None else np.full(conf.size, np.nan)
+    )
 
     # Fixed-suite aligned effect: the declared energy-weighted coefficient.
     aligned_suite = float(
@@ -202,8 +244,19 @@ def matched_training_bias_profile(
         "total_effect_rms": float(np.sqrt(np.mean(np.sum(u[conf] * u[conf], axis=1)))),
         "mean_effect_over_repair_rms": float(np.linalg.norm(u[conf].mean(axis=0)) / repair_scale),
         "additive_heldout_effect": float(additive_values.mean()),
+        "additive_direction_status": (
+            "IDENTIFIED" if additive_direction_identifiable else "NOT_IDENTIFIABLE"
+        ),
         "repair_aligned_effect": aligned_suite,
-        "residual_direction_heldout_effect": float(residual_values.mean()),
+        "residual_direction_heldout_effect": (
+            float(residual_values.mean()) if residual is not None else None
+        ),
+        "residual_direction_status": (
+            "IDENTIFIED" if residual_direction_identifiable else
+            "NOT_IDENTIFIABLE_REPAIR_FLOOR" if residual is None else "NOT_IDENTIFIABLE"
+        ),
+        "usable_calibration_states": int(np.count_nonzero(usable[cal])),
+        "usable_confirmation_states": int(np.count_nonzero(usable[conf])),
     }
     if include_joint_gram:
         suite["joint_gram"] = {
@@ -243,29 +296,55 @@ def matched_training_bias_profile(
             "minimum_independent_units": minimum_independent_units,
         }
 
+    cal_summaries = _unit_summaries(cal_groups, u, r, residual, weights)
+    conf_summaries = _unit_summaries(conf_groups, u, r, residual, weights)
+    calibration_unit_mean = np.mean(np.stack([row["U"] for row in cal_summaries]), axis=0)
+    calibration_unit_norm = float(np.linalg.norm(calibration_unit_mean))
+    additive_unit_direction = (
+        calibration_unit_mean / calibration_unit_norm
+        if calibration_unit_norm > 0.0 else np.zeros(u.shape[1])
+    )
+    population_repair_scale = math.sqrt(float(np.mean([row["B"] for row in conf_summaries])))
     additive_by_unit = np.asarray([
-        float((u[group] @ additive_direction).mean() / repair_scale)
-        for group in conf_groups
+        float(np.dot(row["U"], additive_unit_direction) / population_repair_scale)
+        for row in conf_summaries
     ])
-    residual_by_unit = np.asarray([
-        float((residual[group] @ residual_direction).mean() / repair_scale)
-        for group in conf_groups
-    ])
-    # Each independent run contributes one energy-weighted gain estimate.
-    aligned_by_unit = np.asarray([
-        float(np.sum(np.sum(u[group] * r[group], axis=1)) / np.sum(repair_energy[group]))
-        for group in conf_groups
-    ])
+    if residual is not None:
+        residual_unit_mean = np.mean(np.stack([row["V"] for row in cal_summaries]), axis=0)
+        residual_unit_norm = float(np.linalg.norm(residual_unit_mean))
+        residual_unit_direction = (
+            residual_unit_mean / residual_unit_norm
+            if residual_unit_norm > 0.0 else np.zeros(u.shape[1])
+        )
+        residual_by_unit = np.asarray([
+            float(np.dot(row["V"], residual_unit_direction) / population_repair_scale)
+            for row in conf_summaries
+        ])
+    else:
+        residual_unit_norm = 0.0
+        residual_by_unit = None
+    # Linearized unit scores have exactly the ratio-of-sums center E[A]/E[B].
+    a_by_unit = np.asarray([row["A"] for row in conf_summaries], dtype=np.float64)
+    b_by_unit = np.asarray([row["B"] for row in conf_summaries], dtype=np.float64)
+    aligned_center = float(a_by_unit.sum() / b_by_unit.sum())
+    aligned_by_unit = aligned_center + (
+        a_by_unit - aligned_center * b_by_unit
+    ) / float(b_by_unit.mean())
     branches = {
         "additive": _branch_result(
             additive_by_unit, direction_must_repeat=True, draws=signflip_draws, seed=seed
-        ),
+        ) if calibration_unit_norm > 0.0 else {"status": "NOT_IDENTIFIABLE_CALIBRATION_DIRECTION"},
         "repair_aligned": _branch_result(
             aligned_by_unit, direction_must_repeat=False, draws=signflip_draws, seed=seed + 1
         ),
         "residual_direction": _branch_result(
             residual_by_unit, direction_must_repeat=True, draws=signflip_draws, seed=seed + 2
-        ),
+        ) if residual_by_unit is not None and residual_unit_norm > 0.0 else {
+            "status": (
+                "NOT_IDENTIFIABLE_REPAIR_FLOOR" if residual is None
+                else "NOT_IDENTIFIABLE_CALIBRATION_DIRECTION"
+            )
+        },
     }
     return {
         "status": "POPULATION_INFERENCE_COMPLETE",

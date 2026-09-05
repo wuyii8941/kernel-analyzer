@@ -33,8 +33,9 @@ sys.path[:0] = [
     str(ROOT / "scripts"),
 ]
 
-from kernel_analyzer.short_persistence import _splitmix64  # noqa: E402
+from kernel_analyzer.short_persistence import count_sketch_mapping  # noqa: E402
 from kernel_analyzer.training_bias_profile import matched_training_bias_profile  # noqa: E402
+from kernel_analyzer.update_write import parameter_write_delta  # noqa: E402
 from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime  # noqa: E402
 from scripts.run_generated_fp32_screen import load_model, tensor_digest  # noqa: E402
 from scripts.run_heldout_lmhead_consequence import adam_delta  # noqa: E402
@@ -129,10 +130,12 @@ def _compact_views(value: torch.Tensor | np.ndarray) -> tuple[dict[str, np.ndarr
             for start in range(0, coordinates, 1_000_000):
                 stop = min(coordinates, start + 1_000_000)
                 indices = np.arange(start, stop, dtype=np.uint64)
-                hashed = _splitmix64(indices + np.uint64(seed))
-                buckets = (hashed % np.uint64(SKETCH_DIMENSION)).astype(np.uint16)
+                buckets, signs = count_sketch_mapping(
+                    indices, projection_dim=SKETCH_DIMENSION, seed=seed
+                )
+                buckets = buckets.astype(np.uint16)
                 packed[start:stop] = buckets | (
-                    ((hashed & np.uint64(1)) != 0).astype(np.uint16) << np.uint16(12)
+                    (signs < 0).astype(np.uint16) << np.uint16(12)
                 )
             _PACKED_SKETCH_CACHE[cache_key] = packed
         sketch = np.zeros(SKETCH_DIMENSION, dtype=np.float64)
@@ -145,12 +148,40 @@ def _compact_views(value: torch.Tensor | np.ndarray) -> tuple[dict[str, np.ndarr
             sketch += np.bincount(
                 buckets, weights=signs * values, minlength=SKETCH_DIMENSION,
             )
-        result[f"SKETCH_SEED_{seed}"] = sketch.astype(np.float32)
+        result[f"COUNT_SKETCH_V2_SEED_{seed}"] = sketch.astype(np.float32)
     return result, coordinates
 
 
-def _new_stage_store() -> dict[str, dict[str, dict[str, Any]]]:
-    return {name: {} for name in ("LOCAL", "PARAMETER_GRADIENT", "ADAMW_UPDATE")}
+def _new_stage_store(
+    *, include_parameter_write: bool = False,
+) -> dict[str, dict[str, dict[str, Any]]]:
+    names = ["LOCAL", "PARAMETER_GRADIENT", "ADAMW_UPDATE"]
+    if include_parameter_write:
+        names.append("PARAMETER_WRITE")
+    return {name: {} for name in names}
+
+
+def _new_original_statistics() -> dict[str, list[dict[str, float]]]:
+    return {name: [] for name in (
+        "LOCAL", "PARAMETER_GRADIENT", "ADAMW_UPDATE", "PARAMETER_WRITE",
+    )}
+
+
+def _original_coordinate_row(
+    effect: torch.Tensor | np.ndarray,
+    repair: torch.Tensor | np.ndarray,
+) -> dict[str, float]:
+    effect_tensor = effect if isinstance(effect, torch.Tensor) else torch.from_numpy(np.asarray(effect))
+    repair_tensor = repair if isinstance(repair, torch.Tensor) else torch.from_numpy(np.asarray(repair))
+    effect64 = effect_tensor.detach().reshape(-1).to(dtype=torch.float64)
+    repair64 = repair_tensor.detach().reshape(-1).to(dtype=torch.float64, device=effect64.device)
+    if effect64.numel() != repair64.numel():
+        raise RuntimeError("effect and repair coordinates differ")
+    return {
+        "effect_energy": float(torch.dot(effect64, effect64).item()),
+        "repair_energy": float(torch.dot(repair64, repair64).item()),
+        "effect_repair_inner_product": float(torch.dot(effect64, repair64).item()),
+    }
 
 
 def _append_views(
@@ -177,7 +208,10 @@ def _append_contrast(
     stage: str,
     effect: torch.Tensor | np.ndarray,
     repair: torch.Tensor | np.ndarray,
+    original_statistics: dict[str, list[dict[str, float]]] | None = None,
 ) -> None:
+    if original_statistics is not None:
+        original_statistics[stage].append(_original_coordinate_row(effect, repair))
     effect_views, effect_count = _compact_views(effect)
     repair_views, repair_count = _compact_views(repair)
     if effect_count != repair_count:
@@ -342,7 +376,8 @@ def run_compiled(case: str, device: torch.device) -> dict[str, Any]:
     if preflight_changed != 0.0:
         raise RuntimeError(f"preflight sham changed the target output: {preflight_changed}")
 
-    store = _new_stage_store()
+    store = _new_stage_store(include_parameter_write=True)
+    original_statistics = _new_original_statistics()
     ids: list[str] = []
     determinism: list[dict[str, Any]] = []
     boundary_rows: list[dict[str, Any]] = []
@@ -372,9 +407,19 @@ def run_compiled(case: str, device: torch.device) -> dict[str, Any]:
             grad_r, zeros, zeros, 1,
             learning_rate=config["lr"], beta1=0.9, beta2=0.95,
         )
-        _append_contrast(store, "LOCAL", local_effect, local_repair)
-        _append_contrast(store, "PARAMETER_GRADIENT", grad_c - grad_r, grad_r)
-        _append_contrast(store, "ADAMW_UPDATE", update_c - update_r, update_r)
+        base_stored = base.to(parameter.dtype)
+        write_c = parameter_write_delta(base_stored, update_c)
+        write_r = parameter_write_delta(base_stored, update_r)
+        _append_contrast(store, "LOCAL", local_effect, local_repair, original_statistics)
+        _append_contrast(
+            store, "PARAMETER_GRADIENT", grad_c - grad_r, grad_r, original_statistics
+        )
+        _append_contrast(
+            store, "ADAMW_UPDATE", update_c - update_r, update_r, original_statistics
+        )
+        _append_contrast(
+            store, "PARAMETER_WRITE", write_c - write_r, write_r, original_statistics
+        )
         ids.append(_state_id(state, index))
         determinism.append(repeat)
         boundary_rows.append(identity)
@@ -383,7 +428,7 @@ def run_compiled(case: str, device: torch.device) -> dict[str, Any]:
             "case": case,
             "step": index + 1,
         }), flush=True)
-        del grad_c, grad_repeat, grad_r, update_c, update_r, zeros
+        del grad_c, grad_repeat, grad_r, update_c, update_r, write_c, write_r, zeros
         torch.cuda.empty_cache()
 
     return {
@@ -418,6 +463,9 @@ def run_compiled(case: str, device: torch.device) -> dict[str, Any]:
             "rows": determinism,
         },
         "stages": _finish_stages(store),
+        "original_coordinate_statistics": original_statistics,
+        "primary_update_endpoint": "PARAMETER_WRITE",
+        "secondary_update_endpoint": "ADAMW_UPDATE",
         "claim_boundary": (
             "32 frozen non-overlapping input windows at one checkpoint under cold-start "
             "AdamW with zero weight decay; not a random population sample, warm-moment, "
@@ -523,7 +571,8 @@ def run_liger(device: torch.device) -> dict[str, Any]:
             parameter.grad.detach().float().clone(),
         )
 
-    store = _new_stage_store()
+    store = _new_stage_store(include_parameter_write=True)
+    original_statistics = _new_original_statistics()
     ids: list[str] = []
     determinism: list[dict[str, Any]] = []
     for index, state in enumerate(states):
@@ -553,14 +602,24 @@ def run_liger(device: torch.device) -> dict[str, Any]:
             endpoint_r,
             endpoint_count,
         )
-        _append_contrast(store, "PARAMETER_GRADIENT", grad_c - grad_r, grad_r)
-        _append_contrast(store, "ADAMW_UPDATE", update_c - update_r, update_r)
+        base_stored = base.to(parameter.dtype)
+        write_c = parameter_write_delta(base_stored, update_c)
+        write_r = parameter_write_delta(base_stored, update_r)
+        _append_contrast(
+            store, "PARAMETER_GRADIENT", grad_c - grad_r, grad_r, original_statistics
+        )
+        _append_contrast(
+            store, "ADAMW_UPDATE", update_c - update_r, update_r, original_statistics
+        )
+        _append_contrast(
+            store, "PARAMETER_WRITE", write_c - write_r, write_r, original_statistics
+        )
         ids.append(str(state["sequence_id"]))
         determinism.append(repeat)
         print(json.dumps({
             "event": "TRAINING_BIAS_PROFILE_V2_STATE", "case": "liger", "step": index + 1,
         }), flush=True)
-        del grad_c, grad_repeat, grad_r, update_c, update_r, zeros
+        del grad_c, grad_repeat, grad_r, update_c, update_r, write_c, write_r, zeros
         torch.cuda.empty_cache()
 
     return {
@@ -596,6 +655,12 @@ def run_liger(device: torch.device) -> dict[str, Any]:
             "rows": determinism,
         },
         "stages": _finish_stages(store),
+        "original_coordinate_statistics": original_statistics,
+        "original_coordinate_statistics_limitations": {
+            "LOCAL": "UNAVAILABLE_IN_THIS_STREAMED_LIGER_CAPTURE",
+        },
+        "primary_update_endpoint": "PARAMETER_WRITE",
+        "secondary_update_endpoint": "ADAMW_UPDATE",
         "claim_boundary": (
             "32 frozen non-overlapping input windows at one checkpoint under cold-start "
             "AdamW with zero weight decay; not a random population sample, warm-moment, "

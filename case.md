@@ -1,17 +1,7 @@
 # Directional-bias cases
 
-> **Current status:** this file preserves the historical case registry and its
-> changing denominators. It is not the current AdamW positive list. The only
-> current count and conclusion are in
-> [docs/current_mainline.md](docs/current_mainline.md), with the complete merged
-> audit in [docs/all_bias_long_horizon_audit.md](docs/all_bias_long_horizon_audit.md).
-> The common cold-start AdamW table is a 16/32-step screen, not the final
-> long-horizon list. The current machine audit has 23 unique matrix IDs and
-> 301 row-level records. Forty-three rows have long-run bias evidence plus a
-> paired loss split, but only four currently include explicit late-window
-> confirmation; 105 outcome-relevant rows use a broader label that includes
-> candidates whose persistence is not yet measured. No universal all-operator
-> Oracle is claimed.
+> 历史案例登记与推导。以下各节的“当前”、计数和门槛指当时版本，不是全仓库最新结论。
+> 当前按 [案例地图](docs/case_evidence_map.md) 连接数学成因与 loss 证据；旧机器标签不改写。
 
 ## Historical stateless-SGD source-persistence headline (2026-08-22)
 

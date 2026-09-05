@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from kernel_analyzer.training_bias_profile import (
     holm_adjusted_p,
@@ -140,6 +141,44 @@ def test_declared_aligned_effect_is_energy_weighted() -> None:
     expected = 1.0 / (1.0 + 15.0 * 100.0)
     assert np.isclose(result["suite"]["repair_aligned_effect"], expected)
     assert not np.isclose(result["suite"]["repair_aligned_effect"], 1.0 / 16.0)
+
+
+def test_population_aligned_center_is_ratio_of_unit_sums() -> None:
+    repair = np.ones((32, 1))
+    repair[17::2] = 10.0
+    gains = np.zeros(32)
+    gains[16::2] = 1.0
+    gains[17::2] = -1.0
+    effect = gains[:, None] * repair
+    cal, conf = _split()
+    result = matched_training_bias_profile(
+        effect,
+        repair,
+        calibration_indices=cal,
+        confirmation_indices=conf,
+        inference_unit_ids=_independent_units(),
+        signflip_draws=999,
+    )
+    branch = result["population_inference"]["branches"]["repair_aligned"]
+    expected = float(np.sum(gains[16:] * repair[16:, 0] ** 2) / np.sum(repair[16:, 0] ** 2))
+    assert branch["estimate"] == pytest.approx(expected)
+    assert branch["estimate"] != pytest.approx(float(np.mean(gains[16:])))
+
+
+def test_unidentified_direction_does_not_erase_fixed_suite_energy() -> None:
+    repair = np.ones((32, 2))
+    effect = np.zeros((32, 2))
+    effect[16:, 1] = 2.0
+    cal, conf = _split()
+    result = matched_training_bias_profile(
+        effect,
+        repair,
+        calibration_indices=cal,
+        confirmation_indices=conf,
+        inference_unit_ids=None,
+    )
+    assert result["suite"]["additive_direction_status"] == "NOT_IDENTIFIABLE"
+    assert result["suite"]["total_effect_rms"] == pytest.approx(2.0)
 
 
 def test_holm_adjustment_is_monotone_in_sorted_order() -> None:

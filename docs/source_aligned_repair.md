@@ -1,6 +1,9 @@
 # Source-aligned MM repair
 
-## Why the old arm was insufficient
+> 版本定位（2026-09-05）：来源修改的推导与实验记录。保留各比较边界，不把局部无偏直接推成 optimizer 或完整训练无偏。
+> 当前证据连接见[案例地图](case_evidence_map.md)，研究定义见[主线](current_mainline.md)。
+
+## Why the old comparison was insufficient
 
 For a low-precision MM output, Kernel Analyzer uses the exact same-operand
 identity
@@ -19,16 +22,16 @@ removes only the first term. It cannot remove the second term because the cast
 is precisely that source.
 
 Therefore candidate--repair trajectory separation under the historical
-`FP32 MM -> BF16 cast` arm proves only that kernel arithmetic affects the real
+`FP32 MM -> BF16 cast` comparison proves only that kernel arithmetic affects the real
 F+B path. It is not evidence that a separately identified output-rounding
 source was repaired.
 
-## Implemented arms
+## Implemented comparisons
 
 `scripts/run_mm_source_aligned_repair.py` binds one exact generated MM call and
 implements four modes:
 
-| Arm | Kernel arithmetic | Output materialization |
+| Comparison | Kernel arithmetic | Output materialization |
 |---|---|---|
 | `SHAM` | natural | exact reconstruction of the natural output |
 | `KERNEL_ONLY` | FP32 reference | deterministic nearest low-dtype rounding |
@@ -59,7 +62,7 @@ and is not used to deny the analytic centering property.
 - Qwen seq64 `v_proj`: `JOINT`, because the completed 32-state decomposition
   finds both kernel arithmetic and output rounding coherent.
 - Mamba seq64 `in_proj`: `KERNEL_ONLY`, `ROUNDING_ONLY`, and `JOINT` factorial
-  arms; `JOINT` is the full observed-source repair.
+  comparisons; `JOINT` is the full observed-source repair.
 
 ## Claim boundary
 
@@ -67,7 +70,7 @@ The rounding modes preserve the declared BF16/FP16 ABI and remove deterministic
 rounding bias in conditional expectation. They do not make a single BF16 value
 equal to an arbitrary FP32 value. They also do not establish end-to-end
 equivalence to a full FP32 training step. Such an equivalence claim requires a
-separate high-precision complete-reference arm.
+separate high-precision complete-reference comparison.
 
 The source-repair population reports three independent facts:
 

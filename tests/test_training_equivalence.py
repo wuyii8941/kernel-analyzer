@@ -7,6 +7,8 @@ from kernel_analyzer.training_equivalence import (
     classify_fixed_suite_update_equivalence,
     classify_training_equivalence,
     fixed_suite_total_rms_from_joint_gram,
+    population_aligned_equivalence,
+    population_total_energy_equivalence,
     simultaneous_intervals_from_joint_gram,
 )
 
@@ -172,6 +174,22 @@ def test_large_centered_unseen_direction_is_caught_by_energy() -> None:
     assert result["decision"] == "FIXED_SUITE_UPDATE_ENERGY_EXCEEDS_MARGIN"
 
 
+def test_energy_can_reject_when_profile_direction_is_unavailable() -> None:
+    result = classify_fixed_suite_update_equivalence(
+        None, MARGINS, total_rms=0.5, total_rms_margin=0.01,
+    )
+    assert result["decision"] == "FIXED_SUITE_UPDATE_ENERGY_EXCEEDS_MARGIN"
+    assert result["profile_decision"] == "NOT_ASSESSED"
+
+
+def test_verified_identity_does_not_require_a_profile_direction() -> None:
+    result = classify_fixed_suite_update_equivalence(
+        None, MARGINS, total_rms=0.0, total_rms_margin=0.01,
+        exact_identity_verified=True,
+    )
+    assert result["decision"] == "EXACT_UPDATE_IDENTITY_ON_FIXED_SUITE"
+
+
 def test_material_residual_direction_is_not_equivalent() -> None:
     repairs = np.tile(np.array([1.0, 0.0]), (32, 1))
     effects = np.tile(np.array([0.0, 0.002]), (32, 1))
@@ -224,3 +242,28 @@ def test_full_update_rms_boundary(scale: float, expected: str) -> None:
         intervals, MARGINS, total_rms=scale, total_rms_margin=0.01,
     )
     assert result["decision"] == expected
+
+
+def test_population_energy_uses_matched_boundary_difference() -> None:
+    result = population_total_energy_equivalence(
+        np.full(32, 0.000025), np.ones(32), rms_margin=0.01
+    )
+    assert result["decision"] == "EQUIVALENT"
+    assert result["rms_ratio_estimate"] == pytest.approx(0.005)
+
+
+def test_population_energy_detects_effect_beyond_margin() -> None:
+    result = population_total_energy_equivalence(
+        np.full(32, 0.0004), np.ones(32), rms_margin=0.01
+    )
+    assert result["decision"] == "NON_EQUIVALENT"
+
+
+def test_population_aligned_uses_ratio_of_means() -> None:
+    energy = np.tile([1.0, 100.0], 16)
+    gains = np.tile([1.0, -1.0], 16)
+    result = population_aligned_equivalence(
+        gains * energy, energy, margin=0.5
+    )
+    assert result["ratio_of_means_estimate"] == pytest.approx(-99.0 / 101.0)
+    assert result["decision"] == "NON_EQUIVALENT"

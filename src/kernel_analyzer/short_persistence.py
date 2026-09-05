@@ -26,6 +26,29 @@ def _splitmix64(values: np.ndarray) -> np.ndarray:
     return (x ^ (x >> np.uint64(31))).astype(np.uint64)
 
 
+def count_sketch_mapping(
+    indices: np.ndarray,
+    *,
+    projection_dim: int,
+    seed: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return independently hashed CountSketch buckets and signs.
+
+    Historical captures derived both values from the same low hash bit.  For
+    power-of-two projection sizes that made the sign a deterministic function
+    of the bucket.  Keep the mapping in one shared helper so capture paths do
+    not silently reintroduce that coupling.
+    """
+
+    coordinates = np.asarray(indices, dtype=np.uint64)
+    bucket_hash = _splitmix64(coordinates + np.uint64(seed))
+    sign_seed = np.uint64(seed) ^ np.uint64(0xD1B54A32D192ED03)
+    sign_hash = _splitmix64(coordinates + sign_seed)
+    buckets = (bucket_hash % np.uint64(projection_dim)).astype(np.int64)
+    signs = np.where((sign_hash & np.uint64(1)) == 0, 1.0, -1.0)
+    return buckets, signs
+
+
 def count_sketch_chunks(
     chunks: Iterable[Sequence[float] | np.ndarray],
     *,
@@ -50,9 +73,9 @@ def count_sketch_chunks(
             start = coordinate_count + local_start
             stop = coordinate_count + local_stop
             indices = np.arange(start, stop, dtype=np.uint64)
-            hashed = _splitmix64(indices + np.uint64(seed))
-            buckets = (hashed % np.uint64(projection_dim)).astype(np.int64)
-            signs = np.where((hashed & np.uint64(1)) == 0, 1.0, -1.0)
+            buckets, signs = count_sketch_mapping(
+                indices, projection_dim=projection_dim, seed=seed
+            )
             np.add.at(output, buckets, signs * values[local_start:local_stop])
         coordinate_count += int(values.size)
     if not saw_chunk or coordinate_count == 0:

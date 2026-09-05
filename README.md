@@ -1,50 +1,51 @@
 # Kernel Analyzer
 
-Kernel Analyzer 检查一个具体 LLM training implementation 相对声明 repair 的数值
-差异，怎样经过真实 backward 和目标 optimizer 进入参数更新。
-
-当前科研主线是：
+Kernel Analyzer 分析 LLM training 中具体数值实现产生的差异：哪些形成系统性的方向
+或缩放，哪些主要表现为波动，以及它们是否处在预先声明的 update 范围内。研究以
+Triton 训练计算为重点，同时允许常规 PyTorch/ATen/CUDA 实现成为正式 candidate。
+研究从 [FlashAttention 的偏差与训练失败分析](https://arxiv.org/abs/2510.04212) 出发：
 
 ```text
-matched candidate / repair
+具体实现的数值运算
         ↓
-方向形成的两项来源
+数学推导：为什么误差不会公平抵消
         ↓
-local output → parameter gradient → optimizer update
+真实 backward 与 optimizer：偏差怎样进入参数更新
         ↓
-效应量、置信区间与短程排序
+统一分析：总差异、方向、缩放与适用范围
         ↓
-4096-step paired consequence
+针对成因的修改与配对训练：检验解释和实际价值
 ```
 
-项目不再把一个 tensor tolerance、一个 16/32 步分数或最终参数距离当成完整的
-训练正确性结论。Orbit mean 只作为 reduction / summation / reassociation 类实现
-的 source-side candidate predictor，不是通用静态 Oracle。
+数学推导负责解释成因，测量负责检查方向、缩放和总体差异，训练负责验证修改是否
+影响质量、效率或稳定性。三者不能互相替代。分析完成不要求结果为阳性，也不要求
+出现 loss 分叉或崩溃；只观察到 loss 不同也不能倒推出某种 bias。
 
-请从以下文档开始：
+研究以手写和编译生成的 Triton 实现为重点，也保留 ATen/CUDA 和混合计算案例。
+被测实现和参考实现的角色由实验定义，不由库名或实现语言决定。
 
-1. [当前科研主线](docs/current_mainline.md)
-2. [统一实验方法](docs/method.md)
-3. [证据账本](docs/claims.md)
-4. [三类实现的统一测量结果](docs/three_mechanism_profiles.md)
-5. [当前文档入口](docs/README.md)
-6. [长程机器审计](results/property/declared_persistent_4096/all_bias_case_audit.json)
+## 当前入口
 
-`docs/all_bias_long_horizon_audit.md` 是便于阅读的逐行表；当它正在整理时，不覆盖
-机器 JSON 的计数与标签。
+1. [科研主线](docs/current_mainline.md)：我们要证明什么。
+2. [案例与证据地图](docs/case_evidence_map.md)：推导、更新和 loss 证据分别在哪里。
+3. [实验方法](docs/method.md)：如何比较、如何避免跨协议拼接。
+4. [主张边界](docs/claims.md)：已经支持什么，哪些仍不能声称。
+5. [全部文档与版本入口](docs/README.md)：历史推导、测量和结果的归属。
+6. [统一分析 v1 结果](docs/training_numerical_analysis_v1.md)：由机器记录生成的重采与复算状态。
 
-当前覆盖范围为 Qwen3-1.7B、Mamba-130M、Phi-4 和 DeepSeek-R1-Qwen3-8B，
-每个模型包含序列长度 64、128 和 256。1,562/1,562 个 concrete output positions
-完成了 F+B 绑定与首轮数值处置；这不表示 1,562 个位置都完成了 32 或 4096 步
-训练实验。
+最新 Liger 全参数小模型实验已经延续到 10000 步：参数相对距离由 19.69% 增至
+23.50%，验证 loss 差由 +0.02778 变为 −0.02325。这支持实现引起的轨迹分叉，
+不支持持续恶化或已经出现训练崩溃。
+[实验设置和数据](docs/liger_single_boundary_collapse_experiment.md)
 
-当前长程机器审计包含 23 个唯一主矩阵 case IDs、301 条逐行记录。机器标签中有
-43 条同时具备 long-run bias 证据和 paired loss split：3 条 direct cases 已有后半程
-窗口，8 条有整段 long-run direct evidence 但尚未单独导出后半程窗口，32 条为
-feedback-sustained cases。只有 4 条目前具备显式后半程窗口确认。另有 105 条记录
-属于“已有 bias 候选证据且训练结果受到影响”的更宽口径，其中包括尚未测量
-4096-step persistence 的历史候选，不能全部叫 final persistent cases。不能安全重放
-的记录保持 unresolved，不改成 negative。
+统一实际写入重采现已完成：Phi 的 AdamW 公式差异在 BF16 参数写入时归零；两个
+DeepSeek Triton backward 位置的差异真实写入参数；Liger 写入差异总能量超出范围，
+但本轮未确认强共同方向。另一个事前冻结的 Liger 4096 步数据流再次出现轨迹分叉，
+其验证 loss 差与两条历史数据流方向相反，因此当前不支持稳定质量改善或恶化。
+[机器生成汇总](docs/training_numerical_analysis_v1.md)
 
-源码位于 `src/` 与 `scripts/`，结果位于 `results/`。任何清理操作都不得删除
-机器可读实验结果。
+首轮覆盖的 1,562 个输出位置、历史长程审计记录数、统一测量的案例数属于不同集合，
+不相加为“数学成因与 loss 后果都已闭合的案例总数”。
+
+源码位于 `src/` 与 `scripts/`，实验数据位于 `results/`。
+本轮整理保留全部结果、失败记录和数学推导；讲稿由用户单独维护。
