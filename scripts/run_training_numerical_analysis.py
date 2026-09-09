@@ -26,7 +26,24 @@ def _run(script: str, *arguments: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
+    family_commands = {'row-reference': 'build_row_reduction_contracts.py',
+                       'row-capture': 'run_row_reduction_capture.py',
+                       'family-report': 'finalize_numerical_family.py',
+                       'select-training': 'select_training_validation_candidates.py',
+                       'analyze': 'recompute_training_numerical_v2.py'}
+    if len(sys.argv) > 1 and sys.argv[1] in family_commands:
+        _run(family_commands[sys.argv[1]], *sys.argv[2:])
+        return
+    # New metadata-driven execution path; retain legacy commands for replay.
+    if len(sys.argv) > 1 and sys.argv[1] == "coverage":
+        _run("run_numerical_coverage.py", *sys.argv[2:])
+        return
+    parser = argparse.ArgumentParser(
+        epilog="Metadata-driven capture: coverage {freeze,run,report} --help; "
+               "source-checked families: row-reference / row-capture / family-report. "
+               "Training review shortlist: select-training. "
+               "Current shared analysis: analyze RAW OUTPUT --protocol PROTOCOL. "
+               "The commands listed above retain the historical analysis path.")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("validate")
     subparsers.add_parser("refresh")

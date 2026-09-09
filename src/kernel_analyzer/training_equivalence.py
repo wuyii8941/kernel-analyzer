@@ -72,6 +72,77 @@ def population_total_energy_equivalence(
     }
 
 
+def bounded_population_total_energy_equivalence(
+    effect_energy_by_unit: Sequence[float],
+    repair_energy_by_unit: Sequence[float],
+    *,
+    rms_margin: float,
+    effect_energy_upper_bound: float,
+    repair_energy_upper_bound: float,
+    bound_provenance: str,
+    alpha: float = 0.05,
+) -> dict:
+    """Finite-sample test of ``E[X] < margin**2 E[B]`` under declared bounds.
+
+    The bounds must follow from the data-generating protocol or another
+    argument fixed before the units are observed.  A sample maximum is not a
+    valid value for either bound.  Hoeffding's inequality is applied to
+    ``D = X - margin**2 B``, whose declared range is
+    ``[-margin**2 * B_max, X_max]``.  No normal approximation is used.
+    """
+
+    x = np.asarray(effect_energy_by_unit, dtype=np.float64)
+    b = np.asarray(repair_energy_by_unit, dtype=np.float64)
+    if x.ndim != 1 or x.size < 1 or x.shape != b.shape:
+        raise ValueError("effect and repair energies must be matched nonempty vectors")
+    if not np.isfinite(x).all() or not np.isfinite(b).all() or np.any(x < 0.0) or np.any(b < 0.0):
+        raise ValueError("effect and repair energies must be finite and nonnegative")
+    if rms_margin <= 0.0 or not math.isfinite(rms_margin):
+        raise ValueError("rms_margin must be finite and positive")
+    x_max = float(effect_energy_upper_bound)
+    b_max = float(repair_energy_upper_bound)
+    if not math.isfinite(x_max) or x_max < 0.0:
+        raise ValueError("effect_energy_upper_bound must be finite and nonnegative")
+    if not math.isfinite(b_max) or b_max <= 0.0:
+        raise ValueError("repair_energy_upper_bound must be finite and positive")
+    if not isinstance(bound_provenance, str) or not bound_provenance.strip():
+        raise ValueError("bound_provenance must identify a pre-observation bound argument")
+    if not 0.0 < alpha < 0.5:
+        raise ValueError("alpha must lie in (0, 0.5)")
+    tolerance = 32.0 * np.finfo(np.float64).eps
+    if np.any(x > x_max * (1.0 + tolerance)) or np.any(b > b_max * (1.0 + tolerance)):
+        raise ValueError("observed energy exceeds its declared protocol bound")
+
+    margin_squared = float(rms_margin) ** 2
+    difference = x - margin_squared * b
+    lower_support = -margin_squared * b_max
+    upper_support = x_max
+    support_width = upper_support - lower_support
+    radius = support_width * math.sqrt(math.log(1.0 / alpha) / (2.0 * x.size))
+    center = float(difference.mean())
+    lower = center - radius
+    upper = center + radius
+    repair_mean = float(b.mean())
+    estimate = math.sqrt(float(x.mean()) / repair_mean) if repair_mean > 0.0 else math.inf
+    decision = "EQUIVALENT" if upper < 0.0 else "NON_EQUIVALENT" if lower > 0.0 else "INCONCLUSIVE"
+    return {
+        "decision": decision,
+        "rms_ratio_estimate": estimate,
+        "margin": float(rms_margin),
+        "mean_boundary_difference": center,
+        "one_sided_mean_bounds": [lower, upper],
+        "hoeffding_radius": radius,
+        "declared_support": [lower_support, upper_support],
+        "effect_energy_upper_bound": x_max,
+        "repair_energy_upper_bound": b_max,
+        "bound_provenance": bound_provenance,
+        "alpha": float(alpha),
+        "independent_unit_count": int(x.size),
+        "assumption_scope": "FINITE_SAMPLE_INDEPENDENT_UNITS_WITH_PREDECLARED_ENERGY_BOUNDS",
+        "sample_extrema_are_not_valid_bound_provenance": True,
+    }
+
+
 def population_aligned_equivalence(
     effect_repair_inner_by_unit: Sequence[float],
     repair_energy_by_unit: Sequence[float],
@@ -102,6 +173,77 @@ def population_aligned_equivalence(
         "alpha": float(alpha),
         "independent_unit_count": int(a.size),
         "assumption_scope": "ASYMPTOTIC_STUDENTIZED_INDEPENDENT_UNITS",
+    }
+
+
+def bounded_population_aligned_equivalence(
+    effect_repair_inner_by_unit: Sequence[float],
+    repair_energy_by_unit: Sequence[float],
+    *,
+    margin: float,
+    effect_energy_upper_bound: float,
+    repair_energy_upper_bound: float,
+    bound_provenance: str,
+    alpha: float = 0.05,
+) -> dict:
+    """Finite-sample test of ``|E[A] / E[B]| < margin``.
+
+    Given protocol bounds ``X <= X_max`` and ``B <= B_max``, Cauchy--Schwarz
+    gives ``|A| <= sqrt(X_max * B_max)``.  Hoeffding bounds are applied to the
+    two matched inequalities ``A-margin*B`` and ``-A-margin*B``.  Passing is an
+    intersection decision, so each component can use the declared ``alpha``;
+    this function does not use an observed maximum as a population bound.
+    """
+
+    a = np.asarray(effect_repair_inner_by_unit, dtype=np.float64)
+    b = np.asarray(repair_energy_by_unit, dtype=np.float64)
+    if a.ndim != 1 or a.size < 1 or a.shape != b.shape:
+        raise ValueError("inner products and repair energies must be matched nonempty vectors")
+    if not np.isfinite(a).all() or not np.isfinite(b).all() or np.any(b < 0.0):
+        raise ValueError("inner products must be finite and repair energies nonnegative")
+    if margin <= 0.0 or not math.isfinite(margin):
+        raise ValueError("margin must be finite and positive")
+    x_max = float(effect_energy_upper_bound)
+    b_max = float(repair_energy_upper_bound)
+    if not math.isfinite(x_max) or x_max < 0.0:
+        raise ValueError("effect_energy_upper_bound must be finite and nonnegative")
+    if not math.isfinite(b_max) or b_max <= 0.0:
+        raise ValueError("repair_energy_upper_bound must be finite and positive")
+    if not isinstance(bound_provenance, str) or not bound_provenance.strip():
+        raise ValueError("bound_provenance must identify a pre-observation bound argument")
+    if not 0.0 < alpha < 0.5:
+        raise ValueError("alpha must lie in (0, 0.5)")
+    a_max = math.sqrt(x_max * b_max)
+    tolerance = 32.0 * np.finfo(np.float64).eps
+    if np.any(np.abs(a) > a_max * (1.0 + tolerance)) or np.any(b > b_max * (1.0 + tolerance)):
+        raise ValueError("observed inner product or repair energy exceeds its declared bound")
+
+    positive = a - float(margin) * b
+    negative = -a - float(margin) * b
+    support = [-a_max - float(margin) * b_max, a_max]
+    radius = (support[1] - support[0]) * math.sqrt(math.log(1.0 / alpha) / (2.0 * a.size))
+    positive_bounds = [float(positive.mean()) - radius, float(positive.mean()) + radius]
+    negative_bounds = [float(negative.mean()) - radius, float(negative.mean()) + radius]
+    equivalent = positive_bounds[1] < 0.0 and negative_bounds[1] < 0.0
+    outside = positive_bounds[0] > 0.0 or negative_bounds[0] > 0.0
+    repair_mean = float(b.mean())
+    estimate = float(a.mean() / repair_mean) if repair_mean > 0.0 else math.nan
+    return {
+        "decision": "EQUIVALENT" if equivalent else "NON_EQUIVALENT" if outside else "INCONCLUSIVE",
+        "ratio_of_means_estimate": estimate,
+        "margin": float(margin),
+        "positive_boundary_bounds": positive_bounds,
+        "negative_boundary_bounds": negative_bounds,
+        "hoeffding_radius": radius,
+        "declared_boundary_support": support,
+        "derived_inner_product_abs_bound": a_max,
+        "effect_energy_upper_bound": x_max,
+        "repair_energy_upper_bound": b_max,
+        "bound_provenance": bound_provenance,
+        "alpha": float(alpha),
+        "independent_unit_count": int(a.size),
+        "assumption_scope": "FINITE_SAMPLE_INDEPENDENT_UNITS_WITH_PREDECLARED_ENERGY_BOUNDS",
+        "sample_extrema_are_not_valid_bound_provenance": True,
     }
 
 

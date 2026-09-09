@@ -1,0 +1,66 @@
+{
+  "schema": "operator-family-additional-evidence-v1",
+  "records": [
+    {
+      "family": "ROTARY",
+      "artifact_path": "results/property/numerical_coverage_v1/ministral_fused_rotary_optimizer_condition_summary_v1.json",
+      "artifact_sha256": "3cb1d8d1d81e432832cb86df96b44b6ca3acdc5d92fd5a18941372c4d5309002",
+      "evidence_kind": "FUSED_ROTARY_POSITION_SCALING_FIXED_SUITE",
+      "backend": "INDUCTOR_GENERATED_TRITON",
+      "reference_family": "ATTENTION_POSITION_SCALING",
+      "reference_scope": "REGISTERED_SAME_INPUT_REFERENCE",
+      "case_id": "internal_forward_115_out_ptr0-attention-position-scaling-common-input",
+      "target_parameter": "model.language_model.layers.6.self_attn.o_proj.weight",
+      "semantic_source_sha256": "d1c7081c10ec5f9397a104ddb63d03e06e0dc169b5564ff172f24aa9ae2df611",
+      "state_count": 32,
+      "measurement_status": "VALID_FIXED_SUITE_ENGINEERING_MEASUREMENT",
+      "claim_scope": "FIXED_SUITE_UPDATE",
+      "high_position_result": {
+        "parameter_write_total_rms": 0.10880929258653345,
+        "parameter_write_aligned_ratio_of_sums": -0.00591966532442087,
+        "equivalence_decision": "NON_EQUIVALENT"
+      },
+      "low_position_result": {
+        "parameter_write_total_rms": 0.08346570415684447,
+        "parameter_write_aligned_ratio_of_sums": -0.003483364227153852,
+        "equivalence_decision": "NON_EQUIVALENT"
+      },
+      "optimizer_condition_parameter_write": {
+        "COLD_ZERO_MOMENTS": {
+          "confirmation_aligned_ratio_of_sums": -0.0037599006730434786,
+          "confirmation_nonzero_state_count": 7,
+          "confirmation_total_rms": 0.0867183239842856
+        },
+        "WARM_MOMENTS": {
+          "confirmation_aligned_ratio_of_sums": -3.4028504898209553e-06,
+          "confirmation_nonzero_state_count": 7,
+          "confirmation_total_rms": 0.004531403335488873
+        },
+        "WARM_PARAMETERS_RESET_MOMENTS": {
+          "confirmation_aligned_ratio_of_sums": -0.005015062934977006,
+          "confirmation_nonzero_state_count": 7,
+          "confirmation_total_rms": 0.10015204886579072
+        }
+      },
+      "optimizer_condition_comparisons": {
+        "reset_to_cold_parameter_write_rms_ratio": 1.1549121830807003,
+        "reset_to_warm_parameter_write_rms_ratio": 22.10177321480604,
+        "warm_and_reset_gradient_statistics_exactly_equal": true,
+        "warm_to_cold_parameter_write_rms_ratio": 0.052254277150351955
+      },
+      "position_scaling_is_unique_root_cause": false,
+      "population_guarantee": false,
+      "training_quality_claim": false,
+      "prediction_status": "POST_OUTCOME_DIAGNOSTIC_NOT_PREREGISTERED",
+      "position_inventory_count": 0,
+      "scope": "One Ministral fused-RoPE output and one target parameter. High/low position results and cold/warm/reset-moment results are fixed-suite comparisons; they do not establish a population effect or loss outcome."
+    }
+  ],
+  "input_sha256": {
+    "results/property/numerical_coverage_v1/ministral_position_scaling_highpos_profile_retry1/unified_analysis_v1.json": "6cdcd7bf2ff3ae0dba7715f2615150e1915a2cb9ba71e7c602697dbb324ad3cc",
+    "results/property/numerical_coverage_v1/ministral_position_scaling_lowpos_profile_v1/unified_analysis_v1.json": "a0319050d3fce67de4ac0f06589b08af1631d24829011f9e2eaf94d46da09e9e",
+    "results/property/numerical_coverage_v1/ministral_position_scaling_highpos_recovery_v2/case_plan_selected_one.json": "63736721bad994a67dfe76b2c0ffa49892d1feaaf7983cbbc32eed8db21ce2f5",
+    "results/property/numerical_coverage_v1/ministral_position_scaling_lowpos_recovery_v1/case_plan_selected_one.json": "7191abc6aa86513d251468bd340210421ce28618a9e9e41ded4155301051b2d7",
+    "results/property/numerical_coverage_v1/ministral_fused_rotary_optimizer_condition_summary_v1.json": "3cb1d8d1d81e432832cb86df96b44b6ca3acdc5d92fd5a18941372c4d5309002"
+  }
+}

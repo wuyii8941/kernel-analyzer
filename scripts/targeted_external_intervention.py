@@ -12,7 +12,7 @@ from typing import Any, Callable, Iterable, Mapping
 
 import torch
 
-from forkcert.directional_error_sketch import fixed_flat_coordinate_indices
+from kernel_analyzer.directional_error_sketch import fixed_flat_coordinate_indices
 from kernel_analyzer.short_persistence import count_sketch_chunks
 from scripts.generated_nontriton_fp32_observer import fp32_external_reference
 

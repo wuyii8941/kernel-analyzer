@@ -29,6 +29,73 @@ def digest(value: Any) -> str:
     ).hexdigest()
 
 
+def nearest_downstream_endpoint_tasks(
+    successors: dict[str, set[str]],
+    exact_endpoint_regions: dict[str, list[str]],
+) -> dict[str, list[str]]:
+    """Return the endpoint tasks at the shortest *positive* downstream distance.
+
+    The original implementation ran a fresh breadth-first search for every
+    materialized candidate port.  Large generated graphs contain several ports
+    for the same region, so that repeated the same graph traversal thousands of
+    times.  This reverse multi-source traversal computes the same shortest-path
+    information once per region.  The final one-edge lookup preserves the
+    original rule that a port may not close on its own region without traversing
+    an actual cycle.
+    """
+
+    predecessors: dict[str, set[str]] = defaultdict(set)
+    all_regions = set(successors) | set(exact_endpoint_regions)
+    for source, targets in successors.items():
+        all_regions.add(source)
+        for target in targets:
+            all_regions.add(target)
+            predecessors[target].add(source)
+
+    distance: dict[str, int] = {}
+    closures: dict[str, set[str]] = {}
+    queue: deque[str] = deque()
+    for region_id, task_ids in exact_endpoint_regions.items():
+        if not task_ids:
+            continue
+        distance[region_id] = 0
+        closures[region_id] = set(map(str, task_ids))
+        queue.append(region_id)
+
+    while queue:
+        region_id = queue.popleft()
+        candidate_distance = distance[region_id] + 1
+        for predecessor in predecessors.get(region_id, ()):
+            previous_distance = distance.get(predecessor)
+            if previous_distance is None or candidate_distance < previous_distance:
+                distance[predecessor] = candidate_distance
+                closures[predecessor] = set(closures[region_id])
+                queue.append(predecessor)
+            elif candidate_distance == previous_distance:
+                before = len(closures[predecessor])
+                closures[predecessor].update(closures[region_id])
+                if len(closures[predecessor]) != before:
+                    queue.append(predecessor)
+
+    result: dict[str, list[str]] = {}
+    for region_id in all_regions:
+        candidates = [
+            successor
+            for successor in successors.get(region_id, ())
+            if successor != region_id and successor in distance
+        ]
+        if not candidates:
+            result[region_id] = []
+            continue
+        minimum = min(distance[successor] for successor in candidates)
+        task_ids: set[str] = set()
+        for successor in candidates:
+            if distance[successor] == minimum:
+                task_ids.update(closures[successor])
+        result[region_id] = sorted(task_ids)
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--inventory", type=Path, required=True)
@@ -225,7 +292,11 @@ def main() -> None:
 
     # Close implementation-only buffers at the first downstream exact semantic
     # endpoint. Cross-phase traversal is admitted only through a shared proved
-    # F+B owner, never through names or tensor metadata.
+    # F+B owner, never through names or tensor metadata.  Compute graph closure
+    # once per region rather than once per stored port.
+    downstream_closures = nearest_downstream_endpoint_tasks(
+        successors, exact_endpoint_regions
+    )
     for row in rows:
         if row["status"] == "COMPILER_ADDED_BOUNDARY_CLOSED_BY_EXACT_THEOREM":
             row["closed_by_semantic_endpoint_tasks"] = []
@@ -234,23 +305,8 @@ def main() -> None:
         if row["exact_semantic_endpoint_id"] is not None:
             row["closed_by_semantic_endpoint_tasks"] = [row["task_id"]]
             continue
-        starts = set(successors.get(row["candidate_region_id"], ()))
-        starts.discard(row["candidate_region_id"])
-        queue = deque(sorted(starts))
-        visited = set()
-        closures = []
-        while queue and not closures:
-            level = [queue.popleft() for _ in range(len(queue))]
-            for region_id in level:
-                if region_id in visited:
-                    continue
-                visited.add(region_id)
-                closures.extend(exact_endpoint_regions.get(region_id, ()))
-            if closures:
-                break
-            for region_id in level:
-                queue.extend(sorted(successors.get(region_id, ())))
-        row["closed_by_semantic_endpoint_tasks"] = sorted(set(closures))
+        closures = downstream_closures.get(row["candidate_region_id"], [])
+        row["closed_by_semantic_endpoint_tasks"] = closures
         if closures:
             row["status"] = "INTERNAL_IMPLEMENTATION_BUFFER_COVERED_BY_CLOSED_SEMANTIC_ENDPOINT"
         else:

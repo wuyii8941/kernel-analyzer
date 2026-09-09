@@ -21,7 +21,7 @@ from torch._inductor.compile_fx import compile_fx, compile_fx_inner
 from transformers import AutoModelForCausalLM, MambaForCausalLM
 from transformers.models.mamba import modeling_mamba
 
-from qwen_candidate_step import LossStep
+from qwen_candidate_step import LossStep, text_step_values
 from scripts.aot_capture import _input_edges, _jsonable, _tensor_meta
 from scripts.inductor_buffer_origins import InductorBufferOriginRecorder
 
@@ -48,12 +48,28 @@ def gradient_digest(model: torch.nn.Module) -> str:
 
 
 def load_model(architecture: str, model_path: Path, device: str) -> torch.nn.Module:
-    if architecture == "mamba":
+    if architecture == "gemma4":
+        from transformers import Gemma4ForConditionalGeneration
+        model = Gemma4ForConditionalGeneration.from_pretrained(
+            model_path, dtype=torch.bfloat16, attn_implementation="eager",
+            local_files_only=True,
+        )
+    elif architecture == "mamba":
         modeling_mamba.selective_scan_fn = None
         modeling_mamba.mamba_inner_fn = None
         modeling_mamba.selective_state_update = None
         model = MambaForCausalLM.from_pretrained(
             model_path, dtype=torch.bfloat16, local_files_only=True
+        )
+    elif architecture == "ministral3":
+        # Ministral-3 checkpoints use a multimodal outer configuration even
+        # when the captured input is text-only.  AutoModelForCausalLM rejects
+        # that outer config, so load the declared implementation explicitly;
+        # do not silently substitute the inner text model.
+        from transformers import Mistral3ForConditionalGeneration
+        model = Mistral3ForConditionalGeneration.from_pretrained(
+            model_path, dtype=torch.bfloat16, attn_implementation="eager",
+            local_files_only=True,
         )
     else:
         model = AutoModelForCausalLM.from_pretrained(
@@ -64,6 +80,8 @@ def load_model(architecture: str, model_path: Path, device: str) -> torch.nn.Mod
         )
     model = model.to(device).train()
     model.config.use_cache = False
+    if hasattr(model.config, "text_config"):
+        model.config.text_config.use_cache = False
     return model
 
 
@@ -71,7 +89,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--architecture",
-        choices=("qwen", "mamba", "moe", "phi", "deepseek8"),
+        choices=("qwen", "mamba", "moe", "phi", "deepseek8", "generic", "gemma4",
+                 "ministral3"),
         default="qwen",
     )
     parser.add_argument("--model", type=Path, default=Path("/data1/tzh/models/Qwen/Qwen3-1.7B"))
@@ -90,7 +109,13 @@ def main() -> None:
         "--no-proof-node-renaming", action="store_true",
         help="Capture an unmodified standard Inductor schedule; proof IDs are not claimed to propagate.",
     )
+    parser.add_argument(
+        "--capture-unrenamed-aot", action="store_true",
+        help="Also record AOT nodes without renaming; validate generated identity against the ordinary capture separately.",
+    )
     args = parser.parse_args()
+    if args.capture_unrenamed_aot and not args.no_proof_node_renaming:
+        parser.error("--capture-unrenamed-aot requires --no-proof-node-renaming")
 
     if args.trace_dir.exists() and any(args.trace_dir.iterdir()):
         raise RuntimeError("trace directory must be absent or empty")
@@ -118,7 +143,7 @@ def main() -> None:
     inductor_config.trace.provenance_tracking_level = 1
 
     model = load_model(args.architecture, args.model, args.device)
-    inputs = torch.tensor([token_ids], dtype=torch.long, device=args.device)
+    inputs = text_step_values(record, torch.device(args.device))
 
     proof_rows: list[dict[str, Any]] = []
     standard_aot_graphs: list[dict[str, Any]] = []
@@ -222,7 +247,7 @@ def main() -> None:
         )
     candidate = torch.compile(
         LossStep(model),
-        backend="inductor" if args.no_proof_node_renaming else backend,
+        backend="inductor" if args.no_proof_node_renaming and not args.capture_unrenamed_aot else backend,
         fullgraph=not args.allow_graph_breaks,
         dynamic=False,
     )
@@ -233,7 +258,7 @@ def main() -> None:
             torch.manual_seed(execution_seed)
             torch.cuda.manual_seed_all(execution_seed)
             model.zero_grad(set_to_none=True)
-            loss = candidate(inputs)
+            loss = candidate(*inputs)
             loss.backward()
             torch.cuda.synchronize(torch.device(args.device))
             runs.append({
@@ -290,11 +315,20 @@ def main() -> None:
         ),
         "architecture": args.architecture,
         "model": str(args.model.resolve()),
-        "input": {"state": args.state, "sequence_length": len(token_ids), "token_ids_sha256": digest(token_ids)},
+        "input": {
+            "state": args.state,
+            "sequence_length": len(token_ids),
+            "token_ids_sha256": digest(token_ids),
+            "position_ids_sha256": (
+                digest(record["position_ids"])
+                if record.get("position_ids") is not None else None
+            ),
+        },
         "preserve_aot_aten": args.preserve_aot_aten,
         "allow_graph_breaks": args.allow_graph_breaks,
         "standard_aot_capture": standard_capture,
         "proof_node_renaming": not args.no_proof_node_renaming,
+        "capture_unrenamed_aot": args.capture_unrenamed_aot,
         "runs": runs,
         "repeat_stable": runs[0] == {**runs[1], "repeat": 0},
         "proof_graphs": proof_rows,

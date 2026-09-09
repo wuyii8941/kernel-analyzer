@@ -82,12 +82,14 @@ def main() -> None:
             if (BASE / "training_utility_summary.json").is_file() else None
         ),
         "claim_boundary": (
-            "Recomputed rows use actual stored-parameter writes and original-coordinate "
-            "energy when available. Historical results retain their original semantics."
+            "Historical v1 rows use an extra-rounded write simulation, not verified "
+            "AdamW readback. Original records retain that limitation; see readback-v2."
         ),
     }, indent=2, sort_keys=True) + "\n")
     lines = [
         "# Training Numerical Analysis v1", "",
+        "历史限制：v1 使用额外 BF16 舍入的写入模拟，未通过目标 AdamW 写入一致性验收。",
+        "当前修正与验收状态见 [readback-v2](training_numerical_analysis_v2.md)。", "",
         "本页由 `scripts/build_training_numerical_analysis_report.py` 从机器记录生成。",
         "它不替代原始结果，也不将重新分析写成未见确认。", "",
         "| 案例 | 用途 | 测量状态 | 主要位置 | 写入差异 RMS | 相对缩放区间 | 等价性判断 |",

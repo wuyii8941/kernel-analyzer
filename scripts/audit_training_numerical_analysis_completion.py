@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import argparse
 from pathlib import Path
 
 
@@ -16,6 +17,17 @@ def _load(relative: str) -> dict:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--historical-v1", action="store_true",
+                        help="Reproduce only the old bounded bookkeeping audit, not completion of the research plan.")
+    args = parser.parse_args()
+    if not args.historical_v1:
+        from scripts.summarize_training_numerical_v2 import build_progress
+        progress = build_progress()
+        # Re-read current evidence rather than treating an earlier COMPLETE
+        # bookkeeping label as proof of the new research plan's completion.
+        print(json.dumps(progress, indent=2))
+        raise SystemExit(0 if progress["status"] == "COMPLETE_FULL_RESEARCH_PLAN" else 1)
     checks = {
         "method_validation": _load("synthetic_validation.json").get("status") == "PASS",
         "conventional_candidate_actual_write": (

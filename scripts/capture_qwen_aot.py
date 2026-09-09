@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from scripts.aot_capture import AOTForwardBackwardCapture  # noqa: E402
+from scripts.qwen_candidate_step import text_step_values  # noqa: E402
 
 
 def digest(value: Any) -> str:
@@ -43,7 +44,15 @@ def gradient_digest(model: torch.nn.Module) -> str:
 
 
 def load_model(architecture: str, model_path: Path, device: str) -> torch.nn.Module:
-    if architecture == "mamba":
+    if architecture == "ministral3":
+        from transformers import Mistral3ForConditionalGeneration
+        model = Mistral3ForConditionalGeneration.from_pretrained(
+            model_path,
+            dtype=torch.bfloat16,
+            attn_implementation="eager",
+            local_files_only=True,
+        )
+    elif architecture == "mamba":
         modeling_mamba.selective_scan_fn = None
         modeling_mamba.mamba_inner_fn = None
         modeling_mamba.selective_state_update = None
@@ -60,6 +69,8 @@ def load_model(architecture: str, model_path: Path, device: str) -> torch.nn.Mod
         )
     model = model.to(device).train()
     model.config.use_cache = False
+    if hasattr(model.config, "text_config"):
+        model.config.text_config.use_cache = False
     return model
 
 
@@ -67,7 +78,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--architecture",
-        choices=("qwen", "mamba", "moe", "phi", "deepseek8", "generic"),
+        choices=("qwen", "mamba", "moe", "phi", "deepseek8", "generic", "ministral3"),
         default="qwen",
     )
     parser.add_argument("--model", type=Path, default=Path("/data1/tzh/models/Qwen/Qwen3-1.7B"))
@@ -117,14 +128,16 @@ def main() -> None:
     torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = False
     torch.backends.cudnn.allow_tf32 = False
     model = load_model(args.architecture, args.model, args.device)
-    inputs = torch.tensor([token_ids], dtype=torch.long, device=args.device)
+    inputs = text_step_values(record, torch.device(args.device))
 
     execution_seed = 24000 + args.state
     torch.manual_seed(execution_seed)
     torch.cuda.manual_seed_all(execution_seed)
     model.zero_grad(set_to_none=True)
     baseline_loss = model(
-        input_ids=inputs, labels=inputs, use_cache=False, return_dict=False
+        input_ids=inputs[0], labels=inputs[0],
+        position_ids=(inputs[1] if len(inputs) == 2 else None),
+        use_cache=False, return_dict=False
     )[0]
     baseline_loss.backward()
     baseline_loss_value = baseline_loss.detach().clone()
@@ -136,10 +149,15 @@ def main() -> None:
             super().__init__()
             self.subject = subject
 
-        def forward(self, values: torch.Tensor) -> torch.Tensor:
+        def forward(
+            self,
+            values: torch.Tensor,
+            position_ids: torch.Tensor | None = None,
+        ) -> torch.Tensor:
             return self.subject(
                 input_ids=values,
                 labels=values,
+                position_ids=position_ids,
                 use_cache=False,
                 return_dict=False,
             )[0]
@@ -169,7 +187,7 @@ def main() -> None:
         torch.manual_seed(execution_seed)
         torch.cuda.manual_seed_all(execution_seed)
         model.zero_grad(set_to_none=True)
-        candidate_loss = compiled(inputs)
+        candidate_loss = compiled(*inputs)
         capture.bind_user_outputs(candidate_loss)
         candidate_loss.register_hook(capture.bind_user_cotangent)
         candidate_loss.backward()
@@ -217,6 +235,10 @@ def main() -> None:
             "state": args.state,
             "sequence_length": len(token_ids),
             "token_ids_sha256": digest(token_ids),
+            "position_ids_sha256": (
+                digest(record["position_ids"])
+                if record.get("position_ids") is not None else None
+            ),
         },
         "rng_comparability": {
             "execution_seed": execution_seed,

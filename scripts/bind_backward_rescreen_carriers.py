@@ -60,6 +60,14 @@ def normalize_stack_path(raw: str) -> str:
 def build_meta_model(path: Path) -> torch.nn.Module:
     config = AutoConfig.from_pretrained(path, local_files_only=True, trust_remote_code=False)
     with torch.device("meta"):
+        if str(getattr(config, "model_type", "")) == "mistral3":
+            # Ministral-3 uses a multimodal outer configuration.  The generic
+            # causal-LM factory rejects that outer config in current
+            # Transformers even though the explicit class supports it.  Keep
+            # parameter binding on the same declared architecture used by the
+            # runtime capture instead of silently substituting the text model.
+            from transformers import Mistral3ForConditionalGeneration
+            return Mistral3ForConditionalGeneration(config)
         return AutoModelForCausalLM.from_config(config, trust_remote_code=False)
 
 

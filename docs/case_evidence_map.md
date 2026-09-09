@@ -3,7 +3,11 @@
 本页将现有材料按“实现身份 → 成因推导 → 三阶段测量与判断 → 修改及训练验证”连接。
 **同一行表示一个研究对象或机制族，不代表所有列来自同一协议。**
 配置不一致的证据明确分开，不能靠同名模型或算子拼成一次验证。
-本次是源码和结果核对，不是新 GPU 复现。
+历史记录按当时协议保留；2026-09-06 的实际写入复采和训练确认另行标明，不回填旧结论。
+
+本地图支持[主线四目标](current_mainline.md)的逐项核验，不把“材料存在”当作整体
+完成。特别是小幅 loss 分叉仍是有效后果记录，但不能代替可复现崩溃或有实际幅度
+的训练结果；有完整能量数据也不等于总体统计理论已经完备。
 
 ## 1. 主要机制与训练验证
 
@@ -12,6 +16,7 @@
 | Qwen 中 Liger fused CE，输出权重 dW | 分块累加误差进入 tied weight gradient；提高累加精度检查该来源 [L1] | 历史 4096 步直接作用及独立配对 loss 记录；统一 v2 测量另见 [P1] | 有成因、更新和 loss 材料；同状态直接测量与配对轨迹分开报告 |
 | 小型 GPT-2 中 Liger fused CE，tied embedding | 同类累加精度比较；不是上述 Qwen 模型 [L2] | 全参数自然训练；两条 4096 步数据流，一条续到 10000 步 | loss 分叉；不支持持续恶化。延续过程没有逐步直接/反馈分解 |
 | 同一小型 GPT-2 的新冻结数据流 111 | 相同 BF16/FP32 dW 累加精度比较 [L3] | 新的 4096 步配对运行；验证 loss 差 −0.00946 | 轨迹不同得到复现，但质量差方向未复现；不支持稳定收益或损害 |
+| WikiText / 真实 tokenizer 的四层语言模型，Liger dW 累加 | 同一训练末期的 128 个分块乘积相同，累加舍入精确重构实际 dW 差异 [L4] | 16 组新初始化先训练 1024 步，再全部续至 4096；32 条轨迹的后期窗口平均直接差异与首窗口同向；16 组最终 loss 均不同 | 连接同设置的来源、后期直接方向和 loss 分叉；30/32 条通过每个窗口内部两半方向检查，例外保留；不支持持续恶化 |
 | Phi-4，lm-head backward dX → final norm | 实际 backward 公式、舍入与状态配对；同 AdamW 随机舍入 [P2] | 32 步来源干预、另行 warm-state 4096 步记录；v2 显示相对 update 缩小 [P1,H1] | 来源干预与长程后果都要讲，但不是一次同状态同协议实验 |
 | Qwen3-1.7B，lm-head backward dX → final norm | 同类实际 backward 的传播差异 [P1,H1] | cold 短测未检出、另行 warm-state 长测有方向和配对 loss | 说明 optimizer 状态改变表现；不能永久标成“AdamW 抵消”，也不是独立于 Phi 的新公式 |
 | Qwen，v-proj；Mamba，in-proj | 矩阵乘误差与输出舍入的分解，按来源分别修改 [S1] | 多轮自然/固定条件测量、v2 缩放及各自轨迹 [P1,H1] | 保留 bias 与 loss 材料；旧“FP32 后再转 BF16”不等于已经去掉输出舍入 |
@@ -28,15 +33,22 @@
 | 对象 | 已有事实 | 在主线中的位置 |
 |---|---|---|
 | DeepSeek normalization 与 attention-projection backward | 各自新案例 cold 测量 update 缩小约 13.68% / 10.69%；warm 后不足 1%，同 warm 参数重置 moments 后大效应恢复 [D1] | optimizer 状态作用的证据；不是两个位置的底层误差成因已被完整证明 |
+| TorchAO AdamW8bit moment/parameter update | 分块越大，moment 与参数写入 distortion 越大；8 条冻结数据流的默认 256-block 评估 loss 差均为正，均值 +0.02718 [T1] | 机制确认、训练后果和修改成效分别判断；64-block 的训练改善未确认 |
+| Ministral fused RoPE / position scaling | 相同输入 Triton 比较中，高/低位置写入 RMS 约为 10.88%/8.35%；严格匹配的 cold/warm/reset-moments 为 8.67%/0.45%/10.02% [R2] | 新 Triton 家族复用和 optimizer-state 条件证据；不是 position scaling 唯一根因、总体效应或 loss 结果 |
 | 上述两个 DeepSeek 位置 + Phi loss/CE 对照 | 每项四条 32 步输入流；实际/反馈方向均 4/4，直接方向均 0/4；窗口平均 loss 差区间均跨零 [D2] | 单 checkpoint、指定参数范围的后果；不冒充独立初始化全参数训练或稳定质量降低 |
 | Liger dW，同 FP32 不同加法顺序 | 后 16 个输入中 15 个沿预测方向 [O1] | 非精度切换的补充机制预测；没有同实验的长程 loss 结论 |
 | DeepSeek layer-35 attention dV | 参考更新坐标中的确认和三阶段补测属于不同轮次 [M1] | 有条件方向的补充；不能借其他 DeepSeek 位置的 loss 补齐它 |
 | Phi normalization 0543 | 单行擦边方向在多重比较后未确认 [H1] | 未决候选；不能改成确证阴性，也不能计入强成因案例 |
 | Llama、Ministral lm-head | 历史同族长测 [H1] | 跨模型补充，不自动增加一个独立成因 |
 | Gemma-4、Phi loss/CE、冻结集合中的阴性与未决 | 有效阴性、零差异、反馈或无法执行记录分别保留 [B1] | 对照与范围限制，不为增加正例而改标签或删除 |
-| Phi `lm_head dX` 新实际写入重采 | 同一 32 状态中，AdamW 公式 update 的 RMS 比为 5.47%，BF16 参数实际写入差异逐位为零 [N1] | 证明 optimizer 计算值与已提交参数变化必须分开；不回写旧结果 |
-| DeepSeek 两个位置的新实际写入重采 | normalization / attention projection 的写入 RMS 比为 53.04% / 46.02%，相对缩放区间均完整越过 −1% [N2] | 证明这两个 cold-start effect 已提交到声明参数；属于已有开发案例的统一管线复核 |
-| Liger 新实际写入重采 | 公式 update RMS 0.653%；BF16 实际写入 RMS 4.936%；写入层 additive/residual 方向未确认 [N3] | 存储舍入扩大总差异但未确认强共同方向；不覆盖历史机制与长程协议 |
+| Phi `lm_head dX` v1 写入模拟 | 公式 RMS 5.47%，额外 BF16 舍入模拟给出零差异 [N1] | 模拟未通过实际 AdamW 一致性验收；v2 的 FP32 master 实际重放 RMS 约 5.47%，两种协议分开 |
+| DeepSeek 两个位置的 v1 写入模拟 | 历史模拟 RMS 为 53.04% / 46.02% [N2] | 不能直接称目标 AdamW 实际写入证明；旧值不删除，新 v2 重放另列 |
+| DeepSeek 两个位置与 Llama softmax backward 的实际写入复采 | v2 确认集合 RMS 约 53.04% / 46.04% / 13.71%；采用声明的 FP32 master | 原坐标能量支持有限集合差异；不是单凭 RMS 证明 bias 或 loss 后果，详见[修正记录](training_numerical_analysis_v2.md) |
+| Liger v1 写入模拟 | 公式 RMS 0.653%；额外 BF16 舍入模拟 RMS 4.936% [N3] | 保留历史数值但不作为当前写入证明；不覆盖历史机制与长程协议 |
+| Gemma 原内部平方和输出恢复 | 恢复历史的可训练参数范围，完整运行源码校验通过；32 状态实际写入复采，确认 RMS 7.678779% | 超过声明总 RMS 范围，不由能量单独证明 bias；早期绑定失败保留，不替换原案例 |
+| Granite MoE expert 输出累加，新模型/新家族 | 两边均 FP32，只反转 expert 累加次序；32 状态、同一分析公式；确认 RMS 0.002281% | 非零小差异对照，不是新增 bias 正例；未测该案例的长程 loss |
+
+这两项的协议、重算结果及失败原因见[实际写入 v2](training_numerical_analysis_v2.md)。
 
 ## 3. 为什么不能报一个没有限定的“案例总数”
 
@@ -92,6 +104,8 @@
   [实验说明](liger_single_boundary_collapse_experiment.md)。
 - **[L3]** [事前协议](../results/property/training_numerical_analysis_v1/training_utility_protocol.json)；
   [第三条数据流汇总](../results/property/training_numerical_analysis_v1/training_utility_summary.json)。
+- **[L4]** [同设置机制和延续说明](liger_language_mechanism_followup.md)；
+  [原始记录自动汇总](../results/property/training_numerical_analysis_v2/final_report.md)。
 - **[P1]** [五例原始汇总](../results/property/training_bias_profile_v2/five_case_summary.json)；
   [测量说明](five_case_training_bias_profile_v2.md)。
 - **[P2]** [Phi 传播分解](../results/property/bias_formation_final/phi_transport_decomposition.json)；
@@ -112,6 +126,9 @@
   [响应分解](../results/property/joint_bias_formation_v1/mu_parity_decomposition.json)；
   [saved-P 逐状态响应](../results/property/extended_unified_profiles_v1/saved_p_response.json)；
   [SiLU 逐状态响应](../results/property/extended_unified_profiles_v1/silu_response.json)。
+- **[R2]** [fused RoPE 核验](fused_rotary_position_scaling_audit.md)；
+  [固定集合条件摘要](../results/property/numerical_coverage_v1/ministral_fused_rotary_optimizer_condition_summary_v1.json)；
+  [算子族证据](../results/property/numerical_coverage_v1/ministral_fused_rotary_family_evidence_v1.json)。
 - **[A1]** [attention 推导](l23_qproj_tile.md)；
   [区域干预](../results/property/bias_formation_final/intervention_results/qwen_l23_attention_state.json)。
 - **[D1]** [新案例第一批](../results/property/training_bias_profile_v2/prospective_batch_1/summary.json)；
@@ -119,6 +136,9 @@
   [状态对照](../results/property/optimizer_condition_benchmark_v1/summary.json)。
 - **[D2]** [四条输入流后果](../results/property/independent_consequence_v1/summary.json)。
 - **[O1]** [FP32 顺序实验](../results/property/liger_fp32_chunk_order_v1/summary.json)。
+- **[T1]** [optimizer 家族与训练确认](optimizer_update_family_audit.md)；
+  [冻结协议](../results/property/numerical_coverage_v1/mamba_adamw8bit_training_confirmation_v1/protocol.json)；
+  [独立复算](../results/property/numerical_coverage_v1/mamba_adamw8bit_training_confirmation_v1/verification.json)。
 - **[M1]** [参考坐标确认](../results/property/bias_oracle_recovery/confirmation/result.json)；
   [三阶段补测](three_mechanism_profiles.md)。
 - **[B1]** [16 项原始汇总](../results/property/generalization_benchmark_v1/summary.json)；

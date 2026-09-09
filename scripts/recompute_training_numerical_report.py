@@ -24,7 +24,9 @@ def _sha(path: Path) -> str:
 def _preferred_profile(stage: dict, *, allow_corrected_seed_names: bool) -> tuple[str, dict] | None:
     if "EXACT" in stage:
         return "FULL_VECTOR", stage["EXACT"]["profile"]
-    corrected = sorted(name for name in stage if name.startswith("COUNT_SKETCH_V2"))
+    corrected = sorted(name for name in stage if name.startswith(
+        ("COUNT_SKETCH_V3_FLOAT64", "COUNT_SKETCH_V2")
+    ))
     if corrected:
         return corrected[0], stage[corrected[0]]["profile"]
     legacy_names = sorted(name for name in stage if name.startswith("SKETCH_SEED_"))
@@ -80,11 +82,16 @@ def main() -> None:
             else:
                 geometry, result = profile
                 bias["profile_geometry"] = geometry
-                intervals = {
+                population = result.get("population_inference")
+                intervals = ({
                     name: branch["confidence_interval_95"]
-                    for name, branch in result["population_inference"]["branches"].items()
+                    for name, branch in population.get("branches", {}).items()
                     if "confidence_interval_95" in branch
-                }
+                } if isinstance(population, dict) else {})
+                if not intervals:
+                    bias["direction_diagnostic_status"] = (
+                        "DESCRIPTIVE_FIXED_SUITE_ONLY_NO_POPULATION_INTERVALS"
+                    )
                 classified = classify_fixed_suite_update_equivalence(
                     intervals if set(intervals) == set(MARGINS) else None,
                     MARGINS, total_rms=total_rms,

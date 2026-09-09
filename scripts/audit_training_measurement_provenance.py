@@ -39,6 +39,8 @@ def main() -> None:
                 for view in views:
                     if view == "EXACT":
                         geometries.append("FULL_VECTOR")
+                    elif view.startswith("COUNT_SKETCH_V3_FLOAT64"):
+                        geometries.append("COUNT_SKETCH_V3_FLOAT64")
                     elif view.startswith("COUNT_SKETCH_V2"):
                         geometries.append("COUNT_SKETCH_V2")
                     elif is_new_recapture:

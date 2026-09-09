@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import gzip
 import hashlib
+import inspect
 import json
 import os
 from pathlib import Path
@@ -40,7 +41,11 @@ from scripts.frozen_state_checkpoint import (  # noqa: E402
     state_checkpoint_path,
     write_gzip,
 )
-from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime  # noqa: E402
+from scripts.qwen_candidate_step import (  # noqa: E402
+    LossStep,
+    configure_candidate_runtime,
+    text_step_values,
+)
 from scripts.run_generated_fp32_screen import (  # noqa: E402
     file_digest,
     gradient_digest,
@@ -58,18 +63,65 @@ def canonical_hash(value: Any) -> str:
     ).hexdigest()
 
 
-def runtime_environment() -> dict[str, str]:
+def _python_source_identity(value: Any) -> dict[str, Any]:
+    """Return the exact Python source that supplied a runtime object.
+
+    Package versions are not sufficient provenance: two environments can
+    report the same Transformers version while importing different model
+    implementations.  Missing/non-file sources are retained explicitly.
+    """
+    cls = value if inspect.isclass(value) else type(value)
+    module = sys.modules.get(cls.__module__)
+    source_value = getattr(module, "__file__", None)
+    source = Path(source_value).resolve() if source_value else None
+    return {
+        "class": f"{cls.__module__}.{cls.__qualname__}",
+        "source_path": str(source) if source is not None else None,
+        "source_sha256": (
+            hashlib.sha256(source.read_bytes()).hexdigest()
+            if source is not None and source.is_file()
+            else None
+        ),
+    }
+
+
+def runtime_environment(model: Any | None = None) -> dict[str, Any]:
     import transformers
     import triton
 
-    return {
+    result: dict[str, Any] = {
         "python_executable": str(Path(sys.executable).resolve()),
         "python_version": sys.version.split()[0],
         "torch_version": torch.__version__,
         "torch_cuda_version": str(torch.version.cuda),
         "transformers_version": transformers.__version__,
+        "transformers_source_path": str(Path(transformers.__file__).resolve()),
+        "transformers_source_sha256": hashlib.sha256(
+            Path(transformers.__file__).resolve().read_bytes()
+        ).hexdigest(),
         "triton_version": triton.__version__,
     }
+    if model is not None:
+        result["model_class_source"] = _python_source_identity(model)
+        implementation_sources: dict[str, dict[str, Any]] = {}
+        for module in model.modules():
+            module_name = type(module).__module__
+            if not module_name.startswith("transformers.models."):
+                continue
+            identity = _python_source_identity(module)
+            key = identity["source_path"] or identity["class"]
+            row = implementation_sources.setdefault(key, {
+                "source_path": identity["source_path"],
+                "source_sha256": identity["source_sha256"],
+                "classes": [],
+            })
+            row["classes"].append(identity["class"])
+        for row in implementation_sources.values():
+            row["classes"] = sorted(set(row["classes"]))
+        result["transformers_model_implementation_sources"] = [
+            implementation_sources[key] for key in sorted(implementation_sources)
+        ]
+    return result
 
 
 def wrapper_modules(modules: list[Any]) -> list[tuple[Any, str]]:
@@ -87,7 +139,7 @@ def wrapper_modules(modules: list[Any]) -> list[tuple[Any, str]]:
 
 
 def freeze_or_validate_release(
-    *, modules: list[tuple[Any, str]], release: Path, architecture: str,
+    *, modules: list[tuple[Any, str]], model: Any, release: Path, architecture: str,
     input_bank: Path, state: dict[str, Any], allow_graph_breaks: bool,
 ) -> tuple[Path, Path]:
     trace = release / "trace"
@@ -123,6 +175,7 @@ def freeze_or_validate_release(
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(Path(module.__file__).resolve(), target)
     tokens = state.get("token_ids", state.get("input_ids"))
+    position_ids = state.get("position_ids")
     capture = {
         "schema": "kernel-analyzer-in-process-frozen-candidate-v1",
         "status": "COMPLETE_EXACT_EXECUTED_FORWARD_BACKWARD_SOURCE_CAPTURE",
@@ -133,10 +186,13 @@ def freeze_or_validate_release(
             "state_id": state.get("sequence_id", state.get("state_id", "0")),
             "sequence_length": len(tokens),
             "token_ids_sha256": canonical_hash(tokens),
+            "position_ids_sha256": (
+                canonical_hash(position_ids) if position_ids is not None else None
+            ),
             "input_bank_sha256": file_digest(input_bank),
         },
         "modules": source_rows,
-        "runtime_environment": runtime_environment(),
+        "runtime_environment": runtime_environment(model),
         "phase_module_counts": {key.upper(): value for key, value in phase_counts.items()},
         "same_process_measurement_required": True,
     }
@@ -160,7 +216,7 @@ def main() -> None:
     parser.add_argument(
         "--architecture", choices=(
             "qwen", "mamba", "phi", "deepseek8", "generic", "gemma4",
-            "mistral3",
+            "mistral3", "ministral3",
         ),
         required=True,
     )
@@ -205,15 +261,15 @@ def main() -> None:
         LossStep(model), backend="inductor",
         fullgraph=not args.allow_graph_breaks, dynamic=False,
     )
-    warm_tokens = states[0].get("token_ids", states[0].get("input_ids"))
-    warm = torch.tensor([warm_tokens], dtype=torch.long, device=device)
+    warm = text_step_values(states[0], device)
     model.zero_grad(set_to_none=True)
-    candidate(warm).backward()
+    candidate(*warm).backward()
     torch.cuda.synchronize(device)
     modules = list(PyCodeCache.modules[start:])
     wrappers = wrapper_modules(modules)
     inventory_path, campaign_path = freeze_or_validate_release(
-        modules=wrappers, release=args.release_dir, architecture=args.architecture,
+        modules=wrappers, model=model, release=args.release_dir,
+        architecture=args.architecture,
         input_bank=args.input_bank, state=states[0],
         allow_graph_breaks=args.allow_graph_breaks,
     )
@@ -288,11 +344,11 @@ def main() -> None:
         if left_done or right_done:
             raise RuntimeError("joint state resume is not atomic")
         tokens = state.get("token_ids", state.get("input_ids"))
-        values = torch.tensor([tokens], dtype=torch.long, device=device)
+        values = text_step_values(state, device)
         seed = 24000 + state_index
         torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
         model.zero_grad(set_to_none=True)
-        baseline_loss = candidate(values); baseline_loss.backward(); torch.cuda.synchronize(device)
+        baseline_loss = candidate(*values); baseline_loss.backward(); torch.cuda.synchronize(device)
         baseline = {"loss": tensor_digest(baseline_loss), "gradients": gradient_digest(model)}
         triton_repeats, nontriton_repeats = [], []
         for repeat in range(args.repeat):
@@ -309,7 +365,7 @@ def main() -> None:
             )
             model.zero_grad(set_to_none=True)
             with triton, nontriton:
-                loss = candidate(values); loss.backward()
+                loss = candidate(*values); loss.backward()
             torch.cuda.synchronize(device)
             observed = {"loss": tensor_digest(loss), "gradients": gradient_digest(model)}
             if observed != baseline:

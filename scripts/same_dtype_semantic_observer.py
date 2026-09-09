@@ -18,6 +18,14 @@ from scripts.generated_nontriton_fp32_observer import _AttributeProxy
 TensorSink = Callable[[str, torch.Tensor, Mapping[str, Any]], None]
 
 
+def snapshot_external_inputs(args, kwargs):
+    """Preserve read values before out= storage is changed by mm/bmm/addmm."""
+    clone = lambda value: value.detach().clone() if isinstance(value, torch.Tensor) else value
+    return tuple(clone(x) for x in args), {
+        name: clone(x) for name, x in kwargs.items() if name != 'out'
+    }
+
+
 class DirectPrimitiveEndpointObserver:
     """Bind one primitive endpoint in the *current* generated execution.
 
@@ -302,14 +310,18 @@ class SameDtypeSemanticCandidateObserver:
                     if key not in self.nontriton_rows:
                         return _original(*args, **kwargs)
                     row = self._take_nontriton(*key)
+                    # Snapshot read operands before an out= call can overwrite
+                    # aliased storage. References must not read post-call inputs.
+                    runtime_args, runtime_kwargs = snapshot_external_inputs(args, kwargs)
                     result = _original(*args, **kwargs)
                     value = kwargs.get("out", result)
                     if not isinstance(value, torch.Tensor):
                         raise RuntimeError("external candidate endpoint is not a tensor")
                     self._emit_nontriton(row, value, "output_0", {
                         "external_symbol": _symbol,
-                        "runtime_args": args,
-                        "runtime_kwargs": kwargs,
+                        "runtime_args": runtime_args,
+                        "runtime_kwargs": runtime_kwargs,
+                        "reference_operand_capture": "PRE_INVOCATION_CLONE",
                     })
                     return result
 
@@ -483,6 +495,11 @@ class SameDtypeSemanticCandidateObserver:
                             "stride": list(value.stride()),
                             "dtype": str(value.dtype),
                             "runtime_pointers": runtime_pointers,
+                            "input_output_storage_aliases": [
+                                name for name, operand in pointers.items()
+                                if name.startswith("in_ptr")
+                                and operand.untyped_storage().data_ptr() == value.untyped_storage().data_ptr()
+                            ],
                         })
                         self.task_counts[str(task["task_id"])] += 1
                     return result

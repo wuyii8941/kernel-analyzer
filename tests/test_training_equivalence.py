@@ -4,6 +4,8 @@ import pytest
 import numpy as np
 
 from kernel_analyzer.training_equivalence import (
+    bounded_population_aligned_equivalence,
+    bounded_population_total_energy_equivalence,
     classify_fixed_suite_update_equivalence,
     classify_training_equivalence,
     fixed_suite_total_rms_from_joint_gram,
@@ -259,6 +261,52 @@ def test_population_energy_detects_effect_beyond_margin() -> None:
     assert result["decision"] == "NON_EQUIVALENT"
 
 
+def test_bounded_population_energy_can_prove_equivalence_without_normal_approximation() -> None:
+    result = bounded_population_total_energy_equivalence(
+        np.zeros(2048), np.ones(2048), rms_margin=0.01,
+        effect_energy_upper_bound=0.0, repair_energy_upper_bound=1.0,
+        bound_provenance="protocol-enforced exact candidate/reference identity bound",
+    )
+    assert result["decision"] == "EQUIVALENT"
+    assert result["assumption_scope"] == (
+        "FINITE_SAMPLE_INDEPENDENT_UNITS_WITH_PREDECLARED_ENERGY_BOUNDS"
+    )
+
+
+def test_bounded_population_energy_does_not_miss_rare_unseen_boundary_event() -> None:
+    n = 64
+    margin = 0.01
+    rare_probability = 1.0 / (20.0 * n)
+    result = bounded_population_total_energy_equivalence(
+        np.zeros(n), np.ones(n), rms_margin=margin,
+        effect_energy_upper_bound=margin**2 / rare_probability,
+        repair_energy_upper_bound=1.0,
+        bound_provenance="predeclared finite-support construction",
+    )
+    # The old studentized rule signs these all-zero observations as equivalent,
+    # although the unobserved rare event puts the population exactly on the
+    # non-equivalence boundary.  The finite-sample bounded rule stays open.
+    assert result["decision"] == "INCONCLUSIVE"
+
+
+def test_bounded_population_energy_rejects_observed_bound_violation() -> None:
+    with pytest.raises(ValueError, match="exceeds its declared protocol bound"):
+        bounded_population_total_energy_equivalence(
+            [0.2], [1.0], rms_margin=0.01,
+            effect_energy_upper_bound=0.1, repair_energy_upper_bound=1.0,
+            bound_provenance="predeclared test bound",
+        )
+
+
+def test_bounded_population_energy_requires_bound_provenance() -> None:
+    with pytest.raises(ValueError, match="bound_provenance"):
+        bounded_population_total_energy_equivalence(
+            [0.0], [1.0], rms_margin=0.01,
+            effect_energy_upper_bound=0.0, repair_energy_upper_bound=1.0,
+            bound_provenance="",
+        )
+
+
 def test_population_aligned_uses_ratio_of_means() -> None:
     energy = np.tile([1.0, 100.0], 16)
     gains = np.tile([1.0, -1.0], 16)
@@ -267,3 +315,36 @@ def test_population_aligned_uses_ratio_of_means() -> None:
     )
     assert result["ratio_of_means_estimate"] == pytest.approx(-99.0 / 101.0)
     assert result["decision"] == "NON_EQUIVALENT"
+
+
+def test_bounded_population_aligned_can_prove_equivalence() -> None:
+    result = bounded_population_aligned_equivalence(
+        np.zeros(2048), np.ones(2048), margin=0.01,
+        effect_energy_upper_bound=0.0, repair_energy_upper_bound=1.0,
+        bound_provenance="protocol-enforced exact candidate/reference identity bound",
+    )
+    assert result["decision"] == "EQUIVALENT"
+    assert result["ratio_of_means_estimate"] == 0.0
+
+
+def test_bounded_population_aligned_keeps_rare_boundary_event_open() -> None:
+    n = 64
+    margin = 0.01
+    rare_probability = 1.0 / (20.0 * n)
+    possible_inner = margin / rare_probability
+    result = bounded_population_aligned_equivalence(
+        np.zeros(n), np.ones(n), margin=margin,
+        effect_energy_upper_bound=possible_inner**2,
+        repair_energy_upper_bound=1.0,
+        bound_provenance="predeclared finite-support construction",
+    )
+    assert result["decision"] == "INCONCLUSIVE"
+
+
+def test_bounded_population_aligned_rejects_bound_violation() -> None:
+    with pytest.raises(ValueError, match="exceeds its declared bound"):
+        bounded_population_aligned_equivalence(
+            [2.0], [1.0], margin=0.01,
+            effect_energy_upper_bound=1.0, repair_energy_upper_bound=1.0,
+            bound_provenance="predeclared test bound",
+        )

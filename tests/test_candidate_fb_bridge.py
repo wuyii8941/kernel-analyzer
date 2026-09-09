@@ -7,10 +7,28 @@ from scripts.build_candidate_fb_bridge import (
     executable_aot_graph_projection,
     match_segmented_executable_graphs,
     owner_index,
+    wrapper_segments,
 )
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_current_inductor_trace_names_map_to_phase_local_graph_indices() -> None:
+    paths = [
+        "torchinductor/model__0_forward_1.0/output_code.py",
+        "torchinductor/model__1_forward_4.2/output_code.py",
+        "torchinductor/model__0_backward_3.1/output_code.py",
+        "torchinductor/model__1_backward_6.3/output_code.py",
+        "model__0_forward_segment7_executed/output_code.py",
+    ]
+    assert wrapper_segments(paths) == {
+        paths[0]: ("FORWARD", 0),
+        paths[1]: ("FORWARD", 1),
+        paths[2]: ("BACKWARD", 0),
+        paths[3]: ("BACKWARD", 1),
+        paths[4]: ("FORWARD", 7),
+    }
 
 
 def test_executable_graph_identity_ignores_only_observation_provenance() -> None:

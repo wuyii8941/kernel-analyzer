@@ -1,5 +1,9 @@
 # Training Numerical Analysis v1
 
+历史结果提示：本页使用额外 BF16 舍入的写入模拟，未通过与目标 AdamW 写入一致性的
+验收。数值保留作历史记录，不作为当前真实参数写入证明。修正见
+[readback-v2](training_numerical_analysis_v2.md)，新旧参数表示不可直接混比。
+
 本页由 `scripts/build_training_numerical_analysis_report.py` 从机器记录生成。
 它不替代原始结果，也不将重新分析写成未见确认。
 

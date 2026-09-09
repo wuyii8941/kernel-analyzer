@@ -36,13 +36,19 @@ from kernel_analyzer.bias_formation_v21 import (  # noqa: E402
     summarize_streamed_state_vector_files,
 )
 from kernel_analyzer.antithetic import reflected_endpoint  # noqa: E402
+from kernel_analyzer.numerical_campaign import reference_scope  # noqa: E402
+from kernel_analyzer.source_reference_registry import get_reference  # noqa: E402
 from kernel_analyzer.reference_relative_oracle import (  # noqa: E402
     ReferenceRelativeObservation,
     certify_reference_relative,
 )
-from kernel_analyzer.update_write import parameter_write_delta  # noqa: E402
+from kernel_analyzer.update_write import adamw_parameter_write, WRITE_PROTOCOL  # noqa: E402
 from scripts.aot_capture import AOTForwardBackwardCapture  # noqa: E402
-from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime  # noqa: E402
+from scripts.qwen_candidate_step import (  # noqa: E402
+    LossStep,
+    configure_candidate_runtime,
+    text_step_values,
+)
 from scripts.run_frozen_candidate_fp32_screen import wrapper_modules  # noqa: E402
 from scripts.run_generated_fp32_screen import file_digest, load_model  # noqa: E402
 from scripts.run_same_dtype_semantic_oracle import load  # noqa: E402
@@ -101,7 +107,12 @@ def spool_vector(root: Path, case_id: str, layer: str, partition: str,
 
 def common_state(state: dict[str, Any], seed: int, weights_digest: str) -> dict[str, str]:
     tokens = state.get("input_ids", state.get("token_ids"))
-    input_digest = canonical(tokens)
+    positions = state.get("position_ids")
+    input_digest = (
+        canonical(tokens)
+        if positions is None
+        else canonical({"token_ids": tokens, "position_ids": positions})
+    )
     rng_digest = canonical({"cpu_seed": seed, "cuda_seed": seed})
     optimizer = canonical({"name": "STATELESS_SGD_FP32_MASTER", "lr": LR})
     none = canonical({"name": "none"})
@@ -211,7 +222,7 @@ def main() -> None:
         "--architecture",
         choices=(
             "qwen", "phi", "mamba", "deepseek8", "deepseek8b",
-            "gemma4", "generic",
+            "gemma4", "generic", "ministral3",
         ),
         required=True,
     )
@@ -320,7 +331,8 @@ def main() -> None:
         task_id = str(case["task_id"])
         custom = case.get("reference_cut_task")
         if case.get("reference_method") in {
-            "PARTIAL_REDUCTION_FROM_BOUND_INPUT", "EXTERNAL_FP32_RECOMPUTE"
+            "PARTIAL_REDUCTION_FROM_BOUND_INPUT", "EXTERNAL_FP32_RECOMPUTE",
+            "REGISTERED_SAME_INPUT_REFERENCE",
         }:
             continue
         if custom is not None:
@@ -347,11 +359,22 @@ def main() -> None:
     )
     if canonical(frozen_tokens) != capture["input"]["token_ids_sha256"]:
         raise RuntimeError("the release anchor token sequence changed")
+    frozen_positions = frozen_states[0].get("position_ids")
+    expected_position_digest = capture["input"].get("position_ids_sha256")
+    if ((canonical(frozen_positions) if frozen_positions is not None else None)
+            != expected_position_digest):
+        raise RuntimeError("the release anchor position IDs changed")
     expected_length = int(capture["input"]["sequence_length"])
     selected_states = states[args.warmup_steps : args.warmup_steps + args.states]
     if any(len(state.get("input_ids", state.get("token_ids"))) != expected_length
            for state in states[: args.warmup_steps + args.states]):
         raise RuntimeError("state bank changes the frozen sequence shape")
+    if any(
+        state.get("position_ids") is not None
+        and len(state["position_ids"]) != expected_length
+        for state in states[: args.warmup_steps + args.states]
+    ):
+        raise RuntimeError("state bank position IDs change the frozen sequence shape")
     state_ids = [str(state.get("state_id", state.get("sequence_id", index)))
                  for index, state in enumerate(selected_states)]
     if len(state_ids) != len(set(state_ids)):
@@ -372,9 +395,8 @@ def main() -> None:
     start = len(PyCodeCache.modules)
     candidate = torch.compile(LossStep(model), backend="inductor",
                               fullgraph=not args.allow_graph_breaks, dynamic=False)
-    warm_tokens = states[0].get("input_ids", states[0].get("token_ids"))
-    warm = torch.tensor([warm_tokens], dtype=torch.long, device=device)
-    model.zero_grad(set_to_none=True); candidate(warm).backward(); torch.cuda.synchronize(device)
+    warm = text_step_values(states[0], device)
+    model.zero_grad(set_to_none=True); candidate(*warm).backward(); torch.cuda.synchronize(device)
     modules = list(PyCodeCache.modules[start:])
     validate_runtime_structure(wrapper_modules(modules), capture)
 
@@ -392,7 +414,7 @@ def main() -> None:
                 LossStep(model), backend=reference_capture.inductor_partition_backend(),
                 fullgraph=not args.allow_graph_breaks, dynamic=False)
             model.zero_grad(set_to_none=True)
-            warm_loss = reference(warm); reference_capture.bind_user_outputs(warm_loss)
+            warm_loss = reference(*warm); reference_capture.bind_user_outputs(warm_loss)
             warm_loss.register_hook(reference_capture.bind_user_cotangent)
             warm_loss.backward(); torch.cuda.synchronize(device)
         if not all(reference_cut_gates(reference_capture).values()):
@@ -407,11 +429,10 @@ def main() -> None:
     warm_second = {name: torch.zeros_like(parameters[name], dtype=torch.float32)
                    for name in carriers}
     for warm_index, state in enumerate(states[:args.warmup_steps]):
-        tokens = state.get("input_ids", state.get("token_ids"))
-        values = torch.tensor([tokens], dtype=torch.long, device=device)
+        values = text_step_values(state, device)
         seed = 31000 + warm_index
         torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
-        model.zero_grad(set_to_none=True); candidate(values).backward()
+        model.zero_grad(set_to_none=True); candidate(*values).backward()
         torch.cuda.synchronize(device)
         with torch.no_grad():
             for carrier in carriers:
@@ -468,11 +489,10 @@ def main() -> None:
             else args.states // 2 if args.extended_confirmation else 16
         )
         partition = "calibration" if state_index < split_index else "confirmation"
-        tokens = state.get("input_ids", state.get("token_ids"))
-        values = torch.tensor([tokens], dtype=torch.long, device=device)
+        values = text_step_values(state, device)
         seed = 41000 + state_index
         torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
-        model.zero_grad(set_to_none=True); candidate_loss = candidate(values); candidate_loss.backward()
+        model.zero_grad(set_to_none=True); candidate_loss = candidate(*values); candidate_loss.backward()
         torch.cuda.synchronize(device)
         baseline_gradients = {
             carrier: parameters[carrier].grad.detach().float().cpu().clone()
@@ -489,7 +509,7 @@ def main() -> None:
         if reference is not None and reference_capture is not None:
             active["sink"] = reference_sink
             torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
-            model.zero_grad(set_to_none=True); reference_loss = reference(values)
+            model.zero_grad(set_to_none=True); reference_loss = reference(*values)
             reference_capture.bind_user_outputs(reference_loss)
             reference_loss.register_hook(reference_capture.bind_user_cotangent)
             reference_loss.backward(); torch.cuda.synchronize(device); active["sink"] = None
@@ -518,6 +538,15 @@ def main() -> None:
                 references[observed_id] = align_reference_to_candidate(
                     reference, tensor
                 ).detach().clone()
+            elif case.get("reference_method") == "REGISTERED_SAME_INPUT_REFERENCE":
+                specification = get_reference(str(case["reference_family"]))
+                reference = specification.evaluate(
+                    _metadata, tensor, dict(case["reference_contract"]),
+                    variant=str(case["reference_variant"]),
+                )
+                references[observed_id] = align_reference_to_candidate(
+                    reference, tensor
+                ).detach().clone()
             reference_value = align_reference_to_candidate(references[observed_id], tensor)
             observed_locals[observed_id] = (
                 tensor.detach().float().cpu() - reference_value.detach().float().cpu()
@@ -530,7 +559,7 @@ def main() -> None:
             task_rows=list(tasks.values()), sink=sham_sink,
             include_unresolved_tasks=True)
         with sham:
-            sham_loss = candidate(values); sham_loss.backward()
+            sham_loss = candidate(*values); sham_loss.backward()
         torch.cuda.synchronize(device); sham.validate()
         if set(observed_locals) != set(task_ids):
             raise RuntimeError("shared sham did not observe the complete hotspot matrix")
@@ -557,7 +586,7 @@ def main() -> None:
                 task_rows=[task], sink=repair_sink,
                 include_unresolved_tasks=True)
             with repair:
-                repair_loss = candidate(values); repair_loss.backward()
+                repair_loss = candidate(*values); repair_loss.backward()
             torch.cuda.synchronize(device); repair.validate()
             repair_gradient = parameters[carrier].grad.detach().float().cpu().clone()
             gradient_delta = baseline_gradients[carrier] - repair_gradient
@@ -603,8 +632,14 @@ def main() -> None:
                     candidate_update - repair_update, repair_update, statistics,
                 )
                 base_stored = parameters[carrier].detach().cpu()
-                candidate_write = parameter_write_delta(base_stored, candidate_update)
-                repair_write = parameter_write_delta(base_stored, repair_update)
+                candidate_write = adamw_parameter_write(
+                    base_stored, baseline_gradients[carrier], first=first, second=second,
+                    prior_step=prior_step, learning_rate=LR,
+                )
+                repair_write = adamw_parameter_write(
+                    base_stored, repair_gradient, first=first, second=second,
+                    prior_step=prior_step, learning_rate=LR,
+                )
                 append_v2_contrast(
                     v2_stores[task_id], "PARAMETER_WRITE",
                     candidate_write - repair_write, repair_write, statistics,
@@ -666,7 +701,7 @@ def main() -> None:
                     task_rows=[task], sink=reflected_sink,
                     include_unresolved_tasks=True)
                 with antithetic:
-                    antithetic_loss = candidate(values); antithetic_loss.backward()
+                    antithetic_loss = candidate(*values); antithetic_loss.backward()
                 torch.cuda.synchronize(device); antithetic.validate()
                 if parameters[carrier].grad is None or not reflected:
                     raise RuntimeError("antithetic arm did not reach the carrier")
@@ -732,11 +767,22 @@ def main() -> None:
             })
             case_id = str(case.get("case_id", task_id.replace(":", "_")))
             if args.engineering_reach_only:
+                baseline_gradient = baseline_gradients[carrier]
                 reach_rows[task_id].append({
                     "state_id": state_id,
                     "endpoint_changed_coordinates": delivered["changed"],
                     "local_error_energy": float(torch.sum(observed_locals[task_id].double() ** 2)),
+                    "carrier_baseline_gradient_energy": float(torch.sum(
+                        baseline_gradient.double() ** 2
+                    )),
                     "carrier_gradient_error_energy": float(torch.sum(gradient_delta.double() ** 2)),
+                    "carrier_training_reachable": bool(torch.count_nonzero(baseline_gradient)),
+                    "implementation_difference_reaches_carrier": bool(
+                        torch.count_nonzero(gradient_delta)
+                    ),
+                    # Historical field: this meant difference reach, not
+                    # ordinary training reach.  Keep it for old consumers and
+                    # expose the two meanings explicitly above.
                     "carrier_reached": bool(torch.count_nonzero(gradient_delta)),
                 })
             elif legacy_formation_enabled:
@@ -828,6 +874,9 @@ def main() -> None:
                 "stages": finish_v2_stages(v2_stores[task_id]),
                 "original_coordinate_statistics": v2_original_statistics[task_id],
                 "primary_update_endpoint": "PARAMETER_WRITE",
+                "parameter_write_protocol": WRITE_PROTOCOL,
+                "contrast_id": "LOCAL_IMPLEMENTATION_SUBSTITUTION",
+                "reference_comparison_scope": reference_scope(case.get("reference_method")),
                 "secondary_update_endpoint": "ADAMW_UPDATE",
                 "claim_boundary": (
                     "Matched input states at one checkpoint under the declared "
@@ -891,6 +940,12 @@ def main() -> None:
                 "case_id": str(case.get("case_id", str(case["task_id"]).replace(":", "_"))),
                 "task_id": str(case["task_id"]), "carrier": str(case["carrier"]),
                 "records": reach_rows[str(case["task_id"])],
+                "carrier_training_reachable_any_state": any(
+                    row["carrier_training_reachable"]
+                    for row in reach_rows[str(case["task_id"])]),
+                "implementation_difference_reaches_carrier_any_state": any(
+                    row["implementation_difference_reaches_carrier"]
+                    for row in reach_rows[str(case["task_id"])]),
                 "carrier_reached_any_state": any(
                     row["carrier_reached"] for row in reach_rows[str(case["task_id"])]),
             } for case in cases],
@@ -901,7 +956,13 @@ def main() -> None:
         print(json.dumps({
             "event": "ENGINEERING_REACH_COMPLETE", "output": str(target),
             "cases": len(cases),
-            "reached": sum(row["carrier_reached_any_state"] for row in reach_payload["cases"]),
+            "training_reachable": sum(
+                row["carrier_training_reachable_any_state"] for row in reach_payload["cases"]
+            ),
+            "difference_reached": sum(
+                row["implementation_difference_reaches_carrier_any_state"]
+                for row in reach_payload["cases"]
+            ),
         }), flush=True)
         return
 

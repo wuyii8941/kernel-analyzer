@@ -29,6 +29,9 @@ GRAPH_CALL = re.compile(
 )
 ASSIGNMENT = re.compile(r"^(\w+) = async_compile\.triton\(")
 SEGMENT = re.compile(r"_(forward|backward)_segment(\d+)_executed")
+MODERN_TRACE_SEGMENT = re.compile(
+    r"_(forward|backward)_(\d+)\.(\d+)(?:/|$)"
+)
 FROM_NODE = re.compile(r"\(name=([^,]+),")
 
 
@@ -173,6 +176,40 @@ def wrapper_segment(source_path: str) -> tuple[str, int]:
     if not match:
         raise ValueError(f"wrapper segment identity is absent: {source_path}")
     return match.group(1).upper(), int(match.group(2))
+
+
+def wrapper_segments(source_paths: Sequence[str]) -> dict[str, tuple[str, int]]:
+    """Map legacy and current Inductor wrapper names to phase-local graphs.
+
+    Older archived traces encode ``segment0_executed`` directly.  Current
+    Inductor debug directories instead use process-wide compile identifiers,
+    for example ``model__0_forward_1.0`` and ``model__0_backward_3.1``.  Those
+    identifiers are not AOT graph indices.  Rank distinct compile identifiers
+    separately within forward and backward phases, preserving execution order.
+    """
+    result: dict[str, tuple[str, int]] = {}
+    modern: dict[str, list[tuple[int, int, str]]] = defaultdict(list)
+    for source_path in sorted(set(str(value) for value in source_paths)):
+        legacy = SEGMENT.search(source_path)
+        if legacy:
+            result[source_path] = (
+                legacy.group(1).upper(), int(legacy.group(2)),
+            )
+            continue
+        current = MODERN_TRACE_SEGMENT.search(source_path)
+        if not current:
+            raise ValueError(
+                f"wrapper segment identity is absent: {source_path}"
+            )
+        modern[current.group(1).upper()].append((
+            int(current.group(2)), int(current.group(3)), source_path,
+        ))
+    for phase, rows in modern.items():
+        compile_ids = sorted({compile_id for compile_id, _trace_id, _path in rows})
+        graph_index = {compile_id: index for index, compile_id in enumerate(compile_ids)}
+        for compile_id, _trace_id, source_path in rows:
+            result[source_path] = (phase, graph_index[compile_id])
+    return result
 
 
 def parse_wrapper(
@@ -729,10 +766,11 @@ def main() -> None:
                     "theorem": theorem,
                 }
 
+    source_segments = wrapper_segments(row["source_path"] for row in all_rows)
     results = []
     unresolved = Counter()
     for candidate in all_rows:
-        phase, segment = wrapper_segment(candidate["source_path"])
+        phase, segment = source_segments[candidate["source_path"]]
         graph_index = 0 if normalized_segmented else segment
         prefix = f"{phase.lower()}_g{segment}__" if normalized_segmented else ""
         provenance = call_provenance.get(

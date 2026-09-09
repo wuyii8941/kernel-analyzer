@@ -4,12 +4,14 @@
 
 只在以下文档维护当前研究定义，避免多份“唯一主线”互相覆盖：
 
-1. [当前主线](current_mainline.md)：**实现与参考 → 三阶段测量 → 有界判断 → 修改与训练验证**。
-2. [统一分析 v1 结果](training_numerical_analysis_v1.md)：新采集、实际参数写入及无法执行状态。
+1. [当前主线](current_mainline.md)：**框架与机制、真实 Triton、统计理论、强训练后果**；
+   实现与参考 → 成因条件 → 三阶段测量与统计判断 → 修改预测与训练验证。
+2. [实际写入分析 v2](training_numerical_analysis_v2.md)：真实 AdamW 重放、原案例恢复、新家族与训练确认；[v1](training_numerical_analysis_v1.md)保留历史写入模拟的限制。
 3. [实验方法](method.md)：比较对象、推导条件、三阶段测量和训练后果。
 4. [案例与证据地图](case_evidence_map.md)：每类证据的来源、配置和缺口。
 5. [主张账本](claims.md)：什么已经支持，什么不能推出。
-6. [研究出发点与贡献边界](novelty_positioning.md)。
+6. [研究出发点与贡献边界](novelty_positioning.md)：2026-09-07 公开文献核查及具体创新主张。
+7. [完整新计划验收范围](new_mainline_execution_status.md)与[自动采集入口](numerical_coverage_execution.md)：区分已列出、可执行、已测量和仍未完成。
 
 [讲稿](talk_beyond_tolerance.md)由用户单独维护，本轮未改。它不是实验状态数据库；
 其中旧数字或标签以对应实验协议与上述来源说明理解，不因本轮整理静默改写。
@@ -35,6 +37,9 @@
 | [16 项原始汇总](../results/property/generalization_benchmark_v1/summary.json) | 冻结验证集；不能自动计为成因与 loss 已闭合的案例数 |
 | [等价 v2](../results/property/generalization_benchmark_v1/equivalence_v2.json) | 原数据上的方法修订；完整 Gram 与随机摘要保证不同 |
 | [optimizer 状态对照](../results/property/optimizer_condition_benchmark_v1/summary.json) | warm/reset 区分参数与 moments 条件 |
+| [optimizer-update 新家族](optimizer_update_family_audit.md) | TorchAO 8-bit AdamW 的固定 gradient 机制、实际参数写入与八条数据流训练确认 |
+| [fused causal attention 新家族](fused_attention_family_audit.md) | Qwen 第一层 Flash-SDPA 与 math attention 的固定集合三阶段测量 |
+| [fused RoPE / position scaling](fused_rotary_position_scaling_audit.md) | Ministral 真实 Triton 相同输入比较与 optimizer-state 条件核验 |
 | [四输入流训练后果](../results/property/independent_consequence_v1/summary.json) | 同一 checkpoint、指定参数，非独立全参数预训练 |
 | [最新 Liger 全参数训练](liger_single_boundary_collapse_experiment.md) | 2048、4096、10000 步设置及 loss 符号反转 |
 

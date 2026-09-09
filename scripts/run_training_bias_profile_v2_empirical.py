@@ -35,7 +35,7 @@ sys.path[:0] = [
 
 from kernel_analyzer.short_persistence import count_sketch_mapping  # noqa: E402
 from kernel_analyzer.training_bias_profile import matched_training_bias_profile  # noqa: E402
-from kernel_analyzer.update_write import parameter_write_delta  # noqa: E402
+from kernel_analyzer.update_write import adamw_parameter_write, WRITE_PROTOCOL  # noqa: E402
 from scripts.qwen_candidate_step import LossStep, configure_candidate_runtime  # noqa: E402
 from scripts.run_generated_fp32_screen import load_model, tensor_digest  # noqa: E402
 from scripts.run_heldout_lmhead_consequence import adam_delta  # noqa: E402
@@ -148,7 +148,9 @@ def _compact_views(value: torch.Tensor | np.ndarray) -> tuple[dict[str, np.ndarr
             sketch += np.bincount(
                 buckets, weights=signs * values, minlength=SKETCH_DIMENSION,
             )
-        result[f"COUNT_SKETCH_V2_SEED_{seed}"] = sketch.astype(np.float32)
+        if not np.isfinite(sketch).all():
+            raise ValueError("CountSketch accumulation is nonfinite")
+        result[f"COUNT_SKETCH_V3_FLOAT64_SEED_{seed}"] = sketch
     return result, coordinates
 
 
@@ -181,6 +183,8 @@ def _original_coordinate_row(
         "effect_energy": float(torch.dot(effect64, effect64).item()),
         "repair_energy": float(torch.dot(repair64, repair64).item()),
         "effect_repair_inner_product": float(torch.dot(effect64, repair64).item()),
+        "nonzero_effect_coordinates": int(torch.count_nonzero(effect64).item()),
+        "accumulation_dtype": "float64",
     }
 
 
@@ -236,7 +240,7 @@ def _finish_stages(store: dict[str, dict[str, dict[str, Any]]]) -> dict[str, Any
                     repairs,
                     calibration_indices=CALIBRATION,
                     confirmation_indices=CONFIRMATION,
-                    inference_unit_ids=unit_ids,
+                    inference_unit_ids=None,
                     minimum_independent_units=8,
                     signflip_draws=4000,
                     seed=20261101 + stage_index * 100 + view_index * 3,
@@ -408,8 +412,8 @@ def run_compiled(case: str, device: torch.device) -> dict[str, Any]:
             learning_rate=config["lr"], beta1=0.9, beta2=0.95,
         )
         base_stored = base.to(parameter.dtype)
-        write_c = parameter_write_delta(base_stored, update_c)
-        write_r = parameter_write_delta(base_stored, update_r)
+        write_c = adamw_parameter_write(base_stored, grad_c, learning_rate=config["lr"])
+        write_r = adamw_parameter_write(base_stored, grad_r, learning_rate=config["lr"])
         _append_contrast(store, "LOCAL", local_effect, local_repair, original_statistics)
         _append_contrast(
             store, "PARAMETER_GRADIENT", grad_c - grad_r, grad_r, original_statistics
@@ -465,6 +469,8 @@ def run_compiled(case: str, device: torch.device) -> dict[str, Any]:
         "stages": _finish_stages(store),
         "original_coordinate_statistics": original_statistics,
         "primary_update_endpoint": "PARAMETER_WRITE",
+        "parameter_write_protocol": WRITE_PROTOCOL,
+        "contrast_id": "LOCAL_IMPLEMENTATION_SUBSTITUTION",
         "secondary_update_endpoint": "ADAMW_UPDATE",
         "claim_boundary": (
             "32 frozen non-overlapping input windows at one checkpoint under cold-start "
@@ -603,8 +609,8 @@ def run_liger(device: torch.device) -> dict[str, Any]:
             endpoint_count,
         )
         base_stored = base.to(parameter.dtype)
-        write_c = parameter_write_delta(base_stored, update_c)
-        write_r = parameter_write_delta(base_stored, update_r)
+        write_c = adamw_parameter_write(base_stored, grad_c, learning_rate=1e-4)
+        write_r = adamw_parameter_write(base_stored, grad_r, learning_rate=1e-4)
         _append_contrast(
             store, "PARAMETER_GRADIENT", grad_c - grad_r, grad_r, original_statistics
         )
@@ -660,6 +666,8 @@ def run_liger(device: torch.device) -> dict[str, Any]:
             "LOCAL": "UNAVAILABLE_IN_THIS_STREAMED_LIGER_CAPTURE",
         },
         "primary_update_endpoint": "PARAMETER_WRITE",
+        "parameter_write_protocol": WRITE_PROTOCOL,
+        "contrast_id": "LOCAL_IMPLEMENTATION_SUBSTITUTION",
         "secondary_update_endpoint": "ADAMW_UPDATE",
         "claim_boundary": (
             "32 frozen non-overlapping input windows at one checkpoint under cold-start "

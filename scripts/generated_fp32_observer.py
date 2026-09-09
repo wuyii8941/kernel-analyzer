@@ -25,7 +25,7 @@ def tensor_runtime_contract(value: torch.Tensor) -> dict[str, Any]:
         "storage_offset": int(value.storage_offset()),
     }
 
-from forkcert.directional_error_sketch import (
+from kernel_analyzer.directional_error_sketch import (
     SCHEMA_VERSION as DIRECTIONAL_SKETCH_SCHEMA_VERSION,
     fixed_flat_coordinate_indices,
 )

@@ -60,8 +60,19 @@ def prepare_values(
         tokens = state.get("token_ids", state.get("input_ids"))
         if tokens is None:
             raise RuntimeError("text state has no token IDs")
-        values = (torch.tensor([tokens], dtype=torch.long, device=device),)
-        return values, {"token_ids_sha256": hashlib.sha256(json.dumps(tokens).encode()).hexdigest()}
+        values = [torch.tensor([tokens], dtype=torch.long, device=device)]
+        positions = state.get("position_ids")
+        if positions is not None:
+            if len(positions) != len(tokens):
+                raise RuntimeError("position IDs differ from token length")
+            values.append(torch.tensor([positions], dtype=torch.long, device=device))
+        return tuple(values), {
+            "token_ids_sha256": hashlib.sha256(json.dumps(tokens).encode()).hexdigest(),
+            "position_ids_sha256": (
+                hashlib.sha256(json.dumps(positions).encode()).hexdigest()
+                if positions is not None else None
+            ),
+        }
     image_path = Path(state["image_path"])
     image_sha = hashlib.sha256(image_path.read_bytes()).hexdigest()
     if image_sha != state["image_sha256"]:
@@ -146,6 +157,15 @@ def load_model(architecture: str, path: Path, device: torch.device) -> torch.nn.
             raise RuntimeError("Gemma 4 requires a Transformers build with Gemma4 support")
         model = Gemma4ForConditionalGeneration.from_pretrained(
             path, dtype=torch.bfloat16, attn_implementation="eager", local_files_only=True
+        )
+    elif architecture == "ministral3":
+        # Current Ministral-3 checkpoints must keep their declared nested text
+        # configuration.  Rewriting it to a generic Mistral config can discard
+        # Ministral-only RoPE scaling fields and silently remove the target
+        # computation from the compiled training graph.
+        model = Mistral3ForConditionalGeneration.from_pretrained(
+            path, dtype=torch.bfloat16, attn_implementation="eager",
+            local_files_only=True,
         )
     elif architecture == "mistral3":
         # Some Ministral-3 checkpoints label the nested text config as

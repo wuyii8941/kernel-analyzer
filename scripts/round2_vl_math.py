@@ -8,6 +8,7 @@ import copy
 import gzip
 import hashlib
 import json
+from fractions import Fraction
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -28,6 +29,7 @@ FORMULAS: dict[str, dict[str, str]] = {
     "aten.arange.default": {"map": "y_i=i", "adjoint": "no differentiable input"},
     "aten.arange.start": {"map": "y_i=start+i", "adjoint": "no differentiable input"},
     "aten.bitwise_and.Tensor": {"map": "y=x bitwise_and z", "adjoint": "undefined/non-differentiable integer map"},
+    "aten.bitwise_or.Tensor": {"map": "y=x bitwise_or z", "adjoint": "non-differentiable integer or boolean map"},
     "aten.bmm.default": {"map": "y_b=A_b@B_b", "adjoint": "dA_b=q_b@B_b^T; dB_b=A_b^T@q_b"},
     "aten.cat.default": {"map": "y=concat(x_k,dim)", "adjoint": "dx_k=slice(q,offset_k,size_k)"},
     "aten.clone.default": {"map": "y=value_copy(x)", "adjoint": "dx=q"},
@@ -44,6 +46,7 @@ FORMULAS: dict[str, dict[str, str]] = {
     "aten.eq.Scalar": {"map": "y=(x==c)", "adjoint": "no differentiable output"},
     "aten.expand.default": {"map": "y broadcasts size-one axes of x", "adjoint": "dx=sum_to_shape_x(q)"},
     "aten.fill.Scalar": {"map": "all output coordinates equal c", "adjoint": "no input-value adjoint"},
+    "aten.floor.default": {"map": "y=floor(x)", "adjoint": "zero almost everywhere; no differentiable position input in the declared use"},
     "aten.gelu.default": {"map": "y=GELU_approx(x) using the declared approximation", "adjoint": "dx=q*dGELU_approx(x)/dx"},
     "aten.gelu_backward.default": {"map": "dx=q*dGELU_approx(x)/dx", "adjoint": "actual GELU VJP kernel"},
     "aten.index.Tensor": {"map": "y=x[index tuple]", "adjoint": "dx=scatter_add(q,index tuple)"},
@@ -84,6 +87,7 @@ FORMULAS: dict[str, dict[str, str]] = {
     "aten.sub.Tensor": {"map": "y=a-alpha*b", "adjoint": "da=sum_to(q); db=sum_to(-alpha*q)"},
     "aten.sum.dim_IntList": {"map": "y=sum_dim(x)", "adjoint": "dx=expand(q,input shape)"},
     "aten.t.default": {"map": "y=x^T for rank-two x", "adjoint": "dx=q^T"},
+    "aten.tanh.default": {"map": "y=tanh(x)", "adjoint": "dx=q*(1-y*y)"},
     "aten.transpose.int": {"map": "y swaps axes d0,d1", "adjoint": "dx swaps the same axes of q"},
     "aten.unbind.int": {"map": "returns all axis-d slices as a tuple", "adjoint": "stack tuple cotangents on axis d"},
     "aten.unsqueeze.default": {"map": "insert one size-one axis", "adjoint": "squeeze that axis from q"},
@@ -995,6 +999,85 @@ def _verify_matrix_composite(
     return None
 
 
+def _verify_reused_bmm_composite(forward_nodes, backward_nodes, forward_index, backward_index):
+    """Prove batched products whose saved layouts are shared across AOT units.
+
+    Match exact dataflow, never tensor values or shape-only correspondence.
+    Only identity expands and flattening of leading batch axes are supported.
+    """
+    allowed = {"aten.expand.default", "aten.view.default", "aten.bmm.default", "aten.permute.default"}
+    if not forward_nodes or any(n["target"] not in allowed for n in [*forward_nodes, *backward_nodes]):
+        return None
+    products = [n for n in forward_nodes if n["target"] == "aten.bmm.default"]
+    gradients = [n for n in backward_nodes if n["target"] == "aten.bmm.default"]
+    if len(products) != 1 or len(gradients) != 2:
+        return None
+    index = {**backward_index, **forward_index, **{n["name"]: n for n in backward_nodes}}
+    checks = {}
+    try:
+        product = products[0]
+        a_name, b_name = [_node_argument(x) for x in _args(product)]
+        a, b = index[a_name], index[b_name]
+        used_forward = {product["name"]}
+
+        def flattened_operand(node):
+            if node["target"] != "aten.view.default":
+                return None
+            used_forward.add(node["name"])
+            parent = index[_node_argument(_args(node)[0])]
+            used_forward.add(parent["name"])
+            shape = _tensor_shape(parent.get("tensor_meta"))
+            flat = _tensor_shape(node.get("tensor_meta"))
+            if shape is None or len(shape) < 3 or flat != (_product(shape[:-2]), *shape[-2:]):
+                return None
+            if tuple(_args(node)[1]) != flat or _tensor_dtype(node.get("tensor_meta")) != _tensor_dtype(parent.get("tensor_meta")):
+                return None
+            if parent["target"] == "aten.expand.default":
+                source = index[_node_argument(_args(parent)[0])]
+                if _tensor_shape(source.get("tensor_meta")) != shape or tuple(_args(parent)[1]) != shape or _tensor_dtype(source.get("tensor_meta")) != _tensor_dtype(parent.get("tensor_meta")):
+                    return None
+            return shape
+
+        a_shape, b_shape = flattened_operand(a), flattened_operand(b)
+        def is_transpose(name, operand):
+            n = index.get(name)
+            return n is not None and n["target"] == "aten.permute.default" and _args(n) == [{"node": operand}, [0, 2, 1]] and _tensor_shape(n.get("tensor_meta")) == (_tensor_shape(index[operand].get("tensor_meta"))[0], _tensor_shape(index[operand].get("tensor_meta"))[2], _tensor_shape(index[operand].get("tensor_meta"))[1]) and _tensor_dtype(n.get("tensor_meta")) == _tensor_dtype(index[operand].get("tensor_meta"))
+
+        lefts = [g for g in gradients if is_transpose(_node_argument(_args(g)[1]), b_name)]
+        rights = [g for g in gradients if is_transpose(_node_argument(_args(g)[0]), a_name)]
+        if len(lefts) != 1 or len(rights) != 1 or lefts[0]["name"] == rights[0]["name"]:
+            return _proof_record("REUSED_BATCHED_MATMUL_UNRESOLVED", "Y=A@B", "unresolved saved operands", {"exact_saved_transposes_bound": False})
+        da, db = lefts[0], rights[0]
+        q_name = _node_argument(_args(da)[0])
+        q = index[q_name]
+        y_views = [n for n in forward_nodes if n["target"] == "aten.view.default" and _node_argument(_args(n)[0]) == product["name"]]
+        da_views = [n for n in backward_nodes if n["target"] == "aten.view.default" and _node_argument(_args(n)[0]) == da["name"]]
+        db_views = [n for n in backward_nodes if n["target"] == "aten.view.default" and _node_argument(_args(n)[0]) == db["name"]]
+        if not (len(y_views) == len(da_views) == len(db_views) == 1):
+            return _proof_record("REUSED_BATCHED_MATMUL_UNRESOLVED", "Y=A@B", "unresolved output layouts", {"exact_output_layouts_bound": False})
+        y, da_view, db_view = y_views[0], da_views[0], db_views[0]
+        shape_a, shape_b = _tensor_shape(a.get("tensor_meta")), _tensor_shape(b.get("tensor_meta"))
+        shape_p = _tensor_shape(product.get("tensor_meta"))
+        transpose_names = {_node_argument(_args(da)[1]), _node_argument(_args(db)[0])}
+        used_forward |= {y["name"], *transpose_names}
+        used_backward = {q_name, da["name"], db["name"], da_view["name"], db_view["name"], *transpose_names}
+        checks = {
+            "operand_layouts_are_identity_expand_and_batch_flatten": a_shape is not None and b_shape is not None,
+            "bmm_shapes_match_exact_operands": shape_a is not None and shape_b is not None and shape_a[0] == shape_b[0] and shape_a[2] == shape_b[1] and shape_p == (shape_a[0], shape_a[1], shape_b[2]),
+            "forward_output_restores_leading_batch_axes": a_shape is not None and b_shape is not None and a_shape[:-2] == b_shape[:-2] and _tensor_shape(y.get("tensor_meta")) == (*a_shape[:-2], a_shape[-2], b_shape[-1]) and tuple(_args(y)[1]) == _tensor_shape(y.get("tensor_meta")),
+            "one_exact_upstream_cotangent": q["target"] == "aten.view.default" and _node_argument(_args(db)[1]) == q_name and _node_argument(_args(q)[0]) not in {None, *(n["name"] for n in [*forward_nodes, *backward_nodes])} and _tensor_shape(q.get("tensor_meta")) == shape_p and tuple(_args(q)[1]) == shape_p,
+            "derivative_bmm_shapes_exact": _tensor_shape(da.get("tensor_meta")) == shape_a and _tensor_shape(db.get("tensor_meta")) == shape_b,
+            "gradient_views_restore_operands": tuple(_args(da_view)[1]) == a_shape and _tensor_shape(da_view.get("tensor_meta")) == a_shape and tuple(_args(db_view)[1]) == b_shape and _tensor_shape(db_view.get("tensor_meta")) == b_shape,
+            "all_unit_nodes_covered": all(n["name"] in used_forward for n in forward_nodes) and all(n["name"] in used_backward for n in backward_nodes),
+            "all_actual_nodes_share_forward_origin": forward_nodes[0].get("source_fn_stack") is not None and all(n.get("fwd_source_fn_stack") == forward_nodes[0].get("source_fn_stack") for n in backward_nodes),
+            "no_unmodelled_keywords": all(not _kwargs(n) for n in [*forward_nodes, *backward_nodes]),
+            "dtype_preserved": len({_tensor_dtype(n.get("tensor_meta")) for n in [a, b, *forward_nodes, *backward_nodes]}) == 1,
+        }
+        return _proof_record("REUSED_LAYOUT_BATCHED_MATMUL_ADJOINT", "Y=reshape(A@B)", "dA=reshape(Q@B^T); dB=reshape(A^T@Q), using exact saved layouts", checks)
+    except (IndexError, KeyError, TypeError, ValueError):
+        return _proof_record("REUSED_BATCHED_MATMUL_UNRESOLVED", "Y=A@B", "unresolved", {"exact_argument_binding": False})
+
+
 def _verify_layout_and_routing_composite(
     forward_nodes: Sequence[Mapping[str, Any]],
     backward_nodes: Sequence[Mapping[str, Any]],
@@ -1316,6 +1399,72 @@ def _verify_nonlinear_and_normalization_composite(
     ft = tuple(str(node["target"]) for node in forward_nodes)
     bt = tuple(str(node["target"]) for node in backward_nodes)
     try:
+        cubic_tanh_forward = (
+            "prims.convert_element_type.default", "aten.mul.Tensor", "aten.mul.Tensor",
+            "aten.mul.Tensor", "aten.add.Tensor", "aten.mul.Tensor", "aten.mul.Tensor",
+            "aten.tanh.default", "aten.add.Tensor", "aten.mul.Tensor", "prims.convert_element_type.default",
+        )
+        cubic_tanh_backward = (
+            "prims.convert_element_type.default", "aten.mul.Tensor", "aten.mul.Tensor",
+            "aten.sub.Tensor", "aten.mul.Tensor", "aten.add.Tensor", "aten.mul.Tensor",
+            "aten.mul.Tensor", "aten.mul.Tensor", "aten.add.Tensor", "aten.mul.Tensor",
+            "prims.convert_element_type.default",
+        )
+        if ft == cubic_tanh_forward and bt == cubic_tanh_backward:
+            x, x2, x3, ax3, inner, scaled, hx, t, one_plus, y, restore_y = forward_nodes
+            q, left, t2, sech2, three_ax2, one_plus_derivative, derivative, right_head, right, total, dq, restore_q = backward_nodes
+            source = _input_node(x, forward_index)
+            dtype = _tensor_dtype(source.get("tensor_meta")) if source else None
+            shape = _tensor_shape(source.get("tensor_meta")) if source else None
+            def nr(n): return {"node": n["name"]}
+            a, c, h = _args(ax3)[1], _args(scaled)[1], _args(hx)[1]
+            three_a = _args(three_ax2)[1]
+            checks = {
+                "input_cast_exact": source is not None and _args(x) == [nr(source), "torch.float32"],
+                "cubic_input_chain_exact": _args(x2) == [nr(x), nr(x)] and _args(x3) == [nr(x2), nr(x)] and _args(ax3)[0] == nr(x3),
+                "inner_polynomial_exact": _args(inner) == [nr(x), nr(ax3)] and _args(scaled)[0] == nr(inner),
+                "forward_gate_exact": _args(hx)[0] == nr(x) and _args(t) == [nr(scaled)] and _args(one_plus) == [nr(t), 1] and _args(y) == [nr(hx), nr(one_plus)],
+                "upstream_cotangent_is_external": _node_argument(_args(q)[0]) not in {None, *(n["name"] for n in [*forward_nodes, *backward_nodes])} and _args(q)[1] == "torch.float32",
+                "linear_derivative_term_exact": _args(left) == [nr(one_plus), h],
+                "tanh_derivative_factor_exact": _args(t2) == [nr(t), nr(t)] and _args(sech2) == [1, nr(t2)],
+                "nominal_decimal_cubic_coefficient_derivative_exact": Fraction(str(three_a)) == 3 * Fraction(str(a)),
+                "inner_derivative_chain_exact": _args(three_ax2)[0] == nr(x2) and _args(one_plus_derivative) == [nr(three_ax2), 1] and _args(derivative) == [nr(one_plus_derivative), c],
+                "product_and_chain_rules_exact": _args(right_head) == [nr(hx), nr(sech2)] and _args(right) == [nr(right_head), nr(derivative)] and _args(total) == [nr(left), nr(right)] and _args(dq) == [nr(q), nr(total)],
+                "output_casts_restore_input_dtype": _args(restore_y) == [nr(y), dtype] and _args(restore_q) == [nr(dq), dtype] and all(_tensor_dtype(n.get("tensor_meta")) == dtype for n in (restore_y, restore_q)),
+                "intermediate_dtype_fp32": all(_tensor_dtype(n.get("tensor_meta")) == "torch.float32" for n in [*forward_nodes[:-1], *backward_nodes[:-1]]),
+                "all_shapes_pointwise": shape is not None and all(_tensor_shape(n.get("tensor_meta")) == shape for n in [*forward_nodes, *backward_nodes]),
+                "all_actual_nodes_share_forward_origin": x.get("source_fn_stack") is not None and all(n.get("fwd_source_fn_stack") == x.get("source_fn_stack") for n in backward_nodes),
+                "no_unmodelled_keywords": all(not _kwargs(n) for n in [*forward_nodes, *backward_nodes]),
+            }
+            proof = _proof_record("NOMINAL_DECIMAL_CUBIC_TANH_GATE_ADJOINT",
+                "y=h*x*(1+tanh(c*(x+a*x^3))) with explicitly declared decimal coefficients",
+                "dy/dx=h*(1+t)+h*x*(1-t*t)*c*(1+3*a*x*x); multiply by q", checks)
+            proof["coefficient_interpretation"] = "NOMINAL_DECIMAL_CONSTANTS_BEFORE_BINARY_REPRESENTATION"
+            proof["binary_coefficient_relation_error"] = str(Fraction(float(three_a)) - 3 * Fraction(float(a)))
+            proof["claim_boundary"] = "Exact nominal real-arithmetic polynomial/gate derivative only. Binary constant representation, coefficient rounding, casts and finite-precision operations remain numerical errors to measure; binary coefficient derivative identity is NOT claimed."
+            return proof
+        tanh_vjp = ("prims.convert_element_type.default", "prims.convert_element_type.default",
+                    "aten.mul.Tensor", "aten.sub.Tensor", "aten.mul.Tensor",
+                    "prims.convert_element_type.default")
+        if ft == ("aten.tanh.default",) and bt == tanh_vjp:
+            f = forward_nodes[0]
+            q, saved, square, complement, product, restore = backward_nodes
+            source = _input_node(f, forward_index)
+            shape = _tensor_shape(source.get("tensor_meta")) if source else None
+            dtype = _tensor_dtype(source.get("tensor_meta")) if source else None
+            checks = {
+                "forward_input_resolved": source is not None,
+                "one_external_cotangent": _node_argument(_args(q)[0]) not in {None, f["name"], *(n["name"] for n in backward_nodes)},
+                "saved_value_is_exact_forward_tanh": _node_argument(_args(saved)[0]) == f["name"],
+                "casts_compute_in_fp32": all(str(_args(n)[1]) == "torch.float32" and _tensor_dtype(n.get("tensor_meta")) == "torch.float32" for n in (q, saved)),
+                "square_uses_same_saved_value_twice": [_node_argument(v) for v in _args(square)] == [saved["name"], saved["name"]],
+                "complement_is_one_minus_square": _args(complement) == [1, {"node": square["name"]}] and _kwargs(complement).get("alpha", 1) == 1,
+                "cotangent_multiplies_derivative": [_node_argument(v) for v in _args(product)] == [q["name"], complement["name"]],
+                "gradient_restores_input_dtype": _node_argument(_args(restore)[0]) == product["name"] and str(_args(restore)[1]) == dtype and _tensor_dtype(restore.get("tensor_meta")) == dtype,
+                "pointwise_shapes_match": shape is not None and all(_tensor_shape(n.get("tensor_meta")) == shape for n in [f, *backward_nodes]),
+                "all_backward_nodes_have_exact_forward_origin": f.get("source_fn_stack") is not None and all(n.get("fwd_source_fn_stack") == f.get("source_fn_stack") for n in backward_nodes),
+            }
+            return _proof_record("DECOMPOSED_TANH_ADJOINT", "y=tanh(x)", "dx=q*(1-y*y), with declared dtype casts", checks)
         decomposed_softmax = (
             "prims.convert_element_type.default", "aten.amax.default",
             "aten.sub.Tensor", "aten.exp.default", "aten.sum.dim_IntList",
@@ -1710,7 +1859,17 @@ def _verify_index_embedding_conv_composite(
             "aten.exp.default", "aten.sum.dim_IntList", "aten.mul.Tensor",
             "aten.sub.Tensor",
         )
-        if ft == decomposed_cross_entropy and bt == decomposed_cross_entropy_vjp:
+        saved_zero_cross_entropy = decomposed_cross_entropy[:7] + decomposed_cross_entropy[8:]
+        if ft in {decomposed_cross_entropy, saved_zero_cross_entropy} and bt == decomposed_cross_entropy_vjp:
+            if ft == saved_zero_cross_entropy:
+                safe_target_node = forward_nodes[7]
+                zero_name = _node_argument(_args(safe_target_node)[2])
+                zero_node = forward_index.get(zero_name) or backward_index.get(zero_name)
+                if zero_node is None or zero_node["target"] != "aten.full.default" or float(_args(zero_node)[1]) != 0.0:
+                    return _proof_record("SAVED_CROSS_ENTROPY_ZERO_UNRESOLVED", "cross entropy", "unresolved safe-target zero", {"saved_zero_constant_exact": False})
+                # This node was already proved in its own origin. Insert it only
+                # into the local symbolic description; do not change graph ownership.
+                forward_nodes = [*forward_nodes[:7], zero_node, *forward_nodes[7:]]
             (maximum, shifted, exponent, denominator, log_denominator, logp,
              valid, zero_index, safe_target, target_column, selected, selected_vector,
              negative_selected, zero_loss, masked_loss, valid_count, count_fp32,
@@ -1824,12 +1983,25 @@ def _verify_index_embedding_conv_composite(
             "aten.full.default", "aten.index_put.default",
             "prims.convert_element_type.default",
         )
+        decomposed_embedding_vjp_with_saved_mask = (
+            "prims.convert_element_type.default", "aten.where.self",
+            "aten.full.default", "aten.index_put.default", "prims.convert_element_type.default",
+        )
         if ft == ("aten.embedding.default",) and bt in {
             decomposed_embedding_vjp,
             decomposed_embedding_vjp_with_explicit_zero,
+            decomposed_embedding_vjp_with_saved_mask,
         }:
             embedding = forward_nodes[0]
-            if bt == decomposed_embedding_vjp_with_explicit_zero:
+            if bt == decomposed_embedding_vjp_with_saved_mask:
+                q32, masked_q, zero_weight, scatter, restore = backward_nodes
+                saved_index = {**backward_index, **forward_index}
+                mask_column = saved_index[_node_argument(_args(masked_q)[0])]
+                padding_mask = saved_index[_node_argument(_args(mask_column)[0])]
+                zero_scalar = saved_index[_node_argument(_args(masked_q)[1])]
+                if mask_column["target"] != "aten.unsqueeze.default" or padding_mask["target"] != "aten.eq.Scalar":
+                    return _proof_record("SAVED_EMBEDDING_MASK_UNRESOLVED", "embedding with padding", "unresolved mask", {"exact_padding_mask_program": False})
+            elif bt == decomposed_embedding_vjp_with_explicit_zero:
                 (
                     q32, padding_mask, mask_column, zero_scalar, masked_q,
                     zero_weight, scatter, restore,
@@ -3032,6 +3204,71 @@ def _derive_backward_only_partition_replays(
                     "exact saved-value rematerialization inside the actual backward program",
                     checks,
                 )
+            elif node.get("target") == "aten.view.default":
+                source_shape = _tensor_shape(source.get("tensor_meta")) if source else None
+                output_shape = _tensor_shape(node.get("tensor_meta"))
+                requested = args[1] if len(args) == 2 and isinstance(args[1], (list, tuple)) else None
+                valid_shape = requested is not None and all(isinstance(d, int) and d >= 0 for d in requested)
+                checks = {
+                    **common,
+                    "original_layout_operation_supported": node.get("original_aten") in {"aten.view.default", "aten.reshape.default", "aten._unsafe_view.default"},
+                    "fully_declared_target_shape": valid_shape and output_shape == tuple(requested),
+                    "element_count_preserved": source_shape is not None and output_shape is not None and _product(source_shape) == _product(output_shape),
+                    "layout_preserves_dtype": source is not None and _tensor_dtype(node.get("tensor_meta")) == _tensor_dtype(source.get("tensor_meta")),
+                }
+                proof = _proof_record(
+                    "BACKWARD_PARTITION_VIEW_REMATERIALIZATION", "y=reshape_linear_order(x,declared shape)",
+                    "exact reshape in the actual backward program; inverse reshape routes its adjoint", checks,
+                )
+            elif node.get("target") == "aten.sum.dim_IntList":
+                source_shape = _tensor_shape(source.get("tensor_meta")) if source else None
+                rank = len(source_shape) if source_shape is not None else 0
+                dims = args[1] if len(args) >= 2 and isinstance(args[1], (list, tuple)) else None
+                valid_axes = (len(args) in {2, 3} and rank > 0 and dims is not None and len(dims) > 0
+                              and all(isinstance(d, int) and -rank <= d < rank for d in dims)
+                              and len({d % rank for d in dims}) == len(dims))
+                axes = {d % rank for d in dims} if valid_axes else set()
+                keepdim = args[2] if len(args) == 3 else False
+                expected = tuple(1 if i in axes else d for i, d in enumerate(source_shape or ())) if keepdim else tuple(d for i, d in enumerate(source_shape or ()) if i not in axes)
+                checks = {
+                    **common,
+                    "original_operation_is_sum": node.get("original_aten") == "aten.sum.dim_IntList",
+                    "declared_reduction_axes": valid_axes and isinstance(keepdim, bool),
+                    "output_shape_matches_reduction": valid_axes and _tensor_shape(node.get("tensor_meta")) == expected,
+                    "floating_sum_preserves_dtype": source is not None and _floating_tensor(source) and _tensor_dtype(node.get("tensor_meta")) == _tensor_dtype(source.get("tensor_meta")) and _kwargs(node).get("dtype") in {None, _tensor_dtype(source.get("tensor_meta"))},
+                }
+                proof = _proof_record(
+                    "BACKWARD_PARTITION_SUM_REMATERIALIZATION", "y=sum(x,declared axes,keepdim)",
+                    "declared sum inside actual backward; expand its cotangent along the reduced axes", checks,
+                )
+            elif node.get("target") == "aten.permute.default":
+                source_shape = _tensor_shape(source.get("tensor_meta")) if source else None
+                rank = len(source_shape) if source_shape is not None else 0
+                dims = args[1] if len(args) == 2 and isinstance(args[1], (tuple, list)) else []
+                valid_axes = (
+                    rank > 0 and len(dims) == rank
+                    and all(isinstance(d, int) and -rank <= d < rank for d in dims)
+                    and len({d % rank for d in dims}) == rank
+                )
+                axes = [d % rank for d in dims] if valid_axes else []
+                changed = [i for i, d in enumerate(axes) if i != d]
+                transpose = len(changed) in {0, 2} and all(axes[axes[i]] == i for i in range(len(axes)))
+                checks = {
+                    **common,
+                    "valid_bijective_axis_permutation": valid_axes,
+                    "original_layout_operation_supported": (
+                        node.get("original_aten") == "aten.permute.default"
+                        or (node.get("original_aten") == "aten.transpose.int" and transpose)
+                    ),
+                    "output_metadata_is_declared_permutation": valid_axes and _tensor_shape(node.get("tensor_meta")) == tuple(source_shape[d] for d in axes),
+                    "layout_preserves_dtype": source is not None and _tensor_dtype(node.get("tensor_meta")) == _tensor_dtype(source.get("tensor_meta")),
+                }
+                proof = _proof_record(
+                    "BACKWARD_PARTITION_PERMUTE_REMATERIALIZATION",
+                    "y=permute(x,declared bijective axes)",
+                    "exact layout rematerialization in the actual backward; inverse permutation routes its adjoint",
+                    checks,
+                )
             elif node.get("target") == "prims.convert_element_type.default":
                 checks = {
                     **common,
@@ -3333,6 +3570,9 @@ def main() -> None:
             or _verify_matrix_composite(
                 forward_nodes, vjp_backward_nodes, forward_index,
                 partitioned_origin_proofs,
+            )
+            or _verify_reused_bmm_composite(
+                forward_nodes, vjp_backward_nodes, forward_index, unit_backward_index,
             )
             or _verify_layout_and_routing_composite(
                 forward_nodes, vjp_backward_nodes, forward_index,
