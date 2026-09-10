@@ -60,6 +60,20 @@ def test_support_stages_do_not_confuse_binding_with_measurement():
     assert result['support_counts_are_positions_not_distinct_operator_families'] is True
 
 
+def test_valid_backend_counts_only_measured_positions():
+    result = summarize([
+        row('triton', ['ROW_SUM'], runtime_measurement_status='VERIFIED',
+            implementation_kind='TRITON'),
+        row('external', ['ROW_SUM'], runtime_measurement_status='RECORDED_MEASUREMENT_CHECKED',
+            implementation_kind='EXTERN'),
+        row('pending', ['ROW_SUM'], implementation_kind='TRITON'),
+    ], [])
+    family = next(r for r in result['families'] if r['family_id'] == 'REDUCTION')
+    assert family['valid_measurement_implementation_kind_counts'] == {
+        'TRITON': 1, 'EXTERN': 1,
+    }
+
+
 def test_additional_evidence_does_not_invent_inventory_positions():
     extra=dict(family='SELECTION',artifact_sha256='digest',evidence_kind='FIXED_SUITE',
                measurement_status='VALID_FIXED_SUITE_ENGINEERING_MEASUREMENT')

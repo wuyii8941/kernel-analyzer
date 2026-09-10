@@ -19,7 +19,7 @@ attention。这不是已验证的 16 类 bias，也不是穷尽分类；每族
 必须分别报告已识别、已接入、有效测量与 bias/训练后果证据。卷积和 GELU
 已有历史记录，新的统一接入不能算首次发现。
 
-2026-09-08 的批量更新见 `operator_family_report_v7.json`：当前完整清单有
+2026-09-08 的批量更新见 `operator_family_report_v7.json`：当时完整清单有
 173,736 个 release-qualified 输出位置，其中 421 个完成有效测量。Softmax
 归类 120 个位置，28 个已完成 32-state 三阶段测量、92 个仍待测；embedding
 lookup 有 1 个已完成位置。Top-k/sort 是常规 ATen 路径的 24-state 固定集合
@@ -38,6 +38,12 @@ AdamW 与标准 AdamW，保留实际生成的 Triton 源码；确认集合参数
 11.47%、36.91%，判断为 `NON_EQUIVALENT`。它是常规 CUDA candidate 的正式分析，
 不是 Triton 位置，也不从单步 loss 差推出训练质量。最新自动表为
 `operator_family_table_v3.*`。
+
+2026-09-10 的 v11 没有继续扫描新位置，而是修复证据汇合：三份已经完成的
+SiLU/normalization 执行清单共 99 个位置此前没有回写主清单。程序现在按 release 与
+task ID 唯一匹配后，得到 520 个已核验位置；SiLU 从 0 修正为 64，normalization 从
+228 修正为 263。这个变化不是 99 个新实验，也不增加独立算子问题数。后续优先级使用
+`operator_problem_group_depth_v1.*`，不再以位置数排序。
 
 下面保留历史接入过程。历史上按未覆盖位置数量安排的优先级，不再代表当前
 按不同算子族安排新搜索的优先级。

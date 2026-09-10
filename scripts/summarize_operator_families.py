@@ -118,6 +118,9 @@ def summarize(records, roles, historical_records=(), additional_evidence=()):
                        support_stage_counts=dict(Counter(support_stage(r) for r in groups[k])),
                        recorded_runtime_status_counts=dict(Counter(
                            r['runtime_measurement_status'] for r in groups[k])),
+                       valid_measurement_implementation_kind_counts=dict(Counter(
+                           r.get('implementation_kind', 'UNDECLARED') for r in groups[k]
+                           if support_stage(r) == 'VALID_MEASUREMENT_COMPLETED')),
                        historical_role_records=role_counts[k],
                        additional_historical_artifacts=historical[k],
                        historical_artifacts_are_current_protocol_verification=False,
@@ -145,11 +148,31 @@ def main():
     p.add_argument('--roles', type=Path, required=True)
     p.add_argument('--historical-recovery', type=Path)
     p.add_argument('--additional-evidence', type=Path, action='append', default=[])
+    p.add_argument('--measurement-audit', type=Path)
+    p.add_argument('--measurement-merge-manifest', type=Path)
     p.add_argument('--output', type=Path, required=True)
     a = p.parse_args()
     if a.output.exists() or not a.output.resolve().is_relative_to(Path('/data1/tzh')):
         p.error('New output under /data1/tzh required')
     inventory, roles = a.inventory.read_bytes(), a.roles.read_bytes()
+    inventory_payload = json.loads(inventory)
+    if bool(a.measurement_audit) != bool(a.measurement_merge_manifest):
+        p.error('--measurement-audit and --measurement-merge-manifest are required together')
+    if a.measurement_audit:
+        try:
+            from scripts.merge_family_execution_measurements import merge
+        except ModuleNotFoundError:
+            # Direct ``python scripts/...`` execution places scripts/, rather
+            # than the repository root, on sys.path.
+            from merge_family_execution_measurements import merge
+        audit_bytes = a.measurement_audit.read_bytes()
+        merge_manifest_bytes = a.measurement_merge_manifest.read_bytes()
+        audit = json.loads(audit_bytes)
+        merge_manifest = json.loads(merge_manifest_bytes)
+        if merge_manifest.get('schema') != 'family-measurement-inventory-merge-v1':
+            raise ValueError('Unexpected merge-manifest schema')
+        inventory_payload = merge(
+            inventory_payload, audit, merge_manifest['mappings'], verify_artifacts=True)
     historical=[]
     if a.historical_recovery:
         recovered=json.loads(a.historical_recovery.read_bytes())
@@ -172,7 +195,7 @@ def main():
             if hashlib.sha256(artifact.read_bytes()).hexdigest()!=row['artifact_sha256']:
                 raise ValueError('Additional evidence artifact changed')
             extra.append(row)
-    result = summarize(json.loads(inventory)['records'], json.loads(roles)['cases'],historical,extra)
+    result = summarize(inventory_payload['records'], json.loads(roles)['cases'],historical,extra)
     result.update(schema='operator-family-report-v2', input_sha256={
         str(a.inventory): hashlib.sha256(inventory).hexdigest(),
         str(a.roles): hashlib.sha256(roles).hexdigest(),
@@ -181,6 +204,12 @@ def main():
         result['input_sha256'][str(a.historical_recovery)]=hashlib.sha256(a.historical_recovery.read_bytes()).hexdigest()
     for path in a.additional_evidence:
         result['input_sha256'][str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+    if a.measurement_audit:
+        result['input_sha256'][str(a.measurement_audit)]=hashlib.sha256(audit_bytes).hexdigest()
+        result['input_sha256'][str(a.measurement_merge_manifest)]=hashlib.sha256(
+            merge_manifest_bytes).hexdigest()
+        result['selected_plan_measurement_merge'] = inventory_payload[
+            'selected_plan_measurement_merge']
     a.output.parent.mkdir(parents=True, exist_ok=True)
     with a.output.open('x') as f: json.dump(result, f, indent=2, ensure_ascii=False)
     print(json.dumps({k:v for k,v in result.items() if k not in ('input_sha256', 'ambiguous_positions')}, ensure_ascii=False))

@@ -54,8 +54,14 @@ Kernel Analyzer 的研究目标是建立一个**机制与工具共同组成的�
    相同输入比较及 optimizer-state 条件结果。
 9. [随机状态超界比例检验](docs/population_exceedance_inference.md)：不依赖能量幅度上界的
    精确有限样本端点及其与平均 Q 的边界。
+10. [随机状态总体推断合同](docs/population_inference_contract.md)：平均能量、超界比例和
+    固定集合分别能证明什么，以及条件不足时为什么必须不作判断。
+11. [算子族与重点问题组证据深度](results/property/numerical_coverage_v1/operator_problem_group_depth_v1.md)：
+    自动区分覆盖、update 证据、数学来源、修改验证和训练后果。
 
-整份 2026-09-05 新计划及上述四目标仍未完成。421 个有效位置与 17 个目录家族已经
+整份 2026-09-05 新计划及上述四目标仍未完成。当前清单有 520 个有效位置与 17 个目录家族；
+其中新增的 99 个计数来自把此前已经完成的 SiLU/normalization 结果重新接回清单，
+不是新增运行或新增问题。该规模已经
 提供工具广度，后续不再默认追求更多位置；主要缺口转为随机训练状态的统计含义和少数
 重要 Triton 问题的机制—训练闭环。以下复采与语言训练是已完成的选定实验，
 不能替代这些缺口。历史 `COMPLETE_BOUNDED_MAINLINE`
@@ -106,6 +112,11 @@ loss 差为 8/8 正，均值 `+0.02718`，95% 区间 `[+0.01217,+0.04220]`，
 家族，并表明 optimizer state 会显著改变差异能否进入参数；它没有 loss 结果，也不
 证明 position scaling 是唯一根因或随机训练状态总体中具有相同幅度。
 [核验与结论边界](docs/fused_rotary_position_scaling_audit.md)
+
+当前去重后最值得深入的四组由机器证据表明确记录：AdamW8bit 已确认数学来源、实际
+参数写入和非微小 loss 后果，但尚未得到有效修改；fused RoPE 是强固定集合现象，
+尚缺唯一来源和训练结果；Liger 已有累加恒等式和轨迹分叉，但不支持持续恶化；
+Flash-SDPA 是普通 CUDA 的强对照，尚不是 Triton 机制链。这个排序不由位置数决定。
 
 源码位于 `src/` 与 `scripts/`，实验数据位于 `results/`。
 本轮整理保留全部结果、失败记录和数学推导；讲稿由用户单独维护。

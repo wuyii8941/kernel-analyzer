@@ -12,10 +12,15 @@ def rows_from_report(report):
     for family in report['families']:
         counts=family['support_stage_counts']
         evidence=family.get('additional_measurement_evidence',[])
+        kinds=family.get('valid_measurement_implementation_kind_counts',{})
+        triton=sum(value for key,value in kinds.items() if 'TRITON' in key)
         rows.append(dict(
             family_id=family['family_id'],label=family['label'],
             classified_positions=family['classified_positions'],
             valid_measurement_positions=counts.get('VALID_MEASUREMENT_COMPLETED',0),
+            valid_triton_positions=triton,
+            valid_other_or_undeclared_positions=(
+                counts.get('VALID_MEASUREMENT_COMPLETED',0)-triton),
             bound_not_measured_positions=counts.get(
                 'REFERENCE_AND_TRAINING_BINDING_READY_NOT_VALIDLY_MEASURED',0),
             reference_only_positions=counts.get('REFERENCE_AVAILABLE_TRAINING_BINDING_REQUIRED',0),
@@ -27,7 +32,7 @@ def rows_from_report(report):
 
 def write_csv(path,rows):
     with path.open('x',newline='') as handle:
-        writer=csv.DictWriter(handle,fieldnames=list(rows[0]))
+        writer=csv.DictWriter(handle,fieldnames=list(rows[0]),lineterminator='\n')
         writer.writeheader(); writer.writerows(rows)
 
 
@@ -39,6 +44,7 @@ def write_markdown(path,rows,source):
         lines.append('| '+' | '.join(str(row[c]) for c in columns)+' |')
     lines.extend(['',
         '`classified_positions` 是 release-qualified 输出位置，不是独立算子数。',
+        '`valid_triton_positions` 只按已保存的实际 implementation kind 计数；未知不会被猜成 Triton。',
         '`additional_fixed_suite_evidence` 用于没有编译图位置的常规实现测量，不加入位置数。',
         '有效测量不等于 bias 阳性、总体等价或训练质量结论。',''])
     path.write_text('\n'.join(lines))

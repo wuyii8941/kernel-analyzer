@@ -1,0 +1,558 @@
+{
+  "catalogue_family_count": 17,
+  "input_positions": 173736,
+  "families": [
+    {
+      "family_id": "LINEAR",
+      "label": "矩阵乘法与线性层",
+      "classified_positions": 0,
+      "support_stage_counts": {},
+      "recorded_runtime_status_counts": {},
+      "valid_measurement_implementation_kind_counts": {},
+      "historical_role_records": 2,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    },
+    {
+      "family_id": "NORMALIZATION",
+      "label": "Normalization",
+      "classified_positions": 1302,
+      "support_stage_counts": {
+        "REFERENCE_AND_TRAINING_BINDING_READY_NOT_VALIDLY_MEASURED": 1039,
+        "VALID_MEASUREMENT_COMPLETED": 263
+      },
+      "recorded_runtime_status_counts": {
+        "NOT_ASSESSED_BY_THIS_INVENTORY": 1039,
+        "VERIFIED": 35,
+        "RECORDED_MEASUREMENT_CHECKED": 228
+      },
+      "valid_measurement_implementation_kind_counts": {
+        "TRITON": 263
+      },
+      "historical_role_records": 2,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    },
+    {
+      "family_id": "SOFTMAX",
+      "label": "Softmax",
+      "classified_positions": 120,
+      "support_stage_counts": {
+        "REFERENCE_AND_TRAINING_BINDING_READY_NOT_VALIDLY_MEASURED": 92,
+        "VALID_MEASUREMENT_COMPLETED": 28
+      },
+      "recorded_runtime_status_counts": {
+        "NOT_ASSESSED_BY_THIS_INVENTORY": 92,
+        "VERIFIED": 28
+      },
+      "valid_measurement_implementation_kind_counts": {
+        "TRITON": 28
+      },
+      "historical_role_records": 1,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    },
+    {
+      "family_id": "CROSS_ENTROPY",
+      "label": "Cross-entropy / fused loss",
+      "classified_positions": 1,
+      "support_stage_counts": {
+        "VALID_MEASUREMENT_COMPLETED": 1
+      },
+      "recorded_runtime_status_counts": {
+        "RECORDED_MEASUREMENT_CHECKED": 1
+      },
+      "valid_measurement_implementation_kind_counts": {
+        "TRITON": 1
+      },
+      "historical_role_records": 1,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    },
+    {
+      "family_id": "SILU_GATING",
+      "label": "SiLU 与门控乘法",
+      "classified_positions": 10944,
+      "support_stage_counts": {
+        "VALID_MEASUREMENT_COMPLETED": 64,
+        "REFERENCE_AND_TRAINING_BINDING_READY_NOT_VALIDLY_MEASURED": 128,
+        "REFERENCE_AVAILABLE_TRAINING_BINDING_REQUIRED": 10752
+      },
+      "recorded_runtime_status_counts": {
+        "VERIFIED": 64,
+        "NOT_ASSESSED_BY_THIS_INVENTORY": 10880
+      },
+      "valid_measurement_implementation_kind_counts": {
+        "TRITON": 64
+      },
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    },
+    {
+      "family_id": "SOFTPLUS",
+      "label": "Softplus",
+      "classified_positions": 70,
+      "support_stage_counts": {
+        "VALID_MEASUREMENT_COMPLETED": 36,
+        "REFERENCE_AND_TRAINING_BINDING_READY_NOT_VALIDLY_MEASURED": 34
+      },
+      "recorded_runtime_status_counts": {
+        "VERIFIED": 36,
+        "NOT_CAPTURED": 4,
+        "NO_VERIFIABLE_CAPTURE_YET": 7,
+        "NOT_ASSESSED_BY_THIS_INVENTORY": 23
+      },
+      "valid_measurement_implementation_kind_counts": {
+        "TRITON": 36
+      },
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    },
+    {
+      "family_id": "RECURRENCE",
+      "label": "状态递推 / scan",
+      "classified_positions": 10593,
+      "support_stage_counts": {
+        "REFERENCE_AND_TRAINING_BINDING_READY_NOT_VALIDLY_MEASURED": 10585,
+        "VALID_MEASUREMENT_COMPLETED": 8
+      },
+      "recorded_runtime_status_counts": {
+        "NOT_ASSESSED_BY_THIS_INVENTORY": 9153,
+        "VERIFIED": 8,
+        "NOT_CAPTURED": 4,
+        "NO_VERIFIABLE_CAPTURE_YET": 1428
+      },
+      "valid_measurement_implementation_kind_counts": {
+        "TRITON": 8
+      },
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    },
+    {
+      "family_id": "ROTARY",
+      "label": "Rotary / RoPE",
+      "classified_positions": 32,
+      "support_stage_counts": {
+        "VALID_MEASUREMENT_COMPLETED": 24,
+        "REFERENCE_AND_TRAINING_BINDING_READY_NOT_VALIDLY_MEASURED": 8
+      },
+      "recorded_runtime_status_counts": {
+        "VERIFIED": 24,
+        "NOT_CAPTURED": 4,
+        "NO_VERIFIABLE_CAPTURE_YET": 4
+      },
+      "valid_measurement_implementation_kind_counts": {
+        "TRITON": 24
+      },
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": [
+        {
+          "family": "ROTARY",
+          "artifact_path": "results/property/numerical_coverage_v1/ministral_fused_rotary_optimizer_condition_summary_v1.json",
+          "artifact_sha256": "3cb1d8d1d81e432832cb86df96b44b6ca3acdc5d92fd5a18941372c4d5309002",
+          "evidence_kind": "FUSED_ROTARY_POSITION_SCALING_FIXED_SUITE",
+          "backend": "INDUCTOR_GENERATED_TRITON",
+          "reference_family": "ATTENTION_POSITION_SCALING",
+          "reference_scope": "REGISTERED_SAME_INPUT_REFERENCE",
+          "case_id": "internal_forward_115_out_ptr0-attention-position-scaling-common-input",
+          "target_parameter": "model.language_model.layers.6.self_attn.o_proj.weight",
+          "semantic_source_sha256": "d1c7081c10ec5f9397a104ddb63d03e06e0dc169b5564ff172f24aa9ae2df611",
+          "state_count": 32,
+          "measurement_status": "VALID_FIXED_SUITE_ENGINEERING_MEASUREMENT",
+          "claim_scope": "FIXED_SUITE_UPDATE",
+          "high_position_result": {
+            "parameter_write_total_rms": 0.10880929258653345,
+            "parameter_write_aligned_ratio_of_sums": -0.00591966532442087,
+            "equivalence_decision": "NON_EQUIVALENT"
+          },
+          "low_position_result": {
+            "parameter_write_total_rms": 0.08346570415684447,
+            "parameter_write_aligned_ratio_of_sums": -0.003483364227153852,
+            "equivalence_decision": "NON_EQUIVALENT"
+          },
+          "optimizer_condition_parameter_write": {
+            "COLD_ZERO_MOMENTS": {
+              "confirmation_aligned_ratio_of_sums": -0.0037599006730434786,
+              "confirmation_nonzero_state_count": 7,
+              "confirmation_total_rms": 0.0867183239842856
+            },
+            "WARM_MOMENTS": {
+              "confirmation_aligned_ratio_of_sums": -3.4028504898209553e-06,
+              "confirmation_nonzero_state_count": 7,
+              "confirmation_total_rms": 0.004531403335488873
+            },
+            "WARM_PARAMETERS_RESET_MOMENTS": {
+              "confirmation_aligned_ratio_of_sums": -0.005015062934977006,
+              "confirmation_nonzero_state_count": 7,
+              "confirmation_total_rms": 0.10015204886579072
+            }
+          },
+          "optimizer_condition_comparisons": {
+            "reset_to_cold_parameter_write_rms_ratio": 1.1549121830807003,
+            "reset_to_warm_parameter_write_rms_ratio": 22.10177321480604,
+            "warm_and_reset_gradient_statistics_exactly_equal": true,
+            "warm_to_cold_parameter_write_rms_ratio": 0.052254277150351955
+          },
+          "position_scaling_is_unique_root_cause": false,
+          "population_guarantee": false,
+          "training_quality_claim": false,
+          "prediction_status": "POST_OUTCOME_DIAGNOSTIC_NOT_PREREGISTERED",
+          "position_inventory_count": 0,
+          "scope": "One Ministral fused-RoPE output and one target parameter. High/low position results and cold/warm/reset-moment results are fixed-suite comparisons; they do not establish a population effect or loss outcome."
+        }
+      ]
+    },
+    {
+      "family_id": "REDUCTION",
+      "label": "独立求和与平方和归约",
+      "classified_positions": 36,
+      "support_stage_counts": {
+        "VALID_MEASUREMENT_COMPLETED": 36
+      },
+      "recorded_runtime_status_counts": {
+        "VERIFIED": 36
+      },
+      "valid_measurement_implementation_kind_counts": {
+        "TRITON": 36
+      },
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    },
+    {
+      "family_id": "INDEXED_ACCUMULATION",
+      "label": "索引梯度累加",
+      "classified_positions": 1,
+      "support_stage_counts": {
+        "VALID_MEASUREMENT_COMPLETED": 1
+      },
+      "recorded_runtime_status_counts": {
+        "VERIFIED": 1
+      },
+      "valid_measurement_implementation_kind_counts": {
+        "DIRECT_ATEN": 1
+      },
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    },
+    {
+      "family_id": "GELU",
+      "label": "GELU",
+      "classified_positions": 34,
+      "support_stage_counts": {
+        "VALID_MEASUREMENT_COMPLETED": 34
+      },
+      "recorded_runtime_status_counts": {
+        "RECORDED_MEASUREMENT_CHECKED": 34
+      },
+      "valid_measurement_implementation_kind_counts": {
+        "TRITON": 34
+      },
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [
+        {
+          "family": "GELU",
+          "path": "results/property/direct_persistence_v4/heldout/gemma4_random_gelu_backward1860.formation.json",
+          "sha256": "50f89d9c763b343ab4e41b5aa9d1d52ed0339e895ebe9b3d3a79348fe975951b",
+          "import_status": "HISTORICAL_RECORD_READ_NOT_RERUN",
+          "historical_schema": "kernel-analyzer-gemma4-v3-formation-v1",
+          "historical_status": "COMPLETE",
+          "state_count": 16,
+          "parameter_scope": null,
+          "evidence_kind": "LEGACY_FORMATION",
+          "current_protocol_three_stage_verified": false,
+          "new_family_discovery": false,
+          "bias_recertified": false
+        }
+      ],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    },
+    {
+      "family_id": "CONVOLUTION",
+      "label": "卷积（含逐通道与视觉卷积）",
+      "classified_positions": 24,
+      "support_stage_counts": {
+        "VALID_MEASUREMENT_COMPLETED": 24
+      },
+      "recorded_runtime_status_counts": {
+        "RECORDED_MEASUREMENT_CHECKED": 24
+      },
+      "valid_measurement_implementation_kind_counts": {
+        "EXTERN": 24
+      },
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [
+        {
+          "family": "CONVOLUTION",
+          "path": "results/property/tcmp_allop_v1/candidate/gemma3_vision_convolution_population.json",
+          "sha256": "dc56c27deccac8cc7cc9dee3edacd61ffd39f32a4caa686efd18f158286404f5",
+          "import_status": "HISTORICAL_RECORD_READ_NOT_RERUN",
+          "historical_schema": "kernel-analyzer-gemma-vision-convolution-population-v1",
+          "historical_status": "COMPLETE_CONVOLUTION_PARAMETER_BLOCK_GRAM",
+          "state_count": 8,
+          "parameter_scope": [
+            "model.vision_tower.vision_model.embeddings.patch_embedding.weight",
+            "model.vision_tower.vision_model.embeddings.patch_embedding.bias"
+          ],
+          "evidence_kind": "GRADIENT_GRAM",
+          "current_protocol_three_stage_verified": false,
+          "new_family_discovery": false,
+          "bias_recertified": false
+        },
+        {
+          "family": "CONVOLUTION",
+          "path": "results/property/tcmp_allop_v1/candidate/gemma3_vision_convolution_backward_population.json",
+          "sha256": "33628dc25eac0225c247c4b530b6f49be4d19b69704fdc275d032cef11240865",
+          "import_status": "HISTORICAL_RECORD_READ_NOT_RERUN",
+          "historical_schema": "kernel-analyzer-gemma-vision-convolution-population-v1",
+          "historical_status": "COMPLETE_CONVOLUTION_PARAMETER_BLOCK_GRAM",
+          "state_count": 8,
+          "parameter_scope": [
+            "model.vision_tower.vision_model.embeddings.patch_embedding.weight"
+          ],
+          "evidence_kind": "GRADIENT_GRAM",
+          "current_protocol_three_stage_verified": false,
+          "new_family_discovery": false,
+          "bias_recertified": false
+        }
+      ],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    },
+    {
+      "family_id": "EMBEDDING",
+      "label": "Embedding lookup",
+      "classified_positions": 1,
+      "support_stage_counts": {
+        "VALID_MEASUREMENT_COMPLETED": 1
+      },
+      "recorded_runtime_status_counts": {
+        "RECORDED_MEASUREMENT_CHECKED": 1
+      },
+      "valid_measurement_implementation_kind_counts": {
+        "TRITON": 1
+      },
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    },
+    {
+      "family_id": "SELECTION",
+      "label": "Top-k / sort selection",
+      "classified_positions": 0,
+      "support_stage_counts": {},
+      "recorded_runtime_status_counts": {},
+      "valid_measurement_implementation_kind_counts": {},
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": [
+        {
+          "family": "SELECTION",
+          "artifact_path": "results/property/numerical_coverage_v1/granite_selection_suite24_v1/recomputation_v1.json",
+          "artifact_sha256": "192cc6e4586773aa1821e3ca058a18c8e178765a0f35e2ce49eba49d29f17480",
+          "evidence_kind": "ORDINARY_IMPLEMENTATION_FIXED_SUITE_THREE_STAGE_MEASUREMENT",
+          "backend": "TRANSFORMERS_EAGER_ATEN",
+          "state_count": 24,
+          "claim_scope": "FIXED_CHECKPOINT_TEXT_SUITE_COLD_OPTIMIZER",
+          "measurement_status": "VALID_FIXED_SUITE_ENGINEERING_MEASUREMENT",
+          "exact_zero_effect_by_stage": {
+            "LOCAL": true,
+            "PARAMETER_GRADIENT": true,
+            "PARAMETER_WRITE": true
+          },
+          "equivalence_decision": "NOT_ASSESSED",
+          "execution_identity_independently_proven": false,
+          "training_quality_claim": false,
+          "position_inventory_count": 0,
+          "scope": "Additional family evidence only; no compiled-position, population, equivalence, or training-quality claim"
+        }
+      ]
+    },
+    {
+      "family_id": "OPTIMIZER_UPDATE",
+      "label": "Optimizer parameter and moment update",
+      "classified_positions": 0,
+      "support_stage_counts": {},
+      "recorded_runtime_status_counts": {},
+      "valid_measurement_implementation_kind_counts": {},
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": [
+        {
+          "family": "OPTIMIZER_UPDATE",
+          "artifact_path": "results/property/numerical_coverage_v1/torchao_adamw8bit_mamba_v2/analysis.json",
+          "artifact_sha256": "89fab2ff2a744a4e83440026135957a4b40a29266f525b07affc622ee8edcf1b",
+          "evidence_kind": "REAL_LLM_GRADIENT_OPTIMIZER_IMPLEMENTATION_FIXED_SUITE",
+          "backend": "TORCHAO_TORCH_COMPILE_GENERATED_TRITON_VS_TORCH_ADAMW",
+          "state_count": 32,
+          "claim_scope": "FIXED_SUITE_UPDATE",
+          "measurement_status": "VALID_FIXED_SUITE_ENGINEERING_MEASUREMENT",
+          "equivalence_decision": "NON_EQUIVALENT",
+          "stage_effects": {
+            "GRADIENT_INPUT": {
+              "confirmation_total_rms": 0.0,
+              "confirmation_nonzero_coordinate_range": [
+                0,
+                0
+              ]
+            },
+            "MOMENT1_STATE": {
+              "confirmation_total_rms": 0.036247655424907065,
+              "confirmation_nonzero_coordinate_range": [
+                122876,
+                122880
+              ]
+            },
+            "MOMENT2_STATE": {
+              "confirmation_total_rms": 0.005509864098504014,
+              "confirmation_nonzero_coordinate_range": [
+                122830,
+                122863
+              ]
+            },
+            "PARAMETER_WRITE": {
+              "confirmation_total_rms": 0.05450215587976595,
+              "confirmation_nonzero_coordinate_range": [
+                122842,
+                122865
+              ]
+            }
+          },
+          "generated_source_file_count": 4,
+          "generated_files_containing_triton_jit": 4,
+          "training_quality_claim": false,
+          "position_inventory_count": 0,
+          "scope": "New optimizer-update family measured with real Mamba gradients. No random-population or training-quality conclusion."
+        }
+      ]
+    },
+    {
+      "family_id": "FUSED_ATTENTION",
+      "label": "Fused causal attention",
+      "classified_positions": 0,
+      "support_stage_counts": {},
+      "recorded_runtime_status_counts": {},
+      "valid_measurement_implementation_kind_counts": {},
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": [
+        {
+          "family": "FUSED_ATTENTION",
+          "artifact_path": "results/property/numerical_coverage_v1/qwen_flash_sdpa_attention_v1/analysis.json",
+          "artifact_sha256": "6d52934da8da7c93adf73d52df989a5b2e548e0add0be438480e0164e8a52742",
+          "evidence_kind": "FORCED_FLASH_VS_MATH_CAUSAL_ATTENTION_FIXED_SUITE",
+          "backend": "PYTORCH_SDPA_FLASH_CUDA_VS_MATH",
+          "state_count": 32,
+          "claim_scope": "FIXED_SUITE_UPDATE",
+          "measurement_status": "VALID_FIXED_SUITE_ENGINEERING_MEASUREMENT",
+          "equivalence_decision": "NON_EQUIVALENT",
+          "stage_effects": {
+            "LOCAL": {
+              "confirmation_total_rms": 0.0017189350606437385,
+              "confirmation_nonzero_coordinate_range": [
+                39797,
+                44523
+              ]
+            },
+            "PARAMETER_GRADIENT": {
+              "confirmation_total_rms": 0.11470711126113725,
+              "confirmation_nonzero_coordinate_range": [
+                4073467,
+                4169647
+              ]
+            },
+            "PARAMETER_WRITE": {
+              "confirmation_total_rms": 0.369127453577455,
+              "confirmation_nonzero_coordinate_range": [
+                1633275,
+                2950505
+              ]
+            }
+          },
+          "loss_difference_descriptive": {
+            "minimum": -0.016681194305419922,
+            "maximum": 0.01336669921875,
+            "mean": 7.299333810806274e-05
+          },
+          "training_quality_claim": false,
+          "position_inventory_count": 0,
+          "scope": "One Qwen layer-0 causal attention backend substitution. Fixed suite and cold AdamW only; per-state loss differences are not a training outcome."
+        }
+      ]
+    },
+    {
+      "family_id": "ELEMENTWISE_BIAS",
+      "label": "按通道偏置加法",
+      "classified_positions": 0,
+      "support_stage_counts": {},
+      "recorded_runtime_status_counts": {},
+      "valid_measurement_implementation_kind_counts": {},
+      "historical_role_records": 0,
+      "additional_historical_artifacts": [],
+      "historical_artifacts_are_current_protocol_verification": false,
+      "additional_measurement_evidence": []
+    }
+  ],
+  "families_in_supplied_reference_inventory": 12,
+  "families_in_supplied_roles": 4,
+  "support_stage_counts": {
+    "IDENTIFIED_REFERENCE_ADAPTER_REQUIRED": 120368,
+    "ORDINARY_IMPLEMENTATION_REFERENCE_AUDIT_REQUIRED": 30210,
+    "REFERENCE_AND_TRAINING_BINDING_READY_NOT_VALIDLY_MEASURED": 11886,
+    "VALID_MEASUREMENT_COMPLETED": 520,
+    "REFERENCE_AVAILABLE_TRAINING_BINDING_REQUIRED": 10752
+  },
+  "support_stage_order": [
+    "IDENTIFIED_REFERENCE_ADAPTER_REQUIRED",
+    "REFERENCE_AVAILABLE_TRAINING_BINDING_REQUIRED",
+    "REFERENCE_AND_TRAINING_BINDING_READY_NOT_VALIDLY_MEASURED",
+    "VALID_MEASUREMENT_COMPLETED"
+  ],
+  "support_counts_are_positions_not_distinct_operator_families": true,
+  "unclassified_positions": 150578,
+  "unknown_labels": {},
+  "ambiguous_positions": [],
+  "confirmed_problem_count": null,
+  "confirmed_root_cause_count": null,
+  "scope": "REPORTING_GROUPS_ONLY; not new runtime verification or proof of bias",
+  "rule": "Model, shape, stage and recurrence segments do not create additional operator families.",
+  "schema": "operator-family-report-v2",
+  "input_sha256": {
+    "results/property/numerical_coverage_v1/coverage_with_grouped_softmax_embedding_v2.json": "89341ea91ea4eaec903cb636b0972d34d4f7d929f5f4c90995d4f1b7098c41d1",
+    "results/mainline_case_roles.json": "abd2aab888476a370420a360aad8e61851475a634ae2078098b94261fc4f22c5",
+    "/data1/tzh/kernel-analyzer/scripts/summarize_operator_families.py": "58a26f1c75b71643e9f11acd3ea9194a332b59bec02cdc7897b6c8d93e92a8ca",
+    "results/property/numerical_coverage_v1/historical_operator_family_recovery_v1.json": "fa92521e7802e6f816c6d47ff7f20f097f229297df431cebaba96e762fde0a2e",
+    "results/property/numerical_coverage_v1/granite_selection_family_evidence_v1.json": "4f91d9c63f42242769940031351736336d46676430b8c8a6a3456430fd62ea09",
+    "results/property/numerical_coverage_v1/torchao_adamw8bit_mamba_family_evidence_v1.json": "6edf85edc2fd4cab2197091a7fbe3d22a2648245ecd58f5992df55ddd358e3a0",
+    "results/property/numerical_coverage_v1/qwen_flash_sdpa_attention_family_evidence_v1.json": "f993de438d50e453633936a0f42a761d77986d5e9205f019d4ceac7ad00ba71d",
+    "results/property/numerical_coverage_v1/ministral_fused_rotary_family_evidence_v1.json": "43f389f41defbccc7d881b39075b1c1dc8568c7a681144858a9d3d927071aaaa",
+    "results/property/numerical_coverage_v1/family_execution_audit_20260907_all_three_complete.json": "98703ac1821d134a3fba606f8a903e22f1ef77fc2fc78f63557548389f1bd475",
+    "results/property/numerical_coverage_v1/family_measurement_inventory_merge_manifest_v1.json": "9f95d027d9e941bac1b0efb6097344b457bd6e31418df7fcc55f2f361aa8a6c1"
+  },
+  "selected_plan_measurement_merge": {
+    "updated_positions": 99,
+    "already_valid_positions": 0,
+    "merged_positions": 99,
+    "scope": "Saved measurements reattached to release-qualified positions; not a bias, population, mechanism, or training-outcome claim"
+  }
+}
