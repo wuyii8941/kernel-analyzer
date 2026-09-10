@@ -1,0 +1,300 @@
+{
+  "schema": "population-statewise-exceedance-validation-v1",
+  "status": "PASS",
+  "production_functions": [
+    "population_statewise_rms_exceedance_equivalence",
+    "analyze_population_exceedance_artifact"
+  ],
+  "validation_path": "HIGH_DIMENSIONAL_VECTORS_TO_ORIGINAL_COORDINATE_STATISTICS_TO_PRODUCTION_DECISION",
+  "nominal_alpha": 0.05,
+  "exact_boundary_checks": [
+    {
+      "independent_units": 16,
+      "maximum_exceedance_probability": 0.2,
+      "exact_false_equivalence_probability": 0.028147497671065624
+    },
+    {
+      "independent_units": 64,
+      "maximum_exceedance_probability": 0.05,
+      "exact_false_equivalence_probability": 0.03752413921111602
+    },
+    {
+      "independent_units": 299,
+      "maximum_exceedance_probability": 0.01,
+      "exact_false_equivalence_probability": 0.04953625663766235
+    }
+  ],
+  "full_path_controls": {
+    "zero_effect": {
+      "case_id": "population-exceedance-synthetic",
+      "contrast_id": "CONTROLLED_SYNTHETIC_UPDATE",
+      "measurement_status": "VALID",
+      "claim_scope": "DECLARED_STATE_POPULATION_UPDATE",
+      "bias_analysis": {
+        "population_endpoint": {
+          "decision": "EQUIVALENT",
+          "estimand": "PROBABILITY_STATEWISE_RMS_AT_OR_ABOVE_MARGIN",
+          "observed_exceedance_count": 0,
+          "observed_exceedance_fraction": 0.0,
+          "statewise_rms_margin": 0.01,
+          "maximum_exceedance_probability": 0.05,
+          "one_sided_probability_bounds": [
+            0.0,
+            0.045729702330762456
+          ],
+          "bounds_are_simultaneous": false,
+          "alpha_per_decision_direction": 0.05,
+          "independent_unit_count": 64,
+          "repair_energy_floor": 0.0,
+          "assumption_scope": "FINITE_SAMPLE_IID_BERNOULLI_EXCEEDANCE_INDICATORS",
+          "mean_energy_q_guarantee": false,
+          "interpretation": "Bounds the prevalence of states outside a statewise RMS tolerance; it does not bound mean energy or the size of an exceedance."
+        },
+        "inference_unit_ids": [
+          "independent-0",
+          "independent-1",
+          "independent-2",
+          "independent-3",
+          "independent-4",
+          "independent-5",
+          "independent-6",
+          "independent-7",
+          "independent-8",
+          "independent-9",
+          "independent-10",
+          "independent-11",
+          "independent-12",
+          "independent-13",
+          "independent-14",
+          "independent-15",
+          "independent-16",
+          "independent-17",
+          "independent-18",
+          "independent-19",
+          "independent-20",
+          "independent-21",
+          "independent-22",
+          "independent-23",
+          "independent-24",
+          "independent-25",
+          "independent-26",
+          "independent-27",
+          "independent-28",
+          "independent-29",
+          "independent-30",
+          "independent-31",
+          "independent-32",
+          "independent-33",
+          "independent-34",
+          "independent-35",
+          "independent-36",
+          "independent-37",
+          "independent-38",
+          "independent-39",
+          "independent-40",
+          "independent-41",
+          "independent-42",
+          "independent-43",
+          "independent-44",
+          "independent-45",
+          "independent-46",
+          "independent-47",
+          "independent-48",
+          "independent-49",
+          "independent-50",
+          "independent-51",
+          "independent-52",
+          "independent-53",
+          "independent-54",
+          "independent-55",
+          "independent-56",
+          "independent-57",
+          "independent-58",
+          "independent-59",
+          "independent-60",
+          "independent-61",
+          "independent-62",
+          "independent-63"
+        ],
+        "population_guarantee": true,
+        "guarantee_conditions": "iid units from the declared state population and repair energy strictly above the predeclared floor",
+        "not_a_mean_energy_certificate": true,
+        "multiple_case_non_equivalence_control": "NOT_PROVIDED_BY_THIS_SINGLE_CASE_ANALYSIS"
+      },
+      "equivalence_decision": "EQUIVALENT",
+      "training_outcome": "NOT_MEASURED",
+      "mandatory_endpoints": [
+        "STATEWISE_RMS_EXCEEDANCE_PREVALENCE"
+      ],
+      "provenance": {
+        "protocol_version": "population-statewise-exceedance-validation-v1",
+        "write_protocol": {
+          "version": "adamw-readback-v2",
+          "measurement": "parameter_after_step_minus_parameter_before_step",
+          "synthetic": true
+        },
+        "data_use": "METHOD_VALIDATION"
+      },
+      "schema": "kernel-analyzer-analysis-result-v1"
+    },
+    "large_orthogonal_coordinate_effect": {
+      "case_id": "population-exceedance-synthetic",
+      "contrast_id": "CONTROLLED_SYNTHETIC_UPDATE",
+      "measurement_status": "VALID",
+      "claim_scope": "DECLARED_STATE_POPULATION_UPDATE",
+      "bias_analysis": {
+        "population_endpoint": {
+          "decision": "NON_EQUIVALENT",
+          "estimand": "PROBABILITY_STATEWISE_RMS_AT_OR_ABOVE_MARGIN",
+          "observed_exceedance_count": 64,
+          "observed_exceedance_fraction": 1.0,
+          "statewise_rms_margin": 0.01,
+          "maximum_exceedance_probability": 0.05,
+          "one_sided_probability_bounds": [
+            0.9542702976692463,
+            1.0
+          ],
+          "bounds_are_simultaneous": false,
+          "alpha_per_decision_direction": 0.05,
+          "independent_unit_count": 64,
+          "repair_energy_floor": 0.0,
+          "assumption_scope": "FINITE_SAMPLE_IID_BERNOULLI_EXCEEDANCE_INDICATORS",
+          "mean_energy_q_guarantee": false,
+          "interpretation": "Bounds the prevalence of states outside a statewise RMS tolerance; it does not bound mean energy or the size of an exceedance."
+        },
+        "inference_unit_ids": [
+          "independent-0",
+          "independent-1",
+          "independent-2",
+          "independent-3",
+          "independent-4",
+          "independent-5",
+          "independent-6",
+          "independent-7",
+          "independent-8",
+          "independent-9",
+          "independent-10",
+          "independent-11",
+          "independent-12",
+          "independent-13",
+          "independent-14",
+          "independent-15",
+          "independent-16",
+          "independent-17",
+          "independent-18",
+          "independent-19",
+          "independent-20",
+          "independent-21",
+          "independent-22",
+          "independent-23",
+          "independent-24",
+          "independent-25",
+          "independent-26",
+          "independent-27",
+          "independent-28",
+          "independent-29",
+          "independent-30",
+          "independent-31",
+          "independent-32",
+          "independent-33",
+          "independent-34",
+          "independent-35",
+          "independent-36",
+          "independent-37",
+          "independent-38",
+          "independent-39",
+          "independent-40",
+          "independent-41",
+          "independent-42",
+          "independent-43",
+          "independent-44",
+          "independent-45",
+          "independent-46",
+          "independent-47",
+          "independent-48",
+          "independent-49",
+          "independent-50",
+          "independent-51",
+          "independent-52",
+          "independent-53",
+          "independent-54",
+          "independent-55",
+          "independent-56",
+          "independent-57",
+          "independent-58",
+          "independent-59",
+          "independent-60",
+          "independent-61",
+          "independent-62",
+          "independent-63"
+        ],
+        "population_guarantee": true,
+        "guarantee_conditions": "iid units from the declared state population and repair energy strictly above the predeclared floor",
+        "not_a_mean_energy_certificate": true,
+        "multiple_case_non_equivalence_control": "NOT_PROVIDED_BY_THIS_SINGLE_CASE_ANALYSIS"
+      },
+      "equivalence_decision": "NON_EQUIVALENT",
+      "training_outcome": "NOT_MEASURED",
+      "mandatory_endpoints": [
+        "STATEWISE_RMS_EXCEEDANCE_PREVALENCE"
+      ],
+      "provenance": {
+        "protocol_version": "population-statewise-exceedance-validation-v1",
+        "write_protocol": {
+          "version": "adamw-readback-v2",
+          "measurement": "parameter_after_step_minus_parameter_before_step",
+          "synthetic": true
+        },
+        "data_use": "METHOD_VALIDATION"
+      },
+      "schema": "kernel-analyzer-analysis-result-v1"
+    }
+  },
+  "sample_size_boundary": {
+    "target_maximum_exceedance_probability": 0.01,
+    "zero_violations_298_units": {
+      "decision": "INCONCLUSIVE",
+      "estimand": "PROBABILITY_STATEWISE_RMS_AT_OR_ABOVE_MARGIN",
+      "observed_exceedance_count": 0,
+      "observed_exceedance_fraction": 0.0,
+      "statewise_rms_margin": 0.01,
+      "maximum_exceedance_probability": 0.01,
+      "one_sided_probability_bounds": [
+        0.0,
+        0.010002432437677695
+      ],
+      "bounds_are_simultaneous": false,
+      "alpha_per_decision_direction": 0.05,
+      "independent_unit_count": 298,
+      "repair_energy_floor": 0.0,
+      "assumption_scope": "FINITE_SAMPLE_IID_BERNOULLI_EXCEEDANCE_INDICATORS",
+      "mean_energy_q_guarantee": false,
+      "interpretation": "Bounds the prevalence of states outside a statewise RMS tolerance; it does not bound mean energy or the size of an exceedance."
+    },
+    "zero_violations_299_units": {
+      "decision": "EQUIVALENT",
+      "estimand": "PROBABILITY_STATEWISE_RMS_AT_OR_ABOVE_MARGIN",
+      "observed_exceedance_count": 0,
+      "observed_exceedance_fraction": 0.0,
+      "statewise_rms_margin": 0.01,
+      "maximum_exceedance_probability": 0.01,
+      "one_sided_probability_bounds": [
+        0.0,
+        0.009969146792899272
+      ],
+      "bounds_are_simultaneous": false,
+      "alpha_per_decision_direction": 0.05,
+      "independent_unit_count": 299,
+      "repair_energy_floor": 0.0,
+      "assumption_scope": "FINITE_SAMPLE_IID_BERNOULLI_EXCEEDANCE_INDICATORS",
+      "mean_energy_q_guarantee": false,
+      "interpretation": "Bounds the prevalence of states outside a statewise RMS tolerance; it does not bound mean energy or the size of an exceedance."
+    }
+  },
+  "claim_boundary": "This validates a finite-sample iid Bernoulli prevalence endpoint. It does not validate population mean Q, dependence between units, or the magnitude of effects beyond the statewise threshold.",
+  "source_sha256": {
+    "/data1/tzh/kernel-analyzer/scripts/validate_population_exceedance_equivalence.py": "162f6d529fda9f7f9c2f6775319a28694c0579b473e997773e319ce026e866ea",
+    "src/kernel_analyzer/training_equivalence.py": "1ad99c13cf49c8624f114336fe5d3585e3d74b8c5ca19feb2e2638519da98eed",
+    "src/kernel_analyzer/training_numerical_analysis.py": "c44e0429828363fa84b89913e6d9150bb8293e947103d8b89ffbbdafaa57e22b"
+  }
+}

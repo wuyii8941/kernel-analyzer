@@ -23,6 +23,151 @@ import numpy as np
 BRANCHES = ("additive", "repair_aligned", "residual_direction")
 
 
+def _binomial_cdf(successes: int, trials: int, probability: float) -> float:
+    """Return P[Binomial(trials, probability) <= successes].
+
+    This small implementation keeps the exact prevalence endpoint independent
+    of an optional scipy installation.  Log probabilities avoid overflow for
+    the sample sizes used by the protocol.
+    """
+
+    if trials < 1 or not 0 <= successes <= trials:
+        raise ValueError("successes must lie in [0, trials] and trials must be positive")
+    if not 0.0 <= probability <= 1.0 or not math.isfinite(probability):
+        raise ValueError("probability must lie in [0, 1]")
+    if successes == trials or probability == 0.0:
+        return 1.0
+    if probability == 1.0:
+        return 0.0
+    logs = [
+        math.lgamma(trials + 1)
+        - math.lgamma(index + 1)
+        - math.lgamma(trials - index + 1)
+        + index * math.log(probability)
+        + (trials - index) * math.log1p(-probability)
+        for index in range(successes + 1)
+    ]
+    largest = max(logs)
+    return min(1.0, math.exp(largest) * math.fsum(math.exp(value - largest) for value in logs))
+
+
+def exact_binomial_one_sided_bounds(
+    violations: int,
+    independent_units: int,
+    *,
+    alpha: float = 0.05,
+) -> tuple[float, float]:
+    """Clopper--Pearson lower and upper one-sided bounds.
+
+    The two returned bounds each have one-sided error probability ``alpha``;
+    they are not advertised as one simultaneous ``1-alpha`` interval.
+    """
+
+    if independent_units < 1 or not 0 <= violations <= independent_units:
+        raise ValueError("violations must lie in [0, independent_units]")
+    if not 0.0 < alpha < 0.5 or not math.isfinite(alpha):
+        raise ValueError("alpha must lie in (0, 0.5)")
+
+    def solve_cdf(count: int, target: float) -> float:
+        lower, upper = 0.0, 1.0
+        for _ in range(80):
+            middle = (lower + upper) / 2.0
+            # For count < trials the CDF decreases with probability.
+            if _binomial_cdf(count, independent_units, middle) > target:
+                lower = middle
+            else:
+                upper = middle
+        return (lower + upper) / 2.0
+
+    lower_bound = (
+        0.0
+        if violations == 0
+        else solve_cdf(violations - 1, 1.0 - alpha)
+    )
+    upper_bound = (
+        1.0
+        if violations == independent_units
+        else solve_cdf(violations, alpha)
+    )
+    return lower_bound, upper_bound
+
+
+def population_statewise_rms_exceedance_equivalence(
+    effect_energy_by_unit: Sequence[float],
+    repair_energy_by_unit: Sequence[float],
+    *,
+    statewise_rms_margin: float,
+    maximum_exceedance_probability: float,
+    repair_energy_floor: float = 0.0,
+    alpha: float = 0.05,
+) -> dict:
+    """Exact finite-sample inference for statewise tolerance exceedance.
+
+    The population target is
+
+    ``P(sqrt(X/B) >= statewise_rms_margin)``.
+
+    It is deliberately distinct from the mean-energy target
+    ``E[X] / E[B]``.  Under independent Bernoulli sampling of declared units,
+    no upper bound on the magnitude of ``X`` is needed.  Every repair energy
+    must exceed the floor fixed by the sampling protocol.
+    """
+
+    x = np.asarray(effect_energy_by_unit, dtype=np.float64)
+    b = np.asarray(repair_energy_by_unit, dtype=np.float64)
+    if x.ndim != 1 or x.size < 1 or x.shape != b.shape:
+        raise ValueError("effect and repair energies must be matched nonempty vectors")
+    if not np.isfinite(x).all() or not np.isfinite(b).all() or np.any(x < 0.0):
+        raise ValueError("effect and repair energies must be finite and effect energies nonnegative")
+    if (
+        not math.isfinite(repair_energy_floor)
+        or repair_energy_floor < 0.0
+        or np.any(b <= repair_energy_floor)
+    ):
+        raise ValueError("every repair energy must exceed the predeclared repair-energy floor")
+    if not math.isfinite(statewise_rms_margin) or statewise_rms_margin <= 0.0:
+        raise ValueError("statewise_rms_margin must be finite and positive")
+    if (
+        not math.isfinite(maximum_exceedance_probability)
+        or not 0.0 < maximum_exceedance_probability < 1.0
+    ):
+        raise ValueError("maximum_exceedance_probability must lie in (0, 1)")
+
+    squared_margin = float(statewise_rms_margin) ** 2
+    if not math.isfinite(squared_margin) or squared_margin == 0.0:
+        raise ValueError("margin arithmetic overflow or underflow")
+    # Equality is an exceedance because the equivalence region is strict.
+    indicators = x >= squared_margin * b
+    violations = int(np.count_nonzero(indicators))
+    lower, upper = exact_binomial_one_sided_bounds(violations, int(x.size), alpha=alpha)
+    decision = (
+        "EQUIVALENT"
+        if upper < maximum_exceedance_probability
+        else "NON_EQUIVALENT"
+        if lower > maximum_exceedance_probability
+        else "INCONCLUSIVE"
+    )
+    return {
+        "decision": decision,
+        "estimand": "PROBABILITY_STATEWISE_RMS_AT_OR_ABOVE_MARGIN",
+        "observed_exceedance_count": violations,
+        "observed_exceedance_fraction": violations / int(x.size),
+        "statewise_rms_margin": float(statewise_rms_margin),
+        "maximum_exceedance_probability": float(maximum_exceedance_probability),
+        "one_sided_probability_bounds": [lower, upper],
+        "bounds_are_simultaneous": False,
+        "alpha_per_decision_direction": float(alpha),
+        "independent_unit_count": int(x.size),
+        "repair_energy_floor": float(repair_energy_floor),
+        "assumption_scope": "FINITE_SAMPLE_IID_BERNOULLI_EXCEEDANCE_INDICATORS",
+        "mean_energy_q_guarantee": False,
+        "interpretation": (
+            "Bounds the prevalence of states outside a statewise RMS tolerance; "
+            "it does not bound mean energy or the size of an exceedance."
+        ),
+    }
+
+
 def _one_sided_mean_bounds(values: Sequence[float], alpha: float) -> tuple[float, float]:
     samples = np.asarray(values, dtype=np.float64)
     if samples.ndim != 1 or samples.size < 2 or not np.isfinite(samples).all():

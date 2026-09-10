@@ -13,6 +13,7 @@ from .analysis_result import AnalysisResult
 from .training_equivalence import (
     bounded_population_aligned_equivalence,
     bounded_population_total_energy_equivalence,
+    population_statewise_rms_exceedance_equivalence,
     simultaneous_intervals_from_joint_gram,
 )
 
@@ -246,5 +247,97 @@ def analyze_bounded_population_artifact(
         "guarantee_conditions": (
             "independent declared units and valid finite energy bounds fixed before observation"
         ),
+    }
+    return result
+
+
+def analyze_population_exceedance_artifact(
+    payload: dict, protocol: dict, *, endpoint: str | None = None
+) -> dict:
+    """Analyze the population prevalence of statewise RMS exceedances.
+
+    Unlike mean-energy inference, this endpoint needs no magnitude bound.  It
+    requires one row per explicitly declared independent unit and therefore
+    never infers independence from a list of consecutive state identifiers.
+    """
+
+    endpoint = endpoint or protocol["primary_stage"]
+    result = AnalysisResult(
+        case_id=payload.get("case_id", "UNDECLARED"),
+        contrast_id=payload.get("contrast_id", "UNDECLARED"),
+        measurement_status="PARTIAL",
+        claim_scope="DECLARED_STATE_POPULATION_UPDATE",
+        mandatory_endpoints=("STATEWISE_RMS_EXCEEDANCE_PREVALENCE",),
+        provenance={
+            "protocol_version": protocol.get("schema", "UNDECLARED"),
+            "write_protocol": payload.get("parameter_write_protocol"),
+            "data_use": protocol.get("data_use", "UNDECLARED"),
+        },
+    ).to_dict()
+
+    def unavailable(reason: str, invalid: bool = False) -> dict:
+        result["measurement_status"] = "INVALID" if invalid else "PARTIAL"
+        result["bias_analysis"] = {"not_assessed_reason": reason}
+        return result
+
+    if protocol.get("claim_scope") != "DECLARED_STATE_POPULATION_UPDATE":
+        return unavailable("POPULATION_CLAIM_SCOPE_NOT_DECLARED")
+    if protocol.get("population_estimand") != "STATEWISE_RMS_EXCEEDANCE_PROBABILITY":
+        return unavailable("STATEWISE_EXCEEDANCE_ESTIMAND_NOT_DECLARED")
+    if payload.get("status") != "COMPLETE":
+        return unavailable("CAPTURE_NOT_COMPLETE")
+    if endpoint == "PARAMETER_WRITE":
+        write_protocol = payload.get("parameter_write_protocol", {})
+        if write_protocol.get("version") not in {
+            "adamw-readback-v2", "optimizer-implementation-readback-v1",
+        } or write_protocol.get("measurement") != (
+            "parameter_after_step_minus_parameter_before_step"
+        ):
+            return unavailable("ACTUAL_OPTIMIZER_READBACK_NOT_VERIFIED")
+    if not payload.get("contrast_id") or not payload.get("runtime_boundary"):
+        return unavailable("EXECUTION_OR_CONTRAST_NOT_DECLARED")
+    if payload.get("determinism", {}).get("all_exact") is False:
+        return unavailable("DETERMINISM_CHECK_FAILED", True)
+
+    ids = list(payload.get("state_ids", []))
+    units = list(payload.get("inference_unit_ids", []))
+    if not ids or len(set(ids)) != len(ids) or len(units) != len(ids):
+        return unavailable("EXPLICIT_INFERENCE_UNITS_REQUIRED", True)
+    if len(set(units)) != len(units):
+        return unavailable("ONE_ROW_PER_INDEPENDENT_UNIT_REQUIRED", True)
+    rows = payload.get("original_coordinate_statistics", {}).get(endpoint, [])
+    if len(rows) != len(ids):
+        return unavailable("ORIGINAL_COORDINATE_STATISTICS_INCOMPLETE")
+
+    try:
+        x = [float(row["effect_energy"]) for row in rows]
+        b = [float(row["repair_energy"]) for row in rows]
+        statewise_margin = float(protocol["statewise_rms_margin"])
+        maximum_probability = float(protocol["maximum_exceedance_probability"])
+        repair_floor = float(protocol.get("repair_energy_floor", 0.0))
+        alpha = float(protocol.get("alpha", 0.05))
+        analysis = population_statewise_rms_exceedance_equivalence(
+            x,
+            b,
+            statewise_rms_margin=statewise_margin,
+            maximum_exceedance_probability=maximum_probability,
+            repair_energy_floor=repair_floor,
+            alpha=alpha,
+        )
+    except (KeyError, TypeError, ValueError) as error:
+        return unavailable(f"POPULATION_EXCEEDANCE_ASSUMPTION_FAILED: {error}", True)
+
+    result["measurement_status"] = "VALID"
+    result["equivalence_decision"] = analysis["decision"]
+    result["bias_analysis"] = {
+        "population_endpoint": analysis,
+        "inference_unit_ids": units,
+        "population_guarantee": True,
+        "guarantee_conditions": (
+            "iid units from the declared state population and repair energy "
+            "strictly above the predeclared floor"
+        ),
+        "not_a_mean_energy_certificate": True,
+        "multiple_case_non_equivalence_control": "NOT_PROVIDED_BY_THIS_SINGLE_CASE_ANALYSIS",
     }
     return result

@@ -52,10 +52,13 @@ Kernel Analyzer 的研究目标是建立一个**机制与工具共同组成的�
 7. [清单驱动的自动采集](docs/numerical_coverage_execution.md)：完整端点分母、结构绑定、统一采集和未支持项记录。
 8. [fused RoPE / position scaling 核验](docs/fused_rotary_position_scaling_audit.md)：真实 Triton
    相同输入比较及 optimizer-state 条件结果。
+9. [随机状态超界比例检验](docs/population_exceedance_inference.md)：不依赖能量幅度上界的
+   精确有限样本端点及其与平均 Q 的边界。
 
-整份 2026-09-05 新计划及上述四目标仍未完成，尤其全部已观测 kernel 的动态支持和
-更一般的总体统计保证尚不能签认。以下复采与语言训练是已完成的选定实验，
-不能替代系统性的家族覆盖、统一对照与成本比较。历史 `COMPLETE_BOUNDED_MAINLINE`
+整份 2026-09-05 新计划及上述四目标仍未完成。421 个有效位置与 17 个目录家族已经
+提供工具广度，后续不再默认追求更多位置；主要缺口转为随机训练状态的统计含义和少数
+重要 Triton 问题的机制—训练闭环。以下复采与语言训练是已完成的选定实验，
+不能替代这些缺口。历史 `COMPLETE_BOUNDED_MAINLINE`
 标签仅对应当时的有限验收清单；当前审计已明确区分选定实验完成与整份计划完成。
 
 最新 Liger 全参数小模型实验已经延续到 10000 步：参数相对距离由 19.69% 增至

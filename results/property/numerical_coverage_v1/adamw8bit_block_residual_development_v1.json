@@ -1,0 +1,946 @@
+{
+  "schema": "adamw8bit-block-residual-development-v1",
+  "status": "COMPLETE",
+  "data_use": "RESULT_AWARE_DEVELOPMENT_DIAGNOSTIC_NOT_CONFIRMATION",
+  "candidate_math": "CPU replay of TorchAO block scaling, nearest qmap code, dequantization, and AdamW equations on 32 saved real gradients",
+  "actual_triton_execution_in_this_artifact": false,
+  "block_size": 256,
+  "state_count": 32,
+  "confirmation_steps": [
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32
+  ],
+  "aggregate": {
+    "first_moment_error_energy_in_block_common_offset": 0.003914359873576022,
+    "second_moment_error_energy_in_block_common_offset": 0.009764867227405742,
+    "first_moment_local_error_reduction_from_block_scale": 0.033965906607227744,
+    "second_moment_local_error_reduction_from_block_scale": 0.017089560192498927,
+    "parameter_write_relative_rms_default": 0.05481627033443011,
+    "parameter_write_relative_rms_first_moment_block_mean_corrected": 0.0549446273272002,
+    "block_mean_relative_rms_reduction_fraction": -0.002341585664018986,
+    "parameter_write_relative_rms_first_moment_block_scale_corrected": 0.05616987006014288,
+    "block_scale_relative_rms_reduction_fraction": -0.024693393356653992,
+    "extra_fp32_values_for_first_moment": 480,
+    "extra_bytes_for_first_moment": 1920
+  },
+  "rows": [
+    {
+      "step": 1,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.01494997292031794,
+        "aligned_ratio": -0.0019848360785080046,
+        "block_common_energy_fraction": 0.006301398208542804,
+        "block_scale_correction_error_reduction_fraction": 0.05680241082692561,
+        "signed_residual_mean": 3.3815582989078575e-08,
+        "positive_residual_fraction": 0.5014729817708333,
+        "residual_energy": 1.4202356328603966e-06,
+        "block_remainder_energy": 1.411286165268473e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.001659953019362408,
+        "aligned_ratio": 6.428755045685954e-05,
+        "block_common_energy_fraction": 0.01090983039925414,
+        "block_scale_correction_error_reduction_fraction": 0.020977117075829388,
+        "signed_residual_mean": 1.8125693894936998e-12,
+        "positive_residual_fraction": 0.48196614583333336,
+        "residual_energy": 1.991336941252009e-14,
+        "block_remainder_energy": 1.969611761667073e-14
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.0,
+        "first_moment_block_mean_corrected": 0.0,
+        "first_moment_block_scale_corrected": 0.0
+      }
+    },
+    {
+      "step": 2,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.013605123449196716,
+        "aligned_ratio": -0.0012958376584801614,
+        "block_common_energy_fraction": 0.0034413103963989024,
+        "block_scale_correction_error_reduction_fraction": 0.026800284193265966,
+        "signed_residual_mean": 1.883184137639592e-08,
+        "positive_residual_fraction": 0.4990315755208333,
+        "residual_energy": 1.7936782844599009e-06,
+        "block_remainder_energy": 1.7875056829624004e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0021242213182722414,
+        "aligned_ratio": -3.7269858852724553e-05,
+        "block_common_energy_fraction": 0.004005730919124019,
+        "block_scale_correction_error_reduction_fraction": 0.06507737656440882,
+        "signed_residual_mean": -2.996081995733984e-12,
+        "positive_residual_fraction": 0.48448079427083335,
+        "residual_energy": 6.199016579110174e-14,
+        "block_remainder_energy": 6.174184958183744e-14
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.021417672129894372,
+        "first_moment_block_mean_corrected": 0.02279976342759163,
+        "first_moment_block_scale_corrected": 0.021484141882829145
+      }
+    },
+    {
+      "step": 3,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.013297121564192136,
+        "aligned_ratio": -0.000593254276311771,
+        "block_common_energy_fraction": 0.0045519109227284745,
+        "block_scale_correction_error_reduction_fraction": 0.023939035420508237,
+        "signed_residual_mean": 1.1534327795124456e-08,
+        "positive_residual_fraction": 0.4977783203125,
+        "residual_energy": 1.982168263141382e-06,
+        "block_remainder_energy": 1.973145607979315e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0021941974770041946,
+        "aligned_ratio": -1.1835774240759754e-05,
+        "block_common_energy_fraction": 0.003436651533647794,
+        "block_scale_correction_error_reduction_fraction": 0.008101664213341575,
+        "signed_residual_mean": 7.688120268269323e-13,
+        "positive_residual_fraction": 0.48819173177083336,
+        "residual_energy": 7.669624268236463e-14,
+        "block_remainder_energy": 7.643266439995043e-14
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.026509079094410547,
+        "first_moment_block_mean_corrected": 0.026641509840317,
+        "first_moment_block_scale_corrected": 0.026667612031209823
+      }
+    },
+    {
+      "step": 4,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.01388298966051371,
+        "aligned_ratio": -0.0012789323789403025,
+        "block_common_energy_fraction": 0.004493497310033221,
+        "block_scale_correction_error_reduction_fraction": 0.02747370923630721,
+        "signed_residual_mean": 1.811627864764858e-08,
+        "positive_residual_fraction": 0.4985107421875,
+        "residual_energy": 2.829832341768879e-06,
+        "block_remainder_energy": 2.817116492726919e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0021673359061355675,
+        "aligned_ratio": 1.0855753497160669e-05,
+        "block_common_energy_fraction": 0.003164230852243113,
+        "block_scale_correction_error_reduction_fraction": 0.020123148349261988,
+        "signed_residual_mean": -2.3569831112454684e-12,
+        "positive_residual_fraction": 0.489111328125,
+        "residual_energy": 1.6314017814036376e-13,
+        "block_remainder_energy": 1.6262396454013338e-13
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.02877285660850648,
+        "first_moment_block_mean_corrected": 0.028805764450850965,
+        "first_moment_block_scale_corrected": 0.02895717937963505
+      }
+    },
+    {
+      "step": 5,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014298897780294344,
+        "aligned_ratio": -0.0011950669767920338,
+        "block_common_energy_fraction": 0.0042517394768966385,
+        "block_scale_correction_error_reduction_fraction": 0.02863604177642165,
+        "signed_residual_mean": 3.773933914957365e-08,
+        "positive_residual_fraction": 0.4984049479166667,
+        "residual_energy": 2.5220264197505694e-06,
+        "block_remainder_energy": 2.5113034234575835e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0027082967405242177,
+        "aligned_ratio": 0.00011637459616462104,
+        "block_common_energy_fraction": 0.003443525270983436,
+        "block_scale_correction_error_reduction_fraction": 0.014100766004662368,
+        "signed_residual_mean": -3.879407071741598e-12,
+        "positive_residual_fraction": 0.48353678385416665,
+        "residual_energy": 2.7735984802378777e-13,
+        "block_remainder_energy": 2.7640475664180455e-13
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.03586974619093437,
+        "first_moment_block_mean_corrected": 0.03600662481602461,
+        "first_moment_block_scale_corrected": 0.03620957085939819
+      }
+    },
+    {
+      "step": 6,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.01411742612316158,
+        "aligned_ratio": -0.0008340257178011722,
+        "block_common_energy_fraction": 0.004395445594114005,
+        "block_scale_correction_error_reduction_fraction": 0.028241315302098502,
+        "signed_residual_mean": 3.6992635567045385e-08,
+        "positive_residual_fraction": 0.5027425130208333,
+        "residual_energy": 2.2744201830216805e-06,
+        "block_remainder_energy": 2.264423093026343e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.002012023267376507,
+        "aligned_ratio": 1.858225975236118e-05,
+        "block_common_energy_fraction": 0.0029450671360870713,
+        "block_scale_correction_error_reduction_fraction": 0.008557794565656529,
+        "signed_residual_mean": -4.38115489759405e-12,
+        "positive_residual_fraction": 0.48224283854166666,
+        "residual_energy": 2.722815638336326e-13,
+        "block_remainder_energy": 2.7147967366740237e-13
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.0411328374673556,
+        "first_moment_block_mean_corrected": 0.04127240343947397,
+        "first_moment_block_scale_corrected": 0.0415601492893698
+      }
+    },
+    {
+      "step": 7,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.013722415423026602,
+        "aligned_ratio": -0.0011998758588685366,
+        "block_common_energy_fraction": 0.004988686304545597,
+        "block_scale_correction_error_reduction_fraction": 0.02827758017599591,
+        "signed_residual_mean": 3.7472052083918905e-08,
+        "positive_residual_fraction": 0.4984049479166667,
+        "residual_energy": 2.3959260453419283e-06,
+        "block_remainder_energy": 2.3839735281814066e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.001982955606132329,
+        "aligned_ratio": -3.126823112920163e-05,
+        "block_common_energy_fraction": 0.006299166813335207,
+        "block_scale_correction_error_reduction_fraction": 0.015518742345827952,
+        "signed_residual_mean": -4.520687888169908e-12,
+        "positive_residual_fraction": 0.4764404296875,
+        "residual_energy": 3.1833427766317787e-13,
+        "block_remainder_energy": 3.1632903636790006e-13
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.04689483154653194,
+        "first_moment_block_mean_corrected": 0.047052022711101954,
+        "first_moment_block_scale_corrected": 0.04751080640193587
+      }
+    },
+    {
+      "step": 8,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014787759370523094,
+        "aligned_ratio": -0.0009857898105625224,
+        "block_common_energy_fraction": 0.00596193393072902,
+        "block_scale_correction_error_reduction_fraction": 0.019061510213300603,
+        "signed_residual_mean": 1.728308506215902e-08,
+        "positive_residual_fraction": 0.4993489583333333,
+        "residual_energy": 1.8188986228139687e-06,
+        "block_remainder_energy": 1.8080544660142872e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.001945997816686083,
+        "aligned_ratio": -1.4318367195996524e-05,
+        "block_common_energy_fraction": 0.0035774782234299866,
+        "block_scale_correction_error_reduction_fraction": 0.0076256611743614755,
+        "signed_residual_mean": -1.6956348701574715e-12,
+        "positive_residual_fraction": 0.4997314453125,
+        "residual_energy": 3.2711847587621707e-13,
+        "block_remainder_energy": 3.259482164008478e-13
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.048783363747296485,
+        "first_moment_block_mean_corrected": 0.04893941320880399,
+        "first_moment_block_scale_corrected": 0.04974949328198487
+      }
+    },
+    {
+      "step": 9,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014253323954745585,
+        "aligned_ratio": -0.001545525227584051,
+        "block_common_energy_fraction": 0.0037306226250483207,
+        "block_scale_correction_error_reduction_fraction": 0.03035883659043026,
+        "signed_residual_mean": 1.6289135713197865e-08,
+        "positive_residual_fraction": 0.49972330729166664,
+        "residual_energy": 2.617460329730732e-06,
+        "block_remainder_energy": 2.6076955718175238e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.001956295584913496,
+        "aligned_ratio": 4.984570699233126e-05,
+        "block_common_energy_fraction": 0.004429224952374706,
+        "block_scale_correction_error_reduction_fraction": 0.018954008246200638,
+        "signed_residual_mean": -1.0388379243406166e-11,
+        "positive_residual_fraction": 0.48318684895833336,
+        "residual_energy": 4.078074190948649e-13,
+        "block_remainder_energy": 4.060011516500132e-13
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.044729625131118736,
+        "first_moment_block_mean_corrected": 0.04483773887003311,
+        "first_moment_block_scale_corrected": 0.045562842942036136
+      }
+    },
+    {
+      "step": 10,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014504646526348799,
+        "aligned_ratio": -0.0025338328620234684,
+        "block_common_energy_fraction": 0.0038635557801909542,
+        "block_scale_correction_error_reduction_fraction": 0.050875310878559676,
+        "signed_residual_mean": 6.100369417207376e-08,
+        "positive_residual_fraction": 0.49855143229166665,
+        "residual_energy": 3.009669961421527e-06,
+        "block_remainder_energy": 2.9980419318088077e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0017303067085848126,
+        "aligned_ratio": -1.2203215359283824e-05,
+        "block_common_energy_fraction": 0.002471270673272089,
+        "block_scale_correction_error_reduction_fraction": 0.02524235203005465,
+        "signed_residual_mean": -7.164782827653311e-12,
+        "positive_residual_fraction": 0.49227701822916664,
+        "residual_energy": 7.320484626929252e-13,
+        "block_remainder_energy": 7.30239370669244e-13
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.044726930993201984,
+        "first_moment_block_mean_corrected": 0.04488488224474482,
+        "first_moment_block_scale_corrected": 0.045627906581663526
+      }
+    },
+    {
+      "step": 11,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014050012006610664,
+        "aligned_ratio": -0.0019055938598492798,
+        "block_common_energy_fraction": 0.004878577577006887,
+        "block_scale_correction_error_reduction_fraction": 0.03908707176750992,
+        "signed_residual_mean": 1.4826915614738372e-08,
+        "positive_residual_fraction": 0.49703776041666664,
+        "residual_energy": 3.26925498263896e-06,
+        "block_remainder_energy": 3.253305666620927e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.001215981982013163,
+        "aligned_ratio": -7.636329618724928e-06,
+        "block_common_energy_fraction": 0.034504291605851195,
+        "block_scale_correction_error_reduction_fraction": 0.030415686118792196,
+        "signed_residual_mean": 1.2741085979439754e-12,
+        "positive_residual_fraction": 0.5019938151041666,
+        "residual_energy": 3.720080320071735e-13,
+        "block_remainder_energy": 3.591721621317289e-13
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.04952435714994688,
+        "first_moment_block_mean_corrected": 0.049675138330001596,
+        "first_moment_block_scale_corrected": 0.05050421684686709
+      }
+    },
+    {
+      "step": 12,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.01370845155423355,
+        "aligned_ratio": -0.0016855038254311938,
+        "block_common_energy_fraction": 0.002837658306155245,
+        "block_scale_correction_error_reduction_fraction": 0.03617755090453978,
+        "signed_residual_mean": 5.328585569770761e-08,
+        "positive_residual_fraction": 0.500341796875,
+        "residual_energy": 3.955262019954748e-06,
+        "block_remainder_energy": 3.944038335190385e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0017431586535128752,
+        "aligned_ratio": 5.378336749595625e-05,
+        "block_common_energy_fraction": 0.016036589370971924,
+        "block_scale_correction_error_reduction_fraction": 0.025124241490302568,
+        "signed_residual_mean": 2.092060537833677e-12,
+        "positive_residual_fraction": 0.49520670572916664,
+        "residual_energy": 9.33019081673069e-13,
+        "block_remainder_energy": 9.180566320442452e-13
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.050742344855214255,
+        "first_moment_block_mean_corrected": 0.0509517673817242,
+        "first_moment_block_scale_corrected": 0.05182688447023681
+      }
+    },
+    {
+      "step": 13,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014596060025756748,
+        "aligned_ratio": -0.0019907027039239,
+        "block_common_energy_fraction": 0.004998281602272826,
+        "block_scale_correction_error_reduction_fraction": 0.03320699857210052,
+        "signed_residual_mean": 4.160078980808073e-08,
+        "positive_residual_fraction": 0.49989420572916665,
+        "residual_energy": 5.188184331395091e-06,
+        "block_remainder_energy": 5.16225233148703e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0017433121101592657,
+        "aligned_ratio": 1.0907177929348422e-05,
+        "block_common_energy_fraction": 0.003904960668870704,
+        "block_scale_correction_error_reduction_fraction": 0.01891808156227326,
+        "signed_residual_mean": -2.0080917074096904e-12,
+        "positive_residual_fraction": 0.49107259114583335,
+        "residual_energy": 1.6015091833631832e-12,
+        "block_remainder_energy": 1.5952553463884022e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.04027924067326505,
+        "first_moment_block_mean_corrected": 0.04054288362862274,
+        "first_moment_block_scale_corrected": 0.04114311019019333
+      }
+    },
+    {
+      "step": 14,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.01460905389040433,
+        "aligned_ratio": -0.0011762566832786469,
+        "block_common_energy_fraction": 0.003943122949835807,
+        "block_scale_correction_error_reduction_fraction": 0.02275988733865475,
+        "signed_residual_mean": 4.40253901556046e-08,
+        "positive_residual_fraction": 0.5000081380208333,
+        "residual_energy": 5.104991719692654e-06,
+        "block_remainder_energy": 5.084862113067254e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0012670294701645725,
+        "aligned_ratio": -5.3431085366108067e-05,
+        "block_common_energy_fraction": 0.024114624254202018,
+        "block_scale_correction_error_reduction_fraction": 0.023563996149823185,
+        "signed_residual_mean": -3.478166329230388e-11,
+        "positive_residual_fraction": 0.4852213541666667,
+        "residual_energy": 8.544791140169219e-13,
+        "block_remainder_energy": 8.33873667663359e-13
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.04578241208392685,
+        "first_moment_block_mean_corrected": 0.04595761448554758,
+        "first_moment_block_scale_corrected": 0.046592720595994036
+      }
+    },
+    {
+      "step": 15,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014467570953069069,
+        "aligned_ratio": -0.0016792809645762936,
+        "block_common_energy_fraction": 0.0037052756008203957,
+        "block_scale_correction_error_reduction_fraction": 0.02815177355274645,
+        "signed_residual_mean": 5.3319466903724544e-08,
+        "positive_residual_fraction": 0.5007893880208333,
+        "residual_energy": 4.9415827081633315e-06,
+        "block_remainder_energy": 4.923272780321875e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0016576280702434775,
+        "aligned_ratio": 1.282674122070731e-06,
+        "block_common_energy_fraction": 0.004277522366308599,
+        "block_scale_correction_error_reduction_fraction": 0.006455067429761097,
+        "signed_residual_mean": 1.7426579443687148e-11,
+        "positive_residual_fraction": 0.4735514322916667,
+        "residual_energy": 1.6457737275450345e-12,
+        "block_remainder_energy": 1.6387339012525252e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.05128864079068875,
+        "first_moment_block_mean_corrected": 0.051534956476067637,
+        "first_moment_block_scale_corrected": 0.05226667551829561
+      }
+    },
+    {
+      "step": 16,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014443348980226464,
+        "aligned_ratio": -0.0018228881979037875,
+        "block_common_energy_fraction": 0.0035398377859996843,
+        "block_scale_correction_error_reduction_fraction": 0.03507599771056691,
+        "signed_residual_mean": 3.804445788604356e-08,
+        "positive_residual_fraction": 0.4994384765625,
+        "residual_energy": 4.8146539816415915e-06,
+        "block_remainder_energy": 4.797610882559038e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.00152556653046806,
+        "aligned_ratio": -1.2662990687565554e-05,
+        "block_common_energy_fraction": 0.01026440632956261,
+        "block_scale_correction_error_reduction_fraction": 0.01833911719835435,
+        "signed_residual_mean": -7.979443018373103e-12,
+        "positive_residual_fraction": 0.4873860677083333,
+        "residual_energy": 1.4636804519419886e-12,
+        "block_remainder_energy": 1.4486566438194507e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.05001284205138056,
+        "first_moment_block_mean_corrected": 0.05015350253017818,
+        "first_moment_block_scale_corrected": 0.051048941545528304
+      }
+    },
+    {
+      "step": 17,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014227297416080838,
+        "aligned_ratio": -0.0025731300073212116,
+        "block_common_energy_fraction": 0.002777433553820081,
+        "block_scale_correction_error_reduction_fraction": 0.06619707113124407,
+        "signed_residual_mean": 1.2368649163992251e-08,
+        "positive_residual_fraction": 0.49990234375,
+        "residual_energy": 5.116740358482372e-06,
+        "block_remainder_energy": 5.102528951007026e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.001705635725452089,
+        "aligned_ratio": 4.613159326358802e-05,
+        "block_common_energy_fraction": 0.006673933653548396,
+        "block_scale_correction_error_reduction_fraction": 0.022456394648481925,
+        "signed_residual_mean": -6.7557244477519105e-12,
+        "positive_residual_fraction": 0.49551595052083336,
+        "residual_energy": 2.0553939602110713e-12,
+        "block_remainder_energy": 2.0416763887784284e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.05235853988236279,
+        "first_moment_block_mean_corrected": 0.05243118706583011,
+        "first_moment_block_scale_corrected": 0.05345261654850615
+      }
+    },
+    {
+      "step": 18,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014352558249197492,
+        "aligned_ratio": -0.0021972273939744598,
+        "block_common_energy_fraction": 0.00408202333468052,
+        "block_scale_correction_error_reduction_fraction": 0.03530500444357143,
+        "signed_residual_mean": 7.744271403382799e-08,
+        "positive_residual_fraction": 0.4992757161458333,
+        "residual_energy": 6.4357737944385774e-06,
+        "block_remainder_energy": 6.409502794374359e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0017706958102671397,
+        "aligned_ratio": -2.22085874836992e-05,
+        "block_common_energy_fraction": 0.007965014350901042,
+        "block_scale_correction_error_reduction_fraction": 0.018852987869503735,
+        "signed_residual_mean": -2.2971126110557112e-11,
+        "positive_residual_fraction": 0.48715006510416664,
+        "residual_energy": 2.4020939427625055e-12,
+        "block_remainder_energy": 2.3829612273398662e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.052239904939276556,
+        "first_moment_block_mean_corrected": 0.05230975032326476,
+        "first_moment_block_scale_corrected": 0.05346249238410725
+      }
+    },
+    {
+      "step": 19,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014393452290292335,
+        "aligned_ratio": -0.0025100239754006727,
+        "block_common_energy_fraction": 0.005297853973930638,
+        "block_scale_correction_error_reduction_fraction": 0.06309625737872326,
+        "signed_residual_mean": 6.553970722300288e-08,
+        "positive_residual_fraction": 0.5009928385416667,
+        "residual_energy": 7.928549050763675e-06,
+        "block_remainder_energy": 7.886544764838153e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0019161806166221448,
+        "aligned_ratio": -1.613297807047215e-05,
+        "block_common_energy_fraction": 0.004342725602785083,
+        "block_scale_correction_error_reduction_fraction": 0.013046765120984016,
+        "signed_residual_mean": -4.0619133132301395e-11,
+        "positive_residual_fraction": 0.48037109375,
+        "residual_energy": 3.279767776065066e-12,
+        "block_remainder_energy": 3.265524637922188e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.04655522413724175,
+        "first_moment_block_mean_corrected": 0.04661892734653234,
+        "first_moment_block_scale_corrected": 0.047716855976710944
+      }
+    },
+    {
+      "step": 20,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014101398514320702,
+        "aligned_ratio": -0.002274345137644185,
+        "block_common_energy_fraction": 0.0021691983961555144,
+        "block_scale_correction_error_reduction_fraction": 0.04007249369836119,
+        "signed_residual_mean": 4.870720961886174e-09,
+        "positive_residual_fraction": 0.49969075520833334,
+        "residual_energy": 7.312055176280024e-06,
+        "block_remainder_energy": 7.296193901189253e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0012696854310023933,
+        "aligned_ratio": -6.497868568142852e-06,
+        "block_common_energy_fraction": 0.012193501086716355,
+        "block_scale_correction_error_reduction_fraction": 0.024003892589985254,
+        "signed_residual_mean": -7.068087809875024e-12,
+        "positive_residual_fraction": 0.48636067708333336,
+        "residual_energy": 1.4693440942465168e-12,
+        "block_remainder_energy": 1.4514276536056462e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.05238387605210456,
+        "first_moment_block_mean_corrected": 0.05258250572105621,
+        "first_moment_block_scale_corrected": 0.05379831419404854
+      }
+    },
+    {
+      "step": 21,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.013692068307225446,
+        "aligned_ratio": -0.001811094361568988,
+        "block_common_energy_fraction": 0.004205493664064053,
+        "block_scale_correction_error_reduction_fraction": 0.03219916994986893,
+        "signed_residual_mean": 2.518222229837759e-08,
+        "positive_residual_fraction": 0.5004801432291667,
+        "residual_energy": 4.7518797618094865e-06,
+        "block_remainder_energy": 4.731895766477572e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.00174184708612728,
+        "aligned_ratio": 2.2408372643878922e-06,
+        "block_common_energy_fraction": 0.0066581151294493,
+        "block_scale_correction_error_reduction_fraction": 0.012622155126699508,
+        "signed_residual_mean": 4.6697204953337065e-12,
+        "positive_residual_fraction": 0.48369140625,
+        "residual_energy": 3.2014783393775676e-12,
+        "block_remainder_energy": 3.1801625182711304e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.05614611785974893,
+        "first_moment_block_mean_corrected": 0.05635414189390397,
+        "first_moment_block_scale_corrected": 0.05773217672179344
+      }
+    },
+    {
+      "step": 22,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.0141416167738786,
+        "aligned_ratio": -0.0017236335214236048,
+        "block_common_energy_fraction": 0.004298810242369752,
+        "block_scale_correction_error_reduction_fraction": 0.04093301770877944,
+        "signed_residual_mean": 1.7431283833251615e-08,
+        "positive_residual_fraction": 0.49977213541666665,
+        "residual_energy": 4.5338983748560015e-06,
+        "block_remainder_energy": 4.514407997674581e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.001592029798244301,
+        "aligned_ratio": -1.2729254644780495e-05,
+        "block_common_energy_fraction": 0.005266584264901427,
+        "block_scale_correction_error_reduction_fraction": 0.01759979607826634,
+        "signed_residual_mean": -9.209585129383074e-12,
+        "positive_residual_fraction": 0.500634765625,
+        "residual_energy": 2.8945207644959833e-12,
+        "block_remainder_energy": 2.879276526243962e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.05553311589236565,
+        "first_moment_block_mean_corrected": 0.05566739111550009,
+        "first_moment_block_scale_corrected": 0.05706236364384478
+      }
+    },
+    {
+      "step": 23,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.013900882588670288,
+        "aligned_ratio": -0.001450855455548108,
+        "block_common_energy_fraction": 0.003215789933864974,
+        "block_scale_correction_error_reduction_fraction": 0.027721425504332098,
+        "signed_residual_mean": 8.379384483706681e-09,
+        "positive_residual_fraction": 0.4999593098958333,
+        "residual_energy": 5.044689864133801e-06,
+        "block_remainder_energy": 5.028467187598973e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.001837248052243757,
+        "aligned_ratio": 6.261772040104484e-05,
+        "block_common_energy_fraction": 0.00720093360923581,
+        "block_scale_correction_error_reduction_fraction": 0.042474558802401585,
+        "signed_residual_mean": 1.7673955546149965e-11,
+        "positive_residual_fraction": 0.48971354166666664,
+        "residual_energy": 4.339758290573088e-12,
+        "block_remainder_energy": 4.3085079686139805e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.05588063746841197,
+        "first_moment_block_mean_corrected": 0.056013171669727795,
+        "first_moment_block_scale_corrected": 0.05741671065054581
+      }
+    },
+    {
+      "step": 24,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014498434964796964,
+        "aligned_ratio": -0.00239725194239485,
+        "block_common_energy_fraction": 0.005359408668466283,
+        "block_scale_correction_error_reduction_fraction": 0.06878291350603138,
+        "signed_residual_mean": 7.083604207511673e-08,
+        "positive_residual_fraction": 0.5003092447916667,
+        "residual_energy": 6.011132228816008e-06,
+        "block_remainder_energy": 5.978916105319274e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0017674695971741962,
+        "aligned_ratio": 4.790080933686888e-05,
+        "block_common_energy_fraction": 0.009528141905948001,
+        "block_scale_correction_error_reduction_fraction": 0.01744693608894421,
+        "signed_residual_mean": 1.2547201978359372e-11,
+        "positive_residual_fraction": 0.475390625,
+        "residual_energy": 4.5526381336553384e-12,
+        "block_remainder_energy": 4.509259945438866e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.0592945289165321,
+        "first_moment_block_mean_corrected": 0.05954453425652794,
+        "first_moment_block_scale_corrected": 0.06093277402200137
+      }
+    },
+    {
+      "step": 25,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014116360731303483,
+        "aligned_ratio": -0.0011485287108881433,
+        "block_common_energy_fraction": 0.0024692694900272593,
+        "block_scale_correction_error_reduction_fraction": 0.023134947366916903,
+        "signed_residual_mean": 4.456629470579587e-09,
+        "positive_residual_fraction": 0.49801432291666664,
+        "residual_energy": 5.028205484417039e-06,
+        "block_remainder_energy": 5.015789486845579e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0018371801375995805,
+        "aligned_ratio": -5.381398641034963e-05,
+        "block_common_energy_fraction": 0.00540533095802418,
+        "block_scale_correction_error_reduction_fraction": 0.011088765217273422,
+        "signed_residual_mean": 1.4631845949126434e-12,
+        "positive_residual_fraction": 0.4922688802083333,
+        "residual_energy": 5.314791092064034e-12,
+        "block_remainder_energy": 5.2860629760994974e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.058397425207362345,
+        "first_moment_block_mean_corrected": 0.05866897285666704,
+        "first_moment_block_scale_corrected": 0.059987653968170136
+      }
+    },
+    {
+      "step": 26,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.0145291334153979,
+        "aligned_ratio": -0.0010965727537186822,
+        "block_common_energy_fraction": 0.005335368226440476,
+        "block_scale_correction_error_reduction_fraction": 0.015923081267143258,
+        "signed_residual_mean": 2.3052121346177054e-08,
+        "positive_residual_fraction": 0.4991373697916667,
+        "residual_energy": 5.66290661392144e-06,
+        "block_remainder_energy": 5.632692918232232e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0017968497255097609,
+        "aligned_ratio": 2.797929022005656e-06,
+        "block_common_energy_fraction": 0.00798320464420221,
+        "block_scale_correction_error_reduction_fraction": 0.01925784963028898,
+        "signed_residual_mean": -5.932394005859283e-11,
+        "positive_residual_fraction": 0.48349609375,
+        "residual_energy": 5.562002821054604e-12,
+        "block_remainder_energy": 5.517600232772306e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.05443870851463845,
+        "first_moment_block_mean_corrected": 0.05464284731566377,
+        "first_moment_block_scale_corrected": 0.05581759856125467
+      }
+    },
+    {
+      "step": 27,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014602518578586538,
+        "aligned_ratio": -0.0016001006523688134,
+        "block_common_energy_fraction": 0.004101150539878521,
+        "block_scale_correction_error_reduction_fraction": 0.03029128776193457,
+        "signed_residual_mean": 4.2939232083485036e-08,
+        "positive_residual_fraction": 0.5009195963541667,
+        "residual_energy": 5.0745876412501035e-06,
+        "block_remainder_energy": 5.053775994933174e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0017483537302519687,
+        "aligned_ratio": 1.3295710485850397e-05,
+        "block_common_energy_fraction": 0.007374318571584099,
+        "block_scale_correction_error_reduction_fraction": 0.007724131789245803,
+        "signed_residual_mean": -2.864493518654921e-11,
+        "positive_residual_fraction": 0.495068359375,
+        "residual_energy": 5.403263063048288e-12,
+        "block_remainder_energy": 5.363417697043437e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.05518024410512022,
+        "first_moment_block_mean_corrected": 0.055214020286420154,
+        "first_moment_block_scale_corrected": 0.05650512282781694
+      }
+    },
+    {
+      "step": 28,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.015065221494573521,
+        "aligned_ratio": -0.0011484645039536608,
+        "block_common_energy_fraction": 0.0037051582824803773,
+        "block_scale_correction_error_reduction_fraction": 0.020023000612224395,
+        "signed_residual_mean": 3.529403276914575e-08,
+        "positive_residual_fraction": 0.49949544270833335,
+        "residual_energy": 4.5367472401049e-06,
+        "block_remainder_energy": 4.51993787286948e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.001798557815159564,
+        "aligned_ratio": -4.859430621340551e-06,
+        "block_common_energy_fraction": 0.012971813322088032,
+        "block_scale_correction_error_reduction_fraction": 0.011483293944056228,
+        "signed_residual_mean": 6.747250409371967e-11,
+        "positive_residual_fraction": 0.5176106770833333,
+        "residual_energy": 6.026908754539441e-12,
+        "block_remainder_energy": 5.948728748071125e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.0593806919932695,
+        "first_moment_block_mean_corrected": 0.05942276573949311,
+        "first_moment_block_scale_corrected": 0.06075950829850385
+      }
+    },
+    {
+      "step": 29,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014425008728500324,
+        "aligned_ratio": -0.000906600718912489,
+        "block_common_energy_fraction": 0.0034148237960639123,
+        "block_scale_correction_error_reduction_fraction": 0.017656497772328805,
+        "signed_residual_mean": 6.899288477072876e-08,
+        "positive_residual_fraction": 0.4984212239583333,
+        "residual_energy": 6.414819437079279e-06,
+        "block_remainder_energy": 6.3929139632599554e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0018900296669140037,
+        "aligned_ratio": 3.269732892305093e-05,
+        "block_common_energy_fraction": 0.006559061530607261,
+        "block_scale_correction_error_reduction_fraction": 0.005113308415008566,
+        "signed_residual_mean": 1.6875878468734505e-11,
+        "positive_residual_fraction": 0.48960774739583335,
+        "residual_energy": 7.177875350754102e-12,
+        "block_remainder_energy": 7.1307952022362286e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.051288146263371,
+        "first_moment_block_mean_corrected": 0.05122269002505977,
+        "first_moment_block_scale_corrected": 0.05241858357749267
+      }
+    },
+    {
+      "step": 30,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014677978176528333,
+        "aligned_ratio": -0.00017558667215237557,
+        "block_common_energy_fraction": 0.0033708618511413407,
+        "block_scale_correction_error_reduction_fraction": 0.018615420473243827,
+        "signed_residual_mean": 1.5109262881317682e-08,
+        "positive_residual_fraction": 0.49810384114583334,
+        "residual_energy": 5.734747067544726e-06,
+        "block_remainder_energy": 5.715416030038788e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0017045502264353266,
+        "aligned_ratio": -1.2882001019460657e-05,
+        "block_common_energy_fraction": 0.016522561952860088,
+        "block_scale_correction_error_reduction_fraction": 0.016767099498816163,
+        "signed_residual_mean": 8.976435548870718e-11,
+        "positive_residual_fraction": 0.49844563802083336,
+        "residual_energy": 6.065602638696947e-12,
+        "block_remainder_energy": 5.965383433226184e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.055647979612529645,
+        "first_moment_block_mean_corrected": 0.055747732548940075,
+        "first_moment_block_scale_corrected": 0.0568189462255448
+      }
+    },
+    {
+      "step": 31,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014133306371837717,
+        "aligned_ratio": -0.0004893572417675111,
+        "block_common_energy_fraction": 0.0031335420374913295,
+        "block_scale_correction_error_reduction_fraction": 0.017735360588934546,
+        "signed_residual_mean": 3.171057757487934e-08,
+        "positive_residual_fraction": 0.49954427083333336,
+        "residual_energy": 6.363872769560725e-06,
+        "block_remainder_energy": 6.34393129697884e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0016068842652493627,
+        "aligned_ratio": 5.248901440427112e-05,
+        "block_common_energy_fraction": 0.031440091351147906,
+        "block_scale_correction_error_reduction_fraction": 0.04424999517749151,
+        "signed_residual_mean": 1.0148291330711095e-10,
+        "positive_residual_fraction": 0.526025390625,
+        "residual_energy": 5.614988383925345e-12,
+        "block_remainder_energy": 5.438452658718785e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.05573050962572845,
+        "first_moment_block_mean_corrected": 0.055868031049538705,
+        "first_moment_block_scale_corrected": 0.05688789616667004
+      }
+    },
+    {
+      "step": 32,
+      "default_first_moment_quantization": {
+        "relative_rms": 0.014132781240405425,
+        "aligned_ratio": -0.00017097170253237853,
+        "block_common_energy_fraction": 0.005033733688616333,
+        "block_scale_correction_error_reduction_fraction": 0.019173874510265088,
+        "signed_residual_mean": -1.70220798043082e-09,
+        "positive_residual_fraction": 0.4982177734375,
+        "residual_energy": 7.818454223201219e-06,
+        "block_remainder_energy": 7.77909821275034e-06
+      },
+      "default_second_moment_quantization": {
+        "relative_rms": 0.0017901883632338363,
+        "aligned_ratio": 3.4584054106053585e-06,
+        "block_common_energy_fraction": 0.0034878268884693873,
+        "block_scale_correction_error_reduction_fraction": 0.008614830578071886,
+        "signed_residual_mean": -8.052255535483039e-12,
+        "positive_residual_fraction": 0.4834716796875,
+        "residual_energy": 8.436095638782617e-12,
+        "block_remainder_energy": 8.406671980499569e-12
+      },
+      "parameter_write_relative_rms": {
+        "default": 0.05516042409172421,
+        "first_moment_block_mean_corrected": 0.055326141979733776,
+        "first_moment_block_scale_corrected": 0.05643305251719963
+      }
+    }
+  ],
+  "decision_boundary": "A favorable simulation only nominates a modification. It cannot establish actual optimizer behavior or training improvement.",
+  "source_sha256": {
+    "/data1/tzh/kernel-analyzer/scripts/analyze_adamw8bit_block_residual.py": "ac694823067c7d005cd35fdc3c03fc9934737a528ac815640419806004ea3682",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/torchao_adamw8bit_mamba_v2/real_gradient_inputs.pt": "8829a067ae968e03399121caefee6eba09f12ddb1fd7c776d8e78bd85469685e",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/torchao_adamw8bit_mamba_v2/protocol.json": "5afc99dcd9dbf8afa9cc4bc0c999e800a42c0a8bb45b11f66e86753ff6749f7c",
+    "/data1/tzh/envs/liger/lib/python3.10/site-packages/torchao/optim/quant_utils.py": "b0c1409ebb6654399bc901230489f8f1e2bdb6b1a96fb1fe90050131de29a937",
+    "/data1/tzh/envs/liger/lib/python3.10/site-packages/torchao/optim/subclass_8bit.py": "7fc999d9616554b41801cc08c95bf6cd88a667447e3955b3e14aa0494246e1da"
+  }
+}

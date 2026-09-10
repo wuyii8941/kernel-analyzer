@@ -8,6 +8,14 @@ import subprocess
 import sys
 import time
 
+# Direct execution sets sys.path[0] to ``scripts/`` rather than the repository
+# root, while this launcher intentionally imports sibling helpers as
+# ``scripts.<module>``.  Make that execution mode match ``python -m`` and the
+# detached worker it creates.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 DATA_CACHE_ENV = {
     'HF_HOME':'/data1/tzh/cache/huggingface',
     'HF_DATASETS_CACHE':'/data1/tzh/cache/huggingface/datasets',

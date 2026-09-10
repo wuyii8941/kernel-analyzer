@@ -93,6 +93,24 @@ moment 保留为 FP32 应降低参数写入 RMS；相反设置用于检查二阶
 并不足以推出递推训练后的 loss 更接近 reference。** 三种条件均未达到预声明崩溃
 标准。该第二轮使用全新输入，但假设由已见 component 结果提出，不能写成最初的盲测。
 
+## 修改失败后的分块误差诊断
+
+为避免继续枚举 optimizer 变体，仓库使用已保存的 32 个真实 gradient，按 TorchAO
+源码中的分块缩放、最近 qmap 编码、反量化和 AdamW 方程进行 CPU 数学重放。这是
+结果后的开发诊断，不是新的真实 Triton 执行或训练确认。其默认参数写入 RMS 为
+5.4816%，接近原真实执行的 5.4502%，但不把两者称为逐位相同。
+
+在后 16 步中，一阶 moment 量化误差只有 0.391% 的能量能由“每个 256 元素块共享
+一个加性偏移”解释；二阶 moment 也只有 0.976%。给一阶 moment 每块增加一个 FP32
+均值修正量，参数写入 RMS 反而由 5.4816% 增至 5.4945%。进一步把已有 block scale
+改成该块的最小平方误差 scale，虽然当步一阶 moment 的量化误差下降约 3.40%，递推后
+参数写入 RMS 仍增至 5.6170%。
+
+因此现有结果不支持“误差主要是每块共同漂移，去掉共同漂移即可改善训练”这一简单
+解释，也再次表明局部状态重构误差下降不保证后续参数写入更接近参考。两项候选在开发
+阶段即被否定，不进入昂贵训练确认。下一步若继续该链，应研究跨步误差与梯度/AdamW
+分母的联合响应，而不是把单步 RMS 最小化当成训练目标。
+
 训练确认使用同一个 checkpoint，随机单位是 8 条数据流，而不是 checkpoint 或模型。
 区间依赖这些数据流可作为近似独立单位的假设，不能推广到其他模型、checkpoint、
 数据集或 optimizer 设置。当前环境缺少 Mamba 加速 kernel，模型使用相同的顺序路径；
@@ -119,3 +137,4 @@ loss 差异。它没有证明崩溃、跨 checkpoint 泛化或 64-block 修改�
 - component follow-up：`results/property/numerical_coverage_v1/torchao_adamw8bit_component_mechanism_v1/summary.json`
 - FP32-first-moment 训练确认：`results/property/numerical_coverage_v1/mamba_adamw8bit_hybrid_training_confirmation_v1/`
 - FP32-first-moment 独立复算：`results/property/numerical_coverage_v1/mamba_adamw8bit_hybrid_training_confirmation_v1/verification_v2.json`
+- 修改失败后的分块误差诊断：`results/property/numerical_coverage_v1/adamw8bit_block_residual_development_v1.json`

@@ -5,6 +5,7 @@ import pytest
 from kernel_analyzer.training_numerical_analysis import (
     analyze_artifact,
     analyze_bounded_population_artifact,
+    analyze_population_exceedance_artifact,
 )
 
 
@@ -150,3 +151,36 @@ def test_bounded_population_artifact_rejects_observed_bound_violation():
     assert out["measurement_status"] == "INVALID"
     assert out["equivalence_decision"] == "NOT_ASSESSED"
     assert "BOUNDED_POPULATION_ASSUMPTION_FAILED" in out["bias_analysis"]["not_assessed_reason"]
+
+
+def _exceedance_protocol():
+    return {
+        "schema": "population-statewise-exceedance-v1",
+        "primary_stage": "PARAMETER_WRITE",
+        "claim_scope": "DECLARED_STATE_POPULATION_UPDATE",
+        "population_estimand": "STATEWISE_RMS_EXCEEDANCE_PROBABILITY",
+        "statewise_rms_margin": 0.1,
+        "maximum_exceedance_probability": 0.1,
+        "repair_energy_floor": 0.0,
+        "alpha": 0.05,
+        "data_use": "SYNTHETIC_VALIDATION",
+    }
+
+
+def test_population_exceedance_artifact_uses_original_coordinate_statistics():
+    raw = artifact(np.zeros((64, 3)), np.ones((64, 3)))
+    raw["inference_unit_ids"] = [f"unit-{index}" for index in range(64)]
+    out = analyze_population_exceedance_artifact(raw, _exceedance_protocol())
+    assert out["measurement_status"] == "VALID"
+    assert out["equivalence_decision"] == "EQUIVALENT"
+    assert out["bias_analysis"]["not_a_mean_energy_certificate"] is True
+
+
+def test_population_exceedance_artifact_rejects_duplicate_units():
+    raw = artifact(np.zeros((64, 3)), np.ones((64, 3)))
+    raw["inference_unit_ids"] = ["same-unit"] * 64
+    out = analyze_population_exceedance_artifact(raw, _exceedance_protocol())
+    assert out["measurement_status"] == "INVALID"
+    assert out["bias_analysis"]["not_assessed_reason"] == (
+        "ONE_ROW_PER_INDEPENDENT_UNIT_REQUIRED"
+    )

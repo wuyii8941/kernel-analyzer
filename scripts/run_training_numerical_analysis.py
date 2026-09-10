@@ -38,8 +38,12 @@ def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "coverage":
         _run("run_numerical_coverage.py", *sys.argv[2:])
         return
+    if len(sys.argv) > 1 and sys.argv[1] == "population-exceedance":
+        _run("recompute_population_exceedance.py", *sys.argv[2:])
+        return
     parser = argparse.ArgumentParser(
         epilog="Metadata-driven capture: coverage {freeze,run,report} --help; "
+               "population prevalence: population-exceedance RAW PROTOCOL OUTPUT; "
                "source-checked families: row-reference / row-capture / family-report. "
                "Training review shortlist: select-training. "
                "Current shared analysis: analyze RAW OUTPUT --protocol PROTOCOL. "

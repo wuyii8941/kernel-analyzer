@@ -8,8 +8,10 @@ from kernel_analyzer.training_equivalence import (
     bounded_population_total_energy_equivalence,
     classify_fixed_suite_update_equivalence,
     classify_training_equivalence,
+    exact_binomial_one_sided_bounds,
     fixed_suite_total_rms_from_joint_gram,
     population_aligned_equivalence,
+    population_statewise_rms_exceedance_equivalence,
     population_total_energy_equivalence,
     simultaneous_intervals_from_joint_gram,
 )
@@ -347,4 +349,42 @@ def test_bounded_population_aligned_rejects_bound_violation() -> None:
             [2.0], [1.0], margin=0.01,
             effect_energy_upper_bound=1.0, repair_energy_upper_bound=1.0,
             bound_provenance="predeclared test bound",
+        )
+
+
+def test_exact_binomial_zero_violation_bound_matches_closed_form() -> None:
+    lower, upper = exact_binomial_one_sided_bounds(0, 64, alpha=0.05)
+    assert lower == 0.0
+    assert upper == pytest.approx(1.0 - 0.05 ** (1.0 / 64.0), rel=1e-11)
+
+
+def test_population_exceedance_can_certify_five_percent_with_64_clean_units() -> None:
+    result = population_statewise_rms_exceedance_equivalence(
+        [0.0] * 64,
+        [1.0] * 64,
+        statewise_rms_margin=0.01,
+        maximum_exceedance_probability=0.05,
+    )
+    assert result["decision"] == "EQUIVALENT"
+    assert result["mean_energy_q_guarantee"] is False
+
+
+def test_population_exceedance_counts_exact_margin_as_violation() -> None:
+    result = population_statewise_rms_exceedance_equivalence(
+        [0.01**2] * 32,
+        [1.0] * 32,
+        statewise_rms_margin=0.01,
+        maximum_exceedance_probability=0.05,
+    )
+    assert result["observed_exceedance_count"] == 32
+    assert result["decision"] == "NON_EQUIVALENT"
+
+
+def test_population_exceedance_fails_on_zero_repair_energy() -> None:
+    with pytest.raises(ValueError, match="repair energy"):
+        population_statewise_rms_exceedance_equivalence(
+            [0.0, 0.0],
+            [1.0, 0.0],
+            statewise_rms_margin=0.01,
+            maximum_exceedance_probability=0.05,
         )
