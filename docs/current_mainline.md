@@ -48,7 +48,9 @@
 绑定，不要重跑”。在修复两个 runtime release 后，数据搬运/布局族和逐元素族各完成了
 32 状态有效测量；confirmation 固定集合 update RMS 分别约为 41.53% 和 39.78%，对齐缩放分别约为
 −8.62% 和 −7.91%。它们是新的家族级固定集合证据，但尚无总体或训练质量结论。当前清单中
-剩余两个族仍需修复参考绑定，另一个族尚无可用参考适配器；详情见[未测算子族前沿](unmeasured_triton_family_frontier.md)。
+剩余两个族仍需修复参考绑定，另一个族尚无可用参考适配器。`FUSED_MIXED` 的新 Mamba 尝试只完成
+9/32 个状态，确认 AOT/`torch.compile` 采集会走不可接受的 sequential fallback，因此仍保持运行路径阻塞，
+不进入有效覆盖或 bias 计数；详情见[未测算子族前沿](unmeasured_triton_family_frontier.md)。
 
 ### 算子族优先与去重（2026-09-08 用户校准）
 
