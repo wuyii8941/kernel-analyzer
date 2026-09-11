@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import math
+import numbers
 from pathlib import Path
 
 
@@ -30,6 +31,25 @@ def interval(values: list[float]) -> list[float]:
         variance / len(values)
     )
     return [mean - half, mean + half]
+
+
+def equivalent_recorded_value(reported: object, recomputed: object) -> bool:
+    """Compare JSON results without rejecting harmless float round-off.
+
+    Categorical fields remain exact.  Numeric values are only allowed the
+    machine-scale variation produced by independently repeating the same
+    arithmetic with a different SciPy/Python build.
+    """
+    if isinstance(reported, numbers.Real) and isinstance(recomputed, numbers.Real):
+        return math.isclose(
+            float(reported), float(recomputed), rel_tol=1e-12, abs_tol=1e-15
+        )
+    if isinstance(reported, list) and isinstance(recomputed, list):
+        return len(reported) == len(recomputed) and all(
+            equivalent_recorded_value(left, right)
+            for left, right in zip(reported, recomputed, strict=True)
+        )
+    return reported == recomputed
 
 
 def verify(root: Path) -> dict:
@@ -96,7 +116,7 @@ def verify(root: Path) -> dict:
         }
         reported = summary.get("primary", {})
         for key in ("paired_values", "mean", "interval_95", "decision"):
-            if reported.get(key) != recomputed[key]:
+            if not equivalent_recorded_value(reported.get(key), recomputed[key]):
                 errors.append("reported primary result differs: " + key)
     return {
         "schema": "adamw8bit-error-compensation-training-verification-v1",

@@ -22,6 +22,8 @@ SOURCES = {
     "adamw_training": "results/property/numerical_coverage_v1/mamba_adamw8bit_training_confirmation_v1/verification.json",
     "adamw_modified_training": "results/property/numerical_coverage_v1/mamba_adamw8bit_hybrid_training_confirmation_v1/verification_v2.json",
     "adamw_residual": "results/property/numerical_coverage_v1/adamw8bit_block_residual_development_v1.json",
+    "adamw_compensation_probe": "results/property/numerical_coverage_v1/adamw8bit_error_compensation_probe_v1/verification.json",
+    "adamw_compensation_training": "results/property/numerical_coverage_v1/adamw8bit_error_compensation_training_v1/verification.json",
     "rotary": "results/property/numerical_coverage_v1/ministral_fused_rotary_optimizer_condition_summary_v1.json",
     "rotary_family": "results/property/numerical_coverage_v1/ministral_fused_rotary_family_evidence_v1.json",
     "attention": "results/property/numerical_coverage_v1/qwen_flash_sdpa_attention_v1/analysis.json",
@@ -65,6 +67,8 @@ def build(family_report: dict) -> dict:
     adamw_training = _read("adamw_training")
     adamw_modified = _read("adamw_modified_training")
     adamw_residual = _read("adamw_residual")
+    adamw_compensation_probe = _read("adamw_compensation_probe")
+    adamw_compensation_training = _read("adamw_compensation_training")
     rotary = _read("rotary")
     rotary_family = _read("rotary_family")["records"][0]
     attention = _read("attention")
@@ -91,14 +95,29 @@ def build(family_report: dict) -> dict:
                 "fp32_first_moment_training": adamw_modified["primary"]["decision"],
                 "simple_block_residual_corrections": "REJECTED_IN_DEVELOPMENT",
                 "default_write_rms_in_cpu_replay": adamw_residual["aggregate"]["parameter_write_relative_rms_default"],
+                "recurrence_compensation_write_prediction":
+                    adamw_compensation_probe["recomputed"]["prediction_result"],
+                "recurrence_compensation_default_write_rms":
+                    adamw_compensation_probe["recomputed"]["mean_write_rms"]["default_block256"],
+                "recurrence_compensation_modified_write_rms":
+                    adamw_compensation_probe["recomputed"]["mean_write_rms"]["compensated_block256"],
+                "recurrence_compensation_training":
+                    adamw_compensation_training["recomputed"]["decision"],
             },
             "training_outcome": {
                 "decision": adamw_training["primary"]["decision"],
                 "candidate_minus_reference_loss_mean": adamw_training["primary"]["mean"],
                 "interval_95": adamw_training["primary"]["interval_95"],
                 "collapse": adamw_training["collapse_decision"],
+                "default_minus_recurrence_compensated_loss_mean":
+                    adamw_compensation_training["recomputed"]["mean"],
+                "default_minus_recurrence_compensated_interval_95":
+                    adamw_compensation_training["recomputed"]["interval_95"],
             },
-            "chain_status": "SOURCE_UPDATE_AND_TRAINING_EFFECT_CONFIRMED; EFFECTIVE_MODIFICATION_OPEN",
+            "chain_status": (
+                "RECURRENCE_SOURCE_UPDATE_AND_TRAINING_IMPROVEMENT_CONFIRMED; "
+                "SINGLE_DECLARED_PROTOCOL_ONLY"
+            ),
         },
         {
             "problem_group": "FUSED_ROTARY_POSITION_TRANSFORM",
@@ -155,7 +174,7 @@ def build(family_report: dict) -> dict:
         },
     ]
     return {
-        "schema": "operator-problem-group-depth-report-v1",
+        "schema": "operator-problem-group-depth-report-v2",
         "scope": (
             "Deduplicated reporting groups. Catalogue coverage, update evidence, "
             "mathematical source, modification validation, and training outcome are separate."

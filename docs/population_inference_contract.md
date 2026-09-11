@@ -40,10 +40,13 @@ X=\begin{cases}
 - 总体超界比例：精确有限样本实现和高维合成路径已通过；AdamW8bit 已在一个声明的
   固定 checkpoint 经验 token 分布上完成 32 个独立 gradient-history 单位。32/32 超过
   1% 参数写入 RMS，超范围比例的一侧 95% 下界为 91.06%。
-- 总体方向出现比例：AdamW8bit 在另一组事前抽取的 32 个独立 gradient history 中，
-  candidate-reference 参数写入与 FP32 AdamW 正常写入的内积均为正；出现比例的一侧
-  95% 下界为 91.06%。整体 aligned ratio 的描述值约为 0.0756%，所以这个结果只说明
+- 总体方向出现比例：AdamW8bit 的原始运行在 32 个独立抽取的 gradient history 中，
+  32/32 沿事前声明方向；但其中 16 条与更早的全模型分块实验使用同一 history，不能再称为
+  相对全部既有分析都未见。排除重叠后，剩余 16/16 仍同方向，精确二项单侧 95% 下界为
+  82.93%。当前跨实验确认按这 16 条未重叠 history 报告；原 32 条结果及其 91.06% 下界
+  只保留为实验内估计。整体 aligned ratio 的描述值约为 0.0756%，所以这个结果只说明
   预声明方向的符号稳定，不是方向幅度、向量均值或实际重要性保证。
+  去重复算保存在 `results/property/numerical_coverage_v1/adamw8bit_population_direction_cross_experiment_audit_v1.json`。
 - 原 studentized 平均能量方法：保留为失败与大样本研究记录，不签有限样本证书。
 
 因此，**总体统计不再被定义成一张无条件万能证书**。当前已经闭合两条可执行路线：

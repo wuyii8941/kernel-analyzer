@@ -56,7 +56,7 @@ Kernel Analyzer 的研究目标是建立一个**机制与工具共同组成的�
    精确有限样本端点及其与平均 Q 的边界。
 10. [随机状态总体推断合同](docs/population_inference_contract.md)：平均能量、超界比例和
     固定集合分别能证明什么，以及条件不足时为什么必须不作判断。
-11. [算子族与重点问题组证据深度](results/property/numerical_coverage_v1/operator_problem_group_depth_v1.md)：
+11. [算子族与重点问题组证据深度](results/property/numerical_coverage_v1/operator_problem_group_depth_v2.md)：
     自动区分覆盖、update 证据、数学来源、修改验证和训练后果。
 12. [全部已观测 kernel 清单](docs/observed_kernel_catalog.md)：对保存的全部任务位置去重、
     分类并记录支持状态，按新家族和真实 Triton 优先生成自动执行队列。

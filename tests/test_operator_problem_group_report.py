@@ -1,4 +1,4 @@
-from scripts.build_operator_problem_group_report import _markdown
+from scripts.build_operator_problem_group_report import SOURCES, _markdown
 
 
 def test_markdown_keeps_positions_and_problem_groups_separate():
@@ -19,3 +19,8 @@ def test_markdown_keeps_positions_and_problem_groups_separate():
     text = _markdown(report)
     assert "位置数不是独立问题数" in text
     assert "12" in text and "GROUP" in text
+
+
+def test_latest_problem_group_report_includes_compensation_evidence():
+    assert "adamw_compensation_probe" in SOURCES
+    assert "adamw_compensation_training" in SOURCES

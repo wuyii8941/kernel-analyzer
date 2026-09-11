@@ -43,7 +43,7 @@ AdamW 与标准 AdamW，保留实际生成的 Triton 源码；确认集合参数
 SiLU/normalization 执行清单共 99 个位置此前没有回写主清单。程序现在按 release 与
 task ID 唯一匹配后，得到 520 个已核验位置；SiLU 从 0 修正为 64，normalization 从
 228 修正为 263。这个变化不是 99 个新实验，也不增加独立算子问题数。后续优先级使用
-`operator_problem_group_depth_v1.*`，不再以位置数排序。
+`operator_problem_group_depth_v2.*`，不再以位置数排序。v1 保留为补偿修改完成前的历史快照。
 
 2026-09-10 随后的全部位置清单不再只按已有 reference 标签汇总。它将 27 个保存目录
 按任务清单摘要去重为 17 份不同任务包、146,104 个不同任务位置，并使用已审核 reference、

@@ -127,7 +127,7 @@ Ministral 的编译生成 fused RoPE / position scaling Triton 计算已经通�
 后续 v11 使用 `scripts/merge_family_execution_measurements.py` 按完整 release 路径与
 task ID，把 `family_execution_audit_20260907_all_three_complete.json` 中 99 个已核验
 结果接回统一清单；没有依据 family 名称推断结果。自动生成的
-`operator_problem_group_depth_v1.*` 进一步把目录覆盖、实际 Triton 身份、update 证据、
+`operator_problem_group_depth_v2.*` 进一步把目录覆盖、实际 Triton 身份、update 证据、
 数学来源、修改验证和训练后果分列，作为后续资源安排依据。
 
 ## 2026-09-07 补充核验
