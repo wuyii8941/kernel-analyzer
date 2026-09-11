@@ -77,7 +77,7 @@ def main() -> None:
         torch.cuda.synchronize(device)
         wrappers = wrapper_modules(list(PyCodeCache.modules[start:]))
         inventory, campaign = freeze_or_validate_release(
-            modules=wrappers, release=args.new_release,
+            modules=wrappers, model=model, release=args.new_release,
             architecture=args.architecture, input_bank=args.input_bank,
             state=states[0], allow_graph_breaks=args.allow_graph_breaks,
         )

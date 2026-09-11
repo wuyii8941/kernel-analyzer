@@ -105,9 +105,10 @@ def _prior_campaign_status(paths: list[Path]) -> dict[str, list[dict[str, Any]]]
         for row in payload.get("rows", []):
             family = row.get("operator_family")
             if family:
+                execution_status = row.get("execution_status") or row.get("status")
                 result[str(family)].append({
                     "summary": str(path),
-                    "execution_status": row.get("execution_status"),
+                    "execution_status": execution_status,
                     "measurement_status": row.get("measurement_status"),
                     "failure_reason": row.get("failure_reason"),
                     "case_id": row.get("case_id"),
@@ -156,8 +157,18 @@ def build(
             covered.append(family)
         elif candidate:
             attempts = prior.get(family, [])
+            valid_attempts = [item for item in attempts if item.get("execution_status") in {"MEASUREMENT_VALID", "VALID"}]
             failed_attempts = [item for item in attempts if item.get("execution_status") == "EXECUTION_FAILED"]
-            if failed_attempts:
+            if valid_attempts:
+                evidence.append({
+                    "kind": "AUTOMATED_FAMILY_CAMPAIGN_VALID",
+                    "count": len(valid_attempts),
+                    "summaries": [item["summary"] for item in valid_attempts],
+                })
+                status = "ALREADY_COVERED_DO_NOT_REPEAT"
+                action = "DO_NOT_REPEAT_FAMILY_ONLY_FOR_MORE_POSITIONS"
+                covered.append(family)
+            elif failed_attempts:
                 status = "MEASUREMENT_BLOCKED_AFTER_PRIOR_ATTEMPT"
                 action = "FIX_REFERENCE_BINDING_NOT_RERUN"
                 blocked.append({

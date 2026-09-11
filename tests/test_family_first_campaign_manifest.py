@@ -78,6 +78,39 @@ def test_campaign_manifest_can_be_restricted_to_static_unmeasured_frontier(tmp_p
     assert result["selection_scope"] == "STATIC_UNMEASURED_FRONTIER_FAMILY_ROWS_ONLY"
 
 
+def test_campaign_manifest_records_separate_release_rebind(tmp_path):
+    replacement = tmp_path / "replacement"
+    replacement.mkdir()
+    queue = {"rows": [{
+        "wave": "NEW_FAMILY_FIRST", "operator_family": "ELEMENTWISE",
+        "release": "/r", "task_id": "backward:1:out", "carrier": "weight",
+        "implementation_kind": "TRITON",
+        "reference_candidates": [{"reference_method": "AOT_REPLAY"}],
+    }]}
+    configs = {"/r": {"architecture": "a", "model": "/m", "input_bank": "/b",
+                       "source_protocols": ["/p"]}}
+    result = build(queue, configs, output_root=tmp_path / "out",
+                   release_overrides={"ELEMENTWISE": str(replacement)})
+    campaign = result["campaigns"][0]
+    assert campaign["release"] == str(replacement)
+    assert campaign["original_release"] == "/r"
+    assert campaign["release_override"] is True
+
+
+def test_campaign_manifest_records_explicit_graph_break_policy(tmp_path):
+    queue = {"rows": [{
+        "wave": "NEW_FAMILY_FIRST", "operator_family": "ELEMENTWISE",
+        "release": "/r", "task_id": "backward:1:out", "carrier": "weight",
+        "implementation_kind": "TRITON",
+        "reference_candidates": [{"reference_method": "AOT_REPLAY"}],
+    }]}
+    configs = {"/r": {"architecture": "a", "model": "/m", "input_bank": "/b",
+                       "allow_graph_breaks": False, "source_protocols": ["/p"]}}
+    result = build(queue, configs, output_root=tmp_path / "out",
+                   allow_graph_breaks_families={"ELEMENTWISE"})
+    assert result["campaigns"][0]["runtime"]["allow_graph_breaks"] is True
+
+
 def test_runtime_discovery_does_not_merge_different_compile_policies(tmp_path):
     import json
     first = tmp_path / "a" / "protocol.json"
@@ -176,3 +209,21 @@ def test_unmeasured_frontier_does_not_rerun_prior_failed_family(tmp_path):
     result = build(catalogue, queue, prior_campaigns=[summary])
     assert result["new_family_targets"] == []
     assert result["blocked_or_unbound_families"][0]["reason"] == "MEASUREMENT_BLOCKED_AFTER_PRIOR_ATTEMPT"
+
+
+def test_unmeasured_frontier_promotes_valid_campaign_to_covered(tmp_path):
+    from scripts.build_unmeasured_triton_family_frontier import build
+
+    catalogue = {"positions": [{"operator_family": "ELEMENTWISE",
+                                  "support_status": "READY_FOR_MEASUREMENT",
+                                  "implementation_kind": "TRITON"}]}
+    queue = {"rows": [{"operator_family": "ELEMENTWISE", "wave": "NEW_FAMILY_FIRST",
+                         "release": "/r", "task_id": "backward:1:out",
+                         "implementation_kind": "TRITON"}]}
+    summary = tmp_path / "run.json"
+    summary.write_text(json.dumps({"rows": [{
+        "operator_family": "ELEMENTWISE", "status": "MEASUREMENT_VALID",
+    }]}))
+    result = build(catalogue, queue, prior_campaigns=[summary])
+    assert result["new_family_targets"] == []
+    assert result["families"][0]["status"] == "ALREADY_COVERED_DO_NOT_REPEAT"

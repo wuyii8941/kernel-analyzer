@@ -83,8 +83,12 @@ def build(
     include_specialized: bool = False,
     specialized_plan_overrides: dict[str, str] | None = None,
     frontier_families: set[str] | None = None,
+    release_overrides: dict[str, str] | None = None,
+    allow_graph_breaks_families: set[str] | None = None,
 ) -> dict:
     specialized_plan_overrides = specialized_plan_overrides or {}
+    release_overrides = release_overrides or {}
+    allow_graph_breaks_families = allow_graph_breaks_families or set()
     selected = []
     skipped = []
     seen_families = set()
@@ -113,7 +117,8 @@ def build(
             })
             seen_families.add(family)
             continue
-        config = runtime_configs.get(str(Path(row["release"]).resolve()))
+        original_release = row["release"]
+        config = runtime_configs.get(str(Path(original_release).resolve()))
         if config is None:
             skipped.append({
                 "operator_family": family, "release": row["release"],
@@ -121,8 +126,14 @@ def build(
             })
             seen_families.add(family)
             continue
+        config = dict(config)
+        if family in allow_graph_breaks_families:
+            config["allow_graph_breaks"] = True
         method = usable[0]
-        case_hash = hashlib.sha256((row["release"] + "\0" + row["task_id"]).encode()).hexdigest()[:16]
+        release = release_overrides.get(family, original_release)
+        if family in release_overrides and not Path(release).exists():
+            raise ValueError(f"release override does not exist: {release}")
+        case_hash = hashlib.sha256((release + "\0" + row["task_id"]).encode()).hexdigest()[:16]
         case_id = f"family-{family.lower().replace('_', '-')}-{case_hash}"
         binding = next(
             item for item in bindings if item.get("reference_method") == method
@@ -135,7 +146,8 @@ def build(
         selected.append({
             "operator_family": family,
             "implementation_kind": row.get("implementation_kind", "UNDECLARED"),
-            "release": row["release"],
+            "release": release,
+            "original_release": original_release,
             "task_id": row["task_id"],
             "case": {
                 "case_id": case_id,
@@ -152,6 +164,7 @@ def build(
             "specialized_plan_override": (
                 family in specialized_plan_overrides if specialized else False
             ),
+            "release_override": family in release_overrides,
             "runtime": config,
             "campaign_output": str((output_root / case_id).resolve()),
         })
@@ -171,6 +184,8 @@ def build(
             "FIRST_CANONICAL_POSITION_PER_FAMILY_WITH_GENERIC_REFERENCE_AND_RECOVERED_RUNTIME_CONFIG"
         ),
         "frontier_families": sorted(frontier_families) if frontier_families is not None else None,
+        "release_overrides": dict(sorted(release_overrides.items())),
+        "allow_graph_breaks_families": sorted(allow_graph_breaks_families),
         "selected_campaign_count": len(selected),
         "selected_operator_families": [row["operator_family"] for row in selected],
         "execution_policy": {
@@ -202,6 +217,18 @@ def main() -> None:
         "--frontier", type=Path,
         help="Use only families listed in an unmeasured-family frontier report.",
     )
+    parser.add_argument(
+        "--family", action="append", default=[], dest="selected_families",
+        help="Explicitly select one or more audited family IDs (static selection only).",
+    )
+    parser.add_argument(
+        "--release-override", action="append", default=[], metavar="FAMILY=PATH",
+        help="Use a separately rebound runtime release for one selected family.",
+    )
+    parser.add_argument(
+        "--allow-graph-breaks-family", action="append", default=[], dest="graph_break_families",
+        help="Declare graph-break-compatible compilation for one selected family.",
+    )
     args = parser.parse_args()
     manifest_path = args.output_root / "manifest.json"
     if args.output_root.exists() or not args.output_root.resolve().is_relative_to(Path("/data1/tzh")):
@@ -225,11 +252,24 @@ def main() -> None:
             for row in frontier_payload.get("new_family_targets", [])
             if row.get("operator_family")
         }
+    if args.selected_families:
+        frontier_families = set(args.selected_families)
+    release_overrides = {}
+    for item in args.release_override:
+        if "=" not in item:
+            parser.error("--release-override must be FAMILY=PATH")
+        family, path = item.split("=", 1)
+        if not family or not path or family in release_overrides:
+            parser.error("Invalid or duplicate release override")
+        release_overrides[family] = str(Path(path).resolve())
+    graph_break_families = set(args.graph_break_families)
     result = build(
         queue, runtime_configs, output_root=args.output_root,
         include_specialized=args.include_specialized,
         specialized_plan_overrides=overrides,
         frontier_families=frontier_families,
+        release_overrides=release_overrides,
+        allow_graph_breaks_families=graph_break_families,
     )
     result["queue_sha256"] = hashlib.sha256(args.queue.read_bytes()).hexdigest()
     if args.frontier:
