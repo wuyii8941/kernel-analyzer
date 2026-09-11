@@ -40,17 +40,28 @@ def summarize(manifest: dict) -> dict:
     rows = []
     for campaign in manifest["campaigns"]:
         output = Path(campaign["campaign_output"])
+        specialized = campaign.get("adapter") not in {None, "GENERIC_COVERAGE"}
         run_id = hashlib.sha256(campaign["task_id"].encode()).hexdigest()[:20]
         run = output / "runs" / run_id
-        status_path = run / "status.json"
-        if status_path.exists():
-            execution = json.loads(status_path.read_text()).get("status", "UNDECLARED")
-        elif run.exists():
-            execution = "INCOMPLETE_ATTEMPT"
+        completion_path = output / "completion_verification.json"
+        if specialized and completion_path.exists():
+            completion = json.loads(completion_path.read_text())
+            records = completion.get("records", [])
+            record = next((r for r in records if r.get("task_id") == campaign["task_id"]), {})
+            execution = "VALID" if record.get("status") == "VERIFIED" or record.get("status") == "RECORDED_MEASUREMENT_CHECKED" else record.get("status", "INCOMPLETE")
+            analysis = record.get("analysis") or {}
+            run = output
         else:
-            execution = "NOT_STARTED"
-        analysis_path = run / "analysis.json"
-        analysis = json.loads(analysis_path.read_text()) if analysis_path.exists() else {}
+            status_path = run / "status.json"
+            if status_path.exists():
+                execution = json.loads(status_path.read_text()).get("status", "UNDECLARED")
+            elif run.exists():
+                execution = "INCOMPLETE_ATTEMPT"
+            else:
+                execution = "NOT_STARTED"
+        if not specialized:
+            analysis_path = run / "analysis.json"
+            analysis = json.loads(analysis_path.read_text()) if analysis_path.exists() else {}
         bias = analysis.get("bias_analysis", {})
         rows.append({
             "operator_family": campaign["operator_family"],

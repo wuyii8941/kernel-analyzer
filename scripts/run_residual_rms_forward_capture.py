@@ -83,6 +83,7 @@ def main():
     save(output / 'family_execution_protocol.json', dict(schema='residual-rms-forward-capture-v1',
         capture_arguments=arguments, contracts=contracts, primary_stage='PARAMETER_WRITE',
         contrast_id='SINGLE_FORWARD_OUTPUT_REPLACEMENT', claim_scope='FIXED_SUITE_UPDATE',
+        fixed_suite_margins=dict(full_update_rms=0.01),
         source_sha256={str(path.resolve()): sha(path) for path in paths}, statistical_method_changed=False))
     from scripts.run_parallel_bound_capture import main as run
     from kernel_analyzer.capture_cost import measured_capture

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Turn the family-first queue into resumable generic coverage campaigns.
+"""Turn the family-first queue into resumable coverage campaigns.
 
-Only reference methods already supported by the generic capture engine are
-included.  Existing family-specific reference runners remain visible as
-unsupported by this manifest rather than being silently replaced.
+The default keeps the original generic-only manifest for reproducibility.
+``--include-specialized`` adds already-audited family adapters (normalization
+and recurrence) without changing their reference definitions or selecting on
+numerical outcomes.
 """
 from __future__ import annotations
 
@@ -15,6 +16,28 @@ from pathlib import Path
 
 
 GENERIC_METHODS = {"AOT_REPLAY", "EXTERNAL_FP32_RECOMPUTE"}
+SPECIALIZED_METHODS = {
+    "RESIDUAL_RMS_FORWARD_COMMON_INPUT": {
+        "adapter": "RESIDUAL_RMS_FORWARD",
+        "script": "scripts/run_residual_rms_forward_capture.py",
+        "plan_argument": "family-plan",
+    },
+    "DECAYED_RECURRENCE_COMMON_INPUT": {
+        "adapter": "DECAYED_RECURRENCE",
+        "script": "scripts/run_decayed_recurrence_capture.py",
+        "plan_argument": "recurrence-plan",
+    },
+    "SEGMENTED_RECURRENCE_FIRST_COMMON_INPUT": {
+        "adapter": "SEGMENTED_RECURRENCE_FIRST",
+        "script": "scripts/run_decayed_recurrence_capture.py",
+        "plan_argument": "recurrence-plan",
+    },
+    "CONTINUED_RECURRENCE_COMMON_INPUT": {
+        "adapter": "CONTINUED_RECURRENCE",
+        "script": "scripts/run_decayed_recurrence_capture.py",
+        "plan_argument": "recurrence-plan",
+    },
+}
 
 
 def discover_runtime_configs(protocol_paths: list[Path]) -> dict[str, dict]:
@@ -52,7 +75,15 @@ def discover_runtime_configs(protocol_paths: list[Path]) -> dict[str, dict]:
     return result
 
 
-def build(queue: dict, runtime_configs: dict[str, dict], *, output_root: Path) -> dict:
+def build(
+    queue: dict,
+    runtime_configs: dict[str, dict],
+    *,
+    output_root: Path,
+    include_specialized: bool = False,
+    specialized_plan_overrides: dict[str, str] | None = None,
+) -> dict:
+    specialized_plan_overrides = specialized_plan_overrides or {}
     selected = []
     skipped = []
     seen_families = set()
@@ -64,12 +95,17 @@ def build(queue: dict, runtime_configs: dict[str, dict], *, output_root: Path) -
             continue
         bindings = row.get("reference_candidates", [])
         methods = {binding.get("reference_method") for binding in bindings}
-        usable = sorted(methods & GENERIC_METHODS)
+        usable = sorted(methods & (GENERIC_METHODS | (
+            set(SPECIALIZED_METHODS) if include_specialized else set()
+        )))
         if len(usable) != 1:
             skipped.append({
                 "operator_family": family, "release": row["release"],
                 "task_id": row["task_id"],
-                "reason": "GENERIC_REFERENCE_METHOD_UNAVAILABLE",
+                "reason": (
+                    "GENERIC_OR_SPECIALIZED_REFERENCE_METHOD_UNAVAILABLE"
+                    if include_specialized else "GENERIC_REFERENCE_METHOD_UNAVAILABLE"
+                ),
                 "declared_methods": sorted(str(value) for value in methods),
             })
             seen_families.add(family)
@@ -85,6 +121,14 @@ def build(queue: dict, runtime_configs: dict[str, dict], *, output_root: Path) -
         method = usable[0]
         case_hash = hashlib.sha256((row["release"] + "\0" + row["task_id"]).encode()).hexdigest()[:16]
         case_id = f"family-{family.lower().replace('_', '-')}-{case_hash}"
+        binding = next(
+            item for item in bindings if item.get("reference_method") == method
+        )
+        specialized = SPECIALIZED_METHODS.get(method)
+        specialized_plan = (
+            specialized_plan_overrides.get(family, binding.get("bound_plan"))
+            if specialized else None
+        )
         selected.append({
             "operator_family": family,
             "implementation_kind": row.get("implementation_kind", "UNDECLARED"),
@@ -98,14 +142,29 @@ def build(queue: dict, runtime_configs: dict[str, dict], *, output_root: Path) -
                 "family": family,
                 "selection_rule": "FAMILY_FIRST_QUEUE_WITHOUT_NUMERICAL_OUTCOMES",
             },
+            "adapter": specialized["adapter"] if specialized else "GENERIC_COVERAGE",
+            "capture_script": specialized["script"] if specialized else None,
+            "specialized_plan_argument": specialized["plan_argument"] if specialized else None,
+            "specialized_plan": specialized_plan,
+            "specialized_plan_override": (
+                family in specialized_plan_overrides if specialized else False
+            ),
             "runtime": config,
             "campaign_output": str((output_root / case_id).resolve()),
         })
         seen_families.add(family)
     return {
-        "schema": "family-first-generic-campaign-manifest-v1",
+        "schema": (
+            "family-first-campaign-manifest-v2"
+            if include_specialized else "family-first-generic-campaign-manifest-v1"
+        ),
         "selection_uses_numerical_outcomes": False,
-        "selection_scope": "FIRST_CANONICAL_POSITION_PER_FAMILY_WITH_GENERIC_REFERENCE_AND_RECOVERED_RUNTIME_CONFIG",
+        "specialized_plan_overrides": specialized_plan_overrides,
+        "selection_scope": (
+            "FIRST_CANONICAL_POSITION_PER_FAMILY_WITH_GENERIC_OR_AUDITED_SPECIALIZED_REFERENCE_AND_RECOVERED_RUNTIME_CONFIG"
+            if include_specialized else
+            "FIRST_CANONICAL_POSITION_PER_FAMILY_WITH_GENERIC_REFERENCE_AND_RECOVERED_RUNTIME_CONFIG"
+        ),
         "selected_campaign_count": len(selected),
         "selected_operator_families": [row["operator_family"] for row in selected],
         "execution_policy": {
@@ -113,6 +172,7 @@ def build(queue: dict, runtime_configs: dict[str, dict], *, output_root: Path) -
             "maximum_one_campaign_per_operator_family": True,
             "automatic_continuation_after_failure": False,
             "coverage_position_count_is_not_a_success_metric": True,
+            "specialized_adapters_use_declared_reference_plans": True,
         },
         "skipped_new_family_rows": skipped,
         "campaigns": selected,
@@ -124,6 +184,14 @@ def main() -> None:
     parser.add_argument("--queue", type=Path, required=True)
     parser.add_argument("--protocol-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
+    parser.add_argument(
+        "--include-specialized", action="store_true",
+        help="Include existing audited normalization/recurrence adapters.",
+    )
+    parser.add_argument(
+        "--specialized-plan-override", action="append", default=[], metavar="FAMILY=PATH",
+        help="Use a freshly rebound audited plan for one specialized family.",
+    )
     args = parser.parse_args()
     manifest_path = args.output_root / "manifest.json"
     if args.output_root.exists() or not args.output_root.resolve().is_relative_to(Path("/data1/tzh")):
@@ -131,13 +199,42 @@ def main() -> None:
     queue = json.loads(args.queue.read_text())
     protocols = sorted(args.protocol_root.glob("**/protocol.json"))
     runtime_configs = discover_runtime_configs(protocols)
-    result = build(queue, runtime_configs, output_root=args.output_root)
+    overrides = {}
+    for item in args.specialized_plan_override:
+        if "=" not in item:
+            parser.error("--specialized-plan-override must be FAMILY=PATH")
+        family, path = item.split("=", 1)
+        if not family or not path or family in overrides:
+            parser.error("Invalid or duplicate specialized plan override")
+        overrides[family] = str(Path(path).resolve())
+    result = build(
+        queue, runtime_configs, output_root=args.output_root,
+        include_specialized=args.include_specialized,
+        specialized_plan_overrides=overrides,
+    )
     result["queue_sha256"] = hashlib.sha256(args.queue.read_bytes()).hexdigest()
     result["runtime_config_protocol_count"] = len(protocols)
     args.output_root.mkdir(parents=True)
     for campaign in result["campaigns"]:
         path = args.output_root / (campaign["case"]["case_id"] + ".plan.json")
-        path.write_text(json.dumps({"cases": [campaign["case"]]}, indent=2) + "\n")
+        if campaign.get("specialized_plan"):
+            source = Path(campaign["specialized_plan"])
+            if not source.exists():
+                raise SystemExit("Declared specialized plan is missing: " + str(source))
+            payload = json.loads(source.read_text())
+            matches = [
+                case for case in payload.get("cases", [])
+                if case.get("task_id") == campaign["task_id"]
+            ]
+            if len(matches) != 1:
+                raise SystemExit(
+                    "Specialized plan must contain exactly one selected task: "
+                    + campaign["task_id"]
+                )
+            plan_payload = {"cases": matches}
+        else:
+            plan_payload = {"cases": [campaign["case"]]}
+        path.write_text(json.dumps(plan_payload, indent=2) + "\n")
         campaign["case_plan"] = str(path.resolve())
     manifest_path.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n")
     print(json.dumps({

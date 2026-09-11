@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Freeze, resume, and report family-first generic coverage campaigns."""
+"""Freeze, resume, and report family-first coverage campaigns."""
 from __future__ import annotations
 
 import argparse
@@ -15,6 +15,26 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def command(campaign: dict, action: str, *, device: str) -> list[str]:
+    if campaign.get("adapter") not in {None, "GENERIC_COVERAGE"}:
+        if action in {"freeze", "report"}:
+            # These actions are handled by the orchestrator itself for
+            # family-specific runners; never launch a GPU process here.
+            return [sys.executable, "-c", "pass"]
+        output = Path(campaign["campaign_output"])
+        return [
+            sys.executable, str(ROOT / campaign["capture_script"]),
+            "--" + campaign["specialized_plan_argument"], campaign["specialized_plan"],
+            "--case-plan", campaign["case_plan"],
+            "--states", "32",
+            "--training-bias-profile-v2-output-dir", str(output / "raw"),
+            "--output-dir", str(output / "legacy"),
+            "--spool-dir", str(output / "spool"),
+            "--input-bank", campaign["runtime"]["input_bank"],
+            "--architecture", campaign["runtime"]["architecture"],
+            "--release-dir", campaign["release"],
+            "--model", campaign["runtime"]["model"],
+            "--device", device,
+        ]
     base = [sys.executable, str(ROOT / "scripts/run_training_numerical_analysis.py"),
             "coverage", action, "--output", campaign["campaign_output"]]
     if action == "freeze":
@@ -34,6 +54,17 @@ def observed_status(campaign: dict, action: str, returncode: int) -> str:
     if returncode != 0:
         return "COMMAND_FAILED"
     output = Path(campaign["campaign_output"])
+    if campaign.get("adapter") not in {None, "GENERIC_COVERAGE"}:
+        if action == "freeze":
+            return "FROZEN" if (output / "protocol.json").exists() else "FREEZE_OUTPUT_MISSING"
+        if action == "run":
+            completion = output / "completion_verification.json"
+            if not completion.exists():
+                return "MEASUREMENT_INCOMPLETE_OR_RUNNING"
+            report = json.loads(completion.read_text())
+            complete = report.get("measurement_complete") or report.get("recorded_measurement_complete")
+            return "MEASUREMENT_VALID" if complete else "MEASUREMENT_INCOMPLETE"
+        return "REPORT_COMPLETE" if list((output / "reports").glob("*.json")) else "REPORT_OUTPUT_MISSING"
     if action == "freeze":
         return "FROZEN" if (output / "protocol.json").exists() else "FREEZE_OUTPUT_MISSING"
     if action == "run":
@@ -73,8 +104,51 @@ def main() -> None:
         if args.action == "freeze" and (output / "protocol.json").exists():
             rows.append({"case_id": campaign["case"]["case_id"], "status": "ALREADY_FROZEN"})
             continue
+        if (campaign.get("adapter") not in {None, "GENERIC_COVERAGE"}
+                and args.action == "freeze"):
+            if output.exists():
+                raise SystemExit("Specialized campaign output already exists: " + str(output))
+            output.mkdir(parents=True)
+            freeze = {
+                "schema": "family-first-specialized-freeze-v1",
+                "adapter": campaign["adapter"],
+                "operator_family": campaign["operator_family"],
+                "reference_method": campaign["case"]["reference_method"],
+                "case": campaign["case"],
+                "case_plan": campaign["case_plan"],
+                "specialized_plan": campaign["specialized_plan"],
+                "runtime": campaign["runtime"],
+                "release": campaign["release"],
+                "capture_script": campaign["capture_script"],
+                "selection_uses_numerical_outcomes": False,
+            }
+            (output / "protocol.json").write_text(json.dumps(freeze, indent=2) + "\n")
+            rows.append({"case_id": campaign["case"]["case_id"], "status": "FROZEN"})
+            continue
         cmd = command(campaign, args.action, device=args.device)
         completed = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True)
+        if (args.action == "run"
+                and campaign.get("adapter") not in {None, "GENERIC_COVERAGE"}
+                and completed.returncode == 0):
+            # Specialized capture scripts write the raw protocol but do not
+            # share the generic coverage finalizer.  Audit immediately and
+            # keep the result in the same campaign directory.
+            finalizer = (
+                ROOT / "scripts/finalize_residual_rms_forward.py"
+                if campaign["adapter"] == "RESIDUAL_RMS_FORWARD"
+                else ROOT / "scripts/finalize_decayed_recurrence.py"
+            )
+            audit = subprocess.run(
+                [sys.executable, str(finalizer), "--root", str(output),
+                 "--output", str(output / "completion_verification.json")],
+                cwd=ROOT, text=True, capture_output=True,
+            )
+            if audit.returncode != 0:
+                completed = subprocess.CompletedProcess(
+                    completed.args, audit.returncode,
+                    completed.stdout + "\n" + audit.stdout,
+                    completed.stderr + "\n" + audit.stderr,
+                )
         status = observed_status(campaign, args.action, completed.returncode)
         rows.append({
             "case_id": campaign["case"]["case_id"],

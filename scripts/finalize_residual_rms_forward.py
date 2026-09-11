@@ -31,7 +31,27 @@ def finalize(root):
     if protocol.get('schema') != 'residual-rms-forward-capture-v1':
         raise ValueError('Unexpected capture protocol')
     frozen = protocol['source_sha256']
-    snapshot = read(root / 'source_snapshot.json')
+    snapshot_path = root / 'source_snapshot.json'
+    # New family-first campaigns keep all capture artifacts below ``raw``;
+    # older jobs placed this snapshot at the campaign root.  Accept both
+    # layouts while retaining the content-addressed verification.
+    if not snapshot_path.exists():
+        snapshot_path = root / 'raw' / 'source_snapshot.json'
+    if not snapshot_path.exists():
+        # The family-first launcher writes the protocol before invoking the
+        # shared capture, while older queue jobs supplied this snapshot from
+        # an outer wrapper.  Recreate it only after checking every frozen
+        # source digest; this is not a retrospective source substitution.
+        snapshot = {}
+        for name, expected in frozen.items():
+            path = Path(name)
+            if path.suffix != '.py':
+                continue
+            if sha(path) != expected:
+                raise ValueError('Frozen source changed before snapshot creation: ' + name)
+            snapshot[name] = path.read_text()
+        save(snapshot_path, snapshot)
+    snapshot = read(snapshot_path)
     python_paths = {p for p in frozen if Path(p).suffix == '.py'}
     if set(snapshot) != python_paths or any(hashlib.sha256(snapshot[p].encode()).hexdigest() != frozen[p] for p in python_paths):
         raise ValueError('Frozen source snapshot differs')
@@ -51,7 +71,8 @@ def finalize(root):
         return path
     cases = verify_translation(originals[0], read(frozen_argument('--case-plan')))
     bank = read(frozen_argument('--input-bank'))
-    count = int(argument(protocol['capture_arguments'], '--states'))
+    count = (int(argument(protocol['capture_arguments'], '--states'))
+             if '--states' in protocol['capture_arguments'] else 32)
     warmup = int(argument(protocol['capture_arguments'], '--warmup-steps')) if '--warmup-steps' in protocol['capture_arguments'] else 0
     states = bank.get('states', bank.get('records', []))[warmup:warmup + count]
     ids = [str(s.get('state_id', s.get('sequence_id', i))) for i, s in enumerate(states)]

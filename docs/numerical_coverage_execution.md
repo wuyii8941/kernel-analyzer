@@ -33,6 +33,17 @@ PYTHONPATH=src:. python scripts/build_triton_coverage_frontier.py \
 和同目录的 Markdown 汇总自动生成。该轮没有有效三阶段测量；这表示参考/执行接入
 仍需修复，不表示这些家族是数值阴性。
 
+随后生成的 `family_first_campaigns_v5/manifest.json` 在同一入口中加入了两个已经有
+专用参考定义的族：`NORMALIZATION` 使用 `RESIDUAL_RMS_FORWARD_COMMON_INPUT`，
+`RECURRENCE` 使用 `SEGMENTED_RECURRENCE_FIRST_COMMON_INPUT`。它们各自动选择一个
+冻结位置；`summary_final.json` 报告两个位置均完成三阶段、实际参数写入和来源核对，
+固定集合 update RMS 均为 0。这里的 0 是观察到的有效阴性，不是对所有归一化或递推
+实现的普遍结论。该入口仍保留其余七族的未启动/失败状态，不用替代位置填满分母。
+
+这一步把“专用家族参考”接入了和通用 AOT/外部重算相同的自动编排路径：家族选择、
+计划冻结、运行、完整性审计和统一分析均由程序完成；研究者仍需事前审核参考公式和
+决定是否进入训练后果实验。
+
 自动化终点是生成可复算的诊断与候选修改证据，而不是让程序自行决定科研修改和长训练
 配置。研究者可以据此审核修改并安排训练验证；系统负责冻结该决定、执行已审核配置、
 保留失败并复算报告。本文后续所说的“诊断指导修改尚未完成”，指缺少相应实验结果，

@@ -73,6 +73,12 @@ optimizer-history 单位上签发一个范围明确的总体非等价结论。�
 `results/property/numerical_coverage_v1/family_first_campaigns_v2/summary_v3.json`，
 后续修复应针对这些运行边界，不应事后替换案例。
 
+2026-09-11 的后续自动化版本 `family_first_campaigns_v5` 沿用同一选择规则，新增了
+归一化和递推两个已有专用参考定义的适配器。两个代表位置均通过 32 个状态的三阶段
+采集、实际参数写入核对和来源审计；`summary_final.json` 中均为 `VALID/EQUIVALENT`，
+观察到的 update RMS 为 0。这是两个有效阴性和两个新族的接入证据，不是 bias 阳性，
+也不表示对应算子族的所有位置都已完成。其余未启动或旧轮失败状态继续保留在分母中。
+
 ## 原计划逐项记录
 
 | 原计划要求 | 当前证据 | 尚需完成或核验 |
