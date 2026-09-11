@@ -46,6 +46,11 @@ from scripts.run_qwen256_lmhead_property_confirmation import ShapeObserver  # no
 
 SKETCH_DIMENSION = 4096
 SKETCH_SEEDS = (20260831, 20260861, 20260891)
+# Vocabulary-sized gradients can contain hundreds of millions of coordinates.
+# Their exact original-coordinate energies are recorded separately; above this
+# limit, retaining descriptive CountSketch views is deliberately skipped so a
+# valid fixed-suite energy result is not blocked by host-memory compaction.
+LARGE_VECTOR_SKETCH_LIMIT = 100_000_000
 CALIBRATION = tuple(range(16))
 CONFIRMATION = tuple(range(16, 32))
 _PACKED_SKETCH_CACHE: dict[tuple[int, int], np.ndarray] = {}
@@ -160,7 +165,7 @@ def _new_stage_store(
     names = ["LOCAL", "PARAMETER_GRADIENT", "ADAMW_UPDATE"]
     if include_parameter_write:
         names.append("PARAMETER_WRITE")
-    return {name: {} for name in names}
+    return {name: {} for name in names} | {"__metadata__": {}}
 
 
 def _new_original_statistics() -> dict[str, list[dict[str, float]]]:
@@ -216,6 +221,25 @@ def _append_contrast(
 ) -> None:
     if original_statistics is not None:
         original_statistics[stage].append(_original_coordinate_row(effect, repair))
+    effect_count = int(
+        effect.numel() if isinstance(effect, torch.Tensor)
+        else np.asarray(effect).size
+    )
+    if effect_count > LARGE_VECTOR_SKETCH_LIMIT:
+        repair_count = int(
+            repair.numel() if isinstance(repair, torch.Tensor)
+            else np.asarray(repair).size
+        )
+        if repair_count != effect_count:
+            raise RuntimeError(f"{stage}: effect and repair coordinates differ")
+        metadata = store.setdefault("__metadata__", {})
+        metadata.setdefault(stage, {
+            "coordinate_count": effect_count,
+            "direction_views": "NOT_RETAINED",
+            "reason": "COORDINATE_COUNT_EXCEEDS_SKETCH_LIMIT",
+            "sketch_limit": LARGE_VECTOR_SKETCH_LIMIT,
+        })
+        return
     effect_views, effect_count = _compact_views(effect)
     repair_views, repair_count = _compact_views(repair)
     if effect_count != repair_count:
@@ -227,6 +251,8 @@ def _finish_stages(store: dict[str, dict[str, dict[str, Any]]]) -> dict[str, Any
     unit_ids = [f"input-state-{index:02d}" for index in range(32)]
     result: dict[str, Any] = {}
     for stage_index, (stage, views) in enumerate(store.items()):
+        if stage == "__metadata__":
+            continue
         result[stage] = {}
         for view_index, (view, slot) in enumerate(sorted(views.items())):
             effects = np.stack(slot["effects"])
@@ -247,6 +273,8 @@ def _finish_stages(store: dict[str, dict[str, dict[str, Any]]]) -> dict[str, Any
                     include_joint_gram=True,
                 ),
             }
+    if store.get("__metadata__"):
+        result["_metadata"] = store["__metadata__"]
     return result
 
 
