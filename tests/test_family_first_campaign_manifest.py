@@ -111,6 +111,31 @@ def test_campaign_manifest_records_explicit_graph_break_policy(tmp_path):
     assert result["campaigns"][0]["runtime"]["allow_graph_breaks"] is True
 
 
+def test_campaign_manifest_can_select_static_fallback_task_after_family_block(tmp_path):
+    queue = {"rows": [
+        {"wave": "NEW_FAMILY_FIRST", "operator_family": "FUSED_MIXED",
+         "release": "/mamba", "task_id": "backward:1:out", "carrier": "a",
+         "implementation_kind": "TRITON",
+         "reference_candidates": [{"reference_method": "AOT_REPLAY"}]},
+        {"wave": "NEW_FAMILY_FIRST", "operator_family": "FUSED_MIXED",
+         "release": "/deepseek", "task_id": "backward:2:out", "carrier": "b",
+         "implementation_kind": "TRITON",
+         "reference_candidates": [{"reference_method": "AOT_REPLAY"}]},
+    ]}
+    configs = {
+        "/mamba": {"architecture": "mamba", "model": "/m", "input_bank": "/b",
+                    "source_protocols": ["/p"]},
+        "/deepseek": {"architecture": "deepseek8", "model": "/d", "input_bank": "/b",
+                       "source_protocols": ["/p"]},
+    }
+    result = build(
+        queue, configs, output_root=tmp_path,
+        task_overrides={"FUSED_MIXED": "backward:2:out"},
+    )
+    assert result["campaigns"][0]["task_id"] == "backward:2:out"
+    assert result["task_overrides"] == {"FUSED_MIXED": "backward:2:out"}
+
+
 def test_runtime_discovery_does_not_merge_different_compile_policies(tmp_path):
     import json
     first = tmp_path / "a" / "protocol.json"

@@ -175,6 +175,33 @@ def align_reference_to_candidate(reference: torch.Tensor, candidate: torch.Tenso
     return reference.reshape(candidate.shape)
 
 
+def copy_reference_and_count_changes(
+    candidate: torch.Tensor,
+    reference: torch.Tensor,
+    *,
+    chunk_elements: int = 1 << 20,
+) -> int:
+    """Copy a registered reference without allocating a full-size bool mask.
+
+    Large embedding and vocabulary-gradient buffers can occupy several GiB.
+    The old whole-tensor ``count_nonzero(candidate != reference)`` audit made
+    an otherwise valid family measurement fail solely because its temporary
+    comparison mask did not fit beside the model.  Chunking changes only the
+    audit bookkeeping; the copied reference and scientific contrast are
+    unchanged.
+    """
+    if candidate.numel() != reference.numel():
+        raise RuntimeError("candidate/reference size changed during repair")
+    left = candidate.reshape(-1)
+    right = reference.reshape(-1)
+    changed = 0
+    for start in range(0, left.numel(), chunk_elements):
+        stop = min(start + chunk_elements, left.numel())
+        changed += int(torch.count_nonzero(left[start:stop] != right[start:stop]))
+    candidate.copy_(reference)
+    return changed
+
+
 def partial_reduction_reference(
     metadata: Mapping[str, Any], candidate: torch.Tensor,
     *, sequence_length: int, feature_count: int,
@@ -576,8 +603,9 @@ def main() -> None:
                 if observed_id != task_id or delivered:
                     raise RuntimeError("repair endpoint identity drifted")
                 reference_value = align_reference_to_candidate(references[observed_id], tensor)
-                before = tensor.detach().clone(); tensor.copy_(reference_value)
-                delivered["changed"] = int(torch.count_nonzero(before != reference_value))
+                delivered["changed"] = copy_reference_and_count_changes(
+                    tensor, reference_value
+                )
             torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
             model.zero_grad(set_to_none=True)
             repair = SameDtypeSemanticCandidateObserver(

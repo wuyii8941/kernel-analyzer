@@ -85,20 +85,27 @@ def build(
     frontier_families: set[str] | None = None,
     release_overrides: dict[str, str] | None = None,
     allow_graph_breaks_families: set[str] | None = None,
+    task_overrides: dict[str, str] | None = None,
 ) -> dict:
     specialized_plan_overrides = specialized_plan_overrides or {}
     release_overrides = release_overrides or {}
     allow_graph_breaks_families = allow_graph_breaks_families or set()
+    task_overrides = task_overrides or {}
     selected = []
     skipped = []
     seen_families = set()
     for row in queue["rows"]:
-        if row["wave"] != "NEW_FAMILY_FIRST":
+        requested_task = task_overrides.get(row["operator_family"])
+        if row["wave"] != "NEW_FAMILY_FIRST" and not (
+            requested_task is not None and row["task_id"] == requested_task
+        ):
             continue
         family = row["operator_family"]
         if frontier_families is not None and family not in frontier_families:
             continue
         if family in seen_families:
+            continue
+        if requested_task is not None and row["task_id"] != requested_task:
             continue
         bindings = row.get("reference_candidates", [])
         methods = {binding.get("reference_method") for binding in bindings}
@@ -169,6 +176,12 @@ def build(
             "campaign_output": str((output_root / case_id).resolve()),
         })
         seen_families.add(family)
+    missing_overrides = set(task_overrides) - set(seen_families)
+    if missing_overrides:
+        raise ValueError(
+            "task override did not select a NEW_FAMILY_FIRST queue row for: "
+            + ", ".join(sorted(missing_overrides))
+        )
     return {
         "schema": (
             "family-first-campaign-manifest-v2"
@@ -176,6 +189,7 @@ def build(
         ),
         "selection_uses_numerical_outcomes": False,
         "specialized_plan_overrides": specialized_plan_overrides,
+        "task_overrides": dict(sorted(task_overrides.items())),
         "selection_scope": (
             "STATIC_UNMEASURED_FRONTIER_FAMILY_ROWS_ONLY"
             if frontier_families is not None else
@@ -226,6 +240,10 @@ def main() -> None:
         help="Use a separately rebound runtime release for one selected family.",
     )
     parser.add_argument(
+        "--task-override", action="append", default=[], metavar="FAMILY=TASK_ID",
+        help="Select another static queue task for a family after its first task is blocked.",
+    )
+    parser.add_argument(
         "--allow-graph-breaks-family", action="append", default=[], dest="graph_break_families",
         help="Declare graph-break-compatible compilation for one selected family.",
     )
@@ -262,6 +280,14 @@ def main() -> None:
         if not family or not path or family in release_overrides:
             parser.error("Invalid or duplicate release override")
         release_overrides[family] = str(Path(path).resolve())
+    task_overrides = {}
+    for item in args.task_override:
+        if "=" not in item:
+            parser.error("--task-override must be FAMILY=TASK_ID")
+        family, task_id = item.split("=", 1)
+        if not family or not task_id or family in task_overrides:
+            parser.error("Invalid or duplicate task override")
+        task_overrides[family] = task_id
     graph_break_families = set(args.graph_break_families)
     result = build(
         queue, runtime_configs, output_root=args.output_root,
@@ -270,6 +296,7 @@ def main() -> None:
         frontier_families=frontier_families,
         release_overrides=release_overrides,
         allow_graph_breaks_families=graph_break_families,
+        task_overrides=task_overrides,
     )
     result["queue_sha256"] = hashlib.sha256(args.queue.read_bytes()).hexdigest()
     if args.frontier:
