@@ -60,7 +60,7 @@ Kernel Analyzer 的研究目标是建立一个**机制与工具共同组成的�
     自动区分覆盖、update 证据、数学来源、修改验证和训练后果。
 12. [全部已观测 kernel 清单](docs/observed_kernel_catalog.md)：对保存的全部任务位置去重、
     分类并记录支持状态，按新家族和真实 Triton 优先生成自动执行队列。
-13. [未测算子族前沿](results/property/numerical_coverage_v1/unmeasured_triton_family_frontier_v2.json)：
+13. [未测算子族前沿](docs/unmeasured_triton_family_frontier.md)：
     自动排除已有家族证据，保留未绑定参考和历史执行失败，不把它们重复运行或误报为阴性。
 
 整份 2026-09-05 新计划及上述四目标仍未完成。旧报告有 520 个有效位置与 17 个展示类别；

@@ -30,6 +30,8 @@
 | saved-P / SiLU 的严格正负输入产生非镜像更新 | 响应实验支持 | 人工响应剩余与自然 candidate/reference 差异不同，不混在同一分母 |
 | DeepSeek 两个位置的大 update 缩小依赖 moments | cold/warm/reset 对照支持 | 限于声明位置与参数；不是所有 DeepSeek 实现的成因定理 |
 | Ministral fused RoPE 的参数写入效应依赖 moments | 固定 32 状态中 cold、warm、warm 参数但清空 moments 的写入 RMS 约为 8.67%、0.45%、10.02% | 同一目标参数的结果后诊断；没有总体或 loss 结论，position scaling 也不是已证明的唯一根因 |
+| 新的 `DATA_MOVEMENT_LAYOUT` Triton 家族在固定集合中有明显 update 差异 | fresh runtime release 上 32 状态 confirmation update RMS 约 41.53%，对齐系数约 −8.62% | zero-moment AdamW、单一 q_proj 参数；没有总体、loss 或单一 kernel 根因结论 |
+| 新的 `ELEMENTWISE` Triton 家族在固定集合中有明显 update 差异 | 显式 graph-break policy 的 fresh runtime release 上 32 状态 confirmation update RMS 约 39.78%，对齐系数约 −7.91% | zero-moment AdamW、单一 qkv_proj 参数；没有总体、loss 或单一 kernel 根因结论 |
 | 已经完成无条件的随机训练状态总体等价检验 | 不成立；平均 Q 的有限样本方法需要事前能量上界，超界比例方法需要真正独立单位且回答不同问题 |
 | AdamW8bit 的误差主要是每个量化块的共同漂移 | 不支持；真实 gradient 的数学重放中，一阶/二阶 moment 误差只有约 0.39%/0.98% 能量由块内共同偏移解释，均值或 scale 小修正均未降低递推参数写入 RMS |
 | AdamW8bit 分块大小控制 moment 与参数写入差异 | 固定真实 gradient 上的事前预测得到确认 | 64-block 虽降低 update distortion，但训练 loss 改善未确认 |
