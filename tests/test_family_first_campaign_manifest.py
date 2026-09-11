@@ -59,6 +59,25 @@ def test_specialized_family_campaign_keeps_declared_plan_and_runtime_inputs(tmp_
     assert "--states" in run and "32" in run
 
 
+def test_campaign_manifest_can_be_restricted_to_static_unmeasured_frontier(tmp_path):
+    queue = {"rows": [
+        {"wave": "NEW_FAMILY_FIRST", "operator_family": "ELEMENTWISE",
+         "release": "/r", "task_id": "backward:1:out", "carrier": "weight",
+         "implementation_kind": "TRITON",
+         "reference_candidates": [{"reference_method": "AOT_REPLAY"}]},
+        {"wave": "NEW_FAMILY_FIRST", "operator_family": "SOFTMAX",
+         "release": "/r", "task_id": "backward:2:out", "carrier": "weight",
+         "implementation_kind": "TRITON",
+         "reference_candidates": [{"reference_method": "AOT_REPLAY"}]},
+    ]}
+    configs = {"/r": {"architecture": "a", "model": "/m", "input_bank": "/b",
+                       "source_protocols": ["/p"]}}
+    result = build(queue, configs, output_root=tmp_path,
+                   frontier_families={"ELEMENTWISE"})
+    assert result["selected_operator_families"] == ["ELEMENTWISE"]
+    assert result["selection_scope"] == "STATIC_UNMEASURED_FRONTIER_FAMILY_ROWS_ONLY"
+
+
 def test_runtime_discovery_does_not_merge_different_compile_policies(tmp_path):
     import json
     first = tmp_path / "a" / "protocol.json"
@@ -100,3 +119,60 @@ def test_specialized_summary_reads_family_completion_artifact(tmp_path):
     }]})
     assert result["valid_measurement_count"] == 1
     assert result["rows"][0]["equivalence_decision"] == "EQUIVALENT"
+
+
+def test_unmeasured_family_frontier_excludes_measured_and_preserves_blocked():
+    from scripts.build_unmeasured_triton_family_frontier import build
+
+    catalogue = {"positions": [
+        {"operator_family": "SOFTMAX", "support_status": "VALID_MEASUREMENT_COMPLETED",
+         "implementation_kind": "TRITON"},
+        {"operator_family": "ELEMENTWISE", "support_status": "READY_FOR_MEASUREMENT",
+         "implementation_kind": "TRITON"},
+        {"operator_family": "MASK_POSITION_CONTROL", "support_status": "IDENTIFIED",
+         "implementation_kind": "TRITON"},
+    ]}
+    queue = {"rows": [
+        {"operator_family": "ELEMENTWISE", "wave": "NEW_FAMILY_FIRST", "release": "/r",
+         "task_id": "backward:1:out", "implementation_kind": "TRITON",
+         "reference_candidates": [{"reference_method": "AOT_REPLAY"}]},
+    ]}
+    report = {"families": [{"family_id": "SOFTMAX", "support_stage_counts": {
+        "VALID_MEASUREMENT_COMPLETED": 1}}]}
+    result = build(catalogue, queue, report)
+    assert result["already_covered_families"] == ["SOFTMAX"]
+    assert [x["operator_family"] for x in result["new_family_targets"]] == ["ELEMENTWISE"]
+    assert result["blocked_or_unbound_families"][0]["operator_family"] == "MASK_POSITION_CONTROL"
+    assert result["selection_uses_numerical_outcomes"] is False
+
+
+def test_unmeasured_family_frontier_does_not_call_historical_role_negative():
+    from scripts.build_unmeasured_triton_family_frontier import build
+
+    catalogue = {"positions": [{"operator_family": "LINEAR",
+                                  "support_status": "IDENTIFIED",
+                                  "implementation_kind": "EXTERN"}]}
+    result = build(catalogue, {"rows": []},
+                   {"families": [{"family_id": "LINEAR", "historical_role_records": 2}]})
+    row = result["families"][0]
+    assert row["status"] == "ALREADY_COVERED_DO_NOT_REPEAT"
+    assert "EXPLICIT_ROLE_FAMILY" not in {x["kind"] for x in row["historical_or_measurement_evidence"]}
+
+
+def test_unmeasured_frontier_does_not_rerun_prior_failed_family(tmp_path):
+    from scripts.build_unmeasured_triton_family_frontier import build
+
+    catalogue = {"positions": [{"operator_family": "ELEMENTWISE",
+                                  "support_status": "READY_FOR_MEASUREMENT",
+                                  "implementation_kind": "TRITON"}]}
+    queue = {"rows": [{"operator_family": "ELEMENTWISE", "wave": "NEW_FAMILY_FIRST",
+                         "release": "/r", "task_id": "backward:1:out",
+                         "implementation_kind": "TRITON"}]}
+    summary = tmp_path / "summary.json"
+    summary.write_text(json.dumps({"rows": [{
+        "operator_family": "ELEMENTWISE", "execution_status": "EXECUTION_FAILED",
+        "failure_reason": "graph mismatch",
+    }]}))
+    result = build(catalogue, queue, prior_campaigns=[summary])
+    assert result["new_family_targets"] == []
+    assert result["blocked_or_unbound_families"][0]["reason"] == "MEASUREMENT_BLOCKED_AFTER_PRIOR_ATTEMPT"

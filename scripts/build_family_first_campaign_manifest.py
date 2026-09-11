@@ -82,6 +82,7 @@ def build(
     output_root: Path,
     include_specialized: bool = False,
     specialized_plan_overrides: dict[str, str] | None = None,
+    frontier_families: set[str] | None = None,
 ) -> dict:
     specialized_plan_overrides = specialized_plan_overrides or {}
     selected = []
@@ -91,6 +92,8 @@ def build(
         if row["wave"] != "NEW_FAMILY_FIRST":
             continue
         family = row["operator_family"]
+        if frontier_families is not None and family not in frontier_families:
+            continue
         if family in seen_families:
             continue
         bindings = row.get("reference_candidates", [])
@@ -161,10 +164,13 @@ def build(
         "selection_uses_numerical_outcomes": False,
         "specialized_plan_overrides": specialized_plan_overrides,
         "selection_scope": (
+            "STATIC_UNMEASURED_FRONTIER_FAMILY_ROWS_ONLY"
+            if frontier_families is not None else
             "FIRST_CANONICAL_POSITION_PER_FAMILY_WITH_GENERIC_OR_AUDITED_SPECIALIZED_REFERENCE_AND_RECOVERED_RUNTIME_CONFIG"
             if include_specialized else
             "FIRST_CANONICAL_POSITION_PER_FAMILY_WITH_GENERIC_REFERENCE_AND_RECOVERED_RUNTIME_CONFIG"
         ),
+        "frontier_families": sorted(frontier_families) if frontier_families is not None else None,
         "selected_campaign_count": len(selected),
         "selected_operator_families": [row["operator_family"] for row in selected],
         "execution_policy": {
@@ -192,6 +198,10 @@ def main() -> None:
         "--specialized-plan-override", action="append", default=[], metavar="FAMILY=PATH",
         help="Use a freshly rebound audited plan for one specialized family.",
     )
+    parser.add_argument(
+        "--frontier", type=Path,
+        help="Use only families listed in an unmeasured-family frontier report.",
+    )
     args = parser.parse_args()
     manifest_path = args.output_root / "manifest.json"
     if args.output_root.exists() or not args.output_root.resolve().is_relative_to(Path("/data1/tzh")):
@@ -207,12 +217,23 @@ def main() -> None:
         if not family or not path or family in overrides:
             parser.error("Invalid or duplicate specialized plan override")
         overrides[family] = str(Path(path).resolve())
+    frontier_families = None
+    if args.frontier:
+        frontier_payload = json.loads(args.frontier.read_text())
+        frontier_families = {
+            str(row["operator_family"])
+            for row in frontier_payload.get("new_family_targets", [])
+            if row.get("operator_family")
+        }
     result = build(
         queue, runtime_configs, output_root=args.output_root,
         include_specialized=args.include_specialized,
         specialized_plan_overrides=overrides,
+        frontier_families=frontier_families,
     )
     result["queue_sha256"] = hashlib.sha256(args.queue.read_bytes()).hexdigest()
+    if args.frontier:
+        result["frontier_sha256"] = hashlib.sha256(args.frontier.read_bytes()).hexdigest()
     result["runtime_config_protocol_count"] = len(protocols)
     args.output_root.mkdir(parents=True)
     for campaign in result["campaigns"]:

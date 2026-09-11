@@ -61,6 +61,9 @@ def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "queue-by-family":
         _run("build_family_first_execution_queue.py", *sys.argv[2:])
         return
+    if len(sys.argv) > 1 and sys.argv[1] == "unmeasured-family-frontier":
+        _run("build_unmeasured_triton_family_frontier.py", *sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "build-family-campaigns":
         _run("build_family_first_campaign_manifest.py", *sys.argv[2:])
         return
@@ -79,6 +82,7 @@ def main() -> None:
                "bounded population mean: population-bounded-mean RAW PROTOCOL OUTPUT; "
                "all observed kernels: catalog-observed-kernels ...; "
                "family-first execution queue: queue-by-family ...; "
+               "unmeasured family frontier: unmeasured-family-frontier ...; "
                "family campaign freeze/run/report: build-family-campaigns / run-family-campaigns; "
                "bounded family summary: summarize-family-campaigns; "
                "real iid optimizer-state study: adamw8bit-population {freeze,run}; "
