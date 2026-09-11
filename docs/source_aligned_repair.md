@@ -102,8 +102,8 @@ declared optimizer condition fixed.  It produces two deliberately different
 estimands:
 
 1. `REPAIR_RESIDUAL` for the declared local source component, relative to its
-   exact same-operand zero point (the joint arm is the total local residual;
-   a source-specific arm may deliberately retain other measured sources);
+   exact same-operand zero point (the joint comparison is the total local residual;
+   a source-specific comparison may deliberately retain other measured sources);
 2. `CANDIDATE_MINUS_REPAIR_ENSEMBLE` after backward and optimizer mapping.
 
 The second estimand proves that the source-debiased ensemble removes a
@@ -171,7 +171,7 @@ The compact result is
 
 ## Mamba cross-architecture confirmation
 
-Mamba seq64 `in_proj` was evaluated under the `JOINT` arm on 16 fixed
+Mamba seq64 `in_proj` was evaluated under the `JOINT` comparison on 16 fixed
 conditions with 16 independent draws per condition.  The model's optimized
 selective-scan path is unavailable in this environment, so the four
 condition-disjoint shards use the same sequential implementation and are

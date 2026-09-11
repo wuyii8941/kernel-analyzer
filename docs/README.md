@@ -17,6 +17,8 @@
    事前尾部条件，以及条件不足时的自动停止规则。
 10. [算子族与重点问题组证据深度](../results/property/numerical_coverage_v1/operator_problem_group_depth_v1.md)：
     把目录覆盖、真实 Triton、update、数学来源、修改和训练结果分开。
+11. [全部已观测 kernel 清单](observed_kernel_catalog.md)：对不同任务包和位置去重，
+    记录 reference/训练绑定/测量状态，并生成跨家族 Triton 优先队列。
 
 [讲稿](talk_beyond_tolerance.md)由用户单独维护，本轮未改。它不是实验状态数据库；
 其中旧数字或标签以对应实验协议与上述来源说明理解，不因本轮整理静默改写。

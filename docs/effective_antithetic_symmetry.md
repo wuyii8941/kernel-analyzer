@@ -212,8 +212,8 @@ For a candidate event ensemble, preserve both marginal objects:
 
 but destroy only their real pairing.  A permutation or semantic-orbit
 intervention must preserve the residual multiset, support, and norm.  If the
-natural arm has a nonzero accumulated gradient/update resultant and the
-pairing-broken arm centers or strongly suppresses it, then the coupling—not
+natural comparison has a nonzero accumulated gradient/update resultant and the
+pairing-broken comparison centers or strongly suppresses it, then the coupling—not
 error magnitude—is causal.
 
 Conversely, if pairing destruction leaves the resultant unchanged, this
@@ -335,7 +335,7 @@ antithetic update persistence             0.7457
 ```
 
 The gradient residuals are exactly `+delta_g/-delta_g`, all forward losses are
-equal, and both arms use the same weights and Adam moments.  Nevertheless the
+equal, and both implementations use the same weights and Adam moments.  Nevertheless the
 two accumulated Adam update residuals are almost orthogonal rather than
 opposite.  This independently reproduces a nonzero response-even term in a
 different model and operator region.  Energy weighting shows that `99.87%` of

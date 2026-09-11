@@ -1,6 +1,7 @@
 # 新主线的覆盖与执行入口
 
-这一入口扩展已有仓库，不修改统计公式、历史阈值或原始结果。
+这一入口扩展已有仓库，不修改统计公式、历史阈值或原始结果。全部保存任务的去重清单、
+计算分类和跨家族执行顺序见[全部已观测 kernel 清单](observed_kernel_catalog.md)。
 旧 T1–T4 及历史重算入口继续保留。
 
 本入口承担[主线四目标](current_mainline.md)中的框架自动化和真实 Triton 接入。
@@ -8,6 +9,29 @@
 与偏差机制、统计保证、训练后果分别验收。大量同族小差异不能代替强机制或强训练
 结果；当前 Q-only 固定集合判断也不等于已经完成统计理论。2026-09-07 的口径校准
 不恢复实验队列，以下命令是执行说明而非当前正在运行的声明。
+
+## Triton 优先的全量前沿
+
+观测清单包含大量重复的模型位置和发布目录。为了避免把同一个问题按模型或层号
+重复计数，下面的命令按发布包、任务、输出指针和阶段去重，再按算子族和实际
+implementation kind 汇总。它只使用执行身份和 support status，不读取任何数值结果
+来挑选下一项，因此产物是覆盖计划而不是 bias 结论：
+
+```bash
+PYTHONPATH=src:. python scripts/build_triton_coverage_frontier.py \
+  --catalog results/property/numerical_coverage_v1/observed_kernel_catalog_v1.json.gz \
+  --output results/property/numerical_coverage_v1/triton_coverage_frontier_v1.json
+```
+
+该前沿同时列出每个 Triton 家族的已完成、可直接测量、只有参考但缺少训练接入、
+以及仍需补参考或参数映射的位置，并自动给出一个下一代表。出现
+`READY_FOR_MEASUREMENT` 并不等于已经完成；只有真实三阶段采集和统一复算成功后才
+会进入完成计数。运行失败保留在原家族记录中，不能静默换成另一个位置。
+
+2026-09-11 的首轮七族冻结执行及失败原因由
+`results/property/numerical_coverage_v1/family_first_campaigns_v2/summary_v3.json`
+和同目录的 Markdown 汇总自动生成。该轮没有有效三阶段测量；这表示参考/执行接入
+仍需修复，不表示这些家族是数值阴性。
 
 自动化终点是生成可复算的诊断与候选修改证据，而不是让程序自行决定科研修改和长训练
 配置。研究者可以据此审核修改并安排训练验证；系统负责冻结该决定、执行已审核配置、
@@ -30,6 +54,9 @@ PYTHONPATH=src:. python scripts/run_training_numerical_analysis.py coverage run 
 PYTHONPATH=src:. python scripts/run_training_numerical_analysis.py coverage report \
   --output results/property/numerical_coverage_v1/example
 ```
+
+统一入口会为委托脚本自动补上仓库的 `src/` 与根目录导入路径；命令示例保留
+`PYTHONPATH` 只是为了兼容直接调用旧脚本的环境，不再是运行入口的隐含前提。
 
 ## 已实现
 

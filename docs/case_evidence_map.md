@@ -33,7 +33,7 @@
 | 对象 | 已有事实 | 在主线中的位置 |
 |---|---|---|
 | DeepSeek normalization 与 attention-projection backward | 各自新案例 cold 测量 update 缩小约 13.68% / 10.69%；warm 后不足 1%，同 warm 参数重置 moments 后大效应恢复 [D1] | optimizer 状态作用的证据；不是两个位置的底层误差成因已被完整证明 |
-| TorchAO AdamW8bit moment/parameter update | 分块越大，moment 与参数写入 distortion 越大；8 条冻结数据流的默认 256-block 评估 loss 差均为正，均值 +0.02718 [T1] | 机制确认、训练后果和修改成效分别判断；64-block 的训练改善未确认 |
+| TorchAO AdamW8bit moment/parameter update | 分块越大，moment 与参数写入 distortion 越大；随机 history 总体中 32/32 超过 1% 写入范围；8 条冻结数据流的默认 256-block 评估 loss 差均为正，均值 +0.02718 [T1] | 机制确认、总体比例、训练后果和修改成效分别判断；64-block 在全模型写入上稳定降低 RMS，但训练改善未确认 |
 | Ministral fused RoPE / position scaling | 相同输入 Triton 比较中，高/低位置写入 RMS 约为 10.88%/8.35%；严格匹配的 cold/warm/reset-moments 为 8.67%/0.45%/10.02% [R2] | 新 Triton 家族复用和 optimizer-state 条件证据；不是 position scaling 唯一根因、总体效应或 loss 结果 |
 | 上述两个 DeepSeek 位置 + Phi loss/CE 对照 | 每项四条 32 步输入流；实际/反馈方向均 4/4，直接方向均 0/4；窗口平均 loss 差区间均跨零 [D2] | 单 checkpoint、指定参数范围的后果；不冒充独立初始化全参数训练或稳定质量降低 |
 | Liger dW，同 FP32 不同加法顺序 | 后 16 个输入中 15 个沿预测方向 [O1] | 非精度切换的补充机制预测；没有同实验的长程 loss 结论 |
@@ -138,7 +138,9 @@
 - **[O1]** [FP32 顺序实验](../results/property/liger_fp32_chunk_order_v1/summary.json)。
 - **[T1]** [optimizer 家族与训练确认](optimizer_update_family_audit.md)；
   [冻结协议](../results/property/numerical_coverage_v1/mamba_adamw8bit_training_confirmation_v1/protocol.json)；
-  [独立复算](../results/property/numerical_coverage_v1/mamba_adamw8bit_training_confirmation_v1/verification.json)。
+  [独立复算](../results/property/numerical_coverage_v1/mamba_adamw8bit_training_confirmation_v1/verification.json)；
+  [总体比例复算](../results/property/numerical_coverage_v1/adamw8bit_population_update_v1/verification.json)；
+  [全模型 block 比较复算](../results/property/numerical_coverage_v1/adamw8bit_full_model_block_probe_v1/verification_v2.json)。
 - **[M1]** [参考坐标确认](../results/property/bias_oracle_recovery/confirmation/result.json)；
   [三阶段补测](three_mechanism_profiles.md)。
 - **[B1]** [16 项原始汇总](../results/property/generalization_benchmark_v1/summary.json)；

@@ -44,7 +44,7 @@ FP32 accumulator。因此这同时闭合了 accumulator precision 的 matched in
 
 这次干预与上表使用相同的 state order、参数位置和 cold-start AdamW state path。
 
-| arm | 32-state 方向分数 | 自身随机上界 | 更新误差能量 / natural | 结论 |
+| comparison | 32-state 方向分数 | 自身随机上界 | 更新误差能量 / natural | 结论 |
 |---|---:|---:|---:|---|
 | deterministic BF16 | 1.02971 | 1.00380 | 1.000 | 超过随机抵消范围 |
 | no-op sham | 1.02971 | 1.00379 | 1.000 | 精确复现 natural |

@@ -9,6 +9,7 @@ artifact is normalized by the same recompute and reporting path here.
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -18,9 +19,19 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _run(script: str, *arguments: str) -> None:
+    # Keep the single entry point usable when invoked as
+    # ``python scripts/run_training_numerical_analysis.py``.  In that form
+    # Python puts ``scripts/`` (not the repository root) on sys.path, while
+    # the delegated programs import ``kernel_analyzer`` and sometimes
+    # ``scripts`` as packages.  Do not rely on a caller-specific PYTHONPATH.
+    source_path = os.pathsep.join((str(ROOT / "src"), str(ROOT)))
+    inherited = os.environ.get("PYTHONPATH")
+    env = dict(os.environ)
+    env["PYTHONPATH"] = source_path if not inherited else source_path + os.pathsep + inherited
     subprocess.run(
         [sys.executable, str(ROOT / "scripts" / script), *arguments],
         cwd=ROOT,
+        env=env,
         check=True,
     )
 
@@ -44,10 +55,33 @@ def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "population-bounded-mean":
         _run("recompute_bounded_population_equivalence.py", *sys.argv[2:])
         return
+    if len(sys.argv) > 1 and sys.argv[1] == "catalog-observed-kernels":
+        _run("build_observed_kernel_catalog.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "queue-by-family":
+        _run("build_family_first_execution_queue.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "build-family-campaigns":
+        _run("build_family_first_campaign_manifest.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "run-family-campaigns":
+        _run("run_family_first_campaigns.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "summarize-family-campaigns":
+        _run("summarize_family_first_campaigns.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "adamw8bit-population":
+        _run("run_adamw8bit_population_update.py", *sys.argv[2:])
+        return
     parser = argparse.ArgumentParser(
         epilog="Metadata-driven capture: coverage {freeze,run,report} --help; "
                "population prevalence: population-exceedance RAW PROTOCOL OUTPUT; "
                "bounded population mean: population-bounded-mean RAW PROTOCOL OUTPUT; "
+               "all observed kernels: catalog-observed-kernels ...; "
+               "family-first execution queue: queue-by-family ...; "
+               "family campaign freeze/run/report: build-family-campaigns / run-family-campaigns; "
+               "bounded family summary: summarize-family-campaigns; "
+               "real iid optimizer-state study: adamw8bit-population {freeze,run}; "
                "source-checked families: row-reference / row-capture / family-report. "
                "Training review shortlist: select-training. "
                "Current shared analysis: analyze RAW OUTPUT --protocol PROTOCOL. "
