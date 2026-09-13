@@ -15,9 +15,11 @@
 8. [随机状态超界比例检验](population_exceedance_inference.md)：精确有限样本端点，及其与总体平均 Q 的严格区分。
 9. [随机状态总体推断合同](population_inference_contract.md)：有限样本平均 Q 为什么必须依赖
    事前尾部条件，以及条件不足时的自动停止规则。
-10. [算子族与重点问题组证据深度](../results/property/numerical_coverage_v1/operator_problem_group_depth_v2.md)：
+10. [统计公式与实验设计对齐](statistics_experiment_alignment.md)：固定集合、随机 history、
+    完整配对训练和数值失败分别使用什么统计单位与结论。
+11. [算子族与重点问题组证据深度](../results/property/numerical_coverage_v1/operator_problem_group_depth_v2.md)：
     把目录覆盖、真实 Triton、update、数学来源、修改和训练结果分开。
-11. [全部已观测 kernel 清单](observed_kernel_catalog_v2.md)：对不同任务包和位置去重，
+12. [全部已观测 kernel 清单](observed_kernel_catalog_v2.md)：对不同任务包和位置去重，
     记录 reference/训练绑定/测量状态，并生成跨家族 Triton 优先队列。
 
 [讲稿](talk_beyond_tolerance.md)由用户单独维护，本轮未改。它不是实验状态数据库；

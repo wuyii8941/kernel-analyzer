@@ -167,3 +167,39 @@ NOT_ASSESSED。保留[失败记录](../results/property/result_analysis_v1/bound
 PYTHONPATH=src:. python scripts/verify_same_path_training_attribution.py --root results/property/result_analysis_v1/same_path_training --output results/property/result_analysis_v1/same_path_training/verification_recheck.json
 PYTHONPATH=src:. python scripts/build_final_result_analysis.py --output results/property/result_analysis_v1/final_analysis_recheck.json
 ```
+
+## 结构残差训练干预最终结果
+
+冻结的四种结构干预全部达到终态。坐标移动在 8/8 条已见训练流中于第 206–330 步
+产生非有限 loss；只补偿预选关键参数在 7 条流中完成，第 8 条在第 936 步失败并由
+同一冻结任务重放确认。两类失败都不填入 final-loss t 区间。
+
+只补其余参数与不补偿之间的 8 对差值均值为 `+0.00736`，98.75% 区间
+`[-0.00723,+0.02195]`，预声明等价未建立；额外延迟一步相对正确补偿的均值为
+`-0.00139`，98.75% 区间 `[-0.01361,+0.01083]`，预声明恶化也未建立。
+这组消去实验支持残差坐标对应的重要性，但没有确认一步时间延迟的训练损害，也没有
+证明预选少数参数足以替代全模型补偿。失败端点是在结果揭示后补充，因此失败比例仅作
+描述。完整失败感知汇总见
+`results/property/result_analysis_v3/structured_training/analysis/failure_aware_final.json`。
+
+## 修改冻结后的 iid 完整训练确认
+
+为补上旧训练流最小间距筛选和数据复用的限制，新协议在训练前固定补偿实现、起点总体、
+8 个独立有放回起点、1024 步终点、评估集、配对方向和 +0.01 门槛。起点总体
+`[500000,700000)` 与开发范围分离；实际抽样不按重叠或结果重选。
+
+16 份训练全部有限完成。8 个 OFF−ON 差值为：
+
+```text
+0.0244285, 0.0152419, 0.0453921, 0.0316967,
+0.0282927, 0.0499449, 0.0034330, 0.0278567
+```
+
+均值为 `+0.0282858`，95% 配对 t 区间 `[+0.0157405,+0.0408311]`，因下界超过
++0.01，冻结规则给出 `MATERIAL_IMPROVEMENT`。独立核验重新读取 16 个终点、检查
+冻结依赖哈希并得到完全相同的差值和区间，状态为 `VERIFIED`。
+
+这支持同一 Mamba checkpoint、固定评估集和声明起点总体中的平均训练改善；区间依赖
+iid 起点抽样和配对差值正态假设。它不证明跨模型或跨 checkpoint 泛化，也不证明自然
+训练崩溃。原始结果见
+`results/property/result_analysis_v4/iid_training_confirmation/`。

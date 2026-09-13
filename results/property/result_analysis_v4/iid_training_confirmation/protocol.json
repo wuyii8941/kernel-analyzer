@@ -1,0 +1,89 @@
+{
+  "comparison": "identical compensation implementation; only residual read multiplier is OFF or ON",
+  "conditions": [
+    "OFF",
+    "ON"
+  ],
+  "data_use": "PROSPECTIVE_IID_TRAINING_STREAM_CONFIRMATION_OF_FROZEN_FULL_COMPENSATION",
+  "evaluation_bank": "/data1/tzh/kernel-analyzer/results/coverage/mamba_seq64_input_bank.json",
+  "evaluation_states": 32,
+  "evaluation_steps": [
+    0,
+    256,
+    512,
+    768,
+    1024
+  ],
+  "execution_failure_rule": "retry the same frozen task; retries never increase sample size",
+  "independent_unit": "ONE_IID_DRAWN_CONTIGUOUS_1024_STEP_TRAINING_STREAM",
+  "material_improvement_margin": 0.01,
+  "model": "/data1/tzh/models/state-spaces/mamba-130m-hf",
+  "not_claimed": [
+    "CROSS_CHECKPOINT_GENERALIZATION",
+    "CROSS_MODEL_GENERALIZATION",
+    "UNCONDITIONAL_NONNORMAL_FINITE_SAMPLE_GUARANTEE"
+  ],
+  "numerical_failure_rule": "A nonfinite training loss, parameter, or evaluation makes the final-loss endpoint undefined for the full set; report failures and do not impute loss",
+  "optimizer": {
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "eps": 1e-08,
+    "lr": 0.0001,
+    "weight_decay": 0.01
+  },
+  "paired_t_assumptions": "iid start draws and normally distributed paired endpoint differences",
+  "pairing": "same checkpoint, tokens, evaluation set, and per-step RNG within stream",
+  "primary_contrast": "OFF_MINUS_ON",
+  "primary_endpoint": "MEAN_FIXED_EVALUATION_LOSS_AT_STEP_1024",
+  "primary_rule": "MATERIAL_IMPROVEMENT only if all eight pairs have finite endpoints and the two-sided 95% paired t interval lies above +0.01",
+  "schema": "adamw8bit-iid-training-confirmation-v1",
+  "source_sha256": {
+    "/data1/tzh/kernel-analyzer/results/coverage/mamba_seq64_input_bank.json": "b013268b4e0e5ca0f48da6e3cdb6b3362baa5f8723aafbabbdba5c1d05b8a8d7",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_00.json": "f7ed98089fc407f88135e764d06101ebfebc3ba0ff7e501d8984ec884e4d4125",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_01.json": "02fdc39c23a04e6b5c33d92af64743a0b36978b6448a66aca45d709425494a01",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_02.json": "0b147b85164c625e0b8cbe8e9d9ad05dbb0b63b15c6389a641795863d4623c40",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_03.json": "a562ffaf5b286e1e50f4f6284dba74ea6edfa0a82d4ea9c93be51fc5c7490d7b",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_04.json": "03888c6473256a72f1ca8b25e1e311f52aecc80434c088ca24f300c09d47826b",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_05.json": "27ec739ef51a04cb28232ce034ff116c1ba7bfbd52075cb7e575a5d1ebcd8fe0",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_06.json": "91a6d71afe1c344b4e266336a3d42fa7ca4f8b7f5b951c6445abd4e53c6e800c",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_07.json": "389e2edaadf8831fb463ed89d71398a323c1e341d5326bdd4e6bff4fab8b8bdf",
+    "/data1/tzh/kernel-analyzer/scripts/run_adamw8bit_error_compensation_training.py": "039a77aa41cb94a254809085bbf6348d7600f9b912669ef714bcce7f1a8c39b6",
+    "/data1/tzh/kernel-analyzer/scripts/run_adamw8bit_iid_training_confirmation.py": "912e4db80b90f82809bc719e4c92d697198a943549b75e6f8831abe002e08d49",
+    "/data1/tzh/kernel-analyzer/src/kernel_analyzer/adamw8bit_error_compensation.py": "01fb805e13b8ff576c231774f12da80d7a01e815739370d97211c096dfdd9aef",
+    "/data1/tzh/kernel-analyzer/src/kernel_analyzer/compensation_control.py": "7723018868ed1d6823f36be120cc8dd3f109cdf36b83e819745c268fd2fcf45d",
+    "/data1/tzh/models/state-spaces/mamba-130m-hf/config.json": "784825b6b6cdde47a1602278db0e66d6764169af4a8e662404701bc636a2686a",
+    "/data1/tzh/models/state-spaces/mamba-130m-hf/model.safetensors": "1a5ed29c492ef4d485df3b7c2c8109771696589855b2162ad1ba618b6067cbea"
+  },
+  "status": "FROZEN_BEFORE_TRAINING",
+  "steps": 1024,
+  "stream_count": 8,
+  "stream_sampling": {
+    "development_start_range_is_disjoint": true,
+    "drawn_starts": [
+      607935,
+      693375,
+      662983,
+      622860,
+      674865,
+      590361,
+      649834,
+      695379
+    ],
+    "duplicates_or_overlaps_are_not_removed": true,
+    "method": "IID_UNIFORM_WITH_REPLACEMENT",
+    "population": "integer start blocks in [500000,700000) of the fixed cached WikiText tokenization",
+    "seed": 20260914
+  },
+  "train_banks": [
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_00.json",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_01.json",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_02.json",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_03.json",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_04.json",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_05.json",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_06.json",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v4/iid_training_confirmation/input_banks/stream_07.json"
+  ]
+}
