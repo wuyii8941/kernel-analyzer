@@ -1,0 +1,522 @@
+{
+  "conclusions": [
+    "For fixed-suite full-space equivalence, full analysis does not outperform update RMS because update RMS is its mandatory envelope.",
+    "Stage comparison, multiple states, and direction/scaling diagnostics answer localization and effect-form questions that update RMS alone cannot answer.",
+    "The empirical optimizer modifications show that reducing one-step update RMS is not sufficient to predict training loss improvement.",
+    "Current saved allclose comparisons do not establish that local allclose missed a large write difference."
+  ],
+  "controlled_scenarios": [
+    {
+      "controlled_ground_truth": {
+        "basis": "directly constructed confirmation update RMS versus 1% margin",
+        "fixed_suite_update_equivalent": true
+      },
+      "declared_structure": [],
+      "methods": {
+        "FULL_ANALYSIS": {
+          "confirmed_structure": [],
+          "decision": "EXACT_UPDATE_IDENTITY_ON_FIXED_SUITE",
+          "direction_intervals": {
+            "additive": [
+              0.0,
+              0.0
+            ],
+            "repair_aligned": [
+              0.0,
+              0.0
+            ],
+            "residual_direction": [
+              0.0,
+              0.0
+            ]
+          },
+          "reason": "ALL_CONFIRMATION_UPDATE_DIFFERENCES_ARE_ZERO"
+        },
+        "LOCAL_ALLCLOSE": {
+          "passed": true
+        },
+        "LOCAL_RMS": {
+          "inside_1pct": true,
+          "value": 0.0
+        },
+        "ONE_CONFIRMATION_STATE": {
+          "inside_1pct": true,
+          "value": 0.0
+        },
+        "UPDATE_MEAN_ONLY": {
+          "inside_additive_margin": true,
+          "value": 0.0
+        },
+        "UPDATE_RMS": {
+          "decision": "EQUIVALENT",
+          "value": 0.0
+        }
+      },
+      "name": "exact_identity",
+      "note": "program identity check"
+    },
+    {
+      "controlled_ground_truth": {
+        "basis": "directly constructed confirmation update RMS versus 1% margin",
+        "fixed_suite_update_equivalent": true
+      },
+      "declared_structure": [],
+      "methods": {
+        "FULL_ANALYSIS": {
+          "confirmed_structure": [],
+          "decision": "FIXED_SUITE_UPDATE_EQUIVALENT",
+          "direction_intervals": {
+            "additive": [
+              -0.0003110709737614974,
+              0.0004599349940074645
+            ],
+            "repair_aligned": [
+              -0.00024227974053414405,
+              0.0003216339030753749
+            ],
+            "residual_direction": [
+              -0.00031486629119456934,
+              0.00044449458282365926
+            ]
+          },
+          "reason": "FULL_UPDATE_RMS_AND_ALL_PROFILE_INTERVALS_ARE_INSIDE_MARGINS"
+        },
+        "LOCAL_ALLCLOSE": {
+          "passed": false
+        },
+        "LOCAL_RMS": {
+          "inside_1pct": false,
+          "value": 0.019752962784612808
+        },
+        "ONE_CONFIRMATION_STATE": {
+          "inside_1pct": true,
+          "value": 0.005146838524329224
+        },
+        "UPDATE_MEAN_ONLY": {
+          "inside_additive_margin": false,
+          "value": 0.0012343403820254367
+        },
+        "UPDATE_RMS": {
+          "decision": "EQUIVALENT",
+          "value": 0.004938240696153203
+        }
+      },
+      "name": "large_local_small_update",
+      "note": "local difference exceeds 1%, update remains below 1%"
+    },
+    {
+      "controlled_ground_truth": {
+        "basis": "directly constructed confirmation update RMS versus 1% margin",
+        "fixed_suite_update_equivalent": false
+      },
+      "declared_structure": [
+        "repair_aligned"
+      ],
+      "methods": {
+        "FULL_ANALYSIS": {
+          "confirmed_structure": [
+            "repair_aligned"
+          ],
+          "decision": "MATERIAL_EFFECT",
+          "direction_intervals": {
+            "additive": [
+              -0.0011637545442615943,
+              0.0010672484874139812
+            ],
+            "repair_aligned": [
+              0.019999999999999997,
+              0.020000000000000004
+            ],
+            "residual_direction": [
+              0.0,
+              0.0
+            ]
+          },
+          "reason": "AT_LEAST_ONE_UPDATE_EFFECT_INTERVAL_IS_BEYOND_ITS_MARGIN"
+        },
+        "LOCAL_ALLCLOSE": {
+          "passed": true
+        },
+        "LOCAL_RMS": {
+          "inside_1pct": true,
+          "value": 0.0
+        },
+        "ONE_CONFIRMATION_STATE": {
+          "inside_1pct": false,
+          "value": 0.02
+        },
+        "UPDATE_MEAN_ONLY": {
+          "inside_additive_margin": false,
+          "value": 0.005445317114290053
+        },
+        "UPDATE_RMS": {
+          "decision": "NON_EQUIVALENT",
+          "value": 0.020000000000000004
+        }
+      },
+      "name": "small_local_material_update",
+      "note": "local outputs match while downstream update has 2% rotating scaling"
+    },
+    {
+      "controlled_ground_truth": {
+        "basis": "directly constructed confirmation update RMS versus 1% margin",
+        "fixed_suite_update_equivalent": false
+      },
+      "declared_structure": [],
+      "methods": {
+        "FULL_ANALYSIS": {
+          "confirmed_structure": [],
+          "decision": "FIXED_SUITE_UPDATE_ENERGY_EXCEEDS_MARGIN",
+          "direction_intervals": null,
+          "reason": "FULL_UPDATE_RMS_EXCEEDS_ITS_MARGIN"
+        },
+        "LOCAL_ALLCLOSE": {
+          "passed": true
+        },
+        "LOCAL_RMS": {
+          "inside_1pct": true,
+          "value": 0.0
+        },
+        "ONE_CONFIRMATION_STATE": {
+          "inside_1pct": false,
+          "value": 0.02
+        },
+        "UPDATE_MEAN_ONLY": {
+          "inside_additive_margin": true,
+          "value": 0.0
+        },
+        "UPDATE_RMS": {
+          "decision": "NON_EQUIVALENT",
+          "value": 0.02
+        }
+      },
+      "name": "zero_mean_material_energy",
+      "note": "large update energy with exactly alternating signs"
+    },
+    {
+      "controlled_ground_truth": {
+        "basis": "directly constructed confirmation update RMS versus 1% margin",
+        "fixed_suite_update_equivalent": false
+      },
+      "declared_structure": [
+        "additive",
+        "residual_direction"
+      ],
+      "methods": {
+        "FULL_ANALYSIS": {
+          "confirmed_structure": [
+            "additive",
+            "residual_direction"
+          ],
+          "decision": "MATERIAL_EFFECT",
+          "direction_intervals": {
+            "additive": [
+              0.02,
+              0.02
+            ],
+            "repair_aligned": [
+              -0.001165066725097277,
+              0.0006510547985674596
+            ],
+            "residual_direction": [
+              0.01980166782157986,
+              0.020003855018234984
+            ]
+          },
+          "reason": "AT_LEAST_ONE_UPDATE_EFFECT_INTERVAL_IS_BEYOND_ITS_MARGIN"
+        },
+        "LOCAL_ALLCLOSE": {
+          "passed": true
+        },
+        "LOCAL_RMS": {
+          "inside_1pct": true,
+          "value": 0.0
+        },
+        "ONE_CONFIRMATION_STATE": {
+          "inside_1pct": false,
+          "value": 0.02
+        },
+        "UPDATE_MEAN_ONLY": {
+          "inside_additive_margin": false,
+          "value": 0.02
+        },
+        "UPDATE_RMS": {
+          "decision": "NON_EQUIVALENT",
+          "value": 0.02
+        }
+      },
+      "name": "fixed_additive_direction",
+      "note": "shared parameter-space direction"
+    },
+    {
+      "controlled_ground_truth": {
+        "basis": "directly constructed confirmation update RMS versus 1% margin",
+        "fixed_suite_update_equivalent": false
+      },
+      "declared_structure": [
+        "repair_aligned"
+      ],
+      "methods": {
+        "FULL_ANALYSIS": {
+          "confirmed_structure": [
+            "repair_aligned"
+          ],
+          "decision": "MATERIAL_EFFECT",
+          "direction_intervals": {
+            "additive": [
+              -0.0011637545442615943,
+              0.0010672484874139812
+            ],
+            "repair_aligned": [
+              0.019999999999999997,
+              0.020000000000000004
+            ],
+            "residual_direction": [
+              0.0,
+              0.0
+            ]
+          },
+          "reason": "AT_LEAST_ONE_UPDATE_EFFECT_INTERVAL_IS_BEYOND_ITS_MARGIN"
+        },
+        "LOCAL_ALLCLOSE": {
+          "passed": true
+        },
+        "LOCAL_RMS": {
+          "inside_1pct": true,
+          "value": 0.0
+        },
+        "ONE_CONFIRMATION_STATE": {
+          "inside_1pct": false,
+          "value": 0.02
+        },
+        "UPDATE_MEAN_ONLY": {
+          "inside_additive_margin": false,
+          "value": 0.005445317114290053
+        },
+        "UPDATE_RMS": {
+          "decision": "NON_EQUIVALENT",
+          "value": 0.020000000000000004
+        }
+      },
+      "name": "state_aligned_scaling",
+      "note": "normal update direction rotates but is scaled in every state"
+    },
+    {
+      "controlled_ground_truth": {
+        "basis": "directly constructed confirmation update RMS versus 1% margin",
+        "fixed_suite_update_equivalent": false
+      },
+      "declared_structure": [
+        "additive",
+        "residual_direction"
+      ],
+      "methods": {
+        "FULL_ANALYSIS": {
+          "confirmed_structure": [
+            "additive",
+            "residual_direction"
+          ],
+          "decision": "MATERIAL_EFFECT",
+          "direction_intervals": {
+            "additive": [
+              0.019705549067584174,
+              0.019981703168284116
+            ],
+            "repair_aligned": [
+              -3.115555529670799e-19,
+              4.572452198948195e-19
+            ],
+            "residual_direction": [
+              0.019705549067584174,
+              0.019981703168284116
+            ]
+          },
+          "reason": "AT_LEAST_ONE_UPDATE_EFFECT_INTERVAL_IS_BEYOND_ITS_MARGIN"
+        },
+        "LOCAL_ALLCLOSE": {
+          "passed": true
+        },
+        "LOCAL_RMS": {
+          "inside_1pct": true,
+          "value": 0.0
+        },
+        "ONE_CONFIRMATION_STATE": {
+          "inside_1pct": false,
+          "value": 0.020000000000000004
+        },
+        "UPDATE_MEAN_ONLY": {
+          "inside_additive_margin": false,
+          "value": 0.01986190550818051
+        },
+        "UPDATE_RMS": {
+          "decision": "NON_EQUIVALENT",
+          "value": 0.020000000000000004
+        }
+      },
+      "name": "statewise_orthogonal_mean",
+      "note": "coherent component after removing each state's repair-aligned part"
+    },
+    {
+      "controlled_ground_truth": {
+        "basis": "directly constructed confirmation update RMS versus 1% margin",
+        "fixed_suite_update_equivalent": false
+      },
+      "declared_structure": [],
+      "methods": {
+        "FULL_ANALYSIS": {
+          "confirmed_structure": [],
+          "decision": "FIXED_SUITE_UPDATE_ENERGY_EXCEEDS_MARGIN",
+          "direction_intervals": {
+            "additive": [
+              -0.0011603117887008354,
+              0.0018878923855088652
+            ],
+            "repair_aligned": [
+              -0.000950888481733918,
+              0.0013006532400160632
+            ],
+            "residual_direction": [
+              -0.0011809564120575707,
+              0.001824737316017872
+            ]
+          },
+          "reason": "FULL_UPDATE_RMS_EXCEEDS_ITS_MARGIN"
+        },
+        "LOCAL_ALLCLOSE": {
+          "passed": true
+        },
+        "LOCAL_RMS": {
+          "inside_1pct": true,
+          "value": 0.0
+        },
+        "ONE_CONFIRMATION_STATE": {
+          "inside_1pct": true,
+          "value": 0.0
+        },
+        "UPDATE_MEAN_ONLY": {
+          "inside_additive_margin": false,
+          "value": 0.004824158240020682
+        },
+        "UPDATE_RMS": {
+          "decision": "NON_EQUIVALENT",
+          "value": 0.019070647392649763
+        }
+      },
+      "name": "single_state_false_reassurance",
+      "note": "first confirmation state is zero but the suite has material energy"
+    },
+    {
+      "controlled_ground_truth": {
+        "basis": "directly constructed confirmation update RMS versus 1% margin",
+        "fixed_suite_update_equivalent": false
+      },
+      "declared_structure": [],
+      "methods": {
+        "FULL_ANALYSIS": {
+          "confirmed_structure": [],
+          "decision": "FIXED_SUITE_UPDATE_ENERGY_EXCEEDS_MARGIN",
+          "direction_intervals": {
+            "additive": [
+              0.0,
+              0.0
+            ],
+            "repair_aligned": [
+              -0.0008233459666018095,
+              0.0017580883393628136
+            ],
+            "residual_direction": [
+              -0.00014946612638971546,
+              8.299390957043729e-05
+            ]
+          },
+          "reason": "FULL_UPDATE_RMS_EXCEEDS_ITS_MARGIN"
+        },
+        "LOCAL_ALLCLOSE": {
+          "passed": true
+        },
+        "LOCAL_RMS": {
+          "inside_1pct": true,
+          "value": 0.0
+        },
+        "ONE_CONFIRMATION_STATE": {
+          "inside_1pct": false,
+          "value": 0.02
+        },
+        "UPDATE_MEAN_ONLY": {
+          "inside_additive_margin": false,
+          "value": 0.02
+        },
+        "UPDATE_RMS": {
+          "decision": "NON_EQUIVALENT",
+          "value": 0.02
+        }
+      },
+      "name": "calibration_confirmation_direction_change",
+      "note": "confirmation moves to a direction absent from calibration"
+    }
+  ],
+  "data_use": "CONTROLLED_SHARED_DATA_AND_RETROSPECTIVE_EMPIRICAL_COMPARISON",
+  "empirical_evidence_sha256": {
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/adamw8bit_error_compensation_probe_v1/result.json": "140ae6215c87132de5cf5fef9e0e4b7f5310fd6f5772b7358c9d34f7e0d85e33",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/adamw8bit_full_model_block_probe_v1/result.json": "c8f1b5e8fffdc4802d7154b17812ffec1bbf3814c2a257efc4233e6085613af1",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_hybrid_training_confirmation_v1/verification_v2.json": "0ecbfabeb1c87d11374cf19aedfa292549818900a2f7602150d8399e17a09d94",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_training_confirmation_v1/verification.json": "aa3cba84d1a8b1c8daec57dd8887abb4153473d94e888c0a7fbb68daffe584e1",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/torchao_adamw8bit_component_mechanism_v1/summary.json": "8eeba09d9b7f74861887306d4d7a478a3d84455a5d163fd60233d5c10720caea",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/verification.json": "25d3ce7eea71596575b0a9fdc117a74f76bcab9f325e763aa3bf5d1b7302a3e5"
+  },
+  "empirical_modification_evidence": [
+    {
+      "modification": "BLOCK64",
+      "training_decision": "NOT_CONFIRMED",
+      "training_mean_default_minus_modified": 0.018266068771481514,
+      "write_evidence": {
+        "default_rms": 4.831993469583102,
+        "improved_histories": "16/16",
+        "modified_rms": 2.706571684815258
+      }
+    },
+    {
+      "modification": "FP32_FIRST_MOMENT",
+      "training_decision": "NOT_CONFIRMED",
+      "training_mean_default_minus_modified": -0.010700865648686886,
+      "write_evidence": {
+        "default_rms": 0.05450215587976595,
+        "modified_rms": 0.03208171720037717,
+        "scope": "fixed x_proj gradient sequence"
+      }
+    },
+    {
+      "modification": "CROSS_STEP_RESIDUAL_COMPENSATION",
+      "training_decision": "MATERIAL_IMPROVEMENT",
+      "training_interval_95": [
+        0.013856147579286278,
+        0.030192383401658356
+      ],
+      "training_mean_default_minus_modified": 0.022024265490472317,
+      "write_evidence": {
+        "default_rms": 0.04325128314623103,
+        "improved_histories": "16/16",
+        "modified_rms": 7.391812260399647e-05
+      }
+    }
+  ],
+  "fixed_suite_equivalence_correct_count": {
+    "FULL_ANALYSIS": 9,
+    "LOCAL_RMS": 1,
+    "ONE_CONFIRMATION_STATE": 8,
+    "UPDATE_MEAN_ONLY": 7,
+    "UPDATE_RMS": 9
+  },
+  "limitations": [
+    "Controlled labels are injected, not natural-kernel ground truth.",
+    "Empirical modifications used different frozen data sets and cannot be ranked as one randomized comparison.",
+    "This benchmark does not implement or claim RENDER/TTrace results.",
+    "No AUROC is reported because the methods answer different declared tasks."
+  ],
+  "scenario_count": 9,
+  "schema": "method-incremental-value-benchmark-v1",
+  "source_sha256": {
+    "/data1/tzh/kernel-analyzer/scripts/run_method_incremental_value_benchmark.py": "d9fde6cb502e624610490288efa9a26e6199f55caa18f1e83a3cf179e1511248"
+  },
+  "status": "COMPLETE"
+}

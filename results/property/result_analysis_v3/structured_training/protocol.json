@@ -1,0 +1,115 @@
+{
+  "condition_definitions": {
+    "COORDINATE_ROLL": "first-moment residual rolled by one coordinate inside each 256-coordinate block; second moment correct",
+    "KEY_ONLY": "correct compensation only for the two predeclared key parameters",
+    "ONE_EXTRA_STEP_LAG": "first-moment residual read with one additional causal step lag; second moment correct",
+    "REST_ONLY": "correct compensation for every parameter except the two key parameters"
+  },
+  "contrast_count": 4,
+  "data_use": "RESULT_AWARE_SAME_STREAM_MECHANISM_ATTRIBUTION_NOT_EXTERNAL_CONFIRMATION",
+  "evaluation_states": 32,
+  "evaluation_steps": [
+    0,
+    256,
+    512,
+    768,
+    1024
+  ],
+  "family_alpha": 0.05,
+  "frozen_contrasts": [
+    "KEY_ONLY_MINUS_ON inside [-0.01,+0.01]",
+    "OFF_MINUS_REST_ONLY inside [-0.01,+0.01]",
+    "COORDINATE_ROLL_MINUS_ON lower bound above +0.01",
+    "ONE_EXTRA_STEP_LAG_MINUS_ON lower bound above +0.01"
+  ],
+  "historical_conditions": [
+    "OFF",
+    "ON"
+  ],
+  "key_parameters": [
+    "backbone.embeddings.weight",
+    "backbone.layers.23.mixer.out_proj.weight"
+  ],
+  "loss_margin": 0.01,
+  "new_conditions": [
+    "KEY_ONLY",
+    "REST_ONLY",
+    "COORDINATE_ROLL",
+    "ONE_EXTRA_STEP_LAG"
+  ],
+  "not_claimed": [
+    "UNSEEN_DATA_CONFIRMATION",
+    "CROSS_MODEL_GENERALIZATION",
+    "TIME_REVERSE_ONLINE_DEPLOYABILITY",
+    "MEAN_BIAS_AS_UNIQUE_CAUSE"
+  ],
+  "optimizer": {
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "eps": 1e-08,
+    "lr": 0.0001,
+    "weight_decay": 0.01
+  },
+  "schema": "structured-residual-training-attribution-v1",
+  "simultaneous_interval_level": 0.9875,
+  "source_sha256": {
+    "/data1/tzh/kernel-analyzer/results/coverage/mamba_seq64_input_bank.json": "b013268b4e0e5ca0f48da6e3cdb6b3362baa5f8723aafbabbdba5c1d05b8a8d7",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_00_v1.json": "3f1848046f1256a2dc7878b06a817d059642bb0767dc305a7655462135b0e475",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_01_v1.json": "0d0cae047d5fb2bfd5024ae0c4c17c8f82efc142563458b3e4fa89140ddbd8da",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_02_v1.json": "644bf4415b4ee1bf99a69a16b2a38ac0d6628df02893a38e0a63f79f46e16005",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_03_v1.json": "be9984823ccb6ced039ee81a7b91dcd833e0028fa58679b76f2ea2308a874945",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_04_v1.json": "c5c8952f73d2734c590f631dc4fa9f04e6bf52b2180ba545bc2f21d5554872b4",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_05_v1.json": "bef079b8b883dcc8b70d09f2472d038d6dfec326cf332f100a4ab9dcaf78a183",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_06_v1.json": "7f0768738cd38d81cd16f881a33b91fd388b789791288ad9efaa667a131406c8",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_07_v1.json": "1a81f11ff61a8b517ecac28c5a0b2420729d8de87b4a5d158f320cfb6c8c0085",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/protocol.json": "abed6e9c0548668da6556e0defe12202eafce37a0b93ed364e333b8547408c3c",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_00_OFF.json": "45f67faa716de84d90cc48c350f69d83390aba189a583b24b18c54aa10325c83",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_00_ON.json": "bb7311e24bf3f0979907981c389c6ddc74f74aaf6f1eac8a533eacca59687b45",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_01_OFF.json": "5e9b04cfd131c1ec4659e9d9cd10ce43ac5246c7c350af0d87d28d7610184a8a",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_01_ON.json": "3ff0e4347612f9bfb94bba0f591ea3a060b9ca557f73b0979971183950519f5d",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_02_OFF.json": "386256c6c4a887819f90461a08672b11b7feb4ca48978d8df513e38d15d485b0",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_02_ON.json": "5101a2bf54e44769c39663893995c511e27548ae2d18410d292c0eaa4412f013",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_03_OFF.json": "a9eb493959970015db4ce118efe73dbf417bf311a91c3d7b31cd7fb269101942",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_03_ON.json": "4bf6dfe013f2835a10e78ab294cc8a03890f5246929e4d3d0933babf3bf7a86a",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_04_OFF.json": "6ff2fd106396b09d6122d448d585c62f22f68d2c6b07bee0781e73fb625563ad",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_04_ON.json": "041c55f0ea4b5b0eb124e894cfe30743e1f791a68b44856ff94e615d4b94ab77",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_05_OFF.json": "4ed9c77eabeccd487093c9f4bb52ad70f2800fc1b2cc3c31ac85a2e831ae1954",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_05_ON.json": "533233322bf9801a3904580009f5ad5728a41505ba58a44f466532a511d467ed",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_06_OFF.json": "949724f69ee8f433adb1daf8336e7ea176502fb789418c5f2fbe823a480253ff",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_06_ON.json": "ed49ed6dab892f75a535bb902a7ab4272ed1e40a0cda444e234e1bde20e51b94",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_07_OFF.json": "d161e8710660d416f253e102b582b2bb95366fbc37fbe78891fbfef0d017c679",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/runs/stream_07_ON.json": "8f511cf2e4a9161fefee957ab93793ba9c63245b92302e6c981a8b11e5831e2f",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v1/same_path_training/summary.json": "5f8d819a128c98820d004c2e66805c9b4a274544001ce520ea18846a705c3cdf",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v3/residual_structure/result.json": "929374f1b29be05b58f6602da6ba3fe0c6de4037ef837c7a19e6c066e9a556aa",
+    "/data1/tzh/kernel-analyzer/results/property/result_analysis_v3/residual_structure/verification.json": "aea8fcb29e9aaeff47f469e5bd525f786ad5297ad062d223f1e00b9247cd9555",
+    "/data1/tzh/kernel-analyzer/scripts/run_adamw8bit_error_compensation_training.py": "039a77aa41cb94a254809085bbf6348d7600f9b912669ef714bcce7f1a8c39b6",
+    "/data1/tzh/kernel-analyzer/scripts/run_structured_residual_training.py": "a3aed8017bd1d6895c0f69e97ad9b433d60838f57617631a0a631d14679ad77b",
+    "/data1/tzh/kernel-analyzer/src/kernel_analyzer/adamw8bit_error_compensation.py": "01fb805e13b8ff576c231774f12da80d7a01e815739370d97211c096dfdd9aef",
+    "/data1/tzh/kernel-analyzer/src/kernel_analyzer/compensation_control.py": "7723018868ed1d6823f36be120cc8dd3f109cdf36b83e819745c268fd2fcf45d",
+    "/data1/tzh/kernel-analyzer/src/kernel_analyzer/online_residual_control.py": "a3f2a3ba67abc67458e14f86c5a4970a7ca1acf1440b7e1e61137f3ef8069367",
+    "/data1/tzh/models/state-spaces/mamba-130m-hf/config.json": "784825b6b6cdde47a1602278db0e66d6764169af4a8e662404701bc636a2686a",
+    "/data1/tzh/models/state-spaces/mamba-130m-hf/model.safetensors": "1a5ed29c492ef4d485df3b7c2c8109771696589855b2162ad1ba618b6067cbea"
+  },
+  "status": "FROZEN_BEFORE_NEW_CONDITION_TRAINING",
+  "steps": 1024,
+  "stream_count": 8,
+  "tracked_outputs": [
+    "evaluation loss at frozen checkpoints",
+    "final key-parameter norms",
+    "final non-key parameter norm",
+    "final optimizer first/second state norms",
+    "runtime and peak allocated memory"
+  ],
+  "train_banks": [
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_00_v1.json",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_01_v1.json",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_02_v1.json",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_03_v1.json",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_04_v1.json",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_05_v1.json",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_06_v1.json",
+    "/data1/tzh/kernel-analyzer/results/property/numerical_coverage_v1/mamba_adamw8bit_compensation_bank_07_v1.json"
+  ]
+}
