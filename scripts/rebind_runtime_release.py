@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Rebuild only the wrapper/inventory release for an existing model/shape.
 
-This is used when a harmless observer-code change makes an old wrapper release
-stale.  It performs one warm F+B compile, writes a new release, and reuses the
-old semantic task plan only after checking that all task IDs still exist in the
-new inventory/campaign.  It does not run a scientific screen.
+This is used when an observer-code change makes an old wrapper release stale.
+It performs one warm F+B compile, writes a new release, and reuses the old
+semantic task plan only after checking that all region/symbol identities still
+exist in the new inventory/campaign.  It does not validate copied reference
+graph hashes; ``preflight_triton_signature_runtimes.py`` must do that before a
+scientific freeze.  It does not run a scientific screen.
 """
 
 from __future__ import annotations

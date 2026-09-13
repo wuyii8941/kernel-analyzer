@@ -31,6 +31,27 @@ def save(path, value):
         json.dump(value, f, indent=2, allow_nan=False)
 
 
+def save_idempotent(path, value):
+    """Finish an interrupted metadata freeze without changing its contents.
+
+    A process may stop after writing the source snapshot but before writing the
+    protocol.  Exact reruns are safe; a changed value remains fail-closed.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        if read(path) != value:
+            raise ValueError('Existing partial freeze differs: ' + str(path))
+        return
+    temporary = path.with_name(path.name + '.tmp')
+    if temporary.exists():
+        temporary.unlink()
+    with temporary.open('x') as f:
+        json.dump(value, f, indent=2, allow_nan=False)
+        f.flush()
+        os.fsync(f.fileno())
+    temporary.replace(path)
+
+
 def sha(path):
     h = hashlib.sha256()
     with open(path, 'rb') as f:
@@ -128,9 +149,9 @@ def main():
                     'input_bank': str(a.input_bank.resolve()), 'release': str(a.release.resolve()),
                     'coverage_sha256': digest(coverage),
                     'source_sha256': {str(s.resolve()): sha(s) for s in sources}}
-        save(out / 'source_snapshot.json', {str(s.resolve()): s.read_text() for s in sources if s.suffix=='.py'})
-        save(out / 'protocol.json', protocol)
-        save(out / 'coverage.json', coverage)
+        save_idempotent(out / 'source_snapshot.json', {str(s.resolve()): s.read_text() for s in sources if s.suffix=='.py'})
+        save_idempotent(out / 'protocol.json', protocol)
+        save_idempotent(out / 'coverage.json', coverage)
         print(json.dumps(coverage['counts']))
         return
     protocol = read(out / 'protocol.json')

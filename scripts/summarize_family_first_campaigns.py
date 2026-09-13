@@ -17,6 +17,11 @@ def failure_reason(run: Path, execution: str) -> str | None:
     the family summary useful for scheduling repairs by surfacing the final
     exception line when one is present.
     """
+    if execution == "EXECUTION_TIMEOUT":
+        timeout = run / "execution_timeout.json"
+        if not timeout.exists():
+            return "EXECUTION_TIMEOUT_RECORD_MISSING"
+        return "EXECUTION_TIMEOUT_AFTER_" + str(json.loads(timeout.read_text()).get("timeout_seconds")) + "_SECONDS"
     if execution not in {"EXECUTION_FAILED", "INCOMPLETE_ATTEMPT"}:
         return None
     log = run / "capture.log"
@@ -36,20 +41,47 @@ def failure_reason(run: Path, execution: str) -> str | None:
     return lines[-1][-500:] if lines else "CAPTURE_LOG_EMPTY"
 
 
+def orchestration_failure(output: Path, case_id: str) -> tuple[str | None, str | None]:
+    """Recover a specialized command failure from append-only orchestration."""
+    for path in sorted((output.parent / "orchestration").glob("run-*.json"), reverse=True):
+        for row in json.loads(path.read_text()).get("rows", []):
+            if row.get("case_id") != case_id or row.get("status") != "COMMAND_FAILED":
+                continue
+            stderr = str(row.get("stderr", ""))
+            lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+            return "EXECUTION_FAILED", (lines[-1][-500:] if lines else "COMMAND_FAILED_WITHOUT_STDERR")
+    return None, None
+
+
 def summarize(manifest: dict) -> dict:
     rows = []
     for campaign in manifest["campaigns"]:
         output = Path(campaign["campaign_output"])
+        failure_override = None
         specialized = campaign.get("adapter") not in {None, "GENERIC_COVERAGE"}
         run_id = hashlib.sha256(campaign["task_id"].encode()).hexdigest()[:20]
         run = output / "runs" / run_id
+        analysis = {}
         completion_path = output / "completion_verification.json"
-        if specialized and completion_path.exists():
+        timeout_path = output / "execution_timeout.json"
+        if timeout_path.exists():
+            execution = "EXECUTION_TIMEOUT"
+            analysis = {}
+            run = output
+        elif specialized and completion_path.exists():
             completion = json.loads(completion_path.read_text())
             records = completion.get("records", [])
             record = next((r for r in records if r.get("task_id") == campaign["task_id"]), {})
             execution = "VALID" if record.get("status") == "VERIFIED" or record.get("status") == "RECORDED_MEASUREMENT_CHECKED" else record.get("status", "INCOMPLETE")
             analysis = record.get("analysis") or {}
+            run = output
+        elif specialized:
+            recovered_execution, failure_override = orchestration_failure(
+                output, campaign["case"]["case_id"]
+            )
+            execution = recovered_execution or (
+                "INCOMPLETE_ATTEMPT" if (output / "raw").exists() else "NOT_STARTED"
+            )
             run = output
         else:
             status_path = run / "status.json"
@@ -67,6 +99,21 @@ def summarize(manifest: dict) -> dict:
             "operator_family": campaign["operator_family"],
             "case_id": campaign["case"]["case_id"],
             "task_id": campaign["task_id"],
+            "source_release": campaign.get("original_release", campaign.get("release")),
+            "analysis_artifact": (
+                str(completion_path.resolve())
+                if specialized and completion_path.exists()
+                else str((run / "analysis.json").resolve())
+                if (run / "analysis.json").exists()
+                else None
+            ),
+            "analysis_sha256": (
+                hashlib.sha256(completion_path.read_bytes()).hexdigest()
+                if specialized and completion_path.exists()
+                else hashlib.sha256((run / "analysis.json").read_bytes()).hexdigest()
+                if (run / "analysis.json").exists()
+                else None
+            ),
             "implementation_kind": campaign.get(
                 "implementation_kind", "NOT_RECORDED_IN_V1_MANIFEST"
             ),
@@ -77,7 +124,7 @@ def summarize(manifest: dict) -> dict:
                 else "COMMON_OPERAND_EXTERNAL_RECOMPUTE"
             ),
             "execution_status": execution,
-            "failure_reason": failure_reason(run, execution),
+            "failure_reason": failure_override or failure_reason(run, execution),
             "measurement_status": analysis.get("measurement_status", "NOT_ASSESSED"),
             "equivalence_decision": analysis.get("equivalence_decision", "NOT_ASSESSED"),
             "fixed_suite_parameter_write_total_rms": bias.get("fixed_suite_total_rms"),

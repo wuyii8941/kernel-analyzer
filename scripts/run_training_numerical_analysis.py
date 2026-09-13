@@ -67,8 +67,41 @@ def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "build-family-campaigns":
         _run("build_family_first_campaign_manifest.py", *sys.argv[2:])
         return
+    if len(sys.argv) > 1 and sys.argv[1] == "build-triton-signature-campaigns":
+        _run("build_triton_signature_campaign_manifest.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "build-triton-signature-batches":
+        _run("build_triton_signature_batch_manifest.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "build-triton-signature-continuation":
+        _run("build_triton_signature_continuation_manifest.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "build-specialized-signature-continuation":
+        _run("build_specialized_signature_continuation.py", *sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "run-family-campaigns":
         _run("run_family_first_campaigns.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "run-triton-signature-queue":
+        _run("run_triton_signature_queue.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "run-triton-signature-batches":
+        _run("run_triton_signature_batches.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "summarize-triton-signature-batches":
+        _run("summarize_triton_signature_batches.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "merge-triton-signature-measurements":
+        _run("merge_triton_signature_measurements.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "summarize-triton-signature-groups":
+        _run("summarize_triton_signature_groups.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "audit-triton-signature-campaign":
+        _run("audit_triton_signature_campaign.py", *sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "audit-scoped-mainline":
+        _run("build_scoped_mainline_completion_audit.py", *sys.argv[2:])
         return
     if len(sys.argv) > 1 and sys.argv[1] == "summarize-family-campaigns":
         _run("summarize_family_first_campaigns.py", *sys.argv[2:])
@@ -83,6 +116,16 @@ def main() -> None:
                "all observed kernels: catalog-observed-kernels ...; "
                "family-first execution queue: queue-by-family ...; "
                "unmeasured family frontier: unmeasured-family-frontier ...; "
+               "unmeasured Triton signatures: build-triton-signature-campaigns ...; "
+               "resumable Triton signature execution: run-triton-signature-queue ...; "
+               "runtime-batched signature execution: build-triton-signature-batches / run-triton-signature-batches; "
+               "execution-only continuation: build-triton-signature-continuation ...; "
+               "specialized source-version continuation: build-specialized-signature-continuation ...; "
+               "runtime-batched signature summary: summarize-triton-signature-batches ...; "
+               "inventory attachment: merge-triton-signature-measurements ...; "
+               "signature/problem-group deduplication: summarize-triton-signature-groups ...; "
+               "signature campaign audit: audit-triton-signature-campaign ...; "
+               "bounded mainline evidence audit: audit-scoped-mainline ...; "
                "family campaign freeze/run/report: build-family-campaigns / run-family-campaigns; "
                "bounded family summary: summarize-family-campaigns; "
                "real iid optimizer-state study: adamw8bit-population {freeze,run}; "

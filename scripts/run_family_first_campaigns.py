@@ -9,9 +9,20 @@ from pathlib import Path
 import subprocess
 import sys
 import hashlib
+import os
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def subprocess_environment() -> dict[str, str]:
+    existing = os.environ.get("PYTHONPATH")
+    required = f"{ROOT / 'src'}:{ROOT}"
+    return {
+        **os.environ,
+        "PYTHONPATH": required if not existing else required + ":" + existing,
+        "PYTHONDONTWRITEBYTECODE": "1",
+    }
 
 
 def command(campaign: dict, action: str, *, device: str) -> list[str]:
@@ -126,7 +137,10 @@ def main() -> None:
             rows.append({"case_id": campaign["case"]["case_id"], "status": "FROZEN"})
             continue
         cmd = command(campaign, args.action, device=args.device)
-        completed = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True)
+        environment = subprocess_environment()
+        completed = subprocess.run(
+            cmd, cwd=ROOT, text=True, capture_output=True, env=environment
+        )
         if (args.action == "run"
                 and campaign.get("adapter") not in {None, "GENERIC_COVERAGE"}
                 and completed.returncode == 0):
@@ -141,7 +155,7 @@ def main() -> None:
             audit = subprocess.run(
                 [sys.executable, str(finalizer), "--root", str(output),
                  "--output", str(output / "completion_verification.json")],
-                cwd=ROOT, text=True, capture_output=True,
+                cwd=ROOT, text=True, capture_output=True, env=environment,
             )
             if audit.returncode != 0:
                 completed = subprocess.CompletedProcess(
@@ -150,6 +164,19 @@ def main() -> None:
                     completed.stderr + "\n" + audit.stderr,
                 )
         status = observed_status(campaign, args.action, completed.returncode)
+        if args.action == "run" and completed.returncode != 0:
+            failure_path = output / "execution_failure.json"
+            if not failure_path.exists():
+                failure_path.write_text(json.dumps({
+                    "schema": "family-first-execution-failure-v1",
+                    "case_id": campaign["case"]["case_id"],
+                    "task_id": campaign["task_id"],
+                    "returncode": completed.returncode,
+                    "command": cmd,
+                    "stdout_tail": completed.stdout[-4000:],
+                    "stderr_tail": completed.stderr[-4000:],
+                    "not_a_numerical_measurement": True,
+                }, indent=2, ensure_ascii=False) + "\n")
         rows.append({
             "case_id": campaign["case"]["case_id"],
             "operator_family": campaign["operator_family"],

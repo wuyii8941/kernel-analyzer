@@ -179,6 +179,30 @@ def test_specialized_summary_reads_family_completion_artifact(tmp_path):
     assert result["rows"][0]["equivalence_decision"] == "EQUIVALENT"
 
 
+def test_summary_records_queue_timeout_as_invalid_execution(tmp_path):
+    from scripts.summarize_family_first_campaigns import summarize
+
+    output = tmp_path / "campaign"
+    output.mkdir()
+    (output / "execution_timeout.json").write_text(json.dumps({"timeout_seconds": 60}))
+    result = summarize({"campaigns": [{
+        "adapter": "GENERIC_COVERAGE", "campaign_output": str(output),
+        "operator_family": "ELEMENTWISE", "task_id": "backward:1:out",
+        "case": {"case_id": "case", "reference_method": "AOT_REPLAY"},
+    }]})
+    assert result["rows"][0]["execution_status"] == "EXECUTION_TIMEOUT"
+    assert result["rows"][0]["measurement_status"] == "NOT_ASSESSED"
+    assert result["rows"][0]["failure_reason"] == "EXECUTION_TIMEOUT_AFTER_60_SECONDS"
+
+
+def test_family_runner_subprocess_environment_includes_repo_import_paths():
+    from scripts.run_family_first_campaigns import ROOT, subprocess_environment
+
+    value = subprocess_environment()["PYTHONPATH"].split(":")
+    assert str(ROOT / "src") in value
+    assert str(ROOT) in value
+
+
 def test_unmeasured_family_frontier_excludes_measured_and_preserves_blocked():
     from scripts.build_unmeasured_triton_family_frontier import build
 

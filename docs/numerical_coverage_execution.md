@@ -1,7 +1,7 @@
 # 新主线的覆盖与执行入口
 
 这一入口扩展已有仓库，不修改统计公式、历史阈值或原始结果。全部保存任务的去重清单、
-计算分类和跨家族执行顺序见[全部已观测 kernel 清单](observed_kernel_catalog.md)。
+计算分类和跨家族执行顺序见[全部已观测 kernel 清单](observed_kernel_catalog_v2.md)。
 旧 T1–T4 及历史重算入口继续保留。
 
 本入口承担[主线四目标](current_mainline.md)中的框架自动化和真实 Triton 接入。
@@ -9,6 +9,19 @@
 与偏差机制、统计保证、训练后果分别验收。大量同族小差异不能代替强机制或强训练
 结果；当前 Q-only 固定集合判断也不等于已经完成统计理论。2026-09-07 的口径校准
 不恢复实验队列，以下命令是执行说明而非当前正在运行的声明。
+
+## 2026-09-13 未测 Triton signature 执行结果
+
+自动选择器按 `operator family + phase + symbol signature + reference method` 冻结
+64 个此前未测结构 signature，不读取数值结果。经过版本化运行、预检和执行续跑，
+机器审计给出 31 个有效固定集合测量、28 个超时、4 个执行 identity 失败和 1 个运行
+路径不匹配；64 个任务全部有终态。有效结果接回完整清单后，去重有效位置为 551。
+
+这里有四个不同数量：31 个有效位置、31 个结构 signature、30 个实际编译计算、4 个
+目录家族；独立数值根因数未判定。详细映射见
+`results/property/numerical_coverage_v1/triton_signature_deduplication_v1.*`，执行会计见
+`triton_signature_campaign_audit_v1.json`。超时、graph identity 变化和 sequential
+fallback 均不是数值阴性。
 
 ## Triton 优先的全量前沿
 

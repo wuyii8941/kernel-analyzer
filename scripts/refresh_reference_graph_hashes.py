@@ -26,6 +26,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--release", type=Path, required=True)
     ap.add_argument("--phase", choices=["FORWARD", "BACKWARD"], required=True)
+    ap.add_argument("--graph-index", type=int,
+                    help="Restrict a graph-break release to one declared graph index")
+    ap.add_argument("--cut-id",
+                    help="Restrict the update to one exact reference-cut task ID")
     ap.add_argument("--old-hash", required=True)
     ap.add_argument("--new-hash", required=True)
     args = ap.parse_args()
@@ -34,7 +38,11 @@ def main() -> None:
         plan = json.load(f)
     changed = 0
     for row in plan.get("reference_cut_tasks", []):
+        if args.cut_id is not None and str(row.get("cut_id", row.get("task_id"))) != args.cut_id:
+            continue
         if str(row.get("phase")) != args.phase:
+            continue
+        if args.graph_index is not None and int(row.get("graph_index", -1)) != args.graph_index:
             continue
         if str(row.get("expected_graph_code_sha256")) != args.old_hash:
             raise SystemExit(
@@ -56,6 +64,8 @@ def main() -> None:
         previous = json.loads(sidecar.read_text()).get("changes", [])
     previous.append({
         "phase": args.phase,
+        "graph_index": args.graph_index,
+        "cut_id": args.cut_id,
         "old_hash": args.old_hash,
         "new_hash": args.new_hash,
         "changed_reference_cut_count": changed,
