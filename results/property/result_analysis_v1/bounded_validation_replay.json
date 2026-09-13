@@ -1,0 +1,141 @@
+{
+  "schema": "bounded-population-equivalence-validation-v1",
+  "status": "FAIL",
+  "production_functions": [
+    "bounded_population_total_energy_equivalence",
+    "bounded_population_aligned_equivalence"
+  ],
+  "vector_to_sufficient_statistics_path": true,
+  "rare_event_probability": 0.00078125,
+  "rare_event_population_is_on_margin": true,
+  "all_zero_observation_count": 1914,
+  "boundary_results": [
+    {
+      "endpoint": "energy_false_equivalent",
+      "boundary_false_equivalence_count": 0,
+      "repetitions": 2000,
+      "rate": 0.0,
+      "monte_carlo_interval_95": [
+        1.0842021724855044e-19,
+        0.001917047281252934
+      ],
+      "nominal_alpha": 0.05
+    },
+    {
+      "endpoint": "aligned_false_equivalent",
+      "boundary_false_equivalence_count": 0,
+      "repetitions": 2000,
+      "rate": 0.0,
+      "monte_carlo_interval_95": [
+        1.0842021724855044e-19,
+        0.001917047281252934
+      ],
+      "nominal_alpha": 0.05
+    }
+  ],
+  "exact_identity_controls": {
+    "energy": {
+      "decision": "EQUIVALENT",
+      "rms_ratio_estimate": 0.0,
+      "margin": 0.01,
+      "mean_boundary_difference": -0.00010000000000000003,
+      "one_sided_mean_bounds": [
+        -0.00010270440372281611,
+        -9.729559627718396e-05
+      ],
+      "hoeffding_radius": 2.704403722816071e-06,
+      "declared_support": [
+        -0.0001,
+        0.0
+      ],
+      "effect_energy_upper_bound": 0.0,
+      "repair_energy_upper_bound": 1.0,
+      "bound_provenance": "protocol-enforced exact synthetic identity",
+      "alpha": 0.05,
+      "independent_unit_count": 2048,
+      "assumption_scope": "FINITE_SAMPLE_INDEPENDENT_UNITS_WITH_PREDECLARED_ENERGY_BOUNDS",
+      "sample_extrema_are_not_valid_bound_provenance": true
+    },
+    "aligned": {
+      "decision": "EQUIVALENT",
+      "ratio_of_means_estimate": 0.0,
+      "margin": 0.01,
+      "positive_boundary_bounds": [
+        -0.010270440372281607,
+        -0.009729559627718393
+      ],
+      "negative_boundary_bounds": [
+        -0.010270440372281607,
+        -0.009729559627718393
+      ],
+      "hoeffding_radius": 0.0002704403722816071,
+      "declared_boundary_support": [
+        -0.01,
+        0.0
+      ],
+      "derived_inner_product_abs_bound": 0.0,
+      "effect_energy_upper_bound": 0.0,
+      "repair_energy_upper_bound": 1.0,
+      "bound_provenance": "protocol-enforced exact synthetic identity",
+      "alpha": 0.05,
+      "independent_unit_count": 2048,
+      "assumption_scope": "FINITE_SAMPLE_INDEPENDENT_UNITS_WITH_PREDECLARED_ENERGY_BOUNDS",
+      "sample_extrema_are_not_valid_bound_provenance": true
+    }
+  },
+  "full_analysis_path_controls": {
+    "exact_identity": {
+      "case_id": "bounded-population-synthetic",
+      "contrast_id": "CONTROLLED_SYNTHETIC_UPDATE",
+      "measurement_status": "PARTIAL",
+      "claim_scope": "DECLARED_STATE_POPULATION_UPDATE",
+      "bias_analysis": {
+        "not_assessed_reason": "ACTUAL_OPTIMIZER_READBACK_NOT_VERIFIED"
+      },
+      "equivalence_decision": "NOT_ASSESSED",
+      "training_outcome": "NOT_MEASURED",
+      "mandatory_endpoints": [
+        "TOTAL_RMS",
+        "REPAIR_ALIGNED"
+      ],
+      "provenance": {
+        "protocol_version": "bounded-population-synthetic-protocol-v1",
+        "write_protocol": {
+          "version": "adamw-readback-v2",
+          "synthetic": true
+        },
+        "data_use": "METHOD_VALIDATION"
+      },
+      "schema": "kernel-analyzer-analysis-result-v1"
+    },
+    "unobserved_rare_boundary": {
+      "case_id": "bounded-population-synthetic",
+      "contrast_id": "CONTROLLED_SYNTHETIC_UPDATE",
+      "measurement_status": "PARTIAL",
+      "claim_scope": "DECLARED_STATE_POPULATION_UPDATE",
+      "bias_analysis": {
+        "not_assessed_reason": "ACTUAL_OPTIMIZER_READBACK_NOT_VERIFIED"
+      },
+      "equivalence_decision": "NOT_ASSESSED",
+      "training_outcome": "NOT_MEASURED",
+      "mandatory_endpoints": [
+        "TOTAL_RMS",
+        "REPAIR_ALIGNED"
+      ],
+      "provenance": {
+        "protocol_version": "bounded-population-synthetic-protocol-v1",
+        "write_protocol": {
+          "version": "adamw-readback-v2",
+          "synthetic": true
+        },
+        "data_use": "METHOD_VALIDATION"
+      },
+      "schema": "kernel-analyzer-analysis-result-v1"
+    }
+  },
+  "limitations": "The finite-sample guarantee requires independent units and protocol-level finite energy bounds fixed before observation. Sample extrema are not valid bounds.",
+  "source_sha256": {
+    "/data1/tzh/kernel-analyzer/scripts/validate_bounded_population_equivalence.py": "62da52f4b6f153602cfa0044bf561242c0cbfe46045bc9709530b4099e9dfead",
+    "src/kernel_analyzer/training_equivalence.py": "1ad99c13cf49c8624f114336fe5d3585e3d74b8c5ca19feb2e2638519da98eed"
+  }
+}

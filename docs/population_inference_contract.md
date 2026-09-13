@@ -1,5 +1,15 @@
 # 随机训练状态总体：可证明范围与不能绕过的边界
 
+2026-09-13复核：旧有界验证脚本的纯向量样本缺少当前actual-write字段，重跑时完整
+接口控制返回NOT_ASSESSED，两个2000次边界测试均未错误判等价。已改用真实SGD
+step实现受控向量，再走同一生产接口；没有放松实际写入检查。失败与修正后PASS
+记录均保留在`results/property/result_analysis_v1`。
+
+旧方向频率接口的`OPPOSITE_DIRECTION_PREVALENCE_CONFIRMED`下尾标签不能当成
+负方向证据，因为零值也不是正值。新`direction_interpretation.positive_direction_frequency`
+及`scripts/analyze_direction_frequency.py`保留同一统计量，改用“正方向频率低于null”
+的准确解释。历史冻结代码不改写，已有全正方向结论不受影响。
+
 本框架不再把“小样本 t 区间看起来正常”当作随机训练状态总体保证。总体输出分成
 三个不同问题，程序根据协议选择对应入口；不能在看到结果后互换。
 

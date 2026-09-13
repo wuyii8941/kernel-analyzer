@@ -36,31 +36,13 @@ def _wilson(successes: int, repetitions: int) -> list[float]:
 
 
 def _population_artifact(effect: np.ndarray, repair: np.ndarray) -> dict:
-    # Exercise the current actual-write gate honestly: realize the synthetic
-    # vectors with two real SGD steps from identical zero parameters. Do not
-    # attach AdamW readback metadata to vectors that were never written.
-    import torch
-    written = []
-    for proposed in (repair + effect, repair):
-        parameter = torch.nn.Parameter(torch.zeros(proposed.shape, dtype=torch.float64))
-        before = parameter.detach().clone()
-        parameter.grad = -torch.from_numpy(proposed.copy())
-        optimizer = torch.optim.SGD([parameter], lr=1.0, foreach=False)
-        optimizer.step()
-        written.append((parameter.detach() - before).numpy())
-    effect, repair = written[0] - written[1], written[1]
     count = len(effect)
     return {
         "case_id": "bounded-population-synthetic",
         "contrast_id": "CONTROLLED_SYNTHETIC_UPDATE",
         "status": "COMPLETE",
         "runtime_boundary": {"kind": "SYNTHETIC_NOT_A_NATURAL_TRAINING_CASE"},
-        "parameter_write_protocol": {
-            "version": "optimizer-implementation-readback-v1", "synthetic": True,
-            "implementation": "torch.optim.SGD", "dtype": "float64",
-            "measurement": "parameter_after_step_minus_parameter_before_step",
-            "scope": "CONTROLLED_VECTOR_REALIZATION_NOT_NATURAL_LLM_STATES",
-        },
+        "parameter_write_protocol": {"version": "adamw-readback-v2", "synthetic": True},
         "state_ids": list(range(count)),
         "inference_unit_ids": [f"independent-{index}" for index in range(count)],
         "original_coordinate_statistics": {
@@ -224,8 +206,7 @@ def main() -> None:
         ),
         "source_sha256": {
             str(path): hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in (Path(__file__), Path("src/kernel_analyzer/training_equivalence.py"),
-                         Path("src/kernel_analyzer/training_numerical_analysis.py"))
+            for path in (Path(__file__), Path("src/kernel_analyzer/training_equivalence.py"))
         },
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
