@@ -196,7 +196,7 @@ Golden et al. (2024) 也做过类似的 matched implementation 对比，追踪�
 
 上表回答“代表机制怎样表现”。下面这张表列出首批已经逐项核验的 bias + loss 记录。它不是当前 301 行审计的完整导出；完整机器表仍以 JSON 为准。这里必须继续区分 bias 自身是否持续，不能把 loss 分叉反过来当成持久性证据。
 
-这张表已经通过机器核验：每一行都检查原始 bias 证据、4096 条 loss 记录和源文件哈希；核验结果保存在 `results/property/declared_persistent_4096/slide7_bias_loss_validation.json`。
+这张表已经通过机器核验：每一行都检查原始 bias 证据和4096条 loss 记录；核验结果保存在 `results/property/declared_persistent_4096/slide7_bias_loss_validation.json`。
 
 | 模型 | 算子与训练位置 | 已确认的 bias 证据 | 4096 步时 bias 是否仍持续 | loss 分叉步数 | 最大 loss 差 |
 |---|---|---|---|---:|---:|

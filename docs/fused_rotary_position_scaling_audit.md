@@ -37,7 +37,16 @@
 
 warm 与清空 moments 两种设置的 gradient 原坐标统计完全相同，但参数写入差异相差
 约 22.1 倍；warm 相对 cold 降至约 5.23%。因此，在这组固定状态和目标参数上，
-AdamW moments 会明显抑制该实现差异进入实际参数写入。
+AdamW 状态会明显改变该实现差异进入实际参数写入的程度。重置路径同时清空
+moments 并把 prior_step 设为零，因此这一比较没有单独隔离 moments 与 bias correction。
+
+2026-09-14 原坐标重新分析：warm/reset 的绝对更新差范数 RMS 分别为
+0.0005496225 和 0.0355205614，参考更新范数 RMS 分别为 0.121291891 和
+0.354666348。绝对差异增大约 64.63 倍，参考尺度增大约 2.92 倍，因而相对差异
+增大约 22.10 倍。这排除了“仅由分母变化产生该比例变化”的解释，但仍不隔离
+moments、step counter 各自的贡献。这是旧数据复算。
+结果见 `results/property/result_analysis_v5/rotary_absolute_state_effect.json`，复算入口为
+`scripts/analyze_rotary_absolute_state_effect.py`。
 
 ## 结论边界
 

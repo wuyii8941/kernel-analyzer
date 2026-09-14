@@ -58,7 +58,7 @@ task ID 唯一匹配后，得到 520 个已核验位置；SiLU 从 0 修正为 6
 
 汇总新家族测量时，使用 `scripts/join_explicit_output_measurements.py` 将卷积
 或 GELU 的三阶段记录接入既有总清单。程序重新检查原始数据、冻结源码快照、
-状态与实际写入信息，并要求 release 的 task 文件哈希一致；不能仅按模型名
+状态与实际写入信息，并要求 release 的 task 身份一致；不能仅按模型名
 连接不同版本。`scripts/summarize_operator_families.py` 再按同一别名表归并。
 这些保存记录检查不升级为独立 GPU 复现、总体保证或 bias 阳性。
 

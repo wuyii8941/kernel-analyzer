@@ -49,6 +49,6 @@ def test_successful_command_links_external_plan_but_failed_command_does_not(tmp_
     execution.write_text(json.dumps(record))
     result = recorded_reference_scope(payload, path, tmp_path)
     assert result['status'] == 'COMMAND_LINKED_CURRENT_PLAN_DECLARATION'
-    assert not result['execution_record']['plan_digest_frozen_by_execution_record']
+    assert result['execution_record']['path'].endswith('execution/case.json')
     record['returncode'] = 1; execution.write_text(json.dumps(record))
     assert recorded_reference_scope(payload, path, tmp_path)['status'] == 'UNKNOWN_REFERENCE_SCOPE'

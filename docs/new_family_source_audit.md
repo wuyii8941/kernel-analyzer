@@ -24,8 +24,6 @@ Top-k 输入为 FP32 `[128,32]`，k=8、dim=1、largest=True、sorted=True；输
 
 6 项单元测试通过；已安装 GraniteMoeTopKGating 的 CPU 合成输入接口检查
 观察到一次选择调用、router 权重梯度存在、退出后 forward 恢复。
-该检查的 forward 源码 SHA256 为
-`a83a4201867ddc157237678fef2aa86fc3b5fe03f731626590a03c1bf50f0eb4`。
 它不替代真实模型输入、共同状态和实际参数写入测量，不能计为新训练案例。
 
 `scripts/run_granite_selection_probe.py` 已接入真实文本 full forward/backward，
@@ -77,7 +75,7 @@ loss 差异均为零。索引排列分别改变 64、57 个坐标，但将每个
 浮点 max 偏差案例。它可能影响训练控制路径，因此也不能直接称其无关或安全。
 
 新增 `scripts/audit_operator_candidate_types.py` 对已有源码清单批量检查实际
-Triton signature，并核对源码哈希、重复定义和未知类型。输出只用于区分
+Triton signature，并核对源码结构、重复定义和未知类型。输出只用于区分
 待审核的浮点计算与整数/布尔控制计算，不凭名称或 dtype 自动判定算子族、
 参考正确性、运行覆盖或 bias。家族数量仍以经过语义审核的归并为准。
 
@@ -93,7 +91,7 @@ Triton signature，并核对源码哈希、重复定义和未知类型。输出�
 
 从同一缓存文本数据另取 block 26 起的 32 个长度 128 文本片段，保存为
 `gemma_gelu_fixed32_state_bank_v1.json`。原输入文件继续用于源码捕获身份校验；
-新的状态文件单独进入协议哈希。`gemma_gelu_capture_launch_v2` 已启动全部
+新的状态文件单独登记到协议。`gemma_gelu_capture_launch_v2` 已启动全部
 34 个位置的三阶段测量，并安排完成后自动复核。此处是固定文本集合，不因
 文件中的 TRAJECTORY 标签或状态数而获得独立随机总体推断资格。
 

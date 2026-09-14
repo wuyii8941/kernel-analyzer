@@ -1,4 +1,5 @@
 import torch
+import pytest
 
 from kernel_analyzer.structured_residual_control import roll_within_blocks
 
@@ -29,6 +30,7 @@ def test_unknown_residual_arrangement_is_rejected():
 
 
 def test_online_correct_path_matches_existing_control():
+    pytest.importorskip("torchao")
     from kernel_analyzer.compensation_control import TensorScalarCompensationControl
     from kernel_analyzer.online_residual_control import OnlineFirstMomentResidualControl
     left = torch.nn.Parameter(torch.linspace(-1, 1, 4096))

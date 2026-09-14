@@ -5,19 +5,17 @@
 > bias with loss consequences. See [the mainline](current_mainline.md) and
 > [method](method.md). A VJP identity proves the derivative path, not nonzero bias.
 
-## Runtime release identity
+## Runtime release description
 
-A generated candidate is identified by both exact forward/backward wrapper
-bytes and its Python, PyTorch, CUDA, Transformers, and Triton environment. A
-legacy release may acquire an `environment.json` only after recompilation has
-reproduced every wrapper SHA-256 exactly. A different compiler environment is
-a different candidate release, even when it loads the same model and input.
+A generated candidate records its forward/backward execution boundary and its
+Python, PyTorch, CUDA, Transformers, and Triton environment. Runtime preflight
+checks that the declared computation is actually called. Environment metadata
+describes the scope of a result; it is not itself scientific evidence of bias.
 
 This rule caught an execution-plan error: compiling the Mamba seq128 release
 under PyTorch 2.10 changed its generated backward from 3,265 to 6,337 MM calls.
-The original PyTorch 2.13.0.dev20260521+cu126 environment reproduced both
-frozen wrappers exactly and is now the only admitted environment for that
-release.
+The original PyTorch 2.13.0.dev20260521+cu126 environment reproduced the
+declared execution and is the environment covered by that historical result.
 
 The code is designed so a model step or wrapped single operator can be supplied
 without an LLM. A spec provides a model factory, frozen states, a scalar-loss
@@ -46,8 +44,8 @@ a property label. This reference-only restriction belongs to that optional
 predictor, not to dynamic candidate/reference measurements. Missing predictor
 factors do not erase a valid measurement or mechanism experiment.
 
-Run identity hashes provider/backend source code and every retained evidence
-file. Resume rejects stale provenance. Reports store proof units, unresolved
+Run records provider/backend source code and retained evidence paths.
+Reports store proof units, unresolved
 records, stage inputs and case certificates separately.
 
 ```bash
@@ -63,7 +61,7 @@ root-arithmetic and closed semantic-region cases are replayed through a
 separate audited case adapter.
 
 Complete-coordinate vectors are reduced through temporary float64 chunks under
-`/data1/tzh`; only their hashes, complete Gram matrix, U-statistic and bootstrap
+`/data1/tzh`; only the complete Gram matrix, U-statistic and bootstrap
 interval are retained. The current property denominator has complete concrete
 analytic F+B proofs for 1,562/1,562 exact endpoints. Event-level reference
 arithmetic factors remain queued and fail-closed until captured.

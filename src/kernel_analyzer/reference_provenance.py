@@ -1,5 +1,4 @@
 """Resolve recorded comparison scope without inferring semantics from case names."""
-import hashlib
 import json
 from pathlib import Path
 
@@ -14,8 +13,7 @@ def recorded_reference_scope(payload, artifact_path, repository):
               'audit_level': 'RECORDED_PROVENANCE_NOT_INDEPENDENT_RUNTIME_VERIFICATION'}
     if isinstance(declared, dict) and declared.get('comparison'):
         result.update(status='EXPLICIT_ARTIFACT_SCOPE', scope=declared,
-                      source={'path': str(artifact_path.relative_to(repository)),
-                              'sha256': hashlib.sha256(artifact_path.read_bytes()).hexdigest()})
+                      source={'path': str(artifact_path.relative_to(repository))})
         return result
     for parent in artifact_path.parents:
         if not parent.is_relative_to(repository):
@@ -32,16 +30,12 @@ def recorded_reference_scope(payload, artifact_path, repository):
                 linked_plan, output = [(repository / command[command.index(flag) + 1]).resolve() for flag in flags]
                 if output == artifact_path.parent and linked_plan.is_relative_to(repository):
                     plan = linked_plan
-                    command_evidence = {'path': str(execution.relative_to(repository)),
-                                        'sha256': hashlib.sha256(execution.read_bytes()).hexdigest(),
-                                        'plan_digest_frozen_by_execution_record': False}
+                    command_evidence = {'path': str(execution.relative_to(repository))}
         if plan.is_file():
-            data = plan.read_bytes()
-            matches = [row for row in json.loads(data).get('cases', [])
+            matches = [row for row in json.loads(plan.read_bytes()).get('cases', [])
                        if row.get('case_id') == payload.get('case_id')]
             if matches:
-                source = {'path': str(plan.relative_to(repository)),
-                          'sha256': hashlib.sha256(data).hexdigest()}
+                source = {'path': str(plan.relative_to(repository))}
                 if len(matches) != 1:
                     result.update(status='AMBIGUOUS_PLAN_BINDING', source=source)
                     return result

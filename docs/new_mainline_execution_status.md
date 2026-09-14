@@ -79,7 +79,7 @@ optimizer-history 单位上签发一个范围明确的总体非等价结论。�
 验证和 loss 结果。
 
 同日启动的首轮家族执行不计作新增结果：七个冻结任务均已留下终态，但当前有效测量为
-0。失败原因由自动汇总保留，包括 AOT 图哈希/端口身份不一致、编译阶段的动态分支、
+0。失败原因由自动汇总保留，包括 AOT 图/端口身份不一致、编译阶段的动态分支、
 冻结 candidate 符号缺失等；它们不能当作阴性，也不能从家族清单中删除。汇总见
 `results/property/numerical_coverage_v1/family_first_campaigns_v2/summary_v3.json`，
 后续修复应针对这些运行边界，不应事后替换案例。

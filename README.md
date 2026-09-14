@@ -62,6 +62,8 @@ Kernel Analyzer 的研究目标是建立一个**机制与工具共同组成的�
     分类并记录支持状态，按新家族和真实 Triton 优先生成自动执行队列。
 13. [未测算子族前沿](docs/unmeasured_triton_family_frontier.md)：
     自动排除已有家族证据，保留未绑定参考和历史执行失败，不把它们重复运行或误报为阴性。
+14. [逐问题组因果证据核对](docs/case_causal_audit.md)：按代码位置、数值来源、bias
+    形成理由、干预和训练后果分级；不把模型位置数或历史 gate 当作根因数。
 
 截至 2026-09-13，四个目标已经在**声明范围内**各有证据：统一自动入口与
 全量支持清单、真实 Triton 家族、条件明确的固定集合/随机状态统计方法，以及
@@ -78,7 +80,7 @@ AdamW8bit 的数学递推来源、针对性修改和有实际幅度的配对训�
 机制。详见[本轮去重表](results/property/numerical_coverage_v1/triton_signature_deduplication_v1.md)
 和机器审计 `triton_signature_campaign_audit_v1.json`。
 [限定范围主线验收](results/property/numerical_coverage_v1/scoped_mainline_completion_audit_v1.json)
-从带哈希的既有证据重新计算上述完成判断，并逐项列出不在当前主张内的更强目标。
+从既有证据重新计算上述完成判断，并逐项列出不在当前主张内的更强目标。
 
 针对 AdamW8bit 的两项优先分析现已完成。32 个固定梯度记录中的 moment 误差递推可在
 显式保留浮点求值余项后重构；8 条新 history 中，预先指定的 embedding 与最后一层

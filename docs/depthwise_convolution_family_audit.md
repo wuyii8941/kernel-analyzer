@@ -67,7 +67,7 @@ gradient error energy 均为零，进程正常退出。这里的 `carrier_reache
 
 `results/property/numerical_coverage_v1/mamba64_convolution_capture_v1/completion_verification.json`
 现已记录 24/24 个位置通过保存记录一致性检查，每个位置包含 32 个状态。
-逐文件重新核对 SHA256 后汇总原坐标统计：LOCAL、PARAMETER_GRADIENT、
+逐文件读取后汇总原坐标统计：LOCAL、PARAMETER_GRADIENT、
 PARAMETER_WRITE 各有 768 条观测，所有 effect energy 与非零差异坐标数均为零；
 另存的 ADAMW_UPDATE 统计也为零。
 

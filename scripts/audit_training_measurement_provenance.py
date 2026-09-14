@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import json
-import hashlib
 from pathlib import Path
 
 
@@ -16,10 +15,6 @@ SEARCH_ROOTS = (
     ROOT / "results/property/training_numerical_analysis_v1/recapture",
 )
 OUTPUT = ROOT / "results/property/training_numerical_analysis_v1/measurement_provenance.json"
-
-
-def _sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main() -> None:
@@ -59,7 +54,6 @@ def main() -> None:
             rows.append({
                 "case_id": payload.get("case_id", path.stem),
                 "artifact": str(path.relative_to(ROOT)),
-                "artifact_sha256": _sha(path),
                 "status": payload.get("status", "UNKNOWN"),
                 "stage_geometry": stage_geometry,
                 "original_coordinate_statistics": has_original,
@@ -77,7 +71,7 @@ def main() -> None:
         "schema": "kernel-analyzer-measurement-provenance-audit-v1",
         "legacy_sketch_issue": (
             "The historical empirical v2 sketch derived bucket and sign from the same "
-            "hash; for power-of-two dimensions the sign was determined by bucket parity."
+            "mapping; for power-of-two dimensions the sign was determined by bucket parity."
         ),
         "new_capture_requirement": (
             "Save original-coordinate effect energy, repair energy, and their inner "
