@@ -34,6 +34,12 @@ AdamW8bit 在声明协议内连接了“数学递推来源—实际状态传播�
 `PASS_FLASH_STYLE_CASE` 只表示当时四项 gate 通过，不能自动改写为“唯一数值根因和
 训练损害均已证明”。
 
+这里的“闭环”需要按结论强度区分：若终点是“根因 → 定向干预 → 配对轨迹不再相同”，
+AdamW8bit 和 Liger 都有证据；若还要求在独立训练中得到方向稳定、超过预设门槛的
+质量改善，目前只有 AdamW8bit。Liger 的 4096/10000 步结果证明轨迹分叉，但 loss
+差异会随窗口改变符号，不能写成持续恶化或稳定收益。局部根因闭合（如 attention
+和 softmax）也不自动等于自然总体 bias 或训练质量闭环。
+
 ## 全来源记录已经逐条分类
 
 `scripts/build_exhaustive_case_causal_audit.py` 将当前四个来源清单合并为
