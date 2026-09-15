@@ -11,11 +11,11 @@
 | 问题组 | 现有数据能够确定 | 再升级所缺的观测 |
 |---|---|---|
 | AdamW8bit moment 量化 | 保存残差的传播、干预与限定设置的独立训练收益 | 若声称均值 bias 是唯一中介，才需进一步区分均值、方差和结构；不是所有后续工作的前提 |
-| Liger dW 累加 | FP32 顺序改变局部计算，并在长度128开发集及互斥长度64/256确认集留下可复现方向结构 | 原坐标实际写入仍未保存；只改变加法顺序的1024步配对训练已完成但 loss 差异低于可解释幅度 |
+| Liger dW 累加 | FP32 顺序改变局部计算，并在长度64/256互斥确认集留下可复现方向结构 | 原坐标实际写入仍未保存；只改变加法顺序的1024步配对训练未显示可解释的长期 loss 后果 |
 | softmax saved state | 保存统计与重构概率的行和一致性线索；1024 步声明轨迹已确认恢复会进入 gradient/write 并产生轨迹 non-identity | 独立状态总体中的自然 bias、持续方向和 material loss consequence |
 | attention → q-proj 区域 | 一个延迟 BF16 物化的局部来源及传播路径 | 分别干预剩余 upstream logits 与 residual-stream 来源 |
 | MM/GEMM | 部分条件下 arithmetic 与 output rounding 均有作用 | 同一 operands 的 candidate、arithmetic-only、cast-only、joint 原坐标输出 |
-| SiLU backward | 导数求值不同；optimizer 响应含偶分量 | 相同 operands 下保存 sigmoid、表达式次序、最终 cast 的分量输出 |
+| SiLU backward | 在一个 AST 受检 gate-gradient endpoint 上，显式指数 source variant 贯穿 local、gradient、moment、update 和 write，且使用相同调用前输入 | 自然总体 mean bias，以及 sigmoid、表达式次序、最终 cast 的独立贡献；需要分量中间量和独立自然状态 |
 | fused RoPE | 同输入差异与 optimizer-state 条件性 | 单独改变中间物化；固定 step counter 后改变 moments |
 
 ## 本轮新增的可用结论

@@ -28,19 +28,19 @@ AdamW8bit 在声明协议内连接了“数学递推来源—实际状态传播�
 | 问题组 | 当前最强结论 | 尚不能声称 |
 |---|---|---|
 | AdamW8bit moment 量化 | 跨步丢失残差可重构 moment 差；正确读回改善写入与两批配对训练 loss；坐标打乱造成构造性数值失败 | 自然训练必然崩溃、跨模型普遍成立、生产优化器已完成 |
-| Liger fused linear CE dW 累加 | 一个真实末期状态的差异由相同分块乘积的有限精度加法精确重构；另一个 FP32 顺序协议有局部和摘要方向证据 | 两个协议合并成一次确认；摘要中的公式 update 是实际参数写入；该局部项充分导致全部 loss 差异 |
+| Liger fused linear CE dW 累加 | 相同分块乘积的 FP32 加法顺序是局部来源；长度 64 和 256 的互斥确认银行复现了预先声明方向，并进入参数梯度与零矩 AdamW 首步摘要 update | 仍未保存原坐标实际写入；1024 步顺序对照的 loss 差异回到零，因此不支持该局部项已足以造成长期质量差异 |
 | MM/GEMM 输出与累加 | 选定 fixed-input 条件下可分离 kernel arithmetic 与 output rounding；不同模型位置表现不同 | 所有 MM 共享一个根因；所有条件差都形成持久 bias |
 | softmax saved-state backward | 114,688 行重构概率有非零行和缺陷，重归一化可恢复行和；新增 1024 步声明 warm-state 轨迹中，saved-P 修复进入 q/k 梯度并造成非零 update 与参数/轨迹 non-identity | loss gap 跨步变号，累计 update 近扩散型；尚未证明自然总体 bias、持久方向或 material quality loss |
-| SiLU backward | 不同导数求值进入真实梯度；严格正负重放证明早期 optimizer 偶响应 | 已解释自然 SiLU residual 为何产生非零 bias |
+| SiLU backward | 在同一调用前输入上，AST 受检的显式指数 source variant 改变了 gate-gradient，并贯穿 gradient、moment、update 和 write | 已闭合一个局部 source-choice 响应；尚未闭合自然输入总体 mean bias，也未分开 sigmoid、表达式次序和最终 cast 的贡献 |
 | attention-state → q-proj 区域 | 公式和 S/K/joint/sham 干预闭合到 `S_bwd`；其中一个局部贡献已定位为 key RMSNorm+RoPE 融合延迟 BF16 中间物化 | 该局部根因解释整个区域；其余 upstream-logit 和 residual-stream 贡献来自唯一算子 |
-| fused RoPE / position scaling | 相同输入差异与 optimizer-state 条件效应明确；低位置对照排除 scaling 为唯一根因 | 已隔离底层算术根因；已单独区分 moments 与 step counter；已有 loss 后果 |
-| 99 个 common-input SiLU/RMS backward 位置 | 同一自动流程可测全空间 update 差异 | 每个非零位置都有非零平均 bias 或唯一算术根因 |
+| fused RoPE / position scaling | 相同输入差异与 optimizer-state 条件效应明确；低位置对照排除 scaling 为唯一根因 | 底层算术 source、moments 与 step counter 尚未分别隔离；没有该问题组的 loss 结果 |
+| 99 个 common-input SiLU/RMS backward 位置 | 同一自动流程可测声明范围内的 update 差异 | 它们是覆盖集合；不能把每个非零位置升级为非零平均 bias 或唯一算术根因 |
 | 31 个 reference-graph 区域 | 能测实际训练区域的 update effect | 区域差异就是某一个 Triton kernel 自身的差异 |
 
 因此，最准确的总括是：**AdamW8bit 有较强的来源传播、干预与训练结果链；attention
-有一个已隔离的局部来源；softmax 有局部一致性线索；Liger 有不同协议下的来源和后果
-证据，但 FP32 顺序实验中的约 3.08e-9 只是公式 update 的摘要比例，不是原坐标实际
-写入。其余为条件来源、语义区域、响应机制或仅测量。**历史上的
+和 softmax 各有已隔离的局部来源；Liger 的同精度顺序来源已在互斥确认银行复现，但
+没有原坐标写入或长期质量闭环；SiLU 和 GELU 各有局部 source-choice 响应；其余为
+条件来源、语义区域、响应机制、阴性控制或仅测量。**历史上的
 `PASS_FLASH_STYLE_CASE` 只表示当时四项 gate 通过，不能自动改写为“唯一数值根因和
 训练损害均已证明”。
 
@@ -191,13 +191,13 @@ FP32 master、每输入零 moments。这个位置不能仅凭长 fused kernel �
 | 优先级 | 问题组 | 下一项最小干预 | 完成标准 |
 |---|---|---|---|
 | P0 | MM/GEMM | accumulation arithmetic、最终 cast 与 joint 的三因素拆分 | 在独立状态上说明哪一项产生已测 conditional effect，并报告 interaction |
-| P0 | SiLU backward | sigmoid 求值、表达式次序、最终 cast 分别替换 | 找到自然 residual 的首次非零位置；若均不能解释则明确为组合效应 |
+| P0 | SiLU backward | 已完成显式指数 source variant 的同输入 factorial；保留 sigmoid 求值、表达式次序、最终 cast 的分量拆分 | 局部 source-choice 已闭合；自然 residual 的总体 mean bias 仍需独立状态和分量中间量 |
 | P0 | softmax saved state | 在独立状态中重复同一 source measure，再只恢复一致 saved probability | source residual 与 gradient/update 变化使用同一状态和同一方向定义 |
 | P1 | fused RoPE | RoPE 中间物化与 position scaling 分开；optimizer 对照固定 step counter | 分开算术来源与 optimizer-state response，不再用 high/low position 代替来源干预 |
-| P1 | Liger | 对预声明加法顺序预测做独立状态确认 | 将精确局部恒等式升级或否定为总体系统性 effect；不以 loss 反推 bias |
+| P1 | Liger | 长度64/256互斥确认已完成；两边均为 FP32，仅改变 dW chunk addition order | 已确认同精度顺序可复现局部/摘要方向；原坐标写入与长期 loss sufficiency 仍不作声称 |
 | 已完成子项 | attention q-proj | key RMSNorm+RoPE BF16 中间物化 | 保留为局部根因；整个复合区域继续标为多来源 |
 | 局部诊断 | softmax saved state | 重构概率的行和与保存统计一致性检查 | 重归一化不能单独隔离来源；需要真实实现干预及 gradient/write 传播确认 |
-| 局部诊断 | Liger | 同为 FP32、只改变 chunk addition order | 有局部/摘要方向证据；旧公式 update 不能作实际写入，固定状态不能升级为 iid 总体确认 |
+| 已完成局部诊断 | Liger | 同为 FP32、只改变 chunk addition order，并在长度64/256确认 | 方向与零矩 AdamW 首步摘要 update 已复现；仍无原坐标写入与长期质量结论 |
 | 已完成主项 | AdamW8bit | blockwise moment 残差读回 | 只补外部条件确认，不再在相同数据上重复挑机制 |
 
 99 个 common-input 位置和 31 个 reference-graph 区域只用于选择上述代表问题，不能

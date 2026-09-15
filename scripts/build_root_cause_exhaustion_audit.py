@@ -18,21 +18,26 @@ def main() -> None:
     softmax = read("results/property/root_cause_closure_v1/softmax_saved_state.json")
     liger = read("results/property/root_cause_closure_v1/liger_chunk_order_reanalysis.json")
     silu = read("results/property/numerical_coverage_v1/deepseek128_silu_batch000/raw/mapped_backward_667_in_out_ptr0-silu-common-input.json")
+    silu_factorial = read(
+        "results/property/numerical_coverage_v1/silu_factorial_explicit_source_run3/raw/"
+        "mapped_backward_667_in_out_ptr0-silu-common-input.json"
+    )
     rotary = read("results/property/numerical_coverage_v1/ministral_fused_rotary_optimizer_condition_summary_v1.json")
     mm = read("results/property/case_causal_audit_v1/mm_conditional_sources.json")
     assert softmax["status"] == "FIXED_CALL_LOCAL_ROOT_CONFIRMED" and softmax["row_count"] == 114688
     assert liger["status"] == "COMPLETE"
     assert liger["update_equivalence"]["decision"] == "FIXED_SUITE_UPDATE_EQUIVALENT"
     assert silu["status"] == "COMPLETE" and "original_coordinate_statistics" in silu
+    assert silu_factorial["status"] == "COMPLETE" and silu_factorial["reference_comparison_scope"]["same_local_operands"]
     assert "conditions" in rotary and mm["cases"]
 
     rows = [
         ("adamw8bit_moment_quantization", "end-to-end declared-protocol causal chain", "mean bias as the unique mediator of loss", "an intervention independently changing mean, variance, and coordinate/time structure while preserving the others"),
-        ("liger_fused_linear_ce_dw_accumulation", "FP32 addition-order source plus nonzero profile means over observed declared units", "fresh population generality or causal sufficiency for loss", "new independently sampled states and a matched training intervention changing only addition order"),
+        ("liger_fused_linear_ce_dw_accumulation", "FP32 addition-order source plus nonzero profile means reproduced on disjoint length-64 and length-256 confirmation banks", "actual-write generality or causal sufficiency for loss", "original-coordinate writes or a predeclared longer paired loss comparison"),
         ("softmax_saved_state_backward", "saved-score/statistic inconsistency causes row-mass defect on every retained row; a 1024-step declared trajectory confirms the restoration reaches gradient/write and produces trajectory non-identity", "natural population mean update bias or material loss consequence", "independent state-bank sampling with a predeclared loss endpoint and consistent-saved-state restoration propagated through gradient and parameter write"),
         ("attention_state_to_q_projection_region", "one delayed-BF16-materialization contributor and its transport path", "one unique source for the whole attention region", "separate interventions for remaining upstream-logit and residual-stream contributors"),
         ("mm_gemm_output_and_accumulation", "conditional arithmetic and output-rounding effects in selected comparisons", "exact main effects and interaction on common coordinates", "candidate, arithmetic-only, cast-only, and joint output vectors on identical operands"),
-        ("silu_backward_evaluation", "candidate/reference derivative evaluation differs and optimizer response has an even component", "which sigmoid, expression-order, or final-cast choice creates the natural residual", "common operands and componentwise intermediate outputs"),
+        ("silu_backward_evaluation", "an AST-checked explicit-exponential source variant changes the selected gate-gradient endpoint through local, gradient, moment, update and write stages", "natural population mean bias and the separate sigmoid, expression-order, or final-cast main effects", "componentwise intermediate outputs and an independent natural-state confirmation"),
         ("fused_rope_position_scaling", "same-input implementation difference and optimizer-state dependence", "low-level arithmetic source or moments separately from step counter", "same-operands materialization variants and a fixed-step-counter optimizer-state comparison"),
     ]
     payload = {
