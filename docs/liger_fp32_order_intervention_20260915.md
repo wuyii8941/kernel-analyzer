@@ -46,3 +46,23 @@ run would be needed before making any claim about loss.
 
 The complete machine record is
 `results/property/liger_fp32_chunk_order_v1/length256_order_variants_intervention.json`.
+
+## Length-64 Kahan follow-up
+
+To check the same prediction at a disjoint sequence length, a second real GPU
+run evaluated 32 length-64 states with the original sequential sum, reverse,
+even-then-odd, a frozen permutation, and FP32 Kahan compensation.  The forward
+loss and hidden-state gradient remained bitwise equal for every variant.  The
+mean Kahan-to-reverse gradient difference ratio was `0.753737` (range
+`0.657392`--`0.840577`), so Kahan removed part, but not all, of the ordinary
+order difference.  The original-minus-Kahan profile still had a nonzero
+confirmation additive component (`9.92e-8` gradient RMS-relative additive
+effect) and an update total RMS of `7.94e-7`; it is therefore not a certified
+update repair.
+
+This follow-up strengthens the source diagnosis (finite-precision addition
+order remains observable when the outer sum is compensated) while rejecting a
+stronger claim that Kahan uniformly removes the training update effect.  It is
+an intervention on the same Liger computation, not a new operator family and
+not a loss-quality result.  The machine record is
+`results/property/liger_fp32_chunk_order_v1/length64_kahan_intervention_new.json`.

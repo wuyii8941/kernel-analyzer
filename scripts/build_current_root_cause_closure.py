@@ -115,6 +115,25 @@ def liger_order_confirmation_evidence() -> dict[str, Any]:
         "validation_loss_difference": training["validation_loss_difference"],
         "claim_boundary": training["claim_boundary"],
     }
+    kahan_path = ROOT / "results/property/liger_fp32_chunk_order_v1/length64_kahan_intervention_new.json"
+    if kahan_path.exists():
+        kahan = json.loads(kahan_path.read_text())
+        variants = {}
+        for name, value in kahan.get("profiles", {}).items():
+            variants[name] = {
+                "gradient_total_effect_rms": value["PARAMETER_GRADIENT"]["suite"]["total_effect_rms"],
+                "update_total_effect_rms": value["ADAMW_UPDATE"]["suite"]["total_effect_rms"],
+                "gradient_additive_confirmed": value["PARAMETER_GRADIENT"]["population_inference"]["branches"]["additive"]["raw_confirmed"],
+                "update_additive_confirmed": value["ADAMW_UPDATE"]["population_inference"]["branches"]["additive"]["raw_confirmed"],
+            }
+        ratios = [float(row["kahan_to_reverse_gradient_l2_ratio"]) for row in kahan["rows"]]
+        result["length64_kahan_intervention"] = {
+            "state_count": len(kahan["rows"]),
+            "variants": variants,
+            "kahan_to_reverse_gradient_l2_ratio_mean": math.fsum(ratios) / len(ratios),
+            "kahan_to_reverse_gradient_l2_ratio_range": [min(ratios), max(ratios)],
+            "claim_boundary": kahan["claim_boundary"],
+        }
     return result
 
 
@@ -159,11 +178,18 @@ def mm_source_evidence() -> dict[str, Any]:
         "mamba_seq64_forward_1_output": "results/coverage/cases/mamba_seq64_input_proj_precision_decomposition.json",
         "phi4_seq64_backward_497_output": "results/coverage/cases/phi4_seq64_lmhead_dx_precision_decomposition.json",
     }
+    conditional_paths = {
+        "qwen_seq128_forward_8_output": "results/property/conditional_debias/qwen128_vproj.json",
+        "qwen_seq64_forward_8_output": "results/property/conditional_debias/qwen64_vproj.json",
+        "mamba_seq64_forward_1_output": "results/property/conditional_debias/mamba_seq64_input_proj.json",
+    }
     conditional_by_case = {row["case_id"]: row for row in source_records["cases"]}
     cases = {}
+    conditional_summary = {}
     for case_id, path in decompositions.items():
         decomposition = read(path)
         row = conditional_by_case.get(case_id)
+        conditional = read(conditional_paths[case_id]) if case_id in conditional_paths else {}
         checks = row.get("checks", {}) if row else {}
         preservation = {
             name: {
@@ -175,19 +201,50 @@ def mm_source_evidence() -> dict[str, Any]:
             }
             for name, value in checks.items()
         }
+        aggregate = {}
+        for arm_name, arm in conditional.get("arms", {}).items():
+            aggregate_payload = arm.get("aggregate", {})
+            roles = aggregate_payload.get("roles", {})
+            aggregate[arm_name] = {
+                "status": aggregate_payload.get("status"),
+                "condition_count": aggregate_payload.get("condition_count"),
+                "role_status_counts": {
+                    role: value.get("status_counts", {})
+                    for role, value in roles.items()
+                },
+                "all_conditions_candidate_local_biased": roles.get(
+                    "candidate_local_effect_removed", {}
+                ).get("all_conditions_biased", False),
+                "all_conditions_candidate_zero_moment_update_biased": roles.get(
+                    "candidate_adamw_zero_update_effect_removed", {}
+                ).get("all_conditions_biased", False),
+                "repair_residual_centered": roles.get(
+                    "repair_local_residual", {}
+                ).get("all_conditions_centered", False),
+                "absolute_downstream_reference": aggregate_payload.get(
+                    "absolute_downstream_repair_bias"
+                ),
+            }
         cases[case_id] = {
             "coherent_sources": decomposition["coherent_sources"],
             "decomposition_status": decomposition["status"],
             "decomposition_scope": decomposition["claim_boundary"],
             "conditional_checks": preservation,
+            "conditional_debias": aggregate,
         }
+        conditional_summary[case_id] = aggregate
     return {
         "problem_group": "mm_gemm_output_and_accumulation",
         "case_specific_sources": cases,
+        "conditional_downstream_summary": conditional_summary,
         "interpretation": (
             "The local source is case-specific: output rounding only for Qwen128, "
             "kernel plus output rounding for Qwen64 and Mamba, and kernel arithmetic "
-            "for Phi. These decompositions do not establish one universal MM root or "
+            "for Phi. The retained same-input conditional-debias ensembles additionally "
+            "show that, for the Qwen cases and the local/zero-moment Mamba branches, "
+            "the candidate-minus-debiased downstream effect remains directionally biased "
+            "while the repair residual is centered. These are conditional case-level F+B "
+            "results, not one universal MM root, an absolute high-precision reference, or "
             "a common natural-population mean bias."
         ),
     }
@@ -430,20 +487,38 @@ def main() -> None:
             ]
             current["derived"] = silu_factorial_evidence()
         if row["problem_group"] == "mm_gemm_output_and_accumulation":
+            mm_derived = mm_source_evidence()
             current["numerical_source"] = (
                 "case-specific finite-precision sources: output rounding only in Qwen128, "
                 "kernel plus output rounding in Qwen64/Mamba, and kernel arithmetic in Phi"
             )
             current["bias_formation"] = (
                 "same-operands decompositions isolate the listed source components in each "
-                "case; they must not be merged into a universal MM mechanism"
+                "case; conditional source-debiased ensembles then show a reproducible "
+                "candidate-minus-repair downstream effect for the named Qwen cases and "
+                "the resolved Mamba local/zero-moment branches"
             )
+            current["closure"] = "CASE_SPECIFIC_SOURCE_AND_CONDITIONAL_F_B_EFFECT_CLOSED_NATURAL_GENERALIZATION_OPEN"
             current["what_is_proven"] = (
-                "four concrete MM cases have source decompositions with independent gates; "
-                "the source and direction remain conditional on each case's operands and "
-                "implementation boundary"
+                "four concrete MM cases have independent same-operands source decompositions; "
+                "retained conditional-debias ensembles show centered repair residuals and "
+                "candidate local/zero-moment downstream bias in the named Qwen cases, with "
+                "gradient/SGD branches resolved for Qwen and partially unresolved for Mamba. "
+                "The evidence remains conditional on each case's operands, source-debiased "
+                "ensemble and implementation boundary"
             )
-            current["derived"] = mm_source_evidence()
+            current["next_needed_observation"] = (
+                "an absolute high-precision downstream reference or independently sampled "
+                "natural-state confirmation is needed for a stronger cross-case MM or "
+                "population-bias claim; the current conditional result is already closed "
+                "for the named same-input branches"
+            )
+            current["evidence"] = list(row["evidence"]) + [
+                "results/property/conditional_debias/qwen128_vproj.json",
+                "results/property/conditional_debias/qwen64_vproj.json",
+                "results/property/conditional_debias/mamba_seq64_input_proj.json",
+            ]
+            current["derived"] = mm_derived
         if row["problem_group"] == "liger_fused_linear_ce_dw_accumulation":
             current["what_is_proven"] = (
                 "the local addition-order source and its direction are reproduced in disjoint "

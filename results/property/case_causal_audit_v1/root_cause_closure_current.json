@@ -12,9 +12,9 @@
   "summary": {
     "problem_group_count": 12,
     "end_to_end_count": 1,
-    "source_or_local_closed_count": 6,
+    "source_or_local_closed_count": 7,
     "negative_control_count": 2,
-    "groups_with_open_branch": 6
+    "groups_with_open_branch": 7
   },
   "coverage_collections": [
     {
@@ -562,21 +562,59 @@
             "768": -2.384185791015625e-07
           },
           "claim_boundary": "One small GPT-2 model, one character-level text split, one fixed AdamW setting, and 1024 paired steps. This tests a same-FP32 implementation change and does not establish a general quality or stability result."
+        },
+        "length64_kahan_intervention": {
+          "state_count": 32,
+          "variants": {
+            "ORIGINAL_MINUS_EVEN_THEN_ODD": {
+              "gradient_total_effect_rms": 1.6937122189871875e-06,
+              "update_total_effect_rms": 4.102236257839035e-07,
+              "gradient_additive_confirmed": false,
+              "update_additive_confirmed": true
+            },
+            "ORIGINAL_MINUS_FROZEN_PERMUTATION": {
+              "gradient_total_effect_rms": 2.183910816728197e-06,
+              "update_total_effect_rms": 1.0147324371643714e-06,
+              "gradient_additive_confirmed": false,
+              "update_additive_confirmed": true
+            },
+            "ORIGINAL_MINUS_KAHAN": {
+              "gradient_total_effect_rms": 2.382450411138139e-06,
+              "update_total_effect_rms": 7.944932856088985e-07,
+              "gradient_additive_confirmed": true,
+              "update_additive_confirmed": true
+            },
+            "ORIGINAL_MINUS_REVERSE": {
+              "gradient_total_effect_rms": 2.647816436470858e-06,
+              "update_total_effect_rms": 5.750102739100873e-07,
+              "gradient_additive_confirmed": true,
+              "update_additive_confirmed": true
+            }
+          },
+          "kahan_to_reverse_gradient_l2_ratio_mean": 0.753736978213884,
+          "kahan_to_reverse_gradient_l2_ratio_range": [
+            0.6573924959986007,
+            0.8405770272113378
+          ],
+          "claim_boundary": "All variants use FP32 inputs, FP32 contribution tensors, and FP32 outer accumulation. The Kahan run is a targeted source intervention on a real Liger implementation; it does not establish a training-loss consequence."
         }
       }
     },
     {
       "problem_group": "mm_gemm_output_and_accumulation",
-      "closure": "CONDITIONAL_SOURCE_ISOLATION_NOT_UNIVERSAL_MM_ROOT",
+      "closure": "CASE_SPECIFIC_SOURCE_AND_CONDITIONAL_F_B_EFFECT_CLOSED_NATURAL_GENERALIZATION_OPEN",
       "numerical_source": "case-specific finite-precision sources: output rounding only in Qwen128, kernel plus output rounding in Qwen64/Mamba, and kernel arithmetic in Phi",
-      "bias_formation": "same-operands decompositions isolate the listed source components in each case; they must not be merged into a universal MM mechanism",
+      "bias_formation": "same-operands decompositions isolate the listed source components in each case; conditional source-debiased ensembles then show a reproducible candidate-minus-repair downstream effect for the named Qwen cases and the resolved Mamba local/zero-moment branches",
       "training_outcome": "historical trajectories separate, but robust cross-state direction is case-dependent",
-      "what_is_proven": "four concrete MM cases have source decompositions with independent gates; the source and direction remain conditional on each case's operands and implementation boundary",
-      "next_needed_observation": "same-operands factorial separating accumulation arithmetic, final cast, and their interaction on an independent state bank",
+      "what_is_proven": "four concrete MM cases have independent same-operands source decompositions; retained conditional-debias ensembles show centered repair residuals and candidate local/zero-moment downstream bias in the named Qwen cases, with gradient/SGD branches resolved for Qwen and partially unresolved for Mamba. The evidence remains conditional on each case's operands, source-debiased ensemble and implementation boundary",
+      "next_needed_observation": "an absolute high-precision downstream reference or independently sampled natural-state confirmation is needed for a stronger cross-case MM or population-bias claim; the current conditional result is already closed for the named same-input branches",
       "evidence": [
         "docs/source_aligned_repair.md",
         "results/property/case_causal_audit_v1/mm_conditional_sources.json",
-        "results/property/bias_formation_final/phi_transport_mechanism.json"
+        "results/property/bias_formation_final/phi_transport_mechanism.json",
+        "results/property/conditional_debias/qwen128_vproj.json",
+        "results/property/conditional_debias/qwen64_vproj.json",
+        "results/property/conditional_debias/mamba_seq64_input_proj.json"
       ],
       "derived": {
         "problem_group": "mm_gemm_output_and_accumulation",
@@ -592,6 +630,33 @@
                 "repeat_count": 128,
                 "nonzero_preservation_repeats": 7
               }
+            },
+            "conditional_debias": {
+              "ROUNDING_ONLY": {
+                "status": "LOCAL_SOURCE_CONDITIONALLY_DEBIASED_WITH_SYSTEMATIC_CANDIDATE_F_B_EFFECT",
+                "condition_count": 16,
+                "role_status_counts": {
+                  "candidate_adamw_zero_update_effect_removed": {
+                    "CONDITIONAL_BIAS": 16
+                  },
+                  "candidate_gradient_effect_removed": {
+                    "CONDITIONAL_BIAS": 16
+                  },
+                  "candidate_local_effect_removed": {
+                    "CONDITIONAL_BIAS": 16
+                  },
+                  "candidate_sgd_update_effect_removed": {
+                    "CONDITIONAL_BIAS": 16
+                  },
+                  "repair_local_residual": {
+                    "CONDITIONAL_CENTERED": 16
+                  }
+                },
+                "all_conditions_candidate_local_biased": true,
+                "all_conditions_candidate_zero_moment_update_biased": true,
+                "repair_residual_centered": true,
+                "absolute_downstream_reference": "NOT_IDENTIFIABLE_MISSING_EXACT_REFERENCE"
+              }
             }
           },
           "qwen_seq64_forward_8_output": {
@@ -605,6 +670,33 @@
               "JOINT": {
                 "repeat_count": 256,
                 "nonzero_preservation_repeats": 256
+              }
+            },
+            "conditional_debias": {
+              "JOINT": {
+                "status": "LOCAL_SOURCE_CONDITIONALLY_DEBIASED_WITH_SYSTEMATIC_CANDIDATE_F_B_EFFECT",
+                "condition_count": 16,
+                "role_status_counts": {
+                  "candidate_adamw_zero_update_effect_removed": {
+                    "CONDITIONAL_BIAS": 16
+                  },
+                  "candidate_gradient_effect_removed": {
+                    "CONDITIONAL_BIAS": 16
+                  },
+                  "candidate_local_effect_removed": {
+                    "CONDITIONAL_BIAS": 16
+                  },
+                  "candidate_sgd_update_effect_removed": {
+                    "CONDITIONAL_BIAS": 16
+                  },
+                  "repair_local_residual": {
+                    "CONDITIONAL_CENTERED": 16
+                  }
+                },
+                "all_conditions_candidate_local_biased": true,
+                "all_conditions_candidate_zero_moment_update_biased": true,
+                "repair_residual_centered": true,
+                "absolute_downstream_reference": "NOT_IDENTIFIABLE_MISSING_EXACT_REFERENCE"
               }
             }
           },
@@ -620,6 +712,35 @@
                 "repeat_count": 256,
                 "nonzero_preservation_repeats": 256
               }
+            },
+            "conditional_debias": {
+              "JOINT": {
+                "status": "CONDITIONAL_DEBIAS_UNRESOLVED",
+                "condition_count": 16,
+                "role_status_counts": {
+                  "candidate_adamw_zero_update_effect_removed": {
+                    "CONDITIONAL_BIAS": 16
+                  },
+                  "candidate_gradient_effect_removed": {
+                    "CONDITIONAL_BIAS": 13,
+                    "CONDITIONAL_UNRESOLVED": 3
+                  },
+                  "candidate_local_effect_removed": {
+                    "CONDITIONAL_BIAS": 16
+                  },
+                  "candidate_sgd_update_effect_removed": {
+                    "CONDITIONAL_BIAS": 13,
+                    "CONDITIONAL_UNRESOLVED": 3
+                  },
+                  "repair_local_residual": {
+                    "CONDITIONAL_CENTERED": 16
+                  }
+                },
+                "all_conditions_candidate_local_biased": true,
+                "all_conditions_candidate_zero_moment_update_biased": true,
+                "repair_residual_centered": true,
+                "absolute_downstream_reference": "NOT_IDENTIFIABLE_MISSING_EXACT_REFERENCE"
+              }
             }
           },
           "phi4_seq64_backward_497_output": {
@@ -628,10 +749,97 @@
             ],
             "decomposition_status": "COMPLETE_EXACT_PRECISION_MECHANISM_DECOMPOSITION",
             "decomposition_scope": "Exact same-operands local precision-source decomposition. Concrete AOT F+B proof and downstream trajectory are independent gates.",
-            "conditional_checks": {}
+            "conditional_checks": {},
+            "conditional_debias": {}
           }
         },
-        "interpretation": "The local source is case-specific: output rounding only for Qwen128, kernel plus output rounding for Qwen64 and Mamba, and kernel arithmetic for Phi. These decompositions do not establish one universal MM root or a common natural-population mean bias."
+        "conditional_downstream_summary": {
+          "qwen_seq128_forward_8_output": {
+            "ROUNDING_ONLY": {
+              "status": "LOCAL_SOURCE_CONDITIONALLY_DEBIASED_WITH_SYSTEMATIC_CANDIDATE_F_B_EFFECT",
+              "condition_count": 16,
+              "role_status_counts": {
+                "candidate_adamw_zero_update_effect_removed": {
+                  "CONDITIONAL_BIAS": 16
+                },
+                "candidate_gradient_effect_removed": {
+                  "CONDITIONAL_BIAS": 16
+                },
+                "candidate_local_effect_removed": {
+                  "CONDITIONAL_BIAS": 16
+                },
+                "candidate_sgd_update_effect_removed": {
+                  "CONDITIONAL_BIAS": 16
+                },
+                "repair_local_residual": {
+                  "CONDITIONAL_CENTERED": 16
+                }
+              },
+              "all_conditions_candidate_local_biased": true,
+              "all_conditions_candidate_zero_moment_update_biased": true,
+              "repair_residual_centered": true,
+              "absolute_downstream_reference": "NOT_IDENTIFIABLE_MISSING_EXACT_REFERENCE"
+            }
+          },
+          "qwen_seq64_forward_8_output": {
+            "JOINT": {
+              "status": "LOCAL_SOURCE_CONDITIONALLY_DEBIASED_WITH_SYSTEMATIC_CANDIDATE_F_B_EFFECT",
+              "condition_count": 16,
+              "role_status_counts": {
+                "candidate_adamw_zero_update_effect_removed": {
+                  "CONDITIONAL_BIAS": 16
+                },
+                "candidate_gradient_effect_removed": {
+                  "CONDITIONAL_BIAS": 16
+                },
+                "candidate_local_effect_removed": {
+                  "CONDITIONAL_BIAS": 16
+                },
+                "candidate_sgd_update_effect_removed": {
+                  "CONDITIONAL_BIAS": 16
+                },
+                "repair_local_residual": {
+                  "CONDITIONAL_CENTERED": 16
+                }
+              },
+              "all_conditions_candidate_local_biased": true,
+              "all_conditions_candidate_zero_moment_update_biased": true,
+              "repair_residual_centered": true,
+              "absolute_downstream_reference": "NOT_IDENTIFIABLE_MISSING_EXACT_REFERENCE"
+            }
+          },
+          "mamba_seq64_forward_1_output": {
+            "JOINT": {
+              "status": "CONDITIONAL_DEBIAS_UNRESOLVED",
+              "condition_count": 16,
+              "role_status_counts": {
+                "candidate_adamw_zero_update_effect_removed": {
+                  "CONDITIONAL_BIAS": 16
+                },
+                "candidate_gradient_effect_removed": {
+                  "CONDITIONAL_BIAS": 13,
+                  "CONDITIONAL_UNRESOLVED": 3
+                },
+                "candidate_local_effect_removed": {
+                  "CONDITIONAL_BIAS": 16
+                },
+                "candidate_sgd_update_effect_removed": {
+                  "CONDITIONAL_BIAS": 13,
+                  "CONDITIONAL_UNRESOLVED": 3
+                },
+                "repair_local_residual": {
+                  "CONDITIONAL_CENTERED": 16
+                }
+              },
+              "all_conditions_candidate_local_biased": true,
+              "all_conditions_candidate_zero_moment_update_biased": true,
+              "repair_residual_centered": true,
+              "absolute_downstream_reference": "NOT_IDENTIFIABLE_MISSING_EXACT_REFERENCE"
+            }
+          },
+          "phi4_seq64_backward_497_output": {}
+        },
+        "interpretation": "The local source is case-specific: output rounding only for Qwen128, kernel plus output rounding for Qwen64 and Mamba, and kernel arithmetic for Phi. The retained same-input conditional-debias ensembles additionally show that, for the Qwen cases and the local/zero-moment Mamba branches, the candidate-minus-debiased downstream effect remains directionally biased while the repair residual is centered. These are conditional case-level F+B results, not one universal MM root, an absolute high-precision reference, or a common natural-population mean bias."
       }
     },
     {

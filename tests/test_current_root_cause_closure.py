@@ -75,6 +75,9 @@ def test_current_root_cause_ledger_recomputes_and_keeps_open_branches():
     assert liger["256"]["confirmation_positive_count"] == 11
     assert liger["64"]["update_branches_confirmed"]["additive"] is True
     assert liger["training_1024"]["validation_loss_difference"]["1024"] == 0.0
+    assert 0.70 < liger["length64_kahan_intervention"]["kahan_to_reverse_gradient_l2_ratio_mean"] < 0.80
+    assert liger["length64_kahan_intervention"]["state_count"] == 32
+    assert liger["length64_kahan_intervention"]["variants"]["ORIGINAL_MINUS_KAHAN"]["update_total_effect_rms"] > 0
 
 
 def test_gelu_source_evidence_is_recomputed_from_raw_records():
@@ -134,6 +137,18 @@ def test_mm_sources_remain_case_specific():
         "output_rounding",
     }
     assert mm["phi4_seq64_backward_497_output"]["coherent_sources"] == ["kernel"]
+    qwen128 = mm["qwen_seq128_forward_8_output"]["conditional_debias"]["ROUNDING_ONLY"]
+    assert qwen128["all_conditions_candidate_local_biased"] is True
+    assert qwen128["all_conditions_candidate_zero_moment_update_biased"] is True
+    assert qwen128["repair_residual_centered"] is True
+    assert qwen128["condition_count"] == 16
+    mamba = mm["mamba_seq64_forward_1_output"]["conditional_debias"]["JOINT"]
+    assert mamba["all_conditions_candidate_local_biased"] is True
+    assert mamba["all_conditions_candidate_zero_moment_update_biased"] is True
+    assert mamba["repair_residual_centered"] is True
+    assert "CONDITIONAL_F_B_EFFECT_CLOSED" in by_group(
+        data, "mm_gemm_output_and_accumulation"
+    )["closure"]
 
 
 def test_every_frozen_benchmark_and_catalog_family_has_a_root_cause_boundary():
