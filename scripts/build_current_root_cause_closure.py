@@ -149,6 +149,49 @@ def silu_factorial_evidence() -> dict[str, Any]:
     return result
 
 
+def mm_source_evidence() -> dict[str, Any]:
+    """Summarize the case-specific MM source decompositions without merging them."""
+    source_records = read("results/property/case_causal_audit_v1/mm_conditional_sources.json")
+    decompositions = {
+        "qwen_seq128_forward_8_output": "results/coverage/cases/qwen128_vproj_precision_decomposition.json",
+        "qwen_seq64_forward_8_output": "results/coverage/cases/qwen64_vproj_precision_decomposition.json",
+        "mamba_seq64_forward_1_output": "results/coverage/cases/mamba_seq64_input_proj_precision_decomposition.json",
+        "phi4_seq64_backward_497_output": "results/coverage/cases/phi4_seq64_lmhead_dx_precision_decomposition.json",
+    }
+    conditional_by_case = {row["case_id"]: row for row in source_records["cases"]}
+    cases = {}
+    for case_id, path in decompositions.items():
+        decomposition = read(path)
+        row = conditional_by_case.get(case_id)
+        checks = row.get("checks", {}) if row else {}
+        preservation = {
+            name: {
+                "repeat_count": len(value.get("records", [])),
+                "nonzero_preservation_repeats": sum(
+                    record["preservation_error"]["nonzero"] > 0
+                    for record in value.get("records", [])
+                ),
+            }
+            for name, value in checks.items()
+        }
+        cases[case_id] = {
+            "coherent_sources": decomposition["coherent_sources"],
+            "decomposition_status": decomposition["status"],
+            "decomposition_scope": decomposition["claim_boundary"],
+            "conditional_checks": preservation,
+        }
+    return {
+        "problem_group": "mm_gemm_output_and_accumulation",
+        "case_specific_sources": cases,
+        "interpretation": (
+            "The local source is case-specific: output rounding only for Qwen128, "
+            "kernel plus output rounding for Qwen64 and Mamba, and kernel arithmetic "
+            "for Phi. These decompositions do not establish one universal MM root or "
+            "a common natural-population mean bias."
+        ),
+    }
+
+
 def rms_order_evidence() -> dict[str, Any]:
     data = read("results/property/numerical_coverage_v1/gemma_rms_forward_order_intervention_v1/trajectory32_isolated.json")
     cases = {}
@@ -284,6 +327,21 @@ def main() -> None:
                 "results/property/numerical_coverage_v1/silu_factorial_explicit_source_run3/raw/mapped_backward_667_in_out_ptr0-silu-common-input.json",
             ]
             current["derived"] = silu_factorial_evidence()
+        if row["problem_group"] == "mm_gemm_output_and_accumulation":
+            current["numerical_source"] = (
+                "case-specific finite-precision sources: output rounding only in Qwen128, "
+                "kernel plus output rounding in Qwen64/Mamba, and kernel arithmetic in Phi"
+            )
+            current["bias_formation"] = (
+                "same-operands decompositions isolate the listed source components in each "
+                "case; they must not be merged into a universal MM mechanism"
+            )
+            current["what_is_proven"] = (
+                "four concrete MM cases have source decompositions with independent gates; "
+                "the source and direction remain conditional on each case's operands and "
+                "implementation boundary"
+            )
+            current["derived"] = mm_source_evidence()
         if row["problem_group"] == "liger_fused_linear_ce_dw_accumulation":
             current["what_is_proven"] = (
                 "the local addition-order source and its direction are reproduced in disjoint "

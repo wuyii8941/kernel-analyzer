@@ -29,7 +29,7 @@ AdamW8bit 在声明协议内连接了“数学递推来源—实际状态传播�
 |---|---|---|
 | AdamW8bit moment 量化 | 跨步丢失残差可重构 moment 差；正确读回改善写入与两批配对训练 loss；坐标打乱造成构造性数值失败 | 自然训练必然崩溃、跨模型普遍成立、生产优化器已完成 |
 | Liger fused linear CE dW 累加 | 相同分块乘积的 FP32 加法顺序是局部来源；长度 64 和 256 的互斥确认银行复现了预先声明方向，并进入参数梯度与零矩 AdamW 首步摘要 update | 仍未保存原坐标实际写入；1024 步顺序对照的 loss 差异回到零，因此不支持该局部项已足以造成长期质量差异 |
-| MM/GEMM 输出与累加 | 选定 fixed-input 条件下可分离 kernel arithmetic 与 output rounding；不同模型位置表现不同 | 所有 MM 共享一个根因；所有条件差都形成持久 bias |
+| MM/GEMM 输出与累加 | 四个具体位置的同输入分解分别得到：Qwen128 为 output rounding，Qwen64/Mamba 为 kernel+output rounding，Phi 为 kernel arithmetic | 不能把不同位置合并成一个统一 MM 根因，也没有证明所有条件差都形成持久 bias |
 | softmax saved-state backward | 114,688 行重构概率有非零行和缺陷，重归一化可恢复行和；新增 1024 步声明 warm-state 轨迹中，saved-P 修复进入 q/k 梯度并造成非零 update 与参数/轨迹 non-identity | loss gap 跨步变号，累计 update 近扩散型；尚未证明自然总体 bias、持久方向或 material quality loss |
 | SiLU backward | 在同一调用前输入上，AST 受检的显式指数 source variant 改变了 gate-gradient，并贯穿 gradient、moment、update 和 write | 已闭合一个局部 source-choice 响应；尚未闭合自然输入总体 mean bias，也未分开 sigmoid、表达式次序和最终 cast 的贡献 |
 | attention-state → q-proj 区域 | 公式和 S/K/joint/sham 干预闭合到 `S_bwd`；其中一个局部贡献已定位为 key RMSNorm+RoPE 融合延迟 BF16 中间物化 | 该局部根因解释整个区域；其余 upstream-logit 和 residual-stream 贡献来自唯一算子 |

@@ -60,10 +60,10 @@ moment 递推与参数组集中性已在新固定 gradient histories 上得到�
 | AdamW8bit 分块大小控制 moment 与参数写入差异 | 固定真实 gradient 上的事前预测得到确认 | 64-block 虽降低 update distortion，但训练 loss 改善未确认 |
 | 一阶 moment 是默认 AdamW8bit 写入差异的主要来源之一 | component follow-up 中保留一阶 moment 为 FP32 后，写入 RMS 从 5.45% 降至 3.21% | 整项严格预测因二阶 FP32 对照仍有约 1.53e-7 相对差异而失败；不称作已确认修复 |
 | AdamW8bit moment 误差可由量化保存残差定量重构 | 32个固定梯度记录中，显式加入实测浮点求值余项后，递推重构最大相对残差为 7.60e-9；关闭补偿时一阶/二阶 moment 单独造成的平均写入 RMS 约 1.44%/0.49% | 固定梯度与单一 checkpoint；分量因 AdamW 非线性不能相加，不证明总体均值 bias |
-| grouped causal softmax 有 saved-state 局部一致性线索 | 两个固定状态、56 个调用的 114,688 行重构概率存在非零行和缺陷；重归一化后缺陷低于 8e-16 | 重归一化按构造恢复行和，不能单独认定唯一代码来源；未完成真实来源干预到 gradient/write 的确认 |
+| grouped causal softmax 的 saved-state 局部根因 | 两个固定状态、56 个调用的 114,688 行重构概率存在非零行和缺陷；重归一化后缺陷低于 8e-16；声明 warm-state 轨迹确认一致状态恢复进入 q/k gradient、参数写入并造成轨迹 non-identity | 仍限于固定调用与声明轨迹；loss gap 变号，不支持自然总体 bias、持久方向或 material quality loss |
 | Qwen layer-27 saved-P 修复进入真实训练路径 | 声明 warm-state 1024 步运行中，1024/1024 个状态的局部修改、gradient 和实际 update 均非零；参数距离达到约 5.13%，两侧轨迹均完成 | 这是局部算术来源到声明轨迹 non-identity 的证据；loss gap 跨步变号，未证明自然总体 bias、持续方向或 material quality loss |
 | AdamW8bit 写入误差集中于预先指定的关键参数 | 8条新 history 中，embedding 与最后一层 mixer output projection 占未补偿 effect energy 的 99.60%–99.85%；只补偿关键参数在8/8中优于只补偿其余参数 | optimizer-response 定位；尚未证明只补偿关键参数可复现全补偿的 loss 改善 |
-| FP32 求和顺序可用于一个具体来源预测 | Liger 的长度128开发集与互斥长度64确认集均复现预先声明的顺序方向；长度64确认中参数梯度 additive/residual 与零矩 AdamW 首步三个分支均确认 | 不是通用静态预测；使用8192维摘要、单一参数范围，尚无该顺序效应的长程 loss 验证 |
+| FP32 求和顺序可用于一个具体来源预测 | Liger 的长度128开发集与互斥长度64、256确认集均复现预先声明的顺序方向；确认中参数梯度与零矩 AdamW 首步分支有支持 | 不是通用静态预测；使用8192维摘要、单一参数范围，尚无该顺序效应的长程 loss 验证 |
 
 上述来源见[案例地图 L1–O1](case_evidence_map.md)及[方法](method.md)。
 详细数学条件保留在[成因推导](effective_antithetic_symmetry.md)、

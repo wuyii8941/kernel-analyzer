@@ -120,16 +120,71 @@
     {
       "problem_group": "mm_gemm_output_and_accumulation",
       "closure": "CONDITIONAL_SOURCE_ISOLATION_NOT_UNIVERSAL_MM_ROOT",
-      "numerical_source": "kernel arithmetic residual and final output rounding are separable for selected fixed-input comparisons",
-      "bias_formation": "output-rounding conditional effects reproduce for Qwen128; other MM locations show different or noncoherent geometry, so one common cross-model root is not established",
+      "numerical_source": "case-specific finite-precision sources: output rounding only in Qwen128, kernel plus output rounding in Qwen64/Mamba, and kernel arithmetic in Phi",
+      "bias_formation": "same-operands decompositions isolate the listed source components in each case; they must not be merged into a universal MM mechanism",
       "training_outcome": "historical trajectories separate, but robust cross-state direction is case-dependent",
-      "what_is_proven": "Qwen128 rounding-only preservation has seven tiny nonzero delivery remainders in 128 repeats; Phi transport reconstruction is approximate",
+      "what_is_proven": "four concrete MM cases have source decompositions with independent gates; the source and direction remain conditional on each case's operands and implementation boundary",
       "next_needed_observation": "same-operands factorial separating accumulation arithmetic, final cast, and their interaction on an independent state bank",
       "evidence": [
         "docs/source_aligned_repair.md",
         "results/property/case_causal_audit_v1/mm_conditional_sources.json",
         "results/property/bias_formation_final/phi_transport_mechanism.json"
-      ]
+      ],
+      "derived": {
+        "problem_group": "mm_gemm_output_and_accumulation",
+        "case_specific_sources": {
+          "qwen_seq128_forward_8_output": {
+            "coherent_sources": [
+              "output_rounding"
+            ],
+            "decomposition_status": "COMPLETE_EXACT_PRECISION_MECHANISM_DECOMPOSITION",
+            "decomposition_scope": "Exact source decomposition of local same-operands precision error. It does not test inherited upstream operand error or live multi-step weight accumulation.",
+            "conditional_checks": {
+              "ROUNDING_ONLY": {
+                "repeat_count": 128,
+                "nonzero_preservation_repeats": 7
+              }
+            }
+          },
+          "qwen_seq64_forward_8_output": {
+            "coherent_sources": [
+              "kernel",
+              "output_rounding"
+            ],
+            "decomposition_status": "COMPLETE_EXACT_PRECISION_MECHANISM_DECOMPOSITION",
+            "decomposition_scope": "Exact same-operands local precision-source decomposition. Concrete AOT F+B proof and downstream trajectory are independent gates.",
+            "conditional_checks": {
+              "JOINT": {
+                "repeat_count": 256,
+                "nonzero_preservation_repeats": 256
+              }
+            }
+          },
+          "mamba_seq64_forward_1_output": {
+            "coherent_sources": [
+              "kernel",
+              "output_rounding"
+            ],
+            "decomposition_status": "COMPLETE_EXACT_PRECISION_MECHANISM_DECOMPOSITION",
+            "decomposition_scope": "Exact same-operands local precision-source decomposition. Concrete AOT F+B proof and downstream trajectory are independent gates.",
+            "conditional_checks": {
+              "JOINT": {
+                "repeat_count": 256,
+                "nonzero_preservation_repeats": 256
+              }
+            }
+          },
+          "phi4_seq64_backward_497_output": {
+            "coherent_sources": [
+              "kernel"
+            ],
+            "decomposition_status": "COMPLETE_EXACT_PRECISION_MECHANISM_DECOMPOSITION",
+            "decomposition_scope": "Exact same-operands local precision-source decomposition. Concrete AOT F+B proof and downstream trajectory are independent gates.",
+            "conditional_checks": {}
+          }
+        },
+        "interpretation": "The local source is case-specific: output rounding only for Qwen128, kernel plus output rounding for Qwen64 and Mamba, and kernel arithmetic for Phi. These decompositions do not establish one universal MM root or a common natural-population mean bias."
+      }
     },
     {
       "problem_group": "softmax_saved_state_backward",
