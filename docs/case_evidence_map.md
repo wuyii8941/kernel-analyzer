@@ -20,7 +20,7 @@
 | Phi-4，lm-head backward dX → final norm | 实际 backward 公式、舍入与状态配对；同 AdamW 随机舍入 [P2] | 32 步来源干预、另行 warm-state 4096 步记录；v2 显示相对 update 缩小 [P1,H1] | 来源干预与长程后果都要讲，但不是一次同状态同协议实验 |
 | Qwen3-1.7B，lm-head backward dX → final norm | 同类实际 backward 的传播差异 [P1,H1] | cold 短测未检出、另行 warm-state 长测有方向和配对 loss | 说明 optimizer 状态改变表现；不能永久标成“AdamW 抵消”，也不是独立于 Phi 的新公式 |
 | Qwen，v-proj；Mamba，in-proj | 矩阵乘误差与输出舍入的分解，按来源分别修改 [S1] | 多轮自然/固定条件测量、v2 缩放及各自轨迹 [P1,H1] | 保留 bias 与 loss 材料；旧“FP32 后再转 BF16”不等于已经去掉输出舍入 |
-| Qwen，layer-27 saved-P softmax backward | 保存状态影响实际 backward；严格正负响应 [R1] | 自然实现差与人工正负响应分别测量；历史 loss 记录 [H1] | response 不对称是实测机制证据，不能把人工响应的数值直接当自然差异的均值 |
+| Qwen，layer-27 saved-P softmax backward | 保存状态影响实际 backward；严格正负响应 [R1] | 自然实现差与人工正负响应分别测量；新增声明 warm-state 1024 步轨迹确认该修复进入 q/k gradient、参数写入并造成轨迹 non-identity；历史 loss 记录 [H1] | response 不对称是实测机制证据，不能把人工响应的数值直接当自然差异的均值；1024 步 loss gap 变号，不支持持续恶化或稳定质量损失 |
 | Qwen3-VL，SiLU backward | 非线性导数及 AdamW 正负响应 [R1] | 4096 步直接作用弱、反馈有方向；loss 差很小 [H2] | 反馈维持与自然直接 bias 分开；微小 loss 分叉不写成稳定质量损害 |
 | Qwen，layer-23 attention backward → q-proj | 保存状态与 attention 区域的计算关系，区域修改 [A1] | 历史闭合区域对照与配对轨迹 [H1] | 可保留区域级解释，不能强行归因到一个 Triton kernel |
 
