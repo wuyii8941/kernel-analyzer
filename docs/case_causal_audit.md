@@ -20,7 +20,7 @@ AdamW8bit 在声明协议内连接了“数学递推来源—实际状态传播�
 | AdamW8bit moment 量化 | 跨步丢失残差可重构 moment 差；正确读回改善写入与两批配对训练 loss；坐标打乱造成构造性数值失败 | 自然训练必然崩溃、跨模型普遍成立、生产优化器已完成 |
 | Liger fused linear CE dW 累加 | 一个真实末期状态的差异由相同分块乘积的有限精度加法精确重构；另一个 FP32 顺序协议有局部和摘要方向证据 | 两个协议合并成一次确认；摘要中的公式 update 是实际参数写入；该局部项充分导致全部 loss 差异 |
 | MM/GEMM 输出与累加 | 选定 fixed-input 条件下可分离 kernel arithmetic 与 output rounding；不同模型位置表现不同 | 所有 MM 共享一个根因；所有条件差都形成持久 bias |
-| softmax saved-state backward | 两个固定状态中，114,688 行重构概率有非零行和缺陷，重归一化可恢复行和；严格正负重放另有 AdamW 偶响应证据 | 重归一化本身隔离了唯一来源；已经证明自然训练 bias 根因、总体 bias 或持久 update 方向 |
+| softmax saved-state backward | 114,688 行重构概率有非零行和缺陷，重归一化可恢复行和；新增 1024 步声明 warm-state 轨迹中，saved-P 修复进入 q/k 梯度并造成非零 update 与参数/轨迹 non-identity | loss gap 跨步变号，累计 update 近扩散型；尚未证明自然总体 bias、持久方向或 material quality loss |
 | SiLU backward | 不同导数求值进入真实梯度；严格正负重放证明早期 optimizer 偶响应 | 已解释自然 SiLU residual 为何产生非零 bias |
 | attention-state → q-proj 区域 | 公式和 S/K/joint/sham 干预闭合到 `S_bwd`；其中一个局部贡献已定位为 key RMSNorm+RoPE 融合延迟 BF16 中间物化 | 该局部根因解释整个区域；其余 upstream-logit 和 residual-stream 贡献来自唯一算子 |
 | fused RoPE / position scaling | 相同输入差异与 optimizer-state 条件效应明确；低位置对照排除 scaling 为唯一根因 | 已隔离底层算术根因；已单独区分 moments 与 step counter；已有 loss 后果 |
@@ -192,3 +192,22 @@ FP32 master、每输入零 moments。这个位置不能仅凭长 fused kernel �
 
 99 个 common-input 位置和 31 个 reference-graph 区域只用于选择上述代表问题，不能
 逐位置自动升级成根因实验。机器表中的 `next_root_cause_test` 与本节同步生成和检查。
+
+## 2026-09-15 追加核验后的停止边界
+
+本轮对 saved-P 做了实际修复后的 32 步预检和 1024 步声明 warm-state 运行。它补上了
+“局部根因是否真的进入梯度和参数写入”这一缺口，但没有改变其他问题组的证据等级。
+随后重新运行 `scripts/build_root_cause_exhaustion_audit.py`：除该新增轨迹证据外，
+各问题组仍各缺一个能区分竞争解释的观测。缺失观测分别是独立状态总体、同输入分量
+干预、上游/残差流互补干预、固定 step counter 的状态对照或自然 bias 的预注册终点；
+这些量不能从已保存的聚合统计反推。
+
+因此当前可以安全写出的闭环数量为：
+
+- 以“根因到声明轨迹 non-identity”为终点：AdamW8bit、Liger 和 saved-P 三组；
+- 以“独立训练中方向稳定且超过质量门槛的改善”为终点：仅 AdamW8bit；
+- attention 的 key RMSNorm+RoPE 只闭合了整个复合区域中的一个局部来源；
+- MM、SiLU、RoPE 其余竞争解释没有被现有数据唯一排除，不能用更多模型位置代替。
+
+这不是把未完成案例改成阴性，而是对保留证据做完可复现的离线审计后，明确哪些新
+观测仍是必要条件；在没有这些观测前，不再从公式或旧聚合文件推断唯一根因。

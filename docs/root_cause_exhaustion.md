@@ -12,7 +12,7 @@
 |---|---|---|
 | AdamW8bit moment 量化 | 保存残差的传播、干预与限定设置的独立训练收益 | 若声称均值 bias 是唯一中介，才需进一步区分均值、方差和结构；不是所有后续工作的前提 |
 | Liger dW 累加 | FP32 顺序改变局部计算，并在长度128开发集及互斥长度64/256确认集留下可复现方向结构 | 原坐标实际写入仍未保存；只改变加法顺序的1024步配对训练已完成但 loss 差异低于可解释幅度 |
-| softmax saved state | 保存统计与重构概率的行和一致性线索 | 真实实现中的单因素恢复，检查具体来源及 gradient/write 传播 |
+| softmax saved state | 保存统计与重构概率的行和一致性线索；1024 步声明轨迹已确认恢复会进入 gradient/write 并产生轨迹 non-identity | 独立状态总体中的自然 bias、持续方向和 material loss consequence |
 | attention → q-proj 区域 | 一个延迟 BF16 物化的局部来源及传播路径 | 分别干预剩余 upstream logits 与 residual-stream 来源 |
 | MM/GEMM | 部分条件下 arithmetic 与 output rounding 均有作用 | 同一 operands 的 candidate、arithmetic-only、cast-only、joint 原坐标输出 |
 | SiLU backward | 导数求值不同；optimizer 响应含偶分量 | 相同 operands 下保存 sigmoid、表达式次序、最终 cast 的分量输出 |
