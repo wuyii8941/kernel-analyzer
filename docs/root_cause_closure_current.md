@@ -41,6 +41,51 @@ Gemma RMS 的 endpoint-by-endpoint 归约顺序干预说明，早期同时替换
 
 机器结果：`results/property/case_causal_audit_v1/root_cause_closure_current.json`。
 
+## 冻结 benchmark 与算子族的逐项根因边界
+
+冻结 benchmark 共 16 个案例；这些案例均有测量结果，但当前没有任何一个仅凭 benchmark 的 AOT endpoint 替换就升级为新的根因闭环。逐项机器记录见 `generalization_benchmark_frontier`。
+
+| benchmark 案例 | 模型 | 算子族 | update 结果 | 根因状态 |
+|---|---|---|---|---|
+| `deepseek8b_seq128_backward_1665_in_out_ptr0` | deepseek8b | ATTENTION_STATE_OR_TRANSPORT_BACKWARD | CONFIRMED_TRAINING_UPDATE_EFFECT | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `deepseek8b_seq128_backward_664_in_out_ptr0` | deepseek8b | LOSS_HEAD_BACKWARD | CONFIRMED_TRAINING_UPDATE_EFFECT | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `deepseek8b_seq256_backward_1309_out_ptr0` | deepseek8b | NORMALIZATION_BACKWARD | CONFIRMED_TRAINING_UPDATE_EFFECT | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `deepseek8b_seq256_backward_659_output_0` | deepseek8b | LOSS_CE_BACKWARD | CONFIRMED_TRAINING_UPDATE_EFFECT | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `mamba_seq128_backward_10615_in_out_ptr0` | mamba | NORMALIZATION_BACKWARD | NO_CONFIRMED_UPDATE_EFFECT_UNDER_PROTOCOL | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `mamba_seq128_backward_9491_in_out_ptr0` | mamba | LOSS_HEAD_BACKWARD | NO_CONFIRMED_UPDATE_EFFECT_UNDER_PROTOCOL | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `mamba_seq256_backward_18748_out_ptr0` | mamba | LOSS_CE_BACKWARD | ABSTAIN | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `mamba_seq64_backward_8402_out_ptr0` | mamba | STATE_SPACE_RECURRENT_BACKWARD | NO_CONFIRMED_UPDATE_EFFECT_UNDER_PROTOCOL | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `phi4_seq128_backward_1032_output_0` | phi4 | ATTENTION_STATE_OR_TRANSPORT_BACKWARD | NO_CONFIRMED_UPDATE_EFFECT_UNDER_PROTOCOL | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `phi4_seq128_backward_1133_out_ptr0` | phi4 | ATTENTION_PROJECTION_BACKWARD | NO_CONFIRMED_UPDATE_EFFECT_UNDER_PROTOCOL | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `phi4_seq256_backward_613_in_out_ptr0` | phi4 | NORMALIZATION_BACKWARD | CONFIRMED_TRAINING_UPDATE_EFFECT | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `qwen_seq128_backward_995_out_ptr0` | qwen | ATTENTION_PROJECTION_BACKWARD | CONFIRMED_TRAINING_UPDATE_EFFECT | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `qwen_seq256_backward_1338_in_out_ptr0` | qwen | ATTENTION_STATE_OR_TRANSPORT_BACKWARD | CONFIRMED_TRAINING_UPDATE_EFFECT | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `qwen_seq256_backward_1492_out_ptr1` | qwen | LOSS_CE_BACKWARD | NO_CONFIRMED_UPDATE_EFFECT_UNDER_PROTOCOL | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `qwen_seq64_backward_519_in_out_ptr0` | qwen | LOSS_HEAD_BACKWARD | CONFIRMED_TRAINING_UPDATE_EFFECT | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+| `qwen_seq64_backward_540_out_ptr1` | qwen | NORMALIZATION_BACKWARD | CONFIRMED_TRAINING_UPDATE_EFFECT | MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION |
+
+算子目录共 17 个族、目录记录约 173736 个位置。下表只给出当前根因证据等级，不把目录族数量当成独立 bias 数：
+
+| 算子族 | 目录位置 | 当前根因证据 |
+|---|---:|---|
+| `LINEAR` | 0 | CASE_SPECIFIC_SOURCE_EVIDENCE_ONLY；MM/GEMM sources are isolated only in named cases; no universal linear root |
+| `NORMALIZATION` | 1302 | MIXED_MEASUREMENT_AND_LOCAL_CONTROLS；some RMS/normalization controls exist, but the family is too broad for one root |
+| `SOFTMAX` | 120 | LOCAL_ROOT_IN_ONE_SAVED_STATE_CASE；saved-state inconsistency is closed for one declared endpoint; natural family bias remains open |
+| `CROSS_ENTROPY` | 1 | MEASUREMENT_ONLY_OR_CASE_BOUND；loss endpoints may be mixed with MM or NLL regions; no family-wide source claim |
+| `SILU_GATING` | 10944 | LOCAL_SOURCE_CLOSED_IN_SELECTED_ENDPOINT；explicit source-choice intervention closes one endpoint, not the whole family |
+| `SOFTPLUS` | 70 | MEASUREMENT_ONLY；no retained source-isolating intervention for this family |
+| `RECURRENCE` | 10593 | MEASUREMENT_ONLY；no retained source-isolating intervention for the recurrent family |
+| `ROTARY` | 32 | STATE_RESPONSE_SOURCE_OPEN；state dependence is measured, but arithmetic source and state components are not separated |
+| `REDUCTION` | 36 | MULTIPLE_CASE_SPECIFIC_CONTROLS；Liger/expert/RMS results have different boundaries and cannot be merged |
+| `INDEXED_ACCUMULATION` | 1 | MEASUREMENT_ONLY；no retained source-isolating intervention for this family |
+| `GELU` | 34 | LOCAL_SOURCE_CLOSED_IN_SELECTED_ENDPOINT；explicit tanh source choice changes one endpoint; natural family bias remains open |
+| `CONVOLUTION` | 24 | MEASUREMENT_ONLY；no retained source-isolating intervention for this family |
+| `EMBEDDING` | 1 | MEASUREMENT_ONLY；embedding appears as a parameter carrier in several cases, not as an isolated embedding root |
+| `SELECTION` | 0 | NEGATIVE_CONTROL_ONLY；equal-score tie-order control was identity on the declared suite |
+| `OPTIMIZER_UPDATE` | 0 | END_TO_END_IN_ADAMW8BIT_CASE；moment residual propagation and targeted compensation are closed only for the declared optimizer case |
+| `FUSED_ATTENTION` | 0 | PARTIAL_MULTI_SOURCE_REGION；one materialization contributor is isolated; the complete region has multiple sources |
+| `ELEMENTWISE_BIAS` | 0 | MEASUREMENT_ONLY；no retained source-isolating intervention for the catalog family |
+
 ## 覆盖集合（不计入科学问题组）
 
 原审计中的 99 个同输入 SiLU/RMS 位置和 31 个 reference-graph 区域保留为覆盖集合。它们证明统一流程可以运行，但没有逐项完成根因隔离，因此不计入上表的独立问题组数量。

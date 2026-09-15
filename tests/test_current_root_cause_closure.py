@@ -134,3 +134,26 @@ def test_mm_sources_remain_case_specific():
         "output_rounding",
     }
     assert mm["phi4_seq64_backward_497_output"]["coherent_sources"] == ["kernel"]
+
+
+def test_every_frozen_benchmark_and_catalog_family_has_a_root_cause_boundary():
+    data = load_ledger()
+    benchmark = data["generalization_benchmark_frontier"]
+    assert benchmark["case_count"] == 16
+    assert len(benchmark["cases"]) == 16
+    assert all(
+        row["root_cause_status"] == "MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION"
+        and row["missing_observation"]
+        for row in benchmark["cases"]
+    )
+
+    families = data["operator_family_frontier"]
+    assert families["family_count"] == 17
+    assert len(families["families"]) == 17
+    assert {row["family_id"] for row in families["families"]} == {
+        "LINEAR", "NORMALIZATION", "SOFTMAX", "CROSS_ENTROPY", "SILU_GATING",
+        "SOFTPLUS", "RECURRENCE", "ROTARY", "REDUCTION", "INDEXED_ACCUMULATION",
+        "GELU", "CONVOLUTION", "EMBEDDING", "SELECTION", "OPTIMIZER_UPDATE",
+        "FUSED_ATTENTION", "ELEMENTWISE_BIAS",
+    }
+    assert all(row["root_cause_status"] and row["interpretation"] for row in families["families"])

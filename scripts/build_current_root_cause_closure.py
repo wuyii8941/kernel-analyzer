@@ -301,6 +301,87 @@ def source_record_inventory() -> dict[str, Any]:
     }
 
 
+def generalization_benchmark_frontier() -> dict[str, Any]:
+    """List every frozen benchmark case without promoting measurement to a root."""
+    data = read("results/property/generalization_benchmark_v1/summary.json")
+    cases = []
+    for case_id, row in sorted(data["cases"].items()):
+        cases.append({
+            "case_id": case_id,
+            "model": row.get("model"),
+            "family": row.get("family"),
+            "primary_update_result": row.get("primary_update_result"),
+            "confirmed_update_branches": row.get("confirmed_update_branches"),
+            "root_cause_status": "MEASUREMENT_ONLY_NO_NEW_SOURCE_INTERVENTION",
+            "missing_observation": (
+                "same-input source intervention for this exact endpoint, followed by an independent "
+                "state-bank confirmation; the benchmark result alone does not identify a root"
+            ),
+        })
+    return {
+        "case_count": len(cases),
+        "selection_status": data.get("status"),
+        "claim_boundary": data.get("claim_boundary"),
+        "cases": cases,
+        "interpretation": (
+            "The frozen benchmark establishes measured update behavior at selected training locations. "
+            "Its AOT endpoint substitutions do not by themselves isolate a low-level arithmetic source, "
+            "so no benchmark case is promoted to a new root-cause closure without a case-specific source intervention."
+        ),
+    }
+
+
+def operator_family_frontier() -> dict[str, Any]:
+    """Summarize all catalog families and their current causal evidence level."""
+    data = read("results/property/numerical_coverage_v1/operator_family_report_v10.json")
+    statuses = {
+        "LINEAR": ("CASE_SPECIFIC_SOURCE_EVIDENCE_ONLY", "MM/GEMM sources are isolated only in named cases; no universal linear root"),
+        "NORMALIZATION": ("MIXED_MEASUREMENT_AND_LOCAL_CONTROLS", "some RMS/normalization controls exist, but the family is too broad for one root"),
+        "SOFTMAX": ("LOCAL_ROOT_IN_ONE_SAVED_STATE_CASE", "saved-state inconsistency is closed for one declared endpoint; natural family bias remains open"),
+        "CROSS_ENTROPY": ("MEASUREMENT_ONLY_OR_CASE_BOUND", "loss endpoints may be mixed with MM or NLL regions; no family-wide source claim"),
+        "SILU_GATING": ("LOCAL_SOURCE_CLOSED_IN_SELECTED_ENDPOINT", "explicit source-choice intervention closes one endpoint, not the whole family"),
+        "SOFTPLUS": ("MEASUREMENT_ONLY", "no retained source-isolating intervention for this family"),
+        "RECURRENCE": ("MEASUREMENT_ONLY", "no retained source-isolating intervention for the recurrent family"),
+        "ROTARY": ("STATE_RESPONSE_SOURCE_OPEN", "state dependence is measured, but arithmetic source and state components are not separated"),
+        "REDUCTION": ("MULTIPLE_CASE_SPECIFIC_CONTROLS", "Liger/expert/RMS results have different boundaries and cannot be merged"),
+        "INDEXED_ACCUMULATION": ("MEASUREMENT_ONLY", "no retained source-isolating intervention for this family"),
+        "GELU": ("LOCAL_SOURCE_CLOSED_IN_SELECTED_ENDPOINT", "explicit tanh source choice changes one endpoint; natural family bias remains open"),
+        "CONVOLUTION": ("MEASUREMENT_ONLY", "no retained source-isolating intervention for this family"),
+        "EMBEDDING": ("MEASUREMENT_ONLY", "embedding appears as a parameter carrier in several cases, not as an isolated embedding root"),
+        "SELECTION": ("NEGATIVE_CONTROL_ONLY", "equal-score tie-order control was identity on the declared suite"),
+        "OPTIMIZER_UPDATE": ("END_TO_END_IN_ADAMW8BIT_CASE", "moment residual propagation and targeted compensation are closed only for the declared optimizer case"),
+        "FUSED_ATTENTION": ("PARTIAL_MULTI_SOURCE_REGION", "one materialization contributor is isolated; the complete region has multiple sources"),
+        "ELEMENTWISE_BIAS": ("MEASUREMENT_ONLY", "no retained source-isolating intervention for the catalog family"),
+    }
+    families = []
+    for row in data["families"]:
+        family_id = row["family_id"]
+        status, interpretation = statuses.get(
+            family_id,
+            ("MEASUREMENT_ONLY", "no retained source-isolating intervention for this family"),
+        )
+        families.append({
+            "family_id": family_id,
+            "label": row.get("label"),
+            "classified_positions": row.get("classified_positions", 0),
+            "support_stage_counts": row.get("support_stage_counts", {}),
+            "recorded_runtime_status_counts": row.get("recorded_runtime_status_counts", {}),
+            "historical_role_records": row.get("historical_role_records", 0),
+            "root_cause_status": status,
+            "interpretation": interpretation,
+        })
+    return {
+        "family_count": len(families),
+        "catalogue_position_count": data.get("input_positions"),
+        "families": families,
+        "interpretation": (
+            "Family coverage is not a count of independent roots. A family is promoted only when a "
+            "case-specific intervention identifies a numerical source; otherwise it remains measurement-only "
+            "or a negative/partial control."
+        ),
+    }
+
+
 def main() -> None:
     prior = read("results/property/case_causal_audit_v1/scientific_case_closure.json")
     rows = []
@@ -463,6 +544,8 @@ def main() -> None:
         },
         "coverage_collections": coverage_collections,
         "source_record_inventory": source_record_inventory(),
+        "generalization_benchmark_frontier": generalization_benchmark_frontier(),
+        "operator_family_frontier": operator_family_frontier(),
         "rows": rows,
     }
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
@@ -503,6 +586,29 @@ def main() -> None:
         "当前账本同时对仓库保留的 866 条来源记录做自动归属：551 条有效测量位置、301 条历史矩阵记录、8 条旧案例复审和 6 条角色记录。它们按算子族和审查状态保留在机器字段 `source_record_inventory` 中；其中只有具备独立同输入来源干预的记录才进入上面的根因问题组。其余记录仍可作为覆盖、阴性、历史后果或未决证据，不能把非零范数直接称为已知根因。",
         "",
         "机器结果：`results/property/case_causal_audit_v1/root_cause_closure_current.json`。",
+        "",
+        "## 冻结 benchmark 与算子族的逐项根因边界",
+        "",
+        f"冻结 benchmark 共 {payload['generalization_benchmark_frontier']['case_count']} 个案例；这些案例均有测量结果，但当前没有任何一个仅凭 benchmark 的 AOT endpoint 替换就升级为新的根因闭环。逐项机器记录见 `generalization_benchmark_frontier`。",
+        "",
+        "| benchmark 案例 | 模型 | 算子族 | update 结果 | 根因状态 |",
+        "|---|---|---|---|---|",
+    ]
+    for case in payload["generalization_benchmark_frontier"]["cases"]:
+        lines.append(
+            f"| `{case['case_id']}` | {case['model']} | {case['family']} | "
+            f"{case['primary_update_result']} | {case['root_cause_status']} |"
+        )
+    lines += [
+        "",
+        f"算子目录共 {payload['operator_family_frontier']['family_count']} 个族、目录记录约 {payload['operator_family_frontier']['catalogue_position_count']} 个位置。下表只给出当前根因证据等级，不把目录族数量当成独立 bias 数：",
+        "",
+        "| 算子族 | 目录位置 | 当前根因证据 |",
+        "|---|---:|---|",
+    ]
+    for family in payload["operator_family_frontier"]["families"]:
+        lines.append(f"| `{family['family_id']}` | {family['classified_positions']} | {family['root_cause_status']}；{family['interpretation']} |")
+    lines += [
         "",
         "## 覆盖集合（不计入科学问题组）",
         "",
