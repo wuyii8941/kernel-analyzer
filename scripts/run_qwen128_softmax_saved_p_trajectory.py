@@ -84,7 +84,22 @@ class SavedProbabilityRepair:
             b_kernel = getattr(module, SYMBOL, None)
             if b_kernel is not None and all(id(b_kernel) != id(item) for item in backward):
                 backward.append(b_kernel)
+            # Inductor can regenerate an equivalent forward kernel with a
+            # different fused-op spelling.  The saved-P boundary is still the
+            # unique forward ``softmax`` kernel whose name contains
+            # ``prepare_softmax_online``.  Bind by that semantic signature,
+            # not by a stale generated name.
             f_kernel = getattr(module, FORWARD_SYMBOL, None)
+            if f_kernel is None:
+                for candidate_name in vars(module):
+                    if (
+                        candidate_name.startswith("triton_per_fused__softmax__to_copy")
+                        and "prepare_softmax_online" in candidate_name
+                    ):
+                        candidate = getattr(module, candidate_name)
+                        if all(id(candidate) != id(item) for item in forward):
+                            f_kernel = candidate
+                            break
             if f_kernel is not None and all(id(f_kernel) != id(item) for item in forward):
                 forward.append(f_kernel)
         if len(backward) != 1 or len(forward) != 1:
@@ -99,6 +114,13 @@ class SavedProbabilityRepair:
         self.b_original = self.backward.run; self.f_original = self.forward.run
         self.probability: torch.Tensor | None = None
         self.forward_calls = 0; self.backward_calls = 0
+        self.forward_seen = 0; self.backward_seen = 0
+        # The compiled Qwen graph evaluates the 28 decoder layers in order in
+        # the forward pass and reverse order in backward.  Layer 27 is thus
+        # the last forward call and the first backward call.  Calls for the
+        # other layers remain untouched, preserving the closed boundary.
+        self.forward_target_call = 28
+        self.backward_target_call = 1
         self.changed_coordinates = 0; self.correction_l2 = 0.0
         self.correction_vector: Any | None = None
         self.natural_residual_l2 = 0.0
@@ -110,8 +132,8 @@ class SavedProbabilityRepair:
 
     def __enter__(self) -> "SavedProbabilityRepair":
         def forward_wrapped(*args: Any, **kwargs: Any) -> Any:
-            _, _, source = _source_identity()
-            if source != FORWARD_SHA:
+            self.forward_seen += 1
+            if self.forward_seen != self.forward_target_call:
                 return self.f_original(*args, **kwargs)
             scores, token_ids = args[:2]
             if tuple(scores.shape) != (1, 16, 128, 128):
@@ -134,8 +156,8 @@ class SavedProbabilityRepair:
             return result
 
         def backward_wrapped(*args: Any, **kwargs: Any) -> Any:
-            _, _, source = _source_identity()
-            if source != TARGET_SHA:
+            self.backward_seen += 1
+            if self.backward_seen != self.backward_target_call:
                 return self.b_original(*args, **kwargs)
             destination, upstream = args[:2]
             result = self.b_original(*args, **kwargs)
@@ -197,6 +219,11 @@ class SavedProbabilityRepair:
         else: delattr(self.forward, "run")
         if self.b_had: self.backward.run = self.b_previous
         else: delattr(self.backward, "run")
+        if self.forward_seen != self.forward_target_call or self.backward_seen != self.backward_target_call:
+            raise RuntimeError(
+                "saved-P call order drift: "
+                f"F_seen={self.forward_seen} B_seen={self.backward_seen}"
+            )
         if self.forward_calls != 1 or self.backward_calls != 1:
             raise RuntimeError(
                 f"saved-P boundary executed F={self.forward_calls}, B={self.backward_calls}"

@@ -1,0 +1,50 @@
+{
+  "schema": "qwen-saved-p-declared-trajectory-summary-v1",
+  "status": "COMPLETE_DECLARED_TRAJECTORY_AUDIT",
+  "case_id": "qwen_saved_p_seq128",
+  "protocol": {
+    "model": "Qwen3-1.7B",
+    "layer": 27,
+    "carrier_scope": [
+      "model.layers.27.self_attn.q_proj.weight",
+      "model.layers.27.self_attn.k_proj.weight"
+    ],
+    "warmup_steps": 128,
+    "measurement_steps": 1024,
+    "window_steps": 32,
+    "optimizer": "AdamW",
+    "state_source": "declared sequential state bank",
+    "data_role": "new declared trajectory confirmation",
+    "independence_scope": "not an iid population sample; conclusions are conditional on this declared sequence"
+  },
+  "local_source": {
+    "changed_endpoint_rows": 1024,
+    "endpoint_error_l2_mean": 0.00002494468552960427,
+    "endpoint_error_l2_min": 0.000011104484731592989,
+    "endpoint_error_l2_max": 0.00007479402120225132
+  },
+  "direct_update": {
+    "rows": 1024,
+    "update_l2_mean": 0.00012036499794389389,
+    "update_l2_max": 0.0003690999092601156,
+    "resultant_l2": 0.0039940802383795085,
+    "diffusive_scale_l2": 0.003996827719001257,
+    "coherence_amplification": 0.9993125846759201,
+    "interpretation": "nonzero update effect with approximately diffusive rather than strongly coherent direction"
+  },
+  "paired_trajectory": {
+    "steps": 1024,
+    "finite_candidate_steps": 1024,
+    "finite_repair_steps": 1024,
+    "final_parameter_distance_l2": 0.051254193286455856,
+    "final_loss_gap_candidate_minus_repair": 0.005435943603515625,
+    "loss_gap_mean": 0.00005578098352348495,
+    "loss_gap_population_std_over_steps": 0.0024221910772954107,
+    "last_512_loss_gap_mean": 0.00010943179950118065,
+    "last_32_loss_gap_mean": 0.00047878921031951904,
+    "positive_loss_gap_steps": 507,
+    "negative_loss_gap_steps": 517
+  },
+  "conclusion": "The saved-probability local inconsistency reaches the declared q/k gradients, produces a nonzero warm-state update effect, and yields a finite 1024-step paired trajectory separation. Loss gaps change sign across the trajectory, so this is not evidence of monotone degradation or a stable quality loss.",
+  "claim_boundary": "local arithmetic root plus declared-trajectory non-identity; natural population bias, persistent direction, and material training-quality consequence remain unproven"
+}
