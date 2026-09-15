@@ -1,0 +1,469 @@
+{
+  "schema": "kernel-analyzer-current-root-cause-closure-v1",
+  "status": "CURRENT_EVIDENCE_LEDGER_WITH_EXPLICIT_OPEN_BRANCHES",
+  "counting_rule": "One row is one deduplicated scientific problem group; model, layer, state and implementation conditions are evidence within a group.",
+  "closure_scale": {
+    "END_TO_END": "source, propagation, targeted intervention and a declared training outcome are connected",
+    "SOURCE_CLOSED": "the local arithmetic/source choice is isolated, while natural bias or quality consequence remains open",
+    "PARTIAL": "a transport or semantic-region contributor is isolated, but the whole region has additional sources",
+    "NEGATIVE_CONTROL": "the tested variant did not produce a difference; this does not prove every variant is safe",
+    "OPEN": "existing measurements show a difference or response, but competing source explanations remain"
+  },
+  "summary": {
+    "problem_group_count": 12,
+    "end_to_end_count": 1,
+    "source_or_local_closed_count": 6,
+    "negative_control_count": 2,
+    "groups_with_open_branch": 6
+  },
+  "coverage_collections": [
+    {
+      "collection": "common_input_silu_and_rms_backward_families",
+      "status": "MEASUREMENT_ONLY_FOR_ROOT_CAUSE",
+      "scope": "99 same-input compiled SiLU and RMS-backward output locations",
+      "interpretation": "requires targeted source-isolating variants before root-cause claims",
+      "evidence": [
+        "docs/silu_backward_common_input.md",
+        "docs/new_family_source_audit.md"
+      ]
+    },
+    {
+      "collection": "reference_graph_regions",
+      "status": "REGION_MEASUREMENT_NO_SINGLE_KERNEL_ROOT",
+      "scope": "31 compiled training regions measured by reference-graph endpoint substitution",
+      "interpretation": "same local operands and unique source attribution are absent",
+      "evidence": [
+        "docs/attribution_derivation_20260913.md",
+        "docs/result_analysis_20260913.md"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "problem_group": "adamw8bit_moment_quantization",
+      "closure": "END_TO_END_CAUSAL_CHAIN_UNDER_DECLARED_PROTOCOL",
+      "numerical_source": "blockwise quantization discards a state residual which otherwise enters the next moment recurrence",
+      "bias_formation": "the saved residual is fed back with beta-weighted history; measured residuals reconstruct later moment differences on fixed real gradient histories",
+      "training_outcome": "two eight-pair 1024-step comparisons support a material loss improvement for correct residual readback; coordinate permutation causes constructed numerical failure",
+      "what_is_proven": "one checkpoint/model setting; intervention-to-outcome evidence does not establish mean bias rather than variance or nonlinear response as the unique loss cause; constructed failure is not a natural collapse; a production-quality optimizer claim is not made",
+      "next_needed_observation": "external model or checkpoint confirmation; not another intervention chosen on the same data",
+      "evidence": [
+        "docs/optimizer_update_family_audit.md",
+        "docs/adamw8bit_residual_structure_20260913.md",
+        "docs/priority_analysis_1_2_20260913.md"
+      ]
+    },
+    {
+      "problem_group": "liger_fused_linear_ce_dw_accumulation",
+      "closure": "LOCAL_ARITHMETIC_ROOT_AND_DECLARED_UNIT_MEAN_CLOSED_LOSS_CAUSAL_SUFFICIENCY_OPEN",
+      "numerical_source": "finite-precision addition order and accumulation precision of identical dW chunk products",
+      "bias_formation": "one late training state is reconstructed exactly from ordered chunk additions; Gram reanalysis over the declared split confirms gradient additive/residual means and all three update profile means with current Student mean tests and Holm correction",
+      "training_outcome": "paired trajectories separate; 4096/10000-step records do not support monotone degradation or collapse",
+      "what_is_proven": "the local addition-order source and its direction are reproduced in disjoint length-64 and length-256 confirmation banks; the retained training run does not establish a material loss consequence",
+      "next_needed_observation": "only needed for a stronger claim: preserve original-coordinate writes or run a predeclared longer paired loss comparison",
+      "evidence": [
+        "results/property/root_cause_closure_v1/liger_chunk_order_reanalysis.json",
+        "docs/liger_language_mechanism_followup.md",
+        "docs/liger_single_boundary_collapse_experiment.md",
+        "results/property/bias_formation_final/liger_formation_analysis.json",
+        "results/property/liger_fp32_chunk_order_v1/length64_confirmation.json",
+        "results/property/liger_fp32_chunk_order_v1/length256_confirmation.json",
+        "results/property/liger_fp32_chunk_order_v1/fp32_order_training_1024.json"
+      ],
+      "derived": {
+        "64": {
+          "state_count": 32,
+          "confirmation_positive_count": 14,
+          "confirmation_count": 16,
+          "direction_repeated": true,
+          "gradient_branches_confirmed": {
+            "additive": true,
+            "repair_aligned": false,
+            "residual_direction": true
+          },
+          "update_branches_confirmed": {
+            "additive": true,
+            "repair_aligned": true,
+            "residual_direction": true
+          },
+          "claim_boundary": "Both implementations use FP32 and differ only in the declared Liger dW chunk-addition order. This is a disjoint sequence-length confirmation of the same source prediction; it is not a long training run."
+        },
+        "256": {
+          "state_count": 32,
+          "confirmation_positive_count": 11,
+          "confirmation_count": 16,
+          "direction_repeated": true,
+          "gradient_branches_confirmed": {
+            "additive": false,
+            "repair_aligned": false,
+            "residual_direction": false
+          },
+          "update_branches_confirmed": {
+            "additive": true,
+            "repair_aligned": true,
+            "residual_direction": true
+          },
+          "claim_boundary": "Both implementations use FP32 and differ only in the declared Liger dW chunk-addition order. This is a disjoint sequence-length confirmation of the same source prediction; it is not a long training run."
+        },
+        "training_1024": {
+          "validation_loss_difference": {
+            "0": 0.0,
+            "1024": 0.0,
+            "256": 0.0,
+            "512": 2.384185791015625e-07,
+            "768": -2.384185791015625e-07
+          },
+          "claim_boundary": "One small GPT-2 model, one character-level text split, one fixed AdamW setting, and 1024 paired steps. This tests a same-FP32 implementation change and does not establish a general quality or stability result."
+        }
+      }
+    },
+    {
+      "problem_group": "mm_gemm_output_and_accumulation",
+      "closure": "CONDITIONAL_SOURCE_ISOLATION_NOT_UNIVERSAL_MM_ROOT",
+      "numerical_source": "kernel arithmetic residual and final output rounding are separable for selected fixed-input comparisons",
+      "bias_formation": "output-rounding conditional effects reproduce for Qwen128; other MM locations show different or noncoherent geometry, so one common cross-model root is not established",
+      "training_outcome": "historical trajectories separate, but robust cross-state direction is case-dependent",
+      "what_is_proven": "Qwen128 rounding-only preservation has seven tiny nonzero delivery remainders in 128 repeats; Phi transport reconstruction is approximate",
+      "next_needed_observation": "same-operands factorial separating accumulation arithmetic, final cast, and their interaction on an independent state bank",
+      "evidence": [
+        "docs/source_aligned_repair.md",
+        "results/property/case_causal_audit_v1/mm_conditional_sources.json",
+        "results/property/bias_formation_final/phi_transport_mechanism.json"
+      ]
+    },
+    {
+      "problem_group": "softmax_saved_state_backward",
+      "closure": "LOCAL_ARITHMETIC_ROOT_CLOSED_AND_DECLARED_TRAJECTORY_NON_IDENTITY_NATURAL_BIAS_OPEN",
+      "numerical_source": "same-call evidence isolates an inconsistency: BF16 saved scaled scores are combined with FP32 maximum and denominator from the pre-materialized calculation",
+      "bias_formation": "J_softmax(p)^T 1 = p(1-sum(p)); all 114688 observed rows have nonzero reconstructed mass defect, while consistent renormalization reduces the maximum defect below 8e-16; the semantic replacement reaches q/k gradients",
+      "training_outcome": "a new 1024-step declared warm-state trajectory has nonzero direct update effect and finite parameter/loss non-identity; loss gaps change sign and no monotone degradation is shown",
+      "what_is_proven": "the fixed-call mass defect and declared trajectory effect are closed under their protocols, but the state sequence is not an iid population and does not establish a persistent natural update bias or material quality loss",
+      "next_needed_observation": "independent state-bank sampling with a predeclared loss endpoint, then restore only the consistent saved state before measuring gradient and update direction",
+      "evidence": [
+        "results/property/root_cause_closure_v1/softmax_saved_state.json",
+        "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json",
+        "results/property/case_causal_audit_v1/qwen_saved_p_declared_trajectory_20260915.json",
+        "docs/qwen_saved_p_declared_trajectory_20260915.md",
+        "docs/effective_antithetic_symmetry.md"
+      ]
+    },
+    {
+      "problem_group": "silu_backward_evaluation",
+      "closure": "SOURCE_CHOICE_RESPONSE_CLOSED_NATURAL_BIAS_OPEN",
+      "numerical_source": "finite-precision source choice in the sigmoid/SiLU derivative expression at a generated Triton gate-gradient endpoint",
+      "bias_formation": "a same-operand explicit exponential source variant changes the measured gradient, moment and update/write profiles; natural mean asymmetry remains open",
+      "training_outcome": "direct persistence is weak; later separation is feedback-sustained and the loss difference is small",
+      "what_is_proven": "one AST-checked gate-gradient endpoint has a locally isolated source-choice response across all recorded stages; this is not a universal SiLU root",
+      "next_needed_observation": "only needed for a stronger natural-bias claim: separate sigmoid approximation, expression order and final cast on an independent state bank",
+      "evidence": [
+        "docs/effective_antithetic_symmetry.md",
+        "results/round2/vl_silu_cause.json",
+        "results/property/numerical_coverage_v1/silu_factorial_source_manifest_v2.json",
+        "results/property/numerical_coverage_v1/silu_factorial_explicit_source_run3/raw/mapped_backward_667_in_out_ptr0-silu-common-input.json"
+      ],
+      "derived": {
+        "case_id": "mapped_backward_667_in_out_ptr0-silu-common-input",
+        "source_task_id": "backward:667:in_out_ptr0",
+        "state_count": 32,
+        "confirmation_count": 16,
+        "same_local_operands": true,
+        "source_attribution": "CHECKED_FUNCTION_AST_AND_PRE_CALL_INPUTS",
+        "stages": {
+          "LOCAL": {
+            "total_effect_rms_range": [
+              1.9129600837386545e-06,
+              1.9129600979631715e-06
+            ],
+            "mean_effect_over_repair_rms_range": [
+              1.4649954651391235e-05,
+              1.465651572083787e-05
+            ],
+            "repair_aligned_effect_range": [
+              4.5148527036037527e-07,
+              9.323138979318159e-07
+            ]
+          },
+          "PARAMETER_GRADIENT": {
+            "total_effect_rms_range": [
+              0.00014855805107655604,
+              0.0001519259904202651
+            ],
+            "mean_effect_over_repair_rms_range": [
+              8.894238280130087e-06,
+              9.090569525805705e-06
+            ],
+            "repair_aligned_effect_range": [
+              1.2428256191256357e-07,
+              2.719961741860654e-07
+            ]
+          },
+          "ADAMW_MOMENT1_WRITE": {
+            "total_effect_rms_range": [
+              1.4855807343550057e-05,
+              1.5192602587657355e-05
+            ],
+            "mean_effect_over_repair_rms_range": [
+              8.894239575290653e-06,
+              9.090571401574183e-06
+            ],
+            "repair_aligned_effect_range": [
+              1.2428263396637438e-07,
+              2.7199509473973806e-07
+            ]
+          },
+          "ADAMW_MOMENT2_WRITE": {
+            "total_effect_rms_range": [
+              1.7368425065907185e-07,
+              1.7483153676835587e-07
+            ],
+            "mean_effect_over_repair_rms_range": [
+              2.3620496605124782e-07,
+              2.37650673320924e-07
+            ],
+            "repair_aligned_effect_range": [
+              -1.817269924379524e-10,
+              1.6186195905188172e-10
+            ]
+          },
+          "ADAMW_UPDATE": {
+            "total_effect_rms_range": [
+              0.00020524145103638348,
+              0.00020524523387975105
+            ],
+            "mean_effect_over_repair_rms_range": [
+              7.250255940670893e-05,
+              7.640007435318237e-05
+            ],
+            "repair_aligned_effect_range": [
+              -1.6543626860369109e-06,
+              1.7228888655833804e-06
+            ]
+          },
+          "PARAMETER_WRITE": {
+            "total_effect_rms_range": [
+              0.00020524152882725656,
+              0.00020524537948626593
+            ],
+            "mean_effect_over_repair_rms_range": [
+              7.250238525779545e-05,
+              7.639993232572027e-05
+            ],
+            "repair_aligned_effect_range": [
+              -1.6543618449518576e-06,
+              1.7228523032544876e-06
+            ]
+          },
+          "NEXT_STEP_COMMON_GRADIENT_UPDATE": {
+            "total_effect_rms_range": [
+              0.00010550614131853605,
+              0.00010550948614247737
+            ],
+            "mean_effect_over_repair_rms_range": [
+              3.723486602406166e-05,
+              3.8255233230021375e-05
+            ],
+            "repair_aligned_effect_range": [
+              -4.368870235194855e-07,
+              8.301150131513133e-07
+            ]
+          }
+        }
+      }
+    },
+    {
+      "problem_group": "attention_state_to_q_projection_region",
+      "closure": "ONE_LOCAL_ARITHMETIC_ROOT_CLOSED_WHOLE_REGION_MULTI_SOURCE",
+      "numerical_source": "the S_bwd input to bmm_76 carries the regional difference; one isolated contributor is fusion-delayed BF16 materialization in layer-23 key RMSNorm plus RoPE",
+      "bias_formation": "Gq=S_bwd K and dW=Gq^T H identify transport; S-only and joint restoration remove the selected direction, and eager-like intermediate materialization removes the isolated key-forward contribution",
+      "training_outcome": "a paired trajectory exists under the historical protocol",
+      "what_is_proven": "fusion-delayed BF16 materialization explains one measured contributor, not the whole carrier; changed upstream logits and overlapping residual-stream paths remain multi-source",
+      "next_needed_observation": "treat the closed materialization contributor as a completed subcase; do not claim a unique root for the whole region unless remaining upstream-logit contributors are separately intervened",
+      "evidence": [
+        "results/coverage/cases/l23_qproj_attention_state_region.json",
+        "docs/l23_qproj_tile.md"
+      ]
+    },
+    {
+      "problem_group": "fused_rope_position_scaling",
+      "closure": "STATE_RESPONSE_ESTABLISHED_SOURCE_ROOT_OPEN",
+      "numerical_source": "same-input implementation evaluation difference; position scaling alone is ruled out as the unique explanation",
+      "bias_formation": "identical gradient differences produce very different writes under warm versus reset optimizer state; reset also changes the step counter",
+      "training_outcome": "not measured",
+      "what_is_proven": "the low-level arithmetic source is not isolated and moments are not separated from step-counter effects",
+      "next_needed_observation": "same-operands cast/materialization factorial, plus a state comparison holding step counter fixed while changing moments",
+      "evidence": [
+        "docs/fused_rotary_position_scaling_audit.md",
+        "docs/findings_and_competing_explanations.md"
+      ]
+    },
+    {
+      "problem_group": "gemma_gelu_backward_evaluation",
+      "closure": "SOURCE_CHOICE_RESPONSE_CLOSED_NATURAL_BIAS_OPEN",
+      "numerical_source": "tanh evaluation and expression spelling in a generated Triton tanh-GELU backward product",
+      "bias_formation": "same-input source variants change gradient/update response on the selected confirmation case; native tanh and fused multiply-add agree",
+      "training_outcome": "not measured as an independent full training result",
+      "what_is_proven": "a source-choice-sensitive response for one bound position; not a stable natural mean bias and not a universal GELU root",
+      "next_needed_observation": "only needed if a natural GELU bias claim is desired: predeclared independent source distribution and training endpoint",
+      "evidence": [
+        "results/property/numerical_coverage_v1/gemma_gelu_capture_v2",
+        "results/property/numerical_coverage_v1/gemma_gelu_tanh_exp_confirmation_v3",
+        "results/property/numerical_coverage_v1/gemma_gelu_tanh_native_confirmation_v3",
+        "results/property/numerical_coverage_v1/gemma_gelu_fma_confirmation_v1"
+      ],
+      "derived": {
+        "case_id": "gemma_gelu_backward_952",
+        "source": "generated Triton tanh-GELU backward product; same operands and one declared trainable parameter",
+        "status": "SOURCE_CHOICE_RESPONSE_CONFIRMED_NATURAL_MEAN_BIAS_NOT_CONFIRMED",
+        "evidence": {
+          "natural_reference": {
+            "state_count": 32,
+            "confirmation_count": 16,
+            "local_rms": 9.008437678580069e-07,
+            "gradient_rms": 0.005221286732269348,
+            "update_rms": 0.05010685378167612,
+            "write_rms": 0.05010685758194408,
+            "update_aligned_ratio": -0.0012555387417013167,
+            "reference_variant": "TANH_GELU_PRODUCT_FP32_BF16_WRITE",
+            "same_local_operands": true
+          },
+          "explicit_exponential_tanh": {
+            "state_count": 32,
+            "confirmation_count": 16,
+            "local_rms": 2.1565452967593075e-05,
+            "gradient_rms": 0.0012810411333414925,
+            "update_rms": 0.05131817571035758,
+            "write_rms": 0.051318176664254894,
+            "update_aligned_ratio": -0.0013167132271812649,
+            "reference_variant": "EXP_TANH_SOURCE_ORDER",
+            "same_local_operands": true
+          },
+          "native_tanh": {
+            "state_count": 32,
+            "confirmation_count": 16,
+            "local_rms": 1.3399291586340602e-06,
+            "gradient_rms": 0.0010280553998831337,
+            "update_rms": 0.043510063026220666,
+            "write_rms": 0.04351006312457707,
+            "update_aligned_ratio": -0.0009465962795257568,
+            "reference_variant": "NATIVE_TANH_SOURCE_ORDER",
+            "same_local_operands": true
+          },
+          "fused_multiply_add": {
+            "state_count": 32,
+            "confirmation_count": 16,
+            "local_rms": 1.3399291586340602e-06,
+            "gradient_rms": 0.0010280553998831337,
+            "update_rms": 0.043510063026220666,
+            "write_rms": 0.04351006312457707,
+            "update_aligned_ratio": -0.0009465962795257568,
+            "reference_variant": "NATIVE_TANH_FUSED_MULTIPLY_ADD",
+            "same_local_operands": true
+          },
+          "native_tanh_vs_fma_exact_in_recorded_profile": true
+        },
+        "interpretation": "The explicit exponential tanh choice changes the measured gradient/update profile, whereas native tanh and its fused multiply-add spelling agree on the disjoint confirmation. This identifies a source-choice-sensitive response, not a persistent natural bias or a unique hardware root for every GELU position."
+      }
+    },
+    {
+      "problem_group": "gemma_rms_feature_reduction_order",
+      "closure": "NEGATIVE_SOURCE_CONTROL_NO_ROOT_CAUSE",
+      "numerical_source": "FP32 feature-reduction order",
+      "bias_formation": "isolated order change is tiny or exact identity and has no confirmed direction",
+      "training_outcome": "not measured",
+      "what_is_proven": "the tested order change is not sufficient to explain the earlier combined endpoint effect",
+      "next_needed_observation": "none for this negative control; a different RMS source would require a new predeclared intervention",
+      "evidence": [
+        "results/property/numerical_coverage_v1/gemma_rms_forward_order_intervention_v1/trajectory32_isolated.json"
+      ],
+      "derived": {
+        "case_id": "gemma_rms_feature_reduction_order",
+        "source": "FP32 feature-reduction order in a real compiled Gemma graph",
+        "status": "SOURCE_CONTROL_NEGATIVE_NO_ROOT_CAUSE_FOUND",
+        "state_count": 32,
+        "evidence": {
+          "forward:116:out_ptr0": {
+            "native_endpoint_rms": 1.4020038691696783e-05,
+            "reverse_endpoint_rms": 1.5022145825207374e-05,
+            "direct_endpoint_rms": 1.002107133510591e-06,
+            "direct_gradient_rms": 0.0001811438118918833,
+            "direction_status": null
+          },
+          "forward:200:out_ptr0": {
+            "native_endpoint_rms": 9.536765608410399e-06,
+            "reverse_endpoint_rms": 9.536765608410399e-06,
+            "direct_endpoint_rms": 0.0,
+            "direct_gradient_rms": 0.0,
+            "direction_status": null
+          }
+        },
+        "interpretation": "Isolating the two endpoints shows one tiny changed endpoint without a confirmed direction and one exact identity. The earlier combined replacement was an upstream region effect, so no RMS endpoint is promoted as a root cause."
+      }
+    },
+    {
+      "problem_group": "granite_router_topk_selection",
+      "closure": "NEGATIVE_CONTROL_FIXED_SUITE_IDENTITY",
+      "numerical_source": "selection tie-order variation with unchanged selected set",
+      "bias_formation": "no local, gradient, write or loss difference observed in 24 fixed states",
+      "training_outcome": "no difference observed; no population or quality claim",
+      "what_is_proven": "the tested legal tie-order variation did not create a measurable training difference under the declared deterministic protocol",
+      "next_needed_observation": "none unless a different selection semantic (changed selected set, NaN, or non-tie scores) is explicitly studied",
+      "evidence": [
+        "results/property/numerical_coverage_v1/granite_selection_suite24_v1/summary.json"
+      ],
+      "derived": {
+        "case_id": "granite_router_topk_sort",
+        "source": "ATen Top-k/sort selection path with deterministic tie-order variant",
+        "status": "NO_DIFFERENCE_OBSERVED_SELECTION_VARIANT_NOT_A_BIAS_CASE",
+        "state_count": 24,
+        "all_scores_equal": true,
+        "all_gradients_zero_difference": true,
+        "all_writes_zero_difference": true,
+        "selected_set_unchanged": true,
+        "interpretation": "Index order can change for equal scores while the selected expert set, values, gradients, writes and loss remain equal in the fixed suite. This is a useful semantic negative control, not a discovered bias."
+      }
+    },
+    {
+      "problem_group": "granite_moe_expert_contribution_order",
+      "closure": "SOURCE_CLOSED_FIXED_SUITE_NATURAL_BIAS_OPEN",
+      "numerical_source": "FP32 expert-contribution accumulation order",
+      "bias_formation": "reversing the legal expert accumulation order creates a small nonzero write difference in the declared fixed suite; the source choice is isolated, while a population mean bias is not assessed",
+      "training_outcome": "not measured",
+      "what_is_proven": "the new model/MoE family reuses the common update analysis and has a fixed-suite RMS of about 0.002281%; this is not a unique root or a population bias claim",
+      "next_needed_observation": "if promoted beyond a coverage confirmation, isolate expert accumulation from routing and run an independent state-bank confirmation",
+      "evidence": [
+        "results/property/training_numerical_analysis_v2/granite_expert_order_confirmation_v2/recomputed.json",
+        "docs/training_numerical_analysis_v2.md"
+      ],
+      "derived": {
+        "case_id": "granite_fp32_expert_order_layer0",
+        "contrast_id": "NATURAL_IMPLEMENTATION_COMPARISON_EXPERT_ORDER_ONLY",
+        "state_count": 16,
+        "fixed_suite_total_rms": 2.281040966351542e-05,
+        "fixed_suite_aligned_ratio_of_sums": -1.2851775288729723e-07,
+        "equivalence_decision": "EQUIVALENT",
+        "training_outcome": "NOT_MEASURED"
+      }
+    },
+    {
+      "problem_group": "gemma_bound_square_sum",
+      "closure": "EXECUTION_SOURCE_MISMATCH_UNRESOLVED",
+      "numerical_source": "intended bound square-sum endpoint was not the actual executed kernel source",
+      "bias_formation": "not assessable because the live source formula differed and no replacement measurement was accepted",
+      "training_outcome": "not measured",
+      "what_is_proven": "the attempted recapture failed closed at source binding; this is an unresolved measurement, not a negative bias result",
+      "next_needed_observation": "bind the actual executed endpoint and re-run the declared square-sum comparison before making any root-cause claim",
+      "evidence": [
+        "results/property/training_numerical_analysis_v2/recovery/gemma_bound_square_sum/live_source_failure.json",
+        "results/property/training_numerical_analysis_v2/recovery/gemma_bound_square_sum/case_plan.json"
+      ],
+      "derived": {
+        "case_id": "gemma4_text128_scan_0037",
+        "task_id": "forward:17:out_ptr0",
+        "status": "ACTUAL_EXECUTION_SOURCE_MISMATCH",
+        "measurements_accepted": false,
+        "error": "Square-sum source formula differs",
+        "scope": "The executed kernel with this name is not the saved implementation. This blocks original-boundary recapture in the current environment; it is not negative bias evidence."
+      }
+    }
+  ]
+}
