@@ -31,6 +31,14 @@ def test_current_root_cause_ledger_recomputes_and_keeps_open_branches():
     assert data["summary"]["end_to_end_count"] == 1
     assert data["summary"]["negative_control_count"] == 2
     assert len(data["coverage_collections"]) == 2
+    inventory = data["source_record_inventory"]
+    assert inventory["record_count"] == 866
+    assert inventory["source_kind_counts"] == {
+        "HISTORICAL_MATRIX_ROW": 301,
+        "LEGACY_CASE_REAUDIT": 8,
+        "MAINLINE_ROLE_RECORD": 6,
+        "MEASURED_POSITION": 551,
+    }
     prior = json.loads(
         (ROOT / "results/property/case_causal_audit_v1/scientific_case_closure.json")
         .read_text()

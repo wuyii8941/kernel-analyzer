@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -280,6 +281,26 @@ def gemma_square_sum_binding_evidence() -> dict[str, Any]:
     }
 
 
+def source_record_inventory() -> dict[str, Any]:
+    """Account for all retained causal-audit records without upgrading them."""
+    data = read("results/property/case_causal_audit_v1/exhaustive_source_records.json")
+    rows = data["rows"]
+    source_kind_counts = Counter(row["source_kind"] for row in rows)
+    family_counts = Counter(row.get("operator_family") or "UNSPECIFIED" for row in rows)
+    assessment_counts = Counter(row["assessment"] for row in rows)
+    return {
+        "record_count": len(rows),
+        "source_kind_counts": dict(sorted(source_kind_counts.items())),
+        "operator_family_counts": dict(sorted(family_counts.items())),
+        "assessment_counts": dict(sorted(assessment_counts.items())),
+        "interpretation": (
+            "All retained source records are accounted for. A measured fixed-suite difference "
+            "does not by itself establish a mean bias or a numerical source; only records with "
+            "an independent same-input source check are promoted into the deduplicated ledger."
+        ),
+    }
+
+
 def main() -> None:
     prior = read("results/property/case_causal_audit_v1/scientific_case_closure.json")
     rows = []
@@ -441,6 +462,7 @@ def main() -> None:
             "groups_with_open_branch": sum("OPEN" in r["closure"] for r in rows),
         },
         "coverage_collections": coverage_collections,
+        "source_record_inventory": source_record_inventory(),
         "rows": rows,
     }
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
@@ -473,6 +495,10 @@ def main() -> None:
         "## 使用边界",
         "",
         "所有固定集合结果只覆盖各自声明的状态、参数和实现边界。‘源已闭合’不自动表示自然总体 bias 已闭合；‘训练轨迹不相同’不自动表示质量持续恶化。后续若要把开放分支升级，必须新增能区分表中竞争解释的观测，而不是从已有聚合量反推。",
+        "",
+        "## 全量来源记录审计",
+        "",
+        "当前账本同时对仓库保留的 866 条来源记录做自动归属：551 条有效测量位置、301 条历史矩阵记录、8 条旧案例复审和 6 条角色记录。它们按算子族和审查状态保留在机器字段 `source_record_inventory` 中；其中只有具备独立同输入来源干预的记录才进入上面的根因问题组。其余记录仍可作为覆盖、阴性、历史后果或未决证据，不能把非零范数直接称为已知根因。",
         "",
         "机器结果：`results/property/case_causal_audit_v1/root_cause_closure_current.json`。",
         "",
