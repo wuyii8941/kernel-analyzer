@@ -15,9 +15,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 import math
-from statistics import NormalDist
 
 import numpy as np
+
+from .mean_inference import student_quantile
 
 
 BRANCHES = ("additive", "repair_aligned", "residual_direction")
@@ -422,27 +423,20 @@ def fixed_suite_total_rms_from_joint_gram(
 
 
 def _t_critical(df: int, probability: float) -> float:
-    z = NormalDist().inv_cdf(probability)
-    f = float(df)
-    return (
-        z
-        + (z**3 + z) / (4.0 * f)
-        + (5.0 * z**5 + 16.0 * z**3 + 3.0 * z) / (96.0 * f**2)
-        + (3.0 * z**7 + 19.0 * z**5 + 17.0 * z**3 - 15.0 * z) / (384.0 * f**3)
-    )
+    return student_quantile(df, probability)
 
 
-def simultaneous_intervals_from_joint_gram(
+def profile_samples_from_joint_gram(
     joint_gram: Mapping[str, Sequence[Sequence[float]]],
     *,
     calibration_count: int = 16,
-    family_alpha: float = 0.05,
-) -> dict[str, list[float]]:
-    """Recover three simultaneous held-out intervals from saved inner products.
+) -> dict[str, np.ndarray]:
+    """Recover held-out profile samples from saved inner products.
 
     The saved matrices are sufficient to reproduce the fixed-direction,
     repair-aligned, and scaling-removed confirmation values without retaining
-    the original high-dimensional parameter vectors.
+    the original high-dimensional parameter vectors.  Returning the samples
+    keeps interval construction and mean testing on the same estimands.
     """
 
     uu = np.asarray(joint_gram["effect_effect"], dtype=np.float64)
@@ -465,7 +459,7 @@ def simultaneous_intervals_from_joint_gram(
         # Exact identity needs no learned direction: every implementation
         # effect is zero.  Other degenerate cases remain fail-closed.
         if np.count_nonzero(uu) == 0 and np.count_nonzero(ur) == 0:
-            return {name: [0.0, 0.0] for name in BRANCHES}
+            return {name: np.zeros(conf.size, dtype=np.float64) for name in BRANCHES}
         raise ValueError("calibration mean direction is not identifiable")
     additive = uu[np.ix_(conf, cal)].mean(axis=1) / calibration_norm / repair_scale
 
@@ -491,8 +485,22 @@ def simultaneous_intervals_from_joint_gram(
     else:
         residual = residual_gram[np.ix_(conf, cal)].mean(axis=1) / residual_norm / repair_scale
 
-    values = {"additive": additive, "repair_aligned": aligned, "residual_direction": residual}
-    critical = _t_critical(conf.size - 1, 1.0 - family_alpha / (2.0 * len(BRANCHES)))
+    return {"additive": additive, "repair_aligned": aligned, "residual_direction": residual}
+
+
+def simultaneous_intervals_from_joint_gram(
+    joint_gram: Mapping[str, Sequence[Sequence[float]]],
+    *,
+    calibration_count: int = 16,
+    family_alpha: float = 0.05,
+) -> dict[str, list[float]]:
+    """Recover three simultaneous held-out intervals from saved inner products."""
+
+    values = profile_samples_from_joint_gram(
+        joint_gram, calibration_count=calibration_count
+    )
+    sample_count = next(iter(values.values())).size
+    critical = _t_critical(sample_count - 1, 1.0 - family_alpha / (2.0 * len(BRANCHES)))
     intervals = {}
     for name, samples in values.items():
         center = float(samples.mean())

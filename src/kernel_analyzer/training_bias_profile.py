@@ -18,6 +18,8 @@ from typing import Mapping, Sequence
 
 import numpy as np
 
+from .mean_inference import mean_test_p, student_quantile
+
 
 BRANCHES = ("additive", "repair_aligned", "residual_direction")
 
@@ -32,18 +34,7 @@ def _as_matrix(values: Sequence[Sequence[float]] | np.ndarray, name: str) -> np.
 
 
 def _t_critical_95(df: int) -> float:
-    """Accurate dependency-free approximation to the two-sided 95% t critical."""
-
-    if df < 1:
-        raise ValueError("degrees of freedom must be positive")
-    z = 1.959963984540054
-    f = float(df)
-    return (
-        z
-        + (z**3 + z) / (4.0 * f)
-        + (5.0 * z**5 + 16.0 * z**3 + 3.0 * z) / (96.0 * f**2)
-        + (3.0 * z**7 + 19.0 * z**5 + 17.0 * z**3 - 15.0 * z) / (384.0 * f**3)
-    )
+    return student_quantile(df, 0.975)
 
 
 def _mean_interval(values: np.ndarray) -> tuple[float, float]:
@@ -138,17 +129,24 @@ def _branch_result(
     estimate = float(unit_values.mean())
     lower, upper = _mean_interval(unit_values)
     p_value = _signflip_p(unit_values, draws=draws, seed=seed)
+    standard_error = float(unit_values.std(ddof=1) / math.sqrt(unit_values.size))
+    mean_p = mean_test_p(estimate, standard_error, unit_values.size - 1)
     direction_repeats = not direction_must_repeat or estimate > 0.0
     return {
         "estimate": estimate,
         "confidence_interval_95": [lower, upper],
         "raw_studentized_signflip_p": p_value,
+        "raw_studentized_mean_p": mean_p,
+        "standard_error": standard_error,
+        "mean_test_status": "ASSESSED" if standard_error > 0 else "NOT_ASSESSED_ZERO_SAMPLE_VARIANCE",
+        "statistics_version": "mean-inference-v3",
         "signflip_role": "DIAGNOSTIC_REQUIRES_UNIT_LEVEL_SIGN_SYMMETRY",
         "inference_basis": "ASYMPTOTIC_STUDENTIZED_MEAN_INTERVAL",
         "independent_unit_count": int(unit_values.size),
         "confirmation_direction_matches_calibration": direction_repeats,
         "raw_confirmed": bool(
             (lower > 0.0 or upper < 0.0)
+            and standard_error > 0.0
             and direction_repeats
         ),
     }
@@ -350,6 +348,8 @@ def matched_training_bias_profile(
         "status": "POPULATION_INFERENCE_COMPLETE",
         "suite": suite,
         "population_inference": {
+            "statistics_version": "mean-inference-v3",
+            "finite_sample_distribution_free": False,
             "unit": "DECLARED_INDEPENDENT_TRAINING_UNIT",
             "calibration_unit_count": len(cal_groups),
             "confirmation_unit_count": len(conf_groups),

@@ -1,9 +1,13 @@
 {
   "status": "COMPLETE_AS_EVIDENCE_CLASSIFICATION_NOT_COMPLETE_ROOT_CAUSE_FOR_EVERY_CASE",
-  "counting_rule": "one computation/problem group is counted once across models, layers, shapes, and repeated protocols",
+  "counting_rule": "audit entries include overlapping coverage collections; problem_groups is a legacy field counting entries, not independent operator families",
+  "interpretation": "END_TO_END denotes a measured intervention-to-outcome chain, not proof that mean bias uniquely causes loss changes",
   "summary": {
-    "problem_groups": 9,
+    "audit_entries": 9,
+    "scientific_problem_groups": 7,
+    "coverage_collections": 2,
     "end_to_end_causal_chains": 1,
+    "closed_local_arithmetic_subcases": 2,
     "all_groups_have_unique_root": false
   },
   "rows": [
@@ -20,7 +24,8 @@
       ],
       "training_outcome": "two eight-pair 1024-step comparisons support a material loss improvement for correct residual readback; coordinate permutation causes constructed numerical failure",
       "closure": "END_TO_END_CAUSAL_CHAIN_UNDER_DECLARED_PROTOCOL",
-      "remaining_limit": "one checkpoint/model setting; constructed failure is not a natural collapse; a production-quality optimizer claim is not made",
+      "remaining_limit": "one checkpoint/model setting; intervention-to-outcome evidence does not establish mean bias rather than variance or nonlinear response as the unique loss cause; constructed failure is not a natural collapse; a production-quality optimizer claim is not made",
+      "next_root_cause_test": "external model or checkpoint confirmation; not another intervention chosen on the same data",
       "evidence": [
         "docs/optimizer_update_family_audit.md",
         "docs/adamw8bit_residual_structure_20260913.md",
@@ -31,15 +36,17 @@
       "problem_group": "liger_fused_linear_ce_dw_accumulation",
       "implementation_boundary": "Liger fused linear cross entropy plus external chunk-gradient accumulation",
       "numerical_source": "finite-precision addition order and accumulation precision of identical dW chunk products",
-      "bias_formation": "one late training state is reconstructed exactly from ordered chunk additions; historical protocols show persistent directions, but an expectation-level sign condition is not proved universally",
+      "bias_formation": "one late training state is reconstructed exactly from ordered chunk additions; Gram reanalysis over the declared split confirms gradient additive/residual means and all three update profile means with current Student mean tests and Holm correction",
       "decisive_interventions": [
         "higher-precision accumulation",
         "same-FP32 different addition order"
       ],
       "training_outcome": "paired trajectories separate; 4096/10000-step records do not support monotone degradation or collapse",
-      "closure": "LOCAL_ARITHMETIC_EXACT_GLOBAL_CAUSAL_SUFFICIENCY_OPEN",
-      "remaining_limit": "the local identity does not prove a nonzero population mean or that this term is sufficient for the observed loss difference",
+      "closure": "LOCAL_ARITHMETIC_ROOT_AND_DECLARED_UNIT_MEAN_CLOSED_LOSS_CAUSAL_SUFFICIENCY_OPEN",
+      "remaining_limit": "the reanalysis is conditional on the already observed declared units, is not fresh confirmation, and the fixed-suite update RMS is only 3.08e-9 of repair RMS; it does not establish that this term is sufficient for the observed loss difference",
+      "next_root_cause_test": "no further claim can be extracted from saved data; a fresh independently sampled state population and matched loss intervention are required to test generality or loss sufficiency",
       "evidence": [
+        "results/property/root_cause_closure_v1/liger_chunk_order_reanalysis.json",
         "docs/liger_language_mechanism_followup.md",
         "docs/liger_single_boundary_collapse_experiment.md",
         "results/property/bias_formation_final/liger_formation_analysis.json"
@@ -58,6 +65,7 @@
       "training_outcome": "historical trajectories separate, but robust cross-state direction is case-dependent",
       "closure": "CONDITIONAL_SOURCE_ISOLATION_NOT_UNIVERSAL_MM_ROOT",
       "remaining_limit": "Qwen128 rounding-only preservation has seven tiny nonzero delivery remainders in 128 repeats; Phi transport reconstruction is approximate",
+      "next_root_cause_test": "same-operands factorial separating accumulation arithmetic, final cast, and their interaction on an independent state bank",
       "evidence": [
         "docs/source_aligned_repair.md",
         "results/property/case_causal_audit_v1/mm_conditional_sources.json",
@@ -67,17 +75,20 @@
     {
       "problem_group": "softmax_saved_state_backward",
       "implementation_boundary": "Qwen layer-27 softmax backward using reconstructed versus higher-precision saved probability",
-      "numerical_source": "saved/reconstructed probability changes the analytic softmax VJP input",
-      "bias_formation": "the semantic-region replacement reaches q/k gradients; positive/negative residual replay demonstrates an even AdamW response, not a nonzero natural source mean",
+      "numerical_source": "same-call evidence isolates an inconsistency: BF16 saved scaled scores are combined with FP32 maximum and denominator from the pre-materialized calculation",
+      "bias_formation": "J_softmax(p)^T 1 = p(1-sum(p)); all 114688 observed rows have nonzero reconstructed mass defect, while consistent renormalization reduces the maximum defect below 8e-16; the semantic replacement reaches q/k gradients",
       "decisive_interventions": [
+        "consistent renormalization of the same saved scores",
         "saved-probability replacement",
         "head permutation",
         "positive/negative gradient-residual replay"
       ],
       "training_outcome": "trajectory non-identity exists; the historical persistent-direction gate is not passed",
-      "closure": "SEMANTIC_SOURCE_AND_RESPONSE_SEPARATED_NATURAL_BIAS_OPEN",
-      "remaining_limit": "head-specific pairing was rejected and the natural error distribution has not been shown to have the required nonzero mean component",
+      "closure": "LOCAL_ARITHMETIC_ROOT_CLOSED_NATURAL_BIAS_OPEN",
+      "remaining_limit": "the fixed-call mass defect is a closed local mechanism, but the two captured states are not independent population units and do not establish a persistent natural update bias",
+      "next_root_cause_test": "repeat the same-call source measure on an independent state bank, then restore only the consistent saved state before measuring gradient and update direction",
       "evidence": [
+        "results/property/root_cause_closure_v1/softmax_saved_state.json",
         "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json",
         "docs/effective_antithetic_symmetry.md"
       ]
@@ -95,6 +106,7 @@
       "training_outcome": "direct persistence is weak; later separation is feedback-sustained and the loss difference is small",
       "closure": "OPTIMIZER_RESPONSE_CAUSAL_NATURAL_SOURCE_BIAS_OPEN",
       "remaining_limit": "the natural source distribution and its expectation-level asymmetry are not isolated",
+      "next_root_cause_test": "factor the derivative evaluation into sigmoid approximation, expression ordering, and final cast using identical operands and a held-out state bank",
       "evidence": [
         "docs/effective_antithetic_symmetry.md",
         "results/round2/vl_silu_cause.json"
@@ -103,17 +115,20 @@
     {
       "problem_group": "attention_state_to_q_projection_region",
       "implementation_boundary": "Qwen layer-23 S_bwd/K to q-projection gradient semantic region",
-      "numerical_source": "the S_bwd input to bmm_76 carries the measured regional difference",
-      "bias_formation": "Gq=S_bwd K and dW=Gq^T H identify transport; S-only and joint restoration remove the selected direction while K-only does not",
+      "numerical_source": "the S_bwd input to bmm_76 carries the regional difference; one isolated contributor is fusion-delayed BF16 materialization in layer-23 key RMSNorm plus RoPE",
+      "bias_formation": "Gq=S_bwd K and dW=Gq^T H identify transport; S-only and joint restoration remove the selected direction, and eager-like intermediate materialization removes the isolated key-forward contribution",
       "decisive_interventions": [
         "S-only",
         "K-only",
         "joint",
-        "sham"
+        "sham",
+        "key RMSNorm plus RoPE materialization",
+        "reduction-schedule control"
       ],
       "training_outcome": "a paired trajectory exists under the historical protocol",
-      "closure": "CLOSED_SEMANTIC_REGION_SINGLE_OPERATION_ROOT_OPEN",
-      "remaining_limit": "the upstream operation that creates the S_bwd difference is not uniquely isolated",
+      "closure": "ONE_LOCAL_ARITHMETIC_ROOT_CLOSED_WHOLE_REGION_MULTI_SOURCE",
+      "remaining_limit": "fusion-delayed BF16 materialization explains one measured contributor, not the whole carrier; changed upstream logits and overlapping residual-stream paths remain multi-source",
+      "next_root_cause_test": "treat the closed materialization contributor as a completed subcase; do not claim a unique root for the whole region unless remaining upstream-logit contributors are separately intervened",
       "evidence": [
         "results/coverage/cases/l23_qproj_attention_state_region.json",
         "docs/l23_qproj_tile.md"
@@ -132,6 +147,7 @@
       "training_outcome": "not measured",
       "closure": "STATE_RESPONSE_ESTABLISHED_SOURCE_ROOT_OPEN",
       "remaining_limit": "the low-level arithmetic source is not isolated and moments are not separated from step-counter effects",
+      "next_root_cause_test": "same-operands cast/materialization factorial, plus a state comparison holding step counter fixed while changing moments",
       "evidence": [
         "docs/fused_rotary_position_scaling_audit.md",
         "docs/findings_and_competing_explanations.md"
@@ -148,6 +164,7 @@
       "training_outcome": "not measured per position",
       "closure": "MEASUREMENT_ONLY_FOR_ROOT_CAUSE",
       "remaining_limit": "requires targeted source-isolating variants before root-cause claims",
+      "next_root_cause_test": "select representatives before outcome inspection and run expression-component factorials; do not test all 99 positions independently",
       "evidence": [
         "docs/silu_backward_common_input.md",
         "docs/new_family_source_audit.md"
@@ -164,6 +181,7 @@
       "training_outcome": "not measured per region",
       "closure": "REGION_MEASUREMENT_NO_SINGLE_KERNEL_ROOT",
       "remaining_limit": "same local operands and unique source attribution are absent",
+      "next_root_cause_test": "promote only selected regions to same-operands comparisons; the collection itself is not a root-cause target",
       "evidence": [
         "docs/attribution_derivation_20260913.md",
         "docs/result_analysis_20260913.md"

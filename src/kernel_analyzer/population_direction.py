@@ -42,7 +42,7 @@ def population_positive_direction_prevalence(
     decision = (
         "DIRECTION_PREVALENCE_CONFIRMED"
         if lower > null_positive_probability
-        else "OPPOSITE_DIRECTION_PREVALENCE_CONFIRMED"
+        else "POSITIVE_DIRECTION_FREQUENCY_BELOW_NULL"
         if upper < null_positive_probability
         else "INCONCLUSIVE"
     )

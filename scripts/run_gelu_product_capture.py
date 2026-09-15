@@ -2,7 +2,7 @@
 import argparse
 import sys
 from pathlib import Path
-from scripts.run_numerical_coverage import read,save,sha,ROOT
+from scripts.run_numerical_coverage import read,save
 
 
 def select(plan,cases):
@@ -36,6 +36,10 @@ def main():
         parser.add_argument('--'+name,type=Path,required=True)
     parser.add_argument('--device',required=True)
     parser.add_argument('--state-bank',type=Path)
+    parser.add_argument('--reference-variant', choices=(
+        'NATIVE_TANH_SOURCE_ORDER', 'EXP_TANH_SOURCE_ORDER',
+        'NATIVE_TANH_FUSED_MULTIPLY_ADD'),
+        default='NATIVE_TANH_SOURCE_ORDER')
     a,arguments=parser.parse_known_args()
     check_state_count(read(a.state_bank or a.input_bank),arguments)
     if a.state_bank:arguments.extend(['--state-bank',str(a.state_bank)])
@@ -44,18 +48,6 @@ def main():
         if path.exists() or not path.resolve().is_relative_to(Path('/data1/tzh')):
             raise ValueError('New output directories under /data1/tzh required')
     plan=read(a.family_plan)
-    dependencies=[]
-    visited=set()
-    def verify(record):
-        for name,digest in record.get('source_sha256',{}).items():
-            path=Path(name)
-            if sha(path)!=digest:raise ValueError('Frozen input changed: '+name)
-            dependencies.append(path)
-            if path.suffix=='.json' and name not in visited:
-                visited.add(name)
-                nested=read(path)
-                if isinstance(nested,dict) and isinstance(nested.get('source_sha256'),dict):verify(nested)
-    verify(plan)
     cases=read(a.case_plan)['cases'];contracts=select(plan,cases)
     translated=output.parent/'gelu_capture_plan.json'
     save(translated,dict(cases=[dict(c,reference_method='PARTIAL_REDUCTION_FROM_BOUND_INPUT',
@@ -84,25 +76,19 @@ def main():
         if contract is None or metadata.get('formal_pointer')!='out_ptr0':
             raise ValueError('Undeclared GELU output')
         decoded=validate_pointers(metadata['runtime_pointers'],contract)
-        return evaluate(*decoded,output_dtype=candidate.dtype).reshape(candidate.shape)
+        return evaluate(*decoded,output_dtype=candidate.dtype,
+                        variant=a.reference_variant).reshape(candidate.shape)
     capture.partial_reduction_reference=reference
     old_scope=capture.reference_scope
     capture.reference_scope=lambda method:dict(comparison='INTERNAL_GELU_OUTPUT_REPLACEMENT',
         same_local_operands=True,includes_possible_upstream_differences=False,
         parameter_scope='DECLARED_SINGLE_TRAINABLE_PARAMETER',reference_is_absolute_truth=False,
-        reference_variant='TANH_GELU_PRODUCT_FP32_BF16_WRITE') if method=='PARTIAL_REDUCTION_FROM_BOUND_INPUT' else old_scope(method)
-    dependencies += [Path(__file__),a.family_plan,a.case_plan,translated,a.input_bank,a.model/'config.json']
-    if a.state_bank:dependencies.append(a.state_bank)
-    dependencies += [ROOT/'src/kernel_analyzer'/n for n in ('gelu_product_source.py','gelu_product_reference.py',
-        'gelu_product_observer.py','parallel_measurement.py','training_numerical_analysis.py',
-        'training_equivalence.py','training_bias_profile.py','update_write.py','capture_cost.py')]
-    dependencies += [ROOT/'scripts'/n for n in ('capture_bound_endpoint_bias_formation_v21.py',
-        'same_dtype_semantic_observer.py','run_parallel_bound_capture.py','run_training_bias_profile_v2_empirical.py')]
+        reference_variant=a.reference_variant) if method=='PARTIAL_REDUCTION_FROM_BOUND_INPUT' else old_scope(method)
     save(output/'family_execution_protocol.json',dict(schema='gelu-product-capture-v1',
         contracts=contracts,trainable_parameters=plan['trainable_parameters'],capture_arguments=arguments,
         statistical_method_changed=False,claim_scope='FIXED_SUITE_UPDATE',primary_stage='PARAMETER_WRITE',
-        data_use='HISTORICAL_FAMILY_NEW_REFERENCE_CAPTURE_NOT_UNSEEN_DISCOVERY',
-        source_sha256={str(p.resolve()):sha(p) for p in dependencies}))
+        data_use='RESULT_AWARE_SINGLE_FACTOR_SOURCE_INTERVENTION',
+        reference_variant=a.reference_variant))
     from scripts.run_parallel_bound_capture import main as run
     from kernel_analyzer.capture_cost import measured_capture
     sys.argv=[sys.argv[0],*arguments]

@@ -83,11 +83,8 @@ def main() -> None:
                 if profile["status"] != "POPULATION_INFERENCE_COMPLETE":
                     target[key] = 1.0
                 else:
-                    target[key] = float(
-                        profile["population_inference"]["branches"][branch][
-                            "raw_studentized_signflip_p"
-                        ]
-                    )
+                    from kernel_analyzer.mean_inference import mean_inference_p
+                    target[key] = mean_inference_p(profile["population_inference"]["branches"][branch])
 
     primary_adjusted = holm_adjusted_p(primary_raw)
     explanation_adjusted = holm_adjusted_p(explanation_raw)

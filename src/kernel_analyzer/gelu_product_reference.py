@@ -32,8 +32,16 @@ def decode_inputs(pointers, *, elements, width, stride, offset):
     return gradient,multiplier,saved_input
 
 
+VARIANTS = (
+    "FP32_NATIVE",
+    "NATIVE_TANH_SOURCE_ORDER",
+    "EXP_TANH_SOURCE_ORDER",
+    "NATIVE_TANH_FUSED_MULTIPLY_ADD",
+)
+
+
 def evaluate(gradient, multiplier, saved_input, *, accumulation_dtype=None,
-             output_dtype=None):
+             output_dtype=None, variant="FP32_NATIVE"):
     import math
     import torch
     tensors=(gradient,multiplier,saved_input)
@@ -44,13 +52,26 @@ def evaluate(gradient, multiplier, saved_input, *, accumulation_dtype=None,
         raise ValueError('Finite shape-aligned GELU product operands required')
     dtype=torch.float32 if accumulation_dtype is None else accumulation_dtype
     output_dtype=gradient.dtype if output_dtype is None else output_dtype
-    if dtype not in (torch.float32,torch.float64) or output_dtype not in (torch.bfloat16,torch.float32,torch.float64):
+    if (dtype not in (torch.float32,torch.float64)
+            or output_dtype not in (torch.bfloat16,torch.float32,torch.float64)
+            or variant not in VARIANTS):
         raise ValueError('Unsupported reference precision')
     g,m,x=(t.to(dtype) for t in tensors)
     x2=x*x
-    argument=(x+0.044715*(x2*x))*math.sqrt(2/math.pi)
-    t=torch.tanh(argument)
-    derivative=0.5*(1+t)+(0.5*x)*(1-t*t)*(1+0.134145*x2)*math.sqrt(2/math.pi)
+    if variant == "NATIVE_TANH_FUSED_MULTIPLY_ADD":
+        argument=torch.add(x, x2*x, alpha=0.044715)*math.sqrt(2/math.pi)
+    else:
+        argument=(x+0.044715*(x2*x))*math.sqrt(2/math.pi)
+    if variant != "EXP_TANH_SOURCE_ORDER":
+        t=torch.tanh(argument)
+    else:
+        # Single-factor intervention: operands, expression order, accumulation
+        # dtype, and output write stay fixed; only tanh evaluation changes.
+        t=2.0/(1.0+torch.exp(-2.0*argument))-1.0
+    polynomial=(torch.add(torch.ones_like(x2), x2, alpha=0.134145)
+                if variant == "NATIVE_TANH_FUSED_MULTIPLY_ADD"
+                else 1+0.134145*x2)
+    derivative=0.5*(1+t)+(0.5*x)*(1-t*t)*polynomial*math.sqrt(2/math.pi)
     result=(g*m)*derivative
     if not torch.isfinite(result).all():
         raise ValueError('Nonfinite reference arithmetic')

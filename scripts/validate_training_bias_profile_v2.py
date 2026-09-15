@@ -12,6 +12,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+from kernel_analyzer.mean_inference import mean_inference_p
 
 from kernel_analyzer.training_bias_profile import (  # noqa: E402
     BRANCHES,
@@ -108,7 +109,7 @@ def evaluate(name: str, trial: int) -> tuple[dict, set[str]]:
         return result, expected
     branches = result["population_inference"]["branches"]
     adjusted = holm_adjusted_p({
-        name: branch["raw_studentized_signflip_p"]
+        name: mean_inference_p(branch)
         for name, branch in branches.items()
     })
     for branch_name, branch in branches.items():

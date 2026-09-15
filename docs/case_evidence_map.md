@@ -36,7 +36,7 @@
 | TorchAO AdamW8bit moment/parameter update | 分块越大，moment 与参数写入 distortion 越大；随机 history 总体中 32/32 超过 1% 写入范围；8 条冻结数据流的默认 256-block 评估 loss 差均为正，均值 +0.02718 [T1] | 机制确认、总体比例、训练后果和修改成效分别判断；64-block 在全模型写入上稳定降低 RMS，但训练改善未确认 |
 | Ministral fused RoPE / position scaling | 相同输入 Triton 比较中，高/低位置写入 RMS 约为 10.88%/8.35%；严格匹配的 cold/warm/reset-moments 为 8.67%/0.45%/10.02% [R2] | 新 Triton 家族复用和 optimizer-state 条件证据；不是 position scaling 唯一根因、总体效应或 loss 结果 |
 | 上述两个 DeepSeek 位置 + Phi loss/CE 对照 | 每项四条 32 步输入流；实际/反馈方向均 4/4，直接方向均 0/4；窗口平均 loss 差区间均跨零 [D2] | 单 checkpoint、指定参数范围的后果；不冒充独立初始化全参数训练或稳定质量降低 |
-| Liger dW，同 FP32 不同加法顺序 | 后 16 个输入中 15 个沿预测方向 [O1] | 非精度切换的补充机制预测；没有同实验的长程 loss 结论 |
+| Liger dW，同 FP32 不同加法顺序 | 长度128开发集后16个输入中15个沿预测方向；互斥长度64确认集为14/16，参数梯度与零矩 AdamW 首步分支均复现 [O1] | 非精度切换的补充机制证据；仍是8192维摘要、单一参数范围，没有同实验的长程 loss 结论 |
 | DeepSeek layer-35 attention dV | 参考更新坐标中的确认和三阶段补测属于不同轮次 [M1] | 有条件方向的补充；不能借其他 DeepSeek 位置的 loss 补齐它 |
 | Phi normalization 0543 | 单行擦边方向在多重比较后未确认 [H1] | 未决候选；不能改成确证阴性，也不能计入强成因案例 |
 | Llama、Ministral lm-head | 历史同族长测 [H1] | 跨模型补充，不自动增加一个独立成因 |
@@ -135,7 +135,8 @@
   [第二批](../results/property/training_bias_profile_v2/prospective_batch_2/summary.json)；
   [状态对照](../results/property/optimizer_condition_benchmark_v1/summary.json)。
 - **[D2]** [四条输入流后果](../results/property/independent_consequence_v1/summary.json)。
-- **[O1]** [FP32 顺序实验](../results/property/liger_fp32_chunk_order_v1/summary.json)。
+- **[O1]** [FP32 顺序实验](../results/property/liger_fp32_chunk_order_v1/summary.json)；
+  [互斥长度64确认](../results/property/liger_fp32_chunk_order_v1/length64_confirmation.json)。
 - **[T1]** [optimizer 家族与训练确认](optimizer_update_family_audit.md)；
   [冻结协议](../results/property/numerical_coverage_v1/mamba_adamw8bit_training_confirmation_v1/protocol.json)；
   [独立复算](../results/property/numerical_coverage_v1/mamba_adamw8bit_training_confirmation_v1/verification.json)；
@@ -146,7 +147,9 @@
 - **[B1]** [16 项原始汇总](../results/property/generalization_benchmark_v1/summary.json)；
   [等价 v2 重新分析](../results/property/generalization_benchmark_v1/equivalence_v2.json)；
   [Gemma 接入](../results/property/generalization_benchmark_v1/gemma4_method_bridge_result.json)。
-- **[C1]** [覆盖与分母](coverage_table_v1.md)。
+- **[C1]** [首轮覆盖分母原始表](../results/coverage/coverage_table_v1.json)；
+  [历史模型覆盖审计](../results/coverage/model_coverage_audit_v1.json)。
+  这些是首轮记录，不是当前支持范围；当前入口见[自动采集说明](numerical_coverage_execution.md)。
 - **[H1]** [历史长程机器审计](../results/property/declared_persistent_4096/all_bias_case_audit.json)。
 - **[H2]** [Liger/SiLU 历史长测说明](liger_silu_long_horizon_recheck.md)。
 - **[H3]** [历史案例登记](../cases_flash_style.md)。

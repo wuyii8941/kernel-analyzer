@@ -12,6 +12,9 @@ import math
 from kernel_analyzer.dense_pointer_view import dense_pointer_view
 
 
+VARIANTS = ("FP32_NATIVE", "FP32_REVERSE_FEATURE_ORDER")
+
+
 def _body(rows, width, epsilon):
     return ast.parse(f'''
 xnumel = {rows}
@@ -129,8 +132,11 @@ def check_source(source, symbol):
     )
 
 
-def reference(metadata, candidate, contract):
+def reference(metadata, candidate, contract, *, variant="FP32_NATIVE"):
     import torch
+
+    if variant not in VARIANTS:
+        raise ValueError("Unsupported RMS forward reference variant: " + str(variant))
 
     if metadata.get("symbol") != contract.get("symbol"):
         raise ValueError("RMS forward symbol differs")
@@ -158,7 +164,10 @@ def reference(metadata, candidate, contract):
             or not candidate.is_contiguous()):
         raise ValueError("RMS forward candidate representation differs")
     x = dense_pointer_view(source_value, (rows, width)).detach().float().clone()
-    mean_square = x.square().sum(dim=1, keepdim=True) / float(width)
+    squared = x.square()
+    if variant == "FP32_REVERSE_FEATURE_ORDER":
+        squared = squared.flip(dims=(1,))
+    mean_square = squared.sum(dim=1, keepdim=True) / float(width)
     result = x * torch.pow(mean_square + contract["epsilon"], -0.5)
     if not torch.isfinite(result).all():
         raise ValueError("Nonfinite RMS forward reference arithmetic")

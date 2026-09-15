@@ -22,8 +22,9 @@ CURRENT_DOCS = (
     "docs/case_evidence_map.md", "docs/novelty_positioning.md",
     "docs/liger_single_boundary_collapse_experiment.md",
     "docs/liger_silu_long_horizon_recheck.md",
-    "docs/mainline_cleanup_20260905.md",
-    "docs/training_numerical_analysis_v1.md",
+    "docs/case_causal_audit.md", "docs/bias_proof_plan_result.md",
+    "docs/system.md", "docs/root_cause_exhaustion.md",
+    "docs/numerical_coverage_execution.md", "docs/statistics_experiment_alignment.md",
 )
 LINK = re.compile(r"(?<!!)\[[^\]\n]*\]\(([^)\n]+)\)")
 
@@ -80,22 +81,6 @@ def check_figures() -> list[str]:
         if text not in evidence_map:
             errors.append(f"Legacy audit count differs from evidence map: {text}")
 
-    analysis = json.loads((ROOT / (
-        "results/property/training_numerical_analysis_v1/summary.json"
-    )).read_text())
-    generated = (ROOT / "docs/training_numerical_analysis_v1.md").read_text()
-    for row in analysis["rows"]:
-        if row["fixed_suite_total_rms"] is not None:
-            number = f'{100 * row["fixed_suite_total_rms"]:.3f}%'
-            if number not in generated:
-                errors.append(f"Generated analysis report is stale: {row['case_id']} {number}")
-
-    utility = json.loads((ROOT / (
-        "results/property/training_numerical_analysis_v1/training_utility_summary.json"
-    )).read_text())
-    utility_gap = f'{utility["validation_loss"]["candidate_minus_reference"]:+.5f}'
-    if utility_gap not in generated:
-        errors.append(f"Generated training-utility result is stale: {utility_gap}")
     return errors
 
 

@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
 from kernel_analyzer.training_bias_profile import BRANCHES, holm_adjusted_p  # noqa: E402
+from kernel_analyzer.mean_inference import mean_inference_p
 from scripts.analyze_training_bias_profile_v2_empirical import _branch_summary, _primary_view  # noqa: E402
 
 
@@ -83,7 +84,7 @@ def main() -> None:
             profile = views[_primary_view(views)]["profile"]
             for branch in BRANCHES:
                 raw_p[f"{case_id}|{condition}|{branch}"] = (
-                    float(profile["population_inference"]["branches"][branch]["raw_studentized_signflip_p"])
+                    mean_inference_p(profile["population_inference"]["branches"][branch])
                     if profile.get("status") == "POPULATION_INFERENCE_COMPLETE" else 1.0
                 )
             if condition in SECONDARY_CONDITIONS:
@@ -96,7 +97,7 @@ def main() -> None:
                             continue
                         secondary_profile = secondary_views[_primary_view(secondary_views)]["profile"]
                         secondary_raw_p[secondary_key] = (
-                            float(secondary_profile["population_inference"]["branches"][branch]["raw_studentized_signflip_p"])
+                            mean_inference_p(secondary_profile["population_inference"]["branches"][branch])
                             if secondary_profile.get("status") == "POPULATION_INFERENCE_COMPLETE" else 1.0
                         )
     adjusted = holm_adjusted_p(raw_p)

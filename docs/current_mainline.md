@@ -8,9 +8,33 @@
 递推重构、关键参数组互补定位和统一方法对照。它支持“完整方法提供额外诊断信息”，
 不支持“完整方法在固定集合二元等价判断上优于全空间 update RMS”。
 
+最新 [bias 证明计划验收](bias_proof_plan_result.md)将证据拆成四层：AdamW8bit 的
+32/32 独立 history repair-aligned 同号效应、真实 history 的保存残差递推、针对性修改
+的独立 loss 改善，以及 Liger FP32 累加顺序上的第二算子族诊断复用。当前确认的是
+系统性 aligned effect，不是完整高维均值向量。后续在同一批 16 条冻结 histories 上
+直接确认正确读回残差令绝对 aligned gain 16/16 下降、同号比例从 16/16 变为 8/16；
+训练结果仍不证明平均 bias 是唯一中介。
+
 本页规定当前研究中心；[方法](method.md)规定实验定义，
 [案例地图](case_evidence_map.md)连接推导与原始结果，
 [主张账本](claims.md)规定可说到哪一步。旧版本不再覆盖这三者。
+
+本轮入口复核后的优先级：从已有 normalization、SiLU/门控和分块累加中，选择同精度
+实现选择的来源干预；不把低精度或 QK channel 预设为主案例。AdamW8bit 作为既有强
+干预证据保留。这个选择是下一轮计划，不是已经找到新的主案例。
+工具的实际接入条件见[自动化边界](system.md)：已审核家族可自动采集和分析，但任意
+算子源码仍需参考、输入、调用适配及必要的训练参数关联。
+
+Liger FP32 顺序实验的 update 由公式计算后压缩，不是实际参数写入；softmax 的行和
+重归一化只提供局部一致性诊断。旧完成汇总不能覆盖这两项更窄的证据范围。
+
+2026-09-14 对 Liger FP32 顺序实验增加了长度为64的互斥输入确认：32个状态全部完成，
+前向 loss 与 hidden-state gradient 逐位相同，只有 dW 的64块加法顺序不同。未参与校准的
+16个状态中，预先声明的顺序预测方向有14个同向；参数梯度的 additive/residual 分支和
+零矩 AdamW 首步的三个分支均确认了同号效应。该结果加强了“同精度归约顺序可形成可重复
+方向”的来源证据，但仍是8192维摘要、单一参数范围，尚无该顺序效应的长程 loss 结论。
+机器记录见 `results/property/liger_fp32_chunk_order_v1/length64_confirmation.json`，
+运行入口为 `scripts/run_liger_fp32_chunk_order_length.py`。
 
 ## 1. 我们要回答什么
 
@@ -195,7 +219,7 @@ AdamW8bit 有数学递推解释、修改预测、实际写入和有实际幅度�
 这些不是可以用覆盖数量替代的结论。全部kernel动态支持、无条件总体平均能量证书、
 跨模型/checkpoint修改收益及自然训练崩溃，则属于没有建立的更强外推。
 单项运行是否完成、科学预测是否成立、论文目标是否达到分别记录，具体见
-[完整验收范围](new_mainline_execution_status.md)。
+[当前主张边界](claims.md)。历史阶段验收记录已从工作文档删除，原始机器结果仍保留。
 
 总体统计不再以寻找一种无条件万能区间为目标。有限样本下，无总体能量上界时，不可能
 对所有非负重尾分布从有限观测统一签发平均 $Q$ 等价；证明和反例见
@@ -302,7 +326,8 @@ loss。对最有信息量的案例，使用独立配对训练检查局部修改�
 
 v1 将 update 先舍入到 BF16 再加到参数上。审计发现它可能与实际 AdamW 写入不同，
 因此不能继续把该表中的零值或非零值当成目标 optimizer 的实际写入证明。
-历史 JSON 和推导不删除；[旧表](training_numerical_analysis_v1.md)保留历史含义。
+历史 JSON 和推导不删除；旧 v1 写入模拟报告已从当前文档删除，历史数值仍保留在
+`results/property/training_numerical_analysis_v1/`，当前解释只使用 v2。
 
 v2 从声明的参数与 moments 开始，真实执行一次 `torch.optim.AdamW.step()`，
 读取前后参数变化。当前确认协议采用从存储参数初始化的 FP32 master，明确不声称

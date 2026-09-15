@@ -38,7 +38,18 @@ REFERENCES = {
         'rms_simple_backward_registered_reference',
         ('FP32_NATIVE',), '-rms-simple-backward-common-input'),
     'SOFTMAX_BACKWARD': ReferenceSpec('softmax_backward_reference', ('FP32_NATIVE',), '-softmax-common-input'),
-    'SILU_BACKWARD': ReferenceSpec('silu_backward_reference', ('FP32_NATIVE',), '-silu-common-input'),
+    'SILU_BACKWARD': ReferenceSpec(
+        'silu_backward_reference',
+        (
+            'FP32_NATIVE',
+            'NATIVE_SIGMOID_COMPACT',
+            'EXPLICIT_EXP_COMPACT',
+            'NATIVE_SIGMOID_SOURCE_ORDER',
+            'EXPLICIT_EXP_SOURCE_ORDER',
+        ),
+        '-silu-common-input',
+        True,
+    ),
     'SELECTED_SILU_PRODUCT': ReferenceSpec('selected_silu_product_reference',
         ('FP32_NATIVE',), '-selected-silu-common-input'),
     'SOFTPLUS_BIAS_BACKWARD': ReferenceSpec('softplus_bias_backward_reference',
@@ -68,10 +79,13 @@ REFERENCES = {
         ('FP32_NATIVE',), '-residual-rms-normalized-common-input'),
     'RMS_FORWARD_NORMALIZED': ReferenceSpec(
         'rms_forward_registered_reference',
-        ('FP32_NATIVE',), '-rms-forward-normalized-common-input'),
+        ('FP32_NATIVE', 'FP32_REVERSE_FEATURE_ORDER'),
+        '-rms-forward-normalized-common-input', True),
     'GELU_PRODUCT_BACKWARD': ReferenceSpec(
         'gelu_product_registered_reference',
-        ('FP32_NATIVE',), '-gelu-product-common-input'),
+        ('FP32_NATIVE', 'NATIVE_TANH_SOURCE_ORDER', 'EXP_TANH_SOURCE_ORDER',
+         'NATIVE_TANH_FUSED_MULTIPLY_ADD'),
+        '-gelu-product-common-input', True),
     'GELU_FORWARD_PRODUCT': ReferenceSpec(
         'gelu_forward_product_registered_reference',
         ('FP32_NATIVE',), '-gelu-forward-product-common-input'),

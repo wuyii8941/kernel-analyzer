@@ -13,9 +13,45 @@ def test_legacy_variant_policy_preserved():
     assert get_reference('ROW_SQUARE_SUM').variants == VARIANTS
     assert get_reference('EXPONENTIAL_WEIGHTED_REDUCTION').variants == (
         'FP32_NATIVE', 'FP32_REVERSE_COMPONENT_ORDER', 'FP64_EVALUATION')
+    assert get_reference('SILU_BACKWARD').variants == (
+        'FP32_NATIVE',
+        'NATIVE_SIGMOID_COMPACT',
+        'EXPLICIT_EXP_COMPACT',
+        'NATIVE_SIGMOID_SOURCE_ORDER',
+        'EXPLICIT_EXP_SOURCE_ORDER',
+    )
+    assert get_reference('GELU_PRODUCT_BACKWARD').variants == (
+        'FP32_NATIVE', 'NATIVE_TANH_SOURCE_ORDER', 'EXP_TANH_SOURCE_ORDER',
+        'NATIVE_TANH_FUSED_MULTIPLY_ADD')
     for family in REFERENCES:
-        if family not in ('ROW_SQUARE_SUM', 'EXPONENTIAL_WEIGHTED_REDUCTION'):
+        if family not in ('ROW_SQUARE_SUM', 'EXPONENTIAL_WEIGHTED_REDUCTION',
+                          'SILU_BACKWARD', 'GELU_PRODUCT_BACKWARD',
+                          'RMS_FORWARD_NORMALIZED'):
             assert get_reference(family).variants == ('FP32_NATIVE',)
+    assert get_reference('RMS_FORWARD_NORMALIZED').variants == (
+        'FP32_NATIVE', 'FP32_REVERSE_FEATURE_ORDER')
+
+
+def test_silu_registry_dispatches_declared_factorial_variant():
+    import torch
+
+    value = torch.tensor([0.25, -0.5], dtype=torch.float32)
+    metadata = {
+        'input_output_storage_aliases': [],
+        'runtime_pointers': {
+            'in_ptr0': value,
+            'in_ptr1': value,
+            'in_out_ptr0': value,
+        },
+    }
+    candidate = torch.empty_like(value)
+    result = get_reference('SILU_BACKWARD').evaluate(
+        metadata,
+        candidate,
+        {'elements': value.numel()},
+        variant='EXPLICIT_EXP_SOURCE_ORDER',
+    )
+    assert result.shape == candidate.shape
 
 
 def test_unknown_family_and_variant_never_fall_back():
@@ -71,7 +107,14 @@ def test_selected_nll_is_registered_as_one_reviewed_family():
 def test_multi_output_families_register_one_explicit_output(family, module, suffix):
     specification = get_reference(family)
     assert specification.module == module
-    assert specification.variants == ('FP32_NATIVE',)
+    expected = (
+        ('FP32_NATIVE', 'NATIVE_TANH_SOURCE_ORDER', 'EXP_TANH_SOURCE_ORDER',
+         'NATIVE_TANH_FUSED_MULTIPLY_ADD')
+        if family == 'GELU_PRODUCT_BACKWARD'
+        else (('FP32_NATIVE', 'FP32_REVERSE_FEATURE_ORDER')
+              if family == 'RMS_FORWARD_NORMALIZED' else ('FP32_NATIVE',))
+    )
+    assert specification.variants == expected
     assert specification.case_suffix == suffix
 
 
@@ -107,7 +150,8 @@ def test_grouped_causal_softmax_registry_binds_only_probability_output():
     candidate = torch.empty(rows * width, dtype=torch.bfloat16)
     metadata = dict(symbol=symbol, formal_pointer='out_ptr2',
                     input_output_storage_aliases=[], runtime_pointers=pointers)
-    result = specification.evaluate(metadata, candidate, contract, variant='FP32_NATIVE')
+    result = specification.evaluate(metadata, candidate, contract,
+                                    variant='FP32_NATIVE')
     probability = result.reshape(rows, width)
     assert probability.shape == (rows, width)
     assert torch.equal(probability[0], torch.nn.functional.one_hot(
@@ -143,7 +187,8 @@ def test_residual_rms_registry_binds_only_normalized_output():
     candidate = torch.empty(8, dtype=torch.bfloat16)
     metadata = dict(symbol='kernel', formal_pointer='out_ptr0',
                     input_output_storage_aliases=[], runtime_pointers=pointers)
-    result = specification.evaluate(metadata, candidate, contract, variant='FP32_NATIVE')
+    result = specification.evaluate(metadata, candidate, contract,
+                                    variant='FP32_NATIVE')
     assert result.shape == candidate.shape
     assert torch.isfinite(result).all()
     with pytest.raises(ValueError, match='normalized-output boundary'):
@@ -218,7 +263,8 @@ def test_gelu_product_registry_infers_layout_and_reuses_common_snapshot():
     candidate = torch.empty(contract['elements'], dtype=torch.bfloat16)
     metadata = dict(symbol=symbol, formal_pointer='out_ptr0',
                     input_output_storage_aliases=[], runtime_pointers=pointers)
-    result = specification.evaluate(metadata, candidate, contract, variant='FP32_NATIVE')
+    result = specification.evaluate(metadata, candidate, contract,
+                                    variant='NATIVE_TANH_SOURCE_ORDER')
     assert torch.equal(result, torch.full_like(result, 0.5))
 
 

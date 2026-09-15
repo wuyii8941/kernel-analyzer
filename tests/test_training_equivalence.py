@@ -13,6 +13,7 @@ from kernel_analyzer.training_equivalence import (
     population_aligned_equivalence,
     population_statewise_rms_exceedance_equivalence,
     population_total_energy_equivalence,
+    profile_samples_from_joint_gram,
     simultaneous_intervals_from_joint_gram,
 )
 
@@ -108,6 +109,18 @@ def test_joint_gram_recovers_additive_and_aligned_effects() -> None:
     assert intervals["repair_aligned"][0] > 0.0
     assert intervals["additive"][0] > 0.0
     assert set(intervals) == {"additive", "repair_aligned", "residual_direction"}
+
+
+def test_profile_samples_match_interval_centers() -> None:
+    rng = np.random.default_rng(17)
+    repairs = rng.normal(size=(32, 5))
+    effects = 0.03 * repairs + rng.normal(scale=0.002, size=(32, 5))
+    gram = _gram(effects, repairs)
+    samples = profile_samples_from_joint_gram(gram)
+    intervals = simultaneous_intervals_from_joint_gram(gram)
+    for branch in MARGINS:
+        assert float(samples[branch].mean()) == pytest.approx(sum(intervals[branch]) / 2.0)
+        assert samples[branch].shape == (16,)
 
 
 def test_joint_gram_accepts_exact_identity() -> None:

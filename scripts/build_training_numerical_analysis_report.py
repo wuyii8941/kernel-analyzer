@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "results/property/training_numerical_analysis_v1"
 SUMMARY = BASE / "summary.json"
-DOCUMENT = ROOT / "docs/training_numerical_analysis_v1.md"
+DOCUMENT = BASE / "historical_report.md"
 
 
 def main() -> None:

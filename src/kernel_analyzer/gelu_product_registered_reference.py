@@ -50,7 +50,7 @@ def check_source(source, symbol):
                          stride=stride, offset=offset)
 
 
-def reference(metadata, candidate, contract):
+def reference(metadata, candidate, contract, *, variant="NATIVE_TANH_SOURCE_ORDER"):
     if metadata.get("symbol") != contract.get("symbol"):
         raise ValueError("GELU symbol differs")
     if metadata.get("formal_pointer") != contract.get("output_pointer"):
@@ -58,4 +58,5 @@ def reference(metadata, candidate, contract):
     if metadata.get("input_output_storage_aliases"):
         raise ValueError("Unsupported GELU input/output alias")
     decoded = validate_pointers(metadata.get("runtime_pointers") or {}, contract)
-    return evaluate(*decoded, output_dtype=candidate.dtype).reshape(candidate.shape)
+    return evaluate(*decoded, output_dtype=candidate.dtype,
+                    variant=variant).reshape(candidate.shape)

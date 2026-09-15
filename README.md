@@ -1,184 +1,77 @@
 # Kernel Analyzer
 
-Kernel Analyzer 的研究目标是建立一个**机制与工具共同组成的训练数值偏差分析框架**：
-以真实 Triton 实现为重点，也支持常规 PyTorch/ATen/CUDA；用有明确条件的数学推导
-和统计检验解释实现差异如何形成系统性参数更新，再用针对性修改验证训练后果。
-我们争取可复现的训练崩溃机制；没有崩溃时，仍要争取具有实际幅度的 loss/perplexity、
-训练稳定性或质量相当条件下的成本变化，不以微小 loss 非同一性替代这一目标。
-研究从 [FlashAttention 的偏差与训练失败分析](https://arxiv.org/abs/2510.04212) 出发：
+Kernel Analyzer 分析 LLM training 中具体实现相对声明参考的数值差异，重点支持真实
+Triton，也保留 PyTorch/ATen/CUDA 与混合计算。研究问题是：**bias 从哪段计算开始，
+为什么形成，来源干预能否改变它，以及这些变化是否影响训练。**
 
-```text
-具体实现的数值运算
-        ↓
-数学推导：为什么误差不会公平抵消
-        ↓
-真实 backward 与 optimizer：偏差怎样进入参数更新
-        ↓
-统一分析：总差异、方向、缩放与适用范围
-        ↓
-针对成因的修改与配对训练：检验解释和实际价值
+低精度和 optimizer state 是可能的实验条件，不是所有案例的预设成因；QK channel
+也不是默认解释。后续优先分析同精度实现选择，既有低精度案例和阴性结果全部保留。
+研究借鉴 [FlashAttention 的来源分析](https://arxiv.org/abs/2510.04212)，不要求每个
+案例崩溃，也不把 loss 非同一性解释成质量恶化。
+
+## 系统已经能自动做什么？
+
+**在参考语义和执行接入已审核之后，系统能自动测量、分析并汇总指定实现的误差。
+目前不是把任意 kernel 文件放进目录就能自动完成训练测试。**
+
+| 输入条件 | 当前能力 |
+|---|---|
+| 已有 candidate/reference 输出和容差 | 通用逐坐标误差、allclose、非有限值检查 |
+| 已接入的家族、输入与训练状态、明确参数范围 | 已有采集器执行声明比较，复用 local / gradient / 实际参数写入分析 |
+| 已保存的原坐标统计量和协议 | 统一复算总 RMS、加权缩放、诊断信息与声明范围内的判断 |
+| 新家族或不同调用约定 | 仍需审核参考并接入调用、输出及必要的 backward/参数映射 |
+| 只有任意算子源码，没有参考、输入或训练接入 | 尚不支持自动推导全部语义和测试环境；不能自动签发训练结论 |
+
+操作说明与可执行检查见 **[算子接入与自动化边界](docs/system.md)**。
+当前训练分析入口是 `scripts/run_training_numerical_analysis.py`；
+安装后的 `kernel-analyzer analyze` 仍是旧 T1–T4 接口，不能混用两者的完成语义。
+
+对已经有 candidate/reference 可调用包装的新 kernel，最小 bias 检查入口是：
+
+```python
+from kernel_analyzer import check_bias
+report = check_bias(candidate, reference, make_inputs, samples=32)
+print(report["status"])
 ```
 
-数学推导负责解释成因，测量负责检查方向、缩放和总体差异，训练负责验证修改是否
-影响质量、效率或稳定性。三者不能互相替代。单项分析有效不要求阳性；但**工具能
-报告阴性，不等于论文已完成强机制和训练结果的目标**。只观察到 loss 不同也不能
-倒推出某种 bias。
+实际状态值为 `SYSTEMATIC_BIAS_CONFIRMED`、`SYSTEMATIC_BIAS_NOT_CONFIRMED` 或
+`UNRESOLVED_MEASUREMENT`；入口默认检查输出，可选 `check_backward=True` 检查梯度。
+它不自动生成 reference、解释根因或推断训练 loss，详细字段和边界见上述说明。
 
-## 四个共同目标
+## 研究与证据入口
 
-1. **框架、机制和工具都有**：复用现有接入、三阶段测量与报告；不同家族不改判断
-   公式，代表案例有具体偏差条件、修改预测和新数据验证。
-2. **真实包含 Triton**：主要机制和修改能定位到实际执行的 Triton 计算；常规实现
-   同样可被测，混合路径不强行归为 Triton 内部。
-3. **统计学理论完备**：针对实际声称的结论交代对象、假设、效应量、区间和错误控制，
-   并用同一生产代码验证。固定集合可计算，不等于随机总体理论已经完成。
-4. **训练结果有说服力**：优先验证机制相关的崩溃；否则验证预先声明、超出普通波动
-   且有实际意义的训练变化。小差异仍保留，不包装成大后果。
+- [当前主线](docs/current_mainline.md)：研究目标与下一轮优先级。
+- [实验方法](docs/method.md)及[统计与实验对齐](docs/statistics_experiment_alignment.md)：定义、假设和判断范围。
+- [主张账本](docs/claims.md)与[逐案例来源审计](docs/case_causal_audit.md)：哪些成因已解释，哪些仍未知。
+- [案例与证据地图](docs/case_evidence_map.md)：原始协议、结果、失败与训练记录。
+- [全部文档](docs/README.md)：专题推导和历史复现入口。
 
-这是共同完成目标，不是四项已经实现的声明。文献核查支持这一具体研究联系具有
-创新空间，不支持无条件“首次”：[同行对比与创新边界](docs/novelty_positioning.md)。
+数值测试、bias 检验、来源解释和训练后果是不同结果。总误差大不证明均值 bias；
+相同输入的单计算比较与整段计算区域替换也不能混称为单 kernel 根因。
 
-研究以手写和编译生成的 Triton 实现为重点，也保留 ATen/CUDA 和混合计算案例。
-被测实现和参考实现的角色由实验定义，不由库名或实现语言决定。
+## 当前最强证据及限制
 
-## 当前入口
+AdamW8bit 的保存残差能够解释所测 history 的 moment 差异；针对性残差读回得到
+独立配对训练改善。8 对确认训练的 OFF−ON 平均验证 loss 差为 +0.0282858，
+95% 配对 t 区间为 [+0.0157405,+0.0408311]。范围限于固定 Mamba checkpoint、
+评估集、采样协议和 t 推断假设，不证明平均 bias 是唯一原因，也不是跨模型保证。
+见[独立确认记录](results/property/result_analysis_v4/iid_training_confirmation/verification.json)。
 
-1. [科研主线](docs/current_mainline.md)：我们要证明什么。
-2. [案例与证据地图](docs/case_evidence_map.md)：推导、更新和 loss 证据分别在哪里。
-3. [实验方法](docs/method.md)：如何比较、如何避免跨协议拼接。
-4. [主张边界](docs/claims.md)：已经支持什么，哪些仍不能声称。
-5. [全部文档与版本入口](docs/README.md)：历史推导、测量和结果的归属。
-6. [实际写入分析 v2](docs/training_numerical_analysis_v2.md)：由机器记录核验的复采、新家族和训练结果；旧 v1 保留历史限制。
-7. [清单驱动的自动采集](docs/numerical_coverage_execution.md)：完整端点分母、结构绑定、统一采集和未支持项记录。
-8. [fused RoPE / position scaling 核验](docs/fused_rotary_position_scaling_audit.md)：真实 Triton
-   相同输入比较及 optimizer-state 条件结果。
-9. [随机状态超界比例检验](docs/population_exceedance_inference.md)：不依赖能量幅度上界的
-   精确有限样本端点及其与平均 Q 的边界。
-10. [随机状态总体推断合同](docs/population_inference_contract.md)：平均能量、超界比例和
-    固定集合分别能证明什么，以及条件不足时为什么必须不作判断。
-11. [算子族与重点问题组证据深度](results/property/numerical_coverage_v1/operator_problem_group_depth_v2.md)：
-    自动区分覆盖、update 证据、数学来源、修改验证和训练后果。
-12. [全部已观测 kernel 清单](docs/observed_kernel_catalog_v2.md)：对保存的全部任务位置去重、
-    分类并记录支持状态，按新家族和真实 Triton 优先生成自动执行队列。
-13. [未测算子族前沿](docs/unmeasured_triton_family_frontier.md)：
-    自动排除已有家族证据，保留未绑定参考和历史执行失败，不把它们重复运行或误报为阴性。
-14. [逐问题组因果证据核对](docs/case_causal_audit.md)：按代码位置、数值来源、bias
-    形成理由、干预和训练后果分级；不把模型位置数或历史 gate 当作根因数。
+其他案例提供实现来源、状态依赖或边界证据，不按模型位置重复计数：
+Liger 的 FP32 顺序实验保留局部与摘要方向证据，不能把计算所得 update 的摘要 RMS
+称为原坐标实际参数写入；softmax 的保存状态行和检查也不单独证明训练 bias 根因闭合。
+Liger 的 10000 步轨迹出现 loss 差异反转，不支持持续恶化。
+详见[逐案例审计](docs/case_causal_audit.md)和[训练后果说明](docs/liger_single_boundary_collapse_experiment.md)。
 
-截至 2026-09-13，四个目标已经在**声明范围内**各有证据：统一自动入口与
-全量支持清单、真实 Triton 家族、条件明确的固定集合/随机状态统计方法，以及
-AdamW8bit 的数学递推来源、针对性修改和有实际幅度的配对训练改善。本轮同路径
-开/关补偿重放已完成：8/8组loss改善，均值0.02202，95%配对区间[0.01386,0.03019]；
-16个最终模型重新评估一致，8份开启补偿训练完整复现历史结果。这是已见数据上的归因
-验证，不证明收益仅来自均值bias，也未建立超越local allclose的新增检出优势。
-见[本轮结果分析](docs/result_analysis_20260913.md)。这个限定版主线
-可以进入论文写作；它不等于全部 kernel 已动态支持、无条件总体等价、跨模型训练收益
-或通用自动修复。统一清单覆盖146,104个任务位置，预定义19种分类、实际17种非空分类；新一轮从
-64 个事前冻结的未测 Triton 结构 signature 中取得 31 个有效测量，使去重有效位置从
-520 增至 551。其余为 28 个超时、4 个执行 identity 失败和 1 个运行路径不匹配，均保留
-且不算阴性。31 个有效位置去重为 30 个实际编译计算、4 个目录家族；这不是 31 个新
-机制。详见[本轮去重表](results/property/numerical_coverage_v1/triton_signature_deduplication_v1.md)
-和机器审计 `triton_signature_campaign_audit_v1.json`。
-[限定范围主线验收](results/property/numerical_coverage_v1/scoped_mainline_completion_audit_v1.json)
-从既有证据重新计算上述完成判断，并逐项列出不在当前主张内的更强目标。
+已有覆盖证明工具不止服务于一个案例，但有效位置数不是独立 bias 数量。
+[自动采集记录](docs/numerical_coverage_execution.md)保留成功、超时、缺参考与路径不匹配；
+目录清单和旧 COMPLETE 标签不代表任意 kernel 都已支持，也不代表根因研究完成。
 
-针对 AdamW8bit 的两项优先分析现已完成。32 个固定梯度记录中的 moment 误差递推可在
-显式保留浮点求值余项后重构；8 条新 history 中，预先指定的 embedding 与最后一层
-mixer output projection 占未补偿误差能量的 99.60%–99.85%。受控方法对照同时说明：
-完整方法在固定集合的二元等价判断上不优于全空间 update RMS；它新增的是阶段定位、
-状态依赖和效应结构诊断，不能写成更高的二元检测准确率。
-[实验、对照与边界](docs/priority_analysis_1_2_20260913.md)
+## 目录与维护
 
-针对残差坐标与时间对应关系的固定梯度历史和训练干预均已完成。等能量坐标移动在
-8/8 条已见训练流中产生非有限 loss；只补关键参数在 1/8 条中于第 936 步失败。
-失败端点是结果后补充的描述，不能称为自然 AdamW8bit 崩溃或总体失败率结论。
-[结构干预结果](docs/adamw8bit_residual_structure_20260913.md)
+`src/` 保存公共测量和统计代码，`scripts/` 保存执行与复算入口，`tests/` 保存验证，
+`results/` 保存协议和实验结果。使用已有研究环境；系统默认 Python 不一定包含 PyTorch。
+新任务的输出、缓存和临时文件均放在本仓库内，不写入 `/home`。
 
-补偿修改还完成了一轮与开发起点区间分离的 iid 有放回训练流确认。8/8 对均为正，
-OFF−ON 平均为 `+0.0282858`，95% 配对 t 区间 `[+0.0157405,+0.0408311]`，超过
-预声明 `+0.01` 门槛；独立复算为 `VERIFIED`。结论条件于固定 Mamba checkpoint、
-评估集、声明起点总体和配对 t 假设，不是跨模型或无条件有限样本保证。
-[冻结协议与原始结果](results/property/result_analysis_v4/iid_training_confirmation/summary.json)
-
-最新 Liger 全参数小模型实验已经延续到 10000 步：参数相对距离由 19.69% 增至
-23.50%，验证 loss 差由 +0.02778 变为 −0.02325。这支持实现引起的轨迹分叉，
-不支持持续恶化或已经出现训练崩溃。
-[实验设置和数据](docs/liger_single_boundary_collapse_experiment.md)
-
-原定六项实际写入重采均已完成，另有一个 Granite 新家族确认。审计发现 v1 的参数写入模拟额外舍入了 update，不能直接
-代表目标 AdamW 的实际写入。v2 改为真正执行 AdamW 并读取参数前后变化；已完成的
-Phi 复采在声明的 FP32 master 协议下有约 5.47% 的写入差异 RMS。这不是原 BF16
-协议的直接复现，也不由能量大小推断 bias 或训练质量。旧结果原样保留并注明限制。
-[修正状态与执行入口](docs/training_numerical_analysis_v2.md)
-
-新的 WikiText / 真实 tokenizer 配对确认已完成：16 组新初始化各训练 1024 步，
-15 组参考实现的共同验证 loss 较低，原实现减参考的平均差约 +0.000696。
-这是声明小模型设置下可重复的小幅训练后果，不单独证明持久 bias 或显著工程收益。
-[冻结确认结果](results/property/training_numerical_analysis_v2/language_training_confirmation_iid/summary.json)
-
-同一组全部轨迹已续至 4096 步：32 条轨迹的后期窗口平均直接差异均与第一个窗口
-同向，16 组最终均有 loss 分叉；但 14 组原实现 loss 更低，平均差 −0.00132849。
-因此支持已测窗口的直接方向与 loss 分叉，不支持持续恶化或每个训练步骤同向。
-[自动生成的本轮完整结果](results/property/training_numerical_analysis_v2/final_report.md)
-
-新接入的编译生成 Triton optimizer 家族形成了当前最完整的一条机制与训练证据链。
-在 32 个真实 Mamba gradient 上，AdamW8bit 的 block size 从 64 增至 256、1024 时，
-moment 与参数写入 distortion 按事前预测严格增大。随后冻结的 8 条非重叠 WikiText
-数据流各训练 1024 步；默认 256-block AdamW8bit 相对 FP32 AdamW 的最终评估
-loss 差为 8/8 正，均值 `+0.02718`，95% 区间 `[+0.01217,+0.04220]`，
-超过预声明的 `+0.01` 门槛。没有崩溃；64-block 的训练改善未确认。该结果只覆盖
-一个 checkpoint 和声明设置，不替代跨模型验证或完整总体理论。
-[机制、协议与边界](docs/optimizer_update_family_audit.md)
-
-该案例现已补充一个真实随机状态总体端点。程序从冻结的 8192 个 token 块经验分布中
-独立有放回抽取 32 条长度 8 的 gradient history，每条 history 都重新建立 optimizer
-state。32/32 条 history 的最终参数写入 RMS 差异超过预声明 1%；超范围比例的一侧
-95% 下界为 91.06%，因此相对于“最多 5% history 超范围”的合同判为不等价。
-这是真实总体的超范围比例结论，不是平均能量 $Q$、递推训练或跨 checkpoint 证书。
-
-进一步的 component 分解显示，保留 FP32 一阶 moment 可把固定 gradient 上的参数
-写入 RMS 从 5.45% 降到 3.21%。但在另外 8 条新训练数据流上，这个修改没有改善
-最终评估 loss：`default−modified` 均值为 −0.01070，95% 区间
-[−0.02708,+0.00567]。这是一项保留的阴性结果，也表明单步 update 更接近参考不能
-取代实际训练验证。
-
-随后针对“量化 moment 残差会跨步进入下一次递推”的数学预测，补偿版在另一组 8 条
-非重叠数据流上得到 `default−compensated` 均值 `+0.0248481`，95% 区间
-`[+0.0168563,+0.0328399]`，超过预声明的 `+0.01` 实际改善门槛；独立复算状态为
-`VERIFIED`。这是修改与训练改善的证据，不等于唯一成因已隔离；第0流前8步用于运行
-检查，排除该流的事后分析仍支持改善。补偿版显存和
-速度代价更高，范围仍限于一个 Mamba checkpoint、数据集和优化器设置。
-
-新的全模型 follow-up 进一步排除了“block64 只改善被挑中的 `x_proj`”这一解释：在
-16 条新独立 gradient history 上，block64 的全模型实际写入 RMS 均低于 block256，
-但已有 1024-step loss 改善仍未确认。逐参数核验显示巨大 RMS 主要由 embedding 和
-最后一层 mixer output projection 主导。当前结论因此收紧为：量化分块稳定控制直接
-写入差异，但直接写入 RMS 不是递推训练 loss 的充分预测量。
-
-首轮覆盖的 1,562 个输出位置、历史长程审计记录数、统一测量的案例数属于不同集合，
-不相加为“数学成因与 loss 后果都已闭合的案例总数”。
-
-最新自动接入还覆盖了 Ministral 的 fused RoPE / position scaling Triton 计算。
-同一目标参数的固定集合参数写入差异在 cold、warm 和保持 warm 参数但清空 moments
-时分别约为 8.67%、0.45% 和 10.02%。这验证了统一流程可以接入新的真实 Triton
-家族，并表明 optimizer state 会显著改变差异能否进入参数；它没有 loss 结果，也不
-证明 position scaling 是唯一根因或随机训练状态总体中具有相同幅度。
-[核验与结论边界](docs/fused_rotary_position_scaling_audit.md)
-
-2026-09-11 的家族优先入口又自动完成了一个 RMS 归一化位置和一个状态递推位置的
-三阶段核对；两者在声明的固定状态集合上均为逐位零差异。它们证明专用参考适配器
-可以接入统一流程，是有效阴性和覆盖证据，不是新的 bias 阳性或所有同族位置的保证。
-
-当前去重后最值得深入的四组由机器证据表明确记录：AdamW8bit 已确认数学来源、实际
-参数写入、声明随机 history 总体的超范围比例、非微小 loss 后果和一项有明确代价的
-补偿修改；fused RoPE 是强固定集合现象，
-尚缺唯一来源和训练结果；Liger 已有累加恒等式和轨迹分叉，但不支持持续恶化；
-Flash-SDPA 是普通 CUDA 的强对照，尚不是 Triton 机制链。这个排序不由位置数决定。
-
-最新 signature campaign 进一步验证了清单驱动的自动执行：选择规则只读实现身份、
-阶段、结构 signature 与参考方法，不读数值结果；有效结果、超时、执行失败与路径不匹配
-统一进入终态审计。固定集合中部分参数写入差异幅度明显，但本轮用途是覆盖和复用验证，
-不据此宣布新根因、随机总体 bias 或训练质量后果。
-
-源码位于 `src/` 与 `scripts/`，实验数据位于 `results/`。
-本轮整理保留全部结果、失败记录和数学推导；讲稿由用户单独维护。
+重复的历史状态说明可以删除；原始结果、数学推导、阴性与失败记录，以及仍有调用者的
+历史代码保留。研究者维护的讲稿不随自动整理改写。

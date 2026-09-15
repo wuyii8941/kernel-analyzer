@@ -236,6 +236,20 @@ u_i^{resp}=\tfrac12(Y_i^++Y_i^- -2Y_i^0).
 随机舍入在局部无偏的条件不能自动推出经过非线性 optimizer 后无偏。
 SGD 的干预不能代替 AdamW 干预，cold-start 的结果不能代替真实 warm 状态。
 
+当竞争解释是两个数值选择 (A,B) 时，必须在相同 operands 上测四个组合：原实现
+(Y_{00})、只修改 (A) 的 (Y_{10})、只修改 (B) 的 (Y_{01}) 和同时修改的
+(Y_{11})。当前统一实现使用对称归因：
+
+\[
+C_A=\tfrac12[(Y_{00}-Y_{10})+(Y_{01}-Y_{11})],\qquad
+C_B=\tfrac12[(Y_{00}-Y_{01})+(Y_{10}-Y_{11})].
+\]
+
+因此 (Y_{00}-Y_{11}=C_A+C_B)。同时单独报告 factorial interaction
+(Y_{00}-Y_{10}-Y_{01}+Y_{11})，不能因对称分配后代数闭合就声称物理上没有交互。
+生产实现为 `source_factorial.two_factor_source_decomposition`。这个固定输入归因不能
+自动升级成总体 mean bias 或 loss 成因。
+
 对 reduction 类还可定义：
 
 \[

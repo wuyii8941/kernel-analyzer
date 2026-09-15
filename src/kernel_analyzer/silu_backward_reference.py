@@ -4,6 +4,7 @@ The other output of the fused kernel remains the candidate output. This is a
 local-output substitution, not replacement of the whole fused computation.
 """
 import ast
+import copy
 import hashlib
 
 
@@ -64,20 +65,52 @@ def check_source(source, symbol):
     expected = ast.parse(BODY.format(elements=elements)).body
     if [ast.dump(n) for n in fn.body] != [ast.dump(n) for n in expected]:
         raise ValueError('Gated SiLU backward expression or indexing differs')
+    semantic_function = copy.deepcopy(fn)
+    semantic_function.decorator_list = []
     return dict(family='GATED_SILU_BACKWARD_GATE_OUTPUT_V1', symbol=symbol, elements=elements,
                 output_pointer='in_out_ptr0', unchanged_output_pointer='out_ptr0',
-                function_ast_sha256=hashlib.sha256(ast.dump(fn).encode()).hexdigest(),
+                function_ast_sha256=hashlib.sha256(ast.dump(semantic_function).encode()).hexdigest(),
                 source_sha256=hashlib.sha256(source.encode()).hexdigest(),
                 mathematical_expression='dy * up * sigmoid(gate) * (1 + gate*(1-sigmoid(gate)))',
                 proof_scope='Real derivative of up*silu(gate); single gate-gradient output; no nonzero-bias or loss proof')
 
 
-def evaluate(gradient, gate, up):
-    sigmoid = gate.sigmoid()
-    return gradient * up * sigmoid * (1 + gate * (1 - sigmoid))
+VARIANTS = (
+    'FP32_NATIVE',
+    'NATIVE_SIGMOID_COMPACT',
+    'EXPLICIT_EXP_COMPACT',
+    'NATIVE_SIGMOID_SOURCE_ORDER',
+    'EXPLICIT_EXP_SOURCE_ORDER',
+)
 
 
-def reference(metadata, candidate, contract):
+def evaluate(gradient, gate, up, *, variant='NATIVE_SIGMOID_COMPACT'):
+    """Evaluate the same SiLU derivative while changing one choice at a time.
+
+    The first factor is how sigmoid is evaluated.  The second is whether the
+    multiplies/adds follow the generated program or the compact mathematical
+    expression.  Keeping the four combinations is important: comparing only
+    the old compact reference with the generated program confounds both.
+    """
+    if variant not in VARIANTS:
+        raise ValueError('Unsupported SiLU backward variant: ' + str(variant))
+    if variant == 'FP32_NATIVE':
+        variant = 'NATIVE_SIGMOID_COMPACT'
+    if variant.startswith('NATIVE_SIGMOID'):
+        sigmoid = gate.sigmoid()
+    else:
+        one = gate.new_tensor(1.0)
+        sigmoid = one / (gate.neg().exp() + one)
+    if variant.endswith('COMPACT'):
+        return gradient * up * sigmoid * (1 + gate * (1 - sigmoid))
+    one = gate.new_tensor(1.0)
+    gradient_times_up = gradient * up
+    one_minus_sigmoid = one - sigmoid
+    derivative_factor = gate * one_minus_sigmoid + one
+    return (gradient_times_up * sigmoid) * derivative_factor
+
+
+def reference(metadata, candidate, contract, *, variant='NATIVE_SIGMOID_COMPACT'):
     import torch
     if metadata.get('input_output_storage_aliases') != []:
         raise ValueError('Nonaliasing read inputs were not established')
@@ -92,4 +125,4 @@ def reference(metadata, candidate, contract):
     if (candidate.numel() != contract['elements'] or not candidate.is_contiguous()
             or candidate.dtype not in (torch.float16, torch.bfloat16, torch.float32)):
         raise ValueError('Output layout or representation differs')
-    return evaluate(*values).to(candidate.dtype).reshape(candidate.shape)
+    return evaluate(*values, variant=variant).to(candidate.dtype).reshape(candidate.shape)

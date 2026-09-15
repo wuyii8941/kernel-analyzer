@@ -11,8 +11,7 @@ import os
 from pathlib import Path
 import sys
 
-from kernel_analyzer.row_reduction_reference import VARIANTS
-from kernel_analyzer.source_reference_registry import get_reference
+from kernel_analyzer.source_reference_registry import REFERENCES, get_reference
 from scripts.run_numerical_coverage import ROOT, read, save, sha
 
 
@@ -62,7 +61,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      epilog='Append the existing bound-capture arguments for model, input banks, release, case plan, output and spool directories.')
     parser.add_argument('--reference-manifest', type=Path, required=True)
-    parser.add_argument('--reference-variant', choices=VARIANTS, default='FP32_NATIVE')
+    declared_variants = sorted({variant for spec in REFERENCES.values() for variant in spec.variants})
+    parser.add_argument('--reference-variant', choices=declared_variants, default='FP32_NATIVE')
     parser.add_argument('--train-only-declared-parameters', action='store_true')
     parser.add_argument('--parallel-measurement', action='store_true')
     parser.add_argument('--retain-small-update-vectors', action='store_true',

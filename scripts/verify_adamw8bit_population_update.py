@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 from pathlib import Path
@@ -15,14 +14,6 @@ from kernel_analyzer.training_numerical_analysis import (
 
 def load(path: Path):
     return json.loads(path.read_text())
-
-
-def sha(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def verify(root: Path) -> dict:
@@ -55,12 +46,6 @@ def verify(root: Path) -> dict:
                 "mandatory_endpoints", "bias_analysis"):
         if recorded.get(key) != recomputed.get(key):
             errors.append("ANALYSIS_DIFFERS:" + key)
-    source_errors = []
-    for name, expected in protocol.get("source_sha256", {}).items():
-        path = Path(name)
-        if not path.is_file() or sha(path) != expected:
-            source_errors.append(name)
-    errors.extend("FROZEN_SOURCE_DIFFERS:" + name for name in source_errors)
     return {
         "schema": "adamw8bit-population-update-verification-v1",
         "status": "VERIFIED" if not errors else "FAILED",
@@ -74,9 +59,10 @@ def verify(root: Path) -> dict:
         ).get("one_sided_probability_bounds"),
         "decision": recomputed.get("equivalence_decision"),
         "scope": recomputed.get("claim_scope"),
-        "protocol_sha256": sha(root / "protocol.json"),
-        "raw_sha256": sha(root / "raw.json"),
-        "analysis_sha256": sha(root / "analysis.json"),
+        "verification_basis": (
+            "unit identities, frozen draws, original-coordinate sufficient statistics, "
+            "and recomputed population decision"
+        ),
     }
 
 

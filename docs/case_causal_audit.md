@@ -10,24 +10,27 @@
 
 ## 去重后的科学结论
 
-按“同一计算问题不因模型、层、形状或重复协议而重复计数”，当前整理为 9 个问题组。
-这里的 9 不是 9 个已证明根因：只有 AdamW8bit 在声明协议内达到
-“数学递推来源—实际状态传播—针对性干预—独立训练改善”的端到端闭合。
+当前表有 9 个审查条目：7 个科学问题组和 2 个覆盖集合。后两者不是 bias 或根因，
+不能把 9 写成独立算子问题数。
+AdamW8bit 在声明协议内连接了“数学递推来源—实际状态传播—针对性干预—独立训练改善”。
+这不等于已证明平均 bias 是 loss 差异的唯一原因；方差、坐标结构与非线性响应的贡献仍需区分。
 
 | 问题组 | 当前最强结论 | 尚不能声称 |
 |---|---|---|
 | AdamW8bit moment 量化 | 跨步丢失残差可重构 moment 差；正确读回改善写入与两批配对训练 loss；坐标打乱造成构造性数值失败 | 自然训练必然崩溃、跨模型普遍成立、生产优化器已完成 |
-| Liger fused linear CE dW 累加 | 一个真实末期状态的差异由相同分块乘积的有限精度加法精确重构；精度与顺序干预有效 | 已证明总体非零均值，或该局部项充分导致全部 loss 差异 |
+| Liger fused linear CE dW 累加 | 一个真实末期状态的差异由相同分块乘积的有限精度加法精确重构；另一个 FP32 顺序协议有局部和摘要方向证据 | 两个协议合并成一次确认；摘要中的公式 update 是实际参数写入；该局部项充分导致全部 loss 差异 |
 | MM/GEMM 输出与累加 | 选定 fixed-input 条件下可分离 kernel arithmetic 与 output rounding；不同模型位置表现不同 | 所有 MM 共享一个根因；所有条件差都形成持久 bias |
-| softmax saved-state backward | 保存/重构概率改变解析 VJP；严格正负重放证明 AdamW 有偶响应 | 自然误差分布自身具有已证明的非零均值 |
+| softmax saved-state backward | 两个固定状态中，114,688 行重构概率有非零行和缺陷，重归一化可恢复行和；严格正负重放另有 AdamW 偶响应证据 | 重归一化本身隔离了唯一来源；已经证明自然训练 bias 根因、总体 bias 或持久 update 方向 |
 | SiLU backward | 不同导数求值进入真实梯度；严格正负重放证明早期 optimizer 偶响应 | 已解释自然 SiLU residual 为何产生非零 bias |
-| attention-state → q-proj 区域 | 公式和 S/K/joint/sham 干预闭合到 `S_bwd` 语义区域 | 已定位制造 `S_bwd` 差异的唯一上游算子 |
+| attention-state → q-proj 区域 | 公式和 S/K/joint/sham 干预闭合到 `S_bwd`；其中一个局部贡献已定位为 key RMSNorm+RoPE 融合延迟 BF16 中间物化 | 该局部根因解释整个区域；其余 upstream-logit 和 residual-stream 贡献来自唯一算子 |
 | fused RoPE / position scaling | 相同输入差异与 optimizer-state 条件效应明确；低位置对照排除 scaling 为唯一根因 | 已隔离底层算术根因；已单独区分 moments 与 step counter；已有 loss 后果 |
 | 99 个 common-input SiLU/RMS backward 位置 | 同一自动流程可测全空间 update 差异 | 每个非零位置都有非零平均 bias 或唯一算术根因 |
 | 31 个 reference-graph 区域 | 能测实际训练区域的 update effect | 区域差异就是某一个 Triton kernel 自身的差异 |
 
-因此，最准确的总括是：**框架已对全部记录给出证据范围；根因研究有一条端到端闭合、
-数条局部或语义区域闭合，以及大量尚未进入根因干预的测量案例。**历史上的
+因此，最准确的总括是：**AdamW8bit 有较强的来源传播、干预与训练结果链；attention
+有一个已隔离的局部来源；softmax 有局部一致性线索；Liger 有不同协议下的来源和后果
+证据，但 FP32 顺序实验中的约 3.08e-9 只是公式 update 的摘要比例，不是原坐标实际
+写入。其余为条件来源、语义区域、响应机制或仅测量。**历史上的
 `PASS_FLASH_STYLE_CASE` 只表示当时四项 gate 通过，不能自动改写为“唯一数值根因和
 训练损害均已证明”。
 
@@ -57,7 +60,7 @@
 |---|---|---|---|
 | Phi lm-head dX，历史配对干预 | MM residual 经 final normalization backward 传播 | 保持 residual 能量的对应关系变化会改变梯度方向结构；不是由局部能量直接决定 | 16 状态 row permutation；解析传播重构相对误差 0.3244–0.6005，尚非唯一物理来源的精确重构 |
 | Qwen Liger fused CE t128，历史 formation 协议 | 分块 dW 累加/转换；历史执行源码仍待逐项绑定 | calibration 阳性不能代替 confirmation；后者区间跨冻结 margin | 保留 `UNRESOLVED_CONFIRMATION_MARGIN_CROSSED`；不能借后来 GPT-2 结果补签这个协议 |
-| Qwen layer-23 attention → q-proj | 实际 bmm_76 左输入 S_bwd；Gq=S_bwd K，dW=GqᵀH | 公式定位传播路径，区域恢复定位 S_bwd 的作用；未说明唯一上游算术如何产生非零均值 | S-only、K-only、joint、sham 对照；区域归因不等于唯一 kernel 根因，区间跨零不等于全空间相等 |
+| Qwen layer-23 attention → q-proj | 实际 bmm_76 左输入 S_bwd；Gq=S_bwd K，dW=GqᵀH | 区域恢复定位 S_bwd；另有一个已隔离局部来源：融合使 key RMSNorm+RoPE 的 BF16 中间物化延后，沿 K→S_bwd→Gq→dW 传播 | eager-like materialization 与完整 key-forward 修复一致、reduction-schedule 对照不成立；它解释约 51.5% 所测 carrier，不是整个区域的唯一根因 |
 | Qwen seq128 v-proj，conditional rounding | `run_mm_source_aligned_repair.py:SourceAlignedMMRepair` 拦截 `extern_kernels.mm`；`precision.py:source_aligned_mm_output` 构造替换 | 固定输入下确定性舍入相对随机舍入集合的条件效应；不是跨训练状态共同方向的证明 | 摘要记录 16 条条件下各 candidate-effect 标签为 CONDITIONAL_BIAS；仍需读取完整记录核对最后转换的残差保持误差与执行身份 |
 
 前三项来源分别为
@@ -163,3 +166,23 @@ FP32 master、每输入零 moments。这个位置不能仅凭长 fused kernel �
 因为 lack of evidence 改为阴性，也不能写成根因已闭合。本轮已经完成来源记录分类
 与去重问题组的证据分级；尚未闭合的科学问题直接保留在主表中，不用“审查进行中”
 掩盖它们。
+
+## 根因收敛顺序
+
+后续不再按测量位置数推进，而按下面的可证伪干预推进。每项都必须保持相同局部输入，
+一次只改变一个数值选择，并同时保留 joint 与 sham 对照。
+
+| 优先级 | 问题组 | 下一项最小干预 | 完成标准 |
+|---|---|---|---|
+| P0 | MM/GEMM | accumulation arithmetic、最终 cast 与 joint 的三因素拆分 | 在独立状态上说明哪一项产生已测 conditional effect，并报告 interaction |
+| P0 | SiLU backward | sigmoid 求值、表达式次序、最终 cast 分别替换 | 找到自然 residual 的首次非零位置；若均不能解释则明确为组合效应 |
+| P0 | softmax saved state | 在独立状态中重复同一 source measure，再只恢复一致 saved probability | source residual 与 gradient/update 变化使用同一状态和同一方向定义 |
+| P1 | fused RoPE | RoPE 中间物化与 position scaling 分开；optimizer 对照固定 step counter | 分开算术来源与 optimizer-state response，不再用 high/low position 代替来源干预 |
+| P1 | Liger | 对预声明加法顺序预测做独立状态确认 | 将精确局部恒等式升级或否定为总体系统性 effect；不以 loss 反推 bias |
+| 已完成子项 | attention q-proj | key RMSNorm+RoPE BF16 中间物化 | 保留为局部根因；整个复合区域继续标为多来源 |
+| 局部诊断 | softmax saved state | 重构概率的行和与保存统计一致性检查 | 重归一化不能单独隔离来源；需要真实实现干预及 gradient/write 传播确认 |
+| 局部诊断 | Liger | 同为 FP32、只改变 chunk addition order | 有局部/摘要方向证据；旧公式 update 不能作实际写入，固定状态不能升级为 iid 总体确认 |
+| 已完成主项 | AdamW8bit | blockwise moment 残差读回 | 只补外部条件确认，不再在相同数据上重复挑机制 |
+
+99 个 common-input 位置和 31 个 reference-graph 区域只用于选择上述代表问题，不能
+逐位置自动升级成根因实验。机器表中的 `next_root_cause_test` 与本节同步生成和检查。

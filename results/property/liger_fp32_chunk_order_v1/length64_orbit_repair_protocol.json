@@ -1,0 +1,32 @@
+{
+  "schema": "kernel-analyzer-liger-fp32-order-repair-protocol-v1",
+  "status": "FROZEN_BEFORE_INTERVENTION_RUN",
+  "case_id": "liger_fused_ce_fp32_chunk_order",
+  "sequence_length": 64,
+  "state_count": 32,
+  "calibration_count": 16,
+  "confirmation_count": 16,
+  "data_use": "DISJOINT_POST_SELECTION_MECHANISM_CONFIRMATION",
+  "candidate": "Liger fused CE with FP32 dW accumulator and original chunk order",
+  "repair": "mean dW over four predeclared equivalent FP32 chunk schedules",
+  "schedules": [
+    "original",
+    "reverse",
+    "even_then_odd",
+    "frozen_permutation"
+  ],
+  "invariants": [
+    "all schedules use FP32 inputs and FP32 dW accumulation",
+    "forward loss and hidden-state gradient remain bitwise equal",
+    "only chunk addition order differs",
+    "the repair is evaluated on the same input, model state, and optimizer response probe"
+  ],
+  "prediction": "the schedule-averaged repair reduces the candidate update effect relative to the original-versus-reverse comparison",
+  "primary_endpoint": "zero-moment AdamW first-step update effect",
+  "scope": "one Liger training region, one Qwen checkpoint, one target parameter, and the declared length-64 state bank",
+  "limitations": [
+    "the source prediction was established before this intervention run but the length-64 bank was selected after the length-128 result",
+    "the dW vector is summarized with the fixed 8192-coordinate sketch",
+    "this is not a long training-loss experiment"
+  ]
+}

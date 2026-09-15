@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Apply the frozen five-case multiplicity and robustness rules."""
+"""Apply historical case grouping with current conditional mean inference.
+
+This is a revised analysis, not a new prospective confirmation. Legacy raw
+profiles must be recomputed before use; existing results should be preserved.
+"""
 
 from __future__ import annotations
 
@@ -14,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from kernel_analyzer.training_bias_profile import BRANCHES, holm_adjusted_p  # noqa: E402
+from kernel_analyzer.mean_inference import mean_inference_p
 
 
 CASES = (
@@ -59,6 +64,8 @@ def _branch_summary(
             "primary_view": primary_name,
         }
     primary = primary_profile["population_inference"]["branches"][branch]
+    if primary.get("status", "").startswith("NOT_IDENTIFIABLE"):
+        return {"status": "ABSTAIN", "reason": primary["status"], "primary_view": primary_name}
     estimates: dict[str, float] = {}
     raw_confirmed: dict[str, bool] = {}
     statuses: dict[str, str] = {}
@@ -68,6 +75,8 @@ def _branch_summary(
         if profile["status"] != "POPULATION_INFERENCE_COMPLETE":
             continue
         item = profile["population_inference"]["branches"][branch]
+        if item.get("status", "").startswith("NOT_IDENTIFIABLE"):
+            continue
         estimates[name] = float(item["estimate"])
         raw_confirmed[name] = bool(item["raw_confirmed"])
     signs = {_sign(value) for value in estimates.values()}
@@ -76,6 +85,7 @@ def _branch_summary(
     interval_excludes_zero = lower > 0.0 or upper < 0.0
     confirmed = bool(
         adjusted_p <= 0.05
+        and primary["raw_confirmed"]
         and interval_excludes_zero
         and primary["confirmation_direction_matches_calibration"]
         and direction_robust
@@ -86,6 +96,8 @@ def _branch_summary(
         "estimate": primary["estimate"],
         "confidence_interval_95": primary["confidence_interval_95"],
         "raw_studentized_signflip_p": primary["raw_studentized_signflip_p"],
+        "raw_studentized_mean_p": mean_inference_p(primary),
+        "statistics_version": "mean-inference-v3",
         "holm_adjusted_p": adjusted_p,
         "confirmation_direction_matches_calibration": primary[
             "confirmation_direction_matches_calibration"
@@ -124,11 +136,7 @@ def main() -> None:
                 raise RuntimeError(f"{case}/{stage} did not complete population inference")
             for branch in BRANCHES:
                 key = f"{case}|{stage}|{branch}"
-                value = float(
-                    profile["population_inference"]["branches"][branch][
-                        "raw_studentized_signflip_p"
-                    ]
-                )
+                value = mean_inference_p(profile["population_inference"]["branches"][branch])
                 (primary_raw if stage == PRIMARY_STAGE else explanation_raw)[key] = value
     if len(primary_raw) != 15 or len(explanation_raw) != 30:
         raise RuntimeError("frozen multiplicity family is incomplete")
