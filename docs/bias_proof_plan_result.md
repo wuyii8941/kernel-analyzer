@@ -6,6 +6,10 @@
 `results/property/bias_proof_plan_v1/result_v2.json`。它读取既有原始记录并调用当前生产
 统计代码，不手抄实验数值，也不把旧数据改称新的未见确认。
 
+截至 2026-09-15，新增的 SiLU source-factorial、saved-P 轨迹和 Liger 长度 256
+确认已纳入[当前根因闭环账本](root_cause_closure_current.md)。本页保留原计划的
+验收结构；若与当前账本的根因等级或开放分支冲突，以当前账本为准。
+
 ## 验收结论
 
 | 要证明的内容 | 当前证据 | 结论 |
@@ -13,7 +17,7 @@
 | 不只是误差能量，而有系统性结构 | AdamW8bit 的 32 条独立、预先声明的新 gradient histories 中，candidate-reference write 与 FP32 write 的内积 32/32 为正；正方向比例的一侧 95% 下界为 91.06% | 确认声明 history 总体中的 repair-aligned 系统性效应；没有证明完整高维均值向量非零 |
 | 来源如何进入训练状态 | 真实 8-step gradient history 上，仅用实际保存残差递推即可预测第 8 步 moment 差；OFF 最大相对预测误差约 0.00248%。同一批 16 条冻结 histories 上，正确读回残差令绝对 aligned gain 16/16 下降 | 保存残差是所测 moment 差和 aligned effect 的直接来源；仍不是完整向量均值或 loss 唯一中介证明 |
 | 针对性修改是否影响训练 | 正确读回残差在固定 histories 中 8/8 优于坐标移动和时间倒序；8 对独立训练的 OFF−ON loss 均值为 +0.02829，95% 区间为 [+0.01574,+0.04083] | 修改在声明设置中具有实际训练收益；尚不能说平均 bias 是唯一中介 |
-| 诊断能否复用于另一算子族 | Liger 的 FP32 dW 累加顺序协议在看结果前冻结；forward 与 hidden gradient 逐位相同，matched sham 精确，预先声明的来源方向在确认集合 15/16 为正 | 同一阶段/方向诊断能定位另一个同精度算术来源；幅度很小，没有总体或 loss 后果主张 |
+| 诊断能否复用于另一算子族 | Liger 的 FP32 dW 累加顺序协议在看结果前冻结；forward 与 hidden gradient 逐位相同，matched sham 精确，长度 64/256 的互斥确认均复现预先声明的来源方向 | 同一阶段/方向诊断能定位另一个同精度算术来源；幅度很小，没有原坐标写入或长期 loss 后果主张 |
 
 四项均有对应证据，但不是同一种“完成”。第一项是总体方向频率结论；第二项是固定真实
 history 的机制重构；第三项是独立配对训练；第四项是另一个固定集合算子族的诊断复用。

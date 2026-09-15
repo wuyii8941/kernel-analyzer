@@ -107,3 +107,22 @@ def test_negative_controls_are_not_promoted_to_bias_cases():
     assert granite["state_count"] == 16
     assert 0.00002 < granite["fixed_suite_total_rms"] < 0.00003
     assert granite["equivalence_decision"] == "EQUIVALENT"
+
+
+def test_mm_sources_remain_case_specific():
+    data = load_ledger()
+    mm = by_group(data, "mm_gemm_output_and_accumulation")["derived"][
+        "case_specific_sources"
+    ]
+    assert mm["qwen_seq128_forward_8_output"]["coherent_sources"] == [
+        "output_rounding"
+    ]
+    assert set(mm["qwen_seq64_forward_8_output"]["coherent_sources"]) == {
+        "kernel",
+        "output_rounding",
+    }
+    assert set(mm["mamba_seq64_forward_1_output"]["coherent_sources"]) == {
+        "kernel",
+        "output_rounding",
+    }
+    assert mm["phi4_seq64_backward_497_output"]["coherent_sources"] == ["kernel"]

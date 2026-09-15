@@ -192,11 +192,11 @@ FP32 master、每输入零 moments。这个位置不能仅凭长 fused kernel �
 |---|---|---|---|
 | P0 | MM/GEMM | accumulation arithmetic、最终 cast 与 joint 的三因素拆分 | 在独立状态上说明哪一项产生已测 conditional effect，并报告 interaction |
 | P0 | SiLU backward | 已完成显式指数 source variant 的同输入 factorial；保留 sigmoid 求值、表达式次序、最终 cast 的分量拆分 | 局部 source-choice 已闭合；自然 residual 的总体 mean bias 仍需独立状态和分量中间量 |
-| P0 | softmax saved state | 在独立状态中重复同一 source measure，再只恢复一致 saved probability | source residual 与 gradient/update 变化使用同一状态和同一方向定义 |
+| 已完成局部闭环 | softmax saved state | 同一调用行和保存统计的一致性修复；声明 warm-state 1024 步传播验证 | 局部 source 与 gradient/write 传播已闭合；自然总体 bias、持久方向和 material loss 仍开放 |
 | P1 | fused RoPE | RoPE 中间物化与 position scaling 分开；optimizer 对照固定 step counter | 分开算术来源与 optimizer-state response，不再用 high/low position 代替来源干预 |
 | P1 | Liger | 长度64/256互斥确认已完成；两边均为 FP32，仅改变 dW chunk addition order | 已确认同精度顺序可复现局部/摘要方向；原坐标写入与长期 loss sufficiency 仍不作声称 |
 | 已完成子项 | attention q-proj | key RMSNorm+RoPE BF16 中间物化 | 保留为局部根因；整个复合区域继续标为多来源 |
-| 局部诊断 | softmax saved state | 重构概率的行和与保存统计一致性检查 | 重归一化不能单独隔离来源；需要真实实现干预及 gradient/write 传播确认 |
+| 已完成局部诊断 | softmax saved state | 重构概率行和检查 + 一致 saved probability 的真实 backward/参数写入传播 | 轨迹 non-identity 已确认；重归一化不等于自然总体 bias 或质量后果 |
 | 已完成局部诊断 | Liger | 同为 FP32、只改变 chunk addition order，并在长度64/256确认 | 方向与零矩 AdamW 首步摘要 update 已复现；仍无原坐标写入与长期质量结论 |
 | 已完成主项 | AdamW8bit | blockwise moment 残差读回 | 只补外部条件确认，不再在相同数据上重复挑机制 |
 
@@ -217,7 +217,7 @@ FP32 master、每输入零 moments。这个位置不能仅凭长 fused kernel �
 - 以“根因到声明轨迹 non-identity”为终点：AdamW8bit、Liger 和 saved-P 三组；
 - 以“独立训练中方向稳定且超过质量门槛的改善”为终点：仅 AdamW8bit；
 - attention 的 key RMSNorm+RoPE 只闭合了整个复合区域中的一个局部来源；
-- MM、SiLU、RoPE 其余竞争解释没有被现有数据唯一排除，不能用更多模型位置代替。
+- MM 的跨位置统一机制、SiLU 的自然总体 bias、RoPE 的底层算术与状态分量仍有竞争解释，不能用更多模型位置代替。
 
 这不是把未完成案例改成阴性，而是对保留证据做完可复现的离线审计后，明确哪些新
 观测仍是必要条件；在没有这些观测前，不再从公式或旧聚合文件推断唯一根因。
