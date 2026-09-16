@@ -18,6 +18,13 @@ scripts/run_bias_checker_triton_examples.py \
 
 ## 实际结果
 
+在 2026-09-16 使用当前 `check_bias` 实现、CUDA GPU 和 32 个样本重新运行了同一组
+callable，结果保存在
+`results/property/bias_checker_examples_20260916_rerun.json`。六个 forward case 均为
+`VALID` 且完成 32/32 个样本；输出与下表的历史数值一致。另一次 backward 正控制也在
+当前 GPU 上重新运行，确认输出 RMS 为 0、backward RMS 为约 0.01，结果保存在
+`results/property/bias_checker_triton_backward_20260914.json`。
+
 | callable | measurement | bias status | total RMS | 解释范围 |
 |---|---|---|---:|---|
 | Triton elementwise add | `VALID` | `SYSTEMATIC_BIAS_NOT_CONFIRMED` | 0 | 声明输入下与 `torch.add` 逐位一致 |
@@ -43,9 +50,13 @@ backward 端到端检查：forward RMS 为 `0`，backward RMS 为
 
 ## 结论边界
 
-这验证的是“新 kernel 已经可以被包装成 callable 后，直接复用统一 bias 检查”。
-它不是任意 Triton 源码的零配置分析：调用约定、输出分配、reference 语义和输入
-生成仍需由接入方提供；原地写入、多输出、随机状态和 backward 需要相应 wrapper。
+本页同时记录历史 GPU 运行和 2026-09-16 的当前实现复跑。它们验证了“新 kernel 已经
+可以被包装成 callable 后，直接复用统一 bias 检查”；它们不是任意 Triton 源码的
+零配置分析，也不是自然训练案例的总体统计确认。若实现或运行环境发生变化，应重新
+执行下面的命令再更新结果文件。
+
+调用约定、输出分配、reference 语义和输入生成仍需由接入方提供；原地写入、多输出、
+随机状态和 backward 需要相应 wrapper。
 
 `SYSTEMATIC_BIAS_NOT_CONFIRMED` 只表示本次声明输入没有确认所检验的方向或缩放结构，
 不表示全空间、其他输入分布或训练状态中不存在 bias。示例中的 row-sum case 是

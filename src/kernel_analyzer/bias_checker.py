@@ -41,28 +41,97 @@ def _flatten_tensors(value: Any, path: tuple[str, ...] = ()) -> list[tuple[tuple
     return []
 
 
-def _clone_value(value: Any, *, torch: Any, requires_grad: bool) -> Any:
+def _clone_value(
+    value: Any,
+    *,
+    torch: Any,
+    requires_grad: bool,
+    memo: Optional[dict[int, Any]] = None,
+) -> Any:
+    """Clone a call tree while preserving tensor aliasing.
+
+    A candidate may intentionally receive the same tensor in two positions
+    (for example ``candidate(x, x)`` with an in-place implementation).  The
+    old implementation cloned each occurrence independently, changing the
+    semantics before either callable ran.  ``memo`` is shared across args and
+    kwargs so aliases survive the candidate/reference split.
+    """
+
+    if memo is None:
+        memo = {}
+    object_id = id(value)
+    if object_id in memo:
+        return memo[object_id]
     if isinstance(value, torch.Tensor):
         cloned = value.detach().clone()
         if cloned.is_floating_point() or cloned.is_complex():
             cloned.requires_grad_(bool(requires_grad or value.requires_grad))
+        memo[object_id] = cloned
         return cloned
     if isinstance(value, tuple):
-        return tuple(_clone_value(item, torch=torch, requires_grad=requires_grad) for item in value)
+        # Tuples cannot be memoized before construction, but their tensor
+        # leaves are still shared through the common memo.
+        cloned = tuple(
+            _clone_value(item, torch=torch, requires_grad=requires_grad, memo=memo)
+            for item in value
+        )
+        memo[object_id] = cloned
+        return cloned
     if isinstance(value, list):
-        return [_clone_value(item, torch=torch, requires_grad=requires_grad) for item in value]
+        cloned_list: list[Any] = []
+        memo[object_id] = cloned_list
+        cloned_list.extend(
+            _clone_value(item, torch=torch, requires_grad=requires_grad, memo=memo)
+            for item in value
+        )
+        return cloned_list
     if isinstance(value, Mapping):
-        return {
-            key: _clone_value(item, torch=torch, requires_grad=requires_grad)
+        cloned_mapping: dict[Any, Any] = {}
+        memo[object_id] = cloned_mapping
+        cloned_mapping.update({
+            key: _clone_value(item, torch=torch, requires_grad=requires_grad, memo=memo)
             for key, item in value.items()
-        }
+        })
+        return cloned_mapping
     try:
-        return copy.deepcopy(value)
+        cloned = copy.deepcopy(value, memo)
+        memo[object_id] = cloned
+        return cloned
     except Exception:
         # Immutable arguments (integers, strings, lightweight descriptors) do
         # not need a deep copy.  If a mutable custom object cannot be copied,
         # the callable is responsible for not mutating it.
         return value
+
+
+def _clone_call(
+    args: tuple[Any, ...],
+    kwargs: Mapping[str, Any],
+    *,
+    torch: Any,
+    requires_grad: bool,
+) -> tuple[tuple[Any, ...], dict[str, Any]]:
+    """Clone args and kwargs with one alias-preserving memo."""
+
+    memo: dict[int, Any] = {}
+    return (
+        tuple(_clone_value(args, torch=torch, requires_grad=requires_grad, memo=memo)),
+        dict(_clone_value(kwargs, torch=torch, requires_grad=requires_grad, memo=memo)),
+    )
+
+
+def _unique_differentiable_inputs(
+    args: tuple[Any, ...], kwargs: Mapping[str, Any]
+) -> list[Any]:
+    """Collect floating tensor leaves from both args and kwargs once each."""
+
+    inputs: list[Any] = []
+    seen: set[int] = set()
+    for _, tensor in _flatten_tensors((args, kwargs)):
+        if tensor.requires_grad and tensor.is_floating_point() and id(tensor) not in seen:
+            seen.add(id(tensor))
+            inputs.append(tensor)
+    return inputs
 
 
 def _normalise_call(value: Any) -> tuple[tuple[Any, ...], dict[str, Any]]:
@@ -91,6 +160,44 @@ def _restore_rng(torch: Any, state: Any) -> None:
     torch.set_rng_state(cpu_state)
     if cuda_states is not None and bool(torch.cuda.is_available()):
         torch.cuda.set_rng_state_all(cuda_states)
+
+
+def _shape_signature(leaves: list[tuple[tuple[str, ...], Any]]) -> tuple[Any, ...]:
+    """Return a JSON-friendly structural signature for one tensor tree."""
+
+    return tuple(
+        (path, tuple(int(dim) for dim in tensor.shape), str(tensor.dtype))
+        for path, tensor in leaves
+    )
+
+
+def _default_cotangents(output: Any, *, torch: Any, index: int) -> list[Any]:
+    """Use two deterministic upstream directions for the default backward check.
+
+    An all-ones cotangent alone can miss a backward error orthogonal to that
+    direction.  The alternating direction is a cheap second probe; it is not a
+    proof of full Jacobian equality, so the report exposes the exact cotangent
+    scope.  Scalar outputs only need one direction.
+    """
+
+    ones = torch.ones_like(output.detach())
+    if int(output.numel()) <= 1:
+        return [ones]
+    ordinal = torch.arange(output.numel(), device=output.device).reshape(output.shape)
+    signs = torch.where(
+        ((ordinal + int(index)) % 2) == 0,
+        torch.ones((), device=output.device, dtype=output.dtype),
+        -torch.ones((), device=output.device, dtype=output.dtype),
+    )
+    return [ones, signs]
+
+
+def _normalise_cotangents(value: Any, *, output: Any, torch: Any) -> list[Any]:
+    """Accept one cotangent or an explicit sequence of cotangents."""
+
+    if isinstance(value, (tuple, list)):
+        return list(value)
+    return [value]
 
 
 def _student_interval(values: Sequence[float], *, alpha: float) -> dict[str, Any]:
@@ -233,11 +340,10 @@ def _stage_report(
         if lower > 0.0 or upper < 0.0:
             reasons.append("HELD_OUT_DIRECTIONAL_MEAN_NONZERO")
     sign = direction.get("sign_prevalence") or {}
-    if sign.get("decision") in {
-        "DIRECTION_PREVALENCE_CONFIRMED",
-        "POSITIVE_DIRECTION_FREQUENCY_BELOW_NULL",
-    }:
-        reasons.append("HELD_OUT_DIRECTIONAL_SIGN_PREVALENCE")
+    # Sign prevalence is reported as a separate descriptive/inferential
+    # endpoint.  An imbalanced number of positive and negative observations
+    # does not imply a nonzero mean (large observations can cancel small ones),
+    # so it must never by itself produce a mean-bias verdict.
     aligned = aligned_interval.get("interval")
     if aligned_interval.get("status") == "VALID" and aligned is not None:
         if aligned[0] > 0.0 or aligned[1] < 0.0:
@@ -261,6 +367,14 @@ def _stage_report(
         "mean_effect_norm_ratio": mean_effect_ratio,
         "aligned_ratio_of_sums": aligned_ratio_of_sums,
         "aligned_statewise_gain_interval": aligned_interval,
+        "aligned_estimand": "mean_of_statewise_ratios",
+        "aligned_ratio_of_sums_scope": "descriptive_finite_sample_only",
+        "endpoint_alpha": alpha,
+        "decision_endpoints": [
+            "held_out_directional_mean",
+            "statewise_aligned_gain",
+        ],
+        "sign_prevalence_is_separate_from_mean_decision": True,
         "direction": direction,
         "systematic_bias_reasons": reasons,
         "decision": (
@@ -304,12 +418,16 @@ def check_bias(
     argument.  Each input is cloned before either implementation runs.
 
     The default check compares output tensors.  ``check_backward=True`` adds
-    a gradient check with respect to all floating-point tensor inputs.  For a
-    backward check the output must be one tensor; by default its cotangent is
-    all ones, or ``make_cotangent(output, index)`` may provide one.
+    a gradient check with respect to all unique floating-point tensor inputs
+    in positional and keyword arguments.  For a backward check the output
+    must be one tensor; by default the checker uses all-ones and
+    alternating-sign cotangents (one cotangent for scalar output).
+    ``make_cotangent(output, index)`` may provide one tensor or a sequence of
+    tensors instead.
 
     The result is a JSON-compatible dictionary.  ``SYSTEMATIC_BIAS_CONFIRMED``
-    means at least one held-out directional or aligned endpoint is nonzero;
+    means at least one held-out directional-mean or aligned-gain endpoint is
+    nonzero;
     ``SYSTEMATIC_BIAS_NOT_CONFIRMED`` is not a proof of no bias.  Any failed
     execution, malformed output, non-finite value, or unidentifiable split
     returns ``UNRESOLVED_MEASUREMENT`` rather than a negative claim.
@@ -334,7 +452,7 @@ def check_bias(
         import torch
     except Exception as error:  # pragma: no cover - package can still import without torch
         return {
-            "schema": "kernel-analyzer-bias-check-v1",
+            "schema": "kernel-analyzer-bias-check-v2",
             "status": "UNRESOLVED_MEASUREMENT",
             "measurement_status": "INVALID",
             "scope": "DECLARED_INPUT_DISTRIBUTION_OUTPUT_BIAS",
@@ -342,19 +460,27 @@ def check_bias(
         }
 
     stage_data: dict[str, dict[str, Any]] = {
-        "OUTPUT": {"effects": [], "references": [], "allclose": [], "errors": []}
+        "OUTPUT": {
+            "effects": [], "references": [], "allclose": [], "signatures": [],
+            "sample_indices": [], "errors": [],
+        }
     }
     if check_backward:
-        stage_data["BACKWARD"] = {"effects": [], "references": [], "allclose": [], "errors": []}
+        stage_data["BACKWARD"] = {
+            "effects": [], "references": [], "allclose": [], "signatures": [],
+            "sample_indices": [], "errors": [],
+        }
 
     for index in range(samples):
         try:
             raw_inputs = make_inputs(index)
             raw_args, raw_kwargs = _normalise_call(raw_inputs)
-            candidate_args = _clone_value(raw_args, torch=torch, requires_grad=check_backward)
-            candidate_kwargs = _clone_value(raw_kwargs, torch=torch, requires_grad=check_backward)
-            reference_args = _clone_value(raw_args, torch=torch, requires_grad=check_backward)
-            reference_kwargs = _clone_value(raw_kwargs, torch=torch, requires_grad=check_backward)
+            candidate_args, candidate_kwargs = _clone_call(
+                raw_args, raw_kwargs, torch=torch, requires_grad=check_backward
+            )
+            reference_args, reference_kwargs = _clone_call(
+                raw_args, raw_kwargs, torch=torch, requires_grad=check_backward
+            )
         except Exception as error:
             stage_data["OUTPUT"]["errors"].append({"sample": index, "where": "INPUT", "error": str(error)})
             continue
@@ -414,6 +540,8 @@ def check_bias(
         stage_data["OUTPUT"]["effects"].append(torch.cat(output_effect_parts))
         stage_data["OUTPUT"]["references"].append(torch.cat(output_reference_parts))
         stage_data["OUTPUT"]["allclose"].append(output_allclose)
+        stage_data["OUTPUT"]["signatures"].append(_shape_signature(reference_leaves))
+        stage_data["OUTPUT"]["sample_indices"].append(index)
 
         if not check_backward:
             continue
@@ -428,22 +556,26 @@ def check_bias(
             continue
         candidate_tensor = candidate_output_leaves[0][1]
         reference_tensor = reference_output_leaves[0][1]
-        cotangent = (
+        cotangent_value = (
             make_cotangent(reference_tensor.detach(), index)
             if make_cotangent is not None
-            else torch.ones_like(reference_tensor.detach())
+            else _default_cotangents(reference_tensor.detach(), torch=torch, index=index)
         )
-        if not isinstance(cotangent, torch.Tensor) or cotangent.shape != reference_tensor.shape:
+        cotangents = _normalise_cotangents(
+            cotangent_value, output=reference_tensor.detach(), torch=torch
+        )
+        if not cotangents or any(
+            not isinstance(cotangent, torch.Tensor) or cotangent.shape != reference_tensor.shape
+            for cotangent in cotangents
+        ):
             stage_data["BACKWARD"]["errors"].append({
                 "sample": index,
                 "where": "BACKWARD",
-                "error": "cotangent must be a tensor with the output shape",
+                "error": "cotangent(s) must be tensor(s) with the output shape",
             })
             continue
-        candidate_cotangent = cotangent.to(device=candidate_tensor.device)
-        reference_cotangent = cotangent.to(device=reference_tensor.device)
-        candidate_inputs = [leaf for _, leaf in _flatten_tensors(candidate_args) if leaf.requires_grad and leaf.is_floating_point()]
-        reference_inputs = [leaf for _, leaf in _flatten_tensors(reference_args) if leaf.requires_grad and leaf.is_floating_point()]
+        candidate_inputs = _unique_differentiable_inputs(candidate_args, candidate_kwargs)
+        reference_inputs = _unique_differentiable_inputs(reference_args, reference_kwargs)
         if not candidate_inputs or not reference_inputs or len(candidate_inputs) != len(reference_inputs):
             stage_data["BACKWARD"]["errors"].append({
                 "sample": index,
@@ -452,28 +584,37 @@ def check_bias(
             })
             continue
         try:
-            if preserve_rng:
-                backward_rng = _snapshot_rng(torch)
-            candidate_grads = torch.autograd.grad(
-                (candidate_tensor * candidate_cotangent).sum(), candidate_inputs,
-                allow_unused=True,
-            )
-            if preserve_rng:
-                _restore_rng(torch, backward_rng)
-            reference_grads = torch.autograd.grad(
-                (reference_tensor * reference_cotangent).sum(), reference_inputs,
-                allow_unused=True,
-            )
-            candidate_parts = [
-                (grad if grad is not None else torch.zeros_like(inp)).detach().to(dtype=torch.float64).reshape(-1)
-                for grad, inp in zip(candidate_grads, candidate_inputs)
-            ]
-            reference_parts = [
-                (grad if grad is not None else torch.zeros_like(inp)).detach().to(dtype=torch.float64).reshape(-1)
-                for grad, inp in zip(reference_grads, reference_inputs)
-            ]
-            candidate_vector = torch.cat(candidate_parts).to(device="cpu")
-            reference_vector = torch.cat(reference_parts).to(device="cpu")
+            candidate_vectors = []
+            reference_vectors = []
+            for cotangent in cotangents:
+                candidate_cotangent = cotangent.to(device=candidate_tensor.device)
+                reference_cotangent = cotangent.to(device=reference_tensor.device)
+                if preserve_rng:
+                    backward_rng = _snapshot_rng(torch)
+                candidate_grads = torch.autograd.grad(
+                    (candidate_tensor * candidate_cotangent).sum(), candidate_inputs,
+                    allow_unused=True, retain_graph=True,
+                )
+                if preserve_rng:
+                    _restore_rng(torch, backward_rng)
+                reference_grads = torch.autograd.grad(
+                    (reference_tensor * reference_cotangent).sum(), reference_inputs,
+                    allow_unused=True, retain_graph=True,
+                )
+                candidate_parts = [
+                    (grad if grad is not None else torch.zeros_like(inp)).detach()
+                    .to(dtype=torch.float64).reshape(-1)
+                    for grad, inp in zip(candidate_grads, candidate_inputs)
+                ]
+                reference_parts = [
+                    (grad if grad is not None else torch.zeros_like(inp)).detach()
+                    .to(dtype=torch.float64).reshape(-1)
+                    for grad, inp in zip(reference_grads, reference_inputs)
+                ]
+                candidate_vectors.append(torch.cat(candidate_parts).to(device="cpu"))
+                reference_vectors.append(torch.cat(reference_parts).to(device="cpu"))
+            candidate_vector = torch.cat(candidate_vectors)
+            reference_vector = torch.cat(reference_vectors)
             if not bool(torch.isfinite(candidate_vector).all() and torch.isfinite(reference_vector).all()):
                 raise ValueError("non-finite gradient")
             stage_data["BACKWARD"]["effects"].append(candidate_vector - reference_vector)
@@ -481,11 +622,16 @@ def check_bias(
             stage_data["BACKWARD"]["allclose"].append(bool(torch.allclose(
                 candidate_vector, reference_vector, rtol=rtol, atol=atol
             )))
+            stage_data["BACKWARD"]["signatures"].append(tuple(
+                list(_shape_signature(_flatten_tensors(reference_args)))
+                + [("cotangent",), len(cotangents)]
+            ))
+            stage_data["BACKWARD"]["sample_indices"].append(index)
         except Exception as error:
             stage_data["BACKWARD"]["errors"].append({"sample": index, "where": "BACKWARD", "error": str(error)})
 
     result: dict[str, Any] = {
-        "schema": "kernel-analyzer-bias-check-v1",
+        "schema": "kernel-analyzer-bias-check-v2",
         "status": "SYSTEMATIC_BIAS_NOT_CONFIRMED",
         "measurement_status": "VALID",
         "scope": "DECLARED_INPUT_DISTRIBUTION_OUTPUT_BIAS",
@@ -507,6 +653,7 @@ def check_bias(
             "Reference, call binding, and input distribution are supplied by the caller and are not validated semantically.",
         ],
     }
+    endpoint_alpha = alpha / 2.0
     for stage_name, data in stage_data.items():
         if len(data["effects"]) != samples:
             stage_result = {
@@ -522,18 +669,79 @@ def check_bias(
             result["measurement_status"] = "PARTIAL" if data["effects"] else "INVALID"
             result["status"] = "UNRESOLVED_MEASUREMENT"
             continue
-        stage_result = _stage_report(
-            data["effects"], data["references"], alpha=alpha,
-            reference_energy_floor=reference_energy_floor,
-            allclose_results=data["allclose"], stage_name=stage_name, torch=torch,
-            calibration_count=calibration_samples,
-        )
-        stage_result["errors"] = data["errors"]
+        signatures = data.get("signatures") or [None] * samples
+        grouped: dict[str, dict[str, Any]] = {}
+        for position, signature in enumerate(signatures):
+            # repr is only a local grouping key; the actual signature is
+            # preserved in the report for inspection and JSON serialization.
+            key = repr(signature)
+            group = grouped.setdefault(
+                key,
+                {"signature": signature, "positions": [], "effects": [], "references": [], "allclose": []},
+            )
+            group["positions"].append(position)
+            group["effects"].append(data["effects"][position])
+            group["references"].append(data["references"][position])
+            group["allclose"].append(data["allclose"][position])
+        reports = []
+        for group in grouped.values():
+            if len(grouped) == 1:
+                calibration_in_group = calibration_samples
+            else:
+                # A calibration/confirmation split is meaningful only within
+                # each shape/signature group.  If a group does not contain
+                # both halves, expose it as descriptive rather than silently
+                # borrowing samples from another shape.
+                calibration_in_group = sum(
+                    1 for position in group["positions"] if position < calibration_samples
+                )
+                if calibration_in_group < 2 or len(group["positions"]) - calibration_in_group < 2:
+                    reports.append({
+                        "signature": group["signature"],
+                        "sample_indices": [data["sample_indices"][p] for p in group["positions"]],
+                        "measurement_status": "PARTIAL",
+                        "sample_count": len(group["positions"]),
+                        "decision": "UNRESOLVED_MEASUREMENT",
+                        "reason": "shape/signature group lacks both calibration and confirmation samples",
+                    })
+                    continue
+            report = _stage_report(
+                group["effects"], group["references"], alpha=endpoint_alpha,
+                reference_energy_floor=reference_energy_floor,
+                allclose_results=group["allclose"], stage_name=stage_name, torch=torch,
+                calibration_count=calibration_in_group,
+            )
+            report["signature"] = group["signature"]
+            report["sample_indices"] = [data["sample_indices"][p] for p in group["positions"]]
+            reports.append(report)
+        if len(reports) == 1:
+            stage_result = reports[0]
+            stage_result["errors"] = data["errors"]
+        else:
+            stage_result = {
+                "stage": stage_name,
+                "measurement_status": "VALID" if all(
+                    report.get("measurement_status") == "VALID" for report in reports
+                ) else "PARTIAL",
+                "grouped_by_signature": True,
+                "group_count": len(reports),
+                "groups": reports,
+                "errors": data["errors"],
+                # There is no pooled verdict across incompatible vector
+                # spaces.  Callers must inspect the scoped group results.
+                "decision": "GROUPED_BY_SIGNATURE",
+                "scope": "DECLARED_INPUT_DISTRIBUTION_GROUPED_BY_OUTPUT_SIGNATURE",
+            }
         result["stages"][stage_name] = stage_result
-        if stage_result["decision"] == "SYSTEMATIC_BIAS_CONFIRMED":
+        if stage_result.get("decision") == "SYSTEMATIC_BIAS_CONFIRMED":
             result["status"] = "SYSTEMATIC_BIAS_CONFIRMED"
+        elif stage_result.get("decision") == "GROUPED_BY_SIGNATURE":
+            result["status"] = "UNRESOLVED_MEASUREMENT"
     if check_backward:
         result["scope"] = "DECLARED_INPUT_DISTRIBUTION_OUTPUT_AND_BACKWARD_BIAS"
+        result["backward_cotangent_policy"] = (
+            "default uses all-ones and alternating-sign cotangents; a custom factory may return one or more"
+        )
     if "OUTPUT" in result["stages"]:
         # Keep the explicit stage map while making the common one-stage case
         # convenient to consume as report["output"].

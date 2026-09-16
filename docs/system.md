@@ -51,22 +51,21 @@ print(report["status"])
 `make_inputs(index)` 可以返回参数元组，也可以返回
 `{"args": (...), "kwargs": {...}}`。入口会为每个样本分别调用两种实现，记录输出
 差异的总 RMS、reference-aligned scaling，以及只用前半样本选择、后半样本确认的
-方向性。`check_backward=True` 时，单张量输出还会对所有浮点输入测量参数梯度差异；
-模型、optimizer 和 loss 不是这个入口的前置条件。
+方向性。`check_backward=True` 时，单张量输出还会对位置参数和 `kwargs` 中所有不重复的浮点输入测量参数梯度差异；默认使用全 1 和交替正负两个上游 cotangent。自定义 `make_cotangent` 可以返回一个或多个上游梯度；模型、optimizer 和 loss 不是这个入口的前置条件。报告中的 `aligned_statewise_gain_interval` 对应逐状态比例均值；`aligned_ratio_of_sums` 只作有限样本描述，不与该推断端点混称。
 
 如果算子本身接收“一个 tuple 作为单个参数”，请使用显式 `args` mapping，避免和
 “多个位置参数”的 tuple 约定混淆。
 
 结果状态只有三种科研含义：
 
-* `SYSTEMATIC_BIAS_CONFIRMED`：至少一个独立的方向或 aligned endpoint 在声明样本上显示非零结构；
+* `SYSTEMATIC_BIAS_CONFIRMED`：冻结方向的 held-out 均值端点或 statewise aligned scaling 端点越过零；
 * `SYSTEMATIC_BIAS_NOT_CONFIRMED`：这批输入没有确认所检验的结构，**不等于证明没有 bias**；
 * `UNRESOLVED_MEASUREMENT`：执行失败、输出不匹配、非有限值或数据不足，不能作阴性结论。
 
 入口输出的是 `DECLARED_INPUT_DISTRIBUTION_ONLY` 范围内的 bias 检查，不自动解释根因，
 也不自动声称训练或 loss 后果。方向的精确符号频率端点要求后半样本是独立抽样；若
 输入只是固定样本表，结果应理解为该表的描述。零投影会单独计数，不会被当作相反方向。
-`allclose` 只作为辅助字段，不参与上述 bias 状态判定。通过后，再把算子接入现有采集器，进行 local → gradient → update 和
+符号正负比例单独报告，不会因为比例不平衡就替代均值 bias 判定；两个主要端点使用 Bonferroni 分配的区间显著性。`allclose` 只作为辅助字段，不参与上述 bias 状态判定。输入中的共享 Tensor 别名会在 candidate/reference 两侧保持；不同输出 shape 会按签名分组，并返回 scoped 结果，不会跨向量空间强行堆叠。通过后，再把算子接入现有采集器，进行 local → gradient → update 和
 人工主导的来源分析。
 
 ## 三阶段训练分析怎样复用

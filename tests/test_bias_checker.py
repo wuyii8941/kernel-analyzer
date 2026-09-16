@@ -46,6 +46,13 @@ def test_check_bias_detects_aligned_scaling_even_when_mean_direction_cancels():
     output = report["stages"]["OUTPUT"]
     assert report["status"] == "SYSTEMATIC_BIAS_CONFIRMED"
     assert output["aligned_ratio_of_sums"] == pytest.approx(0.02, rel=1e-5)
+    assert output["aligned_estimand"] == "mean_of_statewise_ratios"
+    assert output["aligned_ratio_of_sums_scope"] == "descriptive_finite_sample_only"
+    assert output["endpoint_alpha"] == pytest.approx(0.025)
+    assert output["decision_endpoints"] == [
+        "held_out_directional_mean",
+        "statewise_aligned_gain",
+    ]
     assert "STATEWISE_ALIGNED_GAIN_NONZERO" in output["systematic_bias_reasons"]
     assert output["allclose_auxiliary"]["allclose"] is False
 
@@ -111,3 +118,85 @@ def test_check_bias_does_not_turn_execution_failure_into_a_negative_result():
 def test_check_bias_rejects_unusable_sample_configuration():
     with pytest.raises(ValueError):
         check_bias(lambda x: x, lambda x: x, _inputs, samples=3)
+
+
+def test_check_bias_preserves_tensor_aliases_across_arguments():
+    def candidate(x, y):
+        x.add_(y)
+        x.add_(y)
+        return x
+
+    def reference(x, y):
+        x.add_(2 * y)
+        return x
+
+    def make_alias_inputs(index):
+        value = torch.tensor([1.0 + index])
+        return value, value
+
+    report = check_bias(candidate, reference, make_alias_inputs, samples=8)
+    assert report["measurement_status"] == "VALID"
+    assert report["stages"]["OUTPUT"]["total_rms"] > 0.0
+
+
+def test_check_bias_backward_includes_keyword_tensor_inputs():
+    report = check_bias(
+        lambda *, x: x * x,
+        lambda *, x: x * x,
+        lambda index: {"kwargs": {"x": torch.tensor([1.0 + index])}},
+        samples=8,
+        check_backward=True,
+    )
+    assert report["measurement_status"] == "VALID"
+    assert report["stages"]["BACKWARD"]["measurement_status"] == "VALID"
+
+
+def test_check_bias_groups_variable_output_shapes_instead_of_stacking_them():
+    def make_inputs(index):
+        width = 2 if index % 2 == 0 else 3
+        return (torch.arange(float(width)),)
+
+    report = check_bias(
+        lambda x: x,
+        lambda x: x,
+        make_inputs,
+        samples=8,
+    )
+    output = report["stages"]["OUTPUT"]
+    assert output["grouped_by_signature"] is True
+    assert output["group_count"] == 2
+    assert report["status"] == "UNRESOLVED_MEASUREMENT"
+
+
+def test_sign_imbalance_does_not_replace_a_zero_mean_bias_decision():
+    def candidate(x, index):
+        return x + (-7.0 if index == 15 else 1.0)
+
+    def make_inputs(index):
+        return {"args": (torch.tensor([0.0]), index)}
+
+    report = check_bias(candidate, lambda x, index: x, make_inputs, samples=16)
+    output = report["stages"]["OUTPUT"]
+    assert output["direction"]["sign_prevalence"] is not None
+    assert "HELD_OUT_DIRECTIONAL_SIGN_PREVALENCE" not in output["systematic_bias_reasons"]
+    assert output["decision"] == "SYSTEMATIC_BIAS_NOT_CONFIRMED"
+
+
+def test_default_backward_uses_more_than_the_all_ones_cotangent():
+    def candidate(x):
+        return torch.stack((2 * x[0] - x[1], -x[0] + 2 * x[1]))
+
+    def reference(x):
+        return x
+
+    report = check_bias(
+        candidate,
+        reference,
+        lambda index: (torch.tensor([1.0 + index, 2.0 + index]),),
+        samples=8,
+        check_backward=True,
+    )
+    backward = report["stages"]["BACKWARD"]
+    assert backward["measurement_status"] == "VALID"
+    assert report["backward_cotangent_policy"].startswith("default uses")
+    assert backward["total_rms"] > 0.0
