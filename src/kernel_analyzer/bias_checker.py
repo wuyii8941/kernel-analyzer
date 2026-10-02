@@ -240,6 +240,34 @@ def _student_interval(values: Sequence[float], *, alpha: float) -> dict[str, Any
     }
 
 
+def _aligned_projection_interval(
+    inner_products: Sequence[float], reference_energies: Sequence[float], *,
+    alpha: float, reference_energy_floor: float = 1e-20,
+) -> dict[str, Any]:
+    """Infer mean dot(effect, unit_reference), without selecting usable states.
+
+    A missing direction makes this endpoint unavailable on the declared
+    population.  Dropping such states would silently change that population.
+    """
+    if len(inner_products) != len(reference_energies):
+        raise ValueError("aligned statistics must have matching lengths")
+    invalid = [i for i, (inner, energy) in enumerate(zip(inner_products, reference_energies))
+               if not math.isfinite(inner) or not math.isfinite(energy)
+               or energy <= reference_energy_floor]
+    if invalid:
+        return {
+            "status": "NOT_IDENTIFIABLE_REFERENCE_DIRECTION",
+            "count": len(inner_products), "interval": None,
+            "invalid_sample_positions": invalid,
+            "reason": "reference direction unavailable; no observations were silently discarded",
+        }
+    values = [inner / math.sqrt(energy)
+              for inner, energy in zip(inner_products, reference_energies)]
+    if not all(math.isfinite(value) for value in values):
+        return {"status": "INVALID_PROJECTION", "count": len(values), "interval": None}
+    return {**_student_interval(values, alpha=alpha), "values": values}
+
+
 def _stage_report(
     effects: list[Any],
     references: list[Any],
@@ -250,6 +278,8 @@ def _stage_report(
     stage_name: str,
     torch: Any,
     calibration_count: Optional[int] = None,
+    directional_margin: float = 0.0,
+    aligned_projection_margin: float = 0.0,
 ) -> dict[str, Any]:
     import numpy as np
 
@@ -258,7 +288,6 @@ def _stage_report(
     x_values: list[float] = []
     b_values: list[float] = []
     a_values: list[float] = []
-    aligned_values: list[float] = []
     for index, (effect, reference) in enumerate(zip(effect_arrays, reference_arrays)):
         x = float(torch.dot(effect, effect).item())
         b = float(torch.dot(reference, reference).item())
@@ -266,8 +295,6 @@ def _stage_report(
         x_values.append(x)
         b_values.append(b)
         a_values.append(a)
-        if b > reference_energy_floor:
-            aligned_values.append(a / b)
 
     total_effect_energy = math.fsum(x_values)
     total_reference_energy = math.fsum(b_values)
@@ -288,7 +315,9 @@ def _stage_report(
         if total_reference_energy > 0.0
         else None
     )
-    aligned_interval = _student_interval(aligned_values, alpha=alpha)
+    aligned_interval = _aligned_projection_interval(
+        a_values, b_values, alpha=alpha, reference_energy_floor=reference_energy_floor,
+    )
 
     direction: dict[str, Any]
     calibration_count = calibration_count if calibration_count is not None else len(effects) // 2
@@ -337,7 +366,7 @@ def _stage_report(
     interval = direction.get("confirmation_projection_interval", {})
     if interval.get("status") == "VALID":
         lower, upper = interval["interval"]
-        if lower > 0.0 or upper < 0.0:
+        if lower > directional_margin or upper < -directional_margin:
             reasons.append("HELD_OUT_DIRECTIONAL_MEAN_NONZERO")
     sign = direction.get("sign_prevalence") or {}
     # Sign prevalence is reported as a separate descriptive/inferential
@@ -346,13 +375,18 @@ def _stage_report(
     # so it must never by itself produce a mean-bias verdict.
     aligned = aligned_interval.get("interval")
     if aligned_interval.get("status") == "VALID" and aligned is not None:
-        if aligned[0] > 0.0 or aligned[1] < 0.0:
-            reasons.append("STATEWISE_ALIGNED_GAIN_NONZERO")
+        if aligned[0] > aligned_projection_margin or aligned[1] < -aligned_projection_margin:
+            reasons.append("UNIT_REFERENCE_PROJECTION_MEAN_NONZERO")
 
     if not allclose_results:
         allclose = None
     else:
         allclose = all(allclose_results)
+    decision = "SYSTEMATIC_BIAS_NOT_CONFIRMED"
+    if aligned_interval.get("status") != "VALID" or interval.get("status") not in (None, "VALID"):
+        decision = "UNRESOLVED_MEASUREMENT"
+    if reasons:
+        decision = "SYSTEMATIC_BIAS_CONFIRMED"
     report: dict[str, Any] = {
         "stage": stage_name,
         "measurement_status": "VALID",
@@ -366,26 +400,42 @@ def _stage_report(
         "total_rms": total_rms,
         "mean_effect_norm_ratio": mean_effect_ratio,
         "aligned_ratio_of_sums": aligned_ratio_of_sums,
-        "aligned_statewise_gain_interval": aligned_interval,
-        "aligned_estimand": "mean_of_statewise_ratios",
+        "aligned_projection_interval": aligned_interval,
+        "aligned_estimand": "mean_dot_effect_unit_reference",
+        "aligned_projection_units": "same_as_effect_vector",
+        "reference_energy_floor": reference_energy_floor,
+        "paired_sufficient_statistics": {
+            "effect_energy": x_values,
+            "reference_energy": b_values,
+            "effect_reference_inner_product": a_values,
+            "ordering": "sample_indices",
+        },
         "aligned_ratio_of_sums_scope": "descriptive_finite_sample_only",
         "endpoint_alpha": alpha,
+        "directional_margin": directional_margin,
+        "aligned_projection_margin": aligned_projection_margin,
         "decision_endpoints": [
             "held_out_directional_mean",
-            "statewise_aligned_gain",
+            "unit_reference_projection_mean",
         ],
         "sign_prevalence_is_separate_from_mean_decision": True,
         "direction": direction,
         "systematic_bias_reasons": reasons,
-        "decision": (
-            "SYSTEMATIC_BIAS_CONFIRMED"
-            if reasons
-            else "SYSTEMATIC_BIAS_NOT_CONFIRMED"
+        "mean_bias_decision": (
+            "NOT_ASSESSED" if interval.get("status") != "VALID" else
+            "CONFIRMED" if "HELD_OUT_DIRECTIONAL_MEAN_NONZERO" in reasons else "NOT_CONFIRMED"
         ),
+        "aligned_effect_decision": (
+            "NOT_ASSESSED" if aligned_interval.get("status") != "VALID" else
+            "CONFIRMED" if "UNIT_REFERENCE_PROJECTION_MEAN_NONZERO" in reasons else "NOT_CONFIRMED"
+        ),
+        "mean_bias_scope": "calibration_selected_fixed_direction_only",
+        "aligned_effect_scope": "mean_unit_reference_projection_not_fixed_vector_mean",
+        "decision": decision,
         "scope": "DECLARED_INPUT_DISTRIBUTION_ONLY",
         "inference_note": (
             "Total RMS and aligned ratio are descriptive for this finite paired sample; "
-            "the split-sample direction endpoint is conditional on the input generator."
+            "both mean endpoints are conditional on the declared input generator and Student assumptions."
         ),
     }
     # Keep numpy imported here only to ensure non-finite checks below use a
@@ -407,6 +457,9 @@ def check_bias(
     check_backward: bool = False,
     make_cotangent: Optional[Callable[..., Any]] = None,
     reference_energy_floor: float = 1e-20,
+    directional_margin: float = 0.0,
+    aligned_projection_margin: float = 0.0,
+    aligned_margin: Optional[float] = None,
     rtol: float = 1e-5,
     atol: float = 1e-8,
     preserve_rng: bool = True,
@@ -425,9 +478,17 @@ def check_bias(
     ``make_cotangent(output, index)`` may provide one tensor or a sequence of
     tensors instead.
 
+    The aligned endpoint is mean dot(effect, reference / norm(reference)),
+    not mean statewise relative gain.  Both ``directional_margin`` and
+    ``aligned_projection_margin`` default to zero and have effect-vector
+    units.  Nonzero margins are optional, predeclared application thresholds,
+    not a requirement for detecting statistical bias.  The legacy
+    dimensionless ``aligned_margin`` accepts only None or zero: an old
+    nonzero relative-gain threshold cannot be reused in the new units.
+
     The result is a JSON-compatible dictionary.  ``SYSTEMATIC_BIAS_CONFIRMED``
-    means at least one held-out directional-mean or aligned-gain endpoint is
-    nonzero;
+    means at least one held-out directional-mean or unit-reference endpoint
+    exceeds its declared practical margin;
     ``SYSTEMATIC_BIAS_NOT_CONFIRMED`` is not a proof of no bias.  Any failed
     execution, malformed output, non-finite value, or unidentifiable split
     returns ``UNRESOLVED_MEASUREMENT`` rather than a negative claim.
@@ -445,6 +506,14 @@ def check_bias(
         raise ValueError("alpha must lie in (0, 0.5)")
     if not math.isfinite(reference_energy_floor) or reference_energy_floor < 0.0:
         raise ValueError("reference_energy_floor must be finite and nonnegative")
+    if not math.isfinite(directional_margin) or directional_margin < 0.0:
+        raise ValueError("directional_margin must be finite and nonnegative")
+    if aligned_margin is not None and aligned_margin != 0.0:
+        raise ValueError("aligned_margin was dimensionless and cannot be migrated automatically; "
+                         "use zero for detection or explicitly declare aligned_projection_margin "
+                         "in effect-vector units")
+    if not math.isfinite(aligned_projection_margin) or aligned_projection_margin < 0.0:
+        raise ValueError("aligned_projection_margin must be finite and nonnegative")
     if not math.isfinite(rtol) or not math.isfinite(atol) or rtol < 0.0 or atol < 0.0:
         raise ValueError("rtol and atol must be finite and nonnegative")
 
@@ -452,7 +521,7 @@ def check_bias(
         import torch
     except Exception as error:  # pragma: no cover - package can still import without torch
         return {
-            "schema": "kernel-analyzer-bias-check-v2",
+            "schema": "kernel-analyzer-bias-check-v3",
             "status": "UNRESOLVED_MEASUREMENT",
             "measurement_status": "INVALID",
             "scope": "DECLARED_INPUT_DISTRIBUTION_OUTPUT_BIAS",
@@ -631,7 +700,7 @@ def check_bias(
             stage_data["BACKWARD"]["errors"].append({"sample": index, "where": "BACKWARD", "error": str(error)})
 
     result: dict[str, Any] = {
-        "schema": "kernel-analyzer-bias-check-v2",
+        "schema": "kernel-analyzer-bias-check-v3",
         "status": "SYSTEMATIC_BIAS_NOT_CONFIRMED",
         "measurement_status": "VALID",
         "scope": "DECLARED_INPUT_DISTRIBUTION_OUTPUT_BIAS",
@@ -639,6 +708,8 @@ def check_bias(
         "calibration_samples": calibration_samples,
         "confirmation_samples": samples - calibration_samples,
         "alpha": alpha,
+        "directional_margin": directional_margin,
+        "aligned_projection_margin": aligned_projection_margin,
         "sample_assumption": (
             "make_inputs(index) must represent independent draws for population interpretations; "
             "the result otherwise remains a finite declared-input-sample description"
@@ -710,6 +781,8 @@ def check_bias(
                 reference_energy_floor=reference_energy_floor,
                 allclose_results=group["allclose"], stage_name=stage_name, torch=torch,
                 calibration_count=calibration_in_group,
+                directional_margin=directional_margin,
+                aligned_projection_margin=aligned_projection_margin,
             )
             report["signature"] = group["signature"]
             report["sample_indices"] = [data["sample_indices"][p] for p in group["positions"]]
@@ -737,6 +810,9 @@ def check_bias(
             result["status"] = "SYSTEMATIC_BIAS_CONFIRMED"
         elif stage_result.get("decision") == "GROUPED_BY_SIGNATURE":
             result["status"] = "UNRESOLVED_MEASUREMENT"
+        elif stage_result.get("decision") == "UNRESOLVED_MEASUREMENT":
+            if result["status"] != "SYSTEMATIC_BIAS_CONFIRMED":
+                result["status"] = "UNRESOLVED_MEASUREMENT"
     if check_backward:
         result["scope"] = "DECLARED_INPUT_DISTRIBUTION_OUTPUT_AND_BACKWARD_BIAS"
         result["backward_cotangent_policy"] = (

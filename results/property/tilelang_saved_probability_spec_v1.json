@@ -1,0 +1,1204 @@
+{
+  "protocol": {
+    "schema": "tilelang-probability-mass-spec-v1",
+    "data_use": "CONTROLLED_DEVELOPMENT_NOT_NATURAL_TRAINING",
+    "specification": "sum of stored reconstructed probabilities equals one up to declared tolerance",
+    "tolerance": 1e-05,
+    "distribution": "128 independent N(0,4^2) FP32 scores, then stored in BF16",
+    "seed_start": 92200,
+    "samples": 64,
+    "conditions": [
+      "statistics_from_original_scores",
+      "statistics_from_stored_scores"
+    ],
+    "intervention": "same BF16 scores and same kernel, recompute max and denominator from stored scores",
+    "property_is_necessary_not_sufficient": true,
+    "inference": "property diagnostics and exploratory conditional intervals; no full mean-bias or training verdict"
+  },
+  "results": {
+    "statistics_from_original_scores": {
+      "schema": "kernel-analyzer-reference-free-diagnostics-v1",
+      "measurement_status": "VALID",
+      "diagnostic_status": "EVIDENCE_ONLY",
+      "bias_decision": "NOT_ASSESSED",
+      "reference_status": "NOT_PROVIDED",
+      "sample_count": 64,
+      "measured_sample_count": 64,
+      "evidence_classes": [
+        "INPUT_CONSISTENCY_VIOLATION"
+      ],
+      "rounding_variants": {},
+      "input_consistency": {
+        "status": "VIOLATION_OBSERVED",
+        "sample_count": 64,
+        "passed_count": 0,
+        "failed_count": 64,
+        "check_name": "input_or_intermediate_consistency",
+        "observations": [
+          {
+            "passed": false,
+            "residual": -0.004086583622784357,
+            "max_abs_residual": 0.004086583622784357,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 0
+          },
+          {
+            "passed": false,
+            "residual": -0.01406919265732487,
+            "max_abs_residual": 0.01406919265732487,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 1
+          },
+          {
+            "passed": false,
+            "residual": -0.007634571166440063,
+            "max_abs_residual": 0.007634571166440063,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 2
+          },
+          {
+            "passed": false,
+            "residual": 0.00016774674235753295,
+            "max_abs_residual": 0.00016774674235753295,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 3
+          },
+          {
+            "passed": false,
+            "residual": -0.02352282040103315,
+            "max_abs_residual": 0.02352282040103315,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 4
+          },
+          {
+            "passed": false,
+            "residual": 0.008403559962643747,
+            "max_abs_residual": 0.008403559962643747,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 5
+          },
+          {
+            "passed": false,
+            "residual": 0.01175521114028344,
+            "max_abs_residual": 0.01175521114028344,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 6
+          },
+          {
+            "passed": false,
+            "residual": 0.005147463584009415,
+            "max_abs_residual": 0.005147463584009415,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 7
+          },
+          {
+            "passed": false,
+            "residual": 0.0017413748511156957,
+            "max_abs_residual": 0.0017413748511156957,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 8
+          },
+          {
+            "passed": false,
+            "residual": 0.01092986880225233,
+            "max_abs_residual": 0.01092986880225233,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 9
+          },
+          {
+            "passed": false,
+            "residual": -0.009967037792268707,
+            "max_abs_residual": 0.009967037792268707,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 10
+          },
+          {
+            "passed": false,
+            "residual": 0.003942373715695169,
+            "max_abs_residual": 0.003942373715695169,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 11
+          },
+          {
+            "passed": false,
+            "residual": 0.023196533190934954,
+            "max_abs_residual": 0.023196533190934954,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 12
+          },
+          {
+            "passed": false,
+            "residual": -0.018533204643515377,
+            "max_abs_residual": 0.018533204643515377,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 13
+          },
+          {
+            "passed": false,
+            "residual": 0.005880327210063374,
+            "max_abs_residual": 0.005880327210063374,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 14
+          },
+          {
+            "passed": false,
+            "residual": 0.0032478665639947835,
+            "max_abs_residual": 0.0032478665639947835,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 15
+          },
+          {
+            "passed": false,
+            "residual": -0.017209542421449786,
+            "max_abs_residual": 0.017209542421449786,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 16
+          },
+          {
+            "passed": false,
+            "residual": 0.01337710270056447,
+            "max_abs_residual": 0.01337710270056447,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 17
+          },
+          {
+            "passed": false,
+            "residual": 0.0067297900994049975,
+            "max_abs_residual": 0.0067297900994049975,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 18
+          },
+          {
+            "passed": false,
+            "residual": 0.002990612791232028,
+            "max_abs_residual": 0.002990612791232028,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 19
+          },
+          {
+            "passed": false,
+            "residual": 0.00047669945682882187,
+            "max_abs_residual": 0.00047669945682882187,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 20
+          },
+          {
+            "passed": false,
+            "residual": -0.01671527028115105,
+            "max_abs_residual": 0.01671527028115105,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 21
+          },
+          {
+            "passed": false,
+            "residual": 0.0021743809004615144,
+            "max_abs_residual": 0.0021743809004615144,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 22
+          },
+          {
+            "passed": false,
+            "residual": 0.015929612152115302,
+            "max_abs_residual": 0.015929612152115302,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 23
+          },
+          {
+            "passed": false,
+            "residual": 0.010318936676177337,
+            "max_abs_residual": 0.010318936676177337,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 24
+          },
+          {
+            "passed": false,
+            "residual": 0.016129395080481723,
+            "max_abs_residual": 0.016129395080481723,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 25
+          },
+          {
+            "passed": false,
+            "residual": 0.010452188578019106,
+            "max_abs_residual": 0.010452188578019106,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 26
+          },
+          {
+            "passed": false,
+            "residual": -0.019199158579286668,
+            "max_abs_residual": 0.019199158579286668,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 27
+          },
+          {
+            "passed": false,
+            "residual": -0.0022038047809421757,
+            "max_abs_residual": 0.0022038047809421757,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 28
+          },
+          {
+            "passed": false,
+            "residual": 0.02649546342285558,
+            "max_abs_residual": 0.02649546342285558,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 29
+          },
+          {
+            "passed": false,
+            "residual": -0.024095188715762994,
+            "max_abs_residual": 0.024095188715762994,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 30
+          },
+          {
+            "passed": false,
+            "residual": 0.021168213120882573,
+            "max_abs_residual": 0.021168213120882573,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 31
+          },
+          {
+            "passed": false,
+            "residual": 0.0064790644375771755,
+            "max_abs_residual": 0.0064790644375771755,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 32
+          },
+          {
+            "passed": false,
+            "residual": 0.013414017209497864,
+            "max_abs_residual": 0.013414017209497864,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 33
+          },
+          {
+            "passed": false,
+            "residual": 0.007985814560039328,
+            "max_abs_residual": 0.007985814560039328,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 34
+          },
+          {
+            "passed": false,
+            "residual": 0.008248092344869118,
+            "max_abs_residual": 0.008248092344869118,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 35
+          },
+          {
+            "passed": false,
+            "residual": 0.01916075655270011,
+            "max_abs_residual": 0.01916075655270011,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 36
+          },
+          {
+            "passed": false,
+            "residual": -0.013410740423104417,
+            "max_abs_residual": 0.013410740423104417,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 37
+          },
+          {
+            "passed": false,
+            "residual": 0.009154192931772442,
+            "max_abs_residual": 0.009154192931772442,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 38
+          },
+          {
+            "passed": false,
+            "residual": 0.030435428073378512,
+            "max_abs_residual": 0.030435428073378512,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 39
+          },
+          {
+            "passed": false,
+            "residual": -0.008078676723089817,
+            "max_abs_residual": 0.008078676723089817,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 40
+          },
+          {
+            "passed": false,
+            "residual": -0.009355895559176153,
+            "max_abs_residual": 0.009355895559176153,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 41
+          },
+          {
+            "passed": false,
+            "residual": 0.018710914373651244,
+            "max_abs_residual": 0.018710914373651244,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 42
+          },
+          {
+            "passed": false,
+            "residual": 0.006650683623975251,
+            "max_abs_residual": 0.006650683623975251,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 43
+          },
+          {
+            "passed": false,
+            "residual": 0.021532936320346696,
+            "max_abs_residual": 0.021532936320346696,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 44
+          },
+          {
+            "passed": false,
+            "residual": 0.000369303043393332,
+            "max_abs_residual": 0.000369303043393332,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 45
+          },
+          {
+            "passed": false,
+            "residual": 0.014313086959298671,
+            "max_abs_residual": 0.014313086959298671,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 46
+          },
+          {
+            "passed": false,
+            "residual": -0.006001094958744346,
+            "max_abs_residual": 0.006001094958744346,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 47
+          },
+          {
+            "passed": false,
+            "residual": -0.004004115836448108,
+            "max_abs_residual": 0.004004115836448108,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 48
+          },
+          {
+            "passed": false,
+            "residual": 0.0022018141569426497,
+            "max_abs_residual": 0.0022018141569426497,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 49
+          },
+          {
+            "passed": false,
+            "residual": -0.00572340464024701,
+            "max_abs_residual": 0.00572340464024701,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 50
+          },
+          {
+            "passed": false,
+            "residual": -0.006125868217526476,
+            "max_abs_residual": 0.006125868217526476,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 51
+          },
+          {
+            "passed": false,
+            "residual": 0.005193019366851237,
+            "max_abs_residual": 0.005193019366851237,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 52
+          },
+          {
+            "passed": false,
+            "residual": 0.011147378121801665,
+            "max_abs_residual": 0.011147378121801665,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 53
+          },
+          {
+            "passed": false,
+            "residual": 0.011884100795363173,
+            "max_abs_residual": 0.011884100795363173,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 54
+          },
+          {
+            "passed": false,
+            "residual": -0.004063951671266941,
+            "max_abs_residual": 0.004063951671266941,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 55
+          },
+          {
+            "passed": false,
+            "residual": 0.016341480053973623,
+            "max_abs_residual": 0.016341480053973623,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 56
+          },
+          {
+            "passed": false,
+            "residual": 0.023391053112472804,
+            "max_abs_residual": 0.023391053112472804,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 57
+          },
+          {
+            "passed": false,
+            "residual": 0.01786336793124832,
+            "max_abs_residual": 0.01786336793124832,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 58
+          },
+          {
+            "passed": false,
+            "residual": -0.0020873438173723002,
+            "max_abs_residual": 0.0020873438173723002,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 59
+          },
+          {
+            "passed": false,
+            "residual": 0.005536952431986153,
+            "max_abs_residual": 0.005536952431986153,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 60
+          },
+          {
+            "passed": false,
+            "residual": -0.000626482044980281,
+            "max_abs_residual": 0.000626482044980281,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 61
+          },
+          {
+            "passed": false,
+            "residual": -0.019281431773130908,
+            "max_abs_residual": 0.019281431773130908,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 62
+          },
+          {
+            "passed": false,
+            "residual": 0.005039309632411948,
+            "max_abs_residual": 0.005039309632411948,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 63
+          }
+        ],
+        "scope": "CALLER_DECLARED_CONTRACT_ONLY",
+        "property_residual_count": 64,
+        "property_residual_mean": 0.0034330016570137383,
+        "property_mean_inference": {
+          "status": "VALID",
+          "count": 64,
+          "mean": 0.0034330016570137383,
+          "standard_error": 0.001594220958755873,
+          "degrees_of_freedom": 63,
+          "interval": [
+            0.0002472052813955912,
+            0.006618798032631885
+          ],
+          "assumptions": [
+            "independent identically distributed draws are needed for a population interpretation",
+            "Student interval is conditional and approximate unless its distributional assumptions hold",
+            "the callback residual is the declared zero-valued property residual",
+            "this endpoint does not establish a full output-vector bias"
+          ],
+          "decision": "PROPERTY_MEAN_NONZERO_CONFIRMED",
+          "scope": "CONDITIONAL_DECLARED_PROPERTY_RESIDUAL"
+        }
+      },
+      "declared_specification": {
+        "status": "NOT_DECLARED",
+        "sample_count": 0,
+        "check_name": "declared_specification",
+        "scope": "NO_CONTRACT_PROVIDED"
+      },
+      "errors": [],
+      "scope": "CALLER_DECLARED_INPUT_AND_CONTROL_CONTRACTS_ONLY",
+      "limitations": [
+        "No complete semantic reference was supplied or inferred.",
+        "Controlled arithmetic variants must be independently declared to preserve semantics.",
+        "A detected difference is not a proof of nonzero population mean bias.",
+        "A passed property is not a proof of full functional equivalence.",
+        "Training gradient, optimizer update, and loss consequences are not measured here."
+      ],
+      "family": "softmax_saved_probability",
+      "family_contract": {
+        "property": "sum(selected_probability, axis=probability_axis) == 1",
+        "property_is_necessary_not_sufficient": true,
+        "output_selector": null,
+        "probability_axis": -1,
+        "tolerance": 1e-05,
+        "reference_required_for_full_bias": true,
+        "tilelang_output_selector": null
+      },
+      "backend": "tilelang",
+      "backend_contract": {
+        "family": "softmax_saved_probability",
+        "candidate_is_compiled_callable": true,
+        "reference_is_required": false,
+        "source_inspection": false,
+        "automatic_root_cause_analysis": false,
+        "autotune_selection_must_be_frozen_before_confirmation": true,
+        "input_distribution_is_caller_declared": true
+      }
+    },
+    "statistics_from_stored_scores": {
+      "schema": "kernel-analyzer-reference-free-diagnostics-v1",
+      "measurement_status": "VALID",
+      "diagnostic_status": "EVIDENCE_ONLY",
+      "bias_decision": "NOT_ASSESSED",
+      "reference_status": "NOT_PROVIDED",
+      "sample_count": 64,
+      "measured_sample_count": 64,
+      "evidence_classes": [],
+      "rounding_variants": {},
+      "input_consistency": {
+        "status": "PASSED",
+        "sample_count": 64,
+        "passed_count": 64,
+        "failed_count": 0,
+        "check_name": "input_or_intermediate_consistency",
+        "observations": [
+          {
+            "passed": true,
+            "residual": -4.839032297088153e-08,
+            "max_abs_residual": 4.839032297088153e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 0
+          },
+          {
+            "passed": true,
+            "residual": 9.20332430265347e-08,
+            "max_abs_residual": 9.20332430265347e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 1
+          },
+          {
+            "passed": true,
+            "residual": 1.177513133665542e-07,
+            "max_abs_residual": 1.177513133665542e-07,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 2
+          },
+          {
+            "passed": true,
+            "residual": -2.4687416333435408e-08,
+            "max_abs_residual": 2.4687416333435408e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 3
+          },
+          {
+            "passed": true,
+            "residual": -1.1944334032953918e-07,
+            "max_abs_residual": 1.1944334032953918e-07,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 4
+          },
+          {
+            "passed": true,
+            "residual": 6.755883164011323e-08,
+            "max_abs_residual": 6.755883164011323e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 5
+          },
+          {
+            "passed": true,
+            "residual": 2.4531729980736827e-08,
+            "max_abs_residual": 2.4531729980736827e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 6
+          },
+          {
+            "passed": true,
+            "residual": -1.3737983883821414e-07,
+            "max_abs_residual": 1.3737983883821414e-07,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 7
+          },
+          {
+            "passed": true,
+            "residual": -6.161482390965034e-08,
+            "max_abs_residual": 6.161482390965034e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 8
+          },
+          {
+            "passed": true,
+            "residual": 8.661007022681133e-09,
+            "max_abs_residual": 8.661007022681133e-09,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 9
+          },
+          {
+            "passed": true,
+            "residual": -1.0562426489002519e-09,
+            "max_abs_residual": 1.0562426489002519e-09,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 10
+          },
+          {
+            "passed": true,
+            "residual": -6.730509483077185e-09,
+            "max_abs_residual": 6.730509483077185e-09,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 11
+          },
+          {
+            "passed": true,
+            "residual": 1.0018083274054845e-07,
+            "max_abs_residual": 1.0018083274054845e-07,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 12
+          },
+          {
+            "passed": true,
+            "residual": 2.9859648087438018e-09,
+            "max_abs_residual": 2.9859648087438018e-09,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 13
+          },
+          {
+            "passed": true,
+            "residual": -5.530597624314737e-08,
+            "max_abs_residual": 5.530597624314737e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 14
+          },
+          {
+            "passed": true,
+            "residual": -8.536647111423434e-08,
+            "max_abs_residual": 8.536647111423434e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 15
+          },
+          {
+            "passed": true,
+            "residual": -1.4069077014511322e-08,
+            "max_abs_residual": 1.4069077014511322e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 16
+          },
+          {
+            "passed": true,
+            "residual": -7.650747591014806e-09,
+            "max_abs_residual": 7.650747591014806e-09,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 17
+          },
+          {
+            "passed": true,
+            "residual": -3.817965998909045e-08,
+            "max_abs_residual": 3.817965998909045e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 18
+          },
+          {
+            "passed": true,
+            "residual": -5.634703181822687e-08,
+            "max_abs_residual": 5.634703181822687e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 19
+          },
+          {
+            "passed": true,
+            "residual": -7.872868446057169e-08,
+            "max_abs_residual": 7.872868446057169e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 20
+          },
+          {
+            "passed": true,
+            "residual": -3.782459501167068e-08,
+            "max_abs_residual": 3.782459501167068e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 21
+          },
+          {
+            "passed": true,
+            "residual": 2.5464895969662393e-08,
+            "max_abs_residual": 2.5464895969662393e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 22
+          },
+          {
+            "passed": true,
+            "residual": -1.3798967191114286e-07,
+            "max_abs_residual": 1.3798967191114286e-07,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 23
+          },
+          {
+            "passed": true,
+            "residual": -2.492392336961302e-08,
+            "max_abs_residual": 2.492392336961302e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 24
+          },
+          {
+            "passed": true,
+            "residual": -1.4363977884901402e-07,
+            "max_abs_residual": 1.4363977884901402e-07,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 25
+          },
+          {
+            "passed": true,
+            "residual": 4.197325598198631e-08,
+            "max_abs_residual": 4.197325598198631e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 26
+          },
+          {
+            "passed": true,
+            "residual": 2.102201168696638e-08,
+            "max_abs_residual": 2.102201168696638e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 27
+          },
+          {
+            "passed": true,
+            "residual": -9.621375829382828e-08,
+            "max_abs_residual": 9.621375829382828e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 28
+          },
+          {
+            "passed": true,
+            "residual": 7.780023092429644e-08,
+            "max_abs_residual": 7.780023092429644e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 29
+          },
+          {
+            "passed": true,
+            "residual": -1.7415844177914863e-07,
+            "max_abs_residual": 1.7415844177914863e-07,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 30
+          },
+          {
+            "passed": true,
+            "residual": 6.280294329030767e-08,
+            "max_abs_residual": 6.280294329030767e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 31
+          },
+          {
+            "passed": true,
+            "residual": -4.217602178613333e-08,
+            "max_abs_residual": 4.217602178613333e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 32
+          },
+          {
+            "passed": true,
+            "residual": -1.5951670206959534e-08,
+            "max_abs_residual": 1.5951670206959534e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 33
+          },
+          {
+            "passed": true,
+            "residual": 2.8781016236933965e-08,
+            "max_abs_residual": 2.8781016236933965e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 34
+          },
+          {
+            "passed": true,
+            "residual": 9.165010927958406e-08,
+            "max_abs_residual": 9.165010927958406e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 35
+          },
+          {
+            "passed": true,
+            "residual": 5.516469903099619e-08,
+            "max_abs_residual": 5.516469903099619e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 36
+          },
+          {
+            "passed": true,
+            "residual": -1.5073861558967394e-07,
+            "max_abs_residual": 1.5073861558967394e-07,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 37
+          },
+          {
+            "passed": true,
+            "residual": -1.1420366874403953e-08,
+            "max_abs_residual": 1.1420366874403953e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 38
+          },
+          {
+            "passed": true,
+            "residual": -1.7231424398467254e-08,
+            "max_abs_residual": 1.7231424398467254e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 39
+          },
+          {
+            "passed": true,
+            "residual": 1.1792344434269353e-08,
+            "max_abs_residual": 1.1792344434269353e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 40
+          },
+          {
+            "passed": true,
+            "residual": 1.0043428977368762e-08,
+            "max_abs_residual": 1.0043428977368762e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 41
+          },
+          {
+            "passed": true,
+            "residual": -3.4070045895617795e-08,
+            "max_abs_residual": 3.4070045895617795e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 42
+          },
+          {
+            "passed": true,
+            "residual": 2.1054020749033953e-08,
+            "max_abs_residual": 2.1054020749033953e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 43
+          },
+          {
+            "passed": true,
+            "residual": 1.32960681353822e-07,
+            "max_abs_residual": 1.32960681353822e-07,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 44
+          },
+          {
+            "passed": true,
+            "residual": -6.936981611360693e-08,
+            "max_abs_residual": 6.936981611360693e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 45
+          },
+          {
+            "passed": true,
+            "residual": 1.409473293634278e-08,
+            "max_abs_residual": 1.409473293634278e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 46
+          },
+          {
+            "passed": true,
+            "residual": -1.553276085530797e-08,
+            "max_abs_residual": 1.553276085530797e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 47
+          },
+          {
+            "passed": true,
+            "residual": -8.659763395257869e-08,
+            "max_abs_residual": 8.659763395257869e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 48
+          },
+          {
+            "passed": true,
+            "residual": -2.335676141385079e-08,
+            "max_abs_residual": 2.335676141385079e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 49
+          },
+          {
+            "passed": true,
+            "residual": 3.9891687064752546e-08,
+            "max_abs_residual": 3.9891687064752546e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 50
+          },
+          {
+            "passed": true,
+            "residual": 2.6323909718684035e-08,
+            "max_abs_residual": 2.6323909718684035e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 51
+          },
+          {
+            "passed": true,
+            "residual": 2.009258937007985e-08,
+            "max_abs_residual": 2.009258937007985e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 52
+          },
+          {
+            "passed": true,
+            "residual": 9.040252990644149e-09,
+            "max_abs_residual": 9.040252990644149e-09,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 53
+          },
+          {
+            "passed": true,
+            "residual": 1.269479454890643e-08,
+            "max_abs_residual": 1.269479454890643e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 54
+          },
+          {
+            "passed": true,
+            "residual": -1.3674047116829513e-08,
+            "max_abs_residual": 1.3674047116829513e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 55
+          },
+          {
+            "passed": true,
+            "residual": 6.347681846818887e-08,
+            "max_abs_residual": 6.347681846818887e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 56
+          },
+          {
+            "passed": true,
+            "residual": 5.566460958839059e-08,
+            "max_abs_residual": 5.566460958839059e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 57
+          },
+          {
+            "passed": true,
+            "residual": 6.977851141343194e-08,
+            "max_abs_residual": 6.977851141343194e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 58
+          },
+          {
+            "passed": true,
+            "residual": -1.5279027820724878e-08,
+            "max_abs_residual": 1.5279027820724878e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 59
+          },
+          {
+            "passed": true,
+            "residual": -2.9738720375149796e-09,
+            "max_abs_residual": 2.9738720375149796e-09,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 60
+          },
+          {
+            "passed": true,
+            "residual": -6.181841960550827e-08,
+            "max_abs_residual": 6.181841960550827e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 61
+          },
+          {
+            "passed": true,
+            "residual": 8.7761965916755e-08,
+            "max_abs_residual": 8.7761965916755e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 62
+          },
+          {
+            "passed": true,
+            "residual": -3.8777141941892523e-08,
+            "max_abs_residual": 3.8777141941892523e-08,
+            "property": "probability_mass_minus_one",
+            "tolerance": 1e-05,
+            "sample": 63
+          }
+        ],
+        "scope": "CALLER_DECLARED_CONTRACT_ONLY",
+        "property_residual_count": 64,
+        "property_residual_mean": -8.681804766416668e-09,
+        "property_mean_inference": {
+          "status": "VALID",
+          "count": 64,
+          "mean": -8.681804766416668e-09,
+          "standard_error": 8.436646295250694e-09,
+          "degrees_of_freedom": 63,
+          "interval": [
+            -2.554109710112354e-08,
+            8.177487568290204e-09
+          ],
+          "assumptions": [
+            "independent identically distributed draws are needed for a population interpretation",
+            "Student interval is conditional and approximate unless its distributional assumptions hold",
+            "the callback residual is the declared zero-valued property residual",
+            "this endpoint does not establish a full output-vector bias"
+          ],
+          "decision": "PROPERTY_MEAN_NOT_CONFIRMED",
+          "scope": "CONDITIONAL_DECLARED_PROPERTY_RESIDUAL"
+        }
+      },
+      "declared_specification": {
+        "status": "NOT_DECLARED",
+        "sample_count": 0,
+        "check_name": "declared_specification",
+        "scope": "NO_CONTRACT_PROVIDED"
+      },
+      "errors": [],
+      "scope": "CALLER_DECLARED_INPUT_AND_CONTROL_CONTRACTS_ONLY",
+      "limitations": [
+        "No complete semantic reference was supplied or inferred.",
+        "Controlled arithmetic variants must be independently declared to preserve semantics.",
+        "A detected difference is not a proof of nonzero population mean bias.",
+        "A passed property is not a proof of full functional equivalence.",
+        "Training gradient, optimizer update, and loss consequences are not measured here."
+      ],
+      "family": "softmax_saved_probability",
+      "family_contract": {
+        "property": "sum(selected_probability, axis=probability_axis) == 1",
+        "property_is_necessary_not_sufficient": true,
+        "output_selector": null,
+        "probability_axis": -1,
+        "tolerance": 1e-05,
+        "reference_required_for_full_bias": true,
+        "tilelang_output_selector": null
+      },
+      "backend": "tilelang",
+      "backend_contract": {
+        "family": "softmax_saved_probability",
+        "candidate_is_compiled_callable": true,
+        "reference_is_required": false,
+        "source_inspection": false,
+        "automatic_root_cause_analysis": false,
+        "autotune_selection_must_be_frozen_before_confirmation": true,
+        "input_distribution_is_caller_declared": true
+      }
+    }
+  },
+  "environment": {
+    "tilelang": "0.1.14",
+    "device": "NVIDIA RTX A6000"
+  }
+}

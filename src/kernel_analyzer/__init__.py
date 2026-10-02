@@ -114,6 +114,19 @@ from .reference_relative_oracle import (
 )
 from .training_bias_profile import holm_adjusted_p, matched_training_bias_profile
 from .bias_checker import check_bias
+from .operator_specs import SumSpec
+from .reference_free_diagnostics import diagnose_kernel
+from .family_diagnostics import check_odd_symmetry, check_reduction_order, check_softmax_saved_state
+from .tilelang_adapter import (
+    TileLangCallConfig,
+    check_tilelang_bias,
+    check_tilelang_odd_symmetry,
+    check_tilelang_reduction_order,
+    check_tilelang_softmax_saved_state,
+    compile_tilelang_program,
+    select_tilelang_output,
+    wrap_tilelang_callable,
+)
 from .tcmp_campaign import (
     ModelCampaignSpec,
     ModelCellSpec,
@@ -153,6 +166,19 @@ __all__ = [
     "holm_adjusted_p",
     "matched_training_bias_profile",
     "check_bias",
+    "SumSpec",
+    "diagnose_kernel",
+    "check_odd_symmetry",
+    "check_reduction_order",
+    "check_softmax_saved_state",
+    "TileLangCallConfig",
+    "check_tilelang_bias",
+    "check_tilelang_odd_symmetry",
+    "check_tilelang_reduction_order",
+    "check_tilelang_softmax_saved_state",
+    "compile_tilelang_program",
+    "select_tilelang_output",
+    "wrap_tilelang_callable",
     "derive_signed_rounding_error",
     "signed_event_transport",
     "signed_transport_certificate",

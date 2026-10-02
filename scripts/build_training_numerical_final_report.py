@@ -13,8 +13,14 @@ NAMES = {
     'deepseek8b_seq256_backward_1714_in_out_ptr0': ('DeepSeek', 'normalization backward'),
     'deepseek8b_seq128_backward_1256_out_ptr0': ('DeepSeek', 'attention projection backward'),
     'llama32_text128_scan_0000': ('Llama', 'softmax backward'),
-    'gemma4_text128_scan_0037': ('Gemma', '原内部行平方和输出'),
     'granite_fp32_expert_order_layer0': ('Granite', 'FP32 MoE expert 输出累加顺序'),
+}
+
+RETIRED_CASES = {
+    'gemma4_text128_scan_0037': {
+        'label': 'Gemma 平方和端点',
+        'reason': '实际执行源与声明端点不匹配；无有效同一端点测量',
+    },
 }
 
 
@@ -35,12 +41,22 @@ def main():
              '## 实际参数写入复采', '',
              '| 模型 | 训练位置 | 确认集合更新差异 RMS / 正常更新 RMS | 声明的 1% 范围 |',
              '|---|---|---:|---|']
+    retired = []
     for record in verification['reports']:
         result = json.loads((BASE / record['report']).read_text())
+        if result['case_id'] in RETIRED_CASES:
+            retired.append(RETIRED_CASES[result['case_id']])
+            continue
         model, position = NAMES.get(result['case_id'], (result['case_id'], '见原记录'))
         label = {'EQUIVALENT': '范围内', 'NON_EQUIVALENT': '超范围', 'INCONCLUSIVE': '边界未决'}[result['equivalence_decision']]
         lines.append(f"| {model} | [{position}]({record['report']}) | {100 * result['bias_analysis']['fixed_suite_total_rms']:.6f}% | {label} |")
-    lines += ['', '各行属于各自固定状态集合和参数范围，不是一个随机总体，也不是 bias 严重程度排行榜。Granite 是新家族的小差异对照；其他六项是原案例复采。', '',
+    lines += ['', '各行属于各自固定状态集合和参数范围，不是一个随机总体，也不是 bias 严重程度排行榜。Granite 的旧固定集合是小差异对照；后续经验库方向确认另见平均 bias 审计，不能把两种范围混为一谈。Gemma 平方和端点因执行源不匹配被排除，不计入有效复采。', '']
+    if retired:
+        lines += ['## 已撤下的无效端点', '',
+                   '| 记录 | 原因 |', '|---|---|']
+        lines += [f"| {item['label']} | {item['reason']} |" for item in retired]
+        lines += ['']
+    lines += [
               '## 同一语言训练的成因、直接方向和 loss', '',
               f"- 真实 {identity['chunks']} 个分块乘积相同，实际 dW 差异可由累加舍入及最后转换精确重构。该恒等式解释来源，不是假设任意状态下舍入均值必定非零。",
               f"- 1024 步：{len(training['rows'])} 组新初始化中 {training['positive_pairs']} 组原实现验证 loss 更高，预声明单侧符号检验 p={training['p_value']:.8f}。精确数值和生成范围见[确认记录](language_training_confirmation_iid/summary.json)。",

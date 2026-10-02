@@ -152,7 +152,7 @@ $e_t$，下一步读取 $Q(m_t)+e_t$ 后再做递推。它针对的是被保存�
 默认与同路径关闭版本还存在平均0.00282384的loss差异。16个最终模型重新评估一致，
 8份开启补偿训练完整复现历史结果。这隔离了补偿开关的训练作用，但不单独分离
 均值bias与误差波动的作用。见[归因推导](attribution_derivation_20260913.md)和
-[完整结果](result_analysis_20260913.md)。范围仍是一个Mamba checkpoint、一个优化器设置和8条已见数据流。
+[全部案例结论](root_cause_closure_current.md)。范围仍是一个Mamba checkpoint、一个优化器设置和8条已见数据流。
 它不是生产优化器证明、跨模型结论或崩溃机制证明。独立复算状态为 `VERIFIED`；沙箱中
 一次无法访问 GPU 的失败记录保留在训练结果目录的 `runtime_failures/` 中，不计入数据流。
 

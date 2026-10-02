@@ -1,7 +1,7 @@
 # Source-aligned MM repair
 
 > 版本定位（2026-09-05）：来源修改的推导与实验记录。保留各比较边界，不把局部无偏直接推成 optimizer 或完整训练无偏。
-> 当前证据连接见[案例地图](case_evidence_map.md)，研究定义见[主线](current_mainline.md)。
+> 当前证据连接见[全部案例结论](root_cause_closure_current.md)，研究定义见[主线](current_mainline.md)。
 
 ## Why the old comparison was insufficient
 

@@ -226,7 +226,7 @@ def main() -> None:
     if device.type == "cuda" and not torch.cuda.is_available():
         raise SystemExit("CUDA is required for the Triton example runner")
 
-    from kernel_analyzer import check_bias
+    from kernel_analyzer import check_bias, check_reduction_order, check_softmax_saved_state
 
     results: dict[str, Any] = {
         "schema": "kernel-analyzer-triton-bias-check-examples-v1",
@@ -240,7 +240,8 @@ def main() -> None:
             "the runner does not infer Triton semantics or a training consequence."
         ),
     }
-    for name, (candidate, reference, make_inputs, description) in _build_kernels().items():
+    kernels = _build_kernels()
+    for name, (candidate, reference, make_inputs, description) in kernels.items():
         report = check_bias(
             candidate,
             reference,
@@ -255,6 +256,29 @@ def main() -> None:
             f"measurement={report['measurement_status']} "
             f"total_rms={report['stages']['OUTPUT'].get('total_rms')}"
         )
+
+    # The same real Triton callables also exercise the reference-free family
+    # layer.  The row-sum comparison is explicitly declared as a same-semantic
+    # FP32 arithmetic variant; the softmax check uses only its mass invariant.
+    row_sum_candidate = kernels["triton_ordered_fp32_row_sum"][0]
+    row_sum_variant = kernels["triton_ordered_fp32_row_sum"][1]
+    row_sum_inputs = kernels["triton_ordered_fp32_row_sum"][2]
+    softmax_candidate = kernels["triton_softmax"][0]
+    softmax_inputs = kernels["triton_softmax"][2]
+    results["reference_free_families"] = {
+        "triton_fp32_reduction_order": check_reduction_order(
+            row_sum_candidate,
+            row_sum_variant,
+            row_sum_inputs,
+            samples=args.samples,
+        ),
+        "triton_softmax_probability_mass": check_softmax_saved_state(
+            softmax_candidate,
+            softmax_inputs,
+            samples=args.samples,
+            tolerance=1e-5,
+        ),
+    }
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(results, indent=2, sort_keys=True) + "\n")

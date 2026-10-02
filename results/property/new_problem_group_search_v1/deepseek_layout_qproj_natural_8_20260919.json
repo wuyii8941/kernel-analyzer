@@ -1,0 +1,97 @@
+{
+  "schema": "kernel-analyzer-qwen3-attention-output-layout-natural-probe-v1",
+  "status": "COMPLETE",
+  "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+  "layer": 13,
+  "parameter": "q_proj",
+  "operator": "Qwen3 attention output layout materialization",
+  "candidate": "native eager transpose(1,2).contiguous()",
+  "reference": "same eager attention with equivalent permute(...).reshape output layout",
+  "input_source": "declared real Qwen3 text input bank",
+  "claim_boundary": "One checkpoint, one layer/parameter, and declared bank; no population or loss-quality claim.",
+  "comparison_scope": {
+    "same_model_weights": true,
+    "same_input_ids": true,
+    "same_attention_path": true,
+    "same_attention_values": true,
+    "single_changed_boundary": "attention output layout materialization"
+  },
+  "rows": [
+    {
+      "state_id": 0,
+      "loss_difference": 0.0,
+      "gradient_effect_rms_over_reference": 0.0,
+      "write_effect_rms_over_reference": 0.0,
+      "write_aligned": 0.0
+    },
+    {
+      "state_id": 1,
+      "loss_difference": 0.0,
+      "gradient_effect_rms_over_reference": 0.0,
+      "write_effect_rms_over_reference": 0.0,
+      "write_aligned": 0.0
+    },
+    {
+      "state_id": 2,
+      "loss_difference": 0.0,
+      "gradient_effect_rms_over_reference": 0.0,
+      "write_effect_rms_over_reference": 0.0,
+      "write_aligned": 0.0
+    },
+    {
+      "state_id": 3,
+      "loss_difference": 0.0,
+      "gradient_effect_rms_over_reference": 0.0,
+      "write_effect_rms_over_reference": 0.0,
+      "write_aligned": 0.0
+    },
+    {
+      "state_id": 4,
+      "loss_difference": 0.0,
+      "gradient_effect_rms_over_reference": 0.0,
+      "write_effect_rms_over_reference": 0.0,
+      "write_aligned": 0.0
+    },
+    {
+      "state_id": 5,
+      "loss_difference": 0.0,
+      "gradient_effect_rms_over_reference": 0.0,
+      "write_effect_rms_over_reference": 0.0,
+      "write_aligned": 0.0
+    },
+    {
+      "state_id": 6,
+      "loss_difference": 0.0,
+      "gradient_effect_rms_over_reference": 0.0,
+      "write_effect_rms_over_reference": 0.0,
+      "write_aligned": 0.0
+    },
+    {
+      "state_id": 7,
+      "loss_difference": 0.0,
+      "gradient_effect_rms_over_reference": 0.0,
+      "write_effect_rms_over_reference": 0.0,
+      "write_aligned": 0.0
+    }
+  ],
+  "summary": {
+    "state_count": 8,
+    "calibration_count": 4,
+    "confirmation_count": 4,
+    "gradient_effect_rms_mean": 0.0,
+    "write_effect_rms_mean": 0.0,
+    "write_aligned_interval_normal_95": [
+      0.0,
+      0.0
+    ],
+    "loss_difference_interval_normal_95": [
+      0.0,
+      0.0
+    ],
+    "heldout_write_projection_interval_normal_95": null,
+    "heldout_write_projection_positive": 0,
+    "heldout_write_projection_negative": 0,
+    "calibration_direction_norm": 0.0,
+    "exact_all_states": true
+  }
+}

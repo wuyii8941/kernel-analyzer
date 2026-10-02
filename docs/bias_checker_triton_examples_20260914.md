@@ -48,6 +48,14 @@ backward 端到端检查：forward RMS 为 `0`，backward RMS 为
 同一组 32-sample 输出检查在第二次 GPU 运行中逐字节一致，结果保存在
 `results/property/bias_checker_examples_20260914_repeat.json`。
 
+2026-09-21 的 targeted-tool GPU smoke 又在真实 Triton callable 上运行了两个无完整
+reference 的家族模板，结果保存在
+`results/property/bias_checker_examples_v1/reference_free_family_smoke_20260921.json`：
+FP32 row-reduction 的候选与声明的 PyTorch reduction variant 给出
+`ROUNDING_VARIANT_DIFFERENCE_OBSERVED`，softmax callable 的 probability-mass contract
+为 `PASSED`。两者的 `bias_decision` 都保持 `NOT_ASSESSED`；这是模板和执行绑定的回归，
+不是对 Triton 源码语义或总体 bias 的自动证明。
+
 ## 结论边界
 
 本页同时记录历史 GPU 运行和 2026-09-16 的当前实现复跑。它们验证了“新 kernel 已经

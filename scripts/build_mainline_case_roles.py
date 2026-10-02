@@ -15,6 +15,9 @@ OUTPUT = ROOT / "results/mainline_case_roles.json"
 DECLARATIONS = (
     {
         "case_id": "gemma4_text128_scan_0037",
+        "active_mainline": False,
+        "status": "RETIRED_EXECUTION_SOURCE_MISMATCH",
+        "retirement_reason": "The live execution source did not match the declared square-sum endpoint; no valid same-endpoint measurement was formed.",
         "semantic_family": "normalization/reduction",
         "candidate_role": "TRITON_CANDIDATE",
         "purpose": "FIRST_TRITON_FAMILY",

@@ -204,7 +204,7 @@ DeepSeek seq128 的 SiLU 共36个位置，首项单独执行，其余35项分配
 不重叠队列 `deepseek128_silu_queue_gpu2`（18项）与
 `deepseek128_silu_queue_gpu3`（17项）。每个位置的声明参数约5033万维，
 分批是内存限制下的执行安排，不减少源计划分母。
-比较边界和数学公式见 [SiLU 相同输入比较](silu_backward_common_input.md)。
+比较边界和数学公式原在 `silu_backward_common_input.md`（2026-10-02 移除，见 Git 历史）。
 
 `audit_family_plan_execution.py` 从原始全计划核对各队列和单独任务，检查案例、
 参数、参考方法和计划摘要是否一致，拒绝重复计数。未排入、未完成、尚无可核验
@@ -256,9 +256,11 @@ PyTorch 显存数字也不是整台 GPU 上所有程序的用量。
 运行记录，不能覆盖旧结果。参数是否全部参与 backward 也作为明确选项记录，
 避免改变训练参数范围后仍声称测量原实现。
 
-当前 `gemma_row_family` 已完成 32 状态，统一原坐标分析给出 update RMS
-7.678779%，复现原参考范围下的结果。统一入口的
-`analyze RAW OUTPUT --protocol PROTOCOL` 使用现有 v2 分析，无须手填结论。
+原 `gemma_row_family` 恢复路径后来发现实际执行源与声明的平方和端点不匹配，
+因此不能形成有效的同一端点测量，也不再作为当前活动案例。相关 32 状态记录、
+绑定诊断和失败原因全部保留用于追溯；它们不能被解释为 7.678779% 的有效
+训练端点结果。统一入口遇到这类 mismatch 应返回无效测量，而不是改用另一个
+端点继续生成 bias 结论。
 
 参考范围对照也已完成：同一 DeepSeek seq64 attention projection 位置，
 AOT 端点替换 RMS 为 34.7162%，相同输入 FP32 重算为 0.0004777564%。

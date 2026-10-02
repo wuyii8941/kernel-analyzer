@@ -40,7 +40,12 @@ def binary_prevalence_summary(
 def statewise_aligned_summary(
     inner_products: Sequence[float], repair_energies: Sequence[float], *, alpha: float = .05
 ) -> dict:
-    """Summarize per-unit aligned gain without calling it a vector-mean test."""
+    """Reproduce the legacy relative-gain protocol, not the current checker.
+
+    Frozen source-link verifiers depend on these historical semantics. New
+    callable checks use the unit-reference projection in ``bias_checker``;
+    do not relabel this historical summary as that new estimand.
+    """
     if len(inner_products) != len(repair_energies) or len(inner_products) < 2:
         raise ValueError("aligned inference needs matching sequences with at least two units")
     values = []

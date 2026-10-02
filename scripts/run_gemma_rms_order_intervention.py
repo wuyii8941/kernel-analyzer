@@ -37,6 +37,7 @@ def _args() -> argparse.Namespace:
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--steps", type=int, default=32)
+    parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--device", default="cuda:0")
     return parser.parse_args()
 
@@ -97,6 +98,19 @@ def _summary(effects: list[Any], references: list[Any], *, torch: Any) -> dict[s
             "status": "IDENTIFIED" if direction_interval is not None else "NOT_IDENTIFIABLE",
         },
     }
+
+
+def _adamw_first_step_write(gradient: Any, *, torch: Any, learning_rate: float) -> Any:
+    """Declared zero-moment FP32-master AdamW write for one state.
+
+    The Gemma RMS capture uses step one, zero moments, no weight decay and an
+    FP32 master parameter.  After bias correction, the proposal is
+    ``-lr * g / (abs(g) + eps)``.  Computing this directly keeps the replay
+    compact while matching the declared optimizer protocol.
+    """
+    epsilon = 1e-8
+    gradient = gradient.detach().float()
+    return -learning_rate * gradient / (gradient.abs() + epsilon)
 
 
 def main() -> None:
@@ -217,6 +231,8 @@ def main() -> None:
                     "candidate_outputs": [],
                     "gradient_effects": [],
                     "gradient_references": [],
+                    "write_effects": [],
+                    "write_references": [],
                 }
             }
             for variant in variants
@@ -227,6 +243,9 @@ def main() -> None:
                 selected_task=selected_task, expected_task_id=task_id,
             )
             baseline_gradient = parameters[carrier].grad.detach().float().cpu().clone()
+            baseline_write = _adamw_first_step_write(
+                baseline_gradient, torch=torch, learning_rate=args.learning_rate
+            )
             for variant in variants:
                 repaired = run_state(
                     state, variant=variant, repair=True,
@@ -242,6 +261,13 @@ def main() -> None:
                     baseline_gradient - gradient
                 )
                 outputs[variant][task_id]["gradient_references"].append(gradient)
+                reference_write = _adamw_first_step_write(
+                    gradient, torch=torch, learning_rate=args.learning_rate
+                )
+                outputs[variant][task_id]["write_effects"].append(
+                    baseline_write - reference_write
+                )
+                outputs[variant][task_id]["write_references"].append(reference_write)
             print(json.dumps({
                 "event": "RMS_ORDER_INTERVENTION_STATE",
                 "task_id": task_id,
@@ -280,6 +306,11 @@ def main() -> None:
                 "parameter_gradient": _summary(
                     data["gradient_effects"],
                     data["gradient_references"],
+                    torch=torch,
+                ),
+                "parameter_write": _summary(
+                    data["write_effects"],
+                    data["write_references"],
                     torch=torch,
                 ),
             }

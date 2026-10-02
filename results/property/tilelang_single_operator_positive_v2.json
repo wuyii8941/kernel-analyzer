@@ -1,0 +1,88 @@
+{
+  "backend": "tilelang",
+  "backend_contract": {
+    "automatic_root_cause_analysis": false,
+    "autotune_selection_must_be_frozen_before_confirmation": true,
+    "candidate_is_compiled_callable": true,
+    "family": "odd_symmetry",
+    "input_distribution_is_caller_declared": true,
+    "reference_is_required": false,
+    "source_inspection": false
+  },
+  "bias_decision": "NOT_ASSESSED",
+  "bias_signal": "BIAS_CANDIDATE_PROPERTY_VIOLATION",
+  "diagnostic_status": "EVIDENCE_ONLY",
+  "errors": [],
+  "evidence_classes": [
+    "METAMORPHIC_PROPERTY_VIOLATION"
+  ],
+  "family": "odd_symmetry",
+  "limitations": [
+    "Odd symmetry is not valid for arbitrary operators.",
+    "A property violation is not a full-reference bias verdict.",
+    "A property pass is not proof of equivalence or training safety.",
+    "Training gradient, optimizer update, and loss consequences are not measured here."
+  ],
+  "measured_sample_count": 4,
+  "measurement_status": "VALID",
+  "property_contract": {
+    "caller_must_declare_odd_semantics": true,
+    "input_transform": "automatic_negation_of_all_floating_input_tensors",
+    "output_selector": null,
+    "property": "f(-x) == -f(x)",
+    "tilelang_output_selector": null,
+    "tolerance": 1e-05
+  },
+  "property_decision": "PROPERTY_VIOLATION_OBSERVED",
+  "records": [
+    {
+      "max_abs_residual": 0.2509765625,
+      "passed": false,
+      "property": "f(-x) == -f(x)",
+      "relative_residual_rms": 0.19352730649994013,
+      "residual_rms": 0.2500048055128155,
+      "sample": 0,
+      "signed_mean_residual": 0.25000476837158203,
+      "status": "VALID",
+      "tolerance": 1e-05
+    },
+    {
+      "max_abs_residual": 0.25048828125,
+      "passed": false,
+      "property": "f(-x) == -f(x)",
+      "relative_residual_rms": 0.21574181648558152,
+      "residual_rms": 0.24999383877413814,
+      "sample": 1,
+      "signed_mean_residual": 0.24999380111694336,
+      "status": "VALID",
+      "tolerance": 1e-05
+    },
+    {
+      "max_abs_residual": 0.2509765625,
+      "passed": false,
+      "property": "f(-x) == -f(x)",
+      "relative_residual_rms": 0.18271145949695392,
+      "residual_rms": 0.24997825084920422,
+      "sample": 2,
+      "signed_mean_residual": 0.2499781847000122,
+      "status": "VALID",
+      "tolerance": 1e-05
+    },
+    {
+      "max_abs_residual": 0.2509765625,
+      "passed": false,
+      "property": "f(-x) == -f(x)",
+      "relative_residual_rms": 0.1948792872792513,
+      "residual_rms": 0.24999176660906505,
+      "sample": 3,
+      "signed_mean_residual": 0.24999165534973145,
+      "status": "VALID",
+      "tolerance": 1e-05
+    }
+  ],
+  "reference_status": "NOT_PROVIDED",
+  "sample_count": 4,
+  "schema": "kernel-analyzer-reference-free-diagnostics-v1",
+  "scope": "CALLER_DECLARED_ODD_PROPERTY_ONLY",
+  "violation_count": 4
+}

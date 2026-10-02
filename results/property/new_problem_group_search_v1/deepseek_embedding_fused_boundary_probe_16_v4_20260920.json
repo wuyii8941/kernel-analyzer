@@ -1,0 +1,206 @@
+{
+  "schema": "kernel-analyzer-deepseek-embedding-fused-boundary-probe-v1",
+  "status": "COMPLETE",
+  "model": "/data1/tzh/models/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+  "operator": "fused embedding/NLL/normalization backward region",
+  "candidate": "native generated fused reduction",
+  "reference_variants": [
+    "BF16 partial materialization",
+    "FP64 reduction"
+  ],
+  "input_source": "results/coverage/deepseek8b_seq128_input_bank.json",
+  "comparison_scope": {
+    "same_model_weights": true,
+    "same_input_ids": true,
+    "same_compiled_call_boundary": true,
+    "single_changed_boundary": "declared fused reduction arithmetic"
+  },
+  "rows": [
+    {
+      "state_index": 0,
+      "loss_native": 2.322540521621704,
+      "loss_bf16_partial": 2.322540521621704,
+      "write_effect_rms_over_bf16_partial": 0.015654278159831125,
+      "write_aligned_over_bf16_partial": -5.082048105374438e-05,
+      "loss_fp64_reduction": 2.322540521621704,
+      "write_effect_rms_over_fp64_reduction": 1.3771770597462623e-06,
+      "write_aligned_over_fp64_reduction": -2.6023474866679147e-09
+    },
+    {
+      "state_index": 1,
+      "loss_native": 2.1412153244018555,
+      "loss_bf16_partial": 2.1412153244018555,
+      "write_effect_rms_over_bf16_partial": 0.014430160374527379,
+      "write_aligned_over_bf16_partial": -5.4190563140630754e-05,
+      "loss_fp64_reduction": 2.1412153244018555,
+      "write_effect_rms_over_fp64_reduction": 1.753705626011648e-06,
+      "write_aligned_over_fp64_reduction": 3.285142163673749e-10
+    },
+    {
+      "state_index": 2,
+      "loss_native": 2.7279796600341797,
+      "loss_bf16_partial": 2.7279796600341797,
+      "write_effect_rms_over_bf16_partial": 0.01242590345812784,
+      "write_aligned_over_bf16_partial": -4.712671528613775e-05,
+      "loss_fp64_reduction": 2.7279796600341797,
+      "write_effect_rms_over_fp64_reduction": 1.149310282924434e-06,
+      "write_aligned_over_fp64_reduction": -1.957188211415754e-09
+    },
+    {
+      "state_index": 3,
+      "loss_native": 3.1421291828155518,
+      "loss_bf16_partial": 3.1421291828155518,
+      "write_effect_rms_over_bf16_partial": 0.018159372969125877,
+      "write_aligned_over_bf16_partial": -0.00012149447837665177,
+      "loss_fp64_reduction": 3.1421291828155518,
+      "write_effect_rms_over_fp64_reduction": 3.1087739253907035e-07,
+      "write_aligned_over_fp64_reduction": 6.312963464875694e-10
+    },
+    {
+      "state_index": 4,
+      "loss_native": 3.040008783340454,
+      "loss_bf16_partial": 3.040008783340454,
+      "write_effect_rms_over_bf16_partial": 0.013461270390682118,
+      "write_aligned_over_bf16_partial": -6.501039412595632e-05,
+      "loss_fp64_reduction": 3.040008783340454,
+      "write_effect_rms_over_fp64_reduction": 2.5131144085079666e-07,
+      "write_aligned_over_fp64_reduction": 6.068535490556472e-10
+    },
+    {
+      "state_index": 5,
+      "loss_native": 2.6093106269836426,
+      "loss_bf16_partial": 2.6093106269836426,
+      "write_effect_rms_over_bf16_partial": 0.01533041552859248,
+      "write_aligned_over_bf16_partial": -3.017554026784698e-05,
+      "loss_fp64_reduction": 2.6093106269836426,
+      "write_effect_rms_over_fp64_reduction": 3.432641103572667e-06,
+      "write_aligned_over_fp64_reduction": 1.9275061254506113e-09
+    },
+    {
+      "state_index": 6,
+      "loss_native": 2.7442779541015625,
+      "loss_bf16_partial": 2.7442779541015625,
+      "write_effect_rms_over_bf16_partial": 0.016315439785254682,
+      "write_aligned_over_bf16_partial": -7.02931316315031e-05,
+      "loss_fp64_reduction": 2.7442779541015625,
+      "write_effect_rms_over_fp64_reduction": 2.45514939479524e-06,
+      "write_aligned_over_fp64_reduction": -1.480986377735144e-09
+    },
+    {
+      "state_index": 7,
+      "loss_native": 1.704866886138916,
+      "loss_bf16_partial": 1.704866886138916,
+      "write_effect_rms_over_bf16_partial": 0.028622925479445675,
+      "write_aligned_over_bf16_partial": -0.00029606375945554896,
+      "loss_fp64_reduction": 1.704866886138916,
+      "write_effect_rms_over_fp64_reduction": 9.9090810627745e-07,
+      "write_aligned_over_fp64_reduction": -2.049722136641939e-09
+    },
+    {
+      "state_index": 8,
+      "loss_native": 2.9819445610046387,
+      "loss_bf16_partial": 2.9819445610046387,
+      "write_effect_rms_over_bf16_partial": 0.017285477892807564,
+      "write_aligned_over_bf16_partial": -6.358092959209262e-05,
+      "loss_fp64_reduction": 2.9819445610046387,
+      "write_effect_rms_over_fp64_reduction": 7.087415569194053e-07,
+      "write_aligned_over_fp64_reduction": 1.3823703245057428e-09
+    },
+    {
+      "state_index": 9,
+      "loss_native": 3.2131714820861816,
+      "loss_bf16_partial": 3.2131714820861816,
+      "write_effect_rms_over_bf16_partial": 0.018305128640872526,
+      "write_aligned_over_bf16_partial": -7.237543200547309e-05,
+      "loss_fp64_reduction": 3.2131714820861816,
+      "write_effect_rms_over_fp64_reduction": 1.7495841109818458e-06,
+      "write_aligned_over_fp64_reduction": -3.4417207775273667e-10
+    },
+    {
+      "state_index": 10,
+      "loss_native": 2.958033323287964,
+      "loss_bf16_partial": 2.958033323287964,
+      "write_effect_rms_over_bf16_partial": 0.01609803661841114,
+      "write_aligned_over_bf16_partial": -7.830768855287609e-05,
+      "loss_fp64_reduction": 2.958033323287964,
+      "write_effect_rms_over_fp64_reduction": 3.1948753070609644e-06,
+      "write_aligned_over_fp64_reduction": 4.084657358163686e-09
+    },
+    {
+      "state_index": 11,
+      "loss_native": 3.0602076053619385,
+      "loss_bf16_partial": 3.0602076053619385,
+      "write_effect_rms_over_bf16_partial": 0.012919810255074741,
+      "write_aligned_over_bf16_partial": -3.188426345878686e-05,
+      "loss_fp64_reduction": 3.0602076053619385,
+      "write_effect_rms_over_fp64_reduction": 1.8913208848319415e-06,
+      "write_aligned_over_fp64_reduction": 2.8527390718938536e-09
+    },
+    {
+      "state_index": 12,
+      "loss_native": 3.0509557723999023,
+      "loss_bf16_partial": 3.0509557723999023,
+      "write_effect_rms_over_bf16_partial": 0.01985736774566586,
+      "write_aligned_over_bf16_partial": -0.00012506135186016415,
+      "loss_fp64_reduction": 3.0509557723999023,
+      "write_effect_rms_over_fp64_reduction": 1.098173901242519e-06,
+      "write_aligned_over_fp64_reduction": 1.1663020288067865e-09
+    },
+    {
+      "state_index": 13,
+      "loss_native": 3.677771806716919,
+      "loss_bf16_partial": 3.677771806716919,
+      "write_effect_rms_over_bf16_partial": 0.016989993509784782,
+      "write_aligned_over_bf16_partial": -7.830763763556016e-05,
+      "loss_fp64_reduction": 3.677771806716919,
+      "write_effect_rms_over_fp64_reduction": 2.2997315729183666e-06,
+      "write_aligned_over_fp64_reduction": 2.3005320156099023e-09
+    },
+    {
+      "state_index": 14,
+      "loss_native": 2.9768733978271484,
+      "loss_bf16_partial": 2.9768733978271484,
+      "write_effect_rms_over_bf16_partial": 0.019010651394819795,
+      "write_aligned_over_bf16_partial": -0.00011340519600013342,
+      "loss_fp64_reduction": 2.9768733978271484,
+      "write_effect_rms_over_fp64_reduction": 1.466185009506094e-07,
+      "write_aligned_over_fp64_reduction": 2.5166919447411414e-10
+    },
+    {
+      "state_index": 15,
+      "loss_native": 2.9842634201049805,
+      "loss_bf16_partial": 2.9842634201049805,
+      "write_effect_rms_over_bf16_partial": 0.0178508848185674,
+      "write_aligned_over_bf16_partial": -8.413431189688183e-05,
+      "loss_fp64_reduction": 2.9842634201049805,
+      "write_effect_rms_over_fp64_reduction": 1.535008057771042e-06,
+      "write_aligned_over_fp64_reduction": 3.077683281076496e-09
+    }
+  ],
+  "summary": {
+    "state_count": 16,
+    "calibration_count": 8,
+    "confirmation_count": 8,
+    "variants": {
+      "bf16_partial": {
+        "write_effect_rms_mean": 0.01704481989145279,
+        "aligned_write_mean": -8.638949657324702e-05,
+        "aligned_write_interval_normal_95": [
+          -0.00011711105670849407,
+          -5.566792758400446e-05
+        ],
+        "loss_difference_mean": 0.0
+      },
+      "fp64_reduction": {
+        "write_effect_rms_mean": 1.521570766271907e-06,
+        "aligned_write_mean": 6.359817117385091e-10,
+        "aligned_write_interval_normal_95": [
+          -3.288418746512725e-10,
+          1.6008052773610596e-09
+        ],
+        "loss_difference_mean": 0.0
+      }
+    }
+  },
+  "claim_boundary": "This probe only tests the declared arithmetic variants at one generated fused boundary; it does not assign the original region effect to a source unless a variant reproduces the observed direction and scale."
+}

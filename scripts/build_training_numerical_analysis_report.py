@@ -89,7 +89,7 @@ def main() -> None:
     lines = [
         "# Training Numerical Analysis v1", "",
         "历史限制：v1 使用额外 BF16 舍入的写入模拟，未通过目标 AdamW 写入一致性验收。",
-        "当前修正与验收状态见 [readback-v2](training_numerical_analysis_v2.md)。", "",
+        "当前修正与验收状态见 [readback-v2](../training_numerical_analysis_v2/)；当前结论查 [案例总表](../../../docs/root_cause_closure_current.md)。", "",
         "本页由 `scripts/build_training_numerical_analysis_report.py` 从机器记录生成。",
         "它不替代原始结果，也不将重新分析写成未见确认。", "",
         "| 案例 | 用途 | 测量状态 | 主要位置 | 写入差异 RMS | 相对缩放区间 | 等价性判断 |",

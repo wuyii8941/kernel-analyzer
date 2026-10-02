@@ -1,0 +1,92 @@
+{
+  "schema": "kernel-analyzer-gemma4-final-logit-softcap-candidate-v1",
+  "status": "CANDIDATE_NOT_PROMOTED",
+  "operator": "Gemma-4 final-logit soft-cap materialization",
+  "model": "/data1/tzh/models/google/gemma-4-E2B",
+  "candidate": "native bfloat16 divide/tanh/multiply",
+  "reference": "float32 divide/tanh/multiply followed by bfloat16 writeback",
+  "comparison_scope": {
+    "same_model_weights": true,
+    "same_input_ids": true,
+    "same_pre_softcap_logits": true,
+    "single_changed_boundary": "final-logit soft-cap arithmetic"
+  },
+  "logit_gradient_probe": {
+    "state_count": 8,
+    "aligned_mean": 0.0006501969509446835,
+    "aligned_interval_normal_95": [0.0005196303857586958, 0.0007807635161306712],
+    "aligned_positive": 8,
+    "aligned_negative": 0,
+    "effect_rms_mean": 0.008574491067436911
+  },
+  "short_parameter_probe": {
+    "target": "model.language_model.layers.0.self_attn.q_proj.weight",
+    "sequence_length": 16,
+    "state_count": 8,
+    "aligned_values": [
+      0.02097591759932014,
+      0.008288869674334955,
+      0.003744684779262889,
+      -0.01164354804014027,
+      0.01694914951062374,
+      0.01799609071020207,
+      0.0006305596893910071,
+      -0.004206872838841388
+    ],
+    "aligned_mean": 0.006591856385519143,
+    "aligned_interval_normal_95": [-0.001437897205582522, 0.014621609976620807],
+    "aligned_positive": 6,
+    "aligned_negative": 2
+  },
+  "lm_head_parameter_probe": {
+    "target": "lm_head.weight",
+    "sequence_length": 8,
+    "state_count": 4,
+    "aligned_values": [
+      -0.020377858752963482,
+      -0.008736853629803587,
+      0.009239299443597198,
+      0.016984714117377585
+    ],
+    "aligned_mean": -0.000722674705448071,
+    "aligned_interval_normal_95": [-0.01734752934265951, 0.015902179931763367],
+    "aligned_positive": 2,
+    "aligned_negative": 2
+  },
+  "final_norm_parameter_probe": {
+    "target": "model.language_model.norm.weight",
+    "sequence_length": 8,
+    "state_count": 4,
+    "aligned_values": [
+      0.006361232782878522,
+      0.017091614557337133,
+      -0.0037971941826051977,
+      -0.0000015519326518866132
+    ],
+    "aligned_mean": 0.004913525306239642,
+    "aligned_interval_normal_95": [-0.004040413384554547, 0.01386746399703383],
+    "aligned_positive": 2,
+    "aligned_negative": 2
+  },
+  "lm_head_parameter_confirmation": {
+    "target": "lm_head.weight",
+    "sequence_length": 16,
+    "state_count": 16,
+    "aligned_values": [-0.0028397054019860344, -0.0004604733174192145, 0.0008133027437774241, -0.0002965912605457837, -0.0008472341243187314, -0.0027005595063083403, -0.0013745404288739767, -0.00036363343199743493, 0.0021254605035336883, 0.00019236392527126564, -0.001309476493190453, -0.0005110532647518618, 0.0007722435965567546, 0.0013120562591809077, -0.0002976555634246858, 0.00015783676747282443],
+    "aligned_mean": -0.00035172868731397824,
+    "aligned_interval_normal_95": [-0.0009973428454890217, 0.0002938854708610651],
+    "aligned_positive": 6,
+    "aligned_negative": 10,
+    "rms_mean": 0.006821739967424611,
+    "evidence": "results/property/new_problem_group_search_v1/gemma4_final_logit_softcap_lm_head_confirmation_20260919.json"
+  },
+  "promotion_decision": {
+    "active_problem_group_count_change": 0,
+    "reason": "The source boundary is isolated and the logits-level gradient direction is consistent, but the short real-parameter replay does not yet establish a nonzero mean update direction. Keep as a candidate for a longer parameter-level confirmation, not as a new natural training-bias group.",
+    "next_decisive_test": "none for the current claim: a 16-state lm_head parameter replay still has a zero-crossing aligned interval; retain as source-isolated non-promoted candidate"
+  },
+  "evidence": [
+    "scripts/run_gemma4_final_logit_softcap_logits_probe.py",
+    "results/property/tcmp_allop_v1/input_banks/gemma4_e2b_text128.json"
+  ]
+}

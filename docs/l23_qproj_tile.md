@@ -1,7 +1,7 @@
 # Layer-23 q_proj tile
 
 > 版本定位（2026-09-05）：推导与历史区域对照。下文“第三个”等序号属于当时登记，不是当前成因数；保留区域范围，不升格为单 kernel 归因。
-> 当前证据连接见[案例地图](case_evidence_map.md)。
+> 当前证据连接见[全部案例结论](root_cause_closure_current.md)。
 
 ## Verdict
 

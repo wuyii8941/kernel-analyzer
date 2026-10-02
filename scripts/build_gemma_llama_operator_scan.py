@@ -17,7 +17,7 @@ ELIGIBILITY = {
 OUT = ROOT / "results/property/declared_persistent_4096/operator_scan_gemma_llama.json"
 TARGET_MANIFEST = ROOT / "results/property/declared_persistent_4096/operator_scan_target_manifest.json"
 BLOCKED_REPLAY = ROOT / "results/property/declared_persistent_4096/operator_scan_replay_blocked.json"
-MD = ROOT / "docs/gemma_llama_operator_scan.md"
+MD = OUT.with_suffix(".md")
 
 
 def main() -> None:

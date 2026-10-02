@@ -6,9 +6,9 @@
 
 > **Horizon note.** The fixed-condition and 32-step experiments in this
 > document describe bias formation and short-horizon directionality. They are
-> not, by themselves, the final long-horizon label. The current 4096-step
-> labels live in `docs/all_bias_long_horizon_audit.md`, under that audit's rules.
-> Current case interpretation lives in `docs/case_evidence_map.md`: an established
+> not, by themselves, the final long-horizon label. The historical 4096-step
+> labels are in Git history (`docs/all_bias_long_horizon_audit.md`, removed 2026-10-02).
+> Current case interpretation lives in `docs/root_cause_closure_current.md`: an established
 > bias mechanism with loss separation need not also have persistent late direct
 > effect. Loss separation alone still cannot establish a bias mechanism.
 

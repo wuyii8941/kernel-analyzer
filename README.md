@@ -9,6 +9,10 @@ Triton，也保留 PyTorch/ATen/CUDA 与混合计算。研究问题是：**bias 
 研究借鉴 [FlashAttention 的来源分析](https://arxiv.org/abs/2510.04212)，不要求每个
 案例崩溃，也不把 loss 非同一性解释成质量恶化。
 
+**当前口径以 [阶段性总结（2026-10-02）](docs/stage_summary_20261002.md) 为准**：研究问题、
+估计目标、已纠正的说法与下一步（自动参照 K_R 的组合求值器）都写在那里；与之冲突的
+旧结论以它为准。
+
 ## 系统已经能自动做什么？
 
 **在参考语义和执行接入已审核之后，系统能自动测量、分析并汇总指定实现的误差。
@@ -38,12 +42,16 @@ print(report["status"])
 `UNRESOLVED_MEASUREMENT`；入口默认检查输出，可选 `check_backward=True` 检查梯度。
 它不自动生成 reference、解释根因或推断训练 loss，详细字段和边界见上述说明。
 
+没有完整 reference 时，现有 `diagnose_kernel` 可以执行调用者声明的性质检查与
+合法变体比较，但目前不作总体 bias 判断。家族规格模板、真实案例回归和统计边界的
+下一步工作集中在[小工具实施计划](docs/system.md#轻量诊断工具实施计划)，尚未完成的
+部分不会被写成现有能力。
+
 ## 研究与证据入口
 
 - [当前主线](docs/current_mainline.md)：研究目标与下一轮优先级。
 - [实验方法](docs/method.md)及[统计与实验对齐](docs/statistics_experiment_alignment.md)：定义、假设和判断范围。
-- [主张账本](docs/claims.md)与[逐案例来源审计](docs/case_causal_audit.md)：哪些成因已解释，哪些仍未知。
-- [案例与证据地图](docs/case_evidence_map.md)：原始协议、结果、失败与训练记录。
+- [主张账本](docs/claims.md)与[全部案例结论](docs/root_cause_closure_current.md)：根因、平均 bias、训练后果、未解问题和原始记录。
 - [全部文档](docs/README.md)：专题推导和历史复现入口。
 
 数值测试、bias 检验、来源解释和训练后果是不同结果。总误差大不证明均值 bias；
@@ -58,10 +66,11 @@ AdamW8bit 的保存残差能够解释所测 history 的 moment 差异；针对�
 见[独立确认记录](results/property/result_analysis_v4/iid_training_confirmation/verification.json)。
 
 其他案例提供实现来源、状态依赖或边界证据，不按模型位置重复计数：
-Liger 的 FP32 顺序实验保留局部与摘要方向证据，不能把计算所得 update 的摘要 RMS
-称为原坐标实际参数写入；softmax 的保存状态行和检查也不单独证明训练 bias 根因闭合。
+Liger 的旧 FP32 顺序实验只有摘要和公式 update；新复采已测得原坐标真实 AdamW
+写入，并在声明经验输入库中确认正的方向投影均值，但没有相应长期质量改善证据。
+Softmax 保存状态的不一致已定位，尚未证明自然总体的更新均值和稳定质量损害。
 Liger 的 10000 步轨迹出现 loss 差异反转，不支持持续恶化。
-详见[逐案例审计](docs/case_causal_audit.md)和[训练后果说明](docs/liger_single_boundary_collapse_experiment.md)。
+详见[全部案例结论](docs/root_cause_closure_current.md)和[训练后果说明](docs/liger_single_boundary_collapse_experiment.md)。
 
 已有覆盖证明工具不止服务于一个案例，但有效位置数不是独立 bias 数量。
 [自动采集记录](docs/numerical_coverage_execution.md)保留成功、超时、缺参考与路径不匹配；
@@ -71,6 +80,8 @@ Liger 的 10000 步轨迹出现 loss 差异反转，不支持持续恶化。
 
 `src/` 保存公共测量和统计代码，`scripts/` 保存执行与复算入口，`tests/` 保存验证，
 `results/` 保存协议和实验结果。使用已有研究环境；系统默认 Python 不一定包含 PyTorch。
+近期单步探针、独立训练确认、失败记录与工具演示分别从[结果索引](results/README.md)
+进入；实验总数和逐案例状态只维护在案例总表，不在多份文档同步抄写。
 新任务的输出、缓存和临时文件均放在本仓库内，不写入 `/home`。
 
 重复的历史状态说明可以删除；原始结果、数学推导、阴性与失败记录，以及仍有调用者的

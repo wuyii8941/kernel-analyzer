@@ -21,7 +21,7 @@ ROWS = [
         "closure": "END_TO_END_CAUSAL_CHAIN_UNDER_DECLARED_PROTOCOL",
         "remaining_limit": "one checkpoint/model setting; intervention-to-outcome evidence does not establish mean bias rather than variance or nonlinear response as the unique loss cause; constructed failure is not a natural collapse; a production-quality optimizer claim is not made",
         "next_root_cause_test": "external model or checkpoint confirmation; not another intervention chosen on the same data",
-        "evidence": ["docs/optimizer_update_family_audit.md", "docs/adamw8bit_residual_structure_20260913.md", "docs/priority_analysis_1_2_20260913.md"],
+        "evidence": ["docs/optimizer_update_family_audit.md", "docs/adamw8bit_residual_structure_20260913.md", "docs/root_cause_closure_current.md"],
     },
     {
         "problem_group": "liger_fused_linear_ce_dw_accumulation",
@@ -57,7 +57,7 @@ ROWS = [
         "closure": "LOCAL_ARITHMETIC_ROOT_CLOSED_AND_DECLARED_TRAJECTORY_NON_IDENTITY_NATURAL_BIAS_OPEN",
         "remaining_limit": "the fixed-call mass defect and declared trajectory effect are closed under their protocols, but the state sequence is not an iid population and does not establish a persistent natural update bias or material quality loss",
         "next_root_cause_test": "independent state-bank sampling with a predeclared loss endpoint, then restore only the consistent saved state before measuring gradient and update direction",
-        "evidence": ["results/property/root_cause_closure_v1/softmax_saved_state.json", "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json", "results/property/case_causal_audit_v1/qwen_saved_p_declared_trajectory_20260915.json", "docs/qwen_saved_p_declared_trajectory_20260915.md", "docs/effective_antithetic_symmetry.md"],
+        "evidence": ["results/property/root_cause_closure_v1/softmax_saved_state.json", "results/coverage/cases/qwen128_softmax_saved_p_trajectory.json", "results/property/case_causal_audit_v1/qwen_saved_p_declared_trajectory_20260915.json", "docs/effective_antithetic_symmetry.md"],
     },
     {
         "problem_group": "silu_backward_evaluation",
@@ -93,7 +93,7 @@ ROWS = [
         "closure": "STATE_RESPONSE_ESTABLISHED_SOURCE_ROOT_OPEN",
         "remaining_limit": "the low-level arithmetic source is not isolated and moments are not separated from step-counter effects",
         "next_root_cause_test": "same-operands cast/materialization factorial, plus a state comparison holding step counter fixed while changing moments",
-        "evidence": ["docs/fused_rotary_position_scaling_audit.md", "docs/findings_and_competing_explanations.md"],
+        "evidence": ["docs/fused_rotary_position_scaling_audit.md", "docs/root_cause_closure_current.md"],
     },
     {
         "problem_group": "common_input_silu_and_rms_backward_families",
@@ -105,7 +105,7 @@ ROWS = [
         "closure": "MEASUREMENT_ONLY_FOR_ROOT_CAUSE",
         "remaining_limit": "requires targeted source-isolating variants before root-cause claims",
         "next_root_cause_test": "select representatives before outcome inspection and run expression-component factorials; do not test all 99 positions independently",
-        "evidence": ["docs/silu_backward_common_input.md", "docs/new_family_source_audit.md"],
+        "evidence": ["docs/silu_backward_common_input.md", "docs/root_cause_closure_current.md"],
     },
     {
         "problem_group": "reference_graph_regions",
@@ -117,7 +117,7 @@ ROWS = [
         "closure": "REGION_MEASUREMENT_NO_SINGLE_KERNEL_ROOT",
         "remaining_limit": "same local operands and unique source attribution are absent",
         "next_root_cause_test": "promote only selected regions to same-operands comparisons; the collection itself is not a root-cause target",
-        "evidence": ["docs/attribution_derivation_20260913.md", "docs/result_analysis_20260913.md"],
+        "evidence": ["docs/attribution_derivation_20260913.md", "docs/root_cause_closure_current.md"],
     },
 ]
 

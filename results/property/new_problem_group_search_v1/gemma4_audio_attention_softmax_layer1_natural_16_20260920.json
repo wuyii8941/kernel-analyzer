@@ -1,0 +1,170 @@
+{
+  "schema": "kernel-analyzer-gemma4-audio-attention-softmax-natural-v1",
+  "status": "COMPLETE_NATURAL_AUDIO_ATTENTION_SOFTMAX_BOUNDARY",
+  "model": "/data1/tzh/models/google/gemma-4-E2B",
+  "operator_family": "audio_attention_softmax_materialization",
+  "candidate": "native Gemma4 audio attention softmax in FP32 before BF16 write",
+  "reference": "same logits and softcap with FP64 softmax before original BF16 write",
+  "layer": 1,
+  "target_parameter": "model.audio_tower.layers.1.self_attn.q_proj.linear.weight",
+  "input_source": "real waveform bank and fixed text target",
+  "comparison_scope": {
+    "same_audio": true,
+    "same_text": true,
+    "same_layer": true,
+    "same_softcap": true,
+    "single_changed_boundary": "audio attention softmax evaluation dtype"
+  },
+  "rows": [
+    {
+      "state_id": 0,
+      "audio_tokens": 147,
+      "loss_difference": -0.008733749389648438,
+      "gradient_effect_rms_over_reference": 0.18900240681660857,
+      "write_effect_rms_over_reference": 0.1890035641737439,
+      "write_aligned": -0.137998543946094
+    },
+    {
+      "state_id": 1,
+      "audio_tokens": 121,
+      "loss_difference": 0.0,
+      "gradient_effect_rms_over_reference": 0.023281349933752426,
+      "write_effect_rms_over_reference": 0.023282436923622564,
+      "write_aligned": 0.016396961110555504
+    },
+    {
+      "state_id": 2,
+      "audio_tokens": 312,
+      "loss_difference": 0.0007801055908203125,
+      "gradient_effect_rms_over_reference": 0.3093802881815948,
+      "write_effect_rms_over_reference": 0.3093795555933798,
+      "write_aligned": -0.21379965313821747
+    },
+    {
+      "state_id": 3,
+      "audio_tokens": 248,
+      "loss_difference": 0.11587810516357422,
+      "gradient_effect_rms_over_reference": 0.28459352080729233,
+      "write_effect_rms_over_reference": 0.2845935253861352,
+      "write_aligned": 0.1877382493032107
+    },
+    {
+      "state_id": 4,
+      "audio_tokens": 735,
+      "loss_difference": 0.02347707748413086,
+      "gradient_effect_rms_over_reference": 1.4633126385419213,
+      "write_effect_rms_over_reference": 1.4633428596844968,
+      "write_aligned": -1.1329549550479225
+    },
+    {
+      "state_id": 5,
+      "audio_tokens": 225,
+      "loss_difference": -0.03755664825439453,
+      "gradient_effect_rms_over_reference": 2.178406960078568,
+      "write_effect_rms_over_reference": 2.1784768883208594,
+      "write_aligned": -0.8120987359090811
+    },
+    {
+      "state_id": 6,
+      "audio_tokens": 141,
+      "loss_difference": 0.14415454864501953,
+      "gradient_effect_rms_over_reference": 0.6918096288876553,
+      "write_effect_rms_over_reference": 0.6918229895430879,
+      "write_aligned": -0.0060267647824575115
+    },
+    {
+      "state_id": 7,
+      "audio_tokens": 231,
+      "loss_difference": 0.0,
+      "gradient_effect_rms_over_reference": 0.035818546981955295,
+      "write_effect_rms_over_reference": 0.03582172230670102,
+      "write_aligned": -0.01223770379059869
+    },
+    {
+      "state_id": 8,
+      "audio_tokens": 128,
+      "loss_difference": 0.019680023193359375,
+      "gradient_effect_rms_over_reference": 0.09927619672861833,
+      "write_effect_rms_over_reference": 0.0992781705947422,
+      "write_aligned": 0.0020689800549840284
+    },
+    {
+      "state_id": 9,
+      "audio_tokens": 457,
+      "loss_difference": 0.062068939208984375,
+      "gradient_effect_rms_over_reference": 0.8035720576774192,
+      "write_effect_rms_over_reference": 0.803581082882471,
+      "write_aligned": -0.3633767426025514
+    },
+    {
+      "state_id": 10,
+      "audio_tokens": 140,
+      "loss_difference": 0.24672317504882812,
+      "gradient_effect_rms_over_reference": 2.094747045566155,
+      "write_effect_rms_over_reference": 2.0947946977505545,
+      "write_aligned": 1.0853849889948668
+    },
+    {
+      "state_id": 11,
+      "audio_tokens": 378,
+      "loss_difference": 0.04348564147949219,
+      "gradient_effect_rms_over_reference": 2.81823483851868,
+      "write_effect_rms_over_reference": 2.8182864755117234,
+      "write_aligned": -1.8646536635196131
+    },
+    {
+      "state_id": 12,
+      "audio_tokens": 135,
+      "loss_difference": 0.0,
+      "gradient_effect_rms_over_reference": 0.012558240412733686,
+      "write_effect_rms_over_reference": 0.012559336047900787,
+      "write_aligned": -0.0011306597021512124
+    },
+    {
+      "state_id": 13,
+      "audio_tokens": 178,
+      "loss_difference": -0.029244422912597656,
+      "gradient_effect_rms_over_reference": 0.1322809967786741,
+      "write_effect_rms_over_reference": 0.13228428582745974,
+      "write_aligned": -0.06884765204101174
+    },
+    {
+      "state_id": 14,
+      "audio_tokens": 56,
+      "loss_difference": 0.0,
+      "gradient_effect_rms_over_reference": 0.00010891405282605127,
+      "write_effect_rms_over_reference": 0.0001089173247918983,
+      "write_aligned": -1.3772898536891156e-06
+    },
+    {
+      "state_id": 15,
+      "audio_tokens": 272,
+      "loss_difference": 0.12189006805419922,
+      "gradient_effect_rms_over_reference": 4.680365942768341,
+      "write_effect_rms_over_reference": 4.680549256730107,
+      "write_aligned": -0.2871791497180588
+    }
+  ],
+  "summary": {
+    "state_count": 16,
+    "calibration_count": 8,
+    "confirmation_count": 8,
+    "write_effect_rms_mean": 0.988572860287611,
+    "write_aligned_interval_normal_95": [
+      -0.5381190133473214,
+      0.08702946059432212
+    ],
+    "loss_difference_interval_normal_95": [
+      0.006358243389872349,
+      0.0814671145240986
+    ],
+    "heldout_projection_interval_normal_95": [
+      -2.8234136033757956e-05,
+      1.1756057911872076e-07
+    ],
+    "heldout_projection_positive": 4,
+    "heldout_projection_negative": 4,
+    "calibration_direction_norm": 0.0006697009839710778
+  },
+  "claim_boundary": "One Gemma-4 checkpoint, one audio-attention layer and declared real waveform bank; fixed-suite source/write result only, no population or quality claim."
+}

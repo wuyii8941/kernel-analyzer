@@ -1,0 +1,16 @@
+{
+  "schema": "tilelang-probability-mass-spec-v1",
+  "data_use": "CONTROLLED_DEVELOPMENT_NOT_NATURAL_TRAINING",
+  "specification": "sum of stored reconstructed probabilities equals one up to declared tolerance",
+  "tolerance": 1e-05,
+  "distribution": "128 independent N(0,4^2) FP32 scores, then stored in BF16",
+  "seed_start": 92200,
+  "samples": 64,
+  "conditions": [
+    "statistics_from_original_scores",
+    "statistics_from_stored_scores"
+  ],
+  "intervention": "same BF16 scores and same kernel, recompute max and denominator from stored scores",
+  "property_is_necessary_not_sufficient": true,
+  "inference": "property diagnostics and exploratory conditional intervals; no full mean-bias or training verdict"
+}

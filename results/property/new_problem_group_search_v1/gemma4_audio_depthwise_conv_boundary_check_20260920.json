@@ -1,0 +1,33 @@
+{
+  "schema": "kernel-analyzer-gemma4-audio-depthwise-conv-boundary-check-v1",
+  "status": "COMPLETE_BOUNDARY_REFERENCE_CHECK",
+  "model": "/data1/tzh/models/google/gemma-4-E2B",
+  "operator": "audio.layers.0.lconv1d.depthwise_conv1d",
+  "input_source": "three real LibriSpeech waveforms from the declared audio bank",
+  "reference_check": "native Conv1d versus explicit padded depthwise window FP32 multiply-accumulate and original-dtype writeback",
+  "states": [
+    {
+      "state_id": 0,
+      "native_vs_explicit_relative_rms": 0.0,
+      "native_vs_explicit_max_abs": 0.0,
+      "high_precision_conv_vs_explicit_relative_rms": 0.0016865493962541223,
+      "high_precision_conv_vs_explicit_max_abs": 0.24993896484375
+    },
+    {
+      "state_id": 10,
+      "native_vs_explicit_relative_rms": 1.1754721072065877e-06,
+      "native_vs_explicit_max_abs": 0.00390625,
+      "high_precision_conv_vs_explicit_relative_rms": 0.0016763356979936361,
+      "high_precision_conv_vs_explicit_max_abs": 0.2498779296875
+    },
+    {
+      "state_id": 13,
+      "native_vs_explicit_relative_rms": 8.02825979917543e-06,
+      "native_vs_explicit_max_abs": 0.03125,
+      "high_precision_conv_vs_explicit_relative_rms": 0.0016555869951844215,
+      "high_precision_conv_vs_explicit_max_abs": 0.248779296875
+    }
+  ],
+  "interpretation": "The explicit reference has the same padded window semantics and agrees with a high-precision Conv1d up to the original BF16 writeback. The large training differences in the natural probe therefore arise primarily in the backward weight-gradient accumulation path, not from an indexing or padding mismatch.",
+  "claim_boundary": "Three-state execution check for the declared Gemma-4 audio depthwise boundary; it does not establish a population or long-run training claim."
+}

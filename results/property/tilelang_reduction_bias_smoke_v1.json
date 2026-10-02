@@ -1,0 +1,164 @@
+{
+  "aligned_margin": 0.0,
+  "alpha": 0.05,
+  "backend": "tilelang",
+  "backend_contract": {
+    "automatic_root_cause_analysis": false,
+    "autotune_selection_must_be_frozen_before_confirmation": true,
+    "candidate_is_compiled_callable": true,
+    "input_distribution_is_caller_declared": true,
+    "reference_is_user_supplied": true,
+    "source_inspection": false
+  },
+  "calibration_samples": 2,
+  "confirmation_samples": 2,
+  "directional_margin": 0.0,
+  "errors": [],
+  "limitations": [
+    "A not-confirmed result is not proof that bias is absent.",
+    "This entry point does not infer a root cause or inspect Triton source.",
+    "The output stage is the default; backward is optional and requires a single tensor output.",
+    "Reference, call binding, and input distribution are supplied by the caller and are not validated semantically."
+  ],
+  "measurement_status": "VALID",
+  "output": {
+    "aligned_estimand": "mean_of_statewise_ratios",
+    "aligned_margin": 0.0,
+    "aligned_ratio_of_sums": -1.1531736888416382e-08,
+    "aligned_ratio_of_sums_scope": "descriptive_finite_sample_only",
+    "aligned_statewise_gain_interval": {
+      "assumptions": [
+        "independent identically distributed draws are needed for a population interpretation",
+        "Student interval is an approximation unless its distributional assumptions hold"
+      ],
+      "count": 4,
+      "degrees_of_freedom": 3,
+      "interval": [
+        -1.2062784046427092e-07,
+        7.40222079125855e-08
+      ],
+      "mean": -2.3302816275842706e-08,
+      "standard_error": 2.3302816275842703e-08,
+      "status": "VALID"
+    },
+    "allclose_auxiliary": {
+      "allclose": true,
+      "allclose_is_not_the_bias_decision": true
+    },
+    "decision": "SYSTEMATIC_BIAS_NOT_CONFIRMED",
+    "decision_endpoints": [
+      "held_out_directional_mean",
+      "statewise_aligned_gain"
+    ],
+    "direction": {
+      "calibration_count": 2,
+      "confirmation_count": 2,
+      "interval": null,
+      "sign_prevalence": null,
+      "status": "NOT_IDENTIFIABLE_ZERO_CALIBRATION_MEAN"
+    },
+    "directional_margin": 0.0,
+    "endpoint_alpha": 0.025,
+    "errors": [],
+    "inference_note": "Total RMS and aligned ratio are descriptive for this finite paired sample; the split-sample direction endpoint is conditional on the input generator.",
+    "mean_effect_norm_ratio": 1.6392740651035902e-08,
+    "measurement_status": "VALID",
+    "sample_count": 4,
+    "sample_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "scope": "DECLARED_INPUT_DISTRIBUTION_ONLY",
+    "sign_prevalence_is_separate_from_mean_decision": true,
+    "signature": [
+      [
+        [],
+        [
+          1
+        ],
+        "torch.float32"
+      ]
+    ],
+    "stage": "OUTPUT",
+    "systematic_bias_reasons": [],
+    "total_effect_energy": 2.2737367544323206e-13,
+    "total_reference_energy": 211.5324769558713,
+    "total_rms": 3.2785481302071805e-08
+  },
+  "sample_assumption": "make_inputs(index) must represent independent draws for population interpretations; the result otherwise remains a finite declared-input-sample description",
+  "sample_count": 4,
+  "schema": "kernel-analyzer-bias-check-v2",
+  "scope": "DECLARED_INPUT_DISTRIBUTION_OUTPUT_BIAS",
+  "stages": {
+    "OUTPUT": {
+      "aligned_estimand": "mean_of_statewise_ratios",
+      "aligned_margin": 0.0,
+      "aligned_ratio_of_sums": -1.1531736888416382e-08,
+      "aligned_ratio_of_sums_scope": "descriptive_finite_sample_only",
+      "aligned_statewise_gain_interval": {
+        "assumptions": [
+          "independent identically distributed draws are needed for a population interpretation",
+          "Student interval is an approximation unless its distributional assumptions hold"
+        ],
+        "count": 4,
+        "degrees_of_freedom": 3,
+        "interval": [
+          -1.2062784046427092e-07,
+          7.40222079125855e-08
+        ],
+        "mean": -2.3302816275842706e-08,
+        "standard_error": 2.3302816275842703e-08,
+        "status": "VALID"
+      },
+      "allclose_auxiliary": {
+        "allclose": true,
+        "allclose_is_not_the_bias_decision": true
+      },
+      "decision": "SYSTEMATIC_BIAS_NOT_CONFIRMED",
+      "decision_endpoints": [
+        "held_out_directional_mean",
+        "statewise_aligned_gain"
+      ],
+      "direction": {
+        "calibration_count": 2,
+        "confirmation_count": 2,
+        "interval": null,
+        "sign_prevalence": null,
+        "status": "NOT_IDENTIFIABLE_ZERO_CALIBRATION_MEAN"
+      },
+      "directional_margin": 0.0,
+      "endpoint_alpha": 0.025,
+      "errors": [],
+      "inference_note": "Total RMS and aligned ratio are descriptive for this finite paired sample; the split-sample direction endpoint is conditional on the input generator.",
+      "mean_effect_norm_ratio": 1.6392740651035902e-08,
+      "measurement_status": "VALID",
+      "sample_count": 4,
+      "sample_indices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "scope": "DECLARED_INPUT_DISTRIBUTION_ONLY",
+      "sign_prevalence_is_separate_from_mean_decision": true,
+      "signature": [
+        [
+          [],
+          [
+            1
+          ],
+          "torch.float32"
+        ]
+      ],
+      "stage": "OUTPUT",
+      "systematic_bias_reasons": [],
+      "total_effect_energy": 2.2737367544323206e-13,
+      "total_reference_energy": 211.5324769558713,
+      "total_rms": 3.2785481302071805e-08
+    }
+  },
+  "status": "SYSTEMATIC_BIAS_NOT_CONFIRMED",
+  "training_claim": false
+}

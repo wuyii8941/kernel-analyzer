@@ -1,0 +1,113 @@
+{
+  "schema": "kernel-analyzer-external-liger-candidate-triage-v1",
+  "date": "2026-09-19",
+  "purpose": "审计外部 Liger/DFuzz 候选，判断是否能增加自然训练问题组；不把错误对照或 API 契约误用计为实现根因。",
+  "environment_recheck": {
+    "runner": "/data1/tzh/envs/liger/bin/python",
+    "recheck_artifact": "results/property/new_problem_group_search_v1/liger_loss_recheck_20260918/single_step_results.json",
+    "orpo_repeated_significant": true,
+    "tvd_repeated_significant": true
+  },
+  "records": [
+    {
+      "candidate": "orpo_loss",
+      "status": "NOT_PROMOTED_REFERENCE_FORMULA_MISMATCH",
+      "observed": "两次单步比较均报告约 0.635 的 loss 差和 1.57e-3 的梯度最大差。",
+      "root_cause": "外部对照把偏好项写成 -logsigmoid(log_odds)，而 Liger/ORPO 定义使用 -beta*logsigmoid(log_odds)，本配置 beta=0.1；因此对照多了约十倍的偏好项。",
+      "verification": "按 Liger 源码的 log_odds 公式和 beta=0.1 重算，NLL 10.4016075 加 0.1*0.6285658 得 10.4644641，与 Liger 10.4644642 一致（浮点舍入范围内）。",
+      "deduplication": "不是新问题组；是错误参考公式。",
+      "evidence": [
+        "results/property/new_problem_group_search_v1/liger_loss_recheck_20260918/single_step_results.json",
+        "/data1/tzh/envs/liger/lib/python3.10/site-packages/liger_kernel/chunked_loss/orpo_loss.py",
+        "/data1/tzh/envs/liger/lib/python3.10/site-packages/liger_kernel/chunked_loss/fused_linear_preference.py"
+      ]
+    },
+    {
+      "candidate": "tvd",
+      "status": "NOT_PROMOTED_REDUCTION_CONTRACT_MISMATCH",
+      "observed": "两次单步比较中，手工参考约 0.5205，而 reduction=mean 输出约 1.63e-5。",
+      "root_cause": "手工参考是每行求和后再对行平均，即 batchmean；被测对象显式设置 reduction=mean，源码按所有 token-vocab 元素平均，二者相差约 vocab_size。内核对概率输入计算的正是 0.5*abs(p-q)。",
+      "verification": "源码的 reduction 分支明确区分 mean 与 batchmean；默认模块配置为 batchmean。以同一 reduction 计算参考时，不存在报告中的数量级差异。",
+      "deduplication": "不是新问题组；是 reduction 语义未对齐。",
+      "evidence": [
+        "results/property/new_problem_group_search_v1/liger_loss_recheck_20260918/single_step_results.json",
+        "/data1/tzh/envs/liger/lib/python3.10/site-packages/liger_kernel/ops/tvd.py",
+        "/data1/tzh/envs/liger/lib/python3.10/site-packages/liger_kernel/transformers/tvd.py"
+      ]
+    },
+    {
+      "candidate": "simpo_loss",
+      "status": "NOT_PROMOTED_CORRECT_REFERENCE_MATCHES",
+      "observed": "四个 DFuzz 重放记录的 Liger loss 与 mean-log-prob 显式公式差异约 1e-6；另有历史记录约 5e-4。",
+      "root_cause": "原始报告把错误的 sum/no-NLL/gamma 变体当作失败；正确 SimPO 公式与当前 Liger 实现一致到浮点误差范围。",
+      "deduplication": "不是新问题组。",
+      "evidence": [
+        "/data1/tzh/linger/DFuzz/reproduce_results/cases/simpo_loss_liger_simpo_loss_1771997625_427_r0.json",
+        "/data1/tzh/linger/DFuzz/reproduce_results/cases/simpo_loss_liger_simpo_loss_1771997725_797_r0.json",
+        "/data1/tzh/envs/liger/lib/python3.10/site-packages/liger_kernel/chunked_loss/simpo_loss.py"
+      ]
+    },
+    {
+      "candidate": "geglu",
+      "status": "NOT_PROMOTED_ACTIVATION_REFERENCE_MISMATCH",
+      "observed": "外部 tensor-level 记录的输出范数差异约 2.26e-2。",
+      "root_cause": "显式参考使用 exact GELU，而 LigerGEGLUMLP 的实现和注释明确采用 tanh-GELU 近似；这不是相同数学实现的数值偏差。",
+      "deduplication": "不是新问题组；若未来用同一 tanh-GELU 语义做自然训练边界，才可与现有 GELU 族统一评估。",
+      "evidence": [
+        "/data1/tzh/linger/repro_liger_results.json",
+        "/data1/tzh/linger/repro_liger.py",
+        "/data1/tzh/envs/liger/lib/python3.10/site-packages/liger_kernel/transformers/geglu.py"
+      ]
+    },
+    {
+      "candidate": "swiglu",
+      "status": "MERGED_OR_REQUIRES_SOURCE_ISOLATION",
+      "observed": "外部 Liger 训练重放有非零轨迹差异，但不是同一训练图内已隔离的单一 gate/update 边界。",
+      "root_cause": "当前证据只能说明 fused SwiGLU 区域与参考路径不同；已有自然证据已覆盖 SiLU 求值和 gate-times-up 乘法族，不能把该区域结果再计为独立根因。",
+      "deduplication": "并入已有激活/门控乘法候选；若要新增，必须做同输入、单中间量替换并进入 local→gradient→write。",
+      "evidence": [
+        "/data1/tzh/linger/repro_liger_results.json",
+        "results/property/case_causal_audit_v1/root_cause_closure_current.json"
+      ]
+    },
+    {
+      "candidate": "torch_compile",
+      "status": "NOT_PROMOTED_COMPOSITE_EXECUTION_MODE",
+      "observed": "高学习率设置下 compiled 路径出现 NaN/轨迹差异。",
+      "root_cause": "记录没有把差异隔离到单一算子或编译变换；它是复合执行模式的候选，不满足当前问题组的单边界根因标准。",
+      "deduplication": "保留为执行模式候选，不计入独立算子问题组。",
+      "evidence": [
+        "/data1/tzh/linger/repro_liger_results.json",
+        "/data1/tzh/linger/repro_liger.py"
+      ]
+    },
+    {
+      "candidate": "fused_adam",
+      "status": "MERGED_OR_NOT_SOURCE_ISOLATED",
+      "observed": "外部记录把 fused Adam 标记为已知差异。",
+      "root_cause": "没有与当前 AdamW8bit 保存状态残差链条分离的 source/intervention 证据；现有记录不足以区分实现差异、超参数/状态路径或其他融合求值差异。",
+      "deduplication": "不新增问题组；若继续，应按 optimizer 实现边界做独立状态和公式对齐。",
+      "evidence": [
+        "/data1/tzh/linger/repro_liger_results.json",
+        "/data1/tzh/linger/repro_liger.py"
+      ]
+    },
+    {
+      "candidate": "fused_linear_jsd",
+      "status": "OPERATOR_LEVEL_CANDIDATE_NOT_NATURAL_TRAINING_GROUP",
+      "observed": "在 liger 环境的 CPU chunked-loss 路径上，16 个受控输入的 BF16 实现相对 FP32 显式 JSD 参考平均 loss 绝对差约 8.39e-4，student-input gradient 差异 RMS 约 2.39e-4，student-weight gradient 差异 RMS 约 1.95e-4；FP16 的相应均值约为 1.34e-4、3.31e-5 和 2.75e-5。",
+      "root_cause": "差异来自 chunked JSD 的低精度输入/输出与分块梯度累加边界；同一环境下 FP32 chunked 路径与显式 FP32 参考在受控输入上逐位一致到浮点舍入范围。当前记录没有真实 LLM 的 student/teacher 训练边界，也没有可运行的 Triton GPU endpoint。",
+      "verification": "使用当前 liger_kernel.chunked_loss.LigerFusedLinearJSDLoss(compiled=False) 与同输入显式 FP32 logits/JSD/CE 参考，固定 beta=0.3、temperature=1.7、chunk_size=3，16 个 seed 分别测试 BF16 与 FP16；结果只支持算子级低精度候选，不支持自然训练 bias 或训练 loss 结论。",
+      "deduplication": "不新增自然训练问题组；它与已有 Liger 分块线性损失共享分块梯度累加边界，且当前没有真实训练执行证据。若后续在真实蒸馏训练中隔离并确认参数写入方向，再作为蒸馏/JSD 语义族独立评估。",
+      "evidence": [
+        "/data1/tzh/envs/liger/lib/python3.10/site-packages/liger_kernel/chunked_loss/jsd_loss.py",
+        "/data1/tzh/envs/liger/lib/python3.10/site-packages/liger_kernel/chunked_loss/fused_linear_distillation.py"
+      ]
+    }
+  ],
+  "conclusion": {
+    "new_natural_problem_groups_added": 0,
+    "promising_but_not_closed": ["swiglu", "torch_compile", "fused_adam", "fused_linear_jsd"],
+    "most_actionable_next_search": "不要把外部报告中的 loss 差异直接计数；优先对尚未覆盖的真实训练单边界做同输入 source isolation。JSD 需要先接入真实 student/teacher 训练端点，再判断是否独立于已有分块线性损失。"
+  }
+}

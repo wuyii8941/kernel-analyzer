@@ -46,14 +46,16 @@ def test_check_bias_detects_aligned_scaling_even_when_mean_direction_cancels():
     output = report["stages"]["OUTPUT"]
     assert report["status"] == "SYSTEMATIC_BIAS_CONFIRMED"
     assert output["aligned_ratio_of_sums"] == pytest.approx(0.02, rel=1e-5)
-    assert output["aligned_estimand"] == "mean_of_statewise_ratios"
+    assert output["aligned_estimand"] == "mean_dot_effect_unit_reference"
+    assert report["schema"] == "kernel-analyzer-bias-check-v3"
+    assert "aligned_statewise_gain_interval" not in output
     assert output["aligned_ratio_of_sums_scope"] == "descriptive_finite_sample_only"
     assert output["endpoint_alpha"] == pytest.approx(0.025)
     assert output["decision_endpoints"] == [
         "held_out_directional_mean",
-        "statewise_aligned_gain",
+        "unit_reference_projection_mean",
     ]
-    assert "STATEWISE_ALIGNED_GAIN_NONZERO" in output["systematic_bias_reasons"]
+    assert "UNIT_REFERENCE_PROJECTION_MEAN_NONZERO" in output["systematic_bias_reasons"]
     assert output["allclose_auxiliary"]["allclose"] is False
 
 
@@ -69,6 +71,21 @@ def test_check_bias_detects_a_directional_additive_effect():
     assert report["status"] == "SYSTEMATIC_BIAS_CONFIRMED"
     assert "HELD_OUT_DIRECTIONAL_MEAN_NONZERO" in output["systematic_bias_reasons"]
     assert output["direction"]["status"] == "VALID"
+
+
+def test_practical_margins_prevent_tiny_effect_from_being_called_bias():
+    report = check_bias(
+        lambda x: x + 0.01,
+        lambda x: x,
+        _inputs,
+        samples=12,
+        directional_margin=0.04,
+        aligned_projection_margin=0.04,
+    )
+    output = report["stages"]["OUTPUT"]
+    assert report["status"] == "SYSTEMATIC_BIAS_NOT_CONFIRMED"
+    assert output["directional_margin"] == pytest.approx(0.04)
+    assert output["aligned_projection_margin"] == pytest.approx(0.04)
 
 
 def test_zero_directional_projections_are_not_counted_as_negative_bias():
@@ -118,6 +135,52 @@ def test_check_bias_does_not_turn_execution_failure_into_a_negative_result():
 def test_check_bias_rejects_unusable_sample_configuration():
     with pytest.raises(ValueError):
         check_bias(lambda x: x, lambda x: x, _inputs, samples=3)
+
+
+def test_aligned_projection_does_not_reweight_by_inverse_reference_length():
+    from kernel_analyzer.bias_checker import _aligned_projection_interval, _student_interval
+
+    # Reference lengths 1 and 100, errors +1 and -1: the unit-direction
+    # mean is exactly zero, whereas the old gain mean is positive.
+    inner = [1.0, -100.0] * 32
+    energies = [1.0, 10000.0] * 32
+    old = _student_interval([a / b for a, b in zip(inner, energies)], alpha=.025)
+    new = _aligned_projection_interval(inner, energies, alpha=.025)
+    assert old["interval"][0] > 0
+    assert new["mean"] == 0
+    assert new["interval"][0] < 0 < new["interval"][1]
+    assert new["values"] == [1., -1.] * 32
+
+
+def test_checker_saves_sufficient_statistics_for_endpoint_recomputation():
+    import math
+
+    report = check_bias(lambda x: x + .03, lambda x: x, _inputs, samples=8)
+    output = report["output"]
+    stats = output["paired_sufficient_statistics"]
+    values = output["aligned_projection_interval"]["values"]
+    for a, b, x, value in zip(stats["effect_reference_inner_product"],
+                              stats["reference_energy"], stats["effect_energy"], values):
+        assert value == pytest.approx(a / math.sqrt(b))
+        assert abs(value) <= math.sqrt(x) + 1e-14
+    assert output["sample_indices"] == list(range(8))
+
+
+def test_unavailable_reference_direction_is_not_silently_filtered():
+    report = check_bias(lambda x: x, lambda x: x,
+                        lambda i: torch.tensor([float(i)]), samples=8)
+    output = report["output"]
+    assert output["aligned_effect_decision"] == "NOT_ASSESSED"
+    assert output["aligned_projection_interval"]["invalid_sample_positions"] == [0]
+    assert output["aligned_projection_interval"]["count"] == 8
+    assert report["status"] == "UNRESOLVED_MEASUREMENT"
+
+
+def test_legacy_nonzero_gain_margin_is_not_reinterpreted_in_new_units():
+    with pytest.raises(ValueError, match="cannot be migrated automatically"):
+        check_bias(lambda x: x, lambda x: x, _inputs, aligned_margin=.01)
+    report = check_bias(lambda x: x, lambda x: x, _inputs, samples=8, aligned_margin=0.)
+    assert report["aligned_projection_margin"] == 0
 
 
 def test_check_bias_preserves_tensor_aliases_across_arguments():
@@ -179,7 +242,9 @@ def test_sign_imbalance_does_not_replace_a_zero_mean_bias_decision():
     output = report["stages"]["OUTPUT"]
     assert output["direction"]["sign_prevalence"] is not None
     assert "HELD_OUT_DIRECTIONAL_SIGN_PREVALENCE" not in output["systematic_bias_reasons"]
-    assert output["decision"] == "SYSTEMATIC_BIAS_NOT_CONFIRMED"
+    assert output["mean_bias_decision"] == "NOT_CONFIRMED"
+    assert output["aligned_effect_decision"] == "NOT_ASSESSED"
+    assert output["decision"] == "UNRESOLVED_MEASUREMENT"  # reference is always zero
 
 
 def test_default_backward_uses_more_than_the_all_ones_cotangent():

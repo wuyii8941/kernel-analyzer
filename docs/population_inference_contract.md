@@ -66,17 +66,10 @@ X=\begin{cases}
 继续调区间消除的实现缺口。后续每个总体实验必须先声明要回答哪一个问题；条件不满足时
 框架返回不作判断。
 
-完整训练的统计单位另行定义为一对共享起点、数据与随机策略的运行。同一运行中的步骤、
-评估窗口和重复执行不增加独立单位数。现有 AdamW8bit 训练流使用最小间距筛选，因而
-不满足严格 iid；原配对区间保留为冻结数据流上的条件性近似。最终方案确定后，新的
-训练收益确认已从与开发范围分离的声明总体独立有放回抽取完整训练流，并在观察结果前
-固定主要比较、训练长度、评估集、margin 和数值失败处理。8 对均有限完成并通过冻结
-规则；范围与分布假设见[统计对齐说明](statistics_experiment_alignment.md)。
-
-训练数值失败与执行失败分开。非有限 loss 发生后，该运行没有预声明终点上的有限 loss，
-不能进入普通最终-loss t 区间。同一数据流的环境失败和重试只构成一项任务的执行记录，
-不能增加训练失败数或样本数。具体规则见
-[统计公式与实验设计对齐](statistics_experiment_alignment.md)。
+完整训练的统计单位、数据复用范围、独立性和失败感知汇总统一见
+[统计公式与实验设计对齐](statistics_experiment_alignment.md)。本合同只记录总体检验
+涉及的训练结果与保证边界，不重复定义配对训练规则；现有训练收益结果和范围见
+[主张账本](claims.md)。
 
 自动入口：
 
@@ -88,3 +81,33 @@ python scripts/run_training_numerical_analysis.py population-exceedance RAW.json
 多案例中“至少一个超范围”的报告仍需按预声明 family 使用 Holm 等校正；单案例
 等价判断中，必须通过所有必要条件的组合使用 intersection-union 逻辑，不靠“没有
 显著”推断安全。
+
+## 超界比例检验的统一定义与验证
+
+逐单位超界比例使用同一实际写入对象定义：
+
+\[
+p_\delta=\Pr\!\left(\sqrt{X/B}\geq\delta\right),\qquad
+I_j=\mathbf 1\{X_j\geq\delta^2B_j\}.
+\]
+
+协议预先给出允许比例 \(\varepsilon\)。对独立同分布单位的
+\(K=\sum_j I_j\)，生产入口使用精确二项单侧界：上界低于 \(\varepsilon\) 时通过，
+下界高于 \(\varepsilon\) 时不通过，其余返回证据不足。每个单位必须有严格为正的
+repair-energy；连续训练步骤不能冒充独立单位。该检验不控制平均能量 \(Q\)，也不
+控制少数超界单位的幅度。
+
+完整高维向量先经原坐标能量统计，再进入同一生产判定函数。边界校准中，16、64、299
+个单位的错误通过率分别为 2.81%、3.75%、4.95%，均不超过名义 5%；当
+\(\varepsilon=1\%\) 且零次超界时，298 个单位仍为 `INCONCLUSIVE`，299 个才可
+返回 `EQUIVALENT`。这些是对实现和边界行为的验证，不是对任何训练分布的额外定理。
+
+AdamW8bit 已在一个声明的固定 checkpoint 经验 token 分布上完成 32 个独立抽取的
+gradient-history 单位，32/32 超过 1% 的参数写入 RMS；超界比例的单侧 95% 下界为
+91.06%。该结果只覆盖声明的经验分布、参数载体和冷启动写入协议，不推广到自然预训练
+总体。统一命令为：
+
+```bash
+python scripts/run_training_numerical_analysis.py population-exceedance \\
+  RAW.json PROTOCOL.json OUTPUT.json
+```

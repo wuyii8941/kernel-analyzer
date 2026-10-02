@@ -97,6 +97,8 @@ def main() -> None:
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    if args.output.exists():
+        raise FileExistsError(f"preserve the existing measurement: {args.output}")
     if not torch.cuda.is_available():
         raise RuntimeError("host GPU required")
 
@@ -200,21 +202,20 @@ def main() -> None:
 
     calibration = list(range(16))
     confirmation = list(range(16, 32))
-    unit_ids = [f"length-{args.length}-state-{i:02d}" for i in range(32)]
     gradient_profile = matched_training_bias_profile(
         np.stack(gradient_effects), np.stack(gradient_repairs),
         calibration_indices=calibration, confirmation_indices=confirmation,
-        inference_unit_ids=unit_ids, include_joint_gram=True, seed=20260903,
+        inference_unit_ids=None, include_joint_gram=True, seed=20260903,
     )
     update_profile = matched_training_bias_profile(
         np.stack(update_effects), np.stack(update_repairs),
         calibration_indices=calibration, confirmation_indices=confirmation,
-        inference_unit_ids=unit_ids, include_joint_gram=True, seed=20260904,
+        inference_unit_ids=None, include_joint_gram=True, seed=20260904,
     )
     orbit_repair_profile = matched_training_bias_profile(
         np.stack(orbit_repair_effects), np.stack(orbit_repair_references),
         calibration_indices=calibration, confirmation_indices=confirmation,
-        inference_unit_ids=unit_ids, include_joint_gram=True, seed=20260905,
+        inference_unit_ids=None, include_joint_gram=True, seed=20260905,
     )
     orbit = np.stack(orbit_effects)
     predictor = orbit[calibration].mean(axis=0)
@@ -237,7 +238,8 @@ def main() -> None:
             "confirmation_projection_mean": float(confirmation_projection.mean()),
             "confirmation_positive_count": int(np.count_nonzero(confirmation_projection > 0)),
             "confirmation_count": 16,
-            "direction_repeated": bool(float(confirmation_projection.mean()) > 0),
+            "confirmation_mean_projection_positive": bool(float(confirmation_projection.mean()) > 0),
+            "population_mean_bias_decision": "NOT_ASSESSED_FIXED_SUITE",
         },
         "rows": rows,
         "source_intervention": {

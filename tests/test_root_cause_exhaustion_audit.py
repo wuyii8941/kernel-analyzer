@@ -11,7 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_exhaustion_audit_is_reproducible_and_fail_closed() -> None:
     subprocess.run([sys.executable, "scripts/build_root_cause_exhaustion_audit.py"], cwd=ROOT, check=True)
     result = json.loads((ROOT / "results/property/root_cause_closure_v1/exhaustion_audit.json").read_text())
-    assert result["scientific_problem_group_count"] == 12
+    assert result["audited_row_count"] == 54
+    assert result["active_problem_group_count"] == 52
+    assert result["negative_control_count"] == 2
     ledger = json.loads(
         (ROOT / "results/property/case_causal_audit_v1/root_cause_closure_current.json").read_text()
     )

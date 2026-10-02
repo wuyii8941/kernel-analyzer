@@ -1,0 +1,91 @@
+{
+  "schema": "kernel-analyzer-gemma4-audio-projection-real-audio-screen-v1",
+  "status": "REAL_AUDIO_COMPONENT_SCREEN_NOT_NATURAL_TRAINING",
+  "model": "/data1/tzh/models/google/gemma-4-E2B",
+  "operator_family": "audio_encoder_output_projection",
+  "source": "real LibriSpeech dummy validation audio decoded from a public parquet sample; audio tower checkpoint weights are real",
+  "candidate": "native BF16 linear output",
+  "reference": "FP32 linear accumulation followed by BF16 writeback",
+  "states": 8,
+  "rows": [
+    {
+      "state_id": 0,
+      "loss_difference": -1.9073486328125e-06,
+      "output_rms": 9.635014430386946e-05,
+      "output_relative_rms": 2.0352075807750225e-05,
+      "weight_gradient_rms": 2.0497795105711702e-07,
+      "weight_gradient_relative_rms": 3.258922151871957e-05,
+      "weight_update_relative_rms": 3.259042205172591e-05
+    },
+    {
+      "state_id": 1,
+      "loss_difference": 0.0,
+      "output_rms": 9.461472654948011e-05,
+      "output_relative_rms": 2.0558960386551917e-05,
+      "weight_gradient_rms": 2.1024813179337798e-07,
+      "weight_gradient_relative_rms": 3.154705700580962e-05,
+      "weight_update_relative_rms": 3.154857404297218e-05
+    },
+    {
+      "state_id": 2,
+      "loss_difference": 3.814697265625e-06,
+      "output_rms": 0.00011825418914668262,
+      "output_relative_rms": 2.1961011952953413e-05,
+      "weight_gradient_rms": 3.292185510872514e-07,
+      "weight_gradient_relative_rms": 4.5889766624895856e-05,
+      "weight_update_relative_rms": 4.589162927004509e-05
+    },
+    {
+      "state_id": 3,
+      "loss_difference": -5.7220458984375e-06,
+      "output_rms": 0.00016293743101414293,
+      "output_relative_rms": 3.172298238496296e-05,
+      "weight_gradient_rms": 3.749918278117548e-07,
+      "weight_gradient_relative_rms": 5.666630750056356e-05,
+      "weight_update_relative_rms": 5.666856304742396e-05
+    },
+    {
+      "state_id": 4,
+      "loss_difference": 3.814697265625e-06,
+      "output_rms": 0.00022569064458366483,
+      "output_relative_rms": 3.9566224586451426e-05,
+      "weight_gradient_rms": 5.323412892721535e-07,
+      "weight_gradient_relative_rms": 7.824488420737907e-05,
+      "weight_update_relative_rms": 7.824954809620976e-05
+    },
+    {
+      "state_id": 5,
+      "loss_difference": -3.814697265625e-06,
+      "output_rms": 0.00012358605454210192,
+      "output_relative_rms": 2.4629469407955185e-05,
+      "weight_gradient_rms": 2.7017813408747315e-07,
+      "weight_gradient_relative_rms": 4.435844675754197e-05,
+      "weight_update_relative_rms": 4.4360065658111125e-05
+    },
+    {
+      "state_id": 6,
+      "loss_difference": 3.814697265625e-06,
+      "output_rms": 0.00014015303167980164,
+      "output_relative_rms": 2.9966533475089818e-05,
+      "weight_gradient_rms": 3.1706665026831615e-07,
+      "weight_gradient_relative_rms": 5.563994272961281e-05,
+      "weight_update_relative_rms": 5.5641688959440216e-05
+    },
+    {
+      "state_id": 7,
+      "loss_difference": 1.9073486328125e-06,
+      "output_rms": 8.538747351849452e-05,
+      "output_relative_rms": 1.670276833465323e-05,
+      "weight_gradient_rms": 2.4246145358119975e-07,
+      "weight_gradient_relative_rms": 3.725560964085162e-05,
+      "weight_update_relative_rms": 3.7257013900671154e-05
+    }
+  ],
+  "direction_diagnostics": {
+    "output_mean_norm_over_rms": 375.6593933105469,
+    "gradient_mean_norm_over_rms": 443.4046325683594,
+    "output_mean_coordinate_sign": 86,
+    "gradient_mean_coordinate_sign": 9
+  },
+  "claim_boundary": "Real audio component screen only; no full audio-language loss, no GPU Triton endpoint, and no natural training problem promotion."
+}

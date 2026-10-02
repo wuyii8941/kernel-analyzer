@@ -1,0 +1,208 @@
+{
+  "schema": "kernel-analyzer-gemma4-audio-language-output-projection-natural-v1",
+  "status": "COMPLETE_NATURAL_AUDIO_LANGUAGE_BOUNDARY",
+  "model": "/data1/tzh/models/google/gemma-4-E2B",
+  "operator_family": "audio_encoder_output_projection_materialization",
+  "candidate": "native BF16 audio output projection in full Gemma-4 audio-language forward",
+  "reference": "same audio-language forward with FP32 projection accumulation followed by BF16 writeback",
+  "input_source": "real LibriSpeech waveforms and a fixed text target",
+  "parameter": "model.audio_tower.output_proj.weight",
+  "optimizer_proxy": {
+    "name": "SGD",
+    "learning_rate": 0.0001
+  },
+  "comparison_scope": {
+    "same_checkpoint": true,
+    "same_audio": true,
+    "same_text_labels": true,
+    "same_audio_encoder": true,
+    "single_changed_boundary": "audio_tower.output_proj accumulation/materialization"
+  },
+  "rows": [
+    {
+      "state_id": 0,
+      "audio_tokens": 147,
+      "loss_candidate": 6.485093116760254,
+      "loss_reference": 6.5646071434021,
+      "loss_difference": -0.0795140266418457,
+      "gradient_effect_rms_over_reference": 0.44955477118492126,
+      "write_effect_rms_over_reference": 0.44955894351005554,
+      "aligned_write_scaling": -0.17828230559825897
+    },
+    {
+      "state_id": 1,
+      "audio_tokens": 121,
+      "loss_candidate": 7.789892673492432,
+      "loss_reference": 7.994795799255371,
+      "loss_difference": -0.20490312576293945,
+      "gradient_effect_rms_over_reference": 0.5403866171836853,
+      "write_effect_rms_over_reference": 0.5403909683227539,
+      "aligned_write_scaling": -0.3889879286289215
+    },
+    {
+      "state_id": 2,
+      "audio_tokens": 312,
+      "loss_candidate": 7.7859296798706055,
+      "loss_reference": 7.6923828125,
+      "loss_difference": 0.09354686737060547,
+      "gradient_effect_rms_over_reference": 0.6594458222389221,
+      "write_effect_rms_over_reference": 0.659455418586731,
+      "aligned_write_scaling": -0.07820168882608414
+    },
+    {
+      "state_id": 3,
+      "audio_tokens": 248,
+      "loss_candidate": 8.373344421386719,
+      "loss_reference": 8.213546752929688,
+      "loss_difference": 0.15979766845703125,
+      "gradient_effect_rms_over_reference": 0.38004645705223083,
+      "write_effect_rms_over_reference": 0.38004371523857117,
+      "aligned_write_scaling": 0.00036832375917583704
+    },
+    {
+      "state_id": 4,
+      "audio_tokens": 735,
+      "loss_candidate": 7.0699262619018555,
+      "loss_reference": 7.141999244689941,
+      "loss_difference": -0.07207298278808594,
+      "gradient_effect_rms_over_reference": 0.9919959902763367,
+      "write_effect_rms_over_reference": 0.9920111298561096,
+      "aligned_write_scaling": 0.3315886855125427
+    },
+    {
+      "state_id": 5,
+      "audio_tokens": 225,
+      "loss_candidate": 8.351964950561523,
+      "loss_reference": 8.561094284057617,
+      "loss_difference": -0.20912933349609375,
+      "gradient_effect_rms_over_reference": 0.9773418307304382,
+      "write_effect_rms_over_reference": 0.9773836135864258,
+      "aligned_write_scaling": -0.9772071242332458
+    },
+    {
+      "state_id": 6,
+      "audio_tokens": 141,
+      "loss_candidate": 8.295063972473145,
+      "loss_reference": 8.269566535949707,
+      "loss_difference": 0.0254974365234375,
+      "gradient_effect_rms_over_reference": 0.6308525800704956,
+      "write_effect_rms_over_reference": 0.630868136882782,
+      "aligned_write_scaling": -0.09658461809158325
+    },
+    {
+      "state_id": 7,
+      "audio_tokens": 231,
+      "loss_candidate": 7.555676460266113,
+      "loss_reference": 7.587344169616699,
+      "loss_difference": -0.03166770935058594,
+      "gradient_effect_rms_over_reference": 0.6825400590896606,
+      "write_effect_rms_over_reference": 0.6825577616691589,
+      "aligned_write_scaling": 0.2796969711780548
+    },
+    {
+      "state_id": 8,
+      "audio_tokens": 128,
+      "loss_candidate": 6.391685485839844,
+      "loss_reference": 6.370301246643066,
+      "loss_difference": 0.021384239196777344,
+      "gradient_effect_rms_over_reference": 0.39476218819618225,
+      "write_effect_rms_over_reference": 0.3947616219520569,
+      "aligned_write_scaling": -0.3393179476261139
+    },
+    {
+      "state_id": 9,
+      "audio_tokens": 457,
+      "loss_candidate": 7.056031227111816,
+      "loss_reference": 6.9145708084106445,
+      "loss_difference": 0.14146041870117188,
+      "gradient_effect_rms_over_reference": 1.0021305084228516,
+      "write_effect_rms_over_reference": 1.0021591186523438,
+      "aligned_write_scaling": -0.8739227056503296
+    },
+    {
+      "state_id": 10,
+      "audio_tokens": 140,
+      "loss_candidate": 7.495853424072266,
+      "loss_reference": 7.983818054199219,
+      "loss_difference": -0.4879646301269531,
+      "gradient_effect_rms_over_reference": 1.7820247411727905,
+      "write_effect_rms_over_reference": 1.7820851802825928,
+      "aligned_write_scaling": -0.8959193229675293
+    },
+    {
+      "state_id": 11,
+      "audio_tokens": 378,
+      "loss_candidate": 7.126217842102051,
+      "loss_reference": 7.116368293762207,
+      "loss_difference": 0.00984954833984375,
+      "gradient_effect_rms_over_reference": 2.319021701812744,
+      "write_effect_rms_over_reference": 2.319096565246582,
+      "aligned_write_scaling": -0.6042092442512512
+    },
+    {
+      "state_id": 12,
+      "audio_tokens": 135,
+      "loss_candidate": 7.039405822753906,
+      "loss_reference": 7.104774475097656,
+      "loss_difference": -0.06536865234375,
+      "gradient_effect_rms_over_reference": 0.27860701084136963,
+      "write_effect_rms_over_reference": 0.27860957384109497,
+      "aligned_write_scaling": -0.11903249472379684
+    },
+    {
+      "state_id": 13,
+      "audio_tokens": 178,
+      "loss_candidate": 7.638822078704834,
+      "loss_reference": 7.839411735534668,
+      "loss_difference": -0.20058965682983398,
+      "gradient_effect_rms_over_reference": 0.8057063221931458,
+      "write_effect_rms_over_reference": 0.8057174682617188,
+      "aligned_write_scaling": 0.40198466181755066
+    },
+    {
+      "state_id": 14,
+      "audio_tokens": 56,
+      "loss_candidate": 6.131703853607178,
+      "loss_reference": 6.097692489624023,
+      "loss_difference": 0.0340113639831543,
+      "gradient_effect_rms_over_reference": 0.7704395651817322,
+      "write_effect_rms_over_reference": 0.7704598903656006,
+      "aligned_write_scaling": -0.7463076114654541
+    },
+    {
+      "state_id": 15,
+      "audio_tokens": 272,
+      "loss_candidate": 7.564937591552734,
+      "loss_reference": 7.183713436126709,
+      "loss_difference": 0.3812241554260254,
+      "gradient_effect_rms_over_reference": 1.5477879047393799,
+      "write_effect_rms_over_reference": 1.5478368997573853,
+      "aligned_write_scaling": -1.0181998014450073
+    }
+  ],
+  "summary": {
+    "state_count": 16,
+    "calibration_count": 8,
+    "confirmation_count": 8,
+    "loss_difference_mean": -0.030277401208877563,
+    "loss_difference_interval_normal_95": [
+      -0.12564352307837046,
+      0.06508872066061533
+    ],
+    "write_effect_rms_mean": 0.8883122503757477,
+    "confirmation_projection_mean": -12.64552832866956,
+    "confirmation_projection_interval_normal_95": [
+      -37.13236839518304,
+      11.841311737843924
+    ],
+    "confirmation_projection_positive": 2,
+    "confirmation_projection_negative": 6,
+    "confirmation_aligned_write_mean": -0.5243655582889915,
+    "confirmation_aligned_write_interval_normal_95": [
+      -0.8573606618160272,
+      -0.1913704547619557
+    ],
+    "calibration_direction_norm": 730.4928697315225
+  },
+  "claim_boundary": "One Gemma-4 E2B checkpoint, eight real speech inputs and one fixed text target; this is a fixed-suite natural audio-language boundary result, not a population or long-run training claim and not a kernel-identity claim."
+}

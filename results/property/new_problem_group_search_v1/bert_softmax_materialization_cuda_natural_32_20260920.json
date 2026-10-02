@@ -1,0 +1,298 @@
+{
+  "schema": "kernel-analyzer-bert-softmax-materialization-cuda-probe-v1",
+  "status": "COMPLETE",
+  "model": "/data1/tzh/models/prajjwal1/bert-tiny",
+  "operator": "BERT layer-0 attention softmax materialization",
+  "parameter": "bert.encoder.layer.0.attention.self.query.weight",
+  "candidate": "native BF16 attention softmax",
+  "reference": "same attention with FP32 softmax followed by one BF16 write-back",
+  "input_source": "/data1/tzh/kernel-analyzer/docs/root_cause_closure_current.md",
+  "comparison_scope": {
+    "same_model_weights": true,
+    "same_input_ids": true,
+    "same_qkv_mask": true,
+    "single_changed_boundary": "attention softmax evaluation/materialization"
+  },
+  "rows": [
+    {
+      "state_id": 0,
+      "native_loss": 1.109375,
+      "fp32_softmax_loss": 1.109375,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.004704879993909225,
+      "write_effect_rms_over_reference": 0.08152956716597233
+    },
+    {
+      "state_id": 1,
+      "native_loss": 1.28125,
+      "fp32_softmax_loss": 1.28125,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0026529951151349662,
+      "write_effect_rms_over_reference": 0.046293126175029356
+    },
+    {
+      "state_id": 2,
+      "native_loss": 1.2109375,
+      "fp32_softmax_loss": 1.2109375,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0019331109682134897,
+      "write_effect_rms_over_reference": 0.05507641536298287
+    },
+    {
+      "state_id": 3,
+      "native_loss": 1.1484375,
+      "fp32_softmax_loss": 1.1484375,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0024062211658508687,
+      "write_effect_rms_over_reference": 0.05169875507257226
+    },
+    {
+      "state_id": 4,
+      "native_loss": 0.9453125,
+      "fp32_softmax_loss": 0.9453125,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.003680894882634855,
+      "write_effect_rms_over_reference": 0.07740693101881042
+    },
+    {
+      "state_id": 5,
+      "native_loss": 0.97265625,
+      "fp32_softmax_loss": 0.97265625,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0019803423765387415,
+      "write_effect_rms_over_reference": 0.0661494491527101
+    },
+    {
+      "state_id": 6,
+      "native_loss": 1.6796875,
+      "fp32_softmax_loss": 1.6796875,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.002619384545757808,
+      "write_effect_rms_over_reference": 0.05620572128573948
+    },
+    {
+      "state_id": 7,
+      "native_loss": 1.1328125,
+      "fp32_softmax_loss": 1.1328125,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0032454491080074273,
+      "write_effect_rms_over_reference": 0.05380882281377639
+    },
+    {
+      "state_id": 8,
+      "native_loss": 1.609375,
+      "fp32_softmax_loss": 1.609375,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.00302758410180084,
+      "write_effect_rms_over_reference": 0.048953171342951914
+    },
+    {
+      "state_id": 9,
+      "native_loss": 1.9296875,
+      "fp32_softmax_loss": 1.9296875,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.002743191534377842,
+      "write_effect_rms_over_reference": 0.06797262728834501
+    },
+    {
+      "state_id": 10,
+      "native_loss": 1.3515625,
+      "fp32_softmax_loss": 1.3515625,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.002400183327924829,
+      "write_effect_rms_over_reference": 0.06562483337636928
+    },
+    {
+      "state_id": 11,
+      "native_loss": 0.89453125,
+      "fp32_softmax_loss": 0.89453125,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.004942222627440601,
+      "write_effect_rms_over_reference": 0.06420617668688487
+    },
+    {
+      "state_id": 12,
+      "native_loss": 1.6171875,
+      "fp32_softmax_loss": 1.6171875,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0024271922637218134,
+      "write_effect_rms_over_reference": 0.07241173592609172
+    },
+    {
+      "state_id": 13,
+      "native_loss": 1.2734375,
+      "fp32_softmax_loss": 1.2734375,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.003418687231478642,
+      "write_effect_rms_over_reference": 0.060377340602473
+    },
+    {
+      "state_id": 14,
+      "native_loss": 1.359375,
+      "fp32_softmax_loss": 1.359375,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.00242942456284756,
+      "write_effect_rms_over_reference": 0.06779411999255386
+    },
+    {
+      "state_id": 15,
+      "native_loss": 1.40625,
+      "fp32_softmax_loss": 1.40625,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0025786865140819603,
+      "write_effect_rms_over_reference": 0.06641877300700634
+    },
+    {
+      "state_id": 16,
+      "native_loss": 1.4375,
+      "fp32_softmax_loss": 1.4375,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0044593617143305325,
+      "write_effect_rms_over_reference": 0.08764897607977243
+    },
+    {
+      "state_id": 17,
+      "native_loss": 1.75,
+      "fp32_softmax_loss": 1.75,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.00217120908846877,
+      "write_effect_rms_over_reference": 0.062079270148960954
+    },
+    {
+      "state_id": 18,
+      "native_loss": 1.1171875,
+      "fp32_softmax_loss": 1.1171875,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0043028942385762705,
+      "write_effect_rms_over_reference": 0.08540252444172287
+    },
+    {
+      "state_id": 19,
+      "native_loss": 1.3046875,
+      "fp32_softmax_loss": 1.3046875,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0026686778680344923,
+      "write_effect_rms_over_reference": 0.05468532536130981
+    },
+    {
+      "state_id": 20,
+      "native_loss": 1.3984375,
+      "fp32_softmax_loss": 1.3984375,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0029986195410125946,
+      "write_effect_rms_over_reference": 0.06797525765250675
+    },
+    {
+      "state_id": 21,
+      "native_loss": 1.703125,
+      "fp32_softmax_loss": 1.703125,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0032519750372360856,
+      "write_effect_rms_over_reference": 0.058347166785256435
+    },
+    {
+      "state_id": 22,
+      "native_loss": 1.53125,
+      "fp32_softmax_loss": 1.53125,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.002537674760007219,
+      "write_effect_rms_over_reference": 0.051199689861834846
+    },
+    {
+      "state_id": 23,
+      "native_loss": 1.03125,
+      "fp32_softmax_loss": 1.03125,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0036571151757307414,
+      "write_effect_rms_over_reference": 0.07283802220697373
+    },
+    {
+      "state_id": 24,
+      "native_loss": 0.9921875,
+      "fp32_softmax_loss": 0.9921875,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.002222196076419971,
+      "write_effect_rms_over_reference": 0.062114289604267
+    },
+    {
+      "state_id": 25,
+      "native_loss": 2.0625,
+      "fp32_softmax_loss": 2.0625,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0028735487111566866,
+      "write_effect_rms_over_reference": 0.06803048274222619
+    },
+    {
+      "state_id": 26,
+      "native_loss": 0.59765625,
+      "fp32_softmax_loss": 0.59765625,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.006052916568635325,
+      "write_effect_rms_over_reference": 0.08941204070532426
+    },
+    {
+      "state_id": 27,
+      "native_loss": 0.921875,
+      "fp32_softmax_loss": 0.921875,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.00421666677825386,
+      "write_effect_rms_over_reference": 0.09089426415767367
+    },
+    {
+      "state_id": 28,
+      "native_loss": 1.609375,
+      "fp32_softmax_loss": 1.609375,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.002511484884903702,
+      "write_effect_rms_over_reference": 0.05401411465651823
+    },
+    {
+      "state_id": 29,
+      "native_loss": 1.40625,
+      "fp32_softmax_loss": 1.40625,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0018733058900638772,
+      "write_effect_rms_over_reference": 0.06409359426039472
+    },
+    {
+      "state_id": 30,
+      "native_loss": 0.59375,
+      "fp32_softmax_loss": 0.59375,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.0035245792818363567,
+      "write_effect_rms_over_reference": 0.062355534455719897
+    },
+    {
+      "state_id": 31,
+      "native_loss": 1.234375,
+      "fp32_softmax_loss": 1.234375,
+      "loss_difference_native_minus_fp32": 0.0,
+      "gradient_effect_rms_over_reference": 0.002090261216463726,
+      "write_effect_rms_over_reference": 0.038165223082048984
+    }
+  ],
+  "summary": {
+    "state_count": 32,
+    "calibration_count": 16,
+    "confirmation_count": 16,
+    "gradient_effect_rms_mean": 0.003081341785964115,
+    "write_effect_rms_mean": 0.06472447945227439,
+    "projection_interval_normal_95": [
+      -0.00010654889821502632,
+      0.000186907280848956
+    ],
+    "projection_positive": 9,
+    "projection_negative": 7,
+    "aligned_write_mean": -0.0023442334011493635,
+    "aligned_write_interval_normal_95": [
+      -0.0028510813577531757,
+      -0.0018373854445455505
+    ],
+    "loss_difference_interval_normal_95": [
+      0.0,
+      0.0
+    ],
+    "calibration_direction_norm": 0.0012201605105581395
+  },
+  "claim_boundary": "One BERT-tiny CUDA checkpoint, layer-0 attention softmax boundary and declared text bank; no population or long-run quality claim."
+}
