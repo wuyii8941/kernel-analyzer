@@ -1,0 +1,893 @@
+{
+  "schema": "kernel-analyzer-liger-order-auto-reference-v1",
+  "multiplicity": "Holm over the six pre-declared comparison/rule pairs",
+  "step4_automatic_vs_manual_reference": {
+    "variants": {
+      "original": {
+        "units": 96,
+        "launches_per_unit": [
+          64
+        ],
+        "coverage_complete": true,
+        "accumulator_rewritten_outside": false,
+        "bitwise_equal_to_torch_path": true,
+        "coordinates_total": 50331648,
+        "classes_total": {
+          "complete_composed": 50331648,
+          "conditional_local": 0,
+          "not_established": 0
+        },
+        "manual_agrees_total": 50331648,
+        "manual_disagrees_total": 0,
+        "reference_width_max": 8.881784197001252e-16,
+        "manual_bound_max": 4.105245936162079e-15,
+        "residual_positive_total": 25181625,
+        "residual_negative_total": 25150021,
+        "residual_contains_zero_total": 2,
+        "evaluation_seconds_mean": 34.755
+      },
+      "reverse": {
+        "units": 96,
+        "launches_per_unit": [
+          64
+        ],
+        "coverage_complete": true,
+        "accumulator_rewritten_outside": false,
+        "bitwise_equal_to_torch_path": true,
+        "coordinates_total": 50331648,
+        "classes_total": {
+          "complete_composed": 50331648,
+          "conditional_local": 0,
+          "not_established": 0
+        },
+        "manual_agrees_total": 50331648,
+        "manual_disagrees_total": 0,
+        "reference_width_max": 6.106226635438361e-16,
+        "manual_bound_max": 4.105245936162079e-15,
+        "residual_positive_total": 25169204,
+        "residual_negative_total": 25162441,
+        "residual_contains_zero_total": 3,
+        "evaluation_seconds_mean": 34.6484375
+      }
+    }
+  },
+  "location": "Liger 0.7 fused linear CE: FP32 dW chunk accumulation (64 chunks, sequence length 64)",
+  "reference": "automatic K_R: TTIR composed reference over the 64 accumulate launches, rounded to FP32",
+  "reference_mode": "numerical_difference",
+  "task_semantics": "f taken as the declared semantics (real sum of the chunk contributions); not separately checked",
+  "measurement": "lm_head parameter write of one real torch AdamW step, zero moments, on the declared rows D",
+  "coordinates": {
+    "rows": 256,
+    "row_seed": 20261002,
+    "coordinates": 524288
+  },
+  "population": {
+    "bank": "32 declared Qwen3-1.7B length-64 states",
+    "draw_seed": 20260919,
+    "calibration": 32,
+    "confirmation": 64,
+    "sampling": "with replacement from the empirical bank"
+  },
+  "factors": {
+    "instruction_stream": "fixed: accumulate kernel, Triton 3.6.0, sm_86, BLOCK=2048, default options",
+    "memory_contents": "sampled: declared bank, with-replacement draws",
+    "launch_configuration": "fixed: grid = ceil(V*H / 2048)",
+    "concurrency_order": "fixed: no atomics; one writer per element",
+    "hardware": "fixed: NVIDIA RTX A6000"
+  },
+  "alpha": 0.05,
+  "comparison_set": [
+    "original_vs_KR/fixed_direction",
+    "original_vs_KR/aligned_reference_update",
+    "reverse_vs_KR/fixed_direction",
+    "reverse_vs_KR/aligned_reference_update",
+    "original_vs_reverse/fixed_direction",
+    "original_vs_reverse/aligned_reference_update"
+  ],
+  "reference_consistency": {
+    "both_order_references_intersect_in_all_units": true
+  },
+  "ambiguous_rounding_coordinates": 0,
+  "results": [
+    {
+      "comparison": "original_vs_KR",
+      "rule": "fixed_direction",
+      "n": 64,
+      "mean_projection": 8.522830624756057e-09,
+      "sd": 8.397922173685338e-09,
+      "t_interval_95": [
+        6.425092080679892e-09,
+        1.0620569168832221e-08
+      ],
+      "positive": 43,
+      "negative": 21,
+      "zero_or_ambiguous": 0,
+      "max_projection_width": 0.0,
+      "lower_bound_of_E_l": 6.425092080679892e-09,
+      "upper_bound_of_E_h": 1.0620569168832221e-08,
+      "verdict": "DETECTED_POSITIVE",
+      "p_value_two_sided_conservative": 2.2099294038272163e-11,
+      "holm_reject_at_0.05": true,
+      "final_verdict": "DETECTED_POSITIVE"
+    },
+    {
+      "comparison": "original_vs_KR",
+      "rule": "aligned_reference_update",
+      "n": 64,
+      "mean_projection": -1.9341496000255397e-11,
+      "sd": 9.37191536615354e-11,
+      "t_interval_95": [
+        -4.2751844046827566e-11,
+        4.0688520463167715e-12
+      ],
+      "positive": 33,
+      "negative": 31,
+      "zero_or_ambiguous": 0,
+      "max_projection_width": 0.0,
+      "lower_bound_of_E_l": -4.2751844046827566e-11,
+      "upper_bound_of_E_h": 4.0688520463167715e-12,
+      "verdict": "NOT_CONFIRMED",
+      "p_value_two_sided_conservative": 0.10371180766389168,
+      "holm_reject_at_0.05": false,
+      "final_verdict": "NOT_CONFIRMED"
+    },
+    {
+      "comparison": "reverse_vs_KR",
+      "rule": "fixed_direction",
+      "n": 64,
+      "mean_projection": 6.887065342018995e-09,
+      "sd": 6.9741576584010795e-09,
+      "t_interval_95": [
+        5.144972592179696e-09,
+        8.629158091858294e-09
+      ],
+      "positive": 51,
+      "negative": 13,
+      "zero_or_ambiguous": 0,
+      "max_projection_width": 0.0,
+      "lower_bound_of_E_l": 5.144972592179696e-09,
+      "upper_bound_of_E_h": 8.629158091858294e-09,
+      "verdict": "DETECTED_POSITIVE",
+      "p_value_two_sided_conservative": 5.335449010918442e-11,
+      "holm_reject_at_0.05": true,
+      "final_verdict": "DETECTED_POSITIVE"
+    },
+    {
+      "comparison": "reverse_vs_KR",
+      "rule": "aligned_reference_update",
+      "n": 64,
+      "mean_projection": -4.36626511309771e-11,
+      "sd": 5.968749955983904e-11,
+      "t_interval_95": [
+        -5.85721449124915e-11,
+        -2.8753157349462697e-11
+      ],
+      "positive": 19,
+      "negative": 45,
+      "zero_or_ambiguous": 0,
+      "max_projection_width": 0.0,
+      "lower_bound_of_E_l": -5.85721449124915e-11,
+      "upper_bound_of_E_h": -2.8753157349462697e-11,
+      "verdict": "DETECTED_NEGATIVE",
+      "p_value_two_sided_conservative": 1.8907339128479403e-07,
+      "holm_reject_at_0.05": true,
+      "final_verdict": "DETECTED_NEGATIVE"
+    },
+    {
+      "comparison": "original_vs_reverse",
+      "rule": "fixed_direction",
+      "n": 64,
+      "mean_projection": 8.756117965363493e-09,
+      "sd": 8.601629904682234e-09,
+      "t_interval_95": [
+        6.6074947440778275e-09,
+        1.0904741186649159e-08
+      ],
+      "positive": 47,
+      "negative": 17,
+      "zero_or_ambiguous": 0,
+      "max_projection_width": 0.0,
+      "lower_bound_of_E_l": 6.6074947440778275e-09,
+      "upper_bound_of_E_h": 1.0904741186649159e-08,
+      "verdict": "DETECTED_POSITIVE",
+      "p_value_two_sided_conservative": 2.0008949849493543e-11,
+      "holm_reject_at_0.05": true,
+      "final_verdict": "DETECTED_POSITIVE"
+    },
+    {
+      "comparison": "original_vs_reverse",
+      "rule": "aligned_reference_update",
+      "n": 64,
+      "mean_projection": 2.43211551307217e-11,
+      "sd": 1.1276866992608035e-10,
+      "t_interval_95": [
+        -3.847620499206522e-12,
+        5.248993076064992e-11
+      ],
+      "positive": 39,
+      "negative": 25,
+      "zero_or_ambiguous": 0,
+      "max_projection_width": 0.0,
+      "lower_bound_of_E_l": -3.847620499206522e-12,
+      "upper_bound_of_E_h": 5.248993076064992e-11,
+      "verdict": "NOT_CONFIRMED",
+      "p_value_two_sided_conservative": 0.08936083221042761,
+      "holm_reject_at_0.05": false,
+      "final_verdict": "NOT_CONFIRMED"
+    }
+  ],
+  "per_unit": [
+    {
+      "unit": "unit000",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4115,
+      "reverse_differs_from_KR": 2448
+    },
+    {
+      "unit": "unit001",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4214,
+      "reverse_differs_from_KR": 1885
+    },
+    {
+      "unit": "unit002",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4084,
+      "reverse_differs_from_KR": 2530
+    },
+    {
+      "unit": "unit003",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4216,
+      "reverse_differs_from_KR": 2888
+    },
+    {
+      "unit": "unit004",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4215,
+      "reverse_differs_from_KR": 2458
+    },
+    {
+      "unit": "unit005",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4325,
+      "reverse_differs_from_KR": 2557
+    },
+    {
+      "unit": "unit006",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4177,
+      "reverse_differs_from_KR": 2391
+    },
+    {
+      "unit": "unit007",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4084,
+      "reverse_differs_from_KR": 2530
+    },
+    {
+      "unit": "unit008",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4127,
+      "reverse_differs_from_KR": 1703
+    },
+    {
+      "unit": "unit009",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 3825,
+      "reverse_differs_from_KR": 1518
+    },
+    {
+      "unit": "unit010",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4131,
+      "reverse_differs_from_KR": 2220
+    },
+    {
+      "unit": "unit011",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4019,
+      "reverse_differs_from_KR": 1643
+    },
+    {
+      "unit": "unit012",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4115,
+      "reverse_differs_from_KR": 2448
+    },
+    {
+      "unit": "unit013",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4131,
+      "reverse_differs_from_KR": 2220
+    },
+    {
+      "unit": "unit014",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 3808,
+      "reverse_differs_from_KR": 2061
+    },
+    {
+      "unit": "unit015",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4159,
+      "reverse_differs_from_KR": 2237
+    },
+    {
+      "unit": "unit016",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 3825,
+      "reverse_differs_from_KR": 1518
+    },
+    {
+      "unit": "unit017",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4168,
+      "reverse_differs_from_KR": 1736
+    },
+    {
+      "unit": "unit018",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4131,
+      "reverse_differs_from_KR": 2220
+    },
+    {
+      "unit": "unit019",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4168,
+      "reverse_differs_from_KR": 1736
+    },
+    {
+      "unit": "unit020",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4216,
+      "reverse_differs_from_KR": 2888
+    },
+    {
+      "unit": "unit021",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4215,
+      "reverse_differs_from_KR": 2458
+    },
+    {
+      "unit": "unit022",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4115,
+      "reverse_differs_from_KR": 2448
+    },
+    {
+      "unit": "unit023",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4084,
+      "reverse_differs_from_KR": 2530
+    },
+    {
+      "unit": "unit024",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4239,
+      "reverse_differs_from_KR": 2721
+    },
+    {
+      "unit": "unit025",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4146,
+      "reverse_differs_from_KR": 2479
+    },
+    {
+      "unit": "unit026",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4104,
+      "reverse_differs_from_KR": 1949
+    },
+    {
+      "unit": "unit027",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 3808,
+      "reverse_differs_from_KR": 2061
+    },
+    {
+      "unit": "unit028",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4001,
+      "reverse_differs_from_KR": 2046
+    },
+    {
+      "unit": "unit029",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4131,
+      "reverse_differs_from_KR": 2220
+    },
+    {
+      "unit": "unit030",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4199,
+      "reverse_differs_from_KR": 2025
+    },
+    {
+      "unit": "unit031",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4001,
+      "reverse_differs_from_KR": 2046
+    },
+    {
+      "unit": "unit032",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4038,
+      "reverse_differs_from_KR": 2612
+    },
+    {
+      "unit": "unit033",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 3867,
+      "reverse_differs_from_KR": 1538
+    },
+    {
+      "unit": "unit034",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4146,
+      "reverse_differs_from_KR": 2479
+    },
+    {
+      "unit": "unit035",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 3635,
+      "reverse_differs_from_KR": 2099
+    },
+    {
+      "unit": "unit036",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4159,
+      "reverse_differs_from_KR": 2237
+    },
+    {
+      "unit": "unit037",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 3808,
+      "reverse_differs_from_KR": 2061
+    },
+    {
+      "unit": "unit038",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4052,
+      "reverse_differs_from_KR": 1870
+    },
+    {
+      "unit": "unit039",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4001,
+      "reverse_differs_from_KR": 2046
+    },
+    {
+      "unit": "unit040",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4215,
+      "reverse_differs_from_KR": 2458
+    },
+    {
+      "unit": "unit041",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4325,
+      "reverse_differs_from_KR": 2557
+    },
+    {
+      "unit": "unit042",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4019,
+      "reverse_differs_from_KR": 1643
+    },
+    {
+      "unit": "unit043",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4218,
+      "reverse_differs_from_KR": 2585
+    },
+    {
+      "unit": "unit044",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 3808,
+      "reverse_differs_from_KR": 2061
+    },
+    {
+      "unit": "unit045",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4067,
+      "reverse_differs_from_KR": 1834
+    },
+    {
+      "unit": "unit046",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4215,
+      "reverse_differs_from_KR": 2458
+    },
+    {
+      "unit": "unit047",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4216,
+      "reverse_differs_from_KR": 2888
+    },
+    {
+      "unit": "unit048",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4216,
+      "reverse_differs_from_KR": 2888
+    },
+    {
+      "unit": "unit049",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4215,
+      "reverse_differs_from_KR": 2458
+    },
+    {
+      "unit": "unit050",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4218,
+      "reverse_differs_from_KR": 2585
+    },
+    {
+      "unit": "unit051",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4215,
+      "reverse_differs_from_KR": 2458
+    },
+    {
+      "unit": "unit052",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4215,
+      "reverse_differs_from_KR": 2458
+    },
+    {
+      "unit": "unit053",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4115,
+      "reverse_differs_from_KR": 2448
+    },
+    {
+      "unit": "unit054",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4163,
+      "reverse_differs_from_KR": 1917
+    },
+    {
+      "unit": "unit055",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4216,
+      "reverse_differs_from_KR": 2888
+    },
+    {
+      "unit": "unit056",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4199,
+      "reverse_differs_from_KR": 2025
+    },
+    {
+      "unit": "unit057",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4018,
+      "reverse_differs_from_KR": 1856
+    },
+    {
+      "unit": "unit058",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4018,
+      "reverse_differs_from_KR": 1856
+    },
+    {
+      "unit": "unit059",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4038,
+      "reverse_differs_from_KR": 2612
+    },
+    {
+      "unit": "unit060",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4067,
+      "reverse_differs_from_KR": 1834
+    },
+    {
+      "unit": "unit061",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 3794,
+      "reverse_differs_from_KR": 1196
+    },
+    {
+      "unit": "unit062",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4199,
+      "reverse_differs_from_KR": 2025
+    },
+    {
+      "unit": "unit063",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4216,
+      "reverse_differs_from_KR": 2888
+    },
+    {
+      "unit": "unit064",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4135,
+      "reverse_differs_from_KR": 1534
+    },
+    {
+      "unit": "unit065",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4177,
+      "reverse_differs_from_KR": 2391
+    },
+    {
+      "unit": "unit066",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4084,
+      "reverse_differs_from_KR": 2530
+    },
+    {
+      "unit": "unit067",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4177,
+      "reverse_differs_from_KR": 2391
+    },
+    {
+      "unit": "unit068",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4214,
+      "reverse_differs_from_KR": 1885
+    },
+    {
+      "unit": "unit069",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4214,
+      "reverse_differs_from_KR": 1885
+    },
+    {
+      "unit": "unit070",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4018,
+      "reverse_differs_from_KR": 1856
+    },
+    {
+      "unit": "unit071",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4127,
+      "reverse_differs_from_KR": 1703
+    },
+    {
+      "unit": "unit072",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4018,
+      "reverse_differs_from_KR": 1856
+    },
+    {
+      "unit": "unit073",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4019,
+      "reverse_differs_from_KR": 1643
+    },
+    {
+      "unit": "unit074",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4146,
+      "reverse_differs_from_KR": 2479
+    },
+    {
+      "unit": "unit075",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4038,
+      "reverse_differs_from_KR": 1779
+    },
+    {
+      "unit": "unit076",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4214,
+      "reverse_differs_from_KR": 1885
+    },
+    {
+      "unit": "unit077",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4084,
+      "reverse_differs_from_KR": 2530
+    },
+    {
+      "unit": "unit078",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4084,
+      "reverse_differs_from_KR": 2530
+    },
+    {
+      "unit": "unit079",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4177,
+      "reverse_differs_from_KR": 2391
+    },
+    {
+      "unit": "unit080",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4038,
+      "reverse_differs_from_KR": 2612
+    },
+    {
+      "unit": "unit081",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4168,
+      "reverse_differs_from_KR": 1736
+    },
+    {
+      "unit": "unit082",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4220,
+      "reverse_differs_from_KR": 2231
+    },
+    {
+      "unit": "unit083",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4159,
+      "reverse_differs_from_KR": 2237
+    },
+    {
+      "unit": "unit084",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4018,
+      "reverse_differs_from_KR": 1856
+    },
+    {
+      "unit": "unit085",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4215,
+      "reverse_differs_from_KR": 2458
+    },
+    {
+      "unit": "unit086",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4215,
+      "reverse_differs_from_KR": 2458
+    },
+    {
+      "unit": "unit087",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4325,
+      "reverse_differs_from_KR": 2557
+    },
+    {
+      "unit": "unit088",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 3794,
+      "reverse_differs_from_KR": 1196
+    },
+    {
+      "unit": "unit089",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4325,
+      "reverse_differs_from_KR": 2557
+    },
+    {
+      "unit": "unit090",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4216,
+      "reverse_differs_from_KR": 2888
+    },
+    {
+      "unit": "unit091",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4018,
+      "reverse_differs_from_KR": 1856
+    },
+    {
+      "unit": "unit092",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4038,
+      "reverse_differs_from_KR": 1779
+    },
+    {
+      "unit": "unit093",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4038,
+      "reverse_differs_from_KR": 2612
+    },
+    {
+      "unit": "unit094",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 3825,
+      "reverse_differs_from_KR": 1518
+    },
+    {
+      "unit": "unit095",
+      "references_intersect": true,
+      "ambiguous_coordinates": 0,
+      "original_differs_from_KR": 4163,
+      "reverse_differs_from_KR": 1917
+    }
+  ]
+}

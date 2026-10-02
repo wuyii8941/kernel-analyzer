@@ -1,0 +1,93 @@
+"""Directed-rounding float64 intervals checked against exact rationals."""
+
+import math
+
+import numpy as np
+import pytest
+
+gmpy2 = pytest.importorskip("gmpy2")
+from gmpy2 import mpq  # noqa: E402
+
+from kernel_analyzer.reference_eval import intervals as iv  # noqa: E402
+
+
+def _samples(rng, n):
+    scales = 10.0 ** rng.integers(-30, 30, size=n)
+    x = rng.standard_normal(n) * scales
+    x[: n // 10] = rng.integers(-2 ** 24, 2 ** 24, size=n // 10).astype(np.float64)
+    return x.astype(np.float32).astype(np.float64)
+
+
+@pytest.mark.parametrize("op", ["add", "mul", "div"])
+def test_directed_bounds_enclose_exact_and_are_tight(op):
+    rng = np.random.default_rng(1)
+    a, b = _samples(rng, 3000), _samples(rng, 3000)
+    if op == "div":
+        b = np.where(b == 0, 1.0, b)
+    fn = {"add": iv.add_bounds, "mul": iv.mul_bounds, "div": iv.div_bounds}[op]
+    lo, hi = fn(a, b)
+    for x, y, l, h in zip(a, b, lo, hi):
+        exact = {"add": mpq(x) + mpq(y), "mul": mpq(x) * mpq(y), "div": mpq(x) / mpq(y)}[op]
+        assert mpq(l) <= exact <= mpq(h)
+        if mpq(l) == exact:
+            assert l == h  # exact results keep width zero
+        else:
+            assert math.nextafter(l, math.inf) == h  # one ulp otherwise
+
+
+def test_sqrt_bounds_enclose_exact():
+    rng = np.random.default_rng(2)
+    a = np.abs(_samples(rng, 2000))
+    lo, hi = iv.sqrt_bounds(a)
+    for x, l, h in zip(a, lo, hi):
+        assert mpq(l) ** 2 <= mpq(x) <= mpq(h) ** 2
+    lo, hi = iv.sqrt_bounds(np.array([4.0, 2.0]))
+    assert lo[0] == hi[0] == 2.0 and lo[1] < hi[1]
+
+
+@pytest.mark.parametrize("name", ["exp", "log", "tanh", "log1p", "rsqrt", "sin", "cos", "erf"])
+def test_elementary_bounds_are_rigorous(name):
+    rng = np.random.default_rng(3)
+    x = rng.uniform(0.01, 8.0, 300)
+    lo, hi, ok = iv.elementary_bounds(name, x, x)
+    assert ok.all()
+    fn = {"exp": gmpy2.exp, "log": gmpy2.log, "tanh": gmpy2.tanh, "log1p": gmpy2.log1p,
+          "rsqrt": gmpy2.rec_sqrt, "sin": gmpy2.sin, "cos": gmpy2.cos, "erf": gmpy2.erf}[name]
+    with gmpy2.context(precision=300):
+        for v, l, h in zip(x, lo, hi):
+            truth = mpq(fn(gmpy2.mpfr(v)))
+            assert mpq(l) <= truth <= mpq(h)
+            assert h - l <= 4 * math.ulp(abs(float(truth))) + 1e-300
+
+
+def test_sum_and_dot_enclose_exact():
+    rng = np.random.default_rng(4)
+    x = _samples(rng, 512).reshape(4, 128)
+    lo, hi = iv.isum(x, x, axis=1)
+    for row, l, h in zip(x, lo, hi):
+        exact = sum(mpq(v) for v in row)
+        assert mpq(l) <= exact <= mpq(h)
+    a = rng.standard_normal((8, 16)).astype(np.float32).astype(np.float64)
+    b = rng.standard_normal((16, 4)).astype(np.float32).astype(np.float64)
+    lo, hi = iv.idot(a, a, b, b)
+    for i in range(8):
+        for j in range(4):
+            exact = sum(mpq(a[i, k]) * mpq(b[k, j]) for k in range(16))
+            assert mpq(lo[i, j]) <= exact <= mpq(hi[i, j])
+
+
+def test_round_nearest_even_formats():
+    vals = np.array([257.0, 1 + 17 / 4096, 2.0 ** -149, 2.0 ** -151, 3.5e38, 65520.0])
+    bf16, _ = iv.round_nearest_even(vals[:2], "bf16")
+    assert bf16[0] == 256.0 and bf16[1] - vals[1] == 15 / 4096
+    f16, of = iv.round_nearest_even(vals[1:2], "f16")
+    assert f16[0] - vals[1] == -1 / 4096
+    f32, of32 = iv.round_nearest_even(vals[2:5], "f32")
+    assert f32[0] == 2.0 ** -149 and f32[1] == 0.0 and of32[2]
+    _, of16 = iv.round_nearest_even(vals[5:], "f16")
+    assert of16[0]  # 65520 rounds to infinity in fp16
+    rng = np.random.default_rng(5)
+    x = rng.standard_normal(10000) * 10.0 ** rng.integers(-40, 38, 10000)
+    ours, _ = iv.round_nearest_even(x, "f32")
+    with np.errstate(over="ignore"):
+        assert np.array_equal(ours, x.astype(np.float32).astype(np.float64))

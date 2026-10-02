@@ -1,0 +1,2784 @@
+{
+  "environment": "py310_triton3.6.0",
+  "torch": "2.10.0+cu128",
+  "groups": {
+    "exercise": "21 launches",
+    "inductor": "350 launches",
+    "liger": "11 launches",
+    "torchao": "2 launches"
+  },
+  "kernels": [
+    {
+      "file": "exercise__scale_masked__99f29a7e42e9be53.ttir",
+      "group": "exercise",
+      "kernel": "scale_masked",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "alpha",
+          "kind": "float",
+          "constexpr": false,
+          "signature": "fp32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__add_then_mul__7819e0f70b485d3a.ttir",
+      "group": "exercise",
+      "kernel": "add_then_mul",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "A",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "B",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "C",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__sequential_sum4__1d3318d149fe0423.ttir",
+      "group": "exercise",
+      "kernel": "sequential_sum4",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "A",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "B",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "C",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "D",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__softmax_rows__e03e6d25abfa97a3.ttir",
+      "group": "exercise",
+      "kernel": "softmax_rows",
+      "grid": [
+        8,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n_cols",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "stride",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 128
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__layernorm_rows__e4460ba4a3b21c8b.ttir",
+      "group": "exercise",
+      "kernel": "layernorm_rows",
+      "grid": [
+        8,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "W",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "B",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n_cols",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "eps",
+          "kind": "float",
+          "constexpr": false,
+          "signature": "fp32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 128
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__matmul__a1e1a92123b622ec.ttir",
+      "group": "exercise",
+      "kernel": "matmul",
+      "grid": [
+        2,
+        2,
+        1
+      ],
+      "args": [
+        {
+          "name": "A",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "B",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "C",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "M",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "N",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "K",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sam",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sak",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "sbk",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sbn",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "scm",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "scn",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "BM",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 32
+        },
+        {
+          "name": "BN",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 16
+        },
+        {
+          "name": "BK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 16
+        },
+        {
+          "name": "PRECISION",
+          "kind": "other",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": "'tf32'"
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__matmul__38f79e76fd260e88.ttir",
+      "group": "exercise",
+      "kernel": "matmul",
+      "grid": [
+        2,
+        2,
+        1
+      ],
+      "args": [
+        {
+          "name": "A",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "B",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "C",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "M",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "N",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "K",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sam",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sak",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "sbk",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sbn",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "scm",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "scn",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "BM",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 32
+        },
+        {
+          "name": "BN",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 16
+        },
+        {
+          "name": "BK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 16
+        },
+        {
+          "name": "PRECISION",
+          "kind": "other",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": "'ieee'"
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__matmul__76f7f2d3b50e741c.ttir",
+      "group": "exercise",
+      "kernel": "matmul",
+      "grid": [
+        2,
+        2,
+        1
+      ],
+      "args": [
+        {
+          "name": "A",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "B",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "C",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "M",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "N",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "K",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sam",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sak",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "sbk",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sbn",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "scm",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "scn",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "BM",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 32
+        },
+        {
+          "name": "BN",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 16
+        },
+        {
+          "name": "BK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 16
+        },
+        {
+          "name": "PRECISION",
+          "kind": "other",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": "'tf32x3'"
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__matmul__318beb4ecc452e08.ttir",
+      "group": "exercise",
+      "kernel": "matmul",
+      "grid": [
+        2,
+        2,
+        1
+      ],
+      "args": [
+        {
+          "name": "A",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*bf16",
+          "value": null
+        },
+        {
+          "name": "B",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*bf16",
+          "value": null
+        },
+        {
+          "name": "C",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*bf16",
+          "value": null
+        },
+        {
+          "name": "M",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "N",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "K",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sam",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sak",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "sbk",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sbn",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "scm",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "scn",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "BM",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 32
+        },
+        {
+          "name": "BN",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 16
+        },
+        {
+          "name": "BK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 16
+        },
+        {
+          "name": "PRECISION",
+          "kind": "other",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": "'ieee'"
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__atomic_accumulate__e392737aeb615805.ttir",
+      "group": "exercise",
+      "kernel": "atomic_accumulate",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "OUT",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "OLD",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        },
+        {
+          "name": "USE_OLD",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": false
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__atomic_accumulate__33be2949072e2212.ttir",
+      "group": "exercise",
+      "kernel": "atomic_accumulate",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "OUT",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "OLD",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        },
+        {
+          "name": "USE_OLD",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": true
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__branch_on_scalar__4a0e5e0da298b37a.ttir",
+      "group": "exercise",
+      "kernel": "branch_on_scalar",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "threshold",
+          "kind": "float",
+          "constexpr": false,
+          "signature": "fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__conversions__f7921d46c789be34.ttir",
+      "group": "exercise",
+      "kernel": "conversions",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y16",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp16",
+          "value": null
+        },
+        {
+          "name": "YBF",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*bf16",
+          "value": null
+        },
+        {
+          "name": "Y8",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp8e5",
+          "value": null
+        },
+        {
+          "name": "Y32",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__elementary__777f33854266bfec.ttir",
+      "group": "exercise",
+      "kernel": "elementary",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__nan_rules__989fc22e4c0ca4ee.ttir",
+      "group": "exercise",
+      "kernel": "nan_rules",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__scan_and_argmax__0712108ff2ed9af3.ttir",
+      "group": "exercise",
+      "kernel": "scan_and_argmax",
+      "grid": [
+        1,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "CS",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "AM",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*i32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__bit_level__b3d1dad6ebfc175c.ttir",
+      "group": "exercise",
+      "kernel": "bit_level",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__inline_asm__3580375dfb4b5cf2.ttir",
+      "group": "exercise",
+      "kernel": "inline_asm",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__while_loop__2b2256bcd329b474.ttir",
+      "group": "exercise",
+      "kernel": "while_loop",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__store_load_chain__29b4ccfa1010cee6.ttir",
+      "group": "exercise",
+      "kernel": "store_load_chain",
+      "grid": [
+        4,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "TMP",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "exercise__exp_sum_divide__3bb5eb99d342aaff.ttir",
+      "group": "exercise",
+      "kernel": "exp_sum_divide",
+      "grid": [
+        1,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "n",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "BLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "inductor__triton_poi_fused_add_0__8ff024adc95c2ba0.ttir",
+      "group": "inductor",
+      "kernel": "triton_poi_fused_add_0",
+      "grid": [
+        256,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "in_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr1",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr2",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr3",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr4",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr5",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr6",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr7",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "xnumel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "XBLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1024
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "inductor__triton_poi_fused_add_0__5fd084b3df8101d6.ttir",
+      "group": "inductor",
+      "kernel": "triton_poi_fused_add_0",
+      "grid": [
+        512,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "in_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr1",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr2",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr3",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr4",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr5",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr6",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr7",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "xnumel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "XBLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 512
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "inductor__triton_per_fused__log_softmax_prepare_softmax_online_0__a32511d89ced7087.ttir",
+      "group": "inductor",
+      "kernel": "triton_per_fused__log_softmax_prepare_softmax_online_0",
+      "grid": [
+        64,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "in_out_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "xnumel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "r0_numel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "XBLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "inductor__triton_per_fused__log_softmax_nll_loss_forward_sub_1__91a7c4ceb2cc5d66.ttir",
+      "group": "inductor",
+      "kernel": "triton_per_fused__log_softmax_nll_loss_forward_sub_1",
+      "grid": [
+        1,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "in_out_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*i64",
+          "value": null
+        },
+        {
+          "name": "in_ptr1",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr2",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr3",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr1",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "xnumel",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "r0_numel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "XBLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "inductor__triton_per_fused__log_softmax__log_softmax_backward_data_arange_eq_expand_nll_loss_backward_nll_loss_forward_scalar_tensor_view_where_0__06bf878b8756c0fc.ttir",
+      "group": "inductor",
+      "kernel": "triton_per_fused__log_softmax__log_softmax_backward_data_arange_eq_expand_nll_loss_backward_nll_loss_forward_scalar_tensor_view_where_0",
+      "grid": [
+        64,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "in_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*i64",
+          "value": null
+        },
+        {
+          "name": "in_ptr1",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr2",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr3",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr4",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr5",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr1",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "xnumel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "r0_numel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "XBLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "inductor__triton_per_fused_add_mean_mul_pow_rsqrt_0__eeb0a3d30222f37d.ttir",
+      "group": "inductor",
+      "kernel": "triton_per_fused_add_mean_mul_pow_rsqrt_0",
+      "grid": [
+        64,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "in_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*bf16",
+          "value": null
+        },
+        {
+          "name": "in_ptr1",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*bf16",
+          "value": null
+        },
+        {
+          "name": "out_ptr1",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*bf16",
+          "value": null
+        },
+        {
+          "name": "xnumel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "r0_numel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "XBLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "inductor__triton_poi_fused_add_addcdiv_copy__div_lerp_mul_neg_pow_reciprocal_rsub_sqrt_0__e933775fed6d54fd.ttir",
+      "group": "inductor",
+      "kernel": "triton_poi_fused_add_addcdiv_copy__div_lerp_mul_neg_pow_reciprocal_rsub_sqrt_0",
+      "grid": [
+        32,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "in_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr1",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr2",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr3",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr4",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr3",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr4",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr6",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "xnumel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "XBLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "inductor__triton_poi_fused_add_addcdiv_copy__div_lerp_mul_neg_pow_reciprocal_rsub_sqrt_0__8a3f48098be1acf3.ttir",
+      "group": "inductor",
+      "kernel": "triton_poi_fused_add_addcdiv_copy__div_lerp_mul_neg_pow_reciprocal_rsub_sqrt_0",
+      "grid": [
+        64,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "in_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr1",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr2",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr3",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr4",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr3",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr4",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr6",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "xnumel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "XBLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 128
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "inductor__triton_poi_fused_add_copy__1__08feed5923d70bcd.ttir",
+      "group": "inductor",
+      "kernel": "triton_poi_fused_add_copy__1",
+      "grid": [
+        1,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "in_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr1",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "xnumel",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "XBLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "liger__liger_cross_entropy_kernel__322167ebc232f130.ttir",
+      "group": "liger",
+      "kernel": "liger_cross_entropy_kernel",
+      "grid": [
+        32,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "X_stride",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "Y_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*i64",
+          "value": null
+        },
+        {
+          "name": "Y_stride",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "weight_ptr",
+          "kind": "none",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": null
+        },
+        {
+          "name": "loss_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "z_loss_ptr",
+          "kind": "none",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": null
+        },
+        {
+          "name": "loss_stride",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "token_accuracy_ptr",
+          "kind": "none",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": null
+        },
+        {
+          "name": "token_accuracy_stride",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "n_cols",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "n_non_ignore",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sum_non_ignore_weight",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "weight_sum",
+          "kind": "float",
+          "constexpr": false,
+          "signature": "fp32",
+          "value": null
+        },
+        {
+          "name": "ignore_index",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "lse_square_scale",
+          "kind": "float",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 0.0
+        },
+        {
+          "name": "label_smoothing",
+          "kind": "float",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 0.0
+        },
+        {
+          "name": "reduction",
+          "kind": "other",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": "'mean'"
+        },
+        {
+          "name": "softcap",
+          "kind": "none",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": null
+        },
+        {
+          "name": "RETURN_Z_LOSS",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": false
+        },
+        {
+          "name": "RETURN_TOKEN_ACCURACY",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": false
+        },
+        {
+          "name": "BLOCK_SIZE",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 512
+        },
+        {
+          "name": "HAS_WEIGHT",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": false
+        },
+        {
+          "name": "HAS_SOFTCAPPING",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": false
+        },
+        {
+          "name": "HAS_GRADIENTS",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": true
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "liger__liger_cross_entropy_kernel__b8503b7db406c559.ttir",
+      "group": "liger",
+      "kernel": "liger_cross_entropy_kernel",
+      "grid": [
+        8,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "X_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "X_stride",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "Y_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*i64",
+          "value": null
+        },
+        {
+          "name": "Y_stride",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "weight_ptr",
+          "kind": "none",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": null
+        },
+        {
+          "name": "loss_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "z_loss_ptr",
+          "kind": "none",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": null
+        },
+        {
+          "name": "loss_stride",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "token_accuracy_ptr",
+          "kind": "none",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": null
+        },
+        {
+          "name": "token_accuracy_stride",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "n_cols",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "n_non_ignore",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "sum_non_ignore_weight",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "weight_sum",
+          "kind": "float",
+          "constexpr": false,
+          "signature": "fp32",
+          "value": null
+        },
+        {
+          "name": "ignore_index",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "lse_square_scale",
+          "kind": "float",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 0.0
+        },
+        {
+          "name": "label_smoothing",
+          "kind": "float",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 0.0
+        },
+        {
+          "name": "reduction",
+          "kind": "other",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": "'mean'"
+        },
+        {
+          "name": "softcap",
+          "kind": "none",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": null
+        },
+        {
+          "name": "RETURN_Z_LOSS",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": false
+        },
+        {
+          "name": "RETURN_TOKEN_ACCURACY",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": false
+        },
+        {
+          "name": "BLOCK_SIZE",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1024
+        },
+        {
+          "name": "HAS_WEIGHT",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": false
+        },
+        {
+          "name": "HAS_SOFTCAPPING",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": false
+        },
+        {
+          "name": "HAS_GRADIENTS",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": true
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "liger___rms_norm_forward_kernel__824837cce53c619b.ttir",
+      "group": "liger",
+      "kernel": "_rms_norm_forward_kernel",
+      "grid": [
+        16,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "Y_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "Y_row_stride",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "X_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "X_row_stride",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "W_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "W_row_stride",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "RSTD_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "RSTD_row_stride",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "n_cols",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "eps",
+          "kind": "float",
+          "constexpr": false,
+          "signature": "fp32",
+          "value": null
+        },
+        {
+          "name": "offset",
+          "kind": "float",
+          "constexpr": false,
+          "signature": "fp32",
+          "value": null
+        },
+        {
+          "name": "casting_mode",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 0
+        },
+        {
+          "name": "elementwise_affine",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": true
+        },
+        {
+          "name": "BLOCK_SIZE",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "liger___rms_norm_backward_kernel__554faa7b727cf651.ttir",
+      "group": "liger",
+      "kernel": "_rms_norm_backward_kernel",
+      "grid": [
+        84,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "dY_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "dY_row_stride",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "dX_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "dX_row_stride",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "X_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "X_row_stride",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "X_dtype",
+          "kind": "other",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": "triton.language.float32"
+        },
+        {
+          "name": "W_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "W_row_stride",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "RSTD_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "RSTD_row_stride",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "dW_ptr",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "dW_row_stride",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "n_rows",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "n_cols",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "offset",
+          "kind": "float",
+          "constexpr": false,
+          "signature": "fp32",
+          "value": null
+        },
+        {
+          "name": "rows_per_program",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 1
+        },
+        {
+          "name": "casting_mode",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 0
+        },
+        {
+          "name": "elementwise_affine",
+          "kind": "bool",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": true
+        },
+        {
+          "name": "BLOCK_SIZE",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 256
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    },
+    {
+      "file": "torchao__triton_per_fused__to_copy_abs_add_amax_clamp_copy__div_ge_index_lerp_mul_pow_rsub_scalar_tensor_select_sqrt_sub_view_where_0__af99688c88a33b3c.ttir",
+      "group": "torchao",
+      "kernel": "triton_per_fused__to_copy_abs_add_amax_clamp_copy__div_ge_index_lerp_mul_pow_rsub_scalar_tensor_select_sqrt_sub_view_where_0",
+      "grid": [
+        1024,
+        1,
+        1
+      ],
+      "args": [
+        {
+          "name": "in_ptr0",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr1",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*u8",
+          "value": null
+        },
+        {
+          "name": "in_ptr2",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr3",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr4",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*u8",
+          "value": null
+        },
+        {
+          "name": "in_ptr5",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr6",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr7",
+          "kind": "float",
+          "constexpr": false,
+          "signature": "fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr8",
+          "kind": "float",
+          "constexpr": false,
+          "signature": "fp32",
+          "value": null
+        },
+        {
+          "name": "in_ptr9",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr8",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr9",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*u8",
+          "value": null
+        },
+        {
+          "name": "out_ptr10",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*u8",
+          "value": null
+        },
+        {
+          "name": "out_ptr11",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "out_ptr12",
+          "kind": "tensor",
+          "constexpr": false,
+          "signature": "*fp32",
+          "value": null
+        },
+        {
+          "name": "xnumel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "r0_numel",
+          "kind": "int",
+          "constexpr": false,
+          "signature": "i32",
+          "value": null
+        },
+        {
+          "name": "XBLOCK",
+          "kind": "int",
+          "constexpr": true,
+          "signature": "constexpr",
+          "value": 4
+        }
+      ],
+      "libtriton_sha256": "8a84317b77c34bb6aea78bb0e8ee730e49cc07ee18707e68931c77bab6f04e5f"
+    }
+  ]
+}
