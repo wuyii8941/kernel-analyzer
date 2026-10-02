@@ -1,0 +1,133 @@
+{
+  "schema": "kernel-analyzer-exp-intervention-v1",
+  "kernel": "liger_cross_entropy_kernel",
+  "fixed_reference": "K_R of the original kernel (real exp)",
+  "log2e_rn": 1.4426950216293335,
+  "log2e_up": 1.442695140838623,
+  "launches": 64,
+  "same_inputs": {
+    "original": true,
+    "exp2_rn": true,
+    "exp2_up": true,
+    "libdevice": true,
+    "div_rn": true,
+    "libdevice_div_rn": true
+  },
+  "original_bitwise_equal_to_unmodified_kernel": true,
+  "variants": {
+    "original": {
+      "prediction": "positive skew as originally observed",
+      "against_original_reference": {
+        "positive": 1515774,
+        "negative": 500180,
+        "contains_zero": 32046,
+        "positive_fraction_of_signed": 0.7518891800110519,
+        "mean_residual": 1.1330270922823716e-14,
+        "mean_abs_residual": 7.235866472854545e-14
+      },
+      "against_own_declared_reference": {
+        "positive": 1515774,
+        "negative": 500180,
+        "contains_zero": 32046,
+        "positive_fraction_of_signed": 0.7518891800110519,
+        "mean_residual": 1.1330270922823716e-14,
+        "mean_abs_residual": 7.235866472854545e-14
+      }
+    },
+    "exp2_rn": {
+      "prediction": "same as original if math.exp lowers to ex2.approx(x * RN32(log2 e))",
+      "against_original_reference": {
+        "positive": 1515774,
+        "negative": 500180,
+        "contains_zero": 32046,
+        "positive_fraction_of_signed": 0.7518891800110519,
+        "mean_residual": 1.1330270922823716e-14,
+        "mean_abs_residual": 7.235866472854545e-14
+      },
+      "against_own_declared_reference": {
+        "positive": 1494454,
+        "negative": 521516,
+        "contains_zero": 32030,
+        "positive_fraction_of_signed": 0.7413076583480905,
+        "mean_residual": 1.1330270927223925e-14,
+        "mean_abs_residual": 7.258264734906309e-14
+      }
+    },
+    "exp2_up": {
+      "prediction": "skew reverses (constant above log2 e makes exp of negative arguments too small)",
+      "against_original_reference": {
+        "positive": 1279930,
+        "negative": 736030,
+        "contains_zero": 32040,
+        "positive_fraction_of_signed": 0.6348985098910692,
+        "mean_residual": 5.09920231035147e-15,
+        "mean_abs_residual": 7.339558565016637e-14
+      },
+      "against_own_declared_reference": {
+        "positive": 1416203,
+        "negative": 599755,
+        "contains_zero": 32042,
+        "positive_fraction_of_signed": 0.7024962821646086,
+        "mean_residual": 5.099202309198123e-15,
+        "mean_abs_residual": 6.969751374455273e-14
+      }
+    },
+    "libdevice": {
+      "prediction": "skew largely removed (compensated reduction)",
+      "against_original_reference": {
+        "positive": 1542686,
+        "negative": 473259,
+        "contains_zero": 32055,
+        "positive_fraction_of_signed": 0.7652421072995543,
+        "mean_residual": 1.048544757959694e-14,
+        "mean_abs_residual": 6.839744081208166e-14
+      },
+      "against_own_declared_reference": {
+        "positive": 1542686,
+        "negative": 473259,
+        "contains_zero": 32055,
+        "positive_fraction_of_signed": 0.7652421072995543,
+        "mean_residual": 1.048544757959694e-14,
+        "mean_abs_residual": 6.839744081208166e-14
+      }
+    },
+    "div_rn": {
+      "prediction": "isolates the approximate division (exp unchanged)",
+      "against_original_reference": {
+        "positive": 1080618,
+        "negative": 935322,
+        "contains_zero": 32060,
+        "positive_fraction_of_signed": 0.5360367868091312,
+        "mean_residual": 4.275256364158076e-15,
+        "mean_abs_residual": 5.233448641579763e-14
+      },
+      "against_own_declared_reference": {
+        "positive": 1080618,
+        "negative": 935322,
+        "contains_zero": 32060,
+        "positive_fraction_of_signed": 0.5360367868091312,
+        "mean_residual": 4.275256364158076e-15,
+        "mean_abs_residual": 5.233448641579763e-14
+      }
+    },
+    "libdevice_div_rn": {
+      "prediction": "both exp and division replaced",
+      "against_original_reference": {
+        "positive": 1061507,
+        "negative": 954427,
+        "contains_zero": 32066,
+        "positive_fraction_of_signed": 0.526558409154268,
+        "mean_residual": 4.14111019776079e-15,
+        "mean_abs_residual": 4.79159413819751e-14
+      },
+      "against_own_declared_reference": {
+        "positive": 1061507,
+        "negative": 954427,
+        "contains_zero": 32066,
+        "positive_fraction_of_signed": 0.526558409154268,
+        "mean_residual": 4.14111019776079e-15,
+        "mean_abs_residual": 4.79159413819751e-14
+      }
+    }
+  }
+}

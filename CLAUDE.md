@@ -22,3 +22,5 @@
   在 `liger` 环境跑（只依赖 `reference_eval.capture`），分析统一在 `ka_main` 跑。
 - 映射表 `ttir_mapping.py` 只对 `results/reference_eval/ttir_op_registry.json` 记录的 Triton 3.6.0
   构建成立；换版本先重跑 `scripts/enumerate_ttir_registry.py` 与枚举测试。
+- 新的测量统一走 `scripts/run_reference_analysis.py`（捕获包 + 声明 → 参照、残差、三类、统计），声明放在
+  `results/reference_eval/declarations/`；不要再为单个案例复制统计脚本。
