@@ -14,6 +14,8 @@ The declaration is a JSON document (see ``results/reference_eval/declarations``)
       "comparisons": [{"candidate": "original", "reference": "K_R"},
                       {"candidate": "original", "reference": "reverse"}],
       "direction_rules": ["fixed_direction", "aligned_reference_update"],
+                                               # also "cross_fit" (folds: "cross_fit_folds", default 2) and
+                                               # "grouped_<rule>" (aggregate first: "groups": {"size": s})
       "population": {"description": "...", "calibration": 32, "confirmation": 64},
       "alpha": 0.05,
       "factors": {...}                         # treatment of the five factors, copied into the report
@@ -25,6 +27,20 @@ measure(K) - measure(RN(K_R)) (or variant - variant), projects it with the
 declared direction rules and applies the endpoint-conservative t test with
 Holm correction.  Binding (where the kernel is and how it is captured) stays
 outside this module.
+
+Direction rules (the projection of an interval vector [l, h] on w is
+[sum min(l w, h w), sum max(l w, h w)]):
+
+* fixed_direction: w = normalized mean of the calibration units; the
+  confirmation units are tested;
+* aligned_reference_update: w_i = the unit's own reference measurement, a
+  direction given by the mechanism (uniform scaling) rather than learned;
+* cross_fit: K folds over all units; fold k is projected on the direction
+  learned from the other folds and tested at alpha / K; the rule rejects when
+  any fold does (Bonferroni, valid under the dependence between folds);
+* grouped_<rule>: coordinates are first summed over declared contiguous
+  groups (rows, tensors), which lowers the dimension the direction is learned
+  in; the group sums of [l, h] enclose the group sums of u.
 """
 
 from __future__ import annotations
@@ -222,6 +238,77 @@ def _summarize(name, rule, l, h, alpha):
             "p_value_two_sided_conservative": max(p_l, p_h)}
 
 
+def _project(lows: np.ndarray, highs: np.ndarray, w: np.ndarray):
+    """Interval projection: (sum min(l w, h w), sum max(l w, h w)) over the last axis."""
+
+    lw, hw = lows * w, highs * w
+    return np.minimum(lw, hw).sum(axis=-1), np.maximum(lw, hw).sum(axis=-1)
+
+
+def _learned_direction(lows, highs):
+    direction = (0.5 * (lows + highs)).mean(axis=0)
+    norm = np.linalg.norm(direction)
+    return direction / norm if norm > 0 else None
+
+
+def _cross_fit(name, rule, lows, highs, folds, alpha):
+    n = lows.shape[0]
+    edges = np.linspace(0, n, folds + 1).astype(int)
+    per_fold, directions = [], []
+    for k in range(folds):
+        a, b = edges[k], edges[k + 1]
+        rest = np.r_[0:a, b:n]
+        w = _learned_direction(lows[rest], highs[rest])
+        if w is None:
+            return {"comparison": name, "rule": rule, "verdict": "UNRESOLVED_MEASUREMENT",
+                    "reason": f"direction learned without fold {k} is zero"}
+        directions.append(w)
+        per_fold.append(_summarize(name, f"{rule}_fold{k}", *_project(lows[a:b], highs[a:b], w), alpha / folds))
+    best = min(per_fold, key=lambda r: r["p_value_two_sided_conservative"])
+    out = dict(best)
+    out.update({"rule": rule, "n": n, "folds": folds, "fold_level": alpha / folds,
+                "p_value_two_sided_conservative": min(1.0, folds * best["p_value_two_sided_conservative"]),
+                "fold_results": per_fold,
+                "fold_direction_cosines": [float(directions[i] @ directions[j])
+                                           for i in range(folds) for j in range(i + 1, folds)]})
+    return out
+
+
+def apply_direction_rules(name, lows, highs, ref_measure, decl, n_cal, n_conf, alpha) -> list:
+    """Project the unit residual intervals [lows, highs] (units x coordinates) with the declared rules."""
+
+    results = []
+    for rule in decl["direction_rules"]:
+        base, lo, hi, ref = rule, lows, highs, ref_measure
+        if rule.startswith("grouped_"):
+            size = decl["groups"]["size"]
+            if lows.shape[1] % size:
+                raise ValueError(f"group size {size} does not divide {lows.shape[1]} coordinates")
+            base = rule[len("grouped_"):]
+            lo = lows.reshape(lows.shape[0], -1, size).sum(axis=2)
+            hi = highs.reshape(highs.shape[0], -1, size).sum(axis=2)
+            ref = ref_measure.reshape(ref_measure.shape[0], -1, size).sum(axis=2)
+        if base == "fixed_direction":
+            w = _learned_direction(lo[:n_cal], hi[:n_cal])
+            if w is None:
+                results.append({"comparison": name, "rule": rule, "verdict": "UNRESOLVED_MEASUREMENT",
+                                "reason": "calibration direction is zero"})
+                continue
+            conf = slice(n_cal, n_cal + n_conf)
+            results.append(_summarize(name, rule, *_project(lo[conf], hi[conf], w), alpha))
+        elif base == "aligned_reference_update":
+            conf = slice(n_cal, n_cal + n_conf)
+            norms = np.linalg.norm(ref[conf], axis=1, keepdims=True)
+            w = np.divide(ref[conf], norms, out=np.zeros_like(ref[conf]), where=norms > 0)
+            results.append(_summarize(name, rule, *_project(lo[conf], hi[conf], w), alpha))
+        elif base == "cross_fit":
+            results.append(_cross_fit(name, rule, lo[:n_cal + n_conf], hi[:n_cal + n_conf],
+                                      decl.get("cross_fit_folds", 2), alpha))
+        else:
+            raise ValueError(f"unknown direction rule {rule}")
+    return results
+
+
 def statistics_stage(decl: dict, ref_dir: Path, device: str = "cuda:0") -> dict:
     ref_dir = Path(ref_dir)
     paths = sorted(ref_dir.glob("unit*.npz"))
@@ -257,26 +344,7 @@ def statistics_stage(decl: dict, ref_dir: Path, device: str = "cuda:0") -> dict:
     for name, items in pairs.items():
         lows = np.stack([a for a, _ in items])
         highs = np.stack([b for _, b in items])
-        if "fixed_direction" in decl["direction_rules"]:
-            direction = (0.5 * (lows[:n_cal] + highs[:n_cal])).mean(axis=0)
-            norm = np.linalg.norm(direction)
-            if norm == 0:
-                results.append({"comparison": name, "rule": "fixed_direction", "verdict": "UNRESOLVED_MEASUREMENT",
-                                "reason": "calibration direction is zero"})
-            else:
-                w = direction / norm
-                proj = np.array([(np.minimum(lows[i] * w, highs[i] * w).sum(), np.maximum(lows[i] * w, highs[i] * w).sum())
-                                 for i in range(n_cal, n_cal + n_conf)])
-                results.append(_summarize(name, "fixed_direction", proj[:, 0], proj[:, 1], alpha))
-        if "aligned_reference_update" in decl["direction_rules"]:
-            proj = []
-            for i in range(n_cal, n_cal + n_conf):
-                r = ref_measure[i]
-                rn = np.linalg.norm(r)
-                w = r / rn if rn > 0 else r
-                proj.append((np.minimum(lows[i] * w, highs[i] * w).sum(), np.maximum(lows[i] * w, highs[i] * w).sum()))
-            proj = np.array(proj)
-            results.append(_summarize(name, "aligned_reference_update", proj[:, 0], proj[:, 1], alpha))
+        results.extend(apply_direction_rules(name, lows, highs, np.stack(ref_measure), decl, n_cal, n_conf, alpha))
     tested = [r for r in results if "p_value_two_sided_conservative" in r]
     for r, rej in zip(tested, _holm([r["p_value_two_sided_conservative"] for r in tested], alpha)):
         r["holm_reject"] = bool(rej)

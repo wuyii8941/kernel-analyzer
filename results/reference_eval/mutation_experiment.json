@@ -2415,8 +2415,8 @@
     },
     {
       "kernel": "liger_rmsnorm_forward",
-      "mutation_kind": "approximation",
-      "known_in_advance": "declared semantics unchanged",
+      "mutation_kind": "approximation_exact_divisor",
+      "known_in_advance": "divisor is a power of two (n_cols = 512): approximate and correctly rounded division agree exactly; expected no numeric difference, IR difference only",
       "coverage_complete": true,
       "aborted_programs": 0,
       "elements": 32768,
@@ -2454,7 +2454,10 @@
           -2.3778368318724424e-10
         ]
       },
-      "checks": {},
+      "checks": {
+        "values_identical": true,
+        "references_identical": true
+      },
       "change_seen": false,
       "localization": {
         "ir_diff": {

@@ -1,0 +1,80 @@
+{
+  "schema": "kernel-analyzer-division-bias-over-n-v1",
+  "delta_definition": "relative bias of x / N (div.full.f32) against div_rn, averaged over 1024 numerators",
+  "model": "delta(N) = RN32(1/N) * N - 1",
+  "model_rcp": "delta_rcp(N) = rcp.approx.ftz.f32(N) * N - 1",
+  "N_63": {
+    "model": 5.774199962615967e-08,
+    "model_rcp": 5.774199962615967e-08,
+    "measured": 5.5760571913731985e-08
+  },
+  "measured_vs_model_correlation": 0.33096786231992875,
+  "measured_vs_model_rcp_correlation": 0.9993188495368065,
+  "measured_minus_model_rcp_max_abs": 5.482273610587164e-09,
+  "rcp_differs_from_RN32_fraction": 0.13507080078125,
+  "rcp_above_RN32_fraction": 0.099395751953125,
+  "rcp_below_RN32_fraction": 0.035675048828125,
+  "measured_sign_matches_model_fraction": 0.8611373901367188,
+  "sign_consistent_within_N_fraction": 1.0,
+  "powers_of_two_exact": true,
+  "uniform_averages": {
+    "1..64": {
+      "model_mean": 1.2514647096395493e-08,
+      "model_rcp_mean": 1.225271262228489e-08,
+      "measured_mean": 1.2690254015839552e-08,
+      "model_positive_fraction": 0.703125,
+      "model_mean_abs": 2.1653249859809875e-08
+    },
+    "1..512": {
+      "model_mean": 3.7425706977956e-09,
+      "model_rcp_mean": 1.0018538887379691e-08,
+      "measured_mean": 1.0113244375727685e-08,
+      "model_positive_fraction": 0.54296875,
+      "model_mean_abs": 2.214892447227612e-08
+    },
+    "1..4096": {
+      "model_mean": 1.828311724239029e-09,
+      "model_rcp_mean": 6.58204868386747e-09,
+      "measured_mean": 6.605276128510609e-09,
+      "model_positive_fraction": 0.515380859375,
+      "model_mean_abs": 2.2155390411171538e-08
+    },
+    "1..65536": {
+      "model_mean": 1.339250654819324e-10,
+      "model_rcp_mean": 5.989334500577925e-09,
+      "measured_mean": 6.000293639587291e-09,
+      "model_positive_fraction": 0.49652099609375,
+      "model_mean_abs": 2.2183919340390545e-08
+    },
+    "1..131072": {
+      "model_mean": 8.036343118744682e-11,
+      "model_rcp_mean": 5.846247326524168e-09,
+      "measured_mean": 5.855015416707682e-09,
+      "model_positive_fraction": 0.49755859375,
+      "model_mean_abs": 2.2219579211280038e-08
+    }
+  },
+  "near_batch_sizes": {
+    "1984..2112": {
+      "model_mean": 2.2691963312699815e-09,
+      "model_rcp_mean": 4.090103429070739e-09,
+      "measured_mean": 4.03481233751855e-09,
+      "model_positive_fraction": 0.4883720930232558,
+      "model_mean_abs": 2.052880419317142e-08
+    },
+    "7936..8448": {
+      "model_mean": 1.5302629529572951e-09,
+      "model_rcp_mean": 3.0209265420572798e-09,
+      "measured_mean": 2.993507130056391e-09,
+      "model_positive_fraction": 0.50682261208577,
+      "model_mean_abs": 2.1300245358719404e-08
+    },
+    "31744..33792": {
+      "model_mean": -1.2453552488903045e-10,
+      "model_rcp_mean": 1.1962957996915954e-09,
+      "measured_mean": 1.1804495442568495e-09,
+      "model_positive_fraction": 0.49097120546608103,
+      "model_mean_abs": 2.1945917176361355e-08
+    }
+  }
+}

@@ -55,6 +55,8 @@ KNOWN = {
     "precision": "local residual of the cast = RN_bf16(t) - t on the given input; declared semantics unchanged",
     "order": "declared semantics unchanged",
     "approximation": "declared semantics unchanged",
+    "approximation_exact_divisor": "divisor is a power of two (n_cols = 512): approximate and correctly rounded "
+                                   "division agree exactly; expected no numeric difference, IR difference only",
     "reformulation": "same real value, different expression: reference intervals intersect",
     "omission": "declared semantics changes: detected with the specification, invisible without it",
     "rerun": "negative control: identical values and identical references",
@@ -306,7 +308,7 @@ def analyse_pair(name, kind, launch0, launch1, out_name):
     elif kind == "omission":
         checks["detected_with_specification"] = semantic_detected > 0
         checks["invisible_without_specification"] = bool(own["max_abs"] <= max(orig["max_abs"], 1e-30) * 4)
-    elif kind in ("rerun", "equivalent"):
+    elif kind in ("rerun", "equivalent", "approximation_exact_divisor"):
         checks["values_identical"] = bool(not changed.any())
         checks["references_identical"] = identical_ref
     elif kind == "reformulation":
@@ -346,7 +348,7 @@ def main():
         print(name, "done", flush=True)
     if args.rms.exists():
         base = load_launch(args.rms / "original" / "launch000")
-        for variant, kind in (("rerun", "rerun"), ("rsqrt_rn", "approximation"), ("div_rn", "approximation"),
+        for variant, kind in (("rerun", "rerun"), ("rsqrt_rn", "approximation"), ("div_rn", "approximation_exact_divisor"),
                               ("omit_eps", "omission")):
             row = analyse_pair("liger_rmsnorm_forward", kind, base, load_launch(args.rms / variant / "launch000"), "Y_ptr")
             row["variant"] = variant

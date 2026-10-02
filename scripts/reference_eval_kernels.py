@@ -351,3 +351,36 @@ def scale_directed(X, Y, alpha, n, BLOCK: tl.constexpr, MODE: tl.constexpr):
     else:
         y = libdevice.mul_ru(x, alpha)
     tl.store(Y + offs, y, mask=mask)
+
+
+@triton.jit
+def divide_by_count(X, N_PTR, Q_FULL, Q_RN, n_x, BLOCK: tl.constexpr):
+    # One program per divisor N: q = x / N with the default (approximate) and the correctly rounded division.
+    pid = tl.program_id(0)
+    n = tl.load(N_PTR + pid).to(tl.float32)
+    offs = tl.arange(0, BLOCK)
+    mask = offs < n_x
+    x = tl.load(X + offs, mask=mask, other=1.0)
+    tl.store(Q_FULL + pid * n_x + offs, x / n, mask=mask)
+    tl.store(Q_RN + pid * n_x + offs, tl.div_rn(x, n), mask=mask)
+
+
+@triton.jit
+def hardware_reciprocal(N_PTR, R, n, BLOCK: tl.constexpr):
+    # rcp.approx.ftz.f32 of the integer counts: the reciprocal div.full.f32 multiplies by.
+    offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
+    mask = offs < n
+    x = tl.load(N_PTR + offs, mask=mask, other=1).to(tl.float32)
+    r = tl.inline_asm_elementwise("rcp.approx.ftz.f32 $0, $1;", "=r,r", [x], dtype=tl.float32, is_pure=True, pack=1)
+    tl.store(R + offs, r, mask=mask)
+
+
+@triton.jit
+def ftz_lowering(X, Y_SQRT, Y_DIV, Y_POW, n, BLOCK: tl.constexpr):
+    # Operations whose lowering differs between Triton 3.5.1 and 3.6.0 only in subnormal handling.
+    offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
+    mask = offs < n
+    x = tl.load(X + offs, mask=mask, other=1.0)
+    tl.store(Y_SQRT + offs, tl.sqrt_rn(tl.abs(x)), mask=mask)
+    tl.store(Y_DIV + offs, tl.div_rn(x, 3.0), mask=mask)
+    tl.store(Y_POW + offs, libdevice.pow(tl.abs(x), 0.75), mask=mask)
