@@ -31,6 +31,8 @@ PREDICTION = {
     "exp2_up": "skew reverses (constant above log2 e makes exp of negative arguments too small)",
     "libdevice": "skew largely removed (compensated reduction)",
     "div_rn": "isolates the approximate division (exp unchanged)",
+    "div_d_rn": "only the division by the row sum d",
+    "div_n_rn": "only the division by n_non_ignore",
     "libdevice_div_rn": "both exp and division replaced",
 }
 

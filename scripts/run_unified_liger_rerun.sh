@@ -24,4 +24,8 @@ wait
 CUDA_VISIBLE_DEVICES=0 /data1/tzh/envs/ka_main/bin/python scripts/run_reference_analysis.py --declaration "$DECL" \
     --stage statistics --out "$REF" --report "$ROOT/results/reference_eval/liger_fp32_order_unified_entry.json" \
     > "$WORK/statistics.log" 2>&1
+CUDA_VISIBLE_DEVICES=0 /data1/tzh/envs/ka_main/bin/python scripts/run_reference_analysis.py \
+    --declaration "$ROOT/results/reference_eval/declarations/liger_fp32_order_manual_reference.json" \
+    --stage statistics --out "$REF" --report "$ROOT/results/reference_eval/liger_fp32_order_manual_reference.json" \
+    > "$WORK/statistics_manual.log" 2>&1
 echo UNIFIED_DONE

@@ -8,6 +8,8 @@ Variants of every ``tl.exp(.)`` inside ``liger_cross_entropy_kernel``:
 * ``exp2_up``   : tl.exp2(x * nextafter32(RN32(log2 e), +inf))   (constant above log2 e)
 * ``libdevice`` : libdevice.exp (compensated expf)
 * ``div_rn``    : tl.exp kept, both divisions (by d and by n_non_ignore) correctly rounded
+* ``div_d_rn``  : only the division by the row sum d correctly rounded
+* ``div_n_rn``  : only the division by n_non_ignore correctly rounded
 * ``libdevice_div_rn`` : libdevice.exp and correctly rounded divisions
 
 The fused linear cross-entropy workload of capture_liger_kernels.py is run
@@ -42,6 +44,8 @@ HELPERS = {
                  "@triton.jit\ndef _EXP(x):\n    return _libdevice.exp(x)\n",
 }
 HELPERS["div_rn"] = HELPERS["original"]
+HELPERS["div_d_rn"] = HELPERS["original"]
+HELPERS["div_n_rn"] = HELPERS["original"]
 HELPERS["libdevice_div_rn"] = HELPERS["libdevice"]
 # Variants that also replace the two divisions by correctly rounded division.
 DIVISIONS = {
@@ -62,8 +66,13 @@ def patched_kernel(variant: str, workdir: Path):
     if body.count("tl.exp(") < 3:
         raise RuntimeError("expected exp calls in the kernel were not found")
     body = body.replace("tl.exp(", "_EXP(")
-    if variant.endswith("div_rn"):
-        for old, new in DIVISIONS.items():
+    if variant.endswith("div_rn") or variant in ("div_d_rn", "div_n_rn"):
+        items = list(DIVISIONS.items())
+        if variant == "div_d_rn":
+            items = items[:1]  # only the division by the row sum d
+        elif variant == "div_n_rn":
+            items = items[1:]  # only the division by n_non_ignore
+        for old, new in items:
             if body.count(old) != 1:
                 raise RuntimeError(f"division site not found: {old.strip()}")
             body = body.replace(old, new)

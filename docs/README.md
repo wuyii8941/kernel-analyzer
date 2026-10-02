@@ -4,7 +4,8 @@
 凡与它冲突的旧结论以它为准；下列文档是其证据与细节来源。运行环境见
 [environments.md](environments.md)；自动参照求值器（第 11 节步 1）在
 `src/kernel_analyzer/reference_eval/`，验收测试为 `tests/test_reference_eval_*.py`；第 1–6 步的
-实施结果见 [自动参照结果](auto_reference_results_20261002.md)。五步证据链的推导见
+实施结果见 [自动参照结果](auto_reference_results_20261002.md)，第二轮检验（统计校准、真实 kernel 改动、
+与误差大小方法的对比、交叉熵除法追到更新、换 Triton 版本）见 [工具检验](tool_validation.md)。五步证据链的推导见
 [讲稿](bias_chain_final.md)。
 
 当前科研口径从下面四份文档进入：

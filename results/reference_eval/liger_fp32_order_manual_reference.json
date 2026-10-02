@@ -1,7 +1,7 @@
 {
   "schema": "kernel-analyzer-reference-bias-analysis-v1",
   "declaration": {
-    "location": "Liger 0.7 fused linear CE: FP32 dW chunk accumulation (64 chunks, sequence length 64); the in-place torch add is replaced by the bitwise-equal Triton kernel scripts.reference_eval_kernels.accumulate",
+    "location": "Liger 0.7 fused linear CE: FP32 dW chunk accumulation (64 chunks, sequence length 64); the in-place torch add is replaced by the bitwise-equal Triton kernel scripts.reference_eval_kernels.accumulate (manual FP64 reference instead of K_R, same statistics)",
     "binding": "scripts/capture_liger_order_accumulation.py (Qwen3-1.7B FP32, 32-state bank, draw seed 20260919, rows seed 20261002)",
     "capture_root": ".cache/liger_unified/capture",
     "variants": [
@@ -55,7 +55,13 @@
       "concurrency_order": "fixed: no atomics; one writer per element",
       "hardware": "fixed: NVIDIA RTX A6000"
     },
-    "task_semantics": "f taken as the declared semantics (real sum of the chunk contributions); not separately checked"
+    "task_semantics": "f taken as the declared semantics (real sum of the chunk contributions); not separately checked",
+    "reference_source": {
+      "type": "manual",
+      "value": "manual",
+      "abs_sum": "abs_sum",
+      "terms": 64
+    }
   },
   "reference": {
     "original": {
@@ -126,7 +132,7 @@
     }
   },
   "not_established_fraction_removed": 0.0,
-  "ambiguous_rounding_elements": 0,
+  "ambiguous_rounding_elements": 324,
   "multiplicity": "Holm over the declared comparison x rule pairs",
   "results": [
     {
