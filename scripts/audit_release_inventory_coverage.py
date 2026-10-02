@@ -8,14 +8,16 @@ import gzip
 import hashlib
 import json
 from pathlib import Path
-import subprocess
 from collections import Counter
 
 
 def audit(root, inventory):
     included = {str(Path(r['release']).resolve()) for r in inventory['records']}
-    listing = subprocess.check_output(['rg', '--files', '--no-ignore', str(root/'results')], text=True)
-    paths = sorted(Path(p) for p in listing.splitlines() if Path(p).name == 'same_dtype_tasks.json.gz')
+    # Same listing as `rg --files --no-ignore`: ignore files are not honoured,
+    # hidden path components are skipped.  No external binary is required.
+    results = root / 'results'
+    paths = sorted(p for p in results.rglob('same_dtype_tasks.json.gz')
+                   if not any(part.startswith('.') for part in p.relative_to(results).parts))
     rows = []
     for path in paths:
         row = dict(release=str(path.parent.resolve()), task_file=str(path.resolve()),

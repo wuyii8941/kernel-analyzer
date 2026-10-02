@@ -1,15 +1,30 @@
 """Compare residual readback controls from one saved pre-failure training state."""
 import argparse
-import copy
+import io
 import json
 from pathlib import Path
 
 from scripts import run_structured_residual_training as frozen
 
 
+def copy_state(saved):
+    """Deep copy of an optimizer state dict.
+
+    ``copy.deepcopy`` dispatches ``aten.clone`` on torchao ``OptimState8bit``,
+    which some torchao releases do not implement; a serialization round trip
+    copies the same tensors without that dispatch.
+    """
+    import torch
+
+    buffer = io.BytesIO()
+    torch.save(saved, buffer)
+    buffer.seek(0)
+    return torch.load(buffer, weights_only=False)
+
+
 def restore_optimizer(item, saved):
     """Preserve BF16 residual storage that standard optimizer loading casts to FP32."""
-    item.load_state_dict(copy.deepcopy(saved))
+    item.load_state_dict(copy_state(saved))
     for group, saved_group in zip(item.param_groups, saved["param_groups"]):
         for parameter, identifier in zip(group["params"], saved_group["params"]):
             original_state = saved["state"][identifier]

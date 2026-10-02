@@ -1,12 +1,10 @@
-import copy
-
 import pytest
 
 torch = pytest.importorskip("torch")
 pytest.importorskip("torchao")
 
 from kernel_analyzer.compensation_control import TensorScalarCompensationControl
-from scripts.replay_failure_checkpoint_controls import restore_optimizer
+from scripts.replay_failure_checkpoint_controls import copy_state, restore_optimizer
 
 
 @pytest.mark.parametrize("enabled", [False, True])
@@ -17,7 +15,7 @@ def test_restored_quantized_optimizer_keeps_residual_dtype_and_next_writes(enabl
     for _ in range(3):
         p.grad = torch.randn(4096, generator=generator)
         opt.step()
-    snapshot = copy.deepcopy(opt.state_dict())
+    snapshot = copy_state(opt.state_dict())
     q = torch.nn.Parameter(p.detach().clone())
     restored = TensorScalarCompensationControl([q], compensation_enabled=enabled)
     restore_optimizer(restored, snapshot)
