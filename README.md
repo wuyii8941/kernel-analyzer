@@ -15,9 +15,13 @@ Kernel Analyzer 检验训练中数值实现差异的系统性作用：给定一�
 2. **用统一流程分析实现选择对训练的作用。** 捕获包加一份测量声明（位置、坐标、模式、测量点、比较集合、
    方向规则、开发/确认划分）给出参照、残差、三类与端点保守统计；Liger FP32 dW 累加从重新捕获开始重跑，
    与案例专用脚本的结果逐项相同。
-3. **用校准、对照和真实干预检验方法。** 答案已知时判定规则的误报率与检出能力；9 个真实 kernel 上 34 处
-   单点改动与 12 个阴性对照；与只看误差大小的方法正面对比；交叉熵近似除法从局部一路追到更新；换 Triton
-   版本后参照仍然可靠。见 [工具检验](docs/tool_validation.md)。
+3. **用校准、对照和真实干预检验方法。** 答案已知时判定规则的误报率与检出能力（含高维灵敏度的推导与三种
+   补法）；9 个真实 kernel 上 34 处单点改动与 12 个阴性对照；与只看误差大小的方法正面对比；交叉熵近似除法
+   从局部一路追到更新；同一份 TTIR 换 Triton 版本编译后的下降差异与跨版本比较。见
+   [工具检验](docs/tool_validation.md)。
+4. **核内定位。** 按锁定版本的下降规则逐位模拟设备上的 FP32 执行（近似指令由设备对模拟出的操作数执行），
+   100 个捕获包上可模拟的元素全部逐位复现；再一次只把一个节点改成精确值，把偏差落到具体节点：
+   定向舍入的 5 处改动全部定位正确，Liger 交叉熵的偏差落在 ÷N 节点。
 
 ## 使用
 
@@ -38,6 +42,7 @@ python scripts/run_reference_analysis.py --declaration D.json --stage statistics
 
 声明示例：`results/reference_eval/declarations/liger_fp32_order.json`。单个 kernel 的参照与覆盖：
 `KernelReferenceEvaluator(parse_ttir(launch.asm["ttir"])).evaluate(launch)`、`kernel_coverage(module)`。
+核内定位：`emulate.verify(launch)`（逐位核对）与 `emulate.localize(launch)`（逐节点贡献）。
 环境：主线 `ka_main`，需要 Liger/torchao/transformers 的捕获在 `liger` 环境（见
 [环境](docs/environments.md)）；缓存与临时文件都在仓库内 `.cache/`。
 
@@ -48,7 +53,8 @@ python scripts/run_reference_analysis.py --declaration D.json --stage statistics
 - 静态覆盖：65 份 TTIR 全部解析并完整处理；实际求值的 kernel 另列，含三类计数与耗时。
 - 判定规则在平均为零时误报率接近 5%（给出区间），灵敏度随维度下降，已画出曲线。
 - 局限：区间依赖问题会让少量离散判定成为参照未建立；逐 program 求值较慢；kernel 内部中间值不可观测，
-  只用数值证据只能定位到 kernel；结论限于声明的总体、坐标与测量点。
+  核内定位依赖逐位模拟，张量核点积、扫描与 atomic 处停止，两类由 ptxas/LLVM 调度决定的合成选择要由
+  输出确定并报告；结论限于声明的总体、坐标与测量点。
 
 ## 早期研究证据
 

@@ -22,5 +22,7 @@
   在 `liger` 环境跑（只依赖 `reference_eval.capture`），分析统一在 `ka_main` 跑。
 - 映射表 `ttir_mapping.py` 只对 `results/reference_eval/ttir_op_registry.json` 记录的 Triton 3.6.0
   构建成立；换版本先重跑 `scripts/enumerate_ttir_registry.py` 与枚举测试。
+- 核内定位用 `reference_eval/emulate.py`（逐位模拟 + 逐节点精确替换）；下降规则同样只对锁定的 3.6.0 /
+  sm_86 成立，换版本或换卡要先在 `.cache/version_ptx/captures` 这类捕获上重跑 `verify` 全部逐位复现。
 - 新的测量统一走 `scripts/run_reference_analysis.py`（捕获包 + 声明 → 参照、残差、三类、统计），声明放在
   `results/reference_eval/declarations/`；不要再为单个案例复制统计脚本。
