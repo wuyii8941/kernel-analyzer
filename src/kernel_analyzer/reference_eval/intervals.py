@@ -202,6 +202,31 @@ def _mpfr_scalar(fn, x: float, ctx, direction: int) -> float:
     return f
 
 
+def _mpfr_point(fn, x: float):
+    """Enclosure of fn(x) at a point with one MPFR call.
+
+    Rounding down gives the largest float64 <= fn(x); if MPFR reports the
+    result inexact, fn(x) lies strictly between it and the next float64.
+    """
+
+    with _CTX_POINT:
+        active = gmpy2.get_context()
+        active.clear_flags()
+        r = fn(gmpy2.mpfr(x))
+        inexact = active.inexact
+    if gmpy2.is_nan(r) or gmpy2.is_infinite(r):
+        raise DomainError(f"{fn.__name__}({x}) is not finite")
+    f = float(r)
+    if not inexact and (f == 0 or abs(f) >= _SUBNORMAL):
+        return f, f
+    if abs(f) < _SUBNORMAL:  # float() of a subnormal result is round-to-nearest: widen both sides
+        return math.nextafter(f, -math.inf), math.nextafter(f, math.inf)
+    return f, math.nextafter(f, math.inf)
+
+
+_CTX_POINT = gmpy2.context(precision=53, round=gmpy2.RoundDown)
+
+
 def elementary_bounds(name: str, lo: np.ndarray, hi: np.ndarray):
     """Rigorous enclosure of ``name`` over [lo, hi]; returns (lo, hi, ok_mask)."""
 
@@ -224,7 +249,9 @@ def elementary_bounds(name: str, lo: np.ndarray, hi: np.ndarray):
                 rok[i] = False
                 continue
             try:
-                if direction > 0:
+                if a == b:
+                    rlo[i], rhi[i] = _mpfr_point(fn, a)
+                elif direction > 0:
                     rlo[i] = _mpfr_scalar(fn, a, _CTX_DOWN, -1)
                     rhi[i] = _mpfr_scalar(fn, b, _CTX_UP, +1)
                 else:
@@ -331,7 +358,7 @@ def pow_bounds(xlo, xhi, ylo, yhi):
             rok[i] = False
             continue
         rlo[i] = math.nextafter(min(corners_lo), -math.inf) if min(corners_lo) < _SUBNORMAL else min(corners_lo)
-        rhi[i] = max(corners_hi)
+        rhi[i] = math.nextafter(max(corners_hi), math.inf) if abs(max(corners_hi)) < _SUBNORMAL else max(corners_hi)
     return out_lo, out_hi, ok
 
 

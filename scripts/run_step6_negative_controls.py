@@ -13,7 +13,9 @@ Three structures (stage summary section 11):
    log2(e) constant shows up as a declared-semantics difference (term 4);
 3. compute -> store -> load -> compute: the reference keeps the upstream
    difference through the load; pinning the load to its captured value
-   downgrades the output to a conditional local reference.
+   downgrades the output to a conditional local reference.  A branch version
+   (the pinned value only decides a branch that writes constants) checks that
+   control dependence carries the downgrade into the writes.
 
     python scripts/run_step6_negative_controls.py --out results/reference_eval/step6_negative_controls.json
 """
@@ -151,6 +153,18 @@ def structure_store_load():
                         "conditional_local": int(((st == 0) & cond).sum()),
                         "not_established": int((st >= 4).sum())},
             "residual": interval_sign(r_lo, r_hi), "seconds": round(seconds, 3),
+        }
+    # Branch version: the pinned value only decides a branch; the branch writes constants.
+    c = torch.tensor([1.0], device="cuda")
+    launch = capture(lambda: k.branch_on_loaded[(1,)](c, torch.empty(16, device="cuda"), BLOCK=16))
+    for label, pins in (("branch_composed", ()), ("branch_on_pinned_load", ("%c",))):
+        result, seconds = evaluate(launch, pin_loads=pins)
+        act, lo, hi, st, cond = output(result, "Y")
+        out[label] = {
+            "classes": {"complete_composed": int(((st == 0) & ~cond).sum()),
+                        "conditional_local": int(((st == 0) & cond).sum()),
+                        "not_established": int((st >= 4).sum())},
+            "seconds": round(seconds, 3),
         }
     return out
 

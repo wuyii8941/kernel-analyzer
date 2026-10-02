@@ -289,3 +289,53 @@ def cube(X, Y, n, BLOCK: tl.constexpr):
     mask = offs < n
     x = tl.load(X + offs, mask=mask)
     tl.store(Y + offs, x * x * x, mask=mask)
+
+
+@triton.jit
+def int64_to_float64(X, Y):
+    # sitofp of 2**53 + 1 loses the 1 in float64; the reference must still contain it.
+    tl.store(Y, tl.load(X).to(tl.float64) - 9007199254740992.0)
+
+
+@triton.jit
+def signed_zero(X, Y, S, BLOCK: tl.constexpr):
+    offs = tl.arange(0, BLOCK)
+    x = tl.load(X + offs)
+    tl.store(Y + offs, libdevice.copysign(tl.full((BLOCK,), 1.0, tl.float32), x))
+    tl.store(S + offs, libdevice.signbit(x).to(tl.int32))
+
+
+@triton.jit
+def fp8_e4b15_round_trip(X, Y, BLOCK: tl.constexpr):
+    offs = tl.arange(0, BLOCK)
+    tl.store(Y + offs, tl.load(X + offs).to(tl.float8e4b15).to(tl.float32))
+
+
+@triton.jit
+def branch_on_loaded(C, Y, BLOCK: tl.constexpr):
+    offs = tl.arange(0, BLOCK)
+    c = tl.load(C)
+    if c > 0.5:
+        tl.store(Y + offs, tl.full((BLOCK,), 1.0, tl.float32))
+    else:
+        tl.store(Y + offs, tl.full((BLOCK,), 0.0, tl.float32))
+
+
+@triton.jit
+def early_return_on_loaded(C, Y, BLOCK: tl.constexpr):
+    offs = tl.arange(0, BLOCK)
+    c = tl.load(C)
+    if c > 0.5:
+        tl.store(Y + offs, tl.full((BLOCK,), 1.0, tl.float32))
+        return
+    tl.store(Y + offs, tl.full((BLOCK,), 0.0, tl.float32))
+
+
+@triton.jit
+def loop_bound_from_loaded(N, Y, BLOCK: tl.constexpr):
+    offs = tl.arange(0, BLOCK)
+    n = tl.load(N)
+    acc = tl.zeros((BLOCK,), tl.float32)
+    for i in range(0, n):
+        acc += 1.0
+    tl.store(Y + offs, acc)

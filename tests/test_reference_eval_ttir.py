@@ -281,3 +281,124 @@ def test_unsigned_storage_and_signed_registers_round_trip():
     for name in ("OUT", "SIGNED"):
         report = result.compare()[name]
         assert report["integer_mismatches"] == 0 and report["integer_matches"] == 256
+
+
+# ---------------------------------------------------------------------------
+# Regressions found in review (production TTIR evaluator)
+# ---------------------------------------------------------------------------
+
+
+@cuda
+def test_large_integer_to_float_keeps_the_lost_unit_inside_the_interval():
+    k = _kernels()
+    x = torch.tensor([2 ** 53 + 1], dtype=torch.int64, device="cuda")
+    y = torch.empty(1, dtype=torch.float64, device="cuda")
+    result = _evaluate(_capture(lambda: k.int64_to_float64[(1,)](x, y)))
+    _, buf = _buffer(result, "Y")
+    assert buf.st[0] == 0
+    assert buf.lo[0] <= 1.0 <= buf.hi[0]  # the exact value is 1; the device computed 0
+    assert y.item() == 0.0
+
+
+@cuda
+def test_copysign_and_signbit_read_the_sign_of_zero():
+    k = _kernels()
+    x = torch.tensor([-0.0, 0.0, -2.0, 3.0], device="cuda")
+    y = torch.empty(4, device="cuda")
+    s = torch.empty(4, dtype=torch.int32, device="cuda")
+    result = _evaluate(_capture(lambda: k.signed_zero[(1,)](x, y, s, BLOCK=4)))
+    _, by = _buffer(result, "Y")
+    _, bs = _buffer(result, "S")
+    assert list(by.lo[:4]) == [-1.0, 1.0, -1.0, 1.0] and list(by.hi[:4]) == [-1.0, 1.0, -1.0, 1.0]
+    assert (by.st[:4] == 0).all()
+    assert list(bs.lo[:4]) == [1, 0, 1, 0] and (bs.st[:4] == 0).all()
+    assert y.tolist() == [-1.0, 1.0, -1.0, 1.0]
+
+
+def _synthetic_launch(ttir, arrays):
+    """A CapturedLaunch for hand-written TTIR: arrays maps pointer names to (before, after) float32 arrays."""
+
+    from kernel_analyzer.reference_eval.capture import CapturedArg, CapturedLaunch
+
+    args, ptr = [], 1 << 20
+    for i, (name, (before, after)) in enumerate(arrays.items()):
+        b = np.ascontiguousarray(before, dtype=np.float32)
+        a = np.ascontiguousarray(after, dtype=np.float32)
+        args.append(CapturedArg(i, name, "tensor", False, "*fp32", dtype="float32", shape=b.shape,
+                                stride=(1,), element_size=4, data_ptr=ptr, storage_ptr=ptr,
+                                storage_nbytes=b.nbytes, before=torch.from_numpy(b.view(np.uint8).copy()),
+                                after=torch.from_numpy(a.view(np.uint8).copy())))
+        ptr += 1 << 20
+    return CapturedLaunch(0, "synthetic", "", (1, 1, 1), args, {"ttir": ttir}, None, {}, None)
+
+
+SYNTHETIC_FP8 = """
+module {
+  tt.func public @fp8_round_trip(%X: !tt.ptr<f32>, %Y: !tt.ptr<f32>) {
+    %offs = tt.make_range {end = 8 : i32, start = 0 : i32} : tensor<8xi32>
+    %0 = tt.splat %X : !tt.ptr<f32> -> tensor<8x!tt.ptr<f32>>
+    %1 = tt.addptr %0, %offs : tensor<8x!tt.ptr<f32>>, tensor<8xi32>
+    %x = tt.load %1 : tensor<8x!tt.ptr<f32>>
+    %q = arith.truncf %x : tensor<8xf32> to tensor<8xf8E4M3FN>
+    %r = arith.extf %q : tensor<8xf8E4M3FN> to tensor<8xf32>
+    %2 = tt.splat %Y : !tt.ptr<f32> -> tensor<8x!tt.ptr<f32>>
+    %3 = tt.addptr %2, %offs : tensor<8x!tt.ptr<f32>>, tensor<8xi32>
+    tt.store %3, %r : tensor<8x!tt.ptr<f32>>
+    tt.return
+  }
+}
+"""
+
+
+def test_conversion_without_a_rounding_model_is_not_established_in_rounding_check_mode():
+    x = np.linspace(-3, 3, 8).astype(np.float32)
+    launch = _synthetic_launch(SYNTHETIC_FP8, {"X": (x, x), "Y": (np.zeros(8), np.zeros(8))})
+    rc = _evaluate(launch, RC)
+    nd = _evaluate(launch, ND)
+    ident, buf = _buffer(rc, "Y")
+    assert buf.written.sum() == 8
+    assert (rc.element_classes(ident) == "not_established").all()
+    ident, _ = _buffer(nd, "Y")
+    assert (nd.element_classes(ident) == "complete_composed").all()
+
+
+@cuda
+def test_aborted_programs_are_reported_and_unwritten_outputs_are_not_clean():
+    k = _kernels()
+    x = torch.randn(8, device="cuda")
+    # On sm_86 the fp8e4b15 conversion lowers to packed inline PTX, which has no declared semantics.
+    result = _evaluate(_capture(lambda: k.fp8_e4b15_round_trip[(1,)](x, torch.empty_like(x), BLOCK=8)))
+    assert result.aborted
+    ident, _ = _buffer(result, "Y")
+    assert (result.element_classes(ident)[:8] == "not_written").all()
+    assert result.compare()["_aborted_programs"]["count"] == 1
+
+
+@cuda
+@pytest.mark.parametrize("kernel_name,pin", [("branch_on_loaded", "%c"), ("early_return_on_loaded", "%c"),
+                                             ("loop_bound_from_loaded", "%n")])
+def test_control_dependence_on_a_pinned_load_downgrades_writes(kernel_name, pin):
+    k = _kernels()
+    kernel = getattr(k, kernel_name)
+    if kernel_name == "loop_bound_from_loaded":
+        c = torch.tensor([3], dtype=torch.int32, device="cuda")
+    else:
+        c = torch.tensor([1.0], device="cuda")
+    launch = _capture(lambda: kernel[(1,)](c, torch.empty(16, device="cuda"), BLOCK=16))
+    free = _evaluate(launch)
+    pinned = _evaluate(launch, pin_loads=(pin,))
+    ident, buf = _buffer(free, "Y")
+    assert (free.element_classes(ident)[buf.written] == "complete_composed").all()
+    ident, buf = _buffer(pinned, "Y")
+    assert buf.written.sum() == 16
+    assert (pinned.element_classes(ident)[buf.written] == "conditional_local").all()
+
+
+def test_round_half_away_and_signed_zero_helpers():
+    from kernel_analyzer.reference_eval.ttir_eval import _round_half_away, _sign_classes
+
+    x = np.array([0.49999999999999994, 2.5, -2.5, 2.0 ** 52 + 1, -0.5, 0.0])
+    assert list(_round_half_away(x)) == [0.0, 3.0, -3.0, 2.0 ** 52 + 1, -1.0, 0.0]
+    neg, pos = _sign_classes(np.array([-0.0, 0.0, -0.0, -1.0, 0.0]), np.array([-0.0, 0.0, 1.0, 0.0, 2.0]))
+    assert list(neg) == [True, False, False, False, False]
+    assert list(pos) == [False, True, False, False, True]

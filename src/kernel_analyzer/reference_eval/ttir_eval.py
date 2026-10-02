@@ -321,6 +321,15 @@ class ProgramState:
     pid_index: int
     grid: tuple
     memory: dict  # ident -> Buffer
+    # Control dependence: conditions (conditional flag, reasons) that decided the current path.
+    ctrl: list = field(default_factory=list)
+    sticky_cond: bool = False  # set by unstructured branches / loop exits, kept to the program end
+    sticky_reasons: frozenset = frozenset()
+
+    def control(self):
+        flag = self.sticky_cond or any(c for c, _ in self.ctrl)
+        reasons = self.sticky_reasons.union(*(r for _, r in self.ctrl)) if self.ctrl else self.sticky_reasons
+        return flag, reasons
 
 
 @dataclass
@@ -332,18 +341,25 @@ class KernelReference:
     aborted: dict
     notes: list = field(default_factory=list)
     reasons: dict = field(default_factory=dict)
+    rules: dict = field(default_factory=dict)  # element/event counts per reference rule
 
     def element_classes(self, ident: int):
+        """Per element: complete_composed / conditional_local / not_established / not_written."""
+
         buf = self.buffers[ident]
         cls = np.full(buf.st.shape, "complete_composed", dtype=object)
         cls = np.where(buf.cond, "conditional_local", cls)
         cls = np.where(buf.st >= ST_UNDEF, "not_established", cls)
-        return cls
+        return np.where(buf.written, cls, "not_written")
 
     def compare(self) -> dict:
         """Per output buffer: classes, residual ``actual - reference`` and widths."""
 
         report = {}
+        if self.aborted:
+            # Outputs an aborted program would have written are unknown; never report the kernel as clean.
+            report["_aborted_programs"] = {"count": len(self.aborted),
+                                           "reasons": sorted(set(self.aborted.values()))[:5]}
         for ident, buf in self.buffers.items():
             mask = buf.written
             if not mask.any():
@@ -503,6 +519,7 @@ class KernelReferenceEvaluator:
         if programs is None:
             programs = [(x, y, z) for z in range(grid[2]) for y in range(grid[1]) for x in range(grid[0])]
         self._pin = set(pin_loads)
+        self._rules = collections.Counter()
         self._outside_window = False
         for buf in memory.values():
             buf.writer[:] = -1  # kernel boundaries order all earlier writes
@@ -525,8 +542,10 @@ class KernelReferenceEvaluator:
         if len(programs) < grid[0] * grid[1] * grid[2]:
             notes.append(f"evaluated {len(programs)} of {grid[0] * grid[1] * grid[2]} program instances; "
                          "races with unevaluated instances are not checked")
+        if aborted:
+            self._rules["path.program_aborted"] += len(aborted)
         return KernelReference(self.func.name, self.mode, memory, [tuple(p) for p in programs], aborted,
-                               notes, dict(reasons))
+                               notes, dict(reasons), dict(self._rules))
 
     # -- functions and regions ----------------------------------------------------
 
@@ -556,6 +575,10 @@ class KernelReferenceEvaluator:
                         if c.st.max() >= ST_UNDEF or int(c.lo) == MAYBE:
                             raise ProgramAbort(f"undecided branch condition at {op.node_id}")
                         label, vals = op.successors[0] if int(c.lo) == 1 else op.successors[1]
+                        self._rules["path.branch_decided_by_reference"] += 1
+                        if c.cond.any():
+                            state.sticky_cond = True
+                            state.sticky_reasons = state.sticky_reasons | c.reasons
                     target = blocks[label]
                     values = [env[v] for v in vals]
                     for (name, _), value in zip(target.args, values):
@@ -773,8 +796,14 @@ class KernelReferenceEvaluator:
             if kind == "f" and buf.d is not None and not pinned:
                 dlo = np.where(safe, buf.d[0][idx], 0.0)
                 dhi = np.where(safe, buf.d[1][idx], 0.0)
+            carried = safe & buf.written[idx]
+            if carried.any() and not pinned:
+                self._rules["memory.load_reads_reference_value"] += int(carried.sum())
+            if pinned:
+                self._rules["observability.pinned_load_lanes"] += int(safe.sum())
             race = safe & (buf.writer[idx] != -1) & (buf.writer[idx] != state.pid_index)
             if race.any():
+                self._rules["memory.cross_program_race_lanes"] += int(race.sum())
                 st = np.where(race, ST_NE, st)
                 reasons.add(f"not_established:cross-program race on load@{op.node_id}")
             oob = active & ~in_range & (ptr.st == ST_OK)
@@ -796,6 +825,7 @@ class KernelReferenceEvaluator:
                 dhi = np.where(inactive, ob(other.d[1], shape), 0.0 if dhi is None else dhi)
         elif inactive.any():
             reasons.add(f"undefined:masked load without other@{op.node_id}")
+            self._rules["memory.masked_load_undefined_lanes"] += int(inactive.sum())
         maybe = (m == MAYBE) | (m_st >= ST_UNDEF)
         if maybe.any():
             st = np.where(maybe, ST_NE, st)
@@ -828,7 +858,10 @@ class KernelReferenceEvaluator:
         v_lo = np.broadcast_to(value.lo, shape)
         v_hi = np.broadcast_to(value.hi, shape) if value.kind == "f" else None
         v_st = np.broadcast_to(value.st, shape).copy()
-        v_cond = np.broadcast_to(value.cond, shape) | (False if mask is None else mask.cond)
+        ctrl_flag, ctrl_reasons = state.control()
+        v_cond = np.broadcast_to(value.cond, shape) | (False if mask is None else mask.cond) | ctrl_flag
+        for r in ctrl_reasons:
+            self._reasons[r] += 1
         v_st = np.where(ptr.st >= ST_UNDEF, ST_NE, v_st)
         if mask is not None:
             v_st = np.where((m == MAYBE) | (m_st >= ST_UNDEF), ST_NE, v_st)
@@ -867,6 +900,7 @@ class KernelReferenceEvaluator:
                 if hi_w is not None:
                     old_differs = old_differs | (buf.hi[idx] != hi_w)
                 race = other_writer & old_differs
+                self._rules["memory.cross_program_race_lanes"] += int(race.sum())
                 st_w = np.where(race, ST_NE, st_w)
                 if race.any():
                     self._reasons[f"cross-program write race at {op.node_id}"] += 1
@@ -899,6 +933,10 @@ class KernelReferenceEvaluator:
         active = (m == 1) & in_range
         idx = index[active].astype(np.int64)
         result_used = op.results and op.results[0] in self._uses
+        if result_used:
+            self._rules["atomic.return_value_not_established_lanes"] += int(((m == 1) & in_range).sum())
+        else:
+            self._rules["atomic.folded_order_free_lanes"] += int(((m == 1) & in_range).sum())
         olds = TV(value.kind, value.elem, np.zeros(shape), np.zeros(shape) if value.kind == "f" else None,
                   None, np.full(shape, ST_NE, dtype=np.int8), np.zeros(shape, dtype=bool),
                   frozenset({f"not_established:atomic return value depends on an undeclared order@{op.node_id}"}))
@@ -953,6 +991,12 @@ class KernelReferenceEvaluator:
         else:
             raise ProgramAbort(f"{op.node_id}: atomic {kind_name} is order dependent")
         buf.st[idx] = np.where(plain, ST_NE, buf.st[idx])
+        ctrl_flag, _ = state.control()
+        if ctrl_flag or value.cond.any() or (mask is not None and mask.cond.any()):
+            extra = np.broadcast_to(value.cond, shape)[active] | ctrl_flag
+            if mask is not None:
+                extra = extra | np.broadcast_to(mask.cond, shape)[active]
+            buf.cond[idx] = buf.cond[idx] | extra
         buf.writer[idx] = -2
         buf.written[idx] = True
         return olds if op.results else None
@@ -960,18 +1004,28 @@ class KernelReferenceEvaluator:
     # ---- control flow -----------------------------------------------------------
 
     def _op_for(self, op, args, env, state):
-        lb, ub, step = (self._scalar_int(env[v], op) for v in op.operands[:3])
+        bounds = [env[v] for v in op.operands[:3]]
+        lb, ub, step = (self._scalar_int(b, op) for b in bounds)
         carried = [env[v] for v in op.operands[3:]]
         region = op.regions[0]
-        i = lb
-        count = 0
-        while (step > 0 and i < ub) or (step < 0 and i > ub):
-            iv_value = TV("i", op.attrs["iv_type"].elem, np.array(i, dtype=np.int64))
-            _, carried = self._run_region(region, env, state, [iv_value] + carried)
-            i += step
-            count += 1
-            if count > 10_000_000:
-                raise ProgramAbort("loop bound too large")
+        bound_flag = any(b.cond.any() for b in bounds)
+        bound_reasons = frozenset().union(*(b.reasons for b in bounds))
+        state.ctrl.append((bound_flag, bound_reasons))
+        try:
+            i = lb
+            count = 0
+            while (step > 0 and i < ub) or (step < 0 and i > ub):
+                iv_value = TV("i", op.attrs["iv_type"].elem, np.array(i, dtype=np.int64))
+                _, carried = self._run_region(region, env, state, [iv_value] + carried)
+                i += step
+                count += 1
+                if count > 10_000_000:
+                    raise ProgramAbort("loop bound too large")
+        finally:
+            state.ctrl.pop()
+        if bound_flag:
+            carried = [TV(v.kind, v.elem, v.lo, v.hi, v.base, v.st, v.cond | True, v.reasons | bound_reasons, v.d)
+                       for v in carried]
         return carried
 
     def _scalar_int(self, value: TV, op) -> int:
@@ -985,25 +1039,35 @@ class KernelReferenceEvaluator:
             raise ProgramAbort(f"{op.node_id}: undefined branch condition")
         c = int(cond.lo)
         if c in (0, 1):
+            self._rules["path.branch_decided_by_reference"] += 1
             region = op.regions[0] if c == 1 else (op.regions[1] if len(op.regions) > 1 else None)
             if region is None:
                 return []
-            _, out = self._run_region(region, env, state, [])
+            state.ctrl.append((bool(cond.cond.any()), cond.reasons))
+            try:
+                _, out = self._run_region(region, env, state, [])
+            finally:
+                state.ctrl.pop()
             return [self._with_cond(v, cond) for v in out]
         # Undecided: run both branches on copies of the memory and take the union.
+        self._rules["path.branch_union"] += 1
         saved = {k: b.copy() for k, b in state.memory.items()}
-        _, then_out = self._run_region(op.regions[0], env, state, [])
-        then_mem = state.memory
-        state.memory = {k: b.copy() for k, b in saved.items()}
-        else_out = []
-        if len(op.regions) > 1:
-            _, else_out = self._run_region(op.regions[1], env, state, [])
-        else_mem = state.memory
+        state.ctrl.append((bool(cond.cond.any()), cond.reasons))
+        try:
+            _, then_out = self._run_region(op.regions[0], env, state, [])
+            then_mem = state.memory
+            state.memory = {k: b.copy() for k, b in saved.items()}
+            else_out = []
+            if len(op.regions) > 1:
+                _, else_out = self._run_region(op.regions[1], env, state, [])
+            else_mem = state.memory
+        finally:
+            state.ctrl.pop()
         state.memory = then_mem
         for k in state.memory:
             state.memory[k] = _hull_buffers(then_mem[k], else_mem[k])
         info = f"path_union:{op.node_id}"
-        return [_hull_tv(a, b).with_reason(info) for a, b in zip(then_out, else_out)]
+        return [self._with_cond(_hull_tv(a, b).with_reason(info), cond) for a, b in zip(then_out, else_out)]
 
     def _with_cond(self, value: TV, cond: TV) -> TV:
         if not cond.cond.any() and not cond.reasons:
@@ -1019,7 +1083,13 @@ class KernelReferenceEvaluator:
             c = vals[0]
             if c.st.max() >= ST_UNDEF or int(c.lo) == MAYBE:
                 raise ProgramAbort(f"{op.node_id}: undecided loop condition")
+            if c.cond.any():
+                state.sticky_cond = True
+                state.sticky_reasons = state.sticky_reasons | c.reasons
             if int(c.lo) == 0:
+                if state.sticky_cond:
+                    return [TV(v.kind, v.elem, v.lo, v.hi, v.base, v.st, v.cond | True, v.reasons, v.d)
+                            for v in vals[1:]]
                 return vals[1:]
             _, carried = self._run_region(after, env, state, vals[1:])
         raise ProgramAbort("while loop did not terminate")
@@ -1248,6 +1318,9 @@ class KernelReferenceEvaluator:
         if name == "cmpf":
             return _cmpf(op, args)
         if name == "select":
+            undecided = int((np.asarray(args[0].lo) == MAYBE).sum())
+            if undecided:
+                self._rules["path.select_union_lanes"] += undecided
             return _select(op, args)
         if name in ("isnan", "isinf", "isfinite", "signbit"):
             return _float_test(name, args[0])
@@ -1263,10 +1336,19 @@ class KernelReferenceEvaluator:
 
     def _int_to_float(self, name, op, x: TV, out_elem) -> TV:
         width = INT_WIDTH[x.elem]
-        vals = _unsigned(x.lo, width).astype(np.float64) if name == "uitofp" else x.lo.astype(np.float64)
-        exact = np.abs(vals) <= 2.0 ** 53
-        lo = np.where(exact, vals, iv.down(vals))
-        hi = np.where(exact, vals, iv.up(vals))
+        ints = _unsigned(x.lo, width) if name == "uitofp" else x.lo.astype(np.int64)
+        f = ints.astype(np.float64)
+        lo, hi = f.copy(), f.copy()
+        # Exactness is decided on the original integer: |x| <= 2**53 always converts exactly;
+        # beyond that the converted value is compared with the integer to widen on the right side.
+        limit = 1 << 53
+        big = (ints > limit) if ints.dtype == np.uint64 else ((ints > limit) | (ints < -limit))
+        for i in np.flatnonzero(big.reshape(-1)):
+            fi, xi = int(f.reshape(-1)[i]), int(ints.reshape(-1)[i])
+            if fi > xi:
+                lo.reshape(-1)[i] = math.nextafter(f.reshape(-1)[i], -math.inf)
+            elif fi < xi:
+                hi.reshape(-1)[i] = math.nextafter(f.reshape(-1)[i], math.inf)
         out = _ftv(out_elem, lo, hi, x.st, x.cond, x.reasons)
         return self._maybe_round(out, op, out_elem, declared=False)
 
@@ -1275,7 +1357,9 @@ class KernelReferenceEvaluator:
         if not rounds:
             return v
         if fmt not in iv.FLOAT_FORMATS:
-            return v.with_reason(f"not_established:no rounding model for {fmt}@{op.node_id}")
+            st = np.where(v.st == ST_OK, ST_NE, v.st).astype(np.int8)
+            return TV("f", v.elem, v.lo, v.hi, None, st, v.cond,
+                      v.reasons | {f"not_established:no rounding model for {fmt}@{op.node_id}"})
         if op.attrs.get("rounding", "rtne") not in ("rtne",):
             st = np.where(v.st == ST_OK, ST_NE, v.st).astype(np.int8)
             return TV("f", v.elem, v.lo, v.hi, None, st, v.cond, v.reasons)
@@ -1330,15 +1414,14 @@ class KernelReferenceEvaluator:
             lo, hi = iv.isqrt(np.where(ok, los[0], 1.0), np.where(ok, his[0], 1.0))
         elif name in ("floor", "ceil", "trunc", "round", "roundeven"):
             fn = {"floor": np.floor, "ceil": np.ceil, "trunc": np.trunc, "roundeven": np.rint,
-                  "round": lambda x: np.sign(x) * np.floor(np.abs(x) + 0.5)}[name]
+                  "round": _round_half_away}[name]
             lo, hi = fn(los[0]), fn(his[0])
         elif name in ("maxnum", "minnum", "maximum", "minimum"):
             return _minmax(name, op, args)
         elif name == "clamp":
             return _clamp(op, args)
         elif name == "copysign":
-            sign_neg = his[1] < 0
-            sign_pos = los[1] >= 0
+            sign_neg, sign_pos = _sign_classes(los[1], his[1])
             mag_lo = np.where(los[0] >= 0, los[0], np.where(his[0] <= 0, -his[0], 0.0))
             mag_hi = np.maximum(np.abs(los[0]), np.abs(his[0]))
             ok = sign_neg | sign_pos
@@ -1378,6 +1461,9 @@ class KernelReferenceEvaluator:
             st = np.where(special, s_st, st)
             lo = np.where(special, s_val, lo)
             hi = np.where(special, s_val, hi)
+        if name == "copysign":
+            # The sign of a NaN is not tracked, so copysign(x, NaN) is not established.
+            st = np.where(np.broadcast_to(args[1].st, st.shape) == ST_NAN, ST_NE, st).astype(np.int8)
         undef = _merge_status(*args)
         st = np.where(undef >= ST_UNDEF, undef, st).astype(np.int8)
         lo = np.where(st == ST_OK, lo, 0.0)
@@ -1631,10 +1717,34 @@ def _float_test(name, x: TV) -> TV:
     elif name == "isfinite":
         v = x.st == ST_OK
     else:  # signbit
-        v = np.where(x.hi < 0, 1, np.where(x.lo >= 0, 0, MAYBE))
+        neg, pos = _sign_classes(x.lo, x.hi)
+        v = np.where(neg, 1, np.where(pos, 0, MAYBE))
         v = np.where(x.st == ST_NINF, 1, np.where(x.st == ST_PINF, 0, v))
-        return TV("b", "i1", v.astype(np.int8), None, None, _merge_status(x), x.cond, x.reasons)
+        st = np.where(x.st == ST_NAN, ST_NE, _merge_status(x)).astype(np.int8)  # NaN sign is not tracked
+        return TV("b", "i1", v.astype(np.int8), None, None, st, x.cond, x.reasons)
     return TV("b", "i1", v.astype(np.int8), None, None, _merge_status(x), x.cond, x.reasons)
+
+
+def _sign_classes(lo, hi):
+    """(definitely negative, definitely positive) including signed zeros.
+
+    A zero endpoint contributes its IEEE sign bit; an interval whose members
+    may carry both signs is in neither class.
+    """
+
+    lo, hi = np.asarray(lo, dtype=np.float64), np.asarray(hi, dtype=np.float64)
+    lo_neg = (lo < 0) | ((lo == 0) & np.signbit(lo))
+    hi_neg = (hi < 0) | ((hi == 0) & np.signbit(hi))
+    neg = hi_neg & lo_neg
+    pos = ~lo_neg & ~hi_neg
+    return neg, pos
+
+
+def _round_half_away(x):
+    a = np.abs(x)
+    f = np.floor(a)
+    r = np.where(a - f >= 0.5, f + 1.0, f)  # a - f is exact
+    return np.copysign(r, x)
 
 
 def _hull_tv(a: TV, b: TV) -> TV:
@@ -1759,7 +1869,7 @@ def _int_op(name, op, args) -> TV:
             v = vals[0] * vals[1]
         elif name in ("divsi", "remsi", "ceildivsi", "floordivsi"):
             a, b = vals
-            zero = b == 0
+            zero = (b == 0) | ((a == -(1 << (width - 1))) & (b == -1))  # division by zero, INT_MIN / -1
             st = np.where(zero, ST_NE, st).astype(np.int8)
             bb = np.where(zero, 1, b)
             q = np.abs(a) // np.abs(bb) * np.where((a >= 0) == (bb >= 0), 1, -1)

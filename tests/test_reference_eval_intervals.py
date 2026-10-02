@@ -91,3 +91,21 @@ def test_round_nearest_even_formats():
     ours, _ = iv.round_nearest_even(x, "f32")
     with np.errstate(over="ignore"):
         assert np.array_equal(ours, x.astype(np.float32).astype(np.float64))
+
+
+@pytest.mark.parametrize("name", ["exp", "log", "tanh", "sqrt", "rsqrt", "log1p", "erf", "atan"])
+def test_single_call_point_enclosure_equals_two_directed_calls(name):
+    fn, direction = iv._MONOTONE[name][0], iv._MONOTONE[name][1]
+    rng = np.random.default_rng(6)
+    xs = np.concatenate([rng.uniform(0.01, 8.0, 300), [1.0, 4.0, 0.25]])
+    for x in xs:
+        x = float(x)
+        lo1, hi1 = iv._mpfr_point(fn, x)
+        if direction > 0:
+            lo2, hi2 = iv._mpfr_scalar(fn, x, iv._CTX_DOWN, -1), iv._mpfr_scalar(fn, x, iv._CTX_UP, +1)
+        else:
+            lo2, hi2 = iv._mpfr_scalar(fn, x, iv._CTX_DOWN, -1), iv._mpfr_scalar(fn, x, iv._CTX_UP, +1)
+        if lo1 == hi1:  # exact result: the single call keeps width 0 (the two-call path widens an exact 0)
+            assert lo2 <= lo1 <= hi2, (name, x)
+        else:
+            assert (lo1, hi1) == (lo2, hi2), (name, x)
