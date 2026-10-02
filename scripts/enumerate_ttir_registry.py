@@ -54,7 +54,13 @@ def _probe(ctx, ir, name: str, workdir: str) -> str:
 
 
 def main():
+    import argparse
+
     import triton
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out", type=Path, default=OUT)
+    out = parser.parse_args().out
     from triton._C.libtriton import ir
 
     lib = sorted(glob.glob(os.path.join(os.path.dirname(triton.__file__), "_C", "libtriton*.so")))[0]
@@ -77,9 +83,9 @@ def main():
         "operations": by_dialect,
         "non_operation_strings": rejected_names,
     }
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(record, indent=2) + "\n")
-    print(json.dumps(record["counts"]), "->", OUT)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(record, indent=2) + "\n")
+    print(json.dumps(record["counts"]), "->", out)
 
 
 if __name__ == "__main__":

@@ -109,3 +109,31 @@ def test_single_call_point_enclosure_equals_two_directed_calls(name):
             assert lo2 <= lo1 <= hi2, (name, x)
         else:
             assert (lo1, hi1) == (lo2, hi2), (name, x)
+
+
+@pytest.mark.parametrize("mode", ["rtz", "rd", "ru", "rtne"])
+def test_round_directed_matches_exact_rounding(mode):
+    from fractions import Fraction
+
+    rng = np.random.default_rng(7)
+    x = rng.standard_normal(2000) * 10.0 ** rng.integers(-40, 39, 2000)
+    vals, pinf, ninf = iv.round_directed(x, "f32", mode)
+    for xi, vi, pi, ni in zip(x, vals, pinf, ninf):
+        if pi or ni:
+            assert abs(xi) > 3.4e38
+            continue
+        lo = float(np.float32(xi))  # RN to f32, then step to the directed neighbour
+        cands = [lo, float(np.nextafter(np.float32(lo), np.float32(-np.inf))),
+                 float(np.nextafter(np.float32(lo), np.float32(np.inf)))]
+        cands = [c for c in cands if np.isfinite(c)]
+        fx = Fraction(xi)
+        if mode == "rd":
+            want = max(c for c in cands if Fraction(c) <= fx) if any(Fraction(c) <= fx for c in cands) else None
+        elif mode == "ru":
+            want = min(c for c in cands if Fraction(c) >= fx) if any(Fraction(c) >= fx for c in cands) else None
+        elif mode == "rtz":
+            want = (max(c for c in cands if Fraction(c) <= fx) if xi > 0 else min(c for c in cands if Fraction(c) >= fx))
+        else:
+            want = lo
+        if want is not None:
+            assert vi == want, (mode, xi, vi, want)

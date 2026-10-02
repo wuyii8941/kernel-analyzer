@@ -402,3 +402,22 @@ def test_round_half_away_and_signed_zero_helpers():
     neg, pos = _sign_classes(np.array([-0.0, 0.0, -0.0, -1.0, 0.0]), np.array([-0.0, 0.0, 1.0, 0.0, 2.0]))
     assert list(neg) == [True, False, False, False, False]
     assert list(pos) == [False, True, False, False, True]
+
+
+@cuda
+@pytest.mark.parametrize("mode", [0, 1])
+def test_directed_rounding_fixes_the_sign_of_a_final_residual(mode):
+    k = _kernels()
+    x = torch.randn(1000, device="cuda")
+    launch = _capture(lambda: k.scale_directed[(4,)](x, torch.empty_like(x), 0.1, 1000, BLOCK=256, MODE=mode))
+    nd, rc = _evaluate(launch, ND), _evaluate(launch, RC)
+    ident, _ = _buffer(nd, "Y")
+    _, actual, lo, hi, st, _ = nd.residual_arrays(ident)
+    r_lo, r_hi = actual - hi, actual - lo
+    if mode == 0:  # rounding down: K - K_R <= 0 on every element
+        assert (r_hi <= 0).all() and (r_lo < 0).any()
+    else:
+        assert (r_lo >= 0).all() and (r_hi > 0).any()
+    ident, _ = _buffer(rc, "Y")
+    _, actual, lo, hi, st, _ = rc.residual_arrays(ident)
+    assert np.array_equal(lo, actual) and np.array_equal(hi, actual)

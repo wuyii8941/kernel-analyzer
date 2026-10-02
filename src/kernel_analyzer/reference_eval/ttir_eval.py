@@ -35,10 +35,12 @@ from typing import Any, Optional
 import numpy as np
 
 from . import intervals as iv
-from .ttir_mapping import LIBDEVICE, inline_asm_internal, recognize_combiner, rule_for
+from .ttir_mapping import LIBDEVICE, LIBDEVICE_ROUNDING, inline_asm_internal, recognize_combiner, rule_for
 from .ttir_parser import PtrType, TFunc, TModule, TOp, TRegion, TType, parse_ttir
 
 ST_OK, ST_NAN, ST_PINF, ST_NINF, ST_UNDEF, ST_NE = 0, 1, 2, 3, 4, 5
+_ROUNDING_MODES = {"rtne": "rtne", "rn": "rtne", "rtz": "rtz", "rz": "rtz", "rd": "rd", "rm": "rd",
+                   "ru": "ru", "rp": "ru"}
 MAYBE = 2
 
 INT_WIDTH = {"i1": 1, "i8": 8, "i16": 16, "i32": 32, "i64": 64}
@@ -1300,6 +1302,13 @@ class KernelReferenceEvaluator:
         internal = LIBDEVICE.get(symbol)
         if internal is None:
             raise ProgramAbort(f"{op.node_id}: libdevice {symbol} has no declared semantics")
+        mode = LIBDEVICE_ROUNDING.get(symbol)
+        if mode is not None:
+            # A rounding-suffixed libdevice call declares the real operation; the suffix is used
+            # only in rounding-check mode.
+            import dataclasses
+
+            op = dataclasses.replace(op, attrs={**op.attrs, "rounding": mode})
         return self._elementwise(internal, op, args)
 
     def _op_inline_asm(self, op, args, env, state):
@@ -1360,18 +1369,21 @@ class KernelReferenceEvaluator:
             st = np.where(v.st == ST_OK, ST_NE, v.st).astype(np.int8)
             return TV("f", v.elem, v.lo, v.hi, None, st, v.cond,
                       v.reasons | {f"not_established:no rounding model for {fmt}@{op.node_id}"})
-        if op.attrs.get("rounding", "rtne") not in ("rtne",):
+        mode = _ROUNDING_MODES.get(op.attrs.get("rounding", "rtne"))
+        if mode is None:
             st = np.where(v.st == ST_OK, ST_NE, v.st).astype(np.int8)
-            return TV("f", v.elem, v.lo, v.hi, None, st, v.cond, v.reasons)
+            return TV("f", v.elem, v.lo, v.hi, None, st, v.cond,
+                      v.reasons | {f"not_established:rounding mode {op.attrs.get('rounding')}@{op.node_id}"})
         if v.d is not None and op.attrs.get("surrogate_gradient") != "identity":
             raise ProgramAbort(f"{op.node_id}: derivative of a rounding node needs a declared surrogate gradient")
-        lo, of_lo = iv.round_nearest_even(v.lo, fmt)
-        hi, of_hi = iv.round_nearest_even(v.hi, fmt)
+        # Rounding is monotone in every IEEE mode, so the endpoints suffice.
+        lo, lo_pinf, lo_ninf = iv.round_directed(v.lo, fmt, mode)
+        hi, hi_pinf, hi_ninf = iv.round_directed(v.hi, fmt, mode)
         st = v.st.copy()
-        both = of_lo & of_hi & (v.st == ST_OK)
-        st = np.where(both & (lo > 0), ST_PINF, st)
-        st = np.where(both & (lo < 0), ST_NINF, st)
-        st = np.where((of_lo != of_hi) & (v.st == ST_OK), ST_NE, st)
+        ok = v.st == ST_OK
+        st = np.where(ok & lo_pinf & hi_pinf, ST_PINF, st)
+        st = np.where(ok & lo_ninf & hi_ninf, ST_NINF, st)
+        st = np.where(ok & ((lo_pinf != hi_pinf) | (lo_ninf != hi_ninf)), ST_NE, st)
         lo = np.where(st == ST_OK, lo, 0.0)
         hi = np.where(st == ST_OK, hi, 0.0)
         out = _ftv(v.elem, lo, hi, st, v.cond, v.reasons)

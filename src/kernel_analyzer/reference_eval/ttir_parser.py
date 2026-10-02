@@ -9,6 +9,7 @@ and rejected later by the mapping (instruction-processing coverage).
 
 from __future__ import annotations
 
+import functools
 import re
 from dataclasses import dataclass, field
 from typing import Optional, Union
@@ -612,6 +613,17 @@ def _strip_comment(line: str) -> str:
 
 
 def parse_ttir(text: str) -> TModule:
+    """Parse TTIR text; results are cached by text (modules are not mutated by the evaluator)."""
+
+    return _parse_ttir_cached(text)
+
+
+@functools.lru_cache(maxsize=128)
+def _parse_ttir_cached(text: str) -> TModule:
+    return _parse_ttir(text)
+
+
+def _parse_ttir(text: str) -> TModule:
     lines = strip_locations(text).splitlines()
     funcs = {}
     # Stack entries: (kind, payload).  kind in {"func", "region"}.

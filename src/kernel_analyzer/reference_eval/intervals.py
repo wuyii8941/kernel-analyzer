@@ -455,3 +455,30 @@ def round_nearest_even(x: np.ndarray, fmt: str):
         overflow = np.abs(rounded) >= limit
     rounded = np.where(x == 0, x, rounded)
     return rounded, overflow & (x != 0)
+
+
+def round_directed(x: np.ndarray, fmt: str, mode: str):
+    """Round float64 values to ``fmt`` in IEEE mode ``mode``.
+
+    mode: "rtne" (nearest even), "rtz" (toward zero), "rd" (toward -inf), "ru" (toward +inf).
+    Returns (values, positive_infinity_mask, negative_infinity_mask); finite overflow results
+    saturate at the largest finite value as IEEE prescribes for the directed modes.
+    """
+
+    precision, emin, emax, _ = FLOAT_FORMATS[fmt]
+    x = np.asarray(x, dtype=np.float64)
+    if mode == "rtne":
+        values, overflow = round_nearest_even(x, fmt)
+        return values, overflow & (x > 0), overflow & (x < 0)
+    fn = {"rtz": np.trunc, "rd": np.floor, "ru": np.ceil}[mode]
+    with np.errstate(all="ignore"):
+        _, exp = np.frexp(x)
+        scale = (precision - 1) - np.maximum(exp - 1, emin)
+        rounded = np.ldexp(fn(np.ldexp(x, scale)), -scale)
+    rounded = np.where(x == 0, x, rounded)
+    max_finite = (2.0 - 2.0 ** (1 - precision)) * 2.0 ** emax
+    big = np.abs(rounded) > max_finite
+    pos_inf = big & (rounded > 0) & (mode == "ru")
+    neg_inf = big & (rounded < 0) & (mode == "rd")
+    rounded = np.where(big & ~pos_inf & ~neg_inf, np.sign(rounded) * max_finite, rounded)
+    return rounded, pos_inf, neg_inf

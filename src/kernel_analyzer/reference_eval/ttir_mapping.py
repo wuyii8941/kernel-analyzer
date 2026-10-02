@@ -227,6 +227,16 @@ LIBDEVICE.update({
     "__nv_fsub_rn": "sub", "__nv_dadd_rn": "add", "__nv_dmul_rn": "mul", "__nv_fmaf_rn": "fma",
 })
 
+# Rounding-suffixed libdevice operations: the declared semantics is the real operation (the
+# suffix is the implementation's rounding, used only in rounding-check mode).
+LIBDEVICE_ROUNDING = {}
+for _base, _internal in (("fadd", "add"), ("fsub", "sub"), ("fmul", "mul"), ("fdiv", "div"), ("fmaf", "fma"),
+                         ("fsqrt", "sqrt"), ("frcp", "rcp"), ("dadd", "add"), ("dsub", "sub"), ("dmul", "mul"),
+                         ("ddiv", "div"), ("fma", "fma"), ("dsqrt", "sqrt"), ("drcp", "rcp")):
+    for _suffix, _mode in (("rn", "rtne"), ("rz", "rtz"), ("rd", "rd"), ("ru", "ru")):
+        LIBDEVICE[f"__nv_{_base}_{_suffix}"] = _internal
+        LIBDEVICE_ROUNDING[f"__nv_{_base}_{_suffix}"] = _mode
+
 # Inline PTX templates with one declared mathematical operation.  "approx"
 # instructions declare the real function; the approximation lands in K - K_R.
 INLINE_ASM = {

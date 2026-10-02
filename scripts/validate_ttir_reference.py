@@ -24,9 +24,6 @@ sys.path.insert(0, str(ROOT))
 import torch  # noqa: E402
 
 from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder  # noqa: E402
-from kernel_analyzer.reference_eval.ttir_eval import KernelReferenceEvaluator, NumericMode  # noqa: E402
-from kernel_analyzer.reference_eval.ttir_mapping import kernel_coverage  # noqa: E402
-from kernel_analyzer.reference_eval.ttir_parser import parse_ttir  # noqa: E402
 
 
 def workloads():
@@ -76,6 +73,10 @@ def workloads():
 
 
 def evaluate_launch(launch, mode):
+    from kernel_analyzer.reference_eval.ttir_eval import KernelReferenceEvaluator
+    from kernel_analyzer.reference_eval.ttir_mapping import kernel_coverage
+    from kernel_analyzer.reference_eval.ttir_parser import parse_ttir
+
     module = parse_ttir(launch.asm["ttir"])
     coverage = kernel_coverage(module)
     t0 = time.time()
@@ -86,6 +87,8 @@ def evaluate_launch(launch, mode):
 
 
 def main():
+    from kernel_analyzer.reference_eval.ttir_eval import NumericMode
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--json", type=Path)
     args = parser.parse_args()

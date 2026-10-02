@@ -154,12 +154,28 @@ def _measure(decl: dict, arrays, variant: str, values: np.ndarray, device: str) 
     raise ValueError(f"unknown measurement {meas['type']}")
 
 
+def _reference_interval(decl, arrays, variant):
+    """The reference interval: automatic K_R, or a manual reference with its declared error bound.
+
+    ``reference_source = {"type": "manual", "value": <extra key>, "abs_sum": <extra key>, "terms": n}``
+    takes a hand-written FP64 accumulation x_m with |x_m - x| <= gamma_n * sum |terms|.
+    """
+
+    src = decl.get("reference_source", {"type": "automatic"})
+    if src.get("type", "automatic") == "automatic":
+        return arrays[f"{variant}__ref_lo"], arrays[f"{variant}__ref_hi"]
+    manual = arrays[f"{variant}__extra__{src['value']}"]
+    bound = iv.up(arrays[f"{variant}__extra__{src['abs_sum']}"] * iv.gamma(src["terms"]) * (1 + 8 * iv.U))
+    return iv.down(manual - bound), iv.up(manual + bound)
+
+
 def _reference_bounds(decl, arrays, variant, device):
-    """measure(RN(K_R)) bounds; RN to the target's storage format at both interval ends."""
+    """measure(RN(reference)) bounds; RN to the target's storage format at both interval ends."""
 
     fmt = STORAGE_FORMAT[decl.get("_storage_dtype", "float32")]
-    lo, of_lo = iv.round_nearest_even(arrays[f"{variant}__ref_lo"], fmt)
-    hi, of_hi = iv.round_nearest_even(arrays[f"{variant}__ref_hi"], fmt)
+    ref_lo, ref_hi = _reference_interval(decl, arrays, variant)
+    lo, of_lo = iv.round_nearest_even(ref_lo, fmt)
+    hi, of_hi = iv.round_nearest_even(ref_hi, fmt)
     if of_lo.any() or of_hi.any():
         raise ValueError("reference overflows the storage format")
     ambiguous = lo != hi

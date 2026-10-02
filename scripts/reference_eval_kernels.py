@@ -339,3 +339,15 @@ def loop_bound_from_loaded(N, Y, BLOCK: tl.constexpr):
     for i in range(0, n):
         acc += 1.0
     tl.store(Y + offs, acc)
+
+
+@triton.jit
+def scale_directed(X, Y, alpha, n, BLOCK: tl.constexpr, MODE: tl.constexpr):
+    offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
+    mask = offs < n
+    x = tl.load(X + offs, mask=mask)
+    if MODE == 0:
+        y = libdevice.mul_rd(x, alpha)
+    else:
+        y = libdevice.mul_ru(x, alpha)
+    tl.store(Y + offs, y, mask=mask)
