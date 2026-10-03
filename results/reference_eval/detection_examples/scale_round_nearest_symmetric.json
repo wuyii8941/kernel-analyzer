@@ -1,0 +1,256 @@
+{
+  "schema": "kernel-analyzer-blind-detection-v1",
+  "binding": "scripts/detection_examples/scale_round_nearest_symmetric.py",
+  "units": 128,
+  "development_units": 64,
+  "seconds": {
+    "operator_and_capture": 155.1,
+    "reference": 1.4,
+    "total": 158.5
+  },
+  "launch_kinds": {
+    "0:m_scale": {
+      "coverage_complete": true,
+      "operations": 17,
+      "rejected": [],
+      "grid": [
+        8,
+        1,
+        1
+      ]
+    }
+  },
+  "targets": [
+    {
+      "launch_position": 0,
+      "kernel": "m_scale",
+      "buffer": "Y",
+      "coverage_complete": true,
+      "operations": 17,
+      "rejected": [],
+      "grid": [
+        8,
+        1,
+        1
+      ],
+      "programs_evaluated": null,
+      "coordinates": {
+        "written": 2048,
+        "complete_reference_on_development": 2048
+      },
+      "reference_width_relative_to_residual_spread": {
+        "real": 0.0,
+        "rounded": null
+      },
+      "detection": {
+        "real": {
+          "units": 128,
+          "development_units": 64,
+          "coordinates": 2048,
+          "vector_mean": {
+            "verdict": "NOT_CONFIRMED",
+            "tests": [
+              {
+                "n": 128,
+                "estimate_of_squared_mean_norm": 3.088104382027272e-18,
+                "z": 0.981877856588078,
+                "p": 0.193,
+                "p_normal_approximation": 0.16308001297475871,
+                "note": "one-sided; sign-flip p is exact when the null unit distribution is symmetric",
+                "test": "omnibus",
+                "holm_reject": false,
+                "verdict": "NOT_CONFIRMED",
+                "holm_reject_over_targets": false
+              },
+              {
+                "test": "total",
+                "n": 128,
+                "mean": 4.999699481258504e-11,
+                "sd": 2.1839872033838693e-09,
+                "t": 0.25899942282556426,
+                "p": 0.7960550123625356,
+                "diagnostics": {
+                  "skewness": 0.3400879666437757,
+                  "excess_kurtosis": 0.43248080996074556,
+                  "largest_unit_share": 0.06613772060641966,
+                  "effective_coordinates": 2047.9999999999998,
+                  "tail_assumption_supported": true
+                },
+                "holm_reject": false,
+                "verdict": "NOT_CONFIRMED",
+                "holm_reject_over_targets": false
+              },
+              {
+                "test": "learned",
+                "n": 64,
+                "mean": 6.978507030483854e-10,
+                "sd": 2.5499987059741346e-09,
+                "t": 2.1893366499785634,
+                "p": 0.03228471790563562,
+                "diagnostics": {
+                  "skewness": 0.24366153044516906,
+                  "excess_kurtosis": 1.1092195172249726,
+                  "largest_unit_share": 0.15155856949682905,
+                  "effective_coordinates": 702.5025970842678,
+                  "tail_assumption_supported": true
+                },
+                "holm_reject": false,
+                "verdict": "NOT_CONFIRMED",
+                "holm_reject_over_targets": false
+              }
+            ]
+          },
+          "alignment": {
+            "verdict": "DETECTED",
+            "tests": [
+              {
+                "test": "aligned",
+                "n": 128,
+                "mean": 1.0007319565779766e-08,
+                "sd": 4.715881898726231e-09,
+                "t": 24.00821285494871,
+                "p": 4.853940353224017e-49,
+                "diagnostics": {
+                  "skewness": 0.018307293932732623,
+                  "excess_kurtosis": -0.6887800152245616,
+                  "largest_unit_share": 0.03411828548629804,
+                  "effective_coordinates": null,
+                  "tail_assumption_supported": true
+                },
+                "holm_reject": true,
+                "verdict": "DETECTED",
+                "holm_reject_over_targets": true
+              },
+              {
+                "test": "relative",
+                "n": 128,
+                "mean": 2.2309394422859138e-09,
+                "sd": 5.877258719848387e-10,
+                "t": 42.94552908428298,
+                "p": 1.7293873983507997e-77,
+                "diagnostics": {
+                  "skewness": -0.1384420136062163,
+                  "excess_kurtosis": 0.023662571318994186,
+                  "largest_unit_share": 0.059028175372172885,
+                  "effective_coordinates": null,
+                  "tail_assumption_supported": true
+                },
+                "holm_reject": true,
+                "verdict": "DETECTED",
+                "holm_reject_over_targets": true
+              }
+            ]
+          },
+          "limits": [
+            "rare values that do not appear among the units cannot be diagnosed from the data",
+            "NOT_CONFIRMED is not evidence of a zero mean; see the calibrated detection rates"
+          ]
+        },
+        "rounded": {
+          "units": 128,
+          "development_units": 64,
+          "coordinates": 2048,
+          "vector_mean": {
+            "verdict": "NOT_CONFIRMED",
+            "tests": [
+              {
+                "n": 128,
+                "estimate_of_squared_mean_norm": 0.0,
+                "z": Infinity,
+                "p": 1.0,
+                "p_normal_approximation": 1.0,
+                "note": "one-sided; sign-flip p is exact when the null unit distribution is symmetric",
+                "test": "omnibus",
+                "holm_reject": false,
+                "verdict": "NOT_CONFIRMED",
+                "holm_reject_over_targets": false
+              },
+              {
+                "test": "total",
+                "n": 128,
+                "mean": 0.0,
+                "sd": 0.0,
+                "t": 0.0,
+                "p": 1.0,
+                "diagnostics": {
+                  "skewness": 0.0,
+                  "excess_kurtosis": 0.0,
+                  "largest_unit_share": 0.0,
+                  "effective_coordinates": 2047.9999999999998,
+                  "tail_assumption_supported": true
+                },
+                "holm_reject": false,
+                "verdict": "NOT_CONFIRMED",
+                "holm_reject_over_targets": false
+              }
+            ]
+          },
+          "alignment": {
+            "verdict": "NOT_CONFIRMED",
+            "tests": [
+              {
+                "test": "aligned",
+                "n": 128,
+                "mean": 0.0,
+                "sd": 0.0,
+                "t": 0.0,
+                "p": 1.0,
+                "diagnostics": {
+                  "skewness": 0.0,
+                  "excess_kurtosis": 0.0,
+                  "largest_unit_share": 0.0,
+                  "effective_coordinates": null,
+                  "tail_assumption_supported": true
+                },
+                "holm_reject": false,
+                "verdict": "NOT_CONFIRMED",
+                "holm_reject_over_targets": false
+              },
+              {
+                "test": "relative",
+                "n": 128,
+                "mean": 0.0,
+                "sd": 0.0,
+                "t": 0.0,
+                "p": 1.0,
+                "diagnostics": {
+                  "skewness": 0.0,
+                  "excess_kurtosis": 0.0,
+                  "largest_unit_share": 0.0,
+                  "effective_coordinates": null,
+                  "tail_assumption_supported": true
+                },
+                "holm_reject": false,
+                "verdict": "NOT_CONFIRMED",
+                "holm_reject_over_targets": false
+              }
+            ]
+          },
+          "limits": [
+            "rare values that do not appear among the units cannot be diagnosed from the data",
+            "NOT_CONFIRMED is not evidence of a zero mean; see the calibrated detection rates"
+          ]
+        }
+      },
+      "residual_identically_zero": [
+        "rounded"
+      ],
+      "verdict": {
+        "real": {
+          "vector_mean": "NOT_CONFIRMED",
+          "alignment": "DETECTED"
+        },
+        "rounded": {
+          "vector_mean": "NOT_CONFIRMED",
+          "alignment": "NOT_CONFIRMED"
+        }
+      }
+    }
+  ],
+  "how_to_read": [
+    "real: e = K - K_R (primary); rounded: e = K - RN(K_R), beyond the final rounding",
+    "vector_mean: E[e] != 0; alignment: <e, K>/|K| or e/K has a nonzero mean",
+    "NOT_CONFIRMED is not evidence of zero bias; CANNOT_JUDGE gives the reason",
+    "rare values absent from the sample cannot be diagnosed"
+  ]
+}
