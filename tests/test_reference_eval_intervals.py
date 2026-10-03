@@ -137,3 +137,35 @@ def test_round_directed_matches_exact_rounding(mode):
             want = lo
         if want is not None:
             assert vi == want, (mode, xi, vi, want)
+
+
+def test_project_bounds_encloses_the_exact_projection_with_cancellation():
+    from fractions import Fraction
+
+    rng = np.random.default_rng(11)
+    for trial in range(40):
+        d = int(rng.integers(2, 300))
+        mid = rng.standard_normal(d) * 10.0 ** rng.integers(-8, 8, d)
+        if trial % 2:  # heavy cancellation: the projection is tiny compared with its terms
+            mid[d // 2:] = -mid[: d - d // 2][: d - d // 2]
+        rad = np.abs(mid) * 10.0 ** rng.integers(-16, -3, d) * rng.random(d)
+        lo, hi = mid - rad, mid + rad
+        w = rng.standard_normal(d)
+        w /= np.linalg.norm(w)
+        pl, ph = iv.project_bounds(lo[None], hi[None], w)
+        exact_lo = sum(min(Fraction(float(a)) * Fraction(float(c)), Fraction(float(b)) * Fraction(float(c)))
+                       for a, b, c in zip(lo, hi, w))
+        exact_hi = sum(max(Fraction(float(a)) * Fraction(float(c)), Fraction(float(b)) * Fraction(float(c)))
+                       for a, b, c in zip(lo, hi, w))
+        assert Fraction(float(pl[0])) <= exact_lo and exact_hi <= Fraction(float(ph[0])), trial
+
+
+def test_fsum_bounds_is_outward_even_when_ordinary_sums_are_not():
+    from fractions import Fraction
+
+    # left-to-right summation loses the small terms; the exact sum is 2**-60 * 1000 above 1
+    x = np.concatenate([[1.0], np.full(1000, 2.0 ** -60)])
+    lo, hi = iv.fsum_bounds(x[None], x[None])
+    exact = Fraction(1) + 1000 * Fraction(2) ** -60
+    assert Fraction(float(lo[0])) <= exact <= Fraction(float(hi[0]))
+    assert sum(x.tolist()) == 1.0 and Fraction(1.0) < exact  # the ordinary sum sits below the truth

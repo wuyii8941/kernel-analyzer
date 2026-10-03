@@ -32,9 +32,8 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
 from kernel_analyzer.reference_eval import intervals as iv  # noqa: E402
-from kernel_analyzer.reference_eval.analysis import _holm, _summarize  # noqa: E402
+from kernel_analyzer.reference_eval.analysis import _holm, assess_units  # noqa: E402
 from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder, save_launch  # noqa: E402
-from kernel_analyzer.reference_eval.detect import detect  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_eval import ST_OK, KernelReferenceEvaluator, TORCH_TO_ELEM  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_mapping import kernel_coverage  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_parser import parse_ttir  # noqa: E402
@@ -95,14 +94,26 @@ def run_program(package: Path, pid: str, family: str, work: Path) -> dict:
             "output_shape": tuple(y.shape) if torch.is_tensor(y) else None}
 
 
-def rules_for(family: str, d: int, shape) -> list:
+def rules_for(family: str, d: int = 0, shape=None) -> list:
     rules = ["R1", "R2", "R3"]
     if family == "F4":
         rules.append("R4")
     return rules + ["R5"]
 
 
+def f4_pattern(shape) -> np.ndarray:
+    """R4 of the protocol: per row, the first 64 dimensions -1, dimensions 65-128 +1, the rest 0."""
+
+    cols = shape[-1]
+    w = np.zeros(cols)
+    w[:64], w[64:128] = -1.0, 1.0
+    return np.tile(w, int(np.prod(shape)) // cols)
+
+
 def direction(rule: str, kr: np.ndarray, family: str, shape) -> np.ndarray:
+    """The protocol directions written out (used by the export scripts; the decisions go through
+    analysis.assess_units, whose rule registry defines the same directions)."""
+
     n = kr.size
     if rule == "R1":
         return np.full(n, -1.0 / math.sqrt(n))
@@ -111,17 +122,23 @@ def direction(rule: str, kr: np.ndarray, family: str, shape) -> np.ndarray:
     if rule == "R3":
         norm = np.linalg.norm(kr)
         return -kr / norm if norm > 0 else np.zeros(n)
-    if rule == "R4":  # F4: first 64 dims -1, dims 65-128 +1, others 0, per row; normalized
-        cols = shape[-1]
-        w = np.zeros(cols)
-        w[:64], w[64:128] = -1.0, 1.0
-        w = np.tile(w, n // cols)
+    if rule == "R4":
+        w = f4_pattern(shape)
         return w / np.linalg.norm(w)
     raise ValueError(rule)
 
 
-def analyse_output(name, family, data, sel, shape):
-    """Statistics for one output (all of it, or one column of F3) over the seeds."""
+def coverage_classes(st, cond) -> dict:
+    total = st.size
+    return {"complete_composed": float(((st == ST_OK) & ~cond).sum() / total),
+            "conditional_local": float(((st == ST_OK) & cond).sum() / total),
+            "not_established": float((st != ST_OK).sum() / total)}
+
+
+def assess_output(name, family, data, sel, shape, alignment="k", measurement=None):
+    """Binding only: stack the seeds of one output and hand them to the unified decision layer
+    (analysis.assess_units).  ``alignment`` picks the reference of the detector's alignment tests: the actual
+    output K ("k", phase 1) or the K_R midpoint ("kr")."""
 
     lo = np.stack([s["lo"][sel] for s in data])
     hi = np.stack([s["hi"][sel] for s in data])
@@ -129,44 +146,43 @@ def analyse_output(name, family, data, sel, shape):
     k = np.stack([s["k"][sel] for s in data])
     st = np.stack([s["st"][sel] for s in data])
     cond = np.stack([s["cond"][sel] for s in data])
-    total = st.size
-    out = {"output": name, "elements_per_seed": int(lo.shape[1]),
-           "coverage_classes": {"complete_composed": float(((st == ST_OK) & ~cond).sum() / total),
-                                "conditional_local": float(((st == ST_OK) & cond).sum() / total),
-                                "not_established": float((st != ST_OK).sum() / total)}}
     ok = (st == ST_OK) & ~cond
-    mid = 0.5 * (lo + hi)
-    out["residual"] = {"positive_frac": float(((lo > 0) & ok).sum() / ok.sum()),
-                       "negative_frac": float(((hi < 0) & ok).sum() / ok.sum()),
-                       "contains_zero_frac": float(((lo <= 0) & (hi >= 0) & ok).sum() / ok.sum()),
-                       "mean": float(mid[ok].mean()), "max_width": float((hi - lo)[ok].max())}
-    valid = ok[: len(DEV)].all(axis=0)  # coordinate set fixed on the development seeds
-    conf_rows = slice(len(DEV), len(DEV) + len(CONF))
-    if not valid.any() or not ok[conf_rows][:, valid].all():
-        out["rules"] = {"verdict": "UNRESOLVED_REFERENCE"}
+    declared = {"R4": f4_pattern(shape)[sel]} if family == "F4" and shape is not None else None
+    mshape = tuple(shape) if shape is not None and len(shape) == 2 and sel.all() else None
+    record, arrays = assess_units(name, lo, hi, kr, ok, len(DEV), rules_for(family), declared_vectors=declared,
+                                  alignment_reference=k if alignment == "k" else kr, detector_shape=mshape,
+                                  measurement=measurement, unit_ids=list(DEV) + list(CONF))
+    record["coverage_classes"] = coverage_classes(st, cond)
+    # residual signs over every element with a complete reference (all seeds), as in the protocol tables
+    okm = ok
+    record["residual_all_elements"] = {"positive_frac": float(((lo > 0) & okm).sum() / okm.sum()),
+                                       "negative_frac": float(((hi < 0) & okm).sum() / okm.sum()),
+                                       "contains_zero_frac": float(((lo <= 0) & (hi >= 0) & okm).sum() / okm.sum()),
+                                       "mean": float((0.5 * (lo + hi))[okm].mean()),
+                                       "max_width": float((hi - lo)[okm].max())}
+    return record, arrays
+
+
+def analyse_output(name, family, data, sel, shape, alignment="k"):
+    """Statistics for one output (all of it, or one column of F3) over the seeds, in the protocol's table
+    format; the decisions come from analysis.assess_units."""
+
+    record, _ = assess_output(name, family, data, sel, shape, alignment)
+    out = {"output": name, "elements_per_seed": int(np.sum(sel)), "coverage_classes": record["coverage_classes"],
+           "residual": record["residual_all_elements"], "record": record}
+    if "rules" not in record:
+        out["rules"] = {"verdict": record.get("verdict", "UNRESOLVED_REFERENCE")}
         return out
-    lo, hi, kr, k, mid = lo[:, valid], hi[:, valid], kr[:, valid], k[:, valid], mid[:, valid]
-    rules = {}
-    for rule in rules_for(family, lo.shape[1], shape):
-        if rule == "R5":
-            w = mid[: len(DEV)].mean(axis=0)
-            norm = np.linalg.norm(w)
-            if norm == 0:
-                rules[rule] = {"verdict": "UNRESOLVED_MEASUREMENT", "reason": "development direction is zero"}
-                continue
-            ws = np.broadcast_to(w / norm, lo[conf_rows].shape)
-        else:
-            ws = np.stack([direction(rule, kr[i], family, shape) for i in range(len(DEV), len(DEV) + len(CONF))])
-        a, b = lo[conf_rows] * ws, hi[conf_rows] * ws
-        r = _summarize(name, rule, np.minimum(a, b).sum(axis=1), np.maximum(a, b).sum(axis=1), 0.05)
-        rules[rule] = {"mu_interval": [r["lower_bound_of_E_l"], r["upper_bound_of_E_h"]],
-                       "mean": r["mean_projection"], "verdict": r["verdict"],
-                       "p": r["p_value_two_sided_conservative"], "n": r["n"]}
-    out["rules"] = rules
-    mshape = None
-    if shape is not None and len(shape) == 2 and valid.all() and lo.shape[1] == shape[0] * shape[1]:
-        mshape = shape
-    out["default_detector"] = detect(mid, k, len(DEV), shape=mshape, seed=0)
+    out["rules"] = {}
+    for r in record["rules"]:
+        if "p_value_two_sided_conservative" not in r:
+            out["rules"][r["rule"]] = {"verdict": r["verdict"], "reason": r.get("reason")}
+            continue
+        out["rules"][r["rule"]] = {"mu_interval": [r["lower_bound_of_E_l"], r["upper_bound_of_E_h"]],
+                                   "mean": r["mean_projection"], "verdict": r["verdict"],
+                                   "p": r["p_value_two_sided_conservative"], "n": r["n"],
+                                   "interpretation": r.get("interpretation")}
+    out["default_detector"] = record.get("default_detector")
     return out
 
 

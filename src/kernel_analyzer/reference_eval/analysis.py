@@ -230,24 +230,46 @@ def _holm(pvalues, alpha):
     return reject
 
 
+def _one_sided_p(values: np.ndarray, greater: bool) -> float:
+    """t-test p-value for E[values] > 0 (greater) or E[values] < 0."""
+
+    from scipy.stats import t
+
+    n = values.size
+    mean = float(values.mean())
+    sd = float(values.std(ddof=1)) if n > 1 else 0.0
+    if sd == 0 or n < 2:
+        return 0.0 if (mean > 0 if greater else mean < 0) else 1.0
+    stat = mean / (sd / math.sqrt(n))
+    return float(t.sf(stat, n - 1) if greater else t.cdf(stat, n - 1))
+
+
 def _summarize(name, rule, l, h, alpha):
+    """Endpoint-conservative t inference for the mean projection mu, known only to lie in [E[l], E[h]].
+
+    A positive mean needs E[l] > 0 and a negative mean E[h] < 0, so the conservative two-sided p-value is
+    2 min(p(E[l] > 0), p(E[h] < 0)), capped at 1 -- the same decision as the interval [lower bound of E[l],
+    upper bound of E[h]] at level alpha.  (An earlier form, max of the two two-sided p-values, came out small
+    for boxes straddling zero with E[l] < 0 < E[h]; Holm then counted such tests as rejections.)"""
+
     mean, sd, interval, p_mid = _t_stats(0.5 * (l + h), alpha)
-    _, _, ci_l, p_l = _t_stats(l, alpha)
-    _, _, ci_h, p_h = _t_stats(h, alpha)
+    _, _, ci_l, _ = _t_stats(l, alpha)
+    _, _, ci_h, _ = _t_stats(h, alpha)
     lower, upper = ci_l[0], ci_h[1]  # endpoint-conservative: lower bound of E[l], upper bound of E[h]
     verdict = "DETECTED_POSITIVE" if lower > 0 else ("DETECTED_NEGATIVE" if upper < 0 else "NOT_CONFIRMED")
+    p = min(1.0, 2.0 * min(_one_sided_p(l, True), _one_sided_p(h, False)))
     return {"comparison": name, "rule": rule, "n": int(l.size), "mean_projection": mean, "sd": sd,
             "t_interval": list(interval), "lower_bound_of_E_l": lower, "upper_bound_of_E_h": upper,
             "positive": int((l > 0).sum()), "negative": int((h < 0).sum()),
             "zero_or_ambiguous": int(((l <= 0) & (h >= 0)).sum()), "verdict": verdict,
-            "p_value_two_sided_conservative": max(p_l, p_h)}
+            "p_value_two_sided_conservative": p}
 
 
 def _project(lows: np.ndarray, highs: np.ndarray, w: np.ndarray):
-    """Interval projection: (sum min(l w, h w), sum max(l w, h w)) over the last axis."""
+    """Interval projection over the last axis: a strict outward enclosure of sum(e w) for every e in the box
+    (directed products, exact sum, one ulp outward), so the endpoints stay conservative."""
 
-    lw, hw = lows * w, highs * w
-    return np.minimum(lw, hw).sum(axis=-1), np.maximum(lw, hw).sum(axis=-1)
+    return iv.project_bounds(lows, highs, w)
 
 
 def _learned_direction(lows, highs):
@@ -256,7 +278,85 @@ def _learned_direction(lows, highs):
     return direction / norm if norm > 0 else None
 
 
-def _cross_fit(name, rule, lows, highs, folds, alpha):
+# ---------------------------------------------------------------------------
+# Decision layer: direction rules, endpoint-conservative inference, multiplicity
+# ---------------------------------------------------------------------------
+
+# Every rule projects the residual interval of a unit on a direction w and tests the mean projection mu with
+# the endpoint-conservative t inference.  "positive" / "negative" say what the sign of mu means for the raw
+# residual e (several directions carry a minus sign, so a positive mu can mean a negative residual).
+RULES = {
+    "negative_ones": {"alias": "R1", "question": "fixed_direction_mean", "definition": "w = -1 / sqrt(n)",
+                      "positive": "the coordinate mean of the residual is negative",
+                      "negative": "the coordinate mean of the residual is positive"},
+    "toward_zero": {"alias": "R2", "question": "reference_alignment",
+                    "definition": "w = -sign(reference) / sqrt(n), per unit",
+                    "positive": "the residual has the opposite sign of the reference: magnitudes pulled toward zero",
+                    "negative": "the residual has the sign of the reference: magnitudes pushed away from zero"},
+    "scale_down": {"alias": "R3", "question": "reference_alignment",
+                   "definition": "w = -reference / |reference|, per unit",
+                   "positive": "the residual is anti-aligned with the reference: the output is scaled down",
+                   "negative": "the residual is aligned with the reference: the output is scaled up"},
+    "aligned_reference_update": {"question": "reference_alignment",
+                                 "definition": "w = reference / |reference|, per unit",
+                                 "positive": "the residual is aligned with the reference: the output is scaled up",
+                                 "negative": "the residual is anti-aligned with the reference: scaled down"},
+    "declared_vector": {"alias": "R4", "question": "fixed_direction_mean",
+                        "definition": "a declared fixed vector (normalized)",
+                        "positive": "the residual points along the declared vector",
+                        "negative": "the residual points against the declared vector"},
+    "fixed_direction": {"alias": "R5", "question": "fixed_direction_mean",
+                        "definition": "w = normalized mean of the development midpoints (saved)",
+                        "positive": "the residual points along the direction learned on the development units",
+                        "negative": "the residual points against the learned direction"},
+    "cross_fit": {"question": "fixed_direction_mean",
+                  "definition": "K folds; each fold tested on the direction learned from the others, Bonferroni",
+                  "positive": "the residual points along the learned direction of the selected fold",
+                  "negative": "the residual points against the learned direction of the selected fold"},
+}
+ALIASES = {info["alias"]: name for name, info in RULES.items() if "alias" in info}
+
+
+def rule_base(rule: str) -> str:
+    base = rule[len("grouped_"):] if rule.startswith("grouped_") else rule
+    return ALIASES.get(base, base)
+
+
+def interpret(rule: str, verdict: str) -> Optional[str]:
+    info = RULES[rule_base(rule)]
+    return {"DETECTED_POSITIVE": info["positive"], "DETECTED_NEGATIVE": info["negative"]}.get(verdict)
+
+
+def holm_adjusted(pvalues) -> list:
+    """Holm step-down adjusted p-values: reject at level alpha exactly when the adjusted p is <= alpha."""
+
+    m = len(pvalues)
+    order = sorted(range(m), key=lambda i: pvalues[i])
+    adj, running = [1.0] * m, 0.0
+    for rank, i in enumerate(order):
+        running = max(running, min(1.0, (m - rank) * pvalues[i]))
+        adj[i] = running
+    return adj
+
+
+def apply_holm(tests: list, alpha: float, p_key: str = "p_value_two_sided_conservative") -> None:
+    """Holm over ``tests`` (dicts with ``p_key`` and an interval verdict): adds the adjusted p-value, the
+    rejection and the final verdict (the interval verdict when rejected, NOT_CONFIRMED otherwise)."""
+
+    for t, adj in zip(tests, holm_adjusted([t[p_key] for t in tests])):
+        t["holm_adjusted_p"] = adj
+        t["holm_reject"] = bool(adj <= alpha)
+        t["final_verdict"] = t["verdict"] if t["holm_reject"] else "NOT_CONFIRMED"
+        t["final_interpretation"] = interpret(t["rule"], t["final_verdict"]) if "rule" in t else None
+
+
+def _with_units(result, l, h, direction_record):
+    result["per_unit_bounds"] = [[float(a), float(b)] for a, b in zip(l, h)]
+    result["direction"] = direction_record
+    return result
+
+
+def _cross_fit(name, rule, lows, highs, folds, alpha, arrays=None):
     n = lows.shape[0]
     edges = np.linspace(0, n, folds + 1).astype(int)
     per_fold, directions = [], []
@@ -268,7 +368,11 @@ def _cross_fit(name, rule, lows, highs, folds, alpha):
             return {"comparison": name, "rule": rule, "verdict": "UNRESOLVED_MEASUREMENT",
                     "reason": f"direction learned without fold {k} is zero"}
         directions.append(w)
-        per_fold.append(_summarize(name, f"{rule}_fold{k}", *_project(lows[a:b], highs[a:b], w), alpha / folds))
+        l, h = _project(lows[a:b], highs[a:b], w)
+        per_fold.append(_with_units(_summarize(name, f"{rule}_fold{k}", l, h, alpha / folds), l, h,
+                                    {"kind": "learned_without_fold", "saved_as": f"{rule}__fold{k}"}))
+        if arrays is not None:
+            arrays[f"{name}__{rule}__fold{k}"] = w
     best_k = min(range(folds), key=lambda k: per_fold[k]["p_value_two_sided_conservative"])
     best = per_fold[best_k]
     # The verdict is the Bonferroni decision over folds; the projection summary belongs to the selected
@@ -284,60 +388,175 @@ def _cross_fit(name, rule, lows, highs, folds, alpha):
             "note": "selected_fold_summary is the selected fold's projection, not a common effect estimate"}
 
 
-def apply_direction_rules(name, lows, highs, ref_measure, decl, n_cal, n_conf, alpha, valid=None) -> list:
+def _direction(base, lo, hi, ref, n_cal, conf, declared_vectors, rule):
+    """(w for the confirmation units, a JSON record of the direction actually used, an array to save or None).
+    Unit-dependent directions are rebuilt exactly from the saved reference midpoints and the recorded
+    normalization scalars."""
+
+    n = lo.shape[1]
+    if base == "negative_ones":
+        return np.full(n, -1.0 / math.sqrt(n)), {"kind": "constant", "value": -1.0 / math.sqrt(n)}, None
+    if base == "toward_zero":
+        scale = 1.0 / math.sqrt(n)
+        return -np.sign(ref[conf]) * scale, {"kind": "per_unit", "formula": "-sign(reference) * scale",
+                                              "scale": scale}, None
+    if base in ("scale_down", "aligned_reference_update"):
+        sign = -1.0 if base == "scale_down" else 1.0
+        norms = np.linalg.norm(ref[conf], axis=1, keepdims=True)
+        w = np.divide(sign * ref[conf], norms, out=np.zeros_like(ref[conf]), where=norms > 0)
+        return w, {"kind": "per_unit", "formula": f"{'-' if sign < 0 else ''}reference / norm",
+                   "norms": [float(x) for x in norms[:, 0]]}, None
+    if base == "declared_vector":
+        if not declared_vectors or rule not in declared_vectors:
+            raise ValueError(f"rule {rule} needs a declared vector")
+        v = np.asarray(declared_vectors[rule], dtype=np.float64)
+        w = v / np.linalg.norm(v)
+        return w, {"kind": "declared", "saved_as": rule}, w
+    if base == "fixed_direction":
+        w = _learned_direction(lo[:n_cal], hi[:n_cal])
+        return w, {"kind": "learned_on_development_units", "saved_as": rule}, w
+    raise ValueError(f"unknown direction rule {rule}")
+
+
+def apply_direction_rules(name, lows, highs, ref_measure, decl, n_cal, n_conf, alpha, valid=None,
+                          arrays=None) -> list:
     """Project the unit residual intervals [lows, highs] (units x coordinates) with the declared rules.
 
     ``valid`` marks the coordinates of the declared set (original coordinate order).  Ungrouped rules use
     the valid coordinates; grouped rules keep the declared groups (contiguous blocks of ``groups.size`` in
     the original order) and use only complete groups -- remaining coordinates are never regrouped.
+    Every result carries the per-unit projection bounds, the direction actually used (vectors are put into
+    ``arrays`` when given) and the reading of its sign.  ``decl["declared_vectors"]`` maps a declared_vector
+    rule name to its vector over the valid coordinates.
     """
 
     valid = np.ones(lows.shape[1], dtype=bool) if valid is None else np.asarray(valid, dtype=bool)
     results = []
+    conf = slice(n_cal, n_cal + n_conf)
     for rule in decl["direction_rules"]:
-        base, lo, hi, ref = rule, lows[:, valid], highs[:, valid], ref_measure[:, valid]
-        extra = {"coordinates_used": int(valid.sum())}
+        base, lo, hi, ref = rule_base(rule), lows[:, valid], highs[:, valid], ref_measure[:, valid]
+        extra = {"coordinates_used": int(valid.sum()), "question": RULES[base]["question"],
+                 "rule_definition": RULES[base]["definition"]}
         if rule.startswith("grouped_"):
             size = decl["groups"]["size"]
             if lows.shape[1] % size:
                 raise ValueError(f"group size {size} does not divide {lows.shape[1]} coordinates")
-            base = rule[len("grouped_"):]
             complete = valid.reshape(-1, size).all(axis=1)
-            extra = {"groups_used": int(complete.sum()), "groups_declared": int(complete.size),
-                     "groups_dropped_incomplete": int((~complete).sum())}
+            extra.update({"groups_used": int(complete.sum()), "groups_declared": int(complete.size),
+                          "groups_dropped_incomplete": int((~complete).sum())})
+            extra.pop("coordinates_used")
             if not complete.any():
                 results.append({"comparison": name, "rule": rule, "verdict": "UNRESOLVED_REFERENCE",
                                 "reason": "no complete declared group", **extra})
                 continue
             # Group sums divided by sqrt(size): a unit direction over groups pulls back to a unit direction
             # over the original coordinates, so projections stay in the units of the ungrouped rules.
+            # Sums and the division are directed, so the grouped endpoints stay conservative.
             norm = math.sqrt(size)
-            lo = lows.reshape(lows.shape[0], -1, size)[:, complete].sum(axis=2) / norm
-            hi = highs.reshape(highs.shape[0], -1, size)[:, complete].sum(axis=2) / norm
+            s_lo, s_hi = iv.fsum_bounds(lows.reshape(lows.shape[0], -1, size)[:, complete],
+                                        highs.reshape(highs.shape[0], -1, size)[:, complete], axis=2)
+            lo, hi = iv.div_bounds(s_lo, norm)[0], iv.div_bounds(s_hi, norm)[1]
             ref = ref_measure.reshape(ref_measure.shape[0], -1, size)[:, complete].sum(axis=2) / norm
-        if base == "fixed_direction":
-            w = _learned_direction(lo[:n_cal], hi[:n_cal])
-            if w is None:
-                results.append({"comparison": name, "rule": rule, "verdict": "UNRESOLVED_MEASUREMENT",
-                                "reason": "calibration direction is zero"})
-                continue
-            conf = slice(n_cal, n_cal + n_conf)
-            results.append(_summarize(name, rule, *_project(lo[conf], hi[conf], w), alpha))
-        elif base == "aligned_reference_update":
-            conf = slice(n_cal, n_cal + n_conf)
-            norms = np.linalg.norm(ref[conf], axis=1, keepdims=True)
-            w = np.divide(ref[conf], norms, out=np.zeros_like(ref[conf]), where=norms > 0)
-            results.append(_summarize(name, rule, *_project(lo[conf], hi[conf], w), alpha))
-        elif base == "cross_fit":
+        if base == "cross_fit":
             results.append(_cross_fit(name, rule, lo[:n_cal + n_conf], hi[:n_cal + n_conf],
-                                      decl.get("cross_fit_folds", 2), alpha))
-        else:
-            raise ValueError(f"unknown direction rule {rule}")
+                                      decl.get("cross_fit_folds", 2), alpha, arrays))
+            results[-1].update(extra)
+            continue
+        declared = decl.get("declared_vectors") or {}
+        if rule in declared and np.size(declared[rule]) == valid.size and not rule.startswith("grouped_"):
+            declared = {**declared, rule: np.asarray(declared[rule], dtype=np.float64)[valid]}  # full length given
+        w, record, saved = _direction(base, lo, hi, ref, n_cal, conf, declared, rule)
+        if w is None:
+            results.append({"comparison": name, "rule": rule, "verdict": "UNRESOLVED_MEASUREMENT",
+                            "reason": "calibration direction is zero", **extra})
+            continue
+        if saved is not None and arrays is not None:
+            arrays[f"{name}__{rule}"] = saved
+        l, h = _project(lo[conf], hi[conf], w)
+        results.append(_with_units(_summarize(name, rule, l, h, alpha), l, h, record))
+        results[-1]["interpretation"] = interpret(rule, results[-1]["verdict"])
         results[-1].update(extra)
     return results
 
 
-def statistics_stage(decl: dict, ref_dir: Path, device: str = "cuda:0") -> dict:
+def residual_summary(lows, highs, valid) -> dict:
+    """Numerical inconsistency at the measurement point, over the coordinate set and all units: where the
+    residual interval lies entirely above / below zero, or contains zero."""
+
+    lo, hi = lows[:, valid], highs[:, valid]
+    total = lo.size
+    return {"positive_frac": float((lo > 0).sum() / total), "negative_frac": float((hi < 0).sum() / total),
+            "contains_zero_frac": float(((lo <= 0) & (hi >= 0)).sum() / total),
+            "mean_midpoint": float((0.5 * (lo + hi)).mean()), "max_width": float((hi - lo).max())}
+
+
+def assess_units(name, lows, highs, ref_mid, ok, n_dev, rules, alpha=0.05, groups=None, declared_vectors=None,
+                 alignment_reference=None, detector_shape=None, run_detector=True, cross_fit_folds=2,
+                 confirmation_invalid="unresolved", measurement=None, unit_ids=None, seed=0):
+    """The decision layer for one measured quantity: units x coordinates residual intervals -> record.
+
+    lows, highs: residual interval endpoints; ref_mid: the reference midpoints that define the
+    reference-dependent directions; ok: coordinates whose reference is of a declared class, per unit.  The
+    coordinate set is fixed on the first ``n_dev`` (development) units; a confirmation unit whose reference is
+    not valid on that set follows ``confirmation_invalid`` ("unresolved" or "drop_unit").  Rules are tested on
+    the confirmation units with strict projection bounds and the endpoint-conservative t inference; the
+    default detector (interval version) runs on the same coordinates.  Multiplicity across tests is applied by
+    the caller (:func:`apply_holm`), because its scope (all comparisons, all programs) is wider than one call.
+
+    Returns (record, arrays): a JSON-ready record with everything needed to recompute the decisions offline
+    (coordinate set size, dev/confirmation unit ids, per-unit projection bounds, directions and normalization
+    scalars, raw p-values, exclusions) and the vectors to save (coordinate set, learned / declared
+    directions, detector directions)."""
+
+    lows, highs = np.asarray(lows, dtype=np.float64), np.asarray(highs, dtype=np.float64)
+    ok = np.asarray(ok, dtype=bool)
+    n_units = lows.shape[0]
+    unit_ids = list(range(n_units)) if unit_ids is None else list(unit_ids)
+    record = {"comparison": name, "measurement": measurement, "alpha": alpha,
+              "units": {"development": unit_ids[:n_dev], "confirmation": unit_ids[n_dev:]},
+              "coordinate_set": "fixed on the development units (reference of a declared class in every one)"}
+    arrays = {}
+    valid = ok[:n_dev].all(axis=0)
+    record["coordinates"] = {"total": int(valid.size), "used": int(valid.sum()),
+                             "excluded_on_development": int((~valid).sum())}
+    if not valid.any():
+        record.update(verdict="UNRESOLVED_REFERENCE", reason="no coordinate valid on all development units")
+        return record, arrays
+    bad = [i for i in range(n_dev, n_units) if (valid & ~ok[i]).any()]
+    if bad and confirmation_invalid == "unresolved":
+        record.update(verdict="UNRESOLVED_REFERENCE",
+                      reason="confirmation units with references not valid on the coordinate set",
+                      confirmation_units_invalid=[unit_ids[i] for i in bad])
+        return record, arrays
+    keep = np.array([i not in bad for i in range(n_units)])
+    record["confirmation_units_dropped"] = [unit_ids[i] for i in bad]
+    lows, highs, ref_mid = lows[keep], highs[keep], np.asarray(ref_mid, dtype=np.float64)[keep]
+    n_conf = int(keep.sum()) - n_dev
+    arrays["coordinate_set"] = valid
+    record["residual"] = residual_summary(lows, highs, valid)
+    decl = {"direction_rules": list(rules), "groups": groups, "cross_fit_folds": cross_fit_folds,
+            "declared_vectors": declared_vectors}
+    record["rules"] = apply_direction_rules(name, lows, highs, ref_mid, decl, n_dev, n_conf, alpha, valid=valid,
+                                            arrays=arrays)
+    if run_detector:
+        from .detect import detect
+
+        align = ref_mid if alignment_reference is None else np.asarray(alignment_reference, dtype=np.float64)[keep]
+        shape = detector_shape if valid.all() else None
+        det = detect(lows[:, valid], highs[:, valid], align[:, valid], n_dev, shape=shape, seed=seed,
+                     return_directions=True)
+        for key, vec in det.pop("directions").items():
+            if np.ndim(vec) == 1:  # unit-dependent directions are rebuilt from the saved references
+                arrays[f"{name}__detector__{key}"] = vec
+        record["default_detector"] = det
+    return record, arrays
+
+
+def statistics_stage(decl: dict, ref_dir: Path, device: str = "cuda:0", arrays_out=None) -> dict:
+    """Residuals per comparison -> :func:`assess_units` (rules, default detector) -> Holm over all
+    comparison x rule tests.  ``arrays_out`` (an .npz path) receives the coordinate set and the directions
+    actually used, so the decisions can be recomputed offline from the report and the saved references."""
+
     ref_dir = Path(ref_dir)
     paths = sorted(ref_dir.glob("unit*.npz"))
     pop = decl["population"]
@@ -404,16 +623,24 @@ def statistics_stage(decl: dict, ref_dir: Path, device: str = "cuda:0") -> dict:
             else:
                 d = cand - measured[c["reference"]]
                 pairs[f"{c['candidate']}_vs_{c['reference']}"].append((d, d))
-    results = []
+    results, assessments, arrays = [], [], {}
     for name, items in pairs.items():
         lows = np.stack([a for a, _ in items])
         highs = np.stack([b for _, b in items])
-        results.extend(apply_direction_rules(name, lows, highs, np.stack(ref_measure), decl, n_cal, n_conf_used,
-                                             alpha, valid=valid))
+        # bad confirmation units are already handled above, so every remaining unit is valid on the set
+        record, vecs = assess_units(name, lows, highs, np.stack(ref_measure), np.broadcast_to(valid, lows.shape),
+                                    n_cal, decl["direction_rules"], alpha=alpha, groups=decl.get("groups"),
+                                    declared_vectors=decl.get("declared_vectors"),
+                                    run_detector=decl.get("default_detector", True),
+                                    cross_fit_folds=decl.get("cross_fit_folds", 2),
+                                    measurement=decl["measurement"], unit_ids=[paths[i].stem for i in used_units])
+        results.extend(record.pop("rules"))
+        assessments.append(record)
+        arrays.update(vecs)
     tested = [r for r in results if "p_value_two_sided_conservative" in r]
-    for r, rej in zip(tested, _holm([r["p_value_two_sided_conservative"] for r in tested], alpha)):
-        r["holm_reject"] = bool(rej)
-        r["final_verdict"] = r["verdict"] if rej else "NOT_CONFIRMED"
+    apply_holm(tested, alpha)
+    if arrays_out is not None:
+        np.savez_compressed(arrays_out, **arrays)
     reference_summary = {}
     for v in decl["variants"]:
         rows = [s[v] for s in summaries]
@@ -446,6 +673,8 @@ def statistics_stage(decl: dict, ref_dir: Path, device: str = "cuda:0") -> dict:
         "coordinates_used": int(valid.sum()), "coordinates_total": int(valid.size),
         "excluded_reference_elements": excluded,
         "ambiguous_rounding_elements": ambiguous_total,
-        "multiplicity": "Holm over the declared comparison x rule pairs",
+        "multiplicity": "Holm over the declared comparison x rule pairs (holm_adjusted_p); the default detector "
+                        "applies Holm within each of its two families per comparison",
         "results": results,
+        "assessments": assessments,
     }

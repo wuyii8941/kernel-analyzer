@@ -36,13 +36,7 @@ def _scalar(v, mode):
 def tsum(lo, hi, axis):
     """Tight enclosure of the exact sum along ``axis`` (fsum of each endpoint array, one ulp outward)."""
 
-    lo_m = np.moveaxis(lo, axis, -1)
-    hi_m = np.moveaxis(hi, axis, -1)
-    flat_lo = lo_m.reshape(-1, lo_m.shape[-1])
-    flat_hi = hi_m.reshape(-1, hi_m.shape[-1])
-    s_lo = np.array([math.fsum(r) for r in flat_lo]).reshape(lo_m.shape[:-1])
-    s_hi = np.array([math.fsum(r) for r in flat_hi]).reshape(hi_m.shape[:-1])
-    return np.nextafter(s_lo, -np.inf), np.nextafter(s_hi, np.inf)
+    return iv.fsum_bounds(lo, hi, axis)
 
 
 def _point(x):

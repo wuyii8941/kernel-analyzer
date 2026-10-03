@@ -450,10 +450,10 @@ def _fp32_representable(x: np.ndarray, elem: str) -> np.ndarray:
         return np.float32(x).astype(np.float64) == x
     if elem == "f16":
         return np.float16(x).astype(np.float64) == x
-    if elem == "bf16":
-        r, _ = iv.round_nearest_even(x, "bf16")
-        return r == x
-    return np.ones(np.shape(x), dtype=bool)
+    if elem in iv.FLOAT_FORMATS:
+        r, overflow = iv.round_nearest_even(x, elem)
+        return (r == x) & ~overflow
+    return np.zeros(np.shape(x), dtype=bool)
 
 
 def _zero_sign(out: TV, kind: str, ops: list) -> TV:
@@ -722,10 +722,11 @@ class GpuEmulator(KernelReferenceEvaluator):
             if a.kind != "f":
                 rounded.append(np.broadcast_to(a.lo, shape))
                 continue
+            if e not in iv.FLOAT_FORMATS:
+                return self._not_emulable(op, list(shape), out_elem, args, f"no rounding model for {e}")
             vals = np.where(a.st == ST_OK, a.lo, 0.0)
             vals = np.where(a.st == 1, np.nan, np.where(a.st == 2, np.inf, np.where(a.st == 3, -np.inf, vals)))
-            fmt = e if e in iv.FLOAT_FORMATS else "f32"
-            r, _ = iv.round_nearest_even(np.where(np.isfinite(vals), vals, 0.0), fmt)
+            r, _ = iv.round_nearest_even(np.where(np.isfinite(vals), vals, 0.0), e)
             r = np.where(np.isfinite(vals), r, vals)
             exact_inputs &= bool(np.all(r[np.isfinite(vals)] == vals[np.isfinite(vals)]))
             rounded.append(np.broadcast_to(r, shape))

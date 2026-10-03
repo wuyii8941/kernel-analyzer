@@ -385,6 +385,30 @@ def isum(lo, hi, axis):
     return down(s_lo - b_lo), up(s_hi + b_hi)
 
 
+def fsum_bounds(lo, hi, axis=-1):
+    """Strict outward enclosure of the exact sums of the endpoint arrays along ``axis``: each endpoint array
+    is summed exactly (math.fsum, correctly rounded) and the result moved one ulp outward."""
+
+    lo_m = np.moveaxis(np.asarray(lo, dtype=np.float64), axis, -1)
+    hi_m = np.moveaxis(np.asarray(hi, dtype=np.float64), axis, -1)
+    shape = lo_m.shape[:-1]
+    flat_lo = lo_m.reshape(-1, lo_m.shape[-1])
+    flat_hi = hi_m.reshape(-1, hi_m.shape[-1])
+    s_lo = np.array([math.fsum(r.tolist()) for r in flat_lo], dtype=np.float64).reshape(shape)
+    s_hi = np.array([math.fsum(r.tolist()) for r in flat_hi], dtype=np.float64).reshape(shape)
+    return np.nextafter(s_lo, -np.inf), np.nextafter(s_hi, np.inf)
+
+
+def project_bounds(lo, hi, w):
+    """Strict outward enclosure of sum(e * w) over the last axis for every e in the box [lo, hi] and the
+    finite direction w (broadcast against lo): directed products, then :func:`fsum_bounds`."""
+
+    w = np.broadcast_to(np.asarray(w, dtype=np.float64), np.shape(lo))
+    a_lo, a_hi = mul_bounds(np.asarray(lo, dtype=np.float64), w)
+    b_lo, b_hi = mul_bounds(np.asarray(hi, dtype=np.float64), w)
+    return fsum_bounds(np.minimum(a_lo, b_lo), np.maximum(a_hi, b_hi), axis=-1)
+
+
 def icumsum(lo, hi, axis, reverse=False):
     if reverse:
         lo, hi = np.flip(lo, axis), np.flip(hi, axis)
@@ -427,6 +451,7 @@ def idot(alo, ahi, blo, bhi):
 # Rounding to storage formats (vectorized round-to-nearest-even)
 # ---------------------------------------------------------------------------
 
+# fmt -> (precision including the implicit bit, minimum normal exponent, maximum exponent, has infinity)
 FLOAT_FORMATS = {
     "f64": (53, -1022, 1023, True),
     "f32": (24, -126, 127, True),
@@ -434,7 +459,21 @@ FLOAT_FORMATS = {
     "bf16": (8, -126, 127, True),
     "tf32": (11, -126, 127, True),
     "f8E5M2": (3, -14, 15, True),
+    # OCP / MLIR finite formats: no infinity; the largest exponent field also holds normal values,
+    # so the largest finite value is set explicitly below (the remaining encodings are NaN).
+    "f8E4M3FN": (4, -6, 8, False),
+    "f8E4M3FNUZ": (4, -7, 7, False),
+    "f8E5M2FNUZ": (3, -15, 15, False),
+    "f8E4M3B11FNUZ": (4, -10, 4, False),
+    "f4E2M1FN": (2, 0, 2, False),
 }
+# Largest finite value where it differs from (2 - 2**(1 - precision)) * 2**emax.
+_MAX_FINITE = {"f8E4M3FN": 448.0}
+
+
+def max_finite(fmt: str) -> float:
+    precision, _, emax, _ = FLOAT_FORMATS[fmt]
+    return _MAX_FINITE.get(fmt, (2.0 - 2.0 ** (1 - precision)) * 2.0 ** emax)
 
 
 def round_nearest_even(x: np.ndarray, fmt: str):
@@ -451,8 +490,7 @@ def round_nearest_even(x: np.ndarray, fmt: str):
         scale = (precision - 1) - e_eff
         scaled = np.ldexp(x, scale)
         rounded = np.ldexp(np.rint(scaled), -scale)  # rint is round-half-even
-        limit = np.ldexp(1.0, emax + 1)
-        overflow = np.abs(rounded) >= limit
+        overflow = np.abs(rounded) > max_finite(fmt)
     rounded = np.where(x == 0, x, rounded)
     return rounded, overflow & (x != 0)
 
@@ -462,10 +500,13 @@ def round_directed(x: np.ndarray, fmt: str, mode: str):
 
     mode: "rtne" (nearest even), "rtz" (toward zero), "rd" (toward -inf), "ru" (toward +inf).
     Returns (values, positive_infinity_mask, negative_infinity_mask); finite overflow results
-    saturate at the largest finite value as IEEE prescribes for the directed modes.
+    saturate at the largest finite value as IEEE prescribes for the directed modes.  For a format
+    without infinity the two masks mark every overflow beyond the largest finite value: whether the
+    implementation saturates or produces NaN is not part of the format, so callers treat it as
+    not established.
     """
 
-    precision, emin, emax, _ = FLOAT_FORMATS[fmt]
+    precision, emin, emax, has_inf = FLOAT_FORMATS[fmt]
     x = np.asarray(x, dtype=np.float64)
     if mode == "rtne":
         values, overflow = round_nearest_even(x, fmt)
@@ -476,9 +517,12 @@ def round_directed(x: np.ndarray, fmt: str, mode: str):
         scale = (precision - 1) - np.maximum(exp - 1, emin)
         rounded = np.ldexp(fn(np.ldexp(x, scale)), -scale)
     rounded = np.where(x == 0, x, rounded)
-    max_finite = (2.0 - 2.0 ** (1 - precision)) * 2.0 ** emax
-    big = np.abs(rounded) > max_finite
-    pos_inf = big & (rounded > 0) & (mode == "ru")
-    neg_inf = big & (rounded < 0) & (mode == "rd")
-    rounded = np.where(big & ~pos_inf & ~neg_inf, np.sign(rounded) * max_finite, rounded)
+    top = max_finite(fmt)
+    big = np.abs(rounded) > top
+    if has_inf:
+        pos_inf = big & (rounded > 0) & (mode == "ru")
+        neg_inf = big & (rounded < 0) & (mode == "rd")
+    else:
+        pos_inf, neg_inf = big & (rounded > 0), big & (rounded < 0)
+    rounded = np.where(big & ~pos_inf & ~neg_inf, np.sign(rounded) * top, rounded)
     return rounded, pos_inf, neg_inf

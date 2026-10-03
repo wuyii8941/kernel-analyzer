@@ -41,7 +41,7 @@ def main():
                 "classes", "residual_positive", "residual_negative", "seconds")} for v in decl["variants"]}}),
                 flush=True)
     else:
-        report = statistics_stage(decl, args.out, args.device)
+        report = statistics_stage(decl, args.out, args.device, arrays_out=args.out / "statistics_arrays.npz")
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, indent=2) + "\n")
         for r in report["results"]:

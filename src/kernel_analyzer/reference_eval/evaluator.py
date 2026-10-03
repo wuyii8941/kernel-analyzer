@@ -231,11 +231,15 @@ def _round_if_declared(value: Interval, attrs: Mapping, mode: Mode, tangent):
     if not fmt:
         raise _NotEstablished("declared rounding without a format")
     try:
-        rounded = round_interval(value, fmt)
+        rounded = round_interval(value, fmt, attrs.get("rounding", "rtne"))
     except Overflow as exc:
+        if exc.implementation_defined:
+            raise _NotEstablished(f"overflow in {fmt}, which has no infinity") from None
         if value.is_point:
             return (Special.POS_INF if exc.sign > 0 else Special.NEG_INF), None
         raise _NotEstablished("rounding overflow inside the interval") from None
+    except ValueError as exc:
+        raise _NotEstablished(str(exc)) from None
     if tangent is not None:
         surrogate = attrs.get("surrogate_gradient")
         if surrogate == "identity":
@@ -591,9 +595,9 @@ STRUCTURAL_OPS = {"const", "arange", "splat", "reduce_sum", "reduce_max", "reduc
                   "load", "store", "atomic_add", "if", "for"}
 
 ALLOWED_ATTRS = {
-    **{name: {"format", "declared_quantization", "surrogate_gradient"} for name in ELEMENTWISE_RULES},
-    "cast": {"to_format", "format", "declared_quantization", "surrogate_gradient"},
-    "sitofp": {"to_format", "format", "declared_quantization", "surrogate_gradient"},
+    **{name: {"format", "rounding", "declared_quantization", "surrogate_gradient"} for name in ELEMENTWISE_RULES},
+    "cast": {"to_format", "format", "rounding", "declared_quantization", "surrogate_gradient"},
+    "sitofp": {"to_format", "format", "rounding", "declared_quantization", "surrogate_gradient"},
     "cmp": {"predicate"},
     "addi": {"width"}, "subi": {"width"}, "muli": {"width"}, "divsi": {"width"}, "remsi": {"width"},
     "bitcast": {"from_format", "to_format"},

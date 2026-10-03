@@ -1387,12 +1387,20 @@ class KernelReferenceEvaluator:
         hi, hi_pinf, hi_ninf = iv.round_directed(v.hi, fmt, mode)
         st = v.st.copy()
         ok = v.st == ST_OK
-        st = np.where(ok & lo_pinf & hi_pinf, ST_PINF, st)
-        st = np.where(ok & lo_ninf & hi_ninf, ST_NINF, st)
-        st = np.where(ok & ((lo_pinf != hi_pinf) | (lo_ninf != hi_ninf)), ST_NE, st)
+        reasons = v.reasons
+        if iv.FLOAT_FORMATS[fmt][3]:
+            st = np.where(ok & lo_pinf & hi_pinf, ST_PINF, st)
+            st = np.where(ok & lo_ninf & hi_ninf, ST_NINF, st)
+            st = np.where(ok & ((lo_pinf != hi_pinf) | (lo_ninf != hi_ninf)), ST_NE, st)
+        else:  # no infinity in the format: saturation or NaN on overflow is the implementation's choice
+            over = ok & (lo_pinf | hi_pinf | lo_ninf | hi_ninf)
+            st = np.where(over, ST_NE, st)
+            if over.any():
+                reasons = reasons | {f"not_established:overflow in {fmt} (no infinity; saturation or NaN "
+                                     f"is implementation-defined)@{op.node_id}"}
         lo = np.where(st == ST_OK, lo, 0.0)
         hi = np.where(st == ST_OK, hi, 0.0)
-        out = _ftv(v.elem, lo, hi, st, v.cond, v.reasons)
+        out = _ftv(v.elem, lo, hi, st, v.cond, reasons)
         out.d = v.d
         return out
 

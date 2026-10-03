@@ -11,6 +11,7 @@ gmpy2 = pytest.importorskip("gmpy2")
 pytest.importorskip("triton")
 from gmpy2 import mpq  # noqa: E402
 
+from kernel_analyzer.reference_eval import intervals as iv  # noqa: E402
 from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_eval import (  # noqa: E402
     ST_NE,
@@ -350,14 +351,19 @@ module {
 """
 
 
-def test_conversion_without_a_rounding_model_is_not_established_in_rounding_check_mode():
-    x = np.linspace(-3, 3, 8).astype(np.float32)
+def test_fp8_e4m3fn_rounding_model_and_implementation_defined_overflow():
+    # in range: modelled (RN-even onto E4M3FN); beyond 448 after rounding: E4M3FN has no infinity, and
+    # saturation or NaN is the implementation's choice, so the element is not established
+    x = np.array([-3.0, -0.3, 0.0, 0.1, 1.06, 2.9, 447.0, 500.0], dtype=np.float32)
     launch = _synthetic_launch(SYNTHETIC_FP8, {"X": (x, x), "Y": (np.zeros(8), np.zeros(8))})
     rc = _evaluate(launch, RC)
     nd = _evaluate(launch, ND)
     ident, buf = _buffer(rc, "Y")
     assert buf.written.sum() == 8
-    assert (rc.element_classes(ident) == "not_established").all()
+    classes = rc.element_classes(ident)
+    assert (classes[:7] == "complete_composed").all() and classes[7] == "not_established"
+    want, _ = iv.round_nearest_even(x[:7].astype(np.float64), "f8E4M3FN")
+    assert np.array_equal(buf.lo[:7], want) and np.array_equal(buf.hi[:7], want)
     ident, _ = _buffer(nd, "Y")
     assert (nd.element_classes(ident) == "complete_composed").all()
 

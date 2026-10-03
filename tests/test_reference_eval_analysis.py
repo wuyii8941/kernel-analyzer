@@ -85,3 +85,24 @@ def test_unified_entry_runs_reference_and_statistics(tmp_path):
     # ... or, when declared, the unit is dropped and the coordinate set stays the calibration one.
     dropped = statistics_stage({**decl, "confirmation_invalid": "drop_unit"}, tmp_path / "ref", device="cuda")
     assert dropped["confirmation_units_dropped"] == ["unit003"] and dropped["coordinates_used"] == window.size - 1
+
+
+def test_conservative_p_matches_the_interval_verdict_for_boxes_straddling_zero():
+    from kernel_analyzer.reference_eval.analysis import _summarize
+
+    rng = np.random.default_rng(5)
+    n = 64
+    # K_R = f within the enclosure: symmetric boxes [-w, w] with tiny spread across units
+    w = 1e-12 * (1 + 1e-3 * rng.random(n))
+    r = _summarize("x", "R1", -w, w, 0.05)
+    assert r["verdict"] == "NOT_CONFIRMED" and r["p_value_two_sided_conservative"] == 1.0
+    # a real positive mean with narrow boxes: small p and a positive verdict, consistently
+    mid = 1e-9 + 1e-10 * rng.standard_normal(n)
+    r = _summarize("x", "R1", mid - 1e-13, mid + 1e-13, 0.05)
+    assert r["verdict"] == "DETECTED_POSITIVE" and r["p_value_two_sided_conservative"] < 1e-10
+    # p <= alpha exactly when the conservative interval excludes zero
+    for _ in range(200):
+        mid = rng.normal(rng.normal(0, 1), 1, n)
+        half = abs(rng.normal(0, 0.5)) * rng.random(n)
+        r = _summarize("x", "R1", mid - half, mid + half, 0.05)
+        assert (r["p_value_two_sided_conservative"] <= 0.05) == (r["verdict"] != "NOT_CONFIRMED")

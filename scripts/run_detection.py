@@ -37,7 +37,8 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from kernel_analyzer.reference_eval import intervals as iv  # noqa: E402
 from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder  # noqa: E402
-from kernel_analyzer.reference_eval.detect import ALPHA, detect  # noqa: E402
+from kernel_analyzer.reference_eval.analysis import apply_holm, assess_units  # noqa: E402
+from kernel_analyzer.reference_eval.detect import ALPHA  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_eval import ST_OK, KernelReferenceEvaluator, TORCH_TO_ELEM  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_mapping import kernel_coverage  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_parser import parse_ttir  # noqa: E402
@@ -86,8 +87,10 @@ def measure_launch(launch, programs):
         ok = (b.st[m] == ST_OK) & ~b.cond[m] & (b.actual_after_st[m] == ST_OK if b.actual_after_st is not None else True)
         r_lo = iv.add_bounds(k, -b.hi[m])[0]  # K - K_R against the real reference
         r_hi = iv.add_bounds(k, -b.lo[m])[1]
-        out[b.name] = {"index": b.global_indices()[m], "real": (r_lo, r_hi), "rounded": (k - hi, k - lo), "k": k,
-                       "ok": ok, "shape": tuple(arg.shape) if arg.shape else None, "aborted": len(result.aborted)}
+        rounded = (iv.add_bounds(k, -hi)[0], iv.add_bounds(k, -lo)[1])  # directed, like the real residual
+        out[b.name] = {"index": b.global_indices()[m], "real": (r_lo, r_hi), "rounded": rounded, "k": k,
+                       "kr": 0.5 * (b.lo[m] + b.hi[m]), "ok": ok, "shape": tuple(arg.shape) if arg.shape else None,
+                       "aborted": len(result.aborted)}
     return out
 
 
@@ -98,7 +101,10 @@ def main():
     parser.add_argument("--development", type=int, default=None, help="default: half of the units")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--rules", default="", help="declared direction rules, comma-separated (e.g. R1,R3); "
+                                                     "the interval default detector always runs")
     args = parser.parse_args()
+    rules = [r for r in args.rules.split(",") if r]
     import torch
 
     binding = load_binding(args.binding)
@@ -150,31 +156,34 @@ def main():
             entry.update(verdict="CANNOT_JUDGE", reason="written elements differ between units (no common coordinates)")
             targets.append(entry)
             continue
-        valid = np.logical_and.reduce([u["ok"] for u in units[:n_dev]])
-        conf_bad = [i for i in range(n_dev, args.units) if (valid & ~units[i]["ok"]).any()]
-        entry["coordinates"] = {"written": int(valid.size), "complete_reference_on_development": int(valid.sum())}
-        if not valid.any() or conf_bad:
-            entry.update(verdict="CANNOT_JUDGE",
-                         reason="no coordinate with a complete reference" if not valid.any() else
-                         f"{len(conf_bad)} confirmation units with references not established on the coordinate set")
-            targets.append(entry)
-            continue
-        k = np.stack([u["k"][valid] for u in units])
+        ok = np.stack([u["ok"] for u in units])
+        k = np.stack([u["k"] for u in units])
+        kr = np.stack([u["kr"] for u in units])
         shape = None
-        if valid.all() and units[0]["shape"] and len(units[0]["shape"]) >= 2 and \
-                int(np.prod(units[0]["shape"])) == valid.size:
+        if units[0]["shape"] and len(units[0]["shape"]) >= 2 and int(np.prod(units[0]["shape"])) == ok.shape[1]:
             shp = units[0]["shape"]
             shape = (int(np.prod(shp[:-1])), int(shp[-1]))
         for definition in DEFINITIONS:
-            e_lo = np.stack([u[definition][0][valid] for u in units])
-            e_hi = np.stack([u[definition][1][valid] for u in units])
-            mid = 0.5 * (e_lo + e_hi)
+            e_lo = np.stack([u[definition][0] for u in units])
+            e_hi = np.stack([u[definition][1] for u in units])
+            # the unified decision layer: coordinate set fixed on the development units, declared rules (if
+            # any) and the interval version of the default detector; the alignment tests compare with K
+            record, _ = assess_units(f"{pos}:{kernel}:{buf}:{definition}", e_lo, e_hi, kr, ok, n_dev, rules,
+                                     alignment_reference=k, detector_shape=shape,
+                                     measurement={"quantity": definition, "point": "kernel output"},
+                                     unit_ids=list(range(args.seed, args.seed + args.units)))
+            if "verdict" in record and record["verdict"] == "UNRESOLVED_REFERENCE":
+                entry.update(verdict="CANNOT_JUDGE", reason=record["reason"])
+                break
+            entry.setdefault("coordinates", record["coordinates"])
+            entry.setdefault("detection", {})[definition] = record.pop("default_detector")
+            entry.setdefault("assessment", {})[definition] = record
+            mid = 0.5 * (e_lo + e_hi)[:, np.asarray(ok[:n_dev].all(axis=0))]
             spread = float(np.std(mid))
             entry.setdefault("reference_width_relative_to_residual_spread", {})[definition] = \
-                float(np.max(e_hi - e_lo) / spread) if spread > 0 else None
+                float(record["residual"]["max_width"] / spread) if spread > 0 else None
             if spread == 0.0:
                 entry.setdefault("residual_identically_zero", []).append(definition)
-            entry.setdefault("detection", {})[definition] = detect(mid, k, n_dev, shape=shape, seed=args.seed)
         targets.append(entry)
 
     # Holm over all tests of all measured outputs, within each family and residual definition
@@ -194,11 +203,15 @@ def main():
                 vs = [r["verdict"] for r in t["detection"][definition][fam]["tests"]]
                 t["detection"][definition][fam]["verdict"] = (
                     "DETECTED" if "DETECTED" in vs else "EXPLORATORY_ONLY" if "EXPLORATORY_ONLY" in vs else "NOT_CONFIRMED")
+    for definition in DEFINITIONS:  # declared rules, if any: Holm over all targets
+        apply_holm([r for t in targets if "assessment" in t for r in t["assessment"][definition]["rules"]
+                    if "p_value_two_sided_conservative" in r], ALPHA)
     for t in targets:
         if "detection" in t:
             t["verdict"] = {d: {f: t["detection"][d][f]["verdict"] for f in ("vector_mean", "alignment")}
                             for d in DEFINITIONS}
-    report = {"schema": "kernel-analyzer-blind-detection-v1", "binding": str(args.binding), "units": args.units,
+    report = {"schema": "kernel-analyzer-blind-detection-v2", "binding": str(args.binding), "units": args.units,
+              "declared_rules": rules,
               "development_units": n_dev, "seconds": {**{k: round(v, 1) for k, v in seconds.items()},
                                                       "total": round(time.time() - t_start, 1)},
               "launch_kinds": {f"{p}:{k}": v for (p, k), v in statuses.items()}, "targets": targets,

@@ -296,15 +296,31 @@ FORMATS = {
     "tf32": (11, -126, 127),
     "fp16": (11, -14, 15),
     "bf16": (8, -126, 127),
+    "fp8e5m2": (3, -14, 15),
+    "fp8e4m3fn": (4, -6, 8),
+    "fp8e4m3fnuz": (4, -7, 7),
+    "fp8e5m2fnuz": (3, -15, 15),
+    "fp4e2m1fn": (2, 0, 2),
 }
+# Formats without infinity: an overflow is implementation-defined (saturation or NaN).
+NO_INFINITY = {"fp8e4m3fn", "fp8e4m3fnuz", "fp8e5m2fnuz", "fp4e2m1fn"}
+_MAX_FINITE = {"fp8e4m3fn": mpq(448)}
+ROUNDING_MODES = ("rtne", "rtz", "rd", "ru")
+
+
+def max_finite(fmt: str):
+    precision, _, emax = FORMATS[fmt]
+    return _MAX_FINITE.get(fmt, (2 - mpq(2) ** (1 - precision)) * mpq(2) ** emax)
 
 
 class Overflow(ArithmeticError):
-    """Round-to-nearest overflowed to an infinity."""
+    """The rounded value is not finite: an infinity (sign = +-1), or, for a format without infinity,
+    an overflow whose result the format leaves to the implementation (``implementation_defined``)."""
 
-    def __init__(self, sign: int):
-        super().__init__("overflow to infinity")
+    def __init__(self, sign: int, implementation_defined: bool = False):
+        super().__init__("overflow (implementation-defined)" if implementation_defined else "overflow to infinity")
         self.sign = sign
+        self.implementation_defined = implementation_defined
 
 
 def _floor_log2(a) -> int:
@@ -316,13 +332,17 @@ def _floor_log2(a) -> int:
     return e
 
 
-def round_nearest_even(value, fmt: str):
-    """Round a rational to ``fmt`` with IEEE round-to-nearest-even.
+def round_rational(value, fmt: str, mode: str = "rtne"):
+    """Round a rational to ``fmt`` in IEEE mode ``mode`` (rtne, rtz, rd = toward -inf, ru = toward +inf).
 
-    Subnormals are kept (no flush to zero).  Raises :class:`Overflow` when the
-    rounded value is not finite.
+    Subnormals are kept (no flush to zero).  Overflow follows IEEE for formats with infinity: rtne
+    overflows to infinity, the directed modes saturate at the largest finite value unless they round
+    away from zero (ru for positive, rd for negative values), which raises :class:`Overflow`.  For a
+    format without infinity every overflow raises :class:`Overflow` with ``implementation_defined``.
     """
 
+    if mode not in ROUNDING_MODES:
+        raise ValueError(f"unknown rounding mode {mode}")
     precision, emin, emax = FORMATS[fmt]
     q = _to_mpq(value)
     if q == 0:
@@ -335,17 +355,32 @@ def round_nearest_even(value, fmt: str):
     n = gmpy2.floor(scaled)
     remainder = scaled - n
     n = int(n)
-    if remainder > mpq(1, 2) or (remainder == mpq(1, 2) and n % 2 == 1):
+    away = (mode == "ru" and sign > 0) or (mode == "rd" and sign < 0)
+    if mode == "rtne":
+        if remainder > mpq(1, 2) or (remainder == mpq(1, 2) and n % 2 == 1):
+            n += 1
+    elif away and remainder > 0:
         n += 1
     result = n * ulp
-    if result >= mpq(2) ** (emax + 1):
-        raise Overflow(sign)
+    top = max_finite(fmt)
+    if result > top:
+        if fmt in NO_INFINITY:
+            raise Overflow(sign, implementation_defined=True)
+        if mode == "rtne" or away:
+            raise Overflow(sign)
+        result = top
     return sign * result
 
 
-def round_interval(x: Interval, fmt: str) -> Interval:
-    # Round-to-nearest is monotone, so the endpoints suffice.
-    return Interval(round_nearest_even(x.lo, fmt), round_nearest_even(x.hi, fmt))
+def round_nearest_even(value, fmt: str):
+    """Round a rational to ``fmt`` with IEEE round-to-nearest-even (see :func:`round_rational`)."""
+
+    return round_rational(value, fmt, "rtne")
+
+
+def round_interval(x: Interval, fmt: str, mode: str = "rtne") -> Interval:
+    # Rounding is monotone in every IEEE mode, so the endpoints suffice.
+    return Interval(round_rational(x.lo, fmt, mode), round_rational(x.hi, fmt, mode))
 
 
 def is_representable(value, fmt: str) -> bool:
