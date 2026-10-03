@@ -532,7 +532,7 @@ def assess_units(name, lows, highs, ref_mid, ok, n_dev, rules, alpha=0.05, group
     record["confirmation_units_dropped"] = [unit_ids[i] for i in bad]
     lows, highs, ref_mid = lows[keep], highs[keep], np.asarray(ref_mid, dtype=np.float64)[keep]
     n_conf = int(keep.sum()) - n_dev
-    arrays["coordinate_set"] = valid
+    arrays[f"{name}__coordinate_set"] = valid
     record["residual"] = residual_summary(lows, highs, valid)
     decl = {"direction_rules": list(rules), "groups": groups, "cross_fit_folds": cross_fit_folds,
             "declared_vectors": declared_vectors}
