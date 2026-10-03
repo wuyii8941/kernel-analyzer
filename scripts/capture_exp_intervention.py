@@ -11,6 +11,8 @@ Variants of every ``tl.exp(.)`` inside ``liger_cross_entropy_kernel``:
 * ``div_d_rn``  : only the division by the row sum d correctly rounded
 * ``div_n_rn``  : only the division by n_non_ignore correctly rounded
 * ``libdevice_div_rn`` : libdevice.exp and correctly rounded divisions
+* ``exp2nd_f64`` : only the exp of the second pass computed in float64 and rounded once to float32
+  (the correctly rounded exp, up to double-rounding cases of probability ~1e-9 per element)
 
 The fused linear cross-entropy workload of capture_liger_kernels.py is run
 with the same seed for each variant, so every variant's kernel receives the
@@ -47,6 +49,7 @@ HELPERS["div_rn"] = HELPERS["original"]
 HELPERS["div_d_rn"] = HELPERS["original"]
 HELPERS["div_n_rn"] = HELPERS["original"]
 HELPERS["libdevice_div_rn"] = HELPERS["libdevice"]
+HELPERS["exp2nd_f64"] = HELPERS["original"] + "\n\n@triton.jit\ndef _EXP64(x):\n    return tl.exp(x.to(tl.float64)).to(tl.float32)\n"
 # Variants that also replace the two divisions by correctly rounded division.
 DIVISIONS = {
     "                X_block = _EXP(X_block - m) / d\n":
@@ -76,6 +79,11 @@ def patched_kernel(variant: str, workdir: Path):
             if body.count(old) != 1:
                 raise RuntimeError(f"division site not found: {old.strip()}")
             body = body.replace(old, new)
+    if variant == "exp2nd_f64":
+        site = "                X_block = _EXP(X_block - m) / d\n"
+        if body.count(site) != 1:
+            raise RuntimeError("second-pass exp site not found")
+        body = body.replace(site, site.replace("_EXP(", "_EXP64("))
     patched = source[:start] + body + source[end:]
     marker = "@triton.jit\ndef liger_cross_entropy_kernel("
     patched = patched.replace(marker, HELPERS[variant] + "\n\n" + marker, 1)
@@ -90,6 +98,8 @@ def patched_kernel(variant: str, workdir: Path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--seed", type=int, default=20261002)
+    parser.add_argument("--variants", default=None, help="comma-separated subset (default: all)")
     args = parser.parse_args()
     from liger_kernel.transformers.fused_linear_cross_entropy import LigerFusedLinearCrossEntropyLoss
     import liger_kernel.ops.fused_linear_cross_entropy as fused
@@ -100,9 +110,9 @@ def main():
     original_kernel = fused.liger_cross_entropy_kernel
     manifest = {"log2e_rn": LOG2E_RN, "log2e_up": LOG2E_UP, "variants": {}}
     reference_inputs = None
-    for variant in HELPERS:
+    for variant in (args.variants.split(",") if args.variants else HELPERS):
         fused.liger_cross_entropy_kernel = patched_kernel(variant, workdir)
-        torch.manual_seed(20261002)
+        torch.manual_seed(args.seed)
         V, H, BT = 32000, 256, 64
         lin = torch.nn.Linear(H, V, bias=False, device="cuda")
         h = torch.randn(BT, H, device="cuda", requires_grad=True)

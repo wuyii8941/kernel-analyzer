@@ -48,7 +48,7 @@ def coverage(captures: Path, oracle) -> list:
         r["package"] = pkg.name
         r["seconds"] = round(time.time() - t0, 2)
         rows.append(r)
-        print(pkg.name[:70], r["bitwise_reproduced"], {k: (v["bitwise_equal"], v["emulated"], v["written"])
+        print(pkg.name[:70], r["status"], {k: (v["bit_identical"], v["emulated"], v["written"])
                                                         for k, v in r["buffers"].items()}, flush=True)
     return rows
 
@@ -69,7 +69,14 @@ def unit_stats(units: list) -> list:
         for row in res["nodes"]:
             for buf, b in row["buffers"].items():
                 e = by_key.setdefault((row["node"], buf), {"text": row["text"], "lowering": row["lowering"],
-                                                           "mean": [], "relative": [], "aligned": [], "abs": []})
+                                                           "mean": [], "relative": [], "aligned": [], "abs": [],
+                                                           "endpoint_differ": 0, "endpoint_elements": 0,
+                                                           "endpoint_max": 0.0})
+                ec = b.get("endpoint_check")
+                if ec:
+                    e["endpoint_differ"] += ec["outputs_differ_by_half_ulp32_or_more"]
+                    e["endpoint_elements"] += ec["elements"]
+                    e["endpoint_max"] = max(e["endpoint_max"], ec["max_difference_in_ulp32"])
                 e["mean"].append(b["mean"])
                 e["relative"].append(b["mean_relative"])
                 e["aligned"].append(b["aligned"])
@@ -77,7 +84,10 @@ def unit_stats(units: list) -> list:
     out, tests = [], []
     for (node, buf), e in by_key.items():
         row = {"node": node, "buffer": buf, "text": e["text"], "lowering": e["lowering"], "units": len(e["mean"]),
-               "mean_abs": float(np.mean(e["abs"])), "tests": {}}
+               "mean_abs": float(np.mean(e["abs"])), "tests": {},
+               "endpoint_check": {"elements": e["endpoint_elements"],
+                                  "outputs_differ_by_half_ulp32_or_more": e["endpoint_differ"],
+                                  "max_difference_in_ulp32": e["endpoint_max"]}}
         for stat in STATISTICS:
             m = np.array(e[stat])
             n = m.size
@@ -123,18 +133,17 @@ def mutation_part(oracle) -> list:
                 if not v["bitwise_reproduced"]:
                     continue
                 choices = v["lowering_choices"]
-                units.append(localize(launch, oracle=oracle, ungrouped=choices["uncontracted_from_output"],
-                                      swapped=choices["swapped_from_output"]))
+                units.append(localize(launch, oracle=oracle, ungrouped=choices["uncontracted"],
+                                      swapped=choices["swapped"], endpoint_nodes="all"))
             stats = unit_stats(units)
             buffers = checks[0]["buffers"]
             row = {"kernel": name, "mutation": kind, "draws": DRAWS,
                    "bitwise_reproduced_draws": sum(c["bitwise_reproduced"] for c in checks),
-                   "elements": {k: (sum(c["buffers"][k]["bitwise_equal"] for c in checks),
+                   "elements": {k: (sum(c["buffers"][k]["bit_identical"] for c in checks),
                                     sum(c["buffers"][k]["written"] for c in checks)) for k in buffers},
                    "not_emulable_nodes": checks[0]["not_emulable_nodes"],
                    "lowering_choices_from_output": [c["lowering_choices"] for c in checks
-                                                    if c["lowering_choices"]["uncontracted_from_output"]
-                                                    or c["lowering_choices"]["swapped_from_output"]],
+                                                    if c["fitted_to_output"]],
                    "nodes": stats}
             exp = EXPECTED.get((name, kind))
             sig = [r for r in stats if r["significant"]]
@@ -161,7 +170,7 @@ def liger_part(root: Path, oracle, max_launches: int) -> dict:
         v = verify(launch, oracle=oracle)
         checks.append(v)
         if v["bitwise_reproduced"]:
-            units.append(localize(launch, oracle=oracle))
+            units.append(localize(launch, oracle=oracle, endpoint_nodes="all"))
         print(pkg.name, v["bitwise_reproduced"], flush=True)
     n_non_ignore = sorted({next(a.value for a in load_launch(p).args if a.name == "n_non_ignore")
                            for p in pkgs[:max_launches]})
@@ -179,14 +188,19 @@ def main():
     parser.add_argument("--only-coverage", action="store_true")
     args = parser.parse_args()
     oracle = HardwareOracle(options={"num_warps": 4, "enable_fp_fusion": True})
-    report = {"schema": "kernel-analyzer-inkernel-localization-v1",
-              "contribution": "c_j = K_emulated - K_(node j exact); node exact = exact real result of every execution "
-                              "of node j from its emulated operands, all other nodes as on the device"}
+    report = {"schema": "kernel-analyzer-inkernel-localization-v2",
+              "contribution": "c_j = K_emulated - K_(node j substituted): a model counterfactual. Every execution of "
+                              "node j passes a float64 value of its exact result (midpoint of the enclosure) from its "
+                              "emulated operands; all other nodes behave as on the device; approximate nodes downstream "
+                              "keep their own error, hw(RN(x)) + f(x) - f(RN(x)). endpoint_check repeats the "
+                              "substitution with both enclosure endpoints."}
     if args.reuse_coverage and args.out.exists():
         report["coverage"] = json.loads(args.out.read_text())["coverage"]
     else:
         report["coverage"] = coverage(args.captures, oracle)
     report["statistics"] = STATISTICS
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(report, indent=2, default=str) + "\n")  # coverage first
     if args.only_coverage and args.out.exists():
         old = json.loads(args.out.read_text())
         report["mutations"], report["liger_cross_entropy"] = old["mutations"], old["liger_cross_entropy"]

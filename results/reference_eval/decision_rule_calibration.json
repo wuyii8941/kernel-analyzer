@@ -2292,6 +2292,188 @@
       "grouped_fixed_direction sums the 1024 coordinates over 16 contiguous groups of 64 first; effect_shape group_constant matches that structure, within_group_mixed does not."
     ]
   },
+  "skewed_stress": {
+    "rows": [
+      {
+        "noise": "skewed_q01",
+        "d": 1,
+        "rule": "fixed_direction",
+        "reps": 4000,
+        "false_positives": 2095,
+        "rate": 0.52375,
+        "wrong_sign_of_rare_values": 1527,
+        "interval_95": [
+          0.5081350192739574,
+          0.539330256541748
+        ]
+      },
+      {
+        "noise": "skewed_q01",
+        "d": 64,
+        "rule": "fixed_direction",
+        "reps": 4000,
+        "false_positives": 254,
+        "rate": 0.0635,
+        "wrong_sign_of_rare_values": 53,
+        "interval_95": [
+          0.05613887977331178,
+          0.07150630389120158
+        ]
+      },
+      {
+        "noise": "skewed_q01",
+        "d": 1024,
+        "rule": "fixed_direction",
+        "reps": 4000,
+        "false_positives": 195,
+        "rate": 0.04875,
+        "wrong_sign_of_rare_values": 76,
+        "interval_95": [
+          0.042283295441920006,
+          0.05588554658377373
+        ]
+      },
+      {
+        "noise": "skewed_q01",
+        "d": 1,
+        "rule": "declared_direction_single",
+        "reps": 4000,
+        "false_positives": 2070,
+        "rate": 0.5175,
+        "interval_95": [
+          0.501881596821804,
+          0.5330928170759535
+        ]
+      },
+      {
+        "noise": "skewed_q01",
+        "d": 1024,
+        "rule": "declared_direction_spread",
+        "reps": 4000,
+        "false_positives": 196,
+        "rate": 0.049,
+        "interval_95": [
+          0.042516902232779395,
+          0.05615153084702891
+        ]
+      },
+      {
+        "noise": "skewed_q05",
+        "d": 1,
+        "rule": "fixed_direction",
+        "reps": 4000,
+        "false_positives": 563,
+        "rate": 0.14075,
+        "wrong_sign_of_rare_values": 296,
+        "interval_95": [
+          0.13011320754182618,
+          0.15191444299910273
+        ]
+      },
+      {
+        "noise": "skewed_q05",
+        "d": 64,
+        "rule": "fixed_direction",
+        "reps": 4000,
+        "false_positives": 195,
+        "rate": 0.04875,
+        "wrong_sign_of_rare_values": 84,
+        "interval_95": [
+          0.042283295441920006,
+          0.05588554658377373
+        ]
+      },
+      {
+        "noise": "skewed_q05",
+        "d": 1024,
+        "rule": "fixed_direction",
+        "reps": 4000,
+        "false_positives": 166,
+        "rate": 0.0415,
+        "wrong_sign_of_rare_values": 88,
+        "interval_95": [
+          0.03553139481190001,
+          0.04814947609981921
+        ]
+      },
+      {
+        "noise": "skewed_q05",
+        "d": 1,
+        "rule": "declared_direction_single",
+        "reps": 4000,
+        "false_positives": 570,
+        "rate": 0.1425,
+        "interval_95": [
+          0.13180620393929812,
+          0.15371883587293042
+        ]
+      },
+      {
+        "noise": "skewed_q05",
+        "d": 1024,
+        "rule": "declared_direction_spread",
+        "reps": 4000,
+        "false_positives": 179,
+        "rate": 0.04475,
+        "interval_95": [
+          0.03855244040859612,
+          0.05162299458667223
+        ]
+      },
+      {
+        "noise": "skewed_q01",
+        "d": 1024,
+        "rule": "cross_fit2_pooled_t",
+        "reps": 2000,
+        "false_positives": 332,
+        "rate": 0.166,
+        "interval_95": [
+          0.14994185742806945,
+          0.1830436273468072
+        ]
+      },
+      {
+        "noise": "skewed_q01",
+        "d": 1024,
+        "rule": "cross_fit2_signflip",
+        "reps": 2000,
+        "false_positives": 107,
+        "rate": 0.0535,
+        "interval_95": [
+          0.04404871301914272,
+          0.06428544270902882
+        ]
+      },
+      {
+        "noise": "skewed_q01",
+        "d": 1024,
+        "rule": "cross_fit2_foldwise_bonferroni",
+        "reps": 2000,
+        "false_positives": 78,
+        "rate": 0.039,
+        "interval_95": [
+          0.030947659678076025,
+          0.04843684676393794
+        ]
+      },
+      {
+        "noise": "skewed_q01",
+        "d": 1024,
+        "rule": "grouped_fixed_direction",
+        "reps": 2000,
+        "false_positives": 106,
+        "rate": 0.053,
+        "interval_95": [
+          0.04359304359257638,
+          0.06374279299877267
+        ]
+      }
+    ],
+    "notes": [
+      "noise per coordinate: probability q of -sqrt((1-q)/q), otherwise sqrt(q/(1-q)), plus N(0, 0.1^2) jitter, rescaled to unit variance; zero mean",
+      "with 32 + 64 units a rare value of probability 0.01 is often absent from a sample, so the sample looks consistently positive"
+    ]
+  },
   "notes": [
     "mu is the mean of each unit along the true direction, in units of the per-coordinate noise sd.",
     "In d dimensions the learned direction is noisy, so the same mu is harder to detect as d grows; the curves are the tool's sensitivity, not an a-priori magnitude bound (no bound M is used).",

@@ -1,14 +1,17 @@
 {
-  "schema": "kernel-analyzer-inkernel-localization-v1",
-  "contribution": "c_j = K_emulated - K_(node j exact); node exact = exact real result of every execution of node j from its emulated operands, all other nodes as on the device",
+  "schema": "kernel-analyzer-inkernel-localization-v2",
+  "contribution": "c_j = K_emulated - K_(node j substituted): a model counterfactual. Every execution of node j passes a float64 value of its exact result (midpoint of the enclosure) from its emulated operands; all other nodes behave as on the device; approximate nodes downstream keep their own error, hw(RN(x)) + f(x) - f(RN(x)). endpoint_check repeats the substitution with both enclosure endpoints.",
   "coverage": [
     {
       "buffers": {
         "ACC": {
           "written": 65536,
           "emulated": 65536,
-          "bitwise_equal": 65536,
-          "not_emulated": 0
+          "bit_identical": 65536,
+          "value_equal": 65536,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -18,12 +21,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__accumulate__1694c42d0c4ae736",
       "seconds": 0.1
     },
@@ -32,8 +40,11 @@
         "Y": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -44,12 +55,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__add_then_mul__7819e0f70b485d3a",
       "seconds": 0.02
     },
@@ -62,12 +78,17 @@
       "nodes": {},
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
-      "bitwise_reproduced": true,
+      "status": "not_established",
+      "bitwise_reproduced": false,
+      "fitted_to_output": false,
       "package": "exercise__atomic_accumulate__33be2949072e2212",
       "seconds": 0.01
     },
@@ -80,12 +101,17 @@
       "nodes": {},
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
-      "bitwise_reproduced": true,
+      "status": "not_established",
+      "bitwise_reproduced": false,
+      "fitted_to_output": false,
       "package": "exercise__atomic_accumulate__e392737aeb615805",
       "seconds": 0.01
     },
@@ -94,8 +120,11 @@
         "Y": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -105,12 +134,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__bit_level__b3d1dad6ebfc175c",
       "seconds": 0.01
     },
@@ -119,8 +153,11 @@
         "Y": {
           "written": 16,
           "emulated": 16,
-          "bitwise_equal": 16,
-          "not_emulated": 0
+          "bit_identical": 16,
+          "value_equal": 16,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -130,12 +167,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__branch_after_rounding__b476b3d021f739bf",
       "seconds": 0.0
     },
@@ -144,8 +186,11 @@
         "Y": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -156,12 +201,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__branch_on_scalar__63153461bbf3f44f",
       "seconds": 0.02
     },
@@ -170,26 +220,38 @@
         "Y16": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "YBF": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "Y8": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "Y32": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -199,12 +261,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__conversions__f7921d46c789be34",
       "seconds": 0.05
     },
@@ -213,8 +280,11 @@
         "Y": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -226,22 +296,30 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 11,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__elementary__95e45662515453bd",
-      "seconds": 1.76
+      "seconds": 1.78
     },
     {
       "buffers": {
         "Y": {
           "written": 200,
           "emulated": 200,
-          "bitwise_equal": 200,
-          "not_emulated": 0
+          "bit_identical": 200,
+          "value_equal": 200,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -252,12 +330,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__exp_sum_divide__2b96d9f550b24a17",
       "seconds": 0.01
     },
@@ -266,8 +349,11 @@
         "Y": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -277,12 +363,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__inline_asm__3580375dfb4b5cf2",
       "seconds": 0.01
     },
@@ -291,8 +382,11 @@
         "Y": {
           "written": 800,
           "emulated": 800,
-          "bitwise_equal": 800,
-          "not_emulated": 0
+          "bit_identical": 800,
+          "value_equal": 800,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -308,28 +402,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__layernorm_rows__9e0f7dadb5ccb8ab",
-      "seconds": 0.08
+      "seconds": 0.09
     },
     {
       "buffers": {
         "Y": {
           "written": 100,
           "emulated": 100,
-          "bitwise_equal": 100,
-          "not_emulated": 0
+          "bit_identical": 100,
+          "value_equal": 100,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "Z": {
           "written": 128,
           "emulated": 100,
-          "bitwise_equal": 100,
-          "not_emulated": 28
+          "bit_identical": 100,
+          "value_equal": 100,
+          "nan_both": 0,
+          "not_emulated": 28,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -337,12 +442,17 @@
       "nodes": {},
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__masked_copy__ac1d1e02baa04e8a",
       "seconds": 0.0
     },
@@ -351,8 +461,11 @@
         "C": {
           "written": 2048,
           "emulated": 0,
-          "bitwise_equal": 0,
-          "not_emulated": 2048
+          "bit_identical": 0,
+          "value_equal": 0,
+          "nan_both": 0,
+          "not_emulated": 2048,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -364,22 +477,30 @@
         "tt.dot@60 (tensor-core dot (tf32x3))"
       ],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
-      "bitwise_reproduced": true,
+      "status": "not_established",
+      "bitwise_reproduced": false,
+      "fitted_to_output": false,
       "package": "exercise__matmul__021ce23db1a3b19d",
-      "seconds": 0.03
+      "seconds": 0.04
     },
     {
       "buffers": {
         "C": {
           "written": 2048,
           "emulated": 2048,
-          "bitwise_equal": 2048,
-          "not_emulated": 0
+          "bit_identical": 2048,
+          "value_equal": 2048,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -389,22 +510,30 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__matmul__77dc1d72d7f70c78",
-      "seconds": 0.23
+      "seconds": 0.24
     },
     {
       "buffers": {
         "C": {
           "written": 2048,
           "emulated": 0,
-          "bitwise_equal": 0,
-          "not_emulated": 2048
+          "bit_identical": 0,
+          "value_equal": 0,
+          "nan_both": 0,
+          "not_emulated": 2048,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -416,12 +545,17 @@
         "tt.dot@60 (tensor-core dot (tf32))"
       ],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
-      "bitwise_reproduced": true,
+      "status": "not_established",
+      "bitwise_reproduced": false,
+      "fitted_to_output": false,
       "package": "exercise__matmul__7bffe6a34f444715",
       "seconds": 0.03
     },
@@ -430,8 +564,11 @@
         "C": {
           "written": 2048,
           "emulated": 0,
-          "bitwise_equal": 0,
-          "not_emulated": 2048
+          "bit_identical": 0,
+          "value_equal": 0,
+          "nan_both": 0,
+          "not_emulated": 2048,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -444,22 +581,30 @@
         "tt.dot@61 (tensor-core dot (ieee))"
       ],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
-      "bitwise_reproduced": true,
+      "status": "not_established",
+      "bitwise_reproduced": false,
+      "fitted_to_output": false,
       "package": "exercise__matmul__9aa2d896f59a6961",
-      "seconds": 0.03
+      "seconds": 0.04
     },
     {
       "buffers": {
         "Y": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 857,
+          "value_equal": 857,
+          "nan_both": 143,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -469,12 +614,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__nan_rules__989fc22e4c0ca4ee",
       "seconds": 0.01
     },
@@ -483,8 +633,11 @@
         "Y": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -494,12 +647,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__scale_masked__99f29a7e42e9be53",
       "seconds": 0.01
     },
@@ -508,8 +666,11 @@
         "CS": {
           "written": 200,
           "emulated": 0,
-          "bitwise_equal": 0,
-          "not_emulated": 200
+          "bit_identical": 0,
+          "value_equal": 0,
+          "nan_both": 0,
+          "not_emulated": 200,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -521,22 +682,30 @@
         "tt.scan@12 (scan)"
       ],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
-      "bitwise_reproduced": true,
+      "status": "not_established",
+      "bitwise_reproduced": false,
+      "fitted_to_output": false,
       "package": "exercise__scan_and_argmax__cd7de1c5dc344a28",
-      "seconds": 0.0
+      "seconds": 0.01
     },
     {
       "buffers": {
         "Y": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -546,22 +715,30 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__sequential_sum4__1d3318d149fe0423",
-      "seconds": 0.01
+      "seconds": 0.02
     },
     {
       "buffers": {
         "Y": {
           "written": 800,
           "emulated": 800,
-          "bitwise_equal": 800,
-          "not_emulated": 0
+          "bit_identical": 800,
+          "value_equal": 800,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -573,12 +750,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__softmax_rows__68a54c9e89bb6ed8",
       "seconds": 0.04
     },
@@ -587,14 +769,20 @@
         "TMP": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "Y": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -604,12 +792,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__store_load_chain__29b4ccfa1010cee6",
       "seconds": 0.01
     },
@@ -618,8 +811,11 @@
         "Y": {
           "written": 1000,
           "emulated": 1000,
-          "bitwise_equal": 1000,
-          "not_emulated": 0
+          "bit_identical": 1000,
+          "value_equal": 1000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -630,12 +826,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "exercise__while_loop__2b2256bcd329b474",
       "seconds": 0.03
     },
@@ -644,8 +845,11 @@
         "out_ptr1": {
           "written": 64000,
           "emulated": 64000,
-          "bitwise_equal": 64000,
-          "not_emulated": 0
+          "bit_identical": 64000,
+          "value_equal": 64000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -659,28 +863,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 1,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "inductor__triton_per_fused__log_softmax__log_softmax_backward_data_arange_eq_expand_nll_lo__e8784b083a6142f6",
-      "seconds": 0.65
+      "seconds": 0.68
     },
     {
       "buffers": {
         "in_out_ptr0": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "out_ptr1": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -692,28 +907,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "inductor__triton_per_fused__log_softmax_nll_loss_forward_sub_1__245254a7cfb27546",
-      "seconds": 0.01
+      "seconds": 0.02
     },
     {
       "buffers": {
         "in_out_ptr0": {
           "written": 64,
           "emulated": 64,
-          "bitwise_equal": 64,
-          "not_emulated": 0
+          "bit_identical": 64,
+          "value_equal": 64,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "out_ptr0": {
           "written": 64,
           "emulated": 64,
-          "bitwise_equal": 64,
-          "not_emulated": 0
+          "bit_identical": 64,
+          "value_equal": 64,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -725,22 +951,30 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "inductor__triton_per_fused__log_softmax_prepare_softmax_online_0__bdc7fc14a3dd7792",
-      "seconds": 0.33
+      "seconds": 0.35
     },
     {
       "buffers": {
         "out_ptr1": {
           "written": 32768,
           "emulated": 32768,
-          "bitwise_equal": 32768,
-          "not_emulated": 0
+          "bit_identical": 32768,
+          "value_equal": 32768,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -753,22 +987,30 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 1,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "inductor__triton_per_fused_add_mean_mul_pow_rsqrt_0__5cba3f271c1da435",
-      "seconds": 0.48
+      "seconds": 0.53
     },
     {
       "buffers": {
         "out_ptr0": {
           "written": 262144,
           "emulated": 262144,
-          "bitwise_equal": 262144,
-          "not_emulated": 0
+          "bit_identical": 262144,
+          "value_equal": 262144,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -778,34 +1020,48 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "inductor__triton_poi_fused_add_0__8c26ed366a5badcf",
-      "seconds": 1.89
+      "seconds": 1.86
     },
     {
       "buffers": {
         "in_ptr1": {
           "written": 8192,
           "emulated": 8192,
-          "bitwise_equal": 8192,
-          "not_emulated": 0
+          "bit_identical": 8192,
+          "value_equal": 8192,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "in_ptr2": {
           "written": 8192,
           "emulated": 8192,
-          "bitwise_equal": 8192,
-          "not_emulated": 0
+          "bit_identical": 8192,
+          "value_equal": 8192,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "in_ptr4": {
           "written": 8192,
           "emulated": 8192,
-          "bitwise_equal": 8192,
-          "not_emulated": 0
+          "bit_identical": 8192,
+          "value_equal": 8192,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -819,22 +1075,30 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 1,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "inductor__triton_poi_fused_add_addcdiv_copy__div_lerp_mul_neg_pow_reciprocal_rsub_sqrt_0__88d4cae1de443b79",
-      "seconds": 0.54
+      "seconds": 0.57
     },
     {
       "buffers": {
         "in_ptr0": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -844,12 +1108,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "inductor__triton_poi_fused_add_copy__1__d20164dfe2c2e191",
       "seconds": 0.0
     },
@@ -858,14 +1127,20 @@
         "dY_ptr": {
           "written": 8192,
           "emulated": 8192,
-          "bitwise_equal": 8192,
-          "not_emulated": 0
+          "bit_identical": 8192,
+          "value_equal": 8192,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "dW_ptr": {
           "written": 21504,
           "emulated": 21504,
-          "bitwise_equal": 21504,
-          "not_emulated": 0
+          "bit_identical": 21504,
+          "value_equal": 21504,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -880,28 +1155,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 1,
-        "uncontracted_from_output": [],
         "two_product_adds": 1,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger___rms_norm_backward_kernel__launch065",
-      "seconds": 0.48
+      "seconds": 0.5
     },
     {
       "buffers": {
         "Y_ptr": {
           "written": 8192,
           "emulated": 8192,
-          "bitwise_equal": 8192,
-          "not_emulated": 0
+          "bit_identical": 8192,
+          "value_equal": 8192,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "RSTD_ptr": {
           "written": 32,
           "emulated": 32,
-          "bitwise_equal": 32,
-          "not_emulated": 0
+          "bit_identical": 32,
+          "value_equal": 32,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -914,28 +1200,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 1,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger___rms_norm_forward_kernel__launch064",
-      "seconds": 0.21
+      "seconds": 0.23
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -950,12 +1247,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch000",
       "seconds": 0.12
     },
@@ -964,14 +1266,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -986,28 +1294,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch001",
-      "seconds": 0.1
+      "seconds": 0.11
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1022,12 +1341,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch002",
       "seconds": 0.11
     },
@@ -1036,14 +1360,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1058,12 +1388,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch003",
       "seconds": 0.1
     },
@@ -1072,14 +1407,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1094,12 +1435,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch004",
       "seconds": 0.1
     },
@@ -1108,8 +1454,11 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1117,12 +1466,17 @@
       "nodes": {},
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 0,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch005",
       "seconds": 0.01
     },
@@ -1131,14 +1485,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1153,85 +1513,18 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch006",
-      "seconds": 0.09
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch007",
-      "seconds": 0.09
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch008",
       "seconds": 0.1
     },
     {
@@ -1239,14 +1532,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1261,12 +1560,111 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch007",
+      "seconds": 0.11
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch008",
+      "seconds": 0.12
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch009",
       "seconds": 0.11
     },
@@ -1275,14 +1673,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1297,28 +1701,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch010",
-      "seconds": 0.09
+      "seconds": 0.1
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1333,12 +1748,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch011",
       "seconds": 0.09
     },
@@ -1347,14 +1767,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1369,28 +1795,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch012",
-      "seconds": 0.09
+      "seconds": 0.1
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1405,28 +1842,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch013",
-      "seconds": 0.1
+      "seconds": 0.11
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1441,28 +1889,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch014",
-      "seconds": 0.1
+      "seconds": 0.11
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1477,12 +1936,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch015",
       "seconds": 0.1
     },
@@ -1491,14 +1955,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1513,28 +1983,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch016",
-      "seconds": 0.09
+      "seconds": 0.1
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1549,12 +2030,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch017",
       "seconds": 0.1
     },
@@ -1563,14 +2049,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1585,12 +2077,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch018",
       "seconds": 0.09
     },
@@ -1599,14 +2096,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1621,28 +2124,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch019",
-      "seconds": 0.09
+      "seconds": 0.1
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1657,28 +2171,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch020",
-      "seconds": 0.09
+      "seconds": 0.1
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1693,28 +2218,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch021",
-      "seconds": 0.09
+      "seconds": 0.1
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1729,12 +2265,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch022",
       "seconds": 0.1
     },
@@ -1743,14 +2284,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1765,12 +2312,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch023",
       "seconds": 0.1
     },
@@ -1779,14 +2331,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1801,12 +2359,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch024",
       "seconds": 0.1
     },
@@ -1815,14 +2378,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1837,12 +2406,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch025",
       "seconds": 0.1
     },
@@ -1851,14 +2425,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1873,12 +2453,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch026",
       "seconds": 0.1
     },
@@ -1887,14 +2472,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1909,28 +2500,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch027",
-      "seconds": 0.11
+      "seconds": 0.1
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1945,12 +2547,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch028",
       "seconds": 0.09
     },
@@ -1959,14 +2566,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -1981,28 +2594,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch029",
-      "seconds": 0.1
+      "seconds": 0.09
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2017,12 +2641,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch030",
       "seconds": 0.1
     },
@@ -2031,14 +2660,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2053,12 +2688,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch031",
       "seconds": 0.1
     },
@@ -2067,14 +2707,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2089,12 +2735,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch032",
       "seconds": 0.1
     },
@@ -2103,14 +2754,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2125,49 +2782,18 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch033",
-      "seconds": 0.09
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch034",
       "seconds": 0.1
     },
     {
@@ -2175,14 +2801,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2197,12 +2829,64 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch034",
+      "seconds": 0.11
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch035",
       "seconds": 0.09
     },
@@ -2211,14 +2895,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2233,28 +2923,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch036",
-      "seconds": 0.1
+      "seconds": 0.09
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2269,28 +2970,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch037",
-      "seconds": 0.1
+      "seconds": 0.09
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2305,12 +3017,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch038",
       "seconds": 0.1
     },
@@ -2319,14 +3036,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2341,28 +3064,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch039",
-      "seconds": 0.1
+      "seconds": 0.09
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2377,12 +3111,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch040",
       "seconds": 0.09
     },
@@ -2391,14 +3130,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2413,12 +3158,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch041",
       "seconds": 0.09
     },
@@ -2427,14 +3177,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2449,28 +3205,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch042",
-      "seconds": 0.1
+      "seconds": 0.09
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2485,445 +3252,18 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch043",
-      "seconds": 0.09
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch044",
-      "seconds": 0.1
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch045",
-      "seconds": 0.1
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch046",
-      "seconds": 0.1
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch047",
-      "seconds": 0.1
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch048",
-      "seconds": 0.1
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch049",
-      "seconds": 0.09
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch050",
-      "seconds": 0.09
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch051",
-      "seconds": 0.09
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch052",
-      "seconds": 0.09
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch053",
-      "seconds": 0.1
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch054",
-      "seconds": 0.1
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch055",
       "seconds": 0.11
     },
     {
@@ -2931,14 +3271,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2953,13 +3299,535 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch056",
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch044",
+      "seconds": 0.12
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch045",
+      "seconds": 0.11
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch046",
+      "seconds": 0.11
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch047",
+      "seconds": 0.11
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch048",
+      "seconds": 0.11
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch049",
+      "seconds": 0.11
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch050",
+      "seconds": 0.11
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch051",
+      "seconds": 0.12
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch052",
+      "seconds": 0.12
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch053",
+      "seconds": 0.11
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch054",
+      "seconds": 0.11
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch055",
       "seconds": 0.1
     },
     {
@@ -2967,14 +3835,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -2989,13 +3863,18 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch057",
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch056",
       "seconds": 0.09
     },
     {
@@ -3003,14 +3882,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -3025,28 +3910,86 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch057",
+      "seconds": 0.1
+    },
+    {
+      "buffers": {
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch058",
-      "seconds": 0.1
+      "seconds": 0.09
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -3061,28 +4004,39 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch059",
-      "seconds": 0.1
+      "seconds": 0.09
     },
     {
       "buffers": {
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -3097,12 +4051,17 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch060",
       "seconds": 0.09
     },
@@ -3111,14 +4070,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -3133,49 +4098,18 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
       "package": "liger__liger_cross_entropy_kernel__launch061",
-      "seconds": 0.1
-    },
-    {
-      "buffers": {
-        "X_ptr": {
-          "written": 32000,
-          "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
-        },
-        "loss_ptr": {
-          "written": 1,
-          "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
-        }
-      },
-      "aborted_programs": 0,
-      "abort_reasons": [],
-      "nodes": {
-        "oracle": 9,
-        "ieee": 11,
-        "fused_product": 2,
-        "reduce_tree": 1,
-        "fma_contraction": 2,
-        "oracle_group": 2
-      },
-      "not_emulable_nodes": [],
-      "lowering_choices": {
-        "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
-        "two_product_adds": 0,
-        "swapped_from_output": []
-      },
-      "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch062",
       "seconds": 0.09
     },
     {
@@ -3183,14 +4117,20 @@
         "X_ptr": {
           "written": 32000,
           "emulated": 32000,
-          "bitwise_equal": 32000,
-          "not_emulated": 0
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "loss_ptr": {
           "written": 1,
           "emulated": 1,
-          "bitwise_equal": 1,
-          "not_emulated": 0
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -3205,77 +4145,154 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 2,
-        "uncontracted_from_output": [],
         "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
-      "package": "liger__liger_cross_entropy_kernel__launch063",
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch062",
       "seconds": 0.1
     },
     {
       "buffers": {
-        "in_ptr3": {
-          "written": 1024,
-          "emulated": 1024,
-          "bitwise_equal": 1024,
-          "not_emulated": 0
+        "X_ptr": {
+          "written": 32000,
+          "emulated": 32000,
+          "bit_identical": 32000,
+          "value_equal": 32000,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
-        "in_ptr6": {
-          "written": 1024,
-          "emulated": 1024,
-          "bitwise_equal": 1024,
-          "not_emulated": 0
-        },
-        "in_ptr9": {
-          "written": 262144,
-          "emulated": 262144,
-          "bitwise_equal": 262144,
-          "not_emulated": 0
+        "loss_ptr": {
+          "written": 1,
+          "emulated": 1,
+          "bit_identical": 1,
+          "value_equal": 1,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
       "abort_reasons": [],
       "nodes": {
-        "fused_product": 5,
-        "fma_contraction": 5,
-        "ieee": 14,
-        "oracle": 7,
-        "oracle_group": 3
+        "oracle": 9,
+        "ieee": 11,
+        "fused_product": 2,
+        "reduce_tree": 1,
+        "fma_contraction": 2,
+        "oracle_group": 2
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
-        "approximate_then_add_pairs": 4,
-        "uncontracted_from_output": [
-          "arith.subf@418"
-        ],
-        "two_product_adds": 3,
+        "frozen": false,
+        "approximate_then_add_pairs": 2,
+        "two_product_adds": 0,
+        "uncontracted": [],
+        "swapped": [],
+        "uncontracted_from_output": [],
         "swapped_from_output": []
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": false,
+      "package": "liger__liger_cross_entropy_kernel__launch063",
+      "seconds": 0.09
+    },
+    {
+      "buffers": {
+        "in_ptr3": {
+          "written": 1024,
+          "emulated": 1024,
+          "bit_identical": 1024,
+          "value_equal": 1024,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "in_ptr6": {
+          "written": 1024,
+          "emulated": 1024,
+          "bit_identical": 1024,
+          "value_equal": 1024,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        },
+        "in_ptr9": {
+          "written": 262144,
+          "emulated": 262144,
+          "bit_identical": 262144,
+          "value_equal": 262144,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
+        }
+      },
+      "aborted_programs": 0,
+      "abort_reasons": [],
+      "nodes": {
+        "fused_product": 5,
+        "fma_contraction": 5,
+        "ieee": 14,
+        "oracle": 7,
+        "oracle_group": 3
+      },
+      "not_emulable_nodes": [],
+      "lowering_choices": {
+        "frozen": false,
+        "approximate_then_add_pairs": 4,
+        "two_product_adds": 3,
+        "uncontracted": [
+          "arith.subf@418"
+        ],
+        "swapped": [],
+        "uncontracted_from_output": [
+          "arith.subf@418"
+        ],
+        "swapped_from_output": []
+      },
+      "status": "bit_identical",
+      "bitwise_reproduced": true,
+      "fitted_to_output": true,
       "package": "torchao__triton_per_fused__to_copy_abs_add_amax_clamp_copy__div_ge_index_lerp_mul_pow_rsu__launch000",
-      "seconds": 73.83
+      "seconds": 74.97
     },
     {
       "buffers": {
         "in_ptr3": {
           "written": 1024,
           "emulated": 1024,
-          "bitwise_equal": 1024,
-          "not_emulated": 0
+          "bit_identical": 1024,
+          "value_equal": 1024,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "in_ptr6": {
           "written": 1024,
           "emulated": 1024,
-          "bitwise_equal": 1024,
-          "not_emulated": 0
+          "bit_identical": 1024,
+          "value_equal": 1024,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "in_ptr9": {
           "written": 262144,
           "emulated": 262144,
-          "bitwise_equal": 262144,
-          "not_emulated": 0
+          "bit_identical": 262144,
+          "value_equal": 262144,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -3289,38 +4306,56 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 4,
+        "two_product_adds": 3,
+        "uncontracted": [
+          "arith.subf@418"
+        ],
+        "swapped": [
+          "arith.subf@114"
+        ],
         "uncontracted_from_output": [
           "arith.subf@418"
         ],
-        "two_product_adds": 3,
         "swapped_from_output": [
           "arith.subf@114"
         ]
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": true,
       "package": "torchao__triton_per_fused__to_copy_abs_add_amax_clamp_copy__div_ge_index_lerp_mul_pow_rsu__launch001",
-      "seconds": 103.27
+      "seconds": 102.75
     },
     {
       "buffers": {
         "in_ptr3": {
           "written": 1024,
           "emulated": 1024,
-          "bitwise_equal": 1024,
-          "not_emulated": 0
+          "bit_identical": 1024,
+          "value_equal": 1024,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "in_ptr6": {
           "written": 1024,
           "emulated": 1024,
-          "bitwise_equal": 1024,
-          "not_emulated": 0
+          "bit_identical": 1024,
+          "value_equal": 1024,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         },
         "in_ptr9": {
           "written": 262144,
           "emulated": 262144,
-          "bitwise_equal": 262144,
-          "not_emulated": 0
+          "bit_identical": 262144,
+          "value_equal": 262144,
+          "nan_both": 0,
+          "not_emulated": 0,
+          "mismatch": 0
         }
       },
       "aborted_programs": 0,
@@ -3334,18 +4369,27 @@
       },
       "not_emulable_nodes": [],
       "lowering_choices": {
+        "frozen": false,
         "approximate_then_add_pairs": 4,
+        "two_product_adds": 3,
+        "uncontracted": [
+          "arith.subf@418"
+        ],
+        "swapped": [
+          "arith.subf@114"
+        ],
         "uncontracted_from_output": [
           "arith.subf@418"
         ],
-        "two_product_adds": 3,
         "swapped_from_output": [
           "arith.subf@114"
         ]
       },
+      "status": "bit_identical",
       "bitwise_reproduced": true,
+      "fitted_to_output": true,
       "package": "torchao__triton_per_fused__to_copy_abs_add_amax_clamp_copy__div_ge_index_lerp_mul_pow_rsu__launch002",
-      "seconds": 91.99
+      "seconds": 102.86
     }
   ],
   "statistics": {
@@ -3394,6 +4438,11 @@
               "p": 0.0007727470401945786,
               "holm_significant": true
             }
+          },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "relative",
@@ -3461,6 +4510,11 @@
               "p": 0.034301333822166206,
               "holm_significant": true
             }
+          },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -3537,6 +4591,11 @@
               "holm_significant": true
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 3.4054790373850227e-09,
@@ -3612,6 +4671,11 @@
               "holm_significant": true
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "relative",
             "value": 2.5705142127916473e-09,
@@ -3651,6 +4715,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 1.5190572328141472e-06,
@@ -3686,6 +4755,11 @@
               "p": 1.0,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -3751,6 +4825,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": -3.188848101024285e-06,
@@ -3787,6 +4866,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 2.803903598191937e-08,
@@ -3822,6 +4906,11 @@
               "p": 0.7798234447608502,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "relative",
@@ -3876,6 +4965,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "relative",
             "value": 2.7984930583085524e-09,
@@ -3912,6 +5006,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": 4.939551794025879e-06,
@@ -3947,6 +5046,11 @@
               "p": 0.7369329551255437,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "relative",
@@ -4001,6 +5105,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": -3.4156425989806394e-06,
@@ -4039,6 +5148,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": -2.3284207477235233e-06,
@@ -4074,6 +5188,11 @@
               "p": 0.8307393896969733,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "relative",
@@ -4144,6 +5263,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 2.923229303064545e-08,
@@ -4179,6 +5303,11 @@
               "p": 0.7358824237360458,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -4216,6 +5345,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": -1.8053469830192626e-08,
@@ -4252,6 +5386,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 0.0,
@@ -4287,6 +5426,11 @@
               "p": 1.0,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -4341,6 +5485,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 256,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.003734234720468521
+          },
           "strongest": {
             "statistic": "relative",
             "value": -4.8657418112960954e-08,
@@ -4393,6 +5542,11 @@
               "p": 0.3970883322091376,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 256,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.003734234720468521
           },
           "strongest": {
             "statistic": "aligned",
@@ -4447,6 +5601,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 256,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.003734167665243149
+          },
           "strongest": {
             "statistic": "aligned",
             "value": 2.2722952913285075e-07,
@@ -4483,6 +5642,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 256,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 0.0025687962770462036,
@@ -4518,6 +5682,11 @@
               "p": 1.0,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 256,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -4572,6 +5741,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 3.725290298461914e-09
+          },
           "strongest": {
             "statistic": "relative",
             "value": 6.880667120535281e-08,
@@ -4610,6 +5784,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 9.648501873016357e-07
+          },
           "strongest": {
             "statistic": "relative",
             "value": 7.431012317498375e-09,
@@ -4646,6 +5825,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 1.862645149230957e-09
+          },
           "strongest": {
             "statistic": "aligned",
             "value": 1.3643581207034771e-08,
@@ -4681,6 +5865,11 @@
               "p": 0.10954204798638836,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "aligned",
@@ -4745,6 +5934,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "relative",
             "value": 7.038876203753647e-08,
@@ -4783,6 +5977,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": 2.1575817235865627e-08,
@@ -4819,6 +6018,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": 6.884542024175715e-09,
@@ -4854,6 +6058,11 @@
               "p": 0.769294753306413,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 1.862645149230957e-09
           },
           "strongest": {
             "statistic": "relative",
@@ -4918,6 +6127,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 7.621700492954631e-13,
@@ -4953,6 +6167,11 @@
               "p": 0.5177378021574985,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "relative",
@@ -4990,6 +6209,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 1.862645149230957e-09
+          },
           "strongest": {
             "statistic": "mean",
             "value": 5.03394897152568e-12,
@@ -5025,6 +6249,11 @@
               "p": 0.8021786870957341,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 69,
+            "max_difference_in_ulp32": 1.3258082196116447
           },
           "strongest": {
             "statistic": "mean",
@@ -5062,6 +6291,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 0.0,
@@ -5097,6 +6331,11 @@
               "p": 1.0,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -5151,6 +6390,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 3.725290298461914e-09
+          },
           "strongest": {
             "statistic": "relative",
             "value": 4.323854143867096e-08,
@@ -5189,6 +6433,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 9.648501873016357e-07
+          },
           "strongest": {
             "statistic": "aligned",
             "value": 1.6652464266702523e-08,
@@ -5224,6 +6473,11 @@
               "p": 0.2642980020281431,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 1.862645149230957e-09
           },
           "strongest": {
             "statistic": "mean",
@@ -5288,6 +6542,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": -3.5953645769089567e-07,
@@ -5323,6 +6582,11 @@
               "p": 0.024508324794192158,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "aligned",
@@ -5360,6 +6624,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": -2.0184452356709767e-07,
@@ -5395,6 +6664,11 @@
               "p": 0.11715715058727841,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "aligned",
@@ -5432,6 +6706,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": -1.7563365872774737e-10,
@@ -5467,6 +6746,11 @@
               "p": 0.3665528266493832,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "relative",
@@ -5504,6 +6788,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 57,
+            "max_difference_in_ulp32": 34.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": -9.515900266731887e-08,
@@ -5539,6 +6828,11 @@
               "p": 0.22082382786699062,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 1.862645149230957e-09
           },
           "strongest": {
             "statistic": "aligned",
@@ -5576,6 +6870,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 1.6812748526717767e-10,
@@ -5611,6 +6910,11 @@
               "p": 0.7124566445476755,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -5665,6 +6969,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": 4.354846430672183e-07,
@@ -5700,6 +7009,11 @@
               "p": 0.8364535856113795,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 1.862645149230957e-09
           },
           "strongest": {
             "statistic": "mean",
@@ -5737,6 +7051,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "relative",
             "value": 5.7669151416215483e-08,
@@ -5772,6 +7091,11 @@
               "p": 0.16339321971259724,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "aligned",
@@ -5809,6 +7133,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": 1.2956249390182028e-07,
@@ -5844,6 +7173,11 @@
               "p": 0.1712567214369675,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "aligned",
@@ -5881,6 +7215,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 59,
+            "max_difference_in_ulp32": 34.0
+          },
           "strongest": {
             "statistic": "relative",
             "value": 1.999675667592589e-08,
@@ -5916,6 +7255,11 @@
               "p": 0.332666654524297,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "aligned",
@@ -5953,6 +7297,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "relative",
             "value": -1.7429910258601725e-08,
@@ -5989,6 +7338,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": -2.812598154378065e-10,
@@ -6024,6 +7378,11 @@
               "p": 0.4579548593154838,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "aligned",
@@ -6078,6 +7437,11 @@
               "holm_significant": true
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": -2.8874907653205265e-07,
@@ -6116,6 +7480,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": 5.235783965723028e-07,
@@ -6151,6 +7520,11 @@
               "p": 0.01403034428240544,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "aligned",
@@ -6188,6 +7562,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": -2.379955420419148e-07,
@@ -6223,6 +7602,11 @@
               "p": 0.6132108085737599,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -6260,6 +7644,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": -1.8807495835656376e-07,
@@ -6295,6 +7684,11 @@
               "p": 0.19348879474561434,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 1.862645149230957e-09
           },
           "strongest": {
             "statistic": "mean",
@@ -6332,6 +7726,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": -3.771787140034571e-08,
@@ -6367,6 +7766,11 @@
               "p": 0.4368599812390628,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "aligned",
@@ -6404,6 +7808,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": -5.455500603534155e-08,
@@ -6439,6 +7848,11 @@
               "p": 0.97423663192534,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 56,
+            "max_difference_in_ulp32": 34.0
           },
           "strongest": {
             "statistic": "mean",
@@ -6503,6 +7917,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "aligned",
             "value": -5.704395868745073e-08,
@@ -6538,6 +7957,11 @@
               "p": 0.8472947492246625,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 1.862645149230957e-09
           },
           "strongest": {
             "statistic": "mean",
@@ -6575,6 +7999,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": -1.232181004972688e-05,
@@ -6610,6 +8039,11 @@
               "p": 0.297888233999209,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 62,
+            "max_difference_in_ulp32": 34.0
           },
           "strongest": {
             "statistic": "aligned",
@@ -6647,6 +8081,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "relative",
             "value": -4.336613669935039e-07,
@@ -6682,6 +8121,11 @@
               "p": 0.8576799931172456,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "relative",
@@ -6719,6 +8163,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 0.0,
@@ -6754,6 +8203,11 @@
               "p": 1.0,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -6791,6 +8245,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 0.0,
@@ -6826,6 +8285,11 @@
               "p": 1.0,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -6863,6 +8327,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 0.0,
@@ -6898,6 +8367,11 @@
               "p": 1.0,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 25600,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -6952,6 +8426,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0025339126586914062
+          },
           "strongest": {
             "statistic": "relative",
             "value": -5.531040407347045e-08,
@@ -6968,7 +8447,7 @@
       "kernel": "matmul",
       "mutation": "approximation_tf32",
       "draws": 8,
-      "bitwise_reproduced_draws": 8,
+      "bitwise_reproduced_draws": 0,
       "elements": {
         "C": [
           0,
@@ -7023,6 +8502,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": -0.00021061306072311936,
@@ -7059,6 +8543,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 0.0,
@@ -7094,6 +8583,11 @@
               "p": 1.0,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -7147,6 +8641,11 @@
               "p": 0.09695715644898582,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.00254058837890625
           },
           "strongest": {
             "statistic": "mean",
@@ -7212,6 +8711,11 @@
               "p": 0.004185271782088966,
               "holm_significant": true
             }
+          },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "aligned",
@@ -7279,6 +8783,11 @@
               "p": 0.3259741543778987,
               "holm_significant": false
             }
+          },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
           },
           "strongest": {
             "statistic": "mean",
@@ -7351,6 +8860,11 @@
               "holm_significant": false
             }
           },
+          "endpoint_check": {
+            "elements": 16384,
+            "outputs_differ_by_half_ulp32_or_more": 0,
+            "max_difference_in_ulp32": 0.0
+          },
           "strongest": {
             "statistic": "mean",
             "value": 3.372908271348507e-06,
@@ -7416,6 +8930,11 @@
             "holm_significant": true
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 1.862645149230957e-09
+        },
         "strongest": {
           "statistic": "relative",
           "value": 5.780663756121286e-08,
@@ -7454,6 +8973,11 @@
             "p": 6.405873124298057e-12,
             "holm_significant": true
           }
+        },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "aligned",
@@ -7495,6 +9019,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 8.127906105735085e-09,
@@ -7530,6 +9059,11 @@
             "p": 0.0393373264376486,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "aligned",
@@ -7567,6 +9101,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "aligned",
           "value": 1.2683366766758305e-14,
@@ -7602,6 +9141,11 @@
             "p": 0.20167520625714946,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "aligned",
@@ -7639,6 +9183,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 1.3546510176225142e-09,
@@ -7674,6 +9223,11 @@
             "p": 0.34089313230206003,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -7711,6 +9265,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "relative",
           "value": 7.525672962831613e-09,
@@ -7746,6 +9305,11 @@
             "p": 0.6513741325280332,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "aligned",
@@ -7783,6 +9347,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -7819,6 +9388,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -7855,6 +9429,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -7890,6 +9469,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -7927,6 +9511,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -7962,6 +9551,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -7999,6 +9593,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8034,6 +9633,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -8071,6 +9675,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8106,6 +9715,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -8143,6 +9757,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8178,6 +9797,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -8215,6 +9839,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8251,6 +9880,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8286,6 +9920,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -8323,6 +9962,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8358,6 +10002,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -8395,6 +10044,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8431,6 +10085,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8467,6 +10126,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8502,6 +10166,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -8539,6 +10208,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8575,6 +10249,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8610,6 +10289,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -8647,6 +10331,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8683,6 +10372,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8718,6 +10412,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -8755,6 +10454,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8791,6 +10495,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8827,6 +10536,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8862,6 +10576,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -8899,6 +10618,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -8934,6 +10658,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -8971,6 +10700,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -9006,6 +10740,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -9043,6 +10782,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -9078,6 +10822,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",
@@ -9115,6 +10864,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -9151,6 +10905,11 @@
             "holm_significant": false
           }
         },
+        "endpoint_check": {
+          "elements": 352000,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
+        },
         "strongest": {
           "statistic": "mean",
           "value": 0.0,
@@ -9186,6 +10945,11 @@
             "p": 1.0,
             "holm_significant": false
           }
+        },
+        "endpoint_check": {
+          "elements": 11,
+          "outputs_differ_by_half_ulp32_or_more": 0,
+          "max_difference_in_ulp32": 0.0
         },
         "strongest": {
           "statistic": "mean",

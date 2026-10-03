@@ -144,14 +144,16 @@ def run(args):
                 return adamw_write(w, grads[v], exp_avg, exp_avg_sq, args.steps).float()
             if layer == "zero":
                 return adamw_write(w, grads[v], None, None, 0).float()
-            return -LR * grads[v]
+            if layer == "sgd_write":  # the parameter difference actually written in FP32
+                return (w - LR * grads[v]).float() - w
+            return -LR * grads[v]  # "sgd": the formula update -lr * g, not written to the parameter
 
         def dot(a, b):
             step_ = 1 << 24
             return float(sum((a[i:i + step_].double() * b[i:i + step_].double()).sum()
                              for i in range(0, a.numel(), step_)))
 
-        for layer in ("adam", "zero", "sgd"):
+        for layer in ("adam", "zero", "sgd", "sgd_write"):
             r = update(layer, ref).reshape(-1)
             rn = math.sqrt(dot(r, r))
             for v in VARIANTS:
@@ -181,6 +183,9 @@ def run(args):
         torch.cuda.empty_cache()
 
 
+LAYERS = ("grad", "adam", "zero", "sgd", "sgd_write")
+
+
 def stats(args):
     sys.path.insert(0, str(ROOT / "src"))
     from kernel_analyzer.reference_eval.analysis import _holm, _summarize
@@ -190,6 +195,7 @@ def stats(args):
     n = len(paths)
     n_cal = n // 3
     data = [np.load(p) for p in paths]
+    layers = [layer for layer in LAYERS if f"{layer}__original" in data[0]]  # older runs: no sgd_write
     sc = [json.loads(str(d["scalars"])) for d in data]
     results = []
     comparisons = {
@@ -197,7 +203,7 @@ def stats(args):
         "exp_effect (original - libdevice)": ("original", "libdevice"),
         "division_effect_under_libdevice (libdevice - libdevice_div_rn)": ("libdevice", "libdevice_div_rn"),
     }
-    for layer in ("grad", "adam", "zero", "sgd"):
+    for layer in layers:
         for name, (a, b) in comparisons.items():
             vecs = np.stack([d[f"{layer}__{a}"] - d[f"{layer}__{b}"] for d in data])
             direction = vecs[:n_cal].mean(axis=0)
@@ -215,7 +221,7 @@ def stats(args):
             r2["layer"] = layer
             results.append(r2)
     # 2x2 interaction on the aligned full-coordinate projections.
-    for layer in ("grad", "adam", "zero", "sgd"):
+    for layer in layers:
         inter = np.array([(s[f"{layer}_aligned_full_original"] - 0.0) - (s[f"{layer}_aligned_full_libdevice"]
                           - s[f"{layer}_aligned_full_libdevice_div_rn"]) for s in sc])
         r = _summarize("interaction (exp x division)", "aligned_reference_update_full", inter[n_cal:], inter[n_cal:], 0.05)
@@ -227,7 +233,7 @@ def stats(args):
         r["final_verdict"] = r["verdict"] if rej else "NOT_CONFIRMED"
     norms = {layer: {v: float(np.median([s[f"{layer}_norm_full_{v}"] / max(s[f'{layer}_reference_norm_full'], 1e-300)
                                          for s in sc])) for v in VARIANTS}
-             for layer in ("grad", "adam", "zero", "sgd")}
+             for layer in layers}
     report = {"schema": "kernel-analyzer-ce-division-propagation-v1", "design": design, "histories": n,
               "calibration": n_cal, "confirmation": n - n_cal, "relative_norm_of_difference_median": norms,
               "results": results,

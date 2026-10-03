@@ -65,3 +65,12 @@ def test_unified_entry_runs_reference_and_statistics(tmp_path):
     # The candidate-minus-reference residual is computed from the stored arrays, not re-derived.
     arrays = np.load(tmp_path / "ref" / "unit000.npz")
     assert np.array_equal(arrays["forward__index"], np.sort(arrays["forward__index"]))
+    assert report["coordinates_used"] == report["coordinates_total"] == window.size
+    # A coordinate whose reference is not established in one unit leaves the statistics everywhere.
+    data = dict(np.load(tmp_path / "ref" / "unit003.npz"))
+    data["backward__st"] = data["backward__st"].copy()
+    data["backward__st"][7] = 5
+    np.savez(tmp_path / "ref" / "unit003.npz", **data)
+    gated = statistics_stage(decl, tmp_path / "ref", device="cuda")
+    assert gated["coordinates_used"] == window.size - 1
+    assert gated["excluded_reference_elements"]["not_established"] == 1

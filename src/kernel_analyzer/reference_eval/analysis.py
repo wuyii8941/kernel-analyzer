@@ -185,11 +185,16 @@ def _reference_interval(decl, arrays, variant):
     return iv.down(manual - bound), iv.up(manual + bound)
 
 
-def _reference_bounds(decl, arrays, variant, device):
-    """measure(RN(reference)) bounds; RN to the target's storage format at both interval ends."""
+def _reference_bounds(decl, arrays, variant, device, valid=None):
+    """measure(RN(reference)) bounds; RN to the target's storage format at both interval ends.
+    Coordinates outside ``valid`` (reference not of a declared class) are measured at the actual value
+    and dropped by the caller."""
 
     fmt = STORAGE_FORMAT[decl.get("_storage_dtype", "float32")]
     ref_lo, ref_hi = _reference_interval(decl, arrays, variant)
+    if valid is not None:
+        actual = arrays[f"{variant}__actual"]
+        ref_lo, ref_hi = np.where(valid, ref_lo, actual), np.where(valid, ref_hi, actual)
     lo, of_lo = iv.round_nearest_even(ref_lo, fmt)
     hi, of_hi = iv.round_nearest_even(ref_hi, fmt)
     if of_lo.any() or of_hi.any():
@@ -264,14 +269,19 @@ def _cross_fit(name, rule, lows, highs, folds, alpha):
                     "reason": f"direction learned without fold {k} is zero"}
         directions.append(w)
         per_fold.append(_summarize(name, f"{rule}_fold{k}", *_project(lows[a:b], highs[a:b], w), alpha / folds))
-    best = min(per_fold, key=lambda r: r["p_value_two_sided_conservative"])
-    out = dict(best)
-    out.update({"rule": rule, "n": n, "folds": folds, "fold_level": alpha / folds,
-                "p_value_two_sided_conservative": min(1.0, folds * best["p_value_two_sided_conservative"]),
-                "fold_results": per_fold,
-                "fold_direction_cosines": [float(directions[i] @ directions[j])
-                                           for i in range(folds) for j in range(i + 1, folds)]})
-    return out
+    best_k = min(range(folds), key=lambda k: per_fold[k]["p_value_two_sided_conservative"])
+    best = per_fold[best_k]
+    # The verdict is the Bonferroni decision over folds; the projection summary belongs to the selected
+    # fold only (its own direction and units), not to a pooled estimate over all units.
+    return {"comparison": name, "rule": rule, "n_total": n, "n_fold": [r["n"] for r in per_fold],
+            "folds": folds, "fold_level": alpha / folds, "selected_fold": best_k,
+            "verdict": best["verdict"],
+            "p_value_two_sided_conservative": min(1.0, folds * best["p_value_two_sided_conservative"]),
+            "selected_fold_summary": best, "fold_results": per_fold,
+            "fold_directions_saved": [w.tolist() for w in directions] if directions[0].size <= 4096 else None,
+            "fold_direction_cosines": [float(directions[i] @ directions[j])
+                                       for i in range(folds) for j in range(i + 1, folds)],
+            "note": "selected_fold_summary is the selected fold's projection, not a common effect estimate"}
 
 
 def apply_direction_rules(name, lows, highs, ref_measure, decl, n_cal, n_conf, alpha) -> list:
@@ -285,9 +295,12 @@ def apply_direction_rules(name, lows, highs, ref_measure, decl, n_cal, n_conf, a
             if lows.shape[1] % size:
                 raise ValueError(f"group size {size} does not divide {lows.shape[1]} coordinates")
             base = rule[len("grouped_"):]
-            lo = lows.reshape(lows.shape[0], -1, size).sum(axis=2)
-            hi = highs.reshape(highs.shape[0], -1, size).sum(axis=2)
-            ref = ref_measure.reshape(ref_measure.shape[0], -1, size).sum(axis=2)
+            # Group sums divided by sqrt(size): a unit direction over groups pulls back to a unit direction
+            # over the original coordinates, so projections stay in the units of the ungrouped rules.
+            norm = math.sqrt(size)
+            lo = lows.reshape(lows.shape[0], -1, size).sum(axis=2) / norm
+            hi = highs.reshape(highs.shape[0], -1, size).sum(axis=2) / norm
+            ref = ref_measure.reshape(ref_measure.shape[0], -1, size).sum(axis=2) / norm
         if base == "fixed_direction":
             w = _learned_direction(lo[:n_cal], hi[:n_cal])
             if w is None:
@@ -320,15 +333,32 @@ def statistics_stage(decl: dict, ref_dir: Path, device: str = "cuda:0") -> dict:
     decl = dict(decl)
     decl["_storage_dtype"] = summaries[0][decl["variants"][0]]["storage_dtype"]
     alpha = decl["alpha"]
+    # Only coordinates whose reference is of a declared class in every unit and variant enter the
+    # statistics (default: complete composed references); the others are counted and reported.
+    classes = set(decl.get("reference_classes", ["complete_composed"]))
+    valid, excluded = None, {"conditional_local": 0, "special_value": 0, "not_established": 0}
+    for path in paths:
+        arrays = np.load(path)
+        for v in decl["variants"]:
+            st, cond = arrays[f"{v}__st"], arrays[f"{v}__cond"].astype(bool)
+            ok = (st == ST_OK) & (~cond | ("conditional_local" in classes))
+            excluded["conditional_local"] += int(((st == ST_OK) & cond & ("conditional_local" not in classes)).sum())
+            excluded["special_value"] += int(((st > ST_OK) & (st < ST_UNDEF)).sum())
+            excluded["not_established"] += int((st >= ST_UNDEF).sum())
+            valid = ok if valid is None else (valid & ok)
+    if valid is None or not valid.any():
+        return {"schema": "kernel-analyzer-reference-bias-analysis-v1",
+                "declaration": {k: v for k, v in decl.items() if not k.startswith("_")},
+                "verdict": "UNRESOLVED_REFERENCE", "excluded_reference_elements": excluded, "results": []}
     pairs = {f"{c['candidate']}_vs_{c['reference']}": [] for c in decl["comparisons"]}
     ref_measure, ambiguous_total = [], 0
     for path in paths:
         arrays = np.load(path)
-        measured = {v: _measure(decl, arrays, v, arrays[f"{v}__actual"], device) for v in decl["variants"]}
+        measured = {v: _measure(decl, arrays, v, arrays[f"{v}__actual"], device)[valid] for v in decl["variants"]}
         reference = {}
         for v in decl["variants"]:
-            lo, hi, amb = _reference_bounds(decl, arrays, v, device)
-            reference[v] = (lo, hi)
+            lo, hi, amb = _reference_bounds(decl, arrays, v, device, valid)
+            reference[v] = (lo[valid], hi[valid])
             ambiguous_total += amb
         base = decl["variants"][0]
         ref_measure.append(0.5 * (reference[base][0] + reference[base][1]))
@@ -375,6 +405,9 @@ def statistics_stage(decl: dict, ref_dir: Path, device: str = "cuda:0") -> dict:
         "declaration": {k: v for k, v in decl.items() if not k.startswith("_")},
         "reference": reference_summary,
         "not_established_fraction_removed": n_ne / n_total if n_total else 0.0,
+        "reference_classes_used": sorted(classes),
+        "coordinates_used": int(valid.sum()), "coordinates_total": int(valid.size),
+        "excluded_reference_elements": excluded,
         "ambiguous_rounding_elements": ambiguous_total,
         "multiplicity": "Holm over the declared comparison x rule pairs",
         "results": results,

@@ -29,6 +29,7 @@ dimension reduction (sums over declared groups).
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import math
 import sys
@@ -56,6 +57,13 @@ def noise(rng, kind, shape):
         big_scale = math.sqrt((1 - (1 - p) * small ** 2) / p)
         mask = rng.random(shape) < p
         return np.where(mask, rng.standard_normal(shape) * big_scale, rng.standard_normal(shape) * small)
+    if kind.startswith("skewed"):
+        # Zero mean, unit variance: rare large negative values, otherwise small positive ones
+        # (probability q of the rare value; skewness about -1/sqrt(q)).
+        q = {"skewed_q01": 0.01, "skewed_q05": 0.05}[kind]
+        rare = rng.random(shape) < q
+        base = np.where(rare, -math.sqrt((1 - q) / q), math.sqrt(q / (1 - q)))
+        return (base + 0.1 * rng.standard_normal(shape)) / math.sqrt(1.01)
     raise ValueError(kind)
 
 
@@ -265,6 +273,68 @@ def remedies(rng, null_reps, power_reps, flips=199):
             ]}
 
 
+def skewed_stress(rng, reps):
+    """False-positive rates under skewed zero-mean noise (rare large negative values)."""
+
+    rows = []
+    crit = t.ppf(1 - ALPHA / 2, N_CONF - 1)
+    for kind in ("skewed_q01", "skewed_q05"):
+        for d in (1, 64, 1024):
+            proj = simulate(rng, kind, d, 0.0, N_DEV, N_CONF, reps)
+            v, _, _ = verdicts(proj, 0.0)
+            k = int((v != 0).sum())
+            rows.append({"noise": kind, "d": d, "rule": "fixed_direction", "reps": reps, "false_positives": k,
+                         "rate": k / reps, "wrong_sign_of_rare_values": int((v == 1).sum()),
+                         "interval_95": clopper_pearson(k, reps)})
+        # a declared direction (one coordinate, or spread over 1024 coordinates)
+        for d, spread in ((1, False), (1024, True)):
+            w = np.full(d, 1 / math.sqrt(d)) if spread else np.ones(1)
+            hits = 0
+            for start in range(0, reps, 200):
+                r = min(200, reps - start)
+                u = noise(rng, kind, (r, N_CONF, d))
+                hits += int((t_verdict(u @ w, crit)[0] != 0).sum())
+            rows.append({"noise": kind, "d": d, "rule": "declared_direction" + ("_spread" if spread else "_single"),
+                         "reps": reps, "false_positives": hits, "rate": hits / reps,
+                         "interval_95": clopper_pearson(hits, reps)})
+        print("skewed", kind, [(r["rule"], r["d"], r["rate"]) for r in rows if r["noise"] == kind], flush=True)
+    # the remedies in d = 1024 under the stronger skew
+    vectors, halves = remedy_vectors(rng)
+    sub = []
+    for kind in ("skewed_q01",):
+        crit_all = t.ppf(1 - ALPHA / 2, N_ALL - 1)
+        patterns = np.vstack([np.ones(N_ALL), rng.choice([-1.0, 1.0], (199, N_ALL))])
+        counts = collections.Counter()
+        n_rep = min(reps, 2000)
+        for start in range(0, n_rep, 50):
+            r = min(50, n_rep - start)
+            u = noise(rng, kind, (r, N_ALL, D_REM))
+            gram = np.einsum("rid,rjd->rij", u, u)
+            proj = cross_fit_stats(gram, 2, patterns)
+            counts["cross_fit2_pooled_t"] += int((t_verdict(proj[:, 0], crit_all)[0] != 0).sum())
+            _, t_all = t_verdict(proj, crit_all)
+            pval = ((np.abs(t_all[:, 1:]) >= np.abs(t_all[:, :1])).sum(axis=1) + 1) / patterns.shape[0]
+            counts["cross_fit2_signflip"] += int((pval <= ALPHA).sum())
+            edges = np.linspace(0, N_ALL, 3).astype(int)
+            fold_v = np.stack([t_verdict(proj[:, 0, a:b], t.ppf(1 - ALPHA / 4, b - a - 1))[0]
+                               for a, b in zip(edges[:-1], edges[1:])], axis=1)
+            counts["cross_fit2_foldwise_bonferroni"] += int((fold_v != 0).any(axis=1).sum())
+            g = u.reshape(r, N_ALL, D_REM // GROUP, GROUP).sum(axis=3)
+            wg = g[:, :N_DEV].mean(axis=1)
+            wg /= np.linalg.norm(wg, axis=1, keepdims=True)
+            counts["grouped_fixed_direction"] += int((t_verdict(np.einsum("rnd,rd->rn", g[:, N_DEV:], wg),
+                                                                 t.ppf(1 - ALPHA / 2, N_CONF - 1))[0] != 0).sum())
+        for rule, k in counts.items():
+            sub.append({"noise": kind, "d": D_REM, "rule": rule, "reps": n_rep, "false_positives": k,
+                        "rate": k / n_rep, "interval_95": clopper_pearson(k, n_rep)})
+        print("skewed remedies", [(r["rule"], r["rate"]) for r in sub], flush=True)
+    return {"rows": rows + sub,
+            "notes": ["noise per coordinate: probability q of -sqrt((1-q)/q), otherwise sqrt(q/(1-q)), plus "
+                      "N(0, 0.1^2) jitter, rescaled to unit variance; zero mean",
+                      "with 32 + 64 units a rare value of probability 0.01 is often absent from a sample, so "
+                      "the sample looks consistently positive"]}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, required=True)
@@ -333,6 +403,7 @@ def main():
     report["detection_probability"] = power_rows
     report["closed_form_examples"] = [closed_form(1024, 1.0), closed_form(1, 0.5)]
     report["remedies"] = remedies(np.random.default_rng(20261005), args.remedy_null_reps, args.remedy_power_reps)
+    report["skewed_stress"] = skewed_stress(np.random.default_rng(20261008), args.remedy_null_reps)
     report["notes"] = [
         "mu is the mean of each unit along the true direction, in units of the per-coordinate noise sd.",
         "In d dimensions the learned direction is noisy, so the same mu is harder to detect as d grows; "

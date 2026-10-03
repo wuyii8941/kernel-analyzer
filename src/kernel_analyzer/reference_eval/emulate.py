@@ -61,6 +61,8 @@ _TT_TYPE = {"f32": "f32", "f16": "f16", "bf16": "bf16", "f64": "f64", "i32": "i3
             "i16": "i16", "i1": "i1"}
 BLOCK = 1024
 LAYOUT_OPS = {"tt.splat", "tt.broadcast", "tt.expand_dims", "ttg.convert_layout", "tt.reshape"}
+SUBSTITUTIONS = ("mid", "lo", "hi", "rn")
+_BITS = {"f32": (np.float32, np.uint32), "f16": (np.float16, np.uint16), "f64": (np.float64, np.uint64)}
 
 
 # ---------------------------------------------------------------------------
@@ -306,9 +308,12 @@ class GpuEmulator(KernelReferenceEvaluator):
 
     def __init__(self, module: TModule, ttgir: str, enable_fp_fusion: bool = True, exact_nodes=(),
                  oracle: Optional[HardwareOracle] = None, func_name: Optional[str] = None, ungrouped=(),
-                 swapped=()):
+                 swapped=(), substitution: str = "mid"):
         super().__init__(module, mode=NumericMode.ROUNDING_CHECK, func_name=func_name)
+        if substitution not in SUBSTITUTIONS:
+            raise ValueError(f"substitution must be one of {SUBSTITUTIONS}")
         self.exact_nodes = set(exact_nodes)
+        self.substitution = substitution
         self.ungrouped = set(ungrouped)  # add / sub nodes whose approximate producer is not contracted
         self.oracle = oracle or HardwareOracle()
         self.layouts = reduce_layouts(module, ttgir)
@@ -348,14 +353,43 @@ class GpuEmulator(KernelReferenceEvaluator):
             return v
         return super()._maybe_round(v, op, fmt, declared)
 
-    def _exact_value(self, fn, *a):
+    def _unrounded(self, fn, *a) -> TV:
+        """The rigorous enclosure [lo, hi] of the operation's exact real result (no rounding)."""
+
         self._no_round = True
         try:
-            out = fn(*a)
+            return fn(*a)
         finally:
             self._no_round = False
+
+    def _estimate(self, fn, *a) -> TV:
+        """A float64 estimate (midpoint of the enclosure) of the exact result, used inside a model."""
+
+        out = self._unrounded(fn, *a)
         mid = 0.5 * (out.lo + out.hi)
         return _ftv(out.elem, mid, mid.copy(), out.st, out.cond, out.reasons)
+
+    def _substitute(self, elem, lo, hi, st, cond, reasons) -> TV:
+        """The value a substituted node passes on.  "mid" / "lo" / "hi": a float64 value of the exact
+        result (midpoint or one endpoint of its enclosure; running both endpoints bounds the effect of
+        not carrying the exact real); "rn": the exact result rounded to the node's format -- the
+        output of a correctly rounded implementation, which a real kernel change can reproduce."""
+
+        if self.substitution == "lo":
+            v = lo
+        elif self.substitution == "hi":
+            v = hi
+        elif self.substitution == "mid":
+            v = 0.5 * (lo + hi)
+        else:
+            r_lo, r_hi = iv.round_nearest_even(lo, elem)[0], iv.round_nearest_even(hi, elem)[0]
+            st = np.where((r_lo != r_hi) & (st == ST_OK), ST_NE, st).astype(np.int8)
+            v = np.where(r_lo == r_hi, r_lo, 0.0)
+        return _ftv(elem, v, np.array(v, copy=True), st, cond, reasons)
+
+    def _exact_value(self, fn, *a) -> TV:
+        out = self._unrounded(fn, *a)
+        return self._substitute(out.elem, out.lo, out.hi, out.st, out.cond, out.reasons)
 
     def _not_emulable(self, op, shape, elem, args, what) -> TV:
         self.trace[(op.node_id, "not_emulable:" + what)] += 1
@@ -466,10 +500,10 @@ class GpuEmulator(KernelReferenceEvaluator):
         if not exact_inputs:
             # An upstream node was made exact: propagate the input change through the declared
             # function and keep this node's own approximation error.
-            f_exact = self._exact_value(super()._float_op, name, op, args, out_elem)
+            f_exact = self._estimate(super()._float_op, name, op, args, out_elem)
             r_args = [TV("f", a.elem, r, r.copy(), None, a.st, a.cond, a.reasons) if a.kind == "f" else a
                       for a, r in zip(args, rounded)]
-            f_round = self._exact_value(super()._float_op, name, op, r_args, out_elem)
+            f_round = self._estimate(super()._float_op, name, op, r_args, out_elem)
             hw = np.where((f_exact.st == ST_OK) & (f_round.st == ST_OK) & np.isfinite(hw),
                           hw + (f_exact.lo - f_round.lo), hw)
         out_st = np.where(np.isnan(hw), 1, np.where(hw == np.inf, 2, np.where(hw == -np.inf, 3, ST_OK)))
@@ -506,9 +540,8 @@ class GpuEmulator(KernelReferenceEvaluator):
             self.trace[(op.node_id, "exact")] += 1
             finite = x.st == ST_OK
             lo, hi = iv.isum(np.where(finite, x.lo, 0.0), np.where(finite, x.hi, 0.0), axis)
-            mid = 0.5 * (lo + hi)
             st = np.where(np.any(~finite, axis=axis), ST_NE, ST_OK).astype(np.int8)
-            return _ftv(x.elem, mid, mid.copy(), st, np.any(x.cond, axis=axis), x.reasons)
+            return self._substitute(x.elem, lo, hi, st, np.any(x.cond, axis=axis), x.reasons)
         lay = self.layouts.get(op.node_id)
         if lay is None:
             return self._not_emulable(op, list(np.delete(np.array(x.shape), axis)), x.elem, [x], "reduce layout")
@@ -592,9 +625,7 @@ class GpuEmulator(KernelReferenceEvaluator):
             self.trace[(op.node_id, "exact")] += 1
             lo, hi = iv.idot(a.lo, a.hi, b.lo, b.hi)
             lo, hi = iv.iadd(lo, hi, c.lo, c.hi)
-            mid = 0.5 * (lo + hi)
-            st = _merge_status(c).copy()
-            return _ftv(c.elem, mid, mid.copy(), st, c.cond, c.reasons)
+            return self._substitute(c.elem, lo, hi, _merge_status(c).copy(), c.cond, c.reasons)
         self.trace[(op.node_id, "dot_fma_chain")] += 1
         acc = c.lo.copy()
         for k in range(a.shape[-1]):
@@ -622,6 +653,26 @@ class GpuEmulator(KernelReferenceEvaluator):
 # ---------------------------------------------------------------------------
 
 
+def _encode(values: np.ndarray, elem: str) -> Optional[np.ndarray]:
+    """Bit patterns of values (already representable) in the storage format."""
+
+    if elem in _BITS:
+        ftype, utype = _BITS[elem]
+        return values.astype(ftype).view(utype).astype(np.uint64)
+    if elem == "bf16":
+        return (values.astype(np.float32).view(np.uint32) >> 16).astype(np.uint64)
+    return None
+
+
+def _device_bits(b) -> Optional[np.ndarray]:
+    raw = np.asarray(b.after_raw, dtype=np.uint8)
+    width = {"f32": np.uint32, "f16": np.uint16, "bf16": np.uint16, "f64": np.uint64}.get(b.elem)
+    if width is None:
+        return None
+    size = np.dtype(width).itemsize
+    return raw[: (raw.size // size) * size].view(width).astype(np.uint64)[: b.lo.size]
+
+
 def _outputs(result, launch) -> dict:
     out = {}
     for ptr, b in result.buffers.items():
@@ -631,11 +682,39 @@ def _outputs(result, launch) -> dict:
         if b.actual_after_st is not None:  # specials are stored as 0 with a status
             actual = np.where(b.actual_after_st == 1, np.nan, np.where(b.actual_after_st == 2, np.inf,
                               np.where(b.actual_after_st == 3, -np.inf, actual)))
-        out[b.name] = (b.written.copy(), b.lo.copy(), b.hi.copy(), b.st.copy(), actual)
+        out[b.name] = (b.written.copy(), b.lo.copy(), b.hi.copy(), b.st.copy(), actual, b.elem, _device_bits(b))
     return out
 
 
-def emulate(launch, exact_nodes=(), oracle: Optional[HardwareOracle] = None, ungrouped=(), swapped=()):
+def _compare(written, lo, hi, st, actual, elem, bits) -> dict:
+    """Element masks: emulated, bit-identical (finite and infinite values, compared as storage bits),
+    numerically equal (+0 and -0 equal), NaN on both sides (the payload is not modelled)."""
+
+    finite = written & (st == ST_OK) & (lo == hi)
+    inf = written & np.isin(st, (2, 3))
+    nan = written & (st == 1)
+    emulated = finite | inf | nan
+    value = np.where(st == 2, np.inf, np.where(st == 3, -np.inf, lo))
+    enc = _encode(np.where(finite | inf, value, 0.0), elem)
+    if enc is not None and bits is not None:
+        bit_equal = (finite | inf) & (enc == bits)
+    else:  # formats without a bit model: numerical equality only
+        bit_equal = (finite | inf) & (value == actual)
+    return {"emulated": emulated, "bit_equal": bit_equal,
+            "value_equal": (finite | inf) & (value == actual), "nan_both": nan & np.isnan(actual)}
+
+
+def _bitwise_count(result, launch) -> tuple:
+    equal = emulated = 0
+    for name, o in _outputs(result, launch).items():
+        m = _compare(*o)
+        emulated += int(m["emulated"].sum())
+        equal += int((m["bit_equal"] | m["nan_both"]).sum())
+    return equal, emulated
+
+
+def emulate(launch, exact_nodes=(), oracle: Optional[HardwareOracle] = None, ungrouped=(), swapped=(),
+            substitution: str = "mid"):
     from .ttir_parser import parse_ttir
 
     module = parse_ttir(launch.asm["ttir"])
@@ -644,33 +723,13 @@ def emulate(launch, exact_nodes=(), oracle: Optional[HardwareOracle] = None, ung
         options = {k: launch.metadata[k] for k in ("enable_fp_fusion", "enable_reflect_ftz") if k in launch.metadata}
         oracle = HardwareOracle(options={"num_warps": 4, **options})
     emu = GpuEmulator(module, launch.asm["ttgir"], enable_fp_fusion=fusion, exact_nodes=exact_nodes, oracle=oracle,
-                      ungrouped=ungrouped, swapped=swapped)
+                      ungrouped=ungrouped, swapped=swapped, substitution=substitution)
     result = emu.evaluate(launch)
     return result, emu
 
 
-def _compare(written, lo, hi, st, actual):
-    """(emulated mask, bitwise-equal mask); NaN and infinities count when the device has the same special."""
-
-    finite = written & (st == ST_OK) & (lo == hi)
-    special = written & np.isin(st, (1, 2, 3))
-    emulated = finite | special
-    same = (finite & (lo == actual)) | (special & (((st == 1) & np.isnan(actual)) | ((st == 2) & (actual == np.inf))
-                                                   | ((st == 3) & (actual == -np.inf))))
-    return emulated, same
-
-
-def _bitwise_count(result, launch) -> tuple:
-    equal = emulated = 0
-    for name, (written, lo, hi, st, actual) in _outputs(result, launch).items():
-        ok, same = _compare(written, lo, hi, st, actual)
-        emulated += int(ok.sum())
-        equal += int(same.sum())
-    return equal, emulated
-
-
-def verify(launch, oracle: Optional[HardwareOracle] = None) -> dict:
-    """Emulate and compare with the device outputs bit for bit.
+def verify(launch, oracle: Optional[HardwareOracle] = None, ungrouped=None, swapped=None) -> dict:
+    """Emulate and compare with the device outputs bit for bit (storage bit patterns).
 
     Every lowering rule is fixed in advance except two binary choices per affected node, which the TTIR
     does not determine:
@@ -681,17 +740,24 @@ def verify(launch, oracle: Optional[HardwareOracle] = None) -> dict:
     * which product LLVM folds when both operands of an add / sub are products -- decided by use
       counts in the selection DAG; it starts with the TTIR use counts.
 
-    A choice is flipped only if that raises the number of bitwise-equal outputs; flipped choices are
-    reported, and every output must then reproduce for the kernel to count as reproduced.
+    With ``ungrouped`` / ``swapped`` given, the choices are frozen (held-out validation): nothing is
+    adjusted.  Otherwise a choice is flipped only if that raises the number of bit-identical outputs,
+    and the flipped choices are reported -- this fits the model to the same outputs it is checked
+    against, so such a kernel needs held-out inputs before it counts as validated.
+
+    status: "bit_identical" (every emulated element has the device's bits; NaN only as a class),
+    "mismatch", or "not_established" (no emulated output, e.g. every program stopped at an atomic).
     """
 
-    result, emu = emulate(launch, oracle=oracle)
+    frozen = ungrouped is not None or swapped is not None
+    ungrouped, swapped = list(ungrouped or []), list(swapped or [])
+    result, emu = emulate(launch, oracle=oracle, ungrouped=ungrouped, swapped=swapped)
     oracle = emu.oracle
-    ungrouped, swapped = [], []
     best = _bitwise_count(result, launch)
     groups = [n for (n, how) in emu.trace if how == "oracle_group"]
     swappable = list(emu.swappable)
-    if best[0] < best[1]:
+    fitted_u, fitted_s = [], []
+    if not frozen and best[0] < best[1]:
         for kind, node in [("group", n) for n in groups] + [("swap", n) for n in swappable]:
             ug = ungrouped + [node] if kind == "group" else ungrouped
             sw = swapped + [node] if kind == "swap" else swapped
@@ -699,24 +765,39 @@ def verify(launch, oracle: Optional[HardwareOracle] = None) -> dict:
             count = _bitwise_count(trial_res, launch)
             if count[0] > best[0]:
                 best, result, emu, ungrouped, swapped = count, trial_res, trial_emu, ug, sw
+                (fitted_u if kind == "group" else fitted_s).append(node)
             if best[0] == best[1]:
                 break
     report = {"buffers": {}, "aborted_programs": len(result.aborted),
               "abort_reasons": sorted(set(result.aborted.values()))[:3],
               "nodes": collections.Counter(), "not_emulable_nodes": [],
-              "lowering_choices": {"approximate_then_add_pairs": len(groups), "uncontracted_from_output": ungrouped,
-                                   "two_product_adds": len(swappable), "swapped_from_output": swapped}}
+              "lowering_choices": {"frozen": frozen, "approximate_then_add_pairs": len(groups),
+                                   "two_product_adds": len(swappable), "uncontracted": ungrouped,
+                                   "swapped": swapped, "uncontracted_from_output": fitted_u,
+                                   "swapped_from_output": fitted_s}}
     for (node, how), _ in emu.trace.items():
         report["nodes"][how.split(":")[0]] += 1
         if how.startswith("not_emulable"):
             report["not_emulable_nodes"].append(f"{node} ({how.split(':', 1)[1]})")
     report["nodes"] = dict(report["nodes"])
-    for name, (written, lo, hi, st, actual) in _outputs(result, launch).items():
-        ok, same = _compare(written, lo, hi, st, actual)
-        report["buffers"][name] = {"written": int(written.sum()), "emulated": int(ok.sum()),
-                                   "bitwise_equal": int(same.sum()),
-                                   "not_emulated": int((written & ~ok).sum())}
-    report["bitwise_reproduced"] = all(b["emulated"] == b["bitwise_equal"] for b in report["buffers"].values())
+    totals = collections.Counter()
+    for name, o in _outputs(result, launch).items():
+        m = _compare(*o)
+        written = o[0]
+        entry = {"written": int(written.sum()), "emulated": int(m["emulated"].sum()),
+                 "bit_identical": int(m["bit_equal"].sum()), "value_equal": int(m["value_equal"].sum()),
+                 "nan_both": int(m["nan_both"].sum()), "not_emulated": int((written & ~m["emulated"]).sum())}
+        entry["mismatch"] = entry["emulated"] - entry["bit_identical"] - entry["nan_both"]
+        report["buffers"][name] = entry
+        totals.update(entry)
+    if totals["emulated"] == 0:
+        report["status"] = "not_established"
+    elif totals["mismatch"] == 0:
+        report["status"] = "bit_identical"
+    else:
+        report["status"] = "mismatch"
+    report["bitwise_reproduced"] = report["status"] == "bit_identical"
+    report["fitted_to_output"] = bool(fitted_u or fitted_s)
     return report
 
 
@@ -733,25 +814,39 @@ def rounding_nodes(emu: GpuEmulator) -> list:
 
 
 def localize(launch, nodes: Optional[list] = None, oracle: Optional[HardwareOracle] = None,
-             ungrouped=(), swapped=()) -> dict:
-    """Per-node contribution c_j = K_emulated - K_(node j exact) on the bitwise-reproduced outputs."""
+             ungrouped=(), swapped=(), endpoint_nodes=None, substitution: str = "mid") -> dict:
+    """Per-node model contribution c_j = K_emulated - K_(node j substituted) on the bit-identical outputs.
+
+    ``substitution`` "mid" passes a float64 value of the exact result downstream (an estimate in the
+    declared execution model, not a deployable change); "rn" passes the correctly rounded result, which
+    a real kernel change can reproduce.  For the nodes in ``endpoint_nodes`` (all when "all") the
+    substitution is repeated with both endpoints of the exact result's enclosure; outputs that differ
+    between the two runs show where carrying a float64 value instead of the exact real matters.
+    """
 
     base, emu = emulate(launch, oracle=oracle, ungrouped=ungrouped, swapped=swapped)
     oracle = emu.oracle
     outs = _outputs(base, launch)
-    masks = {name: w & (st == ST_OK) & (lo == hi) & (lo == act)
-             for name, (w, lo, hi, st, act) in outs.items()}
+    masks = {name: _compare(*o)["bit_equal"] & (o[3] == ST_OK) for name, o in outs.items()}
     nodes = nodes if nodes is not None else rounding_nodes(emu)
     kinds = {}
     for (node, how) in emu.trace:
         kinds.setdefault(node, how)
     texts = {o.node_id: re.sub(r"\s+loc\(.*$", "", o.text.strip())[:140]
              for fn in emu.module.funcs.values() for o in fn.walk()}
+
+    def run(node, mode):
+        res, _ = emulate(launch, exact_nodes=[node], oracle=oracle, ungrouped=ungrouped, swapped=swapped,
+                         substitution=mode)
+        return _outputs(res, launch)
+
     rows = []
     for node in nodes:
-        res, _ = emulate(launch, exact_nodes=[node], oracle=oracle, ungrouped=ungrouped, swapped=swapped)
-        o = _outputs(res, launch)
-        entry = {"node": node, "lowering": kinds.get(node), "text": texts.get(node, ""), "buffers": {}}
+        o = run(node, substitution)
+        ends = (run(node, "lo"), run(node, "hi")) if (endpoint_nodes == "all" or
+                                                      (endpoint_nodes and node in endpoint_nodes)) else None
+        entry = {"node": node, "lowering": kinds.get(node), "text": texts.get(node, ""), "substitution": substitution,
+                 "buffers": {}}
         for name, m in masks.items():
             k = outs[name][1]
             e_lo, e_st = o[name][1], o[name][3]
@@ -759,19 +854,28 @@ def localize(launch, nodes: Optional[list] = None, oracle: Optional[HardwareOrac
             c = (k - e_lo)[ok]
             if c.size == 0:
                 continue
-            scale = np.abs(k[ok]).mean() if np.abs(k[ok]).mean() > 0 else 1.0
             kk = k[ok]
             rel = c[kk != 0] / kk[kk != 0]
-            entry["buffers"][name] = {
-                "elements": int(c.size), "nonzero": int((c != 0).sum()),
-                "sum": float(c.sum()), "sumsq": float((c * c).sum()),
-                "mean_relative": float(rel.mean()) if rel.size else 0.0,
-                "aligned": float((c * kk).sum() / np.linalg.norm(kk)) if np.linalg.norm(kk) > 0 else 0.0,
-                "mean": float(c.mean()), "mean_abs": float(np.abs(c).mean()),
-                "positive": int((c > 0).sum()), "negative": int((c < 0).sum()),
-                "t": float(c.mean() / (c.std(ddof=1) / np.sqrt(c.size))) if c.size > 1 and c.std() > 0 else 0.0,
-                "mean_relative_to_output_scale": float(c.mean() / scale),
-            }
+            scale = np.abs(kk).mean() if np.abs(kk).mean() > 0 else 1.0
+            b = {"elements": int(c.size), "nonzero": int((c != 0).sum()),
+                 "mean": float(c.mean()), "mean_abs": float(np.abs(c).mean()),
+                 "mean_relative": float(rel.mean()) if rel.size else 0.0,
+                 "aligned": float((c * kk).sum() / np.linalg.norm(kk)) if np.linalg.norm(kk) > 0 else 0.0,
+                 "positive": int((c > 0).sum()), "negative": int((c < 0).sum()),
+                 "mean_relative_to_output_scale": float(c.mean() / scale)}
+            if ends is not None:
+                lo_out, hi_out = ends[0][name], ends[1][name]
+                both = ok & (lo_out[3] == ST_OK) & (hi_out[3] == ST_OK)
+                d = np.abs(lo_out[1] - hi_out[1])[both]
+                ulp = np.spacing(np.abs(k[both]).astype(np.float32)).astype(np.float64)
+                in_ulp = d / ulp
+                b["endpoint_check"] = {"elements": int(both.sum()),
+                                       "outputs_differ_by_half_ulp32_or_more": int((in_ulp >= 0.5).sum()),
+                                       "max_difference_in_ulp32": float(in_ulp.max()) if d.size else 0.0,
+                                       "max_abs_difference": float(d.max()) if d.size else 0.0,
+                                       "mean_lo": float((k - lo_out[1])[both].mean()) if both.any() else 0.0,
+                                       "mean_hi": float((k - hi_out[1])[both].mean()) if both.any() else 0.0}
+            entry["buffers"][name] = b
         rows.append(entry)
     return {"verified": {name: int(m.sum()) for name, m in masks.items()}, "nodes": rows,
             "oracle_calls": oracle.calls}

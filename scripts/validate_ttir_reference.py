@@ -26,10 +26,10 @@ import torch  # noqa: E402
 from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder  # noqa: E402
 
 
-def workloads():
+def workloads(seed: int = 0):
     from scripts import reference_eval_kernels as k
 
-    g = torch.Generator(device="cuda").manual_seed(0)
+    g = torch.Generator(device="cuda").manual_seed(seed)
     n = 1000
     x = torch.randn(n, device="cuda", generator=g)
     a, b, c, d = (torch.randn(n, device="cuda", generator=g) for _ in range(4))

@@ -28,11 +28,12 @@ def main():
     parser.add_argument("--rows", type=int, default=1024)
     parser.add_argument("--cols", type=int, default=256)
     parser.add_argument("--steps", type=int, default=3)
+    parser.add_argument("--seed", type=int, default=20261002)
     args = parser.parse_args()
     from torchao.optim import AdamW8bit
     import torchao
 
-    torch.manual_seed(20261002)
+    torch.manual_seed(args.seed)
     p = torch.nn.Parameter(torch.randn(args.rows, args.cols, device="cuda") * 0.02)
     opt = AdamW8bit([p], lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.01)
     grads = [torch.randn_like(p) * 1e-3 for _ in range(args.steps)]

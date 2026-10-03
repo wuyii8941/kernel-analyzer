@@ -81,6 +81,8 @@ def m_softmax(X, Y, n_cols, stride, BLOCK: tl.constexpr, MUT: tl.constexpr):
     x = tl.load(X + row * stride + cols, mask=mask, other=-float("inf"))
     if MUT == 3:
         e = tl.exp(x)  # max subtraction removed: same real value, different execution
+    elif MUT == 4:
+        e = tl.exp((x - tl.max(x, axis=0)).to(tl.float64)).to(tl.float32)  # correctly rounded exp
     else:
         e = tl.exp(x - tl.max(x, axis=0))
     if MUT == 2:
@@ -107,6 +109,8 @@ def m_layernorm(X, W, B, Y, n_cols, eps, BLOCK: tl.constexpr, MUT: tl.constexpr)
         var = tl.sum(d * d, axis=0) / n_cols
     if MUT == 1:
         r = 1.0 / tl.sqrt_rn(var + eps)
+    elif MUT == 4:
+        r = (1.0 / tl.sqrt((var + eps).to(tl.float64))).to(tl.float32)  # correctly rounded rsqrt
     else:
         r = tl.math.rsqrt(var + eps)
     if MUT == 3:

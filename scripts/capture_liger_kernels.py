@@ -24,12 +24,13 @@ from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder, check_r
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--seed", type=int, default=20261002)
     args = parser.parse_args()
     from liger_kernel.transformers.fused_linear_cross_entropy import LigerFusedLinearCrossEntropyLoss
     from liger_kernel.transformers.rms_norm import LigerRMSNorm
     import importlib.metadata as md
 
-    torch.manual_seed(20261002)
+    torch.manual_seed(args.seed)
     dev = "cuda"
     V, H, BT = 32000, 256, 64
     lin = torch.nn.Linear(H, V, bias=False, device=dev)

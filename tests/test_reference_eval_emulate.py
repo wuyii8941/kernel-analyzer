@@ -8,7 +8,7 @@ pytest.importorskip("gmpy2")
 pytest.importorskip("triton")
 
 from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder  # noqa: E402
-from kernel_analyzer.reference_eval.emulate import HardwareOracle, localize, verify  # noqa: E402
+from kernel_analyzer.reference_eval.emulate import HardwareOracle, _compare, emulate, localize, verify  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_parser import parse_ttir  # noqa: E402
 
 cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
@@ -81,3 +81,45 @@ def test_directed_rounding_node_is_localized():
     assert "__nv_fmul_rd" in top["text"]
     b = top["buffers"]["Y"]
     assert b["mean"] < 0 and b["positive"] == 0
+
+
+def test_comparison_uses_storage_bits():
+    written = np.ones(3, dtype=bool)
+    lo = np.array([-0.0, 1.0, 0.0])
+    st = np.array([0, 0, 1], dtype=np.int8)  # the third element is emulated as NaN
+    actual = np.array([0.0, 1.0, np.nan])
+    bits = np.array([0.0, 1.0, np.nan], dtype=np.float32).view(np.uint32).astype(np.uint64)
+    m = _compare(written, lo, lo, st, actual, "f32", bits)
+    assert not m["bit_equal"][0] and m["value_equal"][0]  # -0 against +0: equal values, different bits
+    assert m["bit_equal"][1]
+    assert m["nan_both"][2] and not m["bit_equal"][2]  # NaN only as a class
+
+
+@cuda
+def test_atomic_kernel_is_not_established():
+    from scripts import reference_eval_kernels as k
+
+    x = torch.randn(1000, device="cuda")
+    launch = _capture(lambda: k.atomic_accumulate[(4,)](x, torch.zeros(4, device="cuda"), torch.empty_like(x), 1000,
+                                                        BLOCK=256, USE_OLD=False))
+    r = verify(launch)
+    assert r["status"] == "not_established" and not r["bitwise_reproduced"]
+
+
+@cuda
+def test_rounded_substitution_predicts_the_div_rn_kernel():
+    """Model intervention (division node correctly rounded) against the real kernel change."""
+
+    from scripts import mutation_kernels as mk
+
+    x = torch.randn(16, 200, device="cuda", generator=torch.Generator(device="cuda").manual_seed(4)) * 3
+    outs = {}
+    for mut in (0, 1):
+        y = torch.empty_like(x)
+        outs[mut] = (_capture(lambda: mk.m_softmax[(16,)](x, y, 200, 200, BLOCK=256, MUT=mut)), y)
+    launch = outs[0][0]
+    div = next(o.node_id for o in parse_ttir(launch.asm["ttir"]).entry().walk() if o.name == "arith.divf")
+    res, _ = emulate(launch, exact_nodes=[div], substitution="rn")
+    buf = next(b for b in res.buffers.values() if b.name == "Y")
+    real = outs[1][1].reshape(-1).double().cpu().numpy()
+    assert np.array_equal(buf.lo[buf.written], real[buf.written[: real.size]])

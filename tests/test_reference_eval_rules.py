@@ -51,8 +51,8 @@ def test_cross_fit_uses_all_units_and_adjusts_for_folds():
     lows, highs = _intervals(rng, 96, 8, mu=1.0)
     decl = {"direction_rules": ["cross_fit"], "cross_fit_folds": 3}
     (r,) = apply_direction_rules("x", lows, highs, np.zeros((96, 8)), decl, 32, 64, 0.05)
-    assert r["n"] == 96 and r["folds"] == 3 and len(r["fold_results"]) == 3
-    assert sum(f["n"] for f in r["fold_results"]) == 96
+    assert r["n_total"] == 96 and r["folds"] == 3 and len(r["fold_results"]) == 3
+    assert sum(r["n_fold"]) == 96 and "n" not in r
     best = min(f["p_value_two_sided_conservative"] for f in r["fold_results"])
     assert r["p_value_two_sided_conservative"] == pytest.approx(min(1.0, 3 * best))
     assert r["verdict"] == "DETECTED_POSITIVE"
@@ -72,3 +72,14 @@ def test_grouped_rule_sums_declared_groups():
     assert raw["verdict"] == "NOT_CONFIRMED"
     with pytest.raises(ValueError):
         apply_direction_rules("x", lows[:, :1000], highs[:, :1000], np.zeros((96, 1000)), decl, 32, 64, 0.05)
+
+
+def test_grouped_projection_is_in_original_units():
+    rng = np.random.default_rng(3)
+    d, size = 256, 64
+    lows, highs = _intervals(rng, 96, d, mu=0.0)
+    lows = highs = lows + 0.5  # a constant shift on every coordinate
+    decl = {"direction_rules": ["fixed_direction", "grouped_fixed_direction"], "groups": {"size": size}}
+    raw, grouped = apply_direction_rules("x", lows, highs, np.zeros((96, d)), decl, 32, 64, 0.05)
+    # the same shift seen through unit directions: comparable magnitudes, not a factor sqrt(size) apart
+    assert grouped["mean_projection"] == pytest.approx(raw["mean_projection"], rel=0.5)

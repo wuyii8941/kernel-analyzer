@@ -33,6 +33,7 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
+from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -53,15 +54,17 @@ def _digest(text: str) -> str:
 # ----------------------------------------------------------------------
 
 
-def capture(out: Path):
+def capture(out: Path, seed: int = 20261006, workload_seed: int = 0, linked: Optional[dict] = None,
+            target_name: str = "captures"):
     import torch
 
     from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder, save_launch
     from scripts import build_ttir_corpus, validate_inductor_reference, validate_ttir_reference
 
-    target = out / "captures"
+    target = out / target_name
     target.mkdir(parents=True, exist_ok=True)
     seen = set()
+    linked = LINKED if linked is None else linked
 
     def keep(group, launches):
         for launch in launches:
@@ -71,8 +74,8 @@ def capture(out: Path):
             seen.add(key)
             save_launch(launch, target / f"{group}__{launch.kernel_name[:80]}__{key[1]}")
 
-    torch.manual_seed(20261006)
-    for name, fn in validate_ttir_reference.workloads():
+    torch.manual_seed(seed)
+    for name, fn in validate_ttir_reference.workloads(workload_seed):
         recorder = TritonLaunchRecorder()
         with recorder:
             fn()
@@ -102,7 +105,7 @@ def capture(out: Path):
             make()()
             torch.cuda.synchronize()
         keep("inductor", recorder.launches)
-    for group, root in LINKED.items():
+    for group, root in linked.items():
         if not root.exists():
             continue
         for pkg in sorted(p for p in root.iterdir() if (p / "launch.json").exists()):
