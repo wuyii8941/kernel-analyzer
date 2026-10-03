@@ -24,8 +24,13 @@ Kernel Analyzer 检验训练中数值实现差异的系统性作用：给定一�
    模型反事实：一次替换一个节点，定向舍入的 5 处改动定位正确，Liger 交叉熵的偏差落在 ÷N 节点。真实干预：
    11 处「换成正确舍入」的真实 kernel 改动，模拟预测全部逐位等于设备输出。端到端训练（Qwen3-1.7B、bf16、Liger 与
    torchao，300 步）中捕获的 142 个启动：参照全部建立；逐位模拟冻结规则下 103 个通过，补上 IEEE 有符号零规则并改为
-   从 PTX/SASS 读取合成选择后 142 个全部通过（未参与修正的三步也通过）。尚未检验的是：不给机制与方向时能否发现
-   陌生算子的 bias。
+   从 PTX/SASS 读取合成选择后 142 个全部通过（未参与修正的三步也通过）。
+5. **陌生算子的盲测与默认检测。** blind_test_v1：37 个程序、8 个家族，阳性由审阅方注入，答案封存。阶段 1 测实现
+   K − K_R，阶段 2 用发布的规格 f 测语义 K_R − f；两阶段的独立数值审阅（审阅方的 C++/MPFR 实现）核实了约 520 万个
+   参照坐标与 518 项投影，没有区间违反。冻结判定矩阵已提交，评分待揭盲。盲测暴露了第 1 版默认检测器的缺陷——把参照
+   区间的中点当精确观测，在 6 个语义差异为零的输出上误报；第 2 版每个出口都按区间做端点保守检验，判定统一走
+   `analysis.assess_units`，接口舍入与编译期常数单列。修复版把盲测当回归集重跑：协议判定 0 处变化，默认检测器只去掉
+   了这 6 项误报。见 [工具修订](docs/tool_changes_20261003.md)。
 
 ## 使用
 
@@ -44,6 +49,12 @@ python scripts/run_reference_analysis.py --declaration D.json --stage reference 
 python scripts/run_reference_analysis.py --declaration D.json --stage statistics --out REF --report R.json
 ```
 
+陌生算子的默认检测（不给机制、方向或参照，只给输入来源与调用方式）：
+
+```bash
+python scripts/run_detection.py --binding binding.py --units 128 --out report.json   # 可选 --rules R1,R3
+```
+
 声明示例：`results/reference_eval/declarations/liger_fp32_order.json`。单个 kernel 的参照与覆盖：
 `KernelReferenceEvaluator(parse_ttir(launch.asm["ttir"])).evaluate(launch)`、`kernel_coverage(module)`。
 核内定位：`emulate.verify(launch)`（逐位核对）与 `emulate.localize(launch)`（逐节点贡献）。
@@ -55,7 +66,11 @@ python scripts/run_reference_analysis.py --declaration D.json --stage statistics
 - 生产求值器的回归测试覆盖审阅中发现的错误（大整数转浮点、负零符号、无舍入模型、控制依赖、中止
   program），参照求值相关测试全部通过。
 - 静态覆盖：65 份 TTIR 全部解析并完整处理；实际求值的 kernel 另列，含三类计数与耗时。
-- 判定规则在平均为零时误报率接近 5%（给出区间），灵敏度随维度下降，已画出曲线。
+- 判定规则在平均为零时误报率接近 5%（给出区间），灵敏度随维度下降，已画出曲线。默认检测器第 2 版：点残差上
+  向量均值族误报 3.0–5.4%、对齐族 3.0–4.2%；参照区间的中点带系统偏移而真值为零时 0/1000
+  （`results/reference_eval/detector_calibration_v2.json`）。
+- 尚未经过盲测的：参数更新层（研究主张依赖的那一层）；第 2 版在一批未参与修改的新组合上的成绩。到目前为止工具找到的
+  真实现象都很小（远低于训练噪声），还没有影响训练的发现。
 - 局限：区间依赖问题会让少量离散判定成为参照未建立；逐 program 求值较慢；kernel 内部中间值不可观测，
   核内定位依赖逐位模拟，张量核点积、扫描与 atomic 处停止，两类由 ptxas/LLVM 调度决定的合成选择要由
   输出确定并报告；结论限于声明的总体、坐标与测量点。
