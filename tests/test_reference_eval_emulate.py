@@ -123,3 +123,41 @@ def test_rounded_substitution_predicts_the_div_rn_kernel():
     buf = next(b for b in res.buffers.values() if b.name == "Y")
     real = outs[1][1].reshape(-1).double().cpu().numpy()
     assert np.array_equal(buf.lo[buf.written], real[buf.written[: real.size]])
+
+
+def test_zero_sign_follows_ieee():
+    from kernel_analyzer.reference_eval.emulate import _zero_sign
+    from kernel_analyzer.reference_eval.ttir_eval import _ftv
+
+    def tv(v):
+        v = np.array(v, dtype=np.float64)
+        return _ftv("f32", v, v.copy(), np.zeros(v.shape, dtype=np.int8), np.zeros(v.shape, dtype=bool), frozenset())
+
+    out = tv([0.0, 0.0, 0.0, 0.0])
+    a, b = tv([1.5, -0.0, -0.0, 0.0]), tv([-1.5, -0.0, 0.0, -0.0])
+    r = _zero_sign(out, "add", [a, b])
+    assert list(np.signbit(r.lo)) == [False, True, False, False]  # x + (-x) = +0; -0 + -0 = -0
+    r = _zero_sign(out, "fma", [tv([-2.0, 0.0, -1.0, 2.0]), tv([0.0, 3.0, 0.0, 0.5]), tv([-0.0, -0.0, 0.0, -1.0])])
+    assert list(np.signbit(r.lo)) == [True, False, False, False]  # (-2*0) + -0 = -0; 0*3 + -0 = +0; 2*0.5 - 1 = +0
+
+
+def test_locations_link_ttir_ops_to_ptx_and_sass():
+    from kernel_analyzer.reference_eval.emulate import (op_location, ptx_instructions_by_location,
+                                                        sass_instructions_by_line, ttir_locations)
+
+    ttir = """module {
+  tt.func public @k(%a: f32) {
+    %t = arith.mulf %a, %a : f32 loc(#loc3)
+    tt.return
+  }
+}
+#loc1 = loc("/x/kern.py":12:7)
+#loc3 = loc("t"(#loc1))
+"""
+    op = next(o for o in parse_ttir(ttir).entry().walk() if o.name == "arith.mulf")
+    loc = op_location(op, ttir_locations(ttir), {"%t": "    %t = arith.mulf %a, %a : f32 loc(#loc3)"})
+    assert loc == ("kern.py", 12, 7)
+    ptx = "\t.loc\t1 12 7\n\tmul.f32 \t%r1, %r2, %r2;\n\t.loc\t1 13 0\n\tadd.f32 \t%r3, %r1, %r4;\n\t.file\t1 \"/x/kern.py\"\n"
+    assert ptx_instructions_by_location(ptx)[("kern.py", 12, 7)] == ["mul.f32"]
+    sass = '\t//## File "/x/kern.py", line 13\n        /*0010*/                   FADD R3, R1, R4 ;\n'
+    assert sass_instructions_by_line(sass)[("kern.py", 13)] == ["FADD"]

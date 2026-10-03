@@ -288,6 +288,159 @@ def contraction_plan(module: TModule) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Evidence from the compiled PTX (shared source locations)
+# ---------------------------------------------------------------------------
+
+
+def ttir_locations(text: str) -> dict:
+    """#locN -> (file basename, line, column), resolving named and call-site locations."""
+
+    raw = dict(re.findall(r"^(#loc\d*)\s*=\s*loc\((.*)\)\s*$", text, re.M))
+    cache = {}
+
+    def resolve(ref, depth=0):
+        if ref in cache or depth > 50:
+            return cache.get(ref)
+        body = raw.get(ref)
+        out = None
+        if body is not None:
+            m = re.match(r'^"([^"]*)":(\d+):(\d+)$', body)
+            if m:
+                out = (Path(m.group(1)).name, int(m.group(2)), int(m.group(3)))
+            else:
+                inner = re.findall(r"#loc\d*", body)
+                if body.startswith("callsite(") and inner:
+                    out = resolve(inner[0], depth + 1)  # the callee location
+                elif inner:
+                    out = resolve(inner[-1], depth + 1)
+        cache[ref] = out
+        return out
+
+    return {ref: resolve(ref) for ref in raw}
+
+
+def op_location(op: TOp, locations: dict, defining_lines: Optional[dict] = None):
+    """Source location of an op, from its raw TTIR line (the parser strips loc(...) from op.text);
+    ``defining_lines`` maps an SSA result name to the raw line that defines it."""
+
+    candidates = [op.text]
+    if defining_lines is not None and op.results and op.results[0] in defining_lines:
+        candidates = [defining_lines[op.results[0]]] + candidates
+    for text in candidates:
+        m = re.search(r"loc\((#loc\d*)\)\s*$", text.strip())
+        if m:
+            return locations.get(m.group(1))
+        m = re.search(r'loc\("([^"]*)":(\d+):(\d+)\)\s*$', text.strip())
+        if m:
+            return (Path(m.group(1)).name, int(m.group(2)), int(m.group(3)))
+    return None
+
+
+def ptx_instructions_by_location(ptx: str) -> dict:
+    """(file basename, line, column) -> opcodes of the PTX instructions emitted for it."""
+
+    files = {m.group(1): Path(m.group(2)).name
+             for m in re.finditer(r'^\s*\.file\s+(\d+)\s+"([^"]*)"', ptx, re.M)}  # listed after the code
+    out, current = collections.defaultdict(list), None
+    for line in ptx.splitlines():
+        s = line.split("//")[0].strip()
+        if s.startswith(".file"):
+            continue
+        m = re.match(r"^\.loc\s+(\d+)\s+(\d+)\s+(\d+)", s)
+        if m:
+            current = (files.get(m.group(1)), int(m.group(2)), int(m.group(3)))
+            continue
+        if current and s and not s.startswith((".", "$", "{", "}")) and not s.endswith(":"):
+            tok = s.split()[0]
+            out[current].append(s.split()[1] if tok.startswith("@") else tok)
+    return out
+
+
+def ptx_product_choices(module: TModule, ptx: str, plan: dict) -> dict:
+    """For adds / subs with a product on both sides, read LLVM's choice from the PTX.
+
+    A product whose only use is this add and which still appears as a standalone multiply at its own
+    source location was not folded, so the other product was.  Returns node_id -> "swap" / "default";
+    nodes without conclusive evidence are left out."""
+
+    text = _module_text(module)
+    locations = ttir_locations(text)
+    defining = {}
+    for line in text.splitlines():
+        m = re.match(r"^\s*(%[\w#]+)(?::\d+)?\s*=", line)
+        if m:
+            defining.setdefault(m.group(1), line)
+    by_loc = ptx_instructions_by_location(ptx)
+    ops = [o for fn in module.funcs.values() for o in fn.walk()]
+    uses = collections.Counter(v for o in ops for v in o.operands)
+    loc_of = {o.node_id: op_location(o, locations, defining) for o in ops}
+    shared = collections.Counter(loc_of[o.node_id] for o in ops if o.name == "arith.mulf")
+
+    def materialized(mul) -> Optional[bool]:
+        loc = loc_of.get(mul.node_id)
+        if loc is None or loc not in by_loc or shared[loc] != 1 or uses[mul.results[0]] != 1:
+            return None
+        return any(t.startswith("mul.") and (".f32" in t or ".f16" in t) for t in by_loc[loc])
+
+    out = {}
+    for node, (idx, mul, alt) in plan.items():
+        if alt is None:
+            continue
+        default_kept, other_kept = materialized(mul), materialized(alt[1])
+        if default_kept and other_kept is not True:
+            out[node] = "swap"
+        elif other_kept and default_kept is not True:
+            out[node] = "default"
+    return out
+
+
+def sass_instructions_by_line(sass: str) -> dict:
+    """(file basename, line) -> SASS opcodes, from nvdisasm --print-line-info output."""
+
+    out, current = collections.defaultdict(list), None
+    for line in sass.splitlines():
+        m = re.search(r'//## File "([^"]*)", line (\d+)', line)
+        if m:
+            current = (Path(m.group(1)).name, int(m.group(2)))
+            continue
+        m = re.match(r"^\s*/\*[0-9a-f]+\*/\s+(@!?U?P\w+\s+)?([A-Z][A-Z0-9_.]*)", line)
+        if m and current:
+            out[current].append(m.group(2))
+    return out
+
+
+_SASS_CACHE = {}
+
+
+def launch_sass(launch) -> Optional[str]:
+    """SASS with line information of the captured cubin (nvdisasm shipped with Triton), if available."""
+
+    import subprocess
+
+    directory = getattr(launch, "directory", None)
+    if directory is None:
+        return None
+    cubins = sorted(Path(directory, "compiled").glob("*.cubin"))
+    if not cubins:
+        return None
+    key = str(cubins[0])
+    if key not in _SASS_CACHE:
+        try:
+            import triton
+
+            tool = Path(triton.__file__).parent / "backends" / "nvidia" / "bin" / "nvdisasm"
+            _SASS_CACHE[key] = subprocess.run([str(tool), "-c", "-g", key], capture_output=True, text=True,
+                                              check=True).stdout
+        except Exception:
+            _SASS_CACHE[key] = None
+    return _SASS_CACHE[key]
+
+
+def _module_text(module: TModule) -> str:
+    return getattr(module, "source_text", "")
+
+
+# ---------------------------------------------------------------------------
 # The emulator
 # ---------------------------------------------------------------------------
 
@@ -303,12 +456,35 @@ def _fp32_representable(x: np.ndarray, elem: str) -> np.ndarray:
     return np.ones(np.shape(x), dtype=bool)
 
 
+def _zero_sign(out: TV, kind: str, ops: list) -> TV:
+    """IEEE sign of a zero result: an exact zero sum of opposite-signed (or equal nonzero opposite)
+    operands is +0 under round to nearest, -0 only when both addends are -0; a nonzero result that
+    rounds to zero keeps its sign.  float64 arithmetic on the FP32 operands follows the same rule (the
+    product of two FP32 values is exact in float64), so the sign of p + c in float64 is the IEEE sign."""
+
+    z = (out.st == ST_OK) & (out.lo == 0)
+    if not z.any():
+        return out
+    xs = [np.broadcast_to(np.asarray(o.lo, dtype=np.float64), out.lo.shape) for o in ops]
+    if kind == "add":
+        exact = xs[0] + xs[1]
+    elif kind == "sub":
+        exact = xs[0] + (-xs[1])
+    else:
+        exact = xs[0] * xs[1] + xs[2]
+    lo = np.where(z, np.copysign(0.0, exact), out.lo)
+    hi = np.where(z, lo, out.hi)
+    res = _ftv(out.elem, lo, hi, out.st, out.cond, out.reasons)
+    res.d = out.d
+    return res
+
+
 class GpuEmulator(KernelReferenceEvaluator):
     """Rounding-check evaluation extended with the lowering rules of the locked build (see module doc)."""
 
     def __init__(self, module: TModule, ttgir: str, enable_fp_fusion: bool = True, exact_nodes=(),
                  oracle: Optional[HardwareOracle] = None, func_name: Optional[str] = None, ungrouped=(),
-                 swapped=(), substitution: str = "mid"):
+                 swapped=(), substitution: str = "mid", ptx: Optional[str] = None, sass: Optional[str] = None):
         super().__init__(module, mode=NumericMode.ROUNDING_CHECK, func_name=func_name)
         if substitution not in SUBSTITUTIONS:
             raise ValueError(f"substitution must be one of {SUBSTITUTIONS}")
@@ -319,11 +495,15 @@ class GpuEmulator(KernelReferenceEvaluator):
         self.layouts = reduce_layouts(module, ttgir)
         self.enable_fp_fusion = enable_fp_fusion
         plan = contraction_plan(module) if enable_fp_fusion else {}
-        self.swappable = [n for n, (_, _, alt) in plan.items() if alt is not None]
+        # Product choices read from the PTX take precedence; the rest can still be given (swapped).
+        self.ptx_choices = ptx_product_choices(module, ptx, plan) if (ptx and enable_fp_fusion) else {}
+        swapped = set(swapped) | {n for n, c in self.ptx_choices.items() if c == "swap"}
+        self.swappable = [n for n, (_, _, alt) in plan.items() if alt is not None and n not in self.ptx_choices]
         self.fusion = {n: (alt if (n in swapped and alt is not None) else (i, m)) for n, (i, m, alt) in plan.items()}
         self.fused_products = {mul.node_id for _, mul in self.fusion.values()}
         self._uses = collections.Counter(v for fn in module.funcs.values() for o in fn.walk() for v in o.operands)
         self._def, self._block = {}, {}
+        self._sass = sass
         for fn in module.funcs.values():
             def collect(region):
                 for block in region.blocks:
@@ -334,6 +514,8 @@ class GpuEmulator(KernelReferenceEvaluator):
                         for reg in op.regions:
                             collect(reg)
             collect(fn.body)
+        self.sass_choices = self._sass_contractions(sass) if (sass and enable_fp_fusion) else {}
+        self.ungrouped = set(self.ungrouped) | {n for n, c in self.sass_choices.items() if c == "uncontracted"}
         self.trace = collections.Counter()
         self._env = None
         self._no_round = False
@@ -371,9 +553,13 @@ class GpuEmulator(KernelReferenceEvaluator):
 
     def _substitute(self, elem, lo, hi, st, cond, reasons) -> TV:
         """The value a substituted node passes on.  "mid" / "lo" / "hi": a float64 value of the exact
-        result (midpoint or one endpoint of its enclosure; running both endpoints bounds the effect of
-        not carrying the exact real); "rn": the exact result rounded to the node's format -- the
-        output of a correctly rounded implementation, which a real kernel change can reproduce."""
+        result (midpoint or one endpoint of its enclosure).  Running both endpoints is a sensitivity
+        check, not an enclosure: equal downstream outputs at the two endpoints do not imply equal outputs
+        for every value in between (F(z) = 1 - z^2 on [-1, 1]) nor for mixed endpoints across elements.
+        "rn": the exact result rounded to the node's format -- the output of a correctly rounded
+        implementation, which a real kernel change can reproduce.  Its uniqueness RN(lo) == RN(hi) does
+        follow from the enclosure (rounding is monotone); where the endpoints round apart the element is
+        marked not established."""
 
         if self.substitution == "lo":
             v = lo
@@ -415,7 +601,7 @@ class GpuEmulator(KernelReferenceEvaluator):
             self.trace[(node, "fma_contraction")] += 1
             if node in self.exact_nodes:
                 return self._exact_value(super()._float_op, "fma", fused, [a, b, c], out_elem)
-            return super()._float_op("fma", fused, [a, b, c], out_elem)
+            return _zero_sign(super()._float_op("fma", fused, [a, b, c], out_elem), "fma", [a, b, c])
         if node in self.exact_nodes:
             self.trace[(node, "exact")] += 1
             return self._exact_value(super()._float_op, name, op, args, out_elem)
@@ -427,19 +613,19 @@ class GpuEmulator(KernelReferenceEvaluator):
                                          and op.attrs.get("symbol", "").strip('"') in LIBDEVICE_ROUNDING):
             return self._oracle(name, op, args, out_elem)
         self.trace[(node, "fused_product" if node in self.fused_products else "ieee")] += 1
-        return super()._float_op(name, op, args, out_elem)
+        out = super()._float_op(name, op, args, out_elem)
+        if name in ("add", "sub", "fma"):
+            out = _zero_sign(out, name, args)
+        return out
 
     def _is_oracle(self, op) -> bool:
         return op.name in ORACLE_OPS and not (op.name == "tt.extern_elementwise"
                                              and op.attrs.get("symbol", "").strip('"') in LIBDEVICE_ROUNDING)
 
-    def _group_oracle(self, op, args, out_elem) -> Optional[TV]:
-        """An add / sub fed by an approximate operation of the same block (through layout-only ops):
-        ptxas may contract the multiply that ends the approximate instruction's expansion into the
-        plain add, so the pair runs on the device together."""
+    def _group_producers(self, op):
+        """Approximate operations of the same block feeding this add / sub (through layout-only ops),
+        each with a single use; returns (producers, alias of layout values to producer results)."""
 
-        if op.node_id in self.ungrouped:
-            return None
         block = self._block.get(id(op))
         producers, alias = [], {}
         for v in op.operands:
@@ -455,6 +641,53 @@ class GpuEmulator(KernelReferenceEvaluator):
                 producers.append(prod)
                 for c in chain:
                     alias[c.results[0]] = prod.results[0]
+        return producers, alias
+
+    def _sass_contractions(self, sass: str) -> dict:
+        """For each approximate-then-add pair, read ptxas' decision from the SASS line information:
+        at the add's source line an FADD and no FFMA means not contracted, an FFMA and no FADD means
+        contracted.  Lines with more than one TTIR add / sub, or both or neither instruction, are left
+        undecided.  Returns node_id -> "uncontracted" / "contracted"."""
+
+        text = getattr(self.module, "source_text", "")
+        locations = ttir_locations(text)
+        defining = {}
+        for line in text.splitlines():
+            m = re.match(r"^\s*(%[\w#]+)(?::\d+)?\s*=", line)
+            if m:
+                defining.setdefault(m.group(1), line)
+        by_line = sass_instructions_by_line(sass)
+        ops = [o for fn in self.module.funcs.values() for o in fn.walk()]
+        line_of = {o.node_id: (lambda loc: (loc[0], loc[1]) if loc else None)(op_location(o, locations, defining))
+                   for o in ops}
+        adds_per_line = collections.Counter(line_of[o.node_id] for o in ops if o.name in ("arith.addf", "arith.subf"))
+        out = {}
+        for o in ops:
+            if o.name not in ("arith.addf", "arith.subf") or o.node_id in self.fusion:
+                continue
+            producers, _ = self._group_producers(o)
+            key = line_of[o.node_id]
+            if not producers or key is None or adds_per_line[key] != 1 or key not in by_line:
+                continue
+            if any(line_of[p.node_id] == key for p in producers):
+                continue  # producer and add on one line: the instructions cannot be told apart
+            codes = by_line[key]
+            fadd = any(c.startswith("FADD") for c in codes)
+            ffma = any(c.startswith("FFMA") for c in codes)
+            if fadd and not ffma:
+                out[o.node_id] = "uncontracted"
+            elif ffma and not fadd:
+                out[o.node_id] = "contracted"
+        return out
+
+    def _group_oracle(self, op, args, out_elem) -> Optional[TV]:
+        """An add / sub fed by an approximate operation of the same block (through layout-only ops):
+        ptxas may contract the multiply that ends the approximate instruction's expansion into the
+        plain add, so the pair runs on the device together."""
+
+        if op.node_id in self.ungrouped:
+            return None
+        producers, alias = self._group_producers(op)
         if not producers or any(p.node_id in self.exact_nodes for p in producers):
             return None
         inputs = {}
@@ -558,7 +791,8 @@ class GpuEmulator(KernelReferenceEvaluator):
         def fma(a, b, c):  # RN(a*b + c), or RN(a + c) when b is None
             lo, hi = iv.ifma(a, a, b, b, c, c) if b is not None else iv.iadd(a, a, c, c)
             r_lo, r_hi = rn(lo), rn(hi)
-            return np.where(r_lo == r_hi, r_lo, np.nan)
+            r = np.where(r_lo == r_hi, r_lo, np.nan)
+            return np.where(r == 0, np.copysign(0.0, (a * b if b is not None else a) + c), r)
 
         # Contraction into the combine: the operand is a product defined in the same block, so the
         # first combine that sees a raw product is an fma (LLVM folds the product with fewer uses,
@@ -631,9 +865,11 @@ class GpuEmulator(KernelReferenceEvaluator):
         for k in range(a.shape[-1]):
             x = np.broadcast_to(a.lo[..., :, k][..., :, None], shape)
             y = np.broadcast_to(b.lo[..., k, :][..., None, :], shape)
+            lo_acc = acc
             lo, hi = iv.ifma(x, x, y, y, acc, acc)
             r_lo, r_hi = iv.round_nearest_even(lo, "f32")[0], iv.round_nearest_even(hi, "f32")[0]
             acc = np.where(r_lo == r_hi, r_lo, np.nan)
+            acc = np.where(acc == 0, np.copysign(0.0, x * y + lo_acc), acc)
         bad = np.isnan(acc) | (np.any(a.st != ST_OK, axis=-1)[..., :, None]) | (np.any(b.st != ST_OK, axis=-2)[..., None, :])
         st = np.where(bad, ST_NE, ST_OK).astype(np.int8)
         acc = np.where(bad, 0.0, acc)
@@ -714,7 +950,7 @@ def _bitwise_count(result, launch) -> tuple:
 
 
 def emulate(launch, exact_nodes=(), oracle: Optional[HardwareOracle] = None, ungrouped=(), swapped=(),
-            substitution: str = "mid"):
+            substitution: str = "mid", programs: Optional[list] = None):
     from .ttir_parser import parse_ttir
 
     module = parse_ttir(launch.asm["ttir"])
@@ -722,13 +958,16 @@ def emulate(launch, exact_nodes=(), oracle: Optional[HardwareOracle] = None, ung
     if oracle is None:
         options = {k: launch.metadata[k] for k in ("enable_fp_fusion", "enable_reflect_ftz") if k in launch.metadata}
         oracle = HardwareOracle(options={"num_warps": 4, **options})
+    module.source_text = launch.asm["ttir"]
     emu = GpuEmulator(module, launch.asm["ttgir"], enable_fp_fusion=fusion, exact_nodes=exact_nodes, oracle=oracle,
-                      ungrouped=ungrouped, swapped=swapped, substitution=substitution)
-    result = emu.evaluate(launch)
+                      ungrouped=ungrouped, swapped=swapped, substitution=substitution, ptx=launch.asm.get("ptx"),
+                      sass=launch_sass(launch))
+    result = emu.evaluate(launch, programs=programs)
     return result, emu
 
 
-def verify(launch, oracle: Optional[HardwareOracle] = None, ungrouped=None, swapped=None) -> dict:
+def verify(launch, oracle: Optional[HardwareOracle] = None, ungrouped=None, swapped=None,
+           programs: Optional[list] = None) -> dict:
     """Emulate and compare with the device outputs bit for bit (storage bit patterns).
 
     Every lowering rule is fixed in advance except two binary choices per affected node, which the TTIR
@@ -751,7 +990,7 @@ def verify(launch, oracle: Optional[HardwareOracle] = None, ungrouped=None, swap
 
     frozen = ungrouped is not None or swapped is not None
     ungrouped, swapped = list(ungrouped or []), list(swapped or [])
-    result, emu = emulate(launch, oracle=oracle, ungrouped=ungrouped, swapped=swapped)
+    result, emu = emulate(launch, oracle=oracle, ungrouped=ungrouped, swapped=swapped, programs=programs)
     oracle = emu.oracle
     best = _bitwise_count(result, launch)
     groups = [n for (n, how) in emu.trace if how == "oracle_group"]
@@ -761,18 +1000,21 @@ def verify(launch, oracle: Optional[HardwareOracle] = None, ungrouped=None, swap
         for kind, node in [("group", n) for n in groups] + [("swap", n) for n in swappable]:
             ug = ungrouped + [node] if kind == "group" else ungrouped
             sw = swapped + [node] if kind == "swap" else swapped
-            trial_res, trial_emu = emulate(launch, oracle=oracle, ungrouped=ug, swapped=sw)
+            trial_res, trial_emu = emulate(launch, oracle=oracle, ungrouped=ug, swapped=sw, programs=programs)
             count = _bitwise_count(trial_res, launch)
             if count[0] > best[0]:
                 best, result, emu, ungrouped, swapped = count, trial_res, trial_emu, ug, sw
                 (fitted_u if kind == "group" else fitted_s).append(node)
             if best[0] == best[1]:
                 break
-    report = {"buffers": {}, "aborted_programs": len(result.aborted),
+    report = {"ttir_sha256": hashlib.sha256(launch.asm["ttir"].encode()).hexdigest(),
+              "buffers": {}, "aborted_programs": len(result.aborted),
               "abort_reasons": sorted(set(result.aborted.values()))[:3],
               "nodes": collections.Counter(), "not_emulable_nodes": [],
               "lowering_choices": {"frozen": frozen, "approximate_then_add_pairs": len(groups),
-                                   "two_product_adds": len(swappable), "uncontracted": ungrouped,
+                                   "two_product_adds": len(swappable) + len(emu.ptx_choices),
+                                   "product_choices_from_ptx": emu.ptx_choices,
+                                   "contractions_from_sass": emu.sass_choices, "uncontracted": ungrouped,
                                    "swapped": swapped, "uncontracted_from_output": fitted_u,
                                    "swapped_from_output": fitted_s}}
     for (node, how), _ in emu.trace.items():
@@ -814,17 +1056,20 @@ def rounding_nodes(emu: GpuEmulator) -> list:
 
 
 def localize(launch, nodes: Optional[list] = None, oracle: Optional[HardwareOracle] = None,
-             ungrouped=(), swapped=(), endpoint_nodes=None, substitution: str = "mid") -> dict:
+             ungrouped=(), swapped=(), endpoint_nodes=None, substitution: str = "mid",
+             programs: Optional[list] = None) -> dict:
     """Per-node model contribution c_j = K_emulated - K_(node j substituted) on the bit-identical outputs.
 
     ``substitution`` "mid" passes a float64 value of the exact result downstream (an estimate in the
     declared execution model, not a deployable change); "rn" passes the correctly rounded result, which
     a real kernel change can reproduce.  For the nodes in ``endpoint_nodes`` (all when "all") the
-    substitution is repeated with both endpoints of the exact result's enclosure; outputs that differ
-    between the two runs show where carrying a float64 value instead of the exact real matters.
+    substitution is repeated with all-lower and all-upper endpoints of the exact result's enclosure
+    ("endpoint_check").  This is a sensitivity check: outputs that differ show where carrying a float64
+    value instead of the exact real matters; outputs that agree are stable under that perturbation, which
+    is not an enclosure of the downstream result (no monotonicity is assumed or checked).
     """
 
-    base, emu = emulate(launch, oracle=oracle, ungrouped=ungrouped, swapped=swapped)
+    base, emu = emulate(launch, oracle=oracle, ungrouped=ungrouped, swapped=swapped, programs=programs)
     oracle = emu.oracle
     outs = _outputs(base, launch)
     masks = {name: _compare(*o)["bit_equal"] & (o[3] == ST_OK) for name, o in outs.items()}
@@ -837,7 +1082,7 @@ def localize(launch, nodes: Optional[list] = None, oracle: Optional[HardwareOrac
 
     def run(node, mode):
         res, _ = emulate(launch, exact_nodes=[node], oracle=oracle, ungrouped=ungrouped, swapped=swapped,
-                         substitution=mode)
+                         substitution=mode, programs=programs)
         return _outputs(res, launch)
 
     rows = []

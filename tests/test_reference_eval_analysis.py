@@ -66,11 +66,22 @@ def test_unified_entry_runs_reference_and_statistics(tmp_path):
     arrays = np.load(tmp_path / "ref" / "unit000.npz")
     assert np.array_equal(arrays["forward__index"], np.sort(arrays["forward__index"]))
     assert report["coordinates_used"] == report["coordinates_total"] == window.size
-    # A coordinate whose reference is not established in one unit leaves the statistics everywhere.
-    data = dict(np.load(tmp_path / "ref" / "unit003.npz"))
-    data["backward__st"] = data["backward__st"].copy()
-    data["backward__st"][7] = 5
-    np.savez(tmp_path / "ref" / "unit003.npz", **data)
+
+    def spoil(unit, coord):
+        data = dict(np.load(tmp_path / "ref" / f"{unit}.npz"))
+        data["backward__st"] = data["backward__st"].copy()
+        data["backward__st"][coord] = 5
+        np.savez(tmp_path / "ref" / f"{unit}.npz", **data)
+
+    # A reference not established in a calibration unit removes that coordinate from the declared set.
+    spoil("unit000", 7)
     gated = statistics_stage(decl, tmp_path / "ref", device="cuda")
     assert gated["coordinates_used"] == window.size - 1
     assert gated["excluded_reference_elements"]["not_established"] == 1
+    # In a confirmation unit it does not re-select coordinates: unresolved by default ...
+    spoil("unit003", 9)
+    unresolved = statistics_stage(decl, tmp_path / "ref", device="cuda")
+    assert unresolved["verdict"] == "UNRESOLVED_REFERENCE" and unresolved["confirmation_units_invalid"] == ["unit003"]
+    # ... or, when declared, the unit is dropped and the coordinate set stays the calibration one.
+    dropped = statistics_stage({**decl, "confirmation_invalid": "drop_unit"}, tmp_path / "ref", device="cuda")
+    assert dropped["confirmation_units_dropped"] == ["unit003"] and dropped["coordinates_used"] == window.size - 1

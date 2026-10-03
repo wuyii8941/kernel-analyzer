@@ -164,24 +164,31 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
         self._inductor_static = None
         self._libtriton = _libtriton_sha256()
 
-    def __enter__(self):
+    _active = None  # the recorder that currently receives launches
+    _hook_original = None  # CompiledKernel.run before the hook was installed
+
+    @classmethod
+    def install_hook(cls):
+        """Install the launch hook once and keep it.  Inductor caches the launcher it gets from
+        ``CompiledKernel.run`` at a kernel's first launch, so a hook installed only while a recorder
+        is active misses kernels first launched earlier (e.g. an optimizer compiled at step 1).
+        The installed hook forwards to whichever recorder is active, and costs one attribute
+        check per launch otherwise.  Call it before the workload's first launch."""
+
         from triton.compiler.compiler import CompiledKernel
 
-        try:
-            import torch._inductor.config as inductor_config
-
-            self._inductor_static = inductor_config.use_static_cuda_launcher
-            inductor_config.use_static_cuda_launcher = False
-        except Exception:  # pragma: no cover - inductor unavailable
-            self._inductor_static = None
-        self._original = CompiledKernel.run
-        recorder = self
-        original_fget = self._original.fget
+        if cls._hook_original is not None:
+            return
+        cls._hook_original = CompiledKernel.run
+        original_fget = cls._hook_original.fget
 
         def patched(kernel):
             real = original_fget(kernel)
 
             def launcher(gx, gy, gz, stream, function, packed, launch_md, enter, exit_, *args):
+                recorder = cls._active
+                if recorder is None:
+                    return real(gx, gy, gz, stream, function, packed, launch_md, enter, exit_, *args)
                 index = recorder.launch_count
                 recorder.launch_count += 1
                 take = recorder.select(kernel.name, index) and (
@@ -196,12 +203,32 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
             return launcher
 
         CompiledKernel.run = property(patched)
+
+    @classmethod
+    def remove_hook(cls):
+        from triton.compiler.compiler import CompiledKernel
+
+        if cls._hook_original is not None:
+            CompiledKernel.run = cls._hook_original
+            cls._hook_original = None
+
+    def __enter__(self):
+        try:
+            import torch._inductor.config as inductor_config
+
+            self._inductor_static = inductor_config.use_static_cuda_launcher
+            inductor_config.use_static_cuda_launcher = False
+        except Exception:  # pragma: no cover - inductor unavailable
+            self._inductor_static = None
+        self._installed_here = TritonLaunchRecorder._hook_original is None
+        TritonLaunchRecorder.install_hook()
+        TritonLaunchRecorder._active = self
         return self
 
     def __exit__(self, *exc):
-        from triton.compiler.compiler import CompiledKernel
-
-        CompiledKernel.run = self._original
+        TritonLaunchRecorder._active = None
+        if self._installed_here:  # a hook installed by install_hook() beforehand stays
+            TritonLaunchRecorder.remove_hook()
         if self._inductor_static is not None:
             import torch._inductor.config as inductor_config
 
@@ -355,11 +382,13 @@ def load_launch(directory: Path) -> CapturedLaunch:
     for key, digest in manifest["ir_sha256"].items():
         if hashlib.sha256(asm[key].encode()).hexdigest() != digest:
             raise ValueError(f"{directory}: {key} does not match its recorded hash")
-    return CapturedLaunch(
+    launch = CapturedLaunch(
         index=manifest["index"], kernel_name=manifest["kernel_name"], kernel_hash=manifest["kernel_hash"],
         grid=tuple(manifest["grid"]), args=args, asm=asm, cubin_sha256=manifest["cubin_sha256"],
         metadata=manifest["metadata"], libtriton_sha256=manifest["libtriton_sha256"],
         environment=manifest.get("environment", {}))
+    launch.directory = directory  # the package, for its compiled artifacts (cubin / SASS)
+    return launch
 
 
 # ----------------------------------------------------------------------

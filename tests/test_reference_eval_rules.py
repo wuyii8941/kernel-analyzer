@@ -83,3 +83,16 @@ def test_grouped_projection_is_in_original_units():
     raw, grouped = apply_direction_rules("x", lows, highs, np.zeros((96, d)), decl, 32, 64, 0.05)
     # the same shift seen through unit directions: comparable magnitudes, not a factor sqrt(size) apart
     assert grouped["mean_projection"] == pytest.approx(raw["mean_projection"], rel=0.5)
+
+
+def test_grouping_keeps_declared_groups_when_coordinates_are_invalid():
+    rng = np.random.default_rng(4)
+    lows, highs = _intervals(rng, 96, 8, mu=0.0)
+    valid = np.array([True, False, False, True, True, True, True, True])
+    decl = {"direction_rules": ["grouped_fixed_direction", "fixed_direction"], "groups": {"size": 2}}
+    grouped, raw = apply_direction_rules("x", lows, highs, np.zeros((96, 8)), decl, 32, 64, 0.05, valid=valid)
+    # groups {0,1} and {2,3} are incomplete and dropped; coordinates 0 and 3 are not regrouped into {0,3}
+    assert grouped["groups_used"] == 2 and grouped["groups_dropped_incomplete"] == 2
+    expect = apply_direction_rules("x", lows[:, 4:], highs[:, 4:], np.zeros((96, 4)), decl, 32, 64, 0.05)[0]
+    assert grouped["mean_projection"] == pytest.approx(expect["mean_projection"])
+    assert raw["coordinates_used"] == 6

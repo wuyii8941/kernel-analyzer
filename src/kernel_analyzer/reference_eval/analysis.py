@@ -284,23 +284,37 @@ def _cross_fit(name, rule, lows, highs, folds, alpha):
             "note": "selected_fold_summary is the selected fold's projection, not a common effect estimate"}
 
 
-def apply_direction_rules(name, lows, highs, ref_measure, decl, n_cal, n_conf, alpha) -> list:
-    """Project the unit residual intervals [lows, highs] (units x coordinates) with the declared rules."""
+def apply_direction_rules(name, lows, highs, ref_measure, decl, n_cal, n_conf, alpha, valid=None) -> list:
+    """Project the unit residual intervals [lows, highs] (units x coordinates) with the declared rules.
 
+    ``valid`` marks the coordinates of the declared set (original coordinate order).  Ungrouped rules use
+    the valid coordinates; grouped rules keep the declared groups (contiguous blocks of ``groups.size`` in
+    the original order) and use only complete groups -- remaining coordinates are never regrouped.
+    """
+
+    valid = np.ones(lows.shape[1], dtype=bool) if valid is None else np.asarray(valid, dtype=bool)
     results = []
     for rule in decl["direction_rules"]:
-        base, lo, hi, ref = rule, lows, highs, ref_measure
+        base, lo, hi, ref = rule, lows[:, valid], highs[:, valid], ref_measure[:, valid]
+        extra = {"coordinates_used": int(valid.sum())}
         if rule.startswith("grouped_"):
             size = decl["groups"]["size"]
             if lows.shape[1] % size:
                 raise ValueError(f"group size {size} does not divide {lows.shape[1]} coordinates")
             base = rule[len("grouped_"):]
+            complete = valid.reshape(-1, size).all(axis=1)
+            extra = {"groups_used": int(complete.sum()), "groups_declared": int(complete.size),
+                     "groups_dropped_incomplete": int((~complete).sum())}
+            if not complete.any():
+                results.append({"comparison": name, "rule": rule, "verdict": "UNRESOLVED_REFERENCE",
+                                "reason": "no complete declared group", **extra})
+                continue
             # Group sums divided by sqrt(size): a unit direction over groups pulls back to a unit direction
             # over the original coordinates, so projections stay in the units of the ungrouped rules.
             norm = math.sqrt(size)
-            lo = lows.reshape(lows.shape[0], -1, size).sum(axis=2) / norm
-            hi = highs.reshape(highs.shape[0], -1, size).sum(axis=2) / norm
-            ref = ref_measure.reshape(ref_measure.shape[0], -1, size).sum(axis=2) / norm
+            lo = lows.reshape(lows.shape[0], -1, size)[:, complete].sum(axis=2) / norm
+            hi = highs.reshape(highs.shape[0], -1, size)[:, complete].sum(axis=2) / norm
+            ref = ref_measure.reshape(ref_measure.shape[0], -1, size)[:, complete].sum(axis=2) / norm
         if base == "fixed_direction":
             w = _learned_direction(lo[:n_cal], hi[:n_cal])
             if w is None:
@@ -319,6 +333,7 @@ def apply_direction_rules(name, lows, highs, ref_measure, decl, n_cal, n_conf, a
                                       decl.get("cross_fit_folds", 2), alpha))
         else:
             raise ValueError(f"unknown direction rule {rule}")
+        results[-1].update(extra)
     return results
 
 
@@ -333,32 +348,51 @@ def statistics_stage(decl: dict, ref_dir: Path, device: str = "cuda:0") -> dict:
     decl = dict(decl)
     decl["_storage_dtype"] = summaries[0][decl["variants"][0]]["storage_dtype"]
     alpha = decl["alpha"]
-    # Only coordinates whose reference is of a declared class in every unit and variant enter the
-    # statistics (default: complete composed references); the others are counted and reported.
+    # The coordinate set is fixed on the calibration (development) units: a coordinate enters only if its
+    # reference is of a declared class (default: complete composed) in every calibration unit and variant.
+    # Confirmation data never re-selects coordinates; a confirmation unit whose reference is not valid on
+    # that set follows the declared policy ("unresolved", the default, or "drop_unit").
     classes = set(decl.get("reference_classes", ["complete_composed"]))
-    valid, excluded = None, {"conditional_local": 0, "special_value": 0, "not_established": 0}
+    policy = decl.get("confirmation_invalid", "unresolved")
+    if policy not in ("unresolved", "drop_unit"):
+        raise ValueError("confirmation_invalid must be 'unresolved' or 'drop_unit'")
+    excluded = {"conditional_local": 0, "special_value": 0, "not_established": 0}
+    unit_ok = []
     for path in paths:
         arrays = np.load(path)
+        ok_all = None
         for v in decl["variants"]:
             st, cond = arrays[f"{v}__st"], arrays[f"{v}__cond"].astype(bool)
             ok = (st == ST_OK) & (~cond | ("conditional_local" in classes))
             excluded["conditional_local"] += int(((st == ST_OK) & cond & ("conditional_local" not in classes)).sum())
             excluded["special_value"] += int(((st > ST_OK) & (st < ST_UNDEF)).sum())
             excluded["not_established"] += int((st >= ST_UNDEF).sum())
-            valid = ok if valid is None else (valid & ok)
-    if valid is None or not valid.any():
-        return {"schema": "kernel-analyzer-reference-bias-analysis-v1",
-                "declaration": {k: v for k, v in decl.items() if not k.startswith("_")},
-                "verdict": "UNRESOLVED_REFERENCE", "excluded_reference_elements": excluded, "results": []}
+            ok_all = ok if ok_all is None else (ok_all & ok)
+        unit_ok.append(ok_all)
+    valid = np.logical_and.reduce(unit_ok[:n_cal])
+    header = {"schema": "kernel-analyzer-reference-bias-analysis-v1",
+              "declaration": {k: v for k, v in decl.items() if not k.startswith("_")},
+              "coordinate_set": "fixed on the calibration units", "confirmation_invalid_policy": policy,
+              "excluded_reference_elements": excluded}
+    if not valid.any():
+        return {**header, "verdict": "UNRESOLVED_REFERENCE", "reason": "no coordinate valid in the calibration units",
+                "results": []}
+    bad_conf = [i for i in range(n_cal, n_cal + n_conf) if (valid & ~unit_ok[i]).any()]
+    if bad_conf and policy == "unresolved":
+        return {**header, "verdict": "UNRESOLVED_REFERENCE",
+                "reason": "confirmation units with references not valid on the declared coordinate set",
+                "confirmation_units_invalid": [paths[i].stem for i in bad_conf], "results": []}
+    used_units = [i for i in range(n_cal + n_conf) if i not in bad_conf]
+    n_conf_used = n_conf - len(bad_conf)
     pairs = {f"{c['candidate']}_vs_{c['reference']}": [] for c in decl["comparisons"]}
     ref_measure, ambiguous_total = [], 0
-    for path in paths:
-        arrays = np.load(path)
-        measured = {v: _measure(decl, arrays, v, arrays[f"{v}__actual"], device)[valid] for v in decl["variants"]}
+    for i in used_units:
+        arrays = np.load(paths[i])
+        measured = {v: _measure(decl, arrays, v, arrays[f"{v}__actual"], device) for v in decl["variants"]}
         reference = {}
         for v in decl["variants"]:
             lo, hi, amb = _reference_bounds(decl, arrays, v, device, valid)
-            reference[v] = (lo[valid], hi[valid])
+            reference[v] = (lo, hi)
             ambiguous_total += amb
         base = decl["variants"][0]
         ref_measure.append(0.5 * (reference[base][0] + reference[base][1]))
@@ -374,7 +408,8 @@ def statistics_stage(decl: dict, ref_dir: Path, device: str = "cuda:0") -> dict:
     for name, items in pairs.items():
         lows = np.stack([a for a, _ in items])
         highs = np.stack([b for _, b in items])
-        results.extend(apply_direction_rules(name, lows, highs, np.stack(ref_measure), decl, n_cal, n_conf, alpha))
+        results.extend(apply_direction_rules(name, lows, highs, np.stack(ref_measure), decl, n_cal, n_conf_used,
+                                             alpha, valid=valid))
     tested = [r for r in results if "p_value_two_sided_conservative" in r]
     for r, rej in zip(tested, _holm([r["p_value_two_sided_conservative"] for r in tested], alpha)):
         r["holm_reject"] = bool(rej)
@@ -406,6 +441,8 @@ def statistics_stage(decl: dict, ref_dir: Path, device: str = "cuda:0") -> dict:
         "reference": reference_summary,
         "not_established_fraction_removed": n_ne / n_total if n_total else 0.0,
         "reference_classes_used": sorted(classes),
+        "coordinate_set": "fixed on the calibration units", "confirmation_invalid_policy": policy,
+        "confirmation_units_dropped": [paths[i].stem for i in bad_conf],
         "coordinates_used": int(valid.sum()), "coordinates_total": int(valid.size),
         "excluded_reference_elements": excluded,
         "ambiguous_rounding_elements": ambiguous_total,
