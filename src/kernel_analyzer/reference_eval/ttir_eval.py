@@ -35,7 +35,8 @@ from typing import Any, Optional
 import numpy as np
 
 from . import intervals as iv
-from .ttir_mapping import LIBDEVICE, LIBDEVICE_ROUNDING, inline_asm_internal, recognize_combiner, rule_for
+from .ttir_mapping import (LIBDEVICE, LIBDEVICE_ROUNDING, inline_asm_internal, inline_asm_rounding,
+                           recognize_combiner, rule_for)
 from .ttir_parser import PtrType, TFunc, TModule, TOp, TRegion, TType, parse_ttir
 
 ST_OK, ST_NAN, ST_PINF, ST_NINF, ST_UNDEF, ST_NE = 0, 1, 2, 3, 4, 5
@@ -1315,6 +1316,11 @@ class KernelReferenceEvaluator:
         internal = inline_asm_internal(op.attrs.get("asm", ""))
         if internal is None:
             raise ProgramAbort(f"{op.node_id}: inline asm has no declared semantics")
+        mode = inline_asm_rounding(op.attrs.get("asm", ""))
+        if mode is not None:  # used only in rounding-check mode, like a rounding-suffixed libdevice call
+            import dataclasses
+
+            op = dataclasses.replace(op, attrs={**op.attrs, "rounding": mode})
         return self._elementwise(internal, op, args)
 
     def _elementwise(self, name: str, op: TOp, args: list) -> TV:

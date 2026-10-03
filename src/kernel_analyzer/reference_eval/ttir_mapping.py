@@ -254,12 +254,39 @@ INLINE_ASM = {
 }
 
 
+# Arithmetic with an explicit rounding / flush modifier: the declared semantics is the real operation
+# (numerical-difference mode); the modifier describes the executed instruction and is used only for the
+# rounding in rounding-check mode (ftz is not modelled there).
+_INLINE_ARITH = re.compile(r"(add|sub|mul)\.(rn|rz|rm|rp)(\.ftz)?\.f32 \$0, \$1, \$2;")
+_INLINE_FMA = re.compile(r"fma\.(rn|rz|rm|rp)(\.ftz)?\.f32 \$0, \$1, \$2, \$3;")
+
+
+def _normalize_asm(asm: str) -> str:
+    return " ".join(asm.replace("\\n", " ").split())
+
+
 def inline_asm_internal(asm: str) -> Optional[str]:
-    text = " ".join(asm.replace("\\n", " ").split())
+    text = _normalize_asm(asm)
     for pattern, internal in INLINE_ASM.items():
         if re.fullmatch(pattern, text):
             return internal
+    m = _INLINE_ARITH.fullmatch(text)
+    if m:
+        return m.group(1)
+    if _INLINE_FMA.fullmatch(text):
+        return "fma"
     return None
+
+
+def inline_asm_rounding(asm: str) -> Optional[str]:
+    """The rounding modifier of an inline arithmetic instruction (rn / rz / rm / rp), if any."""
+
+    text = _normalize_asm(asm)
+    m = _INLINE_ARITH.fullmatch(text)
+    if m:
+        return m.group(2)
+    m = _INLINE_FMA.fullmatch(text)
+    return m.group(1) if m else None
 
 
 def rule_for(name: str) -> Optional[Rule]:
