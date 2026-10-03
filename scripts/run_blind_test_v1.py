@@ -43,6 +43,15 @@ DEV = range(0, 32)
 CONF = range(32, 96)
 
 
+def set_seed_offset(offset: int):
+    """Protocol v1.1 replication: the same rules on a disjoint seed set (offset 96: 96-127 development,
+    128-191 confirmation).  Only the seed numbers change."""
+
+    global DEV, CONF
+    DEV = range(offset, offset + 32)
+    CONF = range(offset + 32, offset + 96)
+
+
 def run_program(package: Path, pid: str, family: str, work: Path) -> dict:
     import torch
 
@@ -66,7 +75,7 @@ def run_program(package: Path, pid: str, family: str, work: Path) -> dict:
             launch_info = {"kernel": launch.kernel_name, "grid": list(launch.grid),
                            "num_warps": launch.metadata.get("num_warps"),
                            "enable_fp_fusion": launch.metadata.get("enable_fp_fusion")}
-        if seed in (0, 32):  # kept for localization
+        if seed in (DEV[0], CONF[0]):  # kept for localization and for the reviewer's independent check
             save_launch(launch, work / pid / f"seed{seed:03d}")
         res = KernelReferenceEvaluator(module).evaluate(launch)
         out_ptr = y.untyped_storage().data_ptr() if torch.is_tensor(y) else None
@@ -209,7 +218,9 @@ def main():
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--programs", default=None)
     parser.add_argument("--aggregate", action="store_true")
+    parser.add_argument("--seed-offset", type=int, default=0)
     args = parser.parse_args()
+    set_seed_offset(args.seed_offset)
     if args.aggregate:
         from scripts.blind_test_v1_aggregate import aggregate
 

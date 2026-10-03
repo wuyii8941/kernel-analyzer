@@ -29,13 +29,15 @@ def _localize(pid, family, rule, out_name, work: Path) -> dict:
     from kernel_analyzer.reference_eval.ttir_eval import KernelReferenceEvaluator
     from kernel_analyzer.reference_eval.ttir_parser import parse_ttir
 
-    shares, statuses, texts = {}, [], {}
+    shares, statuses, texts, per_seed = {}, [], {}, {}
     for seed_dir in sorted((work / pid).glob("seed*")):
         launch = load_launch(seed_dir)
         v = verify(launch, ungrouped=[], swapped=[])
-        statuses.append(v["status"])
+        statuses.append(f"{seed_dir.name}:{v['status']}")
         if v["status"] != "bit_identical":
+            per_seed[seed_dir.name] = {"emulation": v["status"]}
             continue
+        seed_values = {}
         base, emu = emulate(launch)
         outs = _outputs(base, launch)
         name = max(outs, key=lambda n: outs[n][0].sum())
@@ -73,7 +75,13 @@ def _localize(pid, family, rule, out_name, work: Path) -> dict:
             ok = o[3][sel] == 0
             c = np.where(ok, kk - o[1][sel], 0.0)
             shares.setdefault(node, []).append(float(c @ wdir))
+            seed_values[node] = float(c @ wdir)
         texts.update({o.node_id: o.text.strip()[:120] for fn in emu.module.funcs.values() for o in fn.walk()})
+        top = max(seed_values, key=lambda n: abs(seed_values[n])) if seed_values else None
+        tot = sum(abs(x) for x in seed_values.values()) or 1.0
+        per_seed[seed_dir.name] = {"emulation": "bit_identical", "top_node": top,
+                                   "top_share": abs(seed_values[top]) / tot if top else None,
+                                   "residual_projection": total}
     if not shares:
         return {"status": statuses, "localized": None}
     means = {n: float(np.mean(v)) for n, v in shares.items()}
@@ -86,9 +94,15 @@ def _localize(pid, family, rule, out_name, work: Path) -> dict:
         if cum >= 0.9 * total_abs:
             break
     node, val = ranked[0]
+    tops = [d["top_node"] for d in per_seed.values() if d.get("top_node")]
+    agree = sum(t == node for t in tops)
+    grade = "stable" if agree >= 2 else ("clue" if agree == 1 else "inconsistent")
+    failed = [k for k, d in per_seed.items() if d["emulation"] != "bit_identical"]
     return {"status": statuses, "localized": texts.get(node, node), "node": node,
             "share_of_projected_effect": abs(val) / total_abs, "region_size_ops": region,
-            "top3": [(texts.get(n, n), v) for n, v in ranked[:3]]}
+            "top3": [(texts.get(n, n), v) for n, v in ranked[:3]],
+            "grade": grade, "seeds_agreeing": agree, "seeds_emulated": len(tops), "emulation_failed_on": failed,
+            "per_seed": {k: {**d, "top_node": texts.get(d.get("top_node"), d.get("top_node"))} for k, d in per_seed.items()}}
 
 
 def aggregate(package: Path, out: Path):
