@@ -63,10 +63,10 @@ def main():
                 c = row[rule]
                 mark = " ✔" if c["detected_and_reproduced"] else ""
                 return fmt(c["seeds_0_95"]), fmt(c["seeds_96_191"]) + mark
-            r1, r5 = show("R1"), show("R5")
-            lines_vec.append(f"| {name} | {p1[pid]['family']} | {r1[0]} | {r1[1]} | {r5[0]} | {r5[1]} |")
-            r2, r3, r4 = show("R2"), show("R3"), show("R4")
-            lines_ali.append(f"| {name} | {p1[pid]['family']} | {r2[0]} | {r2[1]} | {r3[0]} | {r3[1]} | {r4[0]} | {r4[1]} |")
+            r1, r4, r5 = show("R1"), show("R4"), show("R5")
+            lines_vec.append(f"| {name} | {p1[pid]['family']} | {r1[0]} | {r1[1]} | {r4[0]} | {r4[1]} | {r5[0]} | {r5[1]} |")
+            r2, r3 = show("R2"), show("R3")
+            lines_ali.append(f"| {name} | {p1[pid]['family']} | {r2[0]} | {r2[1]} | {r3[0]} | {r3[1]} |")
     # second metric: the default detector
     det_lines = []
     for pid in order:
@@ -96,10 +96,15 @@ def main():
             continue
         node = (loc.get("localized") or loc.get("error") or "").split("loc(")[0].strip()
         node = node[:80] + ("…" if len(node) > 80 else "")
+        failed_list = loc.get("emulation_failed_on", [])
+        n_seeds = len(loc.get("per_seed", {})) or 4
         grade = {"stable": "稳定定位", "clue": "定位线索", "inconsistent": "各输入不一致"}.get(loc.get("grade"), "—")
-        failed = ", ".join(loc.get("emulation_failed_on", [])) or "—"
+        if loc.get("grade") == "stable" and failed_list:
+            grade = (f"条件性定位：{n_seeds} 个输入中 {loc.get('seeds_emulated')} 个可模拟，"
+                     f"这 {loc.get('seeds_emulated')} 个中 {loc.get('seeds_agreeing')} 个首位节点一致")
+        failed = ", ".join(failed_list) or "—"
         loc_lines.append(f"| {pid} | {loc.get('rule')} | `{node}` | {loc.get('region_size_ops', '')} | {grade} "
-                         f"| {loc.get('seeds_agreeing', '')}/{loc.get('seeds_emulated', '')} | {failed} |")
+                         f"| {loc.get('seeds_agreeing', '')}/{loc.get('seeds_emulated', '')}（共 {n_seeds} 个输入） | {failed} |")
     md = f"""# blind_test_v1 阶段 1 报告（按协议修订 v1.1）
 
 检测器冻结于 `e43616c`（打开盲测包之前），评测前的通用覆盖补充为 `cf7631c`（协议第 7 节允许）；本修订之后没有改动
@@ -110,17 +115,26 @@ seed 0–95 是阶段 1（0–31 开发、32–95 确认）；seed 96–191 是 
 （+ / − 为检出及 μ 的符号，· 为未确认）与 μ 的端点保守区间；✔ 表示两个 seed 集上都检出且符号相同。两次运行各自对
 全部 170 个「程序 × 规则」检验做 Holm。全部程序「任务语义未检验」（阶段 2 才有规格 f）。
 
-## 向量均值规则（R1 固定方向、R5 学习方向）
+**表格说明**：μ 区间是未做多重校正的单格区间（95% t 区间、端点保守），最终判定以 Holm 结果为准；区间不含零而判定为未确认
+的格子，原因就在这里，数值不改。复现的定性（出题方第 5 节）：同号复现是可重复性证据，不是准确率或召回率——两轮共用同一
+参照求值器与统计方法，共享的系统错误不会被复现发现。
 
-| 程序 | 家族 | R1，seed 0–95 | R1，seed 96–191 | R5，seed 0–95 | R5，seed 96–191 |
-|---|---|---|---|---|---|
+## 固定方向均值规则（R1 全体同向、R4 两半反向（仅 F4）、R5 学习方向）
+
+R1、R4 是事前固定的向量；R5 的方向在开发 seed 上学，第二轮在 96–127 上重新学习，所以 R5 一栏的 ✔ 是**程序级复现**
+（同一检测程序在新输入上的表现），不表示原方向上的同一个 μ 已跨输入确认。
+
+| 程序 | 家族 | R1，seed 0–95 | R1，seed 96–191 | R4，0–95 | R4，96–191 | R5，0–95 | R5，96–191（程序级复现） |
+|---|---|---|---|---|---|---|---|
 {chr(10).join(lines_vec)}
 
-## 对齐型规则（R2 向零收缩、R3 按比例缩放、R4 旋转双向，仅 F4）
+## 参照相关的对齐规则（R2 向零收缩、R3 按比例缩放）
 
-| 程序 | 家族 | R2，0–95 | R2，96–191 | R3，0–95 | R3，96–191 | R4，0–95 | R4，96–191 |
-|---|---|---|---|---|---|---|---|
+| 程序 | 家族 | R2，0–95 | R2，96–191 | R3，0–95 | R3，96–191 |
+|---|---|---|---|---|---|
 {chr(10).join(lines_ali)}
+
+prog_16 的 R2、R3 记为「初次检出、复现未确认」；它的 R4 作用两轮都检出，两者不矛盾。
 
 ## 第二指标：工具默认检测器（不需要方向规则）
 
