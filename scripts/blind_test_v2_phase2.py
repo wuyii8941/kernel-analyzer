@@ -210,22 +210,30 @@ R3、R5，seed 划分（0–95 一轮，96–191 复现），端点保守推断�
 |---|---:|---|---|---|---|
 {chr(10).join(det_rows)}
 
-## 保护条件
+## 保护条件与无法学习方向的 R5
 
-本阶段触发 2.1 新增保护（样本不足、数值失效）的检验：{guard_count(recs)} 个。
+本阶段触发 2.1 相对第 2 版新增保护（样本不足、数值失效）的检验：{guard_count(recs)} 个，所以本阶段的判定与第 2 版（`3490425`）
+相同。R5 无法学习方向（开发 seed 上 e_sem 的中点全为零，第 2 版已有的处理，表中记「—」）：{zero_direction_count(recs)} 格。
 """
     (OUT / "phase2_report.md").write_text(md)
     print("written", OUT / "phase2_report.md", "detected", det1, det2, "reproduced", repro)
 
 
 def guard_count(recs):
+    """Tests stopped by the 2.1 guards: too few units or a numerical failure (not a zero learned direction)."""
+
     n = 0
     for r in recs.values():
         for run in RUNS:
             o = r[run]
-            n += sum(1 for x in o["record"]["rules"] if x["verdict"].startswith("UNRESOLVED"))
+            n += sum(1 for x in o["record"]["rules"] if x["verdict"] in ("UNRESOLVED_SAMPLE", "UNRESOLVED_NUMERICAL"))
             n += sum(1 for f in ("vector_mean", "alignment") for t in o["default_detector"][f]["tests"] if t.get("p") is None)
     return n
+
+
+def zero_direction_count(recs):
+    return sum(1 for r in recs.values() for run in RUNS for x in r[run]["record"]["rules"]
+               if x["verdict"] == "UNRESOLVED_MEASUREMENT")
 
 
 def main():
