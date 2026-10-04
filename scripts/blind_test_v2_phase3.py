@@ -41,7 +41,7 @@ LR = 2.0 ** -10
 BETAS = ("0.9", "0.999")
 EPS = 2.0 ** -27
 OPTIMIZERS = ("sgd", "adamw_history", "adamw_zero")
-MEASURES = ("actual_write", "ideal_response")
+MEASURES = ("ideal_response", "actual_write")  # scored first (protocol section 5)
 RUNS = {"seeds_0_95": 0, "seeds_96_191": 96}
 MAX_CANDIDATES = 4
 UNSCORED = {"G7", "G8"}
@@ -298,13 +298,15 @@ def stage_aggregate(package):
                 mat_rows.append(f"| {p} | {fam} | {a['u_max_width']:.1e} | " + " | ".join(cells) + " |")
                 det_rows.append(f"| {p} | " + " | ".join(SHORT.get(o["default_detector"][f]["final_verdict"], "")
                                                        for o in (a, b) for f in ("vector_mean", "alignment")) + " |")
-            name = f"phase3_{opt}{'' if m == 'actual_write' else '_ideal_response'}.csv"
+            # the setter's scoring definition is the ideal response (protocol section 5); actual writes are additional
+            name = f"phase3_{opt}{'' if m == 'ideal_response' else '_actual_write'}.csv"
             with open(OUT / name, "w", newline="") as fh:
                 w = csv.DictWriter(fh, fieldnames=template, extrasaction="ignore")
                 w.writeheader()
                 w.writerows(rows)
-            summary.append(f"| {opt} | {'实际写入差（主表）' if m == 'actual_write' else '理想响应（副表）'} | {n_det[0]} | {n_det[1]} | {n_rep} |")
-            sections.append(f"### {opt}，{'实际写入差（主表）' if m == 'actual_write' else '理想响应（副表）'}\n\n"
+            label = "理想响应（计分口径）" if m == "ideal_response" else "实际写入差（附加）"
+            summary.append(f"| {opt} | {label} | {n_det[0]} | {n_det[1]} | {n_rep} |")
+            sections.append(f"### {opt}，{label}\n\n"
                             "每格「0–95 / 96–191」：Holm 后判定与 μ 的端点保守区间；✔ 两轮同号检出。\n\n"
                             "| 程序 | 家族 | u 最大宽度 | R1 | R2 | R3 | R5 |\n|---|---|---:|---|---|---|---|\n"
                             + "\n".join(mat_rows) + "\n\n默认检测器（第二指标）：\n\n"
@@ -314,9 +316,10 @@ def stage_aggregate(package):
     md = f"""# blind_test_v2 阶段 3 报告：参数更新层
 
 口径在运行前冻结于 `docs/blind_test_v2_phase3_protocol.md`：把每个程序的输出当作同形状参数块的梯度；共同状态（θ_s、由规格 f
-在历史 seed 上生成的 AdamW 状态）对 K 与 K_R 相同。**主表是实际写入差**：同一个 FP32 torch optimizer、同一参数与状态，只替换梯度，
-u = θ′(K) − θ′(RN32(K_R))；K_R 区间两端的 RN32 相同时直接重放，不同时逐坐标枚举 FP32 候选（不超过 4 个）取可靠包围，更多则为参照
-未建立。**副表是理想响应**：实数 optimizer 在区间算术中对 K 与 K_R 各求一步，不是实际写入差。规则 R1、R2（−sign(r)/√n）、
+在历史 seed 上生成的 AdamW 状态）对 K 与 K_R 相同。**计分口径是理想响应**（出题方确认，协议第 5 节）：实数 optimizer 在区间算术中
+对 K（点）与 K_R（区间）各求一步，u = step(K) − step(K_R)，不含 optimizer 自身的 FP32 舍入。**附加口径是实际写入差**（阶段 1 审阅方
+建议）：同一个 FP32 torch optimizer、同一参数与状态，只替换梯度，u = θ′(K) − θ′(RN32(K_R))；K_R 区间两端的 RN32 相同时直接重放，
+不同时逐坐标枚举 FP32 候选（不超过 4 个）取可靠包围，更多则为参照未建立。两者可能结论不同。规则 R1、R2（−sign(r)/√n）、
 R3（−r/‖r‖，正号表示沿参照更新方向推得少）、R5，seed 0–95 与 96–191，每种 optimizer、每个口径、每轮各自对全部「程序 × 规则」
 做 Holm；判定层 `detector-v2.1`。历史梯度中 f 的包围两端舍入到不同 FP32 值的坐标：{amb} 个（取中点的 RN32，冻结规则）。
 
