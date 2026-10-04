@@ -114,14 +114,14 @@ def stage_aggregate(package: Path):
     for mode in MODES:
         for fam in ("vector_mean", "alignment"):
             dt = [(o, t) for r in reports.values() for o in r["modes"][mode] if "default_detector" in o
-                  for t in o["default_detector"][fam]["tests"]]
+                  for t in o["default_detector"][fam]["tests"] if t.get("p") is not None]
             for (o, t), rej in zip(dt, _holm([t["p"] for _, t in dt], 0.05)):
                 supported = t.get("diagnostics", {}).get("tail_assumption_supported", True)
                 t["final_verdict"] = ("DETECTED" if supported else "EXPLORATORY_ONLY") if rej else "NOT_CONFIRMED"
             for r in reports.values():
                 for o in r["modes"][mode]:
                     if "default_detector" in o:
-                        vs = [t["final_verdict"] for t in o["default_detector"][fam]["tests"]]
+                        vs = [t["final_verdict"] for t in o["default_detector"][fam]["tests"] if t.get("p") is not None]
                         o["default_detector"][fam]["final_verdict"] = (
                             "DETECTED" if "DETECTED" in vs else "EXPLORATORY_ONLY" if "EXPLORATORY_ONLY" in vs
                             else "NOT_CONFIRMED")

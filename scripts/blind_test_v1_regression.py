@@ -163,7 +163,7 @@ def aggregate(package: Path):
         apply_holm(tests, 0.05)
         for fam in ("vector_mean", "alignment"):
             dt = [t for p in order for o in recs[p]["outputs"].values() if "default_detector" in o[q]
-                  for t in o[q]["default_detector"][fam]["tests"]]
+                  for t in o[q]["default_detector"][fam]["tests"] if t.get("p") is not None]
             for t, adj in zip(dt, holm_adjusted([t["p"] for t in dt])):
                 supported = t.get("diagnostics", {}).get("tail_assumption_supported", True)
                 t["holm_adjusted_p_all_programs"] = adj
@@ -171,10 +171,10 @@ def aggregate(package: Path):
             for p in order:
                 for o in recs[p]["outputs"].values():
                     if "default_detector" in o[q]:
-                        vs = [t["final_verdict"] for t in o[q]["default_detector"][fam]["tests"]]
+                        vs = [t.get("final_verdict", t["verdict"]) for t in o[q]["default_detector"][fam]["tests"]]
                         o[q]["default_detector"][fam]["final_verdict"] = (
                             "DETECTED" if "DETECTED" in vs else "EXPLORATORY_ONLY" if "EXPLORATORY_ONLY" in vs
-                            else "NOT_CONFIRMED")
+                            else "CANNOT_JUDGE" if vs and all(v == "CANNOT_JUDGE" for v in vs) else "NOT_CONFIRMED")
     (OUT / "regression_records.json").write_text(json.dumps(recs, indent=2, default=float) + "\n")
     pieces = sorted(ARRAYS.glob("fixture__*.npz"))
     if pieces:

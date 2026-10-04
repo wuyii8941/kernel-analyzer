@@ -244,6 +244,19 @@ def _one_sided_p(values: np.ndarray, greater: bool) -> float:
     return float(t.sf(stat, n - 1) if greater else t.cdf(stat, n - 1))
 
 
+def residual_interval(candidate, ref_lo, ref_hi):
+    """[candidate - ref_hi, candidate - ref_lo] with directed subtraction: every entry builds its residual
+    intervals here, so no difference is lost before the conservative projections (a plain float subtraction
+    can round an endpoint inward, e.g. 1e-30 - 1e10)."""
+
+    c = np.asarray(candidate, dtype=np.float64)
+    return iv.isub(c, c, np.asarray(ref_lo, dtype=np.float64), np.asarray(ref_hi, dtype=np.float64))
+
+
+def _unresolved(name, rule, verdict, reason, n):
+    return {"comparison": name, "rule": rule, "n": int(n), "verdict": verdict, "reason": reason}
+
+
 def _summarize(name, rule, l, h, alpha):
     """Endpoint-conservative t inference for the mean projection mu, known only to lie in [E[l], E[h]].
 
@@ -252,9 +265,23 @@ def _summarize(name, rule, l, h, alpha):
     upper bound of E[h]] at level alpha.  (An earlier form, max of the two two-sided p-values, came out small
     for boxes straddling zero with E[l] < 0 < E[h]; Holm then counted such tests as rejections.)"""
 
-    mean, sd, interval, p_mid = _t_stats(0.5 * (l + h), alpha)
-    _, _, ci_l, _ = _t_stats(l, alpha)
-    _, _, ci_h, _ = _t_stats(h, alpha)
+    # Guards: the t inference needs at least two units, finite values and a nonzero spread of the endpoint
+    # that would carry a detection; otherwise the test cannot judge (it never reports a detection).
+    l, h = np.asarray(l, dtype=np.float64), np.asarray(h, dtype=np.float64)
+    if l.size < 2:
+        return _unresolved(name, rule, "UNRESOLVED_SAMPLE", f"{l.size} unit(s): the t inference needs at least 2",
+                           l.size)
+    if not (np.isfinite(l).all() and np.isfinite(h).all()):
+        return _unresolved(name, rule, "UNRESOLVED_NUMERICAL", "non-finite projection bounds", l.size)
+    with np.errstate(all="ignore"):
+        mean, sd, interval, p_mid = _t_stats(0.5 * (l + h), alpha)
+        m_l, sd_l, ci_l, _ = _t_stats(l, alpha)
+        m_h, sd_h, ci_h, _ = _t_stats(h, alpha)
+    if not all(np.isfinite([mean, sd, m_l, sd_l, m_h, sd_h, ci_l[0], ci_h[1]])):
+        return _unresolved(name, rule, "UNRESOLVED_NUMERICAL", "overflow in the t statistics", l.size)
+    if (sd_l == 0 and m_l > 0) or (sd_h == 0 and m_h < 0):
+        return _unresolved(name, rule, "UNRESOLVED_SAMPLE", "zero sample variance of the endpoint that would carry "
+                           "the detection: the t inference is undefined", l.size)
     lower, upper = ci_l[0], ci_h[1]  # endpoint-conservative: lower bound of E[l], upper bound of E[h]
     verdict = "DETECTED_POSITIVE" if lower > 0 else ("DETECTED_NEGATIVE" if upper < 0 else "NOT_CONFIRMED")
     p = min(1.0, 2.0 * min(_one_sided_p(l, True), _one_sided_p(h, False)))
@@ -369,8 +396,10 @@ def _cross_fit(name, rule, lows, highs, folds, alpha, arrays=None):
                     "reason": f"direction learned without fold {k} is zero"}
         directions.append(w)
         l, h = _project(lows[a:b], highs[a:b], w)
-        per_fold.append(_with_units(_summarize(name, f"{rule}_fold{k}", l, h, alpha / folds), l, h,
-                                    {"kind": "learned_without_fold", "saved_as": f"{rule}__fold{k}"}))
+        fold = _summarize(name, f"{rule}_fold{k}", l, h, alpha / folds)
+        if "p_value_two_sided_conservative" not in fold:
+            return {"comparison": name, "rule": rule, "verdict": fold["verdict"], "reason": f"fold {k}: {fold['reason']}"}
+        per_fold.append(_with_units(fold, l, h, {"kind": "learned_without_fold", "saved_as": f"{rule}__fold{k}"}))
         if arrays is not None:
             arrays[f"{name}__{rule}__fold{k}"] = w
     best_k = min(range(folds), key=lambda k: per_fold[k]["p_value_two_sided_conservative"])
@@ -475,7 +504,7 @@ def apply_direction_rules(name, lows, highs, ref_measure, decl, n_cal, n_conf, a
         l, h = _project(lo[conf], hi[conf], w)
         results.append(_with_units(_summarize(name, rule, l, h, alpha), l, h, record))
         results[-1]["interpretation"] = interpret(rule, results[-1]["verdict"])
-        results[-1].update(extra)
+        results[-1].update(extra)  # unresolved results carry no p-value and stay out of Holm
     return results
 
 
@@ -619,10 +648,10 @@ def statistics_stage(decl: dict, ref_dir: Path, device: str = "cuda:0", arrays_o
             cand = measured[c["candidate"]]
             if c["reference"] == "K_R":
                 r_lo, r_hi = reference[c["candidate"]]
-                pairs[f"{c['candidate']}_vs_K_R"].append((cand - r_hi, cand - r_lo))
+                pairs[f"{c['candidate']}_vs_K_R"].append(residual_interval(cand, r_lo, r_hi))
             else:
-                d = cand - measured[c["reference"]]
-                pairs[f"{c['candidate']}_vs_{c['reference']}"].append((d, d))
+                ref = measured[c["reference"]]
+                pairs[f"{c['candidate']}_vs_{c['reference']}"].append(residual_interval(cand, ref, ref))
     results, assessments, arrays = [], [], {}
     for name, items in pairs.items():
         lows = np.stack([a for a, _ in items])

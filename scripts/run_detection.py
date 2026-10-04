@@ -37,7 +37,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from kernel_analyzer.reference_eval import intervals as iv  # noqa: E402
 from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder  # noqa: E402
-from kernel_analyzer.reference_eval.analysis import apply_holm, assess_units  # noqa: E402
+from kernel_analyzer.reference_eval.analysis import apply_holm, assess_units, residual_interval  # noqa: E402
 from kernel_analyzer.reference_eval.detect import ALPHA  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_eval import ST_OK, KernelReferenceEvaluator, TORCH_TO_ELEM  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_mapping import kernel_coverage  # noqa: E402
@@ -85,10 +85,9 @@ def measure_launch(launch, programs):
         hi, _ = iv.round_nearest_even(b.hi[m], fmt)
         k = b.actual_after[m]
         ok = (b.st[m] == ST_OK) & ~b.cond[m] & (b.actual_after_st[m] == ST_OK if b.actual_after_st is not None else True)
-        r_lo = iv.add_bounds(k, -b.hi[m])[0]  # K - K_R against the real reference
-        r_hi = iv.add_bounds(k, -b.lo[m])[1]
-        rounded = (iv.add_bounds(k, -hi)[0], iv.add_bounds(k, -lo)[1])  # directed, like the real residual
-        out[b.name] = {"index": b.global_indices()[m], "real": (r_lo, r_hi), "rounded": rounded, "k": k,
+        real = residual_interval(k, b.lo[m], b.hi[m])  # K - K_R against the real reference, directed
+        rounded = residual_interval(k, lo, hi)  # K - RN(K_R), directed
+        out[b.name] = {"index": b.global_indices()[m], "real": real, "rounded": rounded, "k": k,
                        "kr": 0.5 * (b.lo[m] + b.hi[m]), "ok": ok, "shape": tuple(arg.shape) if arg.shape else None,
                        "aborted": len(result.aborted)}
     return out
@@ -188,7 +187,8 @@ def main():
 
     # Holm over all tests of all measured outputs, within each family and residual definition
     for definition, fam in [(d, f) for d in DEFINITIONS for f in ("vector_mean", "alignment")]:
-        tests = [(t, row) for t in targets if "detection" in t for row in t["detection"][definition][fam]["tests"]]
+        tests = [(t, row) for t in targets if "detection" in t for row in t["detection"][definition][fam]["tests"]
+                 if row.get("p") is not None]  # CANNOT_JUDGE tests take no part
         order = sorted(range(len(tests)), key=lambda i: tests[i][1]["p"])
         stop = False
         for rank, i in enumerate(order):
@@ -202,7 +202,8 @@ def main():
             if "detection" in t:
                 vs = [r["verdict"] for r in t["detection"][definition][fam]["tests"]]
                 t["detection"][definition][fam]["verdict"] = (
-                    "DETECTED" if "DETECTED" in vs else "EXPLORATORY_ONLY" if "EXPLORATORY_ONLY" in vs else "NOT_CONFIRMED")
+                    "DETECTED" if "DETECTED" in vs else "EXPLORATORY_ONLY" if "EXPLORATORY_ONLY" in vs
+                    else "CANNOT_JUDGE" if vs and all(v == "CANNOT_JUDGE" for v in vs) else "NOT_CONFIRMED")
     for definition in DEFINITIONS:  # declared rules, if any: Holm over all targets
         apply_holm([r for t in targets if "assessment" in t for r in t["assessment"][definition]["rules"]
                     if "p_value_two_sided_conservative" in r], ALPHA)

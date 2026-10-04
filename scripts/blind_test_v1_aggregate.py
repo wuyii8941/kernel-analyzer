@@ -124,7 +124,7 @@ def aggregate(package: Path, out: Path):
     # the tool's own default detector: Holm over all its tests of all programs, per family of targets
     for fam in ("vector_mean", "alignment"):
         dt = [(o, t) for r in reports.values() if "outputs" in r for o in r["outputs"] if "default_detector" in o
-              for t in o["default_detector"][fam]["tests"]]
+              for t in o["default_detector"][fam]["tests"] if t.get("p") is not None]
         rej = _holm([t["p"] for _, t in dt], 0.05)
         for (o, t), rr in zip(dt, rej):
             supported = t.get("diagnostics", {}).get("tail_assumption_supported", True)
@@ -132,7 +132,7 @@ def aggregate(package: Path, out: Path):
         for r in reports.values():
             for o in r.get("outputs", []):
                 if "default_detector" in o:
-                    vs = [t["final_verdict"] for t in o["default_detector"][fam]["tests"]]
+                    vs = [t["final_verdict"] for t in o["default_detector"][fam]["tests"] if t.get("p") is not None]
                     o["default_detector"][fam]["final_verdict"] = (
                         "DETECTED" if "DETECTED" in vs else "EXPLORATORY_ONLY" if "EXPLORATORY_ONLY" in vs
                         else "NOT_CONFIRMED")

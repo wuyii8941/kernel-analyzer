@@ -32,7 +32,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
 from kernel_analyzer.reference_eval import intervals as iv  # noqa: E402
-from kernel_analyzer.reference_eval.analysis import _holm, assess_units  # noqa: E402
+from kernel_analyzer.reference_eval.analysis import _holm, assess_units, residual_interval  # noqa: E402
 from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder, save_launch  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_eval import ST_OK, KernelReferenceEvaluator, TORCH_TO_ELEM  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_mapping import kernel_coverage  # noqa: E402
@@ -84,8 +84,7 @@ def run_program(package: Path, pid: str, family: str, work: Path) -> dict:
             b = cands[-1]
         m = b.written
         k = b.actual_after[m]
-        r_lo = iv.add_bounds(k, -b.hi[m])[0]
-        r_hi = iv.add_bounds(k, -b.lo[m])[1]
+        r_lo, r_hi = residual_interval(k, b.lo[m], b.hi[m])  # directed: [K - hi, K - lo]
         hashes.append(hashlib.sha256(np.asarray(b.after_raw).tobytes()).hexdigest()[:16])
         per_seed.append({"lo": r_lo, "hi": r_hi, "k": k, "kr": 0.5 * (b.lo[m] + b.hi[m]), "st": b.st[m],
                          "cond": b.cond[m], "index": b.global_indices()[m], "aborted": len(res.aborted)})
