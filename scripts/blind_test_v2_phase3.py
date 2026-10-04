@@ -269,7 +269,7 @@ def stage_aggregate(package):
     sections, summary = [], []
     for m in MEASURES:
         for opt in OPTIMIZERS:
-            rows, mat_rows, det_rows, n_det, n_rep = [], [], [], [0, 0], 0
+            rows, mat_rows, det_rows, n_det, n_rep, n_unres = [], [], [], [0, 0], 0, [0, 0]
             for p in order:
                 r = recs[p]
                 a, b = r[opt][m]["seeds_0_95"], r[opt][m]["seeds_96_191"]
@@ -278,6 +278,8 @@ def stage_aggregate(package):
                               and str(a["rules"][rule].get("final_verdict", "")).startswith("DETECTED")
                               and a["rules"][rule].get("final_verdict") == b["rules"][rule].get("final_verdict")]
                 n_rep += len(reproduced)
+                n_unres[0] += "verdict" in a["rules"]
+                n_unres[1] += "verdict" in b["rules"]
                 for i, o in enumerate((a, b)):
                     n_det[i] += sum(1 for x in o["rules"].values() if isinstance(x, dict)
                                     and str(x.get("final_verdict", "")).startswith("DETECTED"))
@@ -289,15 +291,20 @@ def stage_aggregate(package):
                        "seconds": r["seconds"]}
                 for rule in ("R1", "R2", "R3", "R5"):
                     row[f"mu_{rule}_interval"], row[f"mu_{rule}_verdict"] = rule_cell(a["rules"].get(rule))
+                    if "verdict" in a["rules"]:  # the whole output is unresolved (coordinate-set rule)
+                        row[f"mu_{rule}_verdict"] = a["rules"]["verdict"]
                 rows.append(row)
                 fam = r["family"] + ("（不计分）" if r["family"] in UNSCORED else "")
                 cells = []
                 for rule in ("R1", "R2", "R3", "R5"):
                     mark = " ✔" if rule in reproduced else ""
-                    cells.append(f"{fmt(a['rules'].get(rule))} / {fmt(b['rules'].get(rule))}{mark}")
+                    ca = "参照未建立" if "verdict" in a["rules"] else fmt(a["rules"].get(rule))
+                    cb = "参照未建立" if "verdict" in b["rules"] else fmt(b["rules"].get(rule))
+                    cells.append(f"{ca} / {cb}{mark}")
                 mat_rows.append(f"| {p} | {fam} | {a['u_max_width']:.1e} | " + " | ".join(cells) + " |")
-                det_rows.append(f"| {p} | " + " | ".join(SHORT.get(o["default_detector"][f]["final_verdict"], "")
-                                                       for o in (a, b) for f in ("vector_mean", "alignment")) + " |")
+                det_rows.append(f"| {p} | " + " | ".join(
+                    SHORT.get(o["default_detector"][f]["final_verdict"], "") if o.get("default_detector") else "参照未建立"
+                    for o in (a, b) for f in ("vector_mean", "alignment")) + " |")
             # the setter's scoring definition is the ideal response (protocol section 5); actual writes are additional
             name = f"phase3_{opt}{'' if m == 'ideal_response' else '_actual_write'}.csv"
             with open(OUT / name, "w", newline="") as fh:
@@ -305,7 +312,7 @@ def stage_aggregate(package):
                 w.writeheader()
                 w.writerows(rows)
             label = "理想响应（计分口径）" if m == "ideal_response" else "实际写入差（附加）"
-            summary.append(f"| {opt} | {label} | {n_det[0]} | {n_det[1]} | {n_rep} |")
+            summary.append(f"| {opt} | {label} | {n_det[0]} | {n_det[1]} | {n_rep} | {n_unres[0]} / {n_unres[1]} |")
             sections.append(f"### {opt}，{label}\n\n"
                             "每格「0–95 / 96–191」：Holm 后判定与 μ 的端点保守区间；✔ 两轮同号检出。\n\n"
                             "| 程序 | 家族 | u 最大宽度 | R1 | R2 | R3 | R5 |\n|---|---|---:|---|---|---|---|\n"
@@ -323,8 +330,13 @@ def stage_aggregate(package):
 R3（−r/‖r‖，正号表示沿参照更新方向推得少）、R5，seed 0–95 与 96–191，每种 optimizer、每个口径、每轮各自对全部「程序 × 规则」
 做 Holm；判定层 `detector-v2.1`。历史梯度中 f 的包围两端舍入到不同 FP32 值的坐标：{amb} 个（取中点的 RN32，冻结规则）。
 
-| optimizer | 口径 | 检出格（0–95） | 检出格（96–191） | 两轮同号 |
-|---|---|---:|---:|---:|
+**实际写入差（附加口径）的参照未建立**：K_R 接近零的少数坐标，区间跨过的 FP32 值超过 4 个，按冻结规则记为参照未建立；这些坐标
+随 seed 变化，确认 seed 出现开发集坐标集之外的失效坐标时，按阶段 1 的坐标集规则（默认「unresolved」）整个输出判为参照未建立。
+每个 seed 只有几个到几十个这样的坐标（逐程序的重放统计见 CSV 的 replay_method 列）。规则在运行前冻结，本报告不事后修改；
+下一版可改为丢弃失效单位或放宽候选上限。计分口径（理想响应）不受影响。
+
+| optimizer | 口径 | 检出格（0–95） | 检出格（96–191） | 两轮同号 | 参照未建立的程序（0–95 / 96–191） |
+|---|---|---:|---:|---:|---|
 {chr(10).join(summary)}
 
 {chr(10).join(sections)}
