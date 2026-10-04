@@ -1,4 +1,4 @@
-"""AdamW step on bf16 parameters and bf16 states, compiled with torch.compile (one Inductor Triton kernel).
+"""AdamW step on bf16 parameters and bf16 states (THETA_SCALE / LR via environment for the realistic-scale check), compiled with torch.compile (one Inductor Triton kernel).
 
 This is what torch.optim.AdamW does when the parameters are bf16 (the states follow the parameter dtype), here in
 the compiled form (math in FP32, one rounding of every state to bf16 per step, like the fused implementation).  The
@@ -12,8 +12,12 @@ import torch._inductor.config as inductor_config
 
 inductor_config.use_static_cuda_launcher = False  # every launch goes through Triton's CompiledKernel.run
 
+import os
+
 N = 1 << 16
-LR, B1, B2, EPS, T = 1e-4, 0.9, 0.999, 1e-8, 1000
+LR = float(os.environ.get("ADAMW_LR", "1e-4"))
+THETA_SCALE = float(os.environ.get("ADAMW_THETA_SCALE", "1.0"))
+B1, B2, EPS, T = 0.9, 0.999, 1e-8, 1000
 
 
 @torch.compile(fullgraph=True)
@@ -30,7 +34,7 @@ def adamw_step(p, g, m, v):
 def make_inputs(seed):
     gen = torch.Generator(device="cuda").manual_seed(seed)
     s = torch.exp(torch.randn(N, device="cuda", generator=torch.Generator(device="cuda").manual_seed(12345)))
-    p = torch.randn(N, device="cuda", generator=gen).to(torch.bfloat16)
+    p = (THETA_SCALE * torch.randn(N, device="cuda", generator=gen)).to(torch.bfloat16)
     g = (torch.randn(N, device="cuda", generator=gen) * s).to(torch.bfloat16)
     m = (0.3 * torch.randn(N, device="cuda", generator=gen) * s).to(torch.bfloat16)
     v = (s * s * (1 + 0.1 * torch.randn(N, device="cuda", generator=gen)).abs()).to(torch.bfloat16)

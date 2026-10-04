@@ -67,6 +67,21 @@ def program_subset(grid, count=MAX_PROGRAMS, seed=0):
     return [(i % gx, (i // gx) % gy, i // (gx * gy)) for i in flat]
 
 
+def _before_values(arg, idx):
+    """The buffer's values before the launch at the written positions (for in-place updates), or None."""
+
+    from kernel_analyzer.reference_eval.ttir_eval import decode_storage
+
+    if arg.before is None:
+        return None
+    vals, _ = decode_storage(np.asarray(arg.before), arg.dtype)
+    if arg.window is None:
+        return vals[idx] if idx.max(initial=-1) < vals.size else None
+    pos = {int(w): i for i, w in enumerate(np.asarray(arg.window))}
+    sel = [pos.get(int(i)) for i in idx]
+    return None if any(x is None for x in sel) else vals[np.array(sel, dtype=np.int64)]
+
+
 def measure_launch(launch, programs):
     """Per written float output buffer: (global indices, e_lo, e_hi, actual, status ok, shape)."""
 
@@ -89,7 +104,7 @@ def measure_launch(launch, programs):
         rounded = residual_interval(k, lo, hi)  # K - RN(K_R), directed
         out[b.name] = {"index": b.global_indices()[m], "real": real, "rounded": rounded, "k": k,
                        "kr": 0.5 * (b.lo[m] + b.hi[m]), "ok": ok, "shape": tuple(arg.shape) if arg.shape else None,
-                       "aborted": len(result.aborted)}
+                       "aborted": len(result.aborted), "before": _before_values(arg, b.global_indices()[m])}
     return out
 
 
@@ -100,6 +115,9 @@ def main():
     parser.add_argument("--development", type=int, default=None, help="default: half of the units")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--update-reference", action="store_true",
+                        help="for in-place writes, take the reference update (K_R - value before) as the reference "
+                             "direction of the rules and of the alignment tests (update-layer measurement point)")
     parser.add_argument("--rules", default="", help="declared direction rules, comma-separated (e.g. R1,R3); "
                                                      "the interval default detector always runs")
     args = parser.parse_args()
@@ -158,6 +176,12 @@ def main():
         ok = np.stack([u["ok"] for u in units])
         k = np.stack([u["k"] for u in units])
         kr = np.stack([u["kr"] for u in units])
+        if args.update_reference and all(u.get("before") is not None for u in units):
+            # update layer of an in-place write: directions follow the reference update K_R - before, so a
+            # swallowed or shortened update shows as "pushed less along the reference update" on R2 / R3
+            kr = kr - np.stack([u["before"] for u in units])
+            k = kr
+            entry["reference_direction"] = "reference update K_R - value before the launch"
         shape = None
         if units[0]["shape"] and len(units[0]["shape"]) >= 2 and int(np.prod(units[0]["shape"])) == ok.shape[1]:
             shp = units[0]["shape"]
