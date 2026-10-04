@@ -51,7 +51,10 @@ def set_seed_offset(offset: int):
     CONF = range(offset + 32, offset + 96)
 
 
-def run_program(package: Path, pid: str, family: str, work: Path) -> dict:
+def run_program(package: Path, pid: str, family: str, work: Path, cache: Path = None) -> dict:
+    """``cache``: when given, every seed's K (float32 values), K_R bounds, classes and indices are saved to
+    cache/<pid>/seedNNN.npz, so later phases (specification, update layer) reuse the identical captures."""
+
     import torch
 
     sys.path.insert(0, str(package / "programs"))
@@ -85,6 +88,10 @@ def run_program(package: Path, pid: str, family: str, work: Path) -> dict:
         m = b.written
         k = b.actual_after[m]
         r_lo, r_hi = residual_interval(k, b.lo[m], b.hi[m])  # directed: [K - hi, K - lo]
+        if cache is not None:
+            (cache / pid).mkdir(parents=True, exist_ok=True)
+            np.savez(cache / pid / f"seed{seed:03d}.npz", k=k.astype(np.float32), kr_lo=b.lo[m], kr_hi=b.hi[m],
+                     st=b.st[m], cond=b.cond[m], index=b.global_indices()[m].astype(np.int64))
         hashes.append(hashlib.sha256(np.asarray(b.after_raw).tobytes()).hexdigest()[:16])
         per_seed.append({"lo": r_lo, "hi": r_hi, "k": k, "kr": 0.5 * (b.lo[m] + b.hi[m]), "st": b.st[m],
                          "cond": b.cond[m], "index": b.global_indices()[m], "aborted": len(res.aborted)})
@@ -189,7 +196,7 @@ def per_program(args):
     package = args.package
     manifest = json.loads((package / "manifest.json").read_text())
     wanted = set(args.programs.split(",")) if args.programs else None
-    work = ROOT / ".cache" / "blind_v1_work"
+    work = args.work
     for entry in manifest["programs"]:
         pid, family = entry["id"], entry["family"]
         if wanted and pid not in wanted:
@@ -198,7 +205,7 @@ def per_program(args):
         if target.exists():
             continue
         try:
-            r = run_program(package, pid, family, work)
+            r = run_program(package, pid, family, work, args.cache_arrays)
         except Exception as exc:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(json.dumps({"program": pid, "family": family,
@@ -216,7 +223,12 @@ def per_program(args):
         else:
             outputs.append(analyse_output("output", family, data, np.ones(data[0]["lo"].size, dtype=bool), shape))
         cov = r["coverage"]
+        from kernel_analyzer.reference_eval.capture import load_launch
+        from kernel_analyzer.reference_eval.interface import inventory
+
+        launch = load_launch(work / pid / f"seed{DEV[0]:03d}")
         report = {"program": pid, "family": family, "launch": r["launch"], "coverage_complete": cov["complete"],
+                  "interface": inventory(launch, parse_ttir(launch.asm["ttir"])),
                   "unsupported": [x["rejected"] for x in cov["rejected"]], "operations": cov["operations"],
                   "aborted_programs": sum(s["aborted"] for s in data), "output_hashes": r["hashes"],
                   "outputs": outputs, "seconds": round(r["seconds"], 1)}
@@ -234,12 +246,15 @@ def main():
     parser.add_argument("--programs", default=None)
     parser.add_argument("--aggregate", action="store_true")
     parser.add_argument("--seed-offset", type=int, default=0)
+    parser.add_argument("--cache-arrays", type=Path, default=None, help="save every seed's K and K_R bounds here")
+    parser.add_argument("--work", type=Path, default=ROOT / ".cache" / "blind_v1_work",
+                        help="saved launches (seeds DEV[0], CONF[0]) for localization and checks")
     args = parser.parse_args()
     set_seed_offset(args.seed_offset)
     if args.aggregate:
         from scripts.blind_test_v1_aggregate import aggregate
 
-        aggregate(args.package, args.out)
+        aggregate(args.package, args.out, args.work)
     else:
         per_program(args)
 

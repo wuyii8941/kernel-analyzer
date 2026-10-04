@@ -105,7 +105,7 @@ def _localize(pid, family, rule, out_name, work: Path) -> dict:
             "per_seed": {k: {**d, "top_node": texts.get(d.get("top_node"), d.get("top_node"))} for k, d in per_seed.items()}}
 
 
-def aggregate(package: Path, out: Path):
+def aggregate(package: Path, out: Path, work: Path = None):
     manifest = json.loads((package / "manifest.json").read_text())
     reports = {}
     for entry in manifest["programs"]:
@@ -142,7 +142,7 @@ def aggregate(package: Path, out: Path):
                 and r.get("output_hashes") and s.get("output_hashes") == r.get("output_hashes")]
         r["bitwise_identical_to"] = same
     # localization of the strongest detected rule
-    work = ROOT / ".cache" / "blind_v1_work"
+    work = work or ROOT / ".cache" / "blind_v1_work"
     for pid, r in reports.items():
         detected = [(abs(o["rules"][rule]["mean"]) / max(abs(o["rules"][rule]["mu_interval"][1] - o["rules"][rule]["mu_interval"][0]), 1e-300),
                      rule, o["output"]) for o in r.get("outputs", []) if isinstance(o.get("rules"), dict)
@@ -160,6 +160,9 @@ def aggregate(package: Path, out: Path):
               "residual_mean", "residual_max_width"] + \
              [f"mu_{r}_{k}" for r in RULES for k in ("interval", "verdict")] + \
              ["localized_node", "region_size_ops", "seconds", "edits_made"]
+    template = package / "report_template_phase1.csv"
+    if template.exists():  # the package's own columns (v2 adds the constant and scalar inventories)
+        header = template.read_text().splitlines()[0].split(",")
     rows = []
     for pid in sorted(reports):
         r = reports[pid]
@@ -192,12 +195,23 @@ def aggregate(package: Path, out: Path):
                 return "" if not x else x.get("final_verdict", x.get("verdict", ""))
             row[f"mu_{rule}_interval"] = cell(interval)
             row[f"mu_{rule}_verdict"] = cell(verdict)
+        inv = r.get("interface")
+        if inv:
+            consts = [c for c in inv["float_constants"] if c.get("value") is not None]
+            rounded = [f"{c['value']}~{c['rounded_from']['candidate']} ({c['rounded_from']['relative_rounding']:.2e})"
+                       for c in inv["rounded_compile_time_constants"]]
+            row["compile_time_constants"] = (f"{len(consts)} float constants; rounded: " + ("; ".join(rounded) or "none"))
+            row["interface_scalars"] = "; ".join(
+                f"{x['name']}: {x['passed']} -> {x['received']} ({x['parameter_type']}"
+                + (", exact)" if x.get("exact") else ", compile-time)" if x.get("compile_time") else
+                   f", rounded {x.get('relative_rounding', 0):.2e})")
+                for x in inv["runtime_scalars"]) or "none"
         loc = r.get("localization") or {}
         row["localized_node"] = loc.get("localized") or (loc.get("error") or "")
         row["region_size_ops"] = loc.get("region_size_ops", "")
         rows.append(row)
     with open(out / "phase1_report.csv", "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=header)
+        w = csv.DictWriter(f, fieldnames=header, extrasaction="ignore")
         w.writeheader()
         for row in rows:
             w.writerow(row)
