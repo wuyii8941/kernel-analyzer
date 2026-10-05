@@ -40,8 +40,17 @@ Python 函数（`inspect.isfunction`）装 `CLOSURE_MATCH`，而 `CLOSURE_MATCH`
 守卫转储（`TORCH_LOGS=guards`）中对 `L['op']` 只有一条 `ID_MATCH: ___check_obj_id(L['op'].__code__, …)`，
 指向 `_jit_internal.py:609` 的 `fn`。
 
-在锁定版本里枚举全部图内函数，共享代码对象的组只有：boolean_dispatch 生成的 11 个（上面列出）；`F._pair/_single/_triple`；
-`torch.sym_int` 与 `F._sym_int`、`torch.sym_sqrt` 与 `torch._sym_sqrt`（后两组是同一函数的别名，无害）。
+在锁定版本里按 `trace_rules` 的全部 2566 个条目枚举图内的 Python 函数（584 个代码对象），不同函数共享同一代码对象的
+组有 5 个（`scripts/probes/probe_dynamo_guard_pairs.py` 与本节的枚举）：
+
+- boolean_dispatch 的 `fn`：上面列出的 11 个公开函数，加 `torch.functional` 的 4 个内部变体；
+- `torch.nn.modules.utils._pair/_single/_triple/_quadruple`（`nn.grad` 里也导出）：实测 `_pair` 之后传 `_triple` 同样复用图；
+- `contextlib.contextmanager` 生成的 13 个（`torch.backends.cuda.sdp_kernel`、`cudnn.flags`、`cuda.nvtx.range`、profiler 等）；
+- `typing_extensions.deprecated` 包装的 6 个（`torch.cuda.amp.custom_fwd/custom_bwd`、几个 memory 查询）；
+- `torch.autograd.function._iter_*` 的 4 个内部函数。
+
+后三组几乎不会作为值传入编译区域。对照：`functools.partial` 的不同关键字、`operator.methodcaller/itemgetter`、Enum 成员、
+类、不同对象的绑定方法、numpy ufunc、dtype、staticmethod 都被正确守卫。
 
 ## 与已有记录的关系
 
