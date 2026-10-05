@@ -16,7 +16,8 @@
   triton 3.6.0、gmpy2、python-flint）。`liger` 等其他环境保留作测试与旧结果复现，
   清单见 `docs/environments.md`。旧测试套件仍在 `liger` 环境中跑。
 - 资源规则见 `docs/resource_policy.md`。
-- 按阶段总结第 11 节的计划持续推进，不在每一步之后征求确认；只有遇到无法自行解决的问题才停下来询问。
+- 按 `docs/plan_20261006.md`（一套工具、两种模式、四份证据）推进，不在每一步之后征求确认；只有遇到无法自行解决的
+  问题才停下来询问。阶段总结第 11 节是搭建求值器阶段的计划，已由它取代。
 - 自动参照 K_R 的代码在 `src/kernel_analyzer/reference_eval/`（解析、映射、区间求值、捕获、重放），
   说明与结果见 `docs/auto_reference_results_20261002.md`。需要 Liger/torchao/transformers 的捕获
   在 `liger` 环境跑（只依赖 `reference_eval.capture`），分析统一在 `ka_main` 跑。
