@@ -98,7 +98,7 @@ def f64_point_spec(value, rel=2.0 ** -40):
 GROUPS = {"liger": "tool_spec_cases_liger", "flex": "tool_spec_cases_flex", "inductor": "tool_spec_cases_inductor",
           "tridao": "tool_spec_cases_tridao", "fla": "tool_spec_cases_fla", "inductor2": "tool_spec_cases_inductor2",
           "inductor3": "tool_spec_cases_inductor3", "tutorials": "tool_spec_cases_triton_tutorials",
-          "inductor4": "tool_spec_cases_inductor4", "vllm": "tool_spec_cases_vllm"}
+          "inductor4": "tool_spec_cases_inductor4", "vllm": "tool_spec_cases_vllm", "opinfo": "tool_spec_cases_opinfo"}
 
 
 def load_cases(group):
@@ -227,20 +227,26 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
             kr_cls = np.where(buf.st[m] <= ST_NINF, buf.st[m], -1)  # -1: not established
             k_arr = actual
             k_cls = np.where(np.isnan(k_arr), 1, np.where(k_arr == np.inf, 2, np.where(k_arr == -np.inf, 3, 0)))
-            decided = (kr_cls >= 0) & ~buf.cond[m]
+            # only the storage elements of this tensor view (outputs can be views of one shared buffer, e.g. the
+            # gradients AOTAutograd returns; the other views' elements have no f here)
+            in_view = np.zeros(max(int(pos.max(initial=-1)), int(idx.max(initial=-1))) + 1, dtype=bool)
+            in_view[pos] = True
+            inside = in_view[idx]
+            decided = (kr_cls >= 0) & ~buf.cond[m] & inside
             mism = decided & (kr_cls != f_cls)
+            k_mism = inside & (k_cls != f_cls)
             sv = special.setdefault(name, {"elements_with_special_f": 0, "kr_vs_f_class_mismatch": 0,
                                             "k_vs_f_class_mismatch": 0, "examples": []})
-            sv["elements_with_special_f"] += int((f_cls > 0).sum())
+            sv["elements_with_special_f"] += int(((f_cls > 0) & inside).sum())
             sv["kr_vs_f_class_mismatch"] += int(mism.sum())
-            sv["k_vs_f_class_mismatch"] += int((k_cls != f_cls).sum())
+            sv["k_vs_f_class_mismatch"] += int(k_mism.sum())
             names_ = {0: "finite", 1: "nan", 2: "+inf", 3: "-inf", -1: "?"}
-            for j in np.flatnonzero(mism | (k_cls != f_cls))[: max(0, 5 - len(sv["examples"]))]:
+            for j in np.flatnonzero(mism | k_mism)[: max(0, 5 - len(sv["examples"]))]:
                 sv["examples"].append({"index": int(idx[j]), "f": names_[int(f_cls[j])], "K_R": names_[int(kr_cls[j])],
                                        "K": names_[int(k_cls[j])], "K_value": float(k_arr[j])})
             per.setdefault(name, []).append({
                 "n": (n_lo, n_hi), "s": (s_lo, s_hi), "kr": 0.5 * (r_lo + r_hi), "k": k,
-                "ok": (buf.st[m] == ST_OK) & ~buf.cond[m] & np.isfinite(f_lo), "idx": idx, "pos": pos,
+                "ok": (buf.st[m] == ST_OK) & ~buf.cond[m] & np.isfinite(f_lo), "inside": inside, "idx": idx, "pos": pos,
                 "shape": tuple(out.shape), "width": r_hi - r_lo, "reasons": reasons, "aborted": aborted})
     seconds = time.time() - t0
     n_dev = len(list(dev))
@@ -261,7 +267,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
         kr = np.stack([p["kr"] for p in rows])
         entry = {"elements_per_seed": int(rows[0]["idx"].size), "shape": list(rows[0]["shape"]),
                  "depends_on_non_triton_intermediates": mixed_by_output.get(name, []),
-                 "reference_classes": {"complete_fraction": float(ok.mean())},
+                 "reference_classes": {"complete_fraction": float(ok[np.stack([p["inside"] for p in rows])].mean())},
                  "special_values": special.get(name),
                  "not_established_reasons_seed0": rows[0]["reasons"],
                  "aborted_programs_seed0": rows[0]["aborted"]}
@@ -286,7 +292,8 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
         where = inv[r0["idx"]]
         inside = where >= 0  # written elements of the storage that belong to this tensor view
         full[where[inside]] = np.abs(0.5 * (r0["s"][0] + r0["s"][1]))[inside]
-        entry["sem_profile_last_axis"] = [round(float(x), 8) for x in full.reshape(-1, r0["shape"][-1]).mean(0)]
+        last = r0["shape"][-1] if len(r0["shape"]) else 1  # 0-dim outputs: a single column
+        entry["sem_profile_last_axis"] = [round(float(x), 8) for x in full.reshape(-1, last).mean(0)]
         report["outputs"][name] = entry
     return report
 
