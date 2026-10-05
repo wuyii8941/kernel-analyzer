@@ -61,3 +61,8 @@ The same code is on main (`torch/optim/radam.py`, `_single_tensor_radam` and `_m
 `rho_inf`, `rho_t` and the rectification factor depend only on beta2 and the step count. Compute them in float64 (a
 float64 0-dim tensor in the capturable path), or at least evaluate `1 - beta2**t` as `-expm1(t * log1p(-(1 - beta2)))`
 with `1 - beta2` taken from the Python float, and cast the resulting scalar factor to the parameter dtype.
+
+Tested at runtime on the compiled single-tensor path (`step64 = step.to(torch.float64)` used for both bias corrections
+and `rho_t`): for beta2 in {0.9993, 0.9997, 0.99985, 0.99995} and the steps where the decision flipped, the compiled
+update matches a float64 reference to fp32 rounding of the update itself (<= 6e-4 of the update, the same order as
+the eager non-capturable path); before the change the error was the whole update at the flipped steps.
