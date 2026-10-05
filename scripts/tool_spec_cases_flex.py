@@ -69,6 +69,18 @@ class FlexCase(Case):
             def document(b, h, i, j):
                 return (doc[i] == doc[j]) & (i >= j)
             return document
+        # decode-style masks: query i sits at absolute position i + (KV - Q)
+        off = self.KV - self.Q
+        if kind == "decode_causal":
+            return lambda b, h, i, j: i + off >= j
+        if kind == "decode_sliding":
+            return lambda b, h, i, j: (i + off >= j) & (i + off - j < 128)
+        if kind == "decode_document":
+            doc = self._doc
+
+            def decode_document(b, h, i, j):
+                return (doc[i + off] == doc[j]) & (i + off >= j)
+            return decode_document
         raise ValueError(kind)
 
     def setup(self):
@@ -78,7 +90,9 @@ class FlexCase(Case):
         self._slopes = torch.tensor([2.0 ** (-8.0 * (h + 1) / self.H) for h in range(self.H)], device=dev)
         self._doc = _doc_ids(max(self.Q, self.KV), dev)
         mm = self._mask_mod()
-        self._block_mask = None if mm is None else create_block_mask(mm, self.B, self.H, self.Q, self.KV, device=dev)
+        # one block-mask head (broadcast) for the decode cases: flex decoding with GQA requires it
+        heads = None if self.mask.startswith("decode") else self.H
+        self._block_mask = None if mm is None else create_block_mask(mm, self.B, heads, self.Q, self.KV, device=dev)
         self._flex = torch.compile(flex_attention)
         inp = self.inputs(10_000)
         self.launch(inp)  # compile (and compile the backward) outside the recorder
@@ -249,3 +263,21 @@ class FlexNewer(FlexCase):
 CASES += [FlexNewer("flex_bwd_learned_alibi", "learned_alibi", mask="causal", kernel_options=_SMALL),
           FlexNewer("flex_bwd_lse_grad", "lse", mask="causal"),
           FlexNewer("flex_bwd_lse_grad_plain", "lse")]
+
+
+# Flex decoding (query length < 128 selects the split-KV decoding template; GQA needs a power-of-two group size and
+# a single block-mask head).  Forward only: the decoding template has no backward of its own.
+_DECODE = [
+    ("dec_q1_kv1027", {"Q": 1, "KV": 1027}),
+    ("dec_q1_kv1027_causal", {"Q": 1, "KV": 1027, "mask": "decode_causal"}),
+    ("dec_q7_kv300_causal", {"Q": 7, "KV": 300, "mask": "decode_causal"}),
+    ("dec_q7_kv1000_sliding", {"Q": 7, "KV": 1000, "mask": "decode_sliding"}),
+    ("dec_q64_kv777_document", {"Q": 64, "KV": 777, "mask": "decode_document"}),
+    ("dec_q4_kv513_gqa4", {"Q": 4, "KV": 513, "H": 8, "HKV": 2, "mask": "decode_causal"}),
+    ("dec_q4_kv513_gqa4_softcap", {"Q": 4, "KV": 513, "H": 8, "HKV": 2, "score": "softcap"}),
+    ("dec_q3_kv700_alibi", {"Q": 3, "KV": 700, "score": "alibi", "mask": "decode_causal"}),
+    ("dec_q2_kv400_dv32", {"Q": 2, "KV": 400, "DV": 32, "mask": "decode_causal"}),
+    ("dec_q16_kv2048_b3", {"B": 3, "Q": 16, "KV": 2048, "mask": "decode_sliding"}),
+]
+for _name, _kw in _DECODE:
+    CASES.append(FlexCase(f"flex_{_name}", **_kw))
