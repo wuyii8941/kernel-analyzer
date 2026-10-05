@@ -49,6 +49,8 @@
 
 - TRL 融合 LM head 绕过 `logits_scaling` / `lm_head_multiplier`：TRL #7439（2026-10-03 合并）。
 - TRL GRPO + Liger 丢掉 MoE 辅助损失：TRL #7161。
+- `torch._functorch.config.activation_memory_budget < 1` 与 dropout 同用时，编译后的反向重算 dropout 掩码（重新抽随机数），GPT-2 梯度错 33–84%（有限差分已核实）：PyTorch #190758、#190717（开着）。工具不建模随机数，这一条是对照实验发现的，召回已知问题，不计入。
+- SDPA 四个后端（MATH / EFFICIENT / FLASH / CUDNN）对 float64 语义的差分筛查（`scripts/screen_sdpa_backends.py`，62 种配置 × 3 种精度，`results/screen/sdpa_backends.json`）：无异常。全掩码行四个后端都输出 0（PyTorch 2.5 起的`_safe_softmax` 约定，不是 NaN）；L=1 因果时规格梯度恰为 0，后端给出 1e-8 级噪声。这些后端是 CUDA/cuDNN，工具不覆盖，只作旁证。
 
 ## 目录
 

@@ -530,7 +530,8 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
         op.operands = _values(head)
         op.operand_types = operand_types
     elif name == "scf.for":
-        mm = re.match(r"\s*(%[\w$.\-]+)\s*=\s*(%[\w$.\-]+)\s+to\s+(%[\w$.\-]+)\s+step\s+(%[\w$.\-]+)(.*)$", head)
+        v = r"%[\w$.\-]+(?:#\d+)?"  # a result of a multi-result op is referenced as %name#i
+        mm = re.match(rf"\s*({v})\s*=\s*({v})\s+to\s+({v})\s+step\s+({v})(.*)$", head)
         if not mm:
             raise TTIRParseError(f"line {line_no}: bad scf.for {raw!r}")
         op.attrs["induction_var"] = mm.group(1)
@@ -546,7 +547,7 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
             op.result_types = _type_list(im.group(2))
         op.attrs["iv_type"] = operand_types[0] if operand_types else TType((), "i32")
     elif name == "scf.if":
-        mm = re.match(r"\s*(%[\w$.\-]+)\s*(?:->\s*\((.*)\))?\s*$", head)
+        mm = re.match(r"\s*(%[\w$.\-]+(?:#\d+)?)\s*(?:->\s*\((.*)\))?\s*$", head)
         if not mm:
             raise TTIRParseError(f"line {line_no}: bad scf.if {raw!r}")
         op.operands = [mm.group(1)]

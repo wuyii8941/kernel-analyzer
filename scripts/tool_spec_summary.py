@@ -63,7 +63,9 @@ def main():
             for o, e in r["outputs"].items():
                 s, n = e["semantic"], e["numerical"]
                 ext = bool(e.get("depends_on_non_triton_intermediates"))
+                sv = e.get("special_values") or {}
                 rows.append({"group": grp, "case": r["case"], "output": o,
+                             "special_mismatch": (sv.get("kr_vs_f_class_mismatch", 0), sv.get("k_vs_f_class_mismatch", 0)),
                              "complete": e["reference_classes"]["complete_fraction"],
                              "sem": sem_bin(s, ext), "sem_rel": (s.get("scale") or {}).get("relative_rms"),
                              "num_detected": detected(n), "num_rel": (n.get("scale") or {}).get("relative_rms")})
@@ -71,6 +73,7 @@ def main():
         bins = {}
         for x in rows:
             bins[x["sem"]] = bins.get(x["sem"], 0) + 1
+        special_rows = [x for x in rows if x["special_mismatch"][0] or x["special_mismatch"][1]]
         lines += [f"## {grp}", "",
                   f"用例 {len(files)}，输出 {len(rows)}；e_sem 分档：" +
                   "，".join(f"{k} {v}" for k, v in sorted(bins.items())) +
@@ -80,6 +83,10 @@ def main():
             fmt = lambda v: "—" if v is None or v != v else f"{v:.1e}"  # noqa: E731
             lines.append(f"| {x['case']} | {x['output']} | {x['complete']:.2f} | {x['sem']} | {fmt(x['sem_rel'])} | "
                          f"{'是' if x['num_detected'] else ('否' if x['num_detected'] is False else '—')} | {fmt(x['num_rel'])} |")
+        if special_rows:
+            lines += ["", "特殊值类别不一致（NaN / ±inf，K_R 对 f、K 对 f 的元素数）："] + [
+                f"- {x['case']}:{x['output']} K_R≠f {x['special_mismatch'][0]}，K≠f {x['special_mismatch'][1]}"
+                for x in special_rows]
         if errors:
             lines += ["", "报错："] + [f"- {c}: {m}" for c, m in errors]
         if skipped:

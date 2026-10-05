@@ -33,7 +33,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from kernel_analyzer.reference_eval import intervals as iv  # noqa: E402
 from kernel_analyzer.reference_eval.analysis import assess_units, residual_interval  # noqa: E402
 from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder  # noqa: E402
-from kernel_analyzer.reference_eval.ttir_eval import ST_OK, evaluate_sequence, ptx_zero_fills  # noqa: E402
+from kernel_analyzer.reference_eval.ttir_eval import ST_NINF, ST_OK, evaluate_sequence, ptx_zero_fills  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_mapping import kernel_coverage  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_parser import parse_ttir  # noqa: E402
 
@@ -90,13 +90,15 @@ def f64_point_spec(value, rel=2.0 ** -40):
     """A float64 evaluation of the specification taken as f with a declared bound rel * max|f| (screening use;
     a confirmed finding gets a rigorous enclosure)."""
     value = np.asarray(value, dtype=np.float64)
-    b = rel * float(np.max(np.abs(value))) if value.size else 0.0
-    return iv.down(value - b), iv.up(value + b)
+    finite = np.isfinite(value)
+    b = rel * float(np.max(np.abs(value[finite]))) if finite.any() else 0.0
+    return (np.where(finite, iv.down(value - b), value), np.where(finite, iv.up(value + b), value))
 
 
 GROUPS = {"liger": "tool_spec_cases_liger", "flex": "tool_spec_cases_flex", "inductor": "tool_spec_cases_inductor",
           "tridao": "tool_spec_cases_tridao", "fla": "tool_spec_cases_fla", "inductor2": "tool_spec_cases_inductor2",
-          "inductor3": "tool_spec_cases_inductor3", "tutorials": "tool_spec_cases_triton_tutorials"}
+          "inductor3": "tool_spec_cases_inductor3", "tutorials": "tool_spec_cases_triton_tutorials",
+          "inductor4": "tool_spec_cases_inductor4"}
 
 
 def load_cases(group):
@@ -164,6 +166,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
     not_triton, modified_after, aborted_outputs, mixed_by_output = set(), set(), {}, {}
     external = None
     mixed_sources = None
+    special = {}
     t0 = time.time()
     for seed in list(dev) + list(conf):
         inp = case.inputs(seed)
@@ -204,17 +207,37 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
             idx = buf.global_indices()[m]
             final = torch.empty(0, dtype=out.dtype, device=out.device).set_(out.untyped_storage()).reshape(-1)
             final = final.detach().cpu().numpy()[idx] if idx.size else final.detach().cpu().numpy()[:0]
-            if not np.array_equal(final.astype(np.float64), np.asarray(buf.actual_after[m], dtype=np.float64),
-                                  equal_nan=True):
+            actual = np.asarray(buf.actual_after[m], dtype=np.float64)
+            if buf.actual_after_st is not None:  # the decoder stores special values as 0 plus a status
+                a_st = buf.actual_after_st[m]
+                actual = np.where(a_st == 1, np.nan, np.where(a_st == 2, np.inf, np.where(a_st == 3, -np.inf, actual)))
+            if not np.array_equal(final.astype(np.float64), actual, equal_nan=True):
                 modified_after.add(name)  # a non-Triton op changed it after the last recorded launch
                 continue
             f_lo_s, f_hi_s, pos = to_storage_order(out, *specs[name])
             f_lo, f_hi = f_lo_s[idx], f_hi_s[idx]
-            k, r_lo, r_hi = buf.actual_after[m], buf.lo[m], buf.hi[m]
+            k, r_lo = buf.actual_after[m], buf.lo[m].astype(np.float64)
+            r_hi = buf.hi[m] if buf.hi is not None else r_lo  # integer buffers are exact
             if name not in mixed_by_output:
                 mixed_by_output[name] = mixed_sources.get(out.untyped_storage().data_ptr(), [])
             n_lo, n_hi = residual_interval(k, r_lo, r_hi)
             s_lo, s_hi = iv.isub(r_lo, r_hi, f_lo, f_hi)
+            # special values (NaN / +-inf) are excluded from the residuals; compare their classes separately
+            f_cls = np.where(np.isnan(f_lo), 1, np.where(f_lo == np.inf, 2, np.where(f_hi == -np.inf, 3, 0)))
+            kr_cls = np.where(buf.st[m] <= ST_NINF, buf.st[m], -1)  # -1: not established
+            k_arr = actual
+            k_cls = np.where(np.isnan(k_arr), 1, np.where(k_arr == np.inf, 2, np.where(k_arr == -np.inf, 3, 0)))
+            decided = (kr_cls >= 0) & ~buf.cond[m]
+            mism = decided & (kr_cls != f_cls)
+            sv = special.setdefault(name, {"elements_with_special_f": 0, "kr_vs_f_class_mismatch": 0,
+                                            "k_vs_f_class_mismatch": 0, "examples": []})
+            sv["elements_with_special_f"] += int((f_cls > 0).sum())
+            sv["kr_vs_f_class_mismatch"] += int(mism.sum())
+            sv["k_vs_f_class_mismatch"] += int((k_cls != f_cls).sum())
+            names_ = {0: "finite", 1: "nan", 2: "+inf", 3: "-inf", -1: "?"}
+            for j in np.flatnonzero(mism | (k_cls != f_cls))[: max(0, 5 - len(sv["examples"]))]:
+                sv["examples"].append({"index": int(idx[j]), "f": names_[int(f_cls[j])], "K_R": names_[int(kr_cls[j])],
+                                       "K": names_[int(k_cls[j])], "K_value": float(k_arr[j])})
             per.setdefault(name, []).append({
                 "n": (n_lo, n_hi), "s": (s_lo, s_hi), "kr": 0.5 * (r_lo + r_hi), "k": k,
                 "ok": (buf.st[m] == ST_OK) & ~buf.cond[m] & np.isfinite(f_lo), "idx": idx, "pos": pos,
@@ -239,6 +262,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
         entry = {"elements_per_seed": int(rows[0]["idx"].size), "shape": list(rows[0]["shape"]),
                  "depends_on_non_triton_intermediates": mixed_by_output.get(name, []),
                  "reference_classes": {"complete_fraction": float(ok.mean())},
+                 "special_values": special.get(name),
                  "not_established_reasons_seed0": rows[0]["reasons"],
                  "aborted_programs_seed0": rows[0]["aborted"]}
         for key, label in (("n", "e_num = K - K_R"), ("s", "e_sem = K_R - f")):
