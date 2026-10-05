@@ -31,25 +31,56 @@ torch 操作改过；写它的程序中止（没有语义的 libdevice 函数等
 | FLA 门控 delta rule | main（0.6.0） | 24 | chunk 与 fused_recurrent：GVA、kernel 内 l2norm、sigmoid β、负特征值、kernel 内门控（内联 PTX）、初态/末态、V-first 状态、变长、非整块长度；chunk 的反向 |
 | Triton 官方教程 | v3.6.0 | 9 | 05-layer-norm、06-fused-attention（前向、反向、因果与非因果） |
 
-## 3. 结论（初稿，待正式重跑数字）
+## 3. 结论
 
-- **检出的实质问题都已在上游有记录**：
+- **上游未知的新问题（1 条）**：`torch.optim.RAdam` 的 capturable 路径与 `torch.compile(opt.step)` 在 float32 里
+  算整流项 ρ_t = ρ_∞ − 2t·β₂ᵗ/(1 − β₂ᵗ)（两个接近 ρ_∞ 的数相减，β₂ 先被舍入到 float32），β₂ 接近 1 时整流
+  判据 ρ_t > 5 在前几步翻转（B012）。工具在编译后优化器的筛查里先对 `opt_radam` 报出"小"档 e_sem（默认
+  β₂、第 7 步，7.3e-7）；顺着公式定向构造用例后，β₂ = 0.9995 第 5 步 param 的 e_sem 为 1.45e-2（≈ 整步更新），
+  e_num 2.4e-7。复现：更新误差在默认 β₂ 下达 6e-3，在 0.9995 / 0.9999 的翻转步达 0.99，在 0.99999 下达
+  13–18 倍；eager 的非 capturable 路径保持在 2e-4–2e-3。PyTorch main 代码相同，检索未见报告。
+- **检出、但上游已有记录的问题（2 条）**：
   - Inductor `avg_pool2d(ceil_mode=True, count_include_pad=True)` 反向梯度错误（B010，pytorch#198119，未修）；
   - Triton 教程 fused attention 的非因果反向错误（B011，教程测试里的 FIXME）。
-  两者都是工具在不知道答案的情况下检出的（e_sem 相对 9.4e-2 与 ≈1.0，e_num 分别为 3.6e-8 与 3e-4，
+  两者都是工具在不知道答案的情况下检出的（e_sem 相对 9.4e-2 与 ≈1.0；e_num 分别为 3.6e-8 与 3e-4，
   说明 kernel 忠实执行了它自己的、错误的算法）。
 - **其余全部在常数取整级或干净**：FlexAttention 的系统偏差已核实是 fp32 舍入后的 log2(e)（温度偏 1.3e-8）；
   Inductor 插值的 5e-7 来自 fp32 坐标比例常数，特殊函数的 1e-7 级是 Cephes 近似的设计精度；FLA、mamba、
-  FlashAttention 各算子的语义与文档公式一致。
+  FlashAttention 各算子的语义与文档公式一致（FLA 反向的 dg 因依赖 torch 归约出的中间值而记为混合，其
+  1.7e-3 是上游 TF32 数值误差，不是语义偏差）。
 - **② 类观察**：FlexAttention 反向（Q_LEN 非块倍数时的 dv）、flash-attn 与 mamba 的归一化反向都依赖
   "不带 `other` 的掩码通道为 0"，这在 Triton 文档里是未定义的；Triton 3.6 的 NVIDIA 后端把寄存器置 0
   （PTX 已核实），所以结果正确，属可移植性风险（O01）。
-- **与 Liger 对比**：Liger 的两条 RoPE 问题（B001、B002）是普查脚本先发现、工具复核检出；成熟算子这一轮
-  没有找到上游未知的算法层面错误。这本身是一个结论：这些代码库在 fp32 语义层面经得起检查，问题集中在
-  新集成、新功能和测试未覆盖的配置（B002 的 phi3 + 部分旋转、B010 的 ceil_mode 越界窗口、B011 的非因果）。
+- **规律**：问题都出在默认配置之外——β₂ 接近 1 的 RAdam、ceil_mode 的越界窗口、非因果的教程反向、
+  phi3 的部分旋转（B002）。成熟代码在默认配置和常用配置上经得起 fp32 语义层面的检查；工具的价值在于
+  能系统地扫这些边角配置，并把"kernel 的算法错"（e_sem）和"kernel 的舍入大"（e_num）分开。
+- **已知的误标**：FlexAttention 的 ALiBi 用例把 setup 里构造的斜率常量当成了外来中间值（"混合"），
+  其 e_sem 为 1.2e-8，不影响结论。
 
 ## 4. 工具本轮的改进（因这次筛查而发现的工具问题）
 
 见 `docs/tool_changes_20261005.md`：一处正确性修正（中止程序后的组合求值）、四处精度修正（整数 0 吸收
 未定义、自比较、bool 字节、自定义 scan）、掩码通道补 0 的 PTX 核实假设、内联 PTX 片段解释器、多操作数
 scan、混合来源判定。每处都有修正前失败、修正后通过的测试。
+
+## 5. 普查表（`results/tool_spec/census/summary.md`）
+
+正式结果：FlexAttention、FlashAttention/mamba、FLA、Triton 教程、RAdam 定向用例全部用最终版工具；Inductor 三批的
+多 launch 用例用最终版工具重跑，单 launch 用例沿用上一轮（后加的规则只影响多 launch 组合）。
+`ind_logcumsumexp_bwd` 的正式重跑仍在进行，表中用上一轮结果。
+
+| 组 | 用例 | 输出 | 候选 (≥1e-5) | 小 (1e-7–1e-5) | 常数取整级 | 未检出 | 混合 | 判不了 | 不评 | 报错 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Inductor 第一批 | 86 | 89 | 1（B010） | 6 | 20 | 62 | 0 | 0 | 5 | 0 |
+| Inductor 第二批 | 77 | 100 | 0 | 2 | 50 | 47 | 0 | 1 | 10 | 2 |
+| Inductor 第三批 | 68 | 55 | 0 | 1 | 6 | 42 | 2 | 4 | 8 | 0 |
+| FlexAttention | 27 | 51 | 0 | 0 | 47 | 0 | 4 | 0 | 8 | 0 |
+| FlashAttention + mamba | 56 | 78 | 0 | 0 | 9 | 69 | 0 | 0 | 22 | 0 |
+| FLA | 24 | 50 | 0 | 0 | 35 | 10 | 5 | 0 | 0 | 1 |
+| Triton 教程 | 9 | 17 | 0 | 0 | 3 | 5 | 3（含 B011） | 6 | 0 | 0 |
+| RAdam 定向 | 4 | 12 | 3（B012） | 1 | 5 | 3 | 0 | 0 | 0 | 0 |
+| 合计 | 351 | 452 | 4 | 10 | 175 | 238 | 14 | 11 | 53 | 3 |
+
+"小"档逐条已解释：插值 6 条（fp32 坐标比例常数）、digamma / i0e / i1e / vector_norm 反向（近似算法或常数）、
+默认 β₂ 的 RAdam（即 B012 在默认配置下的弱信号）。"判不了"：Triton 教程 layer norm 反向（自旋锁 + 原子操作，
+工具不建立参照）、若干 libdevice 函数（`erfinv`、`hypot` 反向等没有声明语义）。
