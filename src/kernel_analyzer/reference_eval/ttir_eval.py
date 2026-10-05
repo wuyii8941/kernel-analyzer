@@ -51,7 +51,8 @@ ELEM_SIZE = {"f16": 2, "bf16": 2, "f32": 4, "f64": 8, "f8E5M2": 1, "f8E4M3FN": 1
              "f8E5M2FNUZ": 1, "f8E4M3B11FNUZ": 1, "i1": 1, "i8": 1, "i16": 2, "i32": 4, "i64": 8}
 TORCH_TO_ELEM = {"float32": "f32", "float16": "f16", "bfloat16": "bf16", "float64": "f64",
                  "float8_e5m2": "f8E5M2", "float8_e4m3fn": "f8E4M3FN", "int8": "i8", "uint8": "i8",
-                 "int16": "i16", "int32": "i32", "int64": "i64", "bool": "i1"}
+                 "int16": "i16", "int32": "i32", "int64": "i64", "bool": "i1",
+                 "uint16": "i16", "uint32": "i32", "uint64": "i64"}
 
 
 class NumericMode:
@@ -301,8 +302,9 @@ def decode_storage(raw: np.ndarray, dtype: str):
         tdtype = {"f8E5M2": torch.float8_e5m2, "f8E4M3FN": torch.float8_e4m3fn}[elem]
         vals = torch.from_numpy(raw.copy()).view(tdtype).to(torch.float64).numpy()
     else:
-        np_dtype = {"int8": np.int8, "uint8": np.uint8, "int16": np.int16, "int32": np.int32,
-                    "int64": np.int64, "bool": np.uint8}[dtype]
+        # uint64 (pointer tables) is read as int64: device addresses are below 2**63
+        np_dtype = {"int8": np.int8, "uint8": np.uint8, "int16": np.int16, "uint16": np.uint16, "int32": np.int32,
+                    "uint32": np.uint32, "int64": np.int64, "uint64": np.int64, "bool": np.uint8}[dtype]
         vals = raw.view(np_dtype).astype(np.int64)
         return vals, np.zeros(vals.shape, dtype=np.int8)
     st = np.zeros(vals.shape, dtype=np.int8)
@@ -482,6 +484,17 @@ class KernelReferenceEvaluator:
                                           np.array(False), frozenset())
                 else:
                     bindings[name] = TV(kind, ttype.elem, np.array(int(arg.value), dtype=np.int64))
+        for arg in getattr(launch, "implicit", []) or []:  # reachable through raw addresses only
+            ident = arg.storage_ptr
+            if ident not in memory:
+                memory[ident] = self._buffer_from_capture(arg)
+            elif arg.after is not None:
+                after = arg.after.numpy() if hasattr(arg.after, "numpy") else arg.after
+                buf = memory[ident]
+                buf.actual_after, buf.actual_after_st = decode_storage(after, arg.dtype)
+                buf.after_raw = np.asarray(after).copy()
+            if not memory[ident].name:
+                memory[ident].name = arg.name
         return bindings, memory
 
     def _buffer_from_capture(self, arg) -> Buffer:
@@ -748,6 +761,34 @@ class KernelReferenceEvaluator:
         st = _merge_status(ptr, off)
         return TV("p", ptr.elem, lo, None, np.broadcast_to(ptr.base, lo.shape).copy(), st,
                   _merge_cond(ptr, off), _merge_reasons(ptr, off))
+
+    def _op_int_to_ptr(self, op, args, env, state):
+        """A raw address back to a pointer: the captured storage (operand or registered implicit tensor) whose
+        byte range holds it, plus the byte offset.  Addresses outside every captured storage are not established."""
+        x = args[0]
+        out_elem = op.result_types[0].elem
+        addr = np.asarray(x.lo, dtype=np.int64)
+        idents = np.array(sorted(state.memory), dtype=np.int64)
+        ends = np.array([i + state.memory[int(i)].st.size * ELEM_SIZE[state.memory[int(i)].elem] for i in idents],
+                        dtype=np.int64)
+        base = np.zeros(addr.shape, dtype=np.int64)
+        found = np.zeros(addr.shape, dtype=bool)
+        if idents.size:
+            k = np.searchsorted(idents, addr, side="right") - 1
+            kc = np.clip(k, 0, idents.size - 1)
+            found = (k >= 0) & (addr < ends[kc])
+            base = np.where(found, idents[kc], 0)
+        reasons = set(x.reasons)
+        st = np.where(found, x.st, ST_NE).astype(np.int8)
+        if (~found & (x.st == ST_OK)).any():
+            reasons.add(f"not_established:address outside every captured storage@{op.node_id}")
+        return TV("p", out_elem, np.where(found, addr - base, 0), None, base, st, x.cond, reasons)
+
+    def _op_ptr_to_int(self, op, args, env, state):
+        p = args[0]
+        out_elem = op.result_types[0].elem
+        return TV("i", out_elem, (np.asarray(p.base, dtype=np.int64) + np.asarray(p.lo, dtype=np.int64)), None, None,
+                  p.st, p.cond, p.reasons)
 
     def _op_poison(self, op, args, env, state):
         ttype = op.result_types[0]

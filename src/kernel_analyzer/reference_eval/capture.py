@@ -61,6 +61,9 @@ class CapturedLaunch:
     metadata: dict
     libtriton_sha256: Optional[str]
     environment: dict = field(default_factory=dict)
+    # tensors the kernel reaches only through raw addresses (pointer tables + tt.int_to_ptr), registered by the
+    # workload with TritonLaunchRecorder.register_implicit; captured like tensor operands, bound to no parameter
+    implicit: list = field(default_factory=list)
 
     def ttir_params(self) -> list:
         """Arguments that are parameters of the TTIR function, in order."""
@@ -159,6 +162,7 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
         self.window = window
         self.keep_kernel = keep_kernel
         self.launches: list[CapturedLaunch] = []
+        self.implicit_tensors: list = []
         self.launch_count = 0
         self._original = None
         self._inductor_static = None
@@ -203,6 +207,13 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
             return launcher
 
         CompiledKernel.run = property(patched)
+
+    @classmethod
+    def register_implicit(cls, *tensors):
+        """Tensors that the next launches read or write through raw addresses (e.g. a table of weight pointers
+        that the kernel turns back into pointers with tt.int_to_ptr).  No-op without an active recorder."""
+        if cls._active is not None:
+            cls._active.implicit_tensors.extend(t for t in tensors if t is not None)
 
     @classmethod
     def remove_hook(cls):
@@ -285,6 +296,14 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
             metadata=metadata, libtriton_sha256=self._libtriton,
             environment={"triton": triton.__version__, "torch": torch.__version__,
                          "device": torch.cuda.get_device_name(torch.cuda.current_device())})
+        for j, t in enumerate(self.implicit_tensors):
+            item = CapturedArg(-1 - j, f"implicit{j}", "tensor", False, None, dtype=str(t.dtype).replace("torch.", ""),
+                               shape=tuple(t.shape), stride=tuple(t.stride()), element_size=t.element_size(),
+                               data_ptr=t.data_ptr(), storage_ptr=t.untyped_storage().data_ptr(),
+                               storage_nbytes=t.untyped_storage().nbytes())
+            if self.copy_tensors:
+                item.before = _storage_copy(t)
+            record.implicit.append(item)
         record.kernel = kernel if self.keep_kernel else None
         record.src_info = {
             "arg_names": names, "signature": signature,
@@ -305,6 +324,8 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
                     item.after = _storage_copy(arg)
                 else:
                     _, item.after = _window_copy(arg, item.window, storage_relative=True)
+        for item, t in zip(record.implicit, self.implicit_tensors):
+            item.after = _storage_copy(t)
 
 
 # ----------------------------------------------------------------------

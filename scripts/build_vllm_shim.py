@@ -46,6 +46,7 @@ FILES = [
     "lora/ops/triton_ops/utils.py",
     "model_executor/layers/fused_moe/fused_moe.py",
     "model_executor/determinism/batch_invariant.py",
+    "model_executor/determinism/batch_invariant_configs.py",
     "kernels/triton/activation.py",
     "v1/attention/ops/triton_reshape_and_cache_flash.py",
     "v1/worker/gpu/sample/logit_bias.py",
@@ -285,6 +286,27 @@ class _Platform:
 current_platform = _Platform()
 '''
 
+# fused_moe/utils.py imports the whole quantization stack; the launcher only needs these defaults (non-Hopper,
+# no tensor-descriptor path)
+MOE_UTILS = '''def enable_swap_ab(BLOCK_SIZE_M, BLOCK_SIZE_N):
+    return False
+
+
+def resolve_moe_use_td():
+    return False
+
+
+def warn_if_moe_use_td_ineffective(active_backend, is_quantized=False):
+    return None
+
+
+def __getattr__(name):
+    if name.startswith("__"):
+        raise AttributeError(name)
+    from vllm import _Stub
+    return type(name, (_Stub,), {})
+'''
+
 
 def main():
     DST.mkdir(parents=True, exist_ok=True)  # files are overwritten in place (running jobs keep importing)
@@ -294,7 +316,8 @@ def main():
                       "utils/torch_utils.py": TORCH_UTILS,
                       "v1/attention/backends/utils.py": BACKEND_UTILS,
                       "utils/platform_utils.py": PLATFORM_UTILS,
-                      "model_executor/layers/quantization/utils/quant_utils.py": QUANT_UTILS}.items():
+                      "model_executor/layers/quantization/utils/quant_utils.py": QUANT_UTILS,
+                      "model_executor/layers/fused_moe/utils.py": MOE_UTILS}.items():
         (DST / rel).parent.mkdir(parents=True, exist_ok=True)
         (DST / rel).write_text(text)
     # kv_cache_interface: only the enum

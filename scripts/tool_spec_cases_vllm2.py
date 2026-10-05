@@ -781,3 +781,301 @@ CASES += [FnCase("v2_gumbel_sample", "vllm V2 _gumbel_sample_kernel (per-block a
                  "argmax over blocks is torch)",
                  "argmax(logits / T + G), G = -log(-log(1 - u)), u = (murmur3(seed, pos, token) + 0.5) 2^-32; "
                  "T = 0: argmax(logits)", _gumbel_make, _gumbel_run, _gumbel_ref)]
+
+
+# --- speculative decoding: rejection sampler (v1/sample/rejection_sampler.py) ------------------------------------
+
+def _rs_inputs(g, nd, V, with_draft_probs):
+    T = sum(nd)
+    tp = torch.softmax(1.5 * rn(g, T, V), -1)
+    d = {"target_probs": tp, "draft_ids": torch.randint(0, V, (T,), generator=g).int(),
+         "bonus": torch.randint(0, V, (len(nd), 1), generator=g), "u": torch.rand(T, generator=g).double(),
+         "cu": torch.tensor(nd).cumsum(0).int(), "greedy": torch.tensor([i % 3 == 0 for i in range(len(nd))])}
+    # make some drafts likely to be accepted: draft = argmax of the target at half of the positions
+    am = tp.argmax(-1).int()
+    pick = torch.rand(T, generator=g) < 0.5
+    d["draft_ids"] = torch.where(pick, am, d["draft_ids"])
+    if with_draft_probs:
+        dp = torch.softmax(1.5 * rn(g, T, V), -1)
+        d["draft_probs"] = dp
+    d["inv_q"] = 1.0 / torch.empty(len(nd), V).exponential_(generator=g)
+    return d
+
+
+def _rs_case(name, nd, V, with_draft_probs):
+    maxs = max(nd)
+
+    def make(g):
+        return _rs_inputs(g, nd, V, with_draft_probs)
+
+    def run(inp):
+        from vllm.v1.sample.rejection_sampler import (_rejection_greedy_sample, _rejection_random_sample,
+                                                      _sample_recovered_tokens)
+        dev = inp["target_probs"].device
+        B = len(nd)
+        dp = inp.get("draft_probs")
+        rec = torch.empty(sum(nd), dtype=torch.int32, device=dev)
+        _sample_recovered_tokens(rec, inp["cu"], inp["draft_ids"], dp, inp["target_probs"], inp["inv_q"].float(),
+                                 max_spec_len=maxs)
+        out = torch.full((B, maxs + 1), -1, dtype=torch.int32, device=dev)
+        am = inp["target_probs"].argmax(-1)
+        _rejection_greedy_sample(out, inp["cu"], inp["draft_ids"], am, inp["bonus"], inp["greedy"], maxs, None, None)
+        _rejection_random_sample(out, inp["cu"], inp["draft_ids"], dp, inp["target_probs"], inp["bonus"], rec,
+                                 inp["u"], inp["greedy"], maxs, None)
+        return {"recovered": rec, "output": out}
+
+    def ref(inp):
+        tp, dp = inp["target_probs"], inp.get("draft_probs")
+        T, V_ = tp.shape
+        rec = torch.zeros(T, dtype=torch.float64)
+        req = torch.repeat_interleave(torch.arange(len(nd)), torch.tensor(nd))
+        inv_q = inp["inv_q"].float().double()  # the kernel reads the fp32 noise
+        for t in range(T):
+            if dp is not None:
+                pr = torch.clamp(tp[t] - dp[t], min=0)
+            else:
+                pr = tp[t].clone()
+                pr[int(inp["draft_ids"][t])] = 0
+            rec[t] = float(torch.argmax(pr * inv_q[req[t]].to(pr.device)))
+        out = torch.full((len(nd), maxs + 1), -1.0, dtype=torch.float64)
+        s = 0
+        for b, n in enumerate(nd):
+            rejected = False
+            for p in range(n):
+                t = s + p
+                did = int(inp["draft_ids"][t])
+                if bool(inp["greedy"][b]):
+                    tok = int(torch.argmax(tp[t]))
+                    out[b, p] = tok
+                    rejected = did != tok
+                else:
+                    q = 1.0 if dp is None else float(dp[t, did])
+                    acc = q > 0 and float(tp[t, did]) / q >= float(inp["u"][t])
+                    out[b, p] = did if acc else rec[t]
+                    rejected = not acc
+                if rejected:
+                    break
+            if not rejected:
+                out[b, n] = int(inp["bonus"][b, 0])
+            s += n
+        dev = tp.device
+        return {"recovered": rec.to(dev), "output": out.to(dev)}
+
+    return FnCase(f"v2_rejection_{name}", "vllm rejection sampler Triton kernels (recovered, greedy, random)",
+                  f"accept draft if p/q >= u, else recovered = argmax(max(p - q, 0) / E); greedy: target argmax; "
+                  f"bonus when all accepted; drafts {nd}, draft probs {with_draft_probs}", make, run, ref)
+
+
+CASES += [_rs_case("draft_probs", [3, 1, 4, 2, 5], 2000, True), _rs_case("ngram_no_draft_probs", [3, 1, 4, 2, 5],
+                                                                            2000, False)]
+
+
+# --- Triton top-k / top-p (v1/sample/ops/topk_topp_triton.py) -----------------------------------------------------
+
+def _topkp_spec(x, k, p):
+    """Keep: top-k by value (exactly k with continuous inputs), then the smallest prefix (by probability over the
+    kept tokens) whose mass reaches p (mass of the strictly higher tokens < p)."""
+    out = x.clone()
+    for r in range(x.shape[0]):
+        row = x[r]
+        keep = torch.isfinite(row)
+        if k is not None and int(k[r]) < row.numel() and int(k[r]) < int(keep.sum()):
+            th = row[keep].topk(int(k[r])).values[-1]
+            keep &= row >= th
+        if p is not None and float(p[r]) < 1.0:
+            pr = torch.zeros_like(row)
+            pr[keep] = torch.softmax(row[keep], 0)
+            order = torch.argsort(row, descending=True)
+            ps = pr[order]
+            above = torch.cumsum(ps, 0) - ps
+            sel = torch.zeros_like(keep)
+            sel[order[above < float(p[r])]] = True
+            keep &= sel
+        out[r] = row.masked_fill(~keep, float("-inf"))
+    return out
+
+
+def _topkp_case(name, B, V, use_k, use_p, few_finite=0):
+    def make(g):
+        x = 2 * rn(g, B, V)
+        if few_finite:
+            m = torch.full((B, V), float("-inf"))
+            for r in range(B):
+                ids = torch.randperm(V, generator=g)[:few_finite]
+                m[r, ids] = x[r, ids]
+            x = m
+        d = {"logits": x}
+        if use_k:
+            d["k"] = torch.randint(1, 60, (B,), generator=g).int() if not few_finite else torch.full((B,), 20).int()
+        if use_p:
+            d["p"] = (0.5 + 0.45 * torch.rand(B, generator=g)) if not few_finite else torch.full((B,), 0.95)
+        return d
+
+    def run(inp):
+        from vllm.v1.sample.ops.topk_topp_triton import apply_top_k_top_p_triton
+        return {"logits": apply_top_k_top_p_triton(inp["logits"], inp.get("k"), inp.get("p"))}
+
+    def ref(inp):
+        return {"logits": _topkp_spec(inp["logits"], inp.get("k"), inp.get("p"))}
+
+    return FnCase(f"v2_topkp_{name}", "vllm apply_top_k_top_p_triton (pivot search)",
+                  f"exact top-k then top-p masking, B={B} V={V} k={use_k} p={use_p} few_finite={few_finite}",
+                  make, run, ref)
+
+
+CASES += [
+    _topkp_case("k", 8, 4096, True, False),
+    _topkp_case("p_monolithic", 80, 4096, False, True),
+    _topkp_case("p_split", 8, 4096, False, True),
+    _topkp_case("kp", 8, 4096, True, True),
+    _topkp_case("grammar_few_finite_kp", 8, 4096, True, True, few_finite=2),  # pytorch-free recall of vllm#59785
+]
+
+
+# --- LoRA shrink / expand (lora/ops/triton_ops): pointer tables for several slices ---------------------------------
+
+def _lora_meta(mapping):
+    _, sorted_idx = torch.sort(mapping, stable=True)
+    ids, counts = torch.unique(mapping, sorted=True, return_counts=True)
+    start = torch.cat([torch.zeros(1, dtype=torch.long), counts.cumsum(0)])
+    return sorted_idx.int(), counts.int(), start.int(), ids.int()
+
+
+def _lora_case(name, op, slices, T=24, K=256, R=16, L=3):
+    def make(g):
+        mapping = torch.randint(-1, L, (T,), generator=g)
+        d = {"mapping": mapping}
+        if op == "shrink":
+            d["x"] = rn(g, T, K).half()
+            for s in range(slices):
+                d[f"w{s}"] = (0.1 * rn(g, L, R, K)).half()
+        else:
+            d["y"] = rn(g, slices, T, R).half()
+            d["out"] = rn(g, T, K * slices).half()
+            for s in range(slices):
+                d[f"w{s}"] = (0.1 * rn(g, L, K, R)).half()
+        return d
+
+    def run(inp):
+        from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder
+        from vllm.lora.ops.triton_ops.lora_expand_op import _lora_expand
+        from vllm.lora.ops.triton_ops.lora_shrink_op import _lora_shrink
+        ws = [inp[f"w{s}"] for s in range(slices)]
+        TritonLaunchRecorder.register_implicit(*ws)  # reached through the kernel's pointer table when slices > 1
+        sorted_idx, counts, start, ids = (t.to(ws[0].device) for t in _lora_meta(inp["mapping"].cpu()))
+        no_lora = torch.tensor([bool((inp["mapping"] == -1).all())])
+        nact = torch.tensor([ids.numel()])
+        if op == "shrink":
+            out = torch.empty(slices, T, R, dtype=torch.float32, device=ws[0].device)
+            _lora_shrink(inp["x"], ws, out, inp["mapping"], sorted_idx, counts, start, ids, no_lora, nact, 0.5)
+            return {"y": out}
+        out = inp["out"]
+        _lora_expand(inp["y"], ws, out, inp["mapping"], sorted_idx, counts, start, ids, no_lora, nact,
+                     offset_start=0, add_inputs=True)
+        return {"out": out}
+
+    def ref(inp):
+        m = inp["mapping"]
+        if op == "shrink":
+            y = torch.zeros(slices, T, R, dtype=torch.float64, device=m.device)
+            for s in range(slices):
+                for t in range(T):
+                    if int(m[t]) >= 0:
+                        y[s, t] = 0.5 * inp["w{}".format(s)][int(m[t])] @ inp["x"][t]
+            return {"y": y}
+        out = inp["out"].clone()
+        for s in range(slices):
+            for t in range(T):
+                if int(m[t]) >= 0:
+                    out[t, s * K:(s + 1) * K] += inp[f"w{s}"][int(m[t])] @ inp["y"][s, t]
+        return {"out": out}
+
+    return FnCase(f"v2_lora_{op}_{slices}slice", f"vllm _lora_{op} (Triton, multi-LoRA)",
+                  f"{'y_s[t] = 0.5 * A_s[lora(t)] x[t]' if op == 'shrink' else 'out[t, slice s] += B_s[lora(t)] y_s[t]'}"
+                  f" for tokens with a LoRA (mapping -1: untouched); {slices} slice(s), rank {R}", make, run, ref)
+
+
+CASES += [_lora_case("s", "shrink", 1), _lora_case("s3", "shrink", 3), _lora_case("e", "expand", 1),
+          _lora_case("e3", "expand", 3)]
+
+
+# --- fused MoE (bf16 path of fused_moe_kernel) ------------------------------------------------------------------------
+
+def _moe_align(topk_ids, block, E):
+    flat = topk_ids.flatten()
+    sorted_ids, expert_ids = [], []
+    for e in range(E):
+        toks = torch.nonzero(flat == e).flatten().tolist()
+        if not toks:
+            continue
+        pad = (-len(toks)) % block
+        toks += [flat.numel()] * pad
+        sorted_ids += toks
+        expert_ids += [e] * (len(toks) // block)
+    return (torch.tensor(sorted_ids, dtype=torch.int32), torch.tensor(expert_ids, dtype=torch.int32),
+            torch.tensor([len(sorted_ids)], dtype=torch.int32))
+
+
+def _moe_case(name, T, K, N, E, topk, routed):
+    BM = 16
+
+    def make(g):
+        logits = rn(g, T, E)
+        w, ids = torch.topk(torch.softmax(logits, -1), topk, -1)
+        s, e, n = _moe_align(ids, BM, E)
+        return {"a": rn(g, T, K).half(), "b": (0.1 * rn(g, E, N, K)).half(), "w": w.float(), "ids": ids,
+                "sorted": s, "experts": e, "ntpp": n}
+
+    def run(inp):
+        import triton.language as tl
+        from vllm.model_executor.layers.fused_moe.fused_moe import invoke_fused_moe_triton_kernel
+        c = torch.zeros(T, topk, N, dtype=torch.float16, device=inp["a"].device)
+        cfg = {"BLOCK_SIZE_M": BM, "BLOCK_SIZE_N": 32, "BLOCK_SIZE_K": 32, "GROUP_SIZE_M": 1, "num_warps": 4,
+               "num_stages": 2}
+        invoke_fused_moe_triton_kernel(inp["a"], inp["b"], c, None, None, inp["w"], inp["sorted"], inp["experts"],
+                                       inp["ntpp"], routed, topk, cfg, tl.float16, False, False, False, False, False)
+        return {"c": c}
+
+    def ref(inp):
+        c = torch.zeros(T, topk, N, dtype=torch.float64, device=inp["a"].device)
+        for t in range(T):
+            for j in range(topk):
+                e = int(inp["ids"][t, j])
+                c[t, j] = inp["b"][e] @ inp["a"][t] * (inp["w"][t, j] if routed else 1.0)
+        return {"c": c}
+
+    return FnCase(f"v2_fused_moe_{name}", "vllm fused_moe_kernel (fp16, invoke_fused_moe_triton_kernel)",
+                  f"C[t, j] = (w[t, j] if routed) * B[e(t, j)] A[t]; T={T} K={K} N={N} E={E} topk={topk}; token "
+                  f"grouping computed as moe_align_block_size does (block {BM}, padding id T*topk)", make, run, ref)
+
+
+CASES += [_moe_case("plain", 37, 128, 96, 8, 2, False), _moe_case("routed", 37, 128, 96, 8, 2, True)]
+
+
+# --- batch-invariant kernels (model_executor/determinism/batch_invariant.py) --------------------------------------
+
+def _bi_mm_make(g):
+    return {"a": rn(g, 70, 96).half(), "b": rn(g, 96, 130).half(), "bias": rn(g, 130).half()}
+
+
+def _bi_mm_run(inp):
+    from vllm.model_executor.determinism.batch_invariant import matmul_persistent
+    return {"c": matmul_persistent(inp["a"], inp["b"], inp["bias"])}
+
+
+def _bi_lsm_run(inp):
+    from vllm.model_executor.determinism.batch_invariant import log_softmax, mean_dim, rms_norm_batch_invariant
+    return {"log_softmax": log_softmax(inp["x"], -1), "mean": mean_dim(inp["x"], 1),
+            "rms": rms_norm_batch_invariant(inp["x"], inp["w"], 1e-6)}
+
+
+CASES += [
+    FnCase("v2_bi_matmul_persistent", "vllm batch_invariant.matmul_persistent", "a @ b + bias (fp16)", _bi_mm_make,
+           _bi_mm_run, lambda inp: {"c": inp["a"] @ inp["b"] + inp["bias"]}),
+    FnCase("v2_bi_log_softmax_mean_rms", "vllm batch_invariant log_softmax / mean_dim / rms_norm",
+           "log_softmax(x, -1), mean(x, 1), x * rsqrt(mean(x^2) + eps) * w", lambda g: {"x": 2 * rn(g, 9, 3000),
+                                                                                   "w": rn(g, 3000)},
+           _bi_lsm_run, lambda inp: {"log_softmax": torch.log_softmax(inp["x"], -1), "mean": inp["x"].mean(1),
+                                     "rms": inp["x"] * torch.rsqrt((inp["x"] ** 2).mean(-1, keepdim=True) + 1e-6)
+                                     * inp["w"]}),
+]

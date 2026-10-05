@@ -159,7 +159,8 @@ class TRegion:
 
     @property
     def entry(self) -> TBlock:
-        return self.blocks[0]
+        # An empty region (`scf.if %c { } else { ... }`) has an implicit, operand-free terminator.
+        return self.blocks[0] if self.blocks else TBlock(None, [], [])
 
 
 @dataclass
