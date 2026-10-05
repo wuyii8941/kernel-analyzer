@@ -56,7 +56,7 @@ python scripts/run_reference_analysis.py --declaration D.json --stage statistics
 ```
 
 对一个调用做检查（绑定文件给 `make_inputs(seed)`、`run(inputs) -> {名字: 张量}`，可选 `spec(inputs)`；不给规格即
-模式 A，示例在 `examples/bindings/`）：
+模式 A，示例与模板在 `examples/bindings/`，说明见[接入指南](docs/binding_guide.md)）：
 
 ```bash
 kernel-analyzer check examples/bindings/softmax.py --out DIR --seeds 96
