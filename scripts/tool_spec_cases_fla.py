@@ -22,6 +22,40 @@ import torch.nn.functional as F
 
 from tool_spec_cases_tridao import FnCase, rn
 
+_PATCHED = False
+
+
+def patch_fla_backward_adds():
+    """Replace the two in-place torch adds of FLA's chunk backward (dk.add_(dk2), dg.add_(dg2)) by the bitwise-equal
+    Triton kernel reference_eval_kernels.accumulate (same IEEE fp32 add, one writer per element), so the whole
+    backward is a chain of Triton launches and K_R composes across it (as for the Liger dW accumulation)."""
+    global _PATCHED
+    if _PATCHED:
+        return
+    import inspect
+    import sys
+    from pathlib import Path
+
+    import triton
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from scripts.reference_eval_kernels import accumulate
+
+    import fla.ops.gated_delta_rule.chunk as chunk_mod
+
+    def triton_add_(acc, c):
+        assert acc.is_contiguous() and c.is_contiguous() and acc.shape == c.shape
+        n = acc.numel()
+        accumulate[(triton.cdiv(n, 1024),)](acc, c, n, BLOCK=1024)
+        return acc
+
+    src = inspect.getsource(chunk_mod.chunk_gated_delta_rule_bwd)
+    assert "dk.add_(dk2)" in src and "dg.add_(dg2)" in src
+    src = src.replace("dk.add_(dk2)", "_triton_add_(dk, dk2)").replace("dg.add_(dg2)", "_triton_add_(dg, dg2)")
+    chunk_mod._triton_add_ = triton_add_
+    exec(compile(src, chunk_mod.__file__, "exec"), chunk_mod.__dict__)
+    _PATCHED = True
+
 
 def gdr_ref(q, k, v, g, beta, h0=None, cu=None, l2=False, beta_sig=False, neg=False, gate=False, A_log=None,
             dt_bias=None, v_first=False):
@@ -79,6 +113,9 @@ def _gdr_case(name, path="chunk", B=2, T=128, H=2, HV=2, K=32, V=32, l2=False, b
 
     def run(inp):
         from fla.ops.gated_delta_rule import chunk_gated_delta_rule, fused_recurrent_gated_delta_rule
+
+        if backward:
+            patch_fla_backward_adds()
 
         kw = dict(initial_state=inp.get("h0"), output_final_state=final, use_qk_l2norm_in_kernel=l2,
                   use_beta_sigmoid_in_kernel=beta_sig, allow_neg_eigval=neg, state_v_first=v_first,

@@ -345,6 +345,8 @@ class KernelReference:
     notes: list = field(default_factory=list)
     reasons: dict = field(default_factory=dict)
     rules: dict = field(default_factory=dict)  # element/event counts per reference rule
+    loaded: set = field(default_factory=set)  # storages whose captured initial values the reference loaded
+    loaded_any: set = field(default_factory=set)  # storages the reference loaded from at all
 
     def element_classes(self, ident: int):
         """Per element: complete_composed / conditional_local / not_established / not_written."""
@@ -415,10 +417,13 @@ class KernelReference:
 
 class KernelReferenceEvaluator:
     def __init__(self, module: TModule, mode: str = NumericMode.NUMERICAL_DIFFERENCE,
-                 func_name: Optional[str] = None):
+                 func_name: Optional[str] = None, masked_fill_zero: bool = False):
+        """``masked_fill_zero``: treat masked-off lanes of loads without ``other`` as 0 instead of undefined.  TTIR
+        leaves them undefined; use only with a lowering checked to zero-fill them (see ``ptx_zero_fills``)."""
         self.module = module
         self.func = module.entry(func_name)
         self.mode = mode
+        self.masked_fill_zero = masked_fill_zero
         self._uses = self._collect_uses()
 
     @classmethod
@@ -524,6 +529,8 @@ class KernelReferenceEvaluator:
         self._pin = set(pin_loads)
         self._rules = collections.Counter()
         self._outside_window = False
+        self._loaded = set()
+        self._loaded_any = set()
         for buf in memory.values():
             buf.writer[:] = -1  # kernel boundaries order all earlier writes
         aborted = {}
@@ -539,6 +546,27 @@ class KernelReferenceEvaluator:
                 for buf in memory.values():
                     hit = buf.writer == index
                     buf.st = np.where(hit, ST_NE, buf.st).astype(np.int8)
+        if aborted:
+            # An aborted program may stop before some of its stores: elements the kernel changed but the reference
+            # did not write in this launch keep their earlier reference value, which a later launch would read as
+            # established.  They are not established.
+            for arg in launch.args:
+                if arg.kind != "tensor" or arg.storage_ptr not in memory or arg.before is None:
+                    continue
+                buf = memory[arg.storage_ptr]
+                if buf.after_raw is None:
+                    continue
+                b = np.asarray(arg.before.numpy() if hasattr(arg.before, "numpy") else arg.before)
+                a = np.asarray(buf.after_raw)
+                n = buf.st.size
+                if b.shape != a.shape or b.size % n:
+                    continue
+                changed = (b != a).reshape(n, -1).any(axis=1)
+                hit = changed & (buf.writer == -1)
+                if hit.any():
+                    buf.st = np.where(hit, ST_NE, buf.st).astype(np.int8)
+                    reasons["not_established:changed by the kernel, not written by the aborted reference"] += \
+                        int(hit.sum())
         notes = []
         if self._outside_window:
             notes.append("some accesses fell outside the captured windows; those lanes are not established")
@@ -548,7 +576,7 @@ class KernelReferenceEvaluator:
         if aborted:
             self._rules["path.program_aborted"] += len(aborted)
         return KernelReference(self.func.name, self.mode, memory, [tuple(p) for p in programs], aborted,
-                               notes, dict(reasons), dict(self._rules))
+                               notes, dict(reasons), dict(self._rules), set(self._loaded), set(self._loaded_any))
 
     # -- functions and regions ----------------------------------------------------
 
@@ -783,6 +811,10 @@ class KernelReferenceEvaluator:
         if buf is not None:
             safe = active & in_range & (ptr.st == ST_OK)
             idx = np.where(safe, index, 0).astype(np.int64)
+            if safe.any():
+                self._loaded_any.add(buf.ident)
+            if (safe & ~buf.written[idx]).any():
+                self._loaded.add(buf.ident)  # lanes read the captured initial value (not a reference write)
             if pinned:
                 src_lo = buf.actual_after
                 src_hi = buf.actual_after if kind == "f" else None
@@ -828,6 +860,15 @@ class KernelReferenceEvaluator:
             if kind == "f" and other.d is not None:
                 dlo = np.where(inactive, ob(other.d[0], shape), 0.0 if dlo is None else dlo)
                 dhi = np.where(inactive, ob(other.d[1], shape), 0.0 if dhi is None else dhi)
+        elif inactive.any() and self.masked_fill_zero:
+            # Declared lowering assumption (verified on the kernel's PTX by the caller): masked-off lanes of a load
+            # without `other` hold 0, as Triton's NVIDIA backend zero-initializes the destination registers.
+            lo = np.where(inactive, 0.0 if kind == "f" else 0, lo)
+            if kind == "f":
+                hi = np.where(inactive, 0.0, hi)
+            st = np.where(inactive, ST_OK, st)
+            reasons.add(f"assumed:masked lanes zero-filled by the lowering@{op.node_id}")
+            self._rules["memory.masked_load_zero_filled_lanes"] += int(inactive.sum())
         elif inactive.any():
             reasons.add(f"undefined:masked load without other@{op.node_id}")
             self._rules["memory.masked_load_undefined_lanes"] += int(inactive.sum())
@@ -1250,6 +1291,10 @@ class KernelReferenceEvaluator:
         axis = int(op.attrs["axis"].split(":")[0])
         reverse = op.attrs.get("reverse", "false").startswith("true")
         combiner = recognize_combiner(op)
+        if len(args) > 1:  # several operands (e.g. cummax values + indices): only the generic fold applies
+            if self.mode == NumericMode.ROUNDING_CHECK:
+                raise ProgramAbort(f"{op.node_id}: multi-operand scan in rounding-check mode")
+            return self._generic_scan(op, args, axis, reverse, env, state)
         (x,) = args
         if combiner == "sum" and x.kind == "f" and self.mode == NumericMode.ROUNDING_CHECK:
             raise ProgramAbort(f"{op.node_id}: scan order is not declared (rounding-check mode)")
@@ -1351,13 +1396,68 @@ class KernelReferenceEvaluator:
     def _op_inline_asm(self, op, args, env, state):
         internal = inline_asm_internal(op.attrs.get("asm", ""))
         if internal is None:
-            raise ProgramAbort(f"{op.node_id}: inline asm has no declared semantics")
+            program = parse_ptx_program(op.attrs.get("asm", ""))
+            if program is None or len(op.results) != 1 or \
+                    op.attrs.get("packed_element", "1 : i32").split(":")[0].strip() != "1":
+                raise ProgramAbort(f"{op.node_id}: inline asm has no declared semantics")
+            if self.mode == NumericMode.ROUNDING_CHECK and any(ins[2] in _PTX_APPROX for ins in program):
+                raise ProgramAbort(f"{op.node_id}: approximate PTX instruction in rounding-check mode")
+            return self._run_ptx_program(op, program, args)
         mode = inline_asm_rounding(op.attrs.get("asm", ""))
         if mode is not None:  # used only in rounding-check mode, like a rounding-suffixed libdevice call
             import dataclasses
 
             op = dataclasses.replace(op, attrs={**op.attrs, "rounding": mode})
         return self._elementwise(internal, op, args)
+
+    def _run_ptx_program(self, op, program, args):
+        """Lane-wise reference of a straight-line PTX snippet (see parse_ptx_program).  Arithmetic is exact real
+        arithmetic and the .approx functions are the exact functions (their approximation error is a node
+        computation error, measured by K - K_R); a predicated instruction is r := select(p, value, r)."""
+        import dataclasses
+
+        shape = op.result_types[0].shape
+        out_elem = op.result_types[0].elem
+        n_out = len(op.results)
+        regs, preds = {}, {}
+        for i, a in enumerate(args):
+            regs[f"${n_out + i}"] = a if a.shape == shape else a.map(lambda x: np.broadcast_to(x, shape))
+        undefined = _ftv(out_elem, np.zeros(shape), np.zeros(shape), np.full(shape, ST_UNDEF, dtype=np.int8),
+                         np.zeros(shape, dtype=bool), frozenset())
+
+        def value(tok):
+            if tok in regs:
+                return regs[tok]
+            if tok.startswith("$"):
+                return regs.setdefault(tok, undefined)
+            if tok.lower().startswith("0f"):
+                v = float(np.frombuffer(int(tok[2:], 16).to_bytes(4, "little"), dtype=np.float32)[0])
+            else:
+                v = float(iv.round_nearest_even(np.array([float(tok)]), "f32")[0][0])
+            return _ftv("f32", np.full(shape, v), np.full(shape, v), np.zeros(shape, dtype=np.int8),
+                        np.zeros(shape, dtype=bool), frozenset())
+
+        def fake(name, n, attrs=None):
+            return dataclasses.replace(op, name=name, operands=[f"%ptx{i}" for i in range(n)], attrs=attrs or {},
+                                       results=["%ptx_out"], result_types=[op.result_types[0]])
+
+        for pred, neg, kind, dst, srcs in program:
+            if kind == "setp":
+                cmp, a, b = srcs
+                preds[dst] = _cmpf(fake("arith.cmpf", 2, {"predicate": cmp}), [value(a), value(b)])
+                continue
+            if kind == "mov":
+                v = value(srcs[0])
+            else:
+                v = self._float_op(kind, fake(kind, len(srcs)), [value(s) for s in srcs], out_elem)
+            if pred is not None:
+                p = preds[pred]
+                if neg:
+                    p = TV("b", "i1", np.where(p.lo == MAYBE, MAYBE, 1 - p.lo).astype(np.int8), None, None,
+                           p.st, p.cond, p.reasons)
+                v = _select(fake("arith.select", 3), [p, v, value(dst)])
+            regs[dst] = v
+        return regs["$0"]
 
     def _elementwise(self, name: str, op: TOp, args: list) -> TV:
         out_type = op.result_types[0]
@@ -2090,8 +2190,78 @@ def _window_of(arg):
     return None if arg.window is None else np.asarray(arg.window, dtype=np.int64)
 
 
+_PTX_APPROX = {"exp2", "log2", "rcp", "rsqrt", "sqrt", "tanh", "sin", "cos"}
+_PTX_SETP = {"eq": "oeq", "ne": "one", "lt": "olt", "le": "ole", "gt": "ogt", "ge": "oge", "equ": "ueq",
+             "neu": "une", "ltu": "ult", "leu": "ule", "gtu": "ugt", "geu": "uge"}
+_PTX_FN = {"ex2": "exp2", "lg2": "log2", "rcp": "rcp", "rsqrt": "rsqrt", "sqrt": "sqrt", "tanh": "tanh",
+           "sin": "sin", "cos": "cos"}
+
+
+def parse_ptx_program(asm: str):
+    """Parse a straight-line f32 PTX snippet of inline asm into [(pred, negated, kind, dst, srcs)], or None when an
+    instruction is outside the supported subset: .reg .pred declarations; setp.<cmp>.f32; mov.f32 / mov.b32;
+    add / sub / mul (any rounding / ftz modifier); fma.rn; neg / abs; ex2 / lg2 / rcp / rsqrt / sqrt / tanh / sin
+    / cos (.approx or .rn, optional .ftz); each optionally predicated with @p or @!p."""
+    import re
+
+    text = asm.replace("\\n", " ").replace("\\t", " ").replace("{", " ").replace("}", " ")
+    program = []
+    for stmt in (s.strip() for s in text.split(";")):
+        if not stmt:
+            continue
+        if stmt.startswith(".reg"):
+            if not re.fullmatch(r"\.reg\s+\.pred\s+[\w, ]+", stmt):
+                return None
+            continue
+        m = re.fullmatch(r"(?:@(!?)(\w+)\s+)?([\w.]+)\s+(.+)", stmt)
+        if not m:
+            return None
+        neg, pred, opcode, rest = m.group(1) == "!", m.group(2), m.group(3), m.group(4)
+        ops = [t.strip() for t in rest.split(",")]
+        parts = opcode.split(".")
+        base, mods = parts[0], parts[1:]
+        if not mods or mods[-1] not in ("f32", "b32"):
+            return None
+        if base == "setp" and len(mods) == 2 and mods[0] in _PTX_SETP and len(ops) == 3:
+            program.append((pred, neg, "setp", ops[0], [_PTX_SETP[mods[0]], ops[1], ops[2]]))
+        elif base == "mov" and len(ops) == 2:
+            program.append((pred, neg, "mov", ops[0], [ops[1]]))
+        elif base in ("add", "sub", "mul") and len(ops) == 3 and set(mods[:-1]) <= {"rn", "rz", "rm", "rp", "ftz", "sat"} \
+                and "sat" not in mods:
+            program.append((pred, neg, base, ops[0], ops[1:]))
+        elif base == "fma" and len(ops) == 4 and set(mods[:-1]) <= {"rn", "rz", "rm", "rp", "ftz"}:
+            program.append((pred, neg, "fma", ops[0], ops[1:]))
+        elif base in ("neg", "abs") and len(ops) == 2 and set(mods[:-1]) <= {"ftz"}:
+            program.append((pred, neg, base, ops[0], ops[1:]))
+        elif base in _PTX_FN and len(ops) == 2 and set(mods[:-1]) <= {"approx", "rn", "ftz", "full"}:
+            program.append((pred, neg, _PTX_FN[base], ops[0], ops[1:]))
+        else:
+            return None
+    return program or None
+
+
+def ptx_zero_fills(ptx: str) -> bool:
+    """True when every predicated global load in the PTX writes registers that were set to 0 just before (directly,
+    or through a register holding the literal 0): the lowering then defines masked-off lanes as 0."""
+    import re
+
+    lines = ptx.splitlines()
+    zero = set(re.findall(r"mov\.(?:u32|b32|u16|b16|u64|b64)\s+(%r[sd]?\d+),\s*0(?:x0)?;", ptx))
+    for i, line in enumerate(lines):
+        m = re.search(r"@!?%p\d+\s+ld\.global[\w.:]*\s+\{?\s*([^}\]]*?)\s*\}?,\s*\[", line)
+        if not m:
+            continue
+        regs = [r.strip() for r in m.group(1).split(",") if r.strip()]
+        window = "\n".join(lines[max(0, i - 4 * len(regs) - 2):i])
+        for r in regs:
+            mv = re.findall(rf"mov\.\w+\s+{re.escape(r)},\s*([^;]+);", window)
+            if not mv or not (mv[-1].strip() in ("0", "0x0") or mv[-1].strip() in zero):
+                return False
+    return True
+
+
 def evaluate_sequence(launches: list, mode: str = NumericMode.NUMERICAL_DIFFERENCE,
-                      programs_for=None, pin_loads: tuple = ()) -> SequenceReference:
+                      programs_for=None, pin_loads: tuple = (), masked_fill_zero: bool = False) -> SequenceReference:
     """Chain launches through one reference memory (composed reference).
 
     Before each launch every operand buffer is checked: if its captured bytes
@@ -2121,7 +2291,7 @@ def evaluate_sequence(launches: list, mode: str = NumericMode.NUMERICAL_DIFFEREN
             if not (same_window and buf.after_raw is not None and np.array_equal(buf.after_raw, before)):
                 external.append({"launch": position, "buffer": arg.name, "storage": arg.storage_ptr})
                 del memory[arg.storage_ptr]
-        evaluator = KernelReferenceEvaluator(module, mode=mode)
+        evaluator = KernelReferenceEvaluator(module, mode=mode, masked_fill_zero=masked_fill_zero)
         programs = programs_for(launch) if programs_for is not None else None
         results.append(evaluator.evaluate(launch, programs=programs, pin_loads=pin_loads, memory=memory))
     return SequenceReference(results, external, memory)

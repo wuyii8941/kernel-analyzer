@@ -229,6 +229,39 @@ def test_scan_with_a_custom_combine_region_encloses_the_exact_prefix():
 
 
 @cuda
+def test_zero_fill_assumption_is_checked_on_ptx_and_defines_masked_lanes():
+    from kernel_analyzer.reference_eval.ttir_eval import ptx_zero_fills
+
+    k = _kernels()
+    x = torch.randn(128, device="cuda")
+    launch = _capture(lambda: k.masked_copy[(1,)](x, torch.empty_like(x), torch.empty_like(x), 100, BLOCK=128))
+    assert ptx_zero_fills(launch.asm["ptx"])  # Triton 3.6 NVIDIA lowering zero-initializes masked lanes
+    assert not ptx_zero_fills("@%p1 ld.global.b32 { %r1 }, [ %rd1 + 0 ];")
+    assert ptx_zero_fills("mov.b32 \t%r25, 0;\nmov.u32 %r24, %r25;\n@%p4 ld.global.b32 { %r24 }, [ %rd20 + 0 ];")
+    res = KernelReferenceEvaluator(parse_ttir(launch.asm["ttir"]), masked_fill_zero=True).evaluate(launch)
+    _, bz = _buffer(res, "Z")
+    assert (bz.st[:128] == 0).all() and (bz.lo[100:128] == 0).all()
+    assert np.array_equal(bz.actual_after[100:128], np.zeros(28))  # the hardware agrees
+
+
+@cuda
+def test_straight_line_ptx_snippet_has_exact_lanewise_semantics():
+    k = _kernels()
+    x = torch.cat([torch.linspace(-30, 30, 120), torch.tensor([20.5, 25.0, -0.0, 1e-3, 19.5, 21.0, 0.7, -5.0])]).cuda()
+    y = torch.empty_like(x)
+    launch = _capture(lambda: k.softplus_inline_ptx[(1,)](x, y, BLOCK=128))
+    assert kernel_coverage(parse_ttir(launch.asm["ttir"]))["complete"]
+    result = _evaluate(launch)
+    _, by = _buffer(result, "Y")
+    xs = x.double().cpu().numpy()
+    exact = np.where(xs > 20.0, xs, np.log2(1.0 + np.exp2(xs * float(np.float32(1.4426950408889634))))
+                     * float(np.float32(0.6931471805599453)))  # the f32 immediates as written
+    assert (by.st == 0).all()
+    assert np.all(by.lo <= exact + 1e-12 * np.abs(exact) + 1e-300) and np.all(by.hi >= exact - 1e-12 * np.abs(exact) - 1e-300)
+    assert np.allclose(y.double().cpu().numpy(), exact, rtol=1e-5, atol=1e-6)  # the approx instructions are close
+
+
+@cuda
 def test_atomic_return_value_is_not_established_when_used():
     k = _kernels()
     n = 1000
@@ -422,6 +455,26 @@ def test_aborted_programs_are_reported_and_unwritten_outputs_are_not_clean():
     ident, _ = _buffer(result, "Y")
     assert (result.element_classes(ident)[:8] == "not_written").all()
     assert result.compare()["_aborted_programs"]["count"] == 1
+
+
+@cuda
+def test_values_changed_by_an_aborted_program_are_not_established_downstream():
+    """FLA's gate kernel aborts on inline asm; a later launch must not read its stale reference as established."""
+    from kernel_analyzer.reference_eval.ttir_eval import evaluate_sequence
+
+    k = _kernels()
+    x = torch.randn(128, device="cuda")
+    y = torch.zeros(128, device="cuda")
+    z1, z2 = torch.empty(128, device="cuda"), torch.empty(128, device="cuda")
+    rec = TritonLaunchRecorder()
+    with rec:
+        k.fp8_e4b15_round_trip[(1,)](x, y, BLOCK=128)
+        k.masked_copy[(1,)](y, z1, z2, 128, BLOCK=128)
+        torch.cuda.synchronize()
+    seq = evaluate_sequence(rec.launches)
+    assert seq.launches[0].aborted
+    bz = seq.memory[z1.untyped_storage().data_ptr()]
+    assert (bz.st[bz.written] != 0).all()
 
 
 @cuda

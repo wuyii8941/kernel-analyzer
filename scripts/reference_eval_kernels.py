@@ -268,6 +268,22 @@ def log_cumsum_exp(X, Y, BLOCK: tl.constexpr):
     tl.store(Y + offs, tl.associative_scan(tl.load(X + offs), 0, _logaddexp_combine))
 
 
+_SOFTPLUS_PTX = tl.constexpr(" { .reg .pred p; setp.gt.f32  p, $1, 20.; @p  mov.f32  $0, $1; "
+                 "@!p mul.f32 $0, $1, 1.4426950408889634; @!p ex2.approx.ftz.f32 $0, $0; "
+                 "@!p add.f32 $0, $0, 1.0; @!p lg2.approx.ftz.f32 $0, $0; "
+                 "@!p mul.f32 $0, $0, 0.6931471805599453; } ")
+
+
+@triton.jit
+def softplus_inline_ptx(X, Y, BLOCK: tl.constexpr):
+    """FLA's softplus_nv (fla/ops/utils/softplus.py): a predicated multi-instruction PTX snippet."""
+    offs = tl.arange(0, BLOCK)
+    x = tl.load(X + offs)
+    y = tl.inline_asm_elementwise(asm=_SOFTPLUS_PTX, constraints="=r,r", args=[x], dtype=tl.float32, is_pure=True,
+                                  pack=1)
+    tl.store(Y + offs, y)
+
+
 @triton.jit
 def accumulate(ACC, C, n, BLOCK: tl.constexpr):
     offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)

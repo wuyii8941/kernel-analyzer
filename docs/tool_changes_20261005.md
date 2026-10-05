@@ -28,13 +28,37 @@
 | bool 存储可经 int8 指针读写 | Inductor 把 bool 输出转成 int8 写（交叉熵反向），原规则拒绝这种重解释 | i8 与 i1（torch.bool）互访；写入存 0/1，读出未决的 bool 记为未建立 | （由 Inductor 交叉熵反向用例覆盖） |
 | 自定义组合函数的 scan | Inductor 的 logcumsumexp 用带组合区域的 `tt.scan`，原来只支持求和 | 按扫描顺序依次折叠组合区域；Triton 要求组合函数可结合，实数下与树形顺序结果相同，每个前缀的区间包住其实数值 | `log_cumsum_exp` |
 
+另有一处正确性修正（不只是精度）：
+
+- **中止程序之后的组合求值。** 一个程序中止时（例如遇到没有声明语义的内联汇编），原规则只把它中止前
+  已写的元素标为未建立；它本该写、却没来得及写的元素保留写之前的参照值和"已建立"状态，下一个 launch
+  读到时会当作有效值。FLA 的 gate kernel（`tt.elementwise_inline_asm`）就触发了这个问题：下游输出被标成
+  "完整"，K_R 却错了（e_num 相对 RMS ≈ 1）。新规则：有程序中止时，凡是本次 launch 中实际字节变了、
+  参照却没写的元素，一律标为未建立。测试 `test_values_changed_by_an_aborted_program_are_not_established_downstream`
+  修正前失败、修正后通过（53 项全过）。此前的单 launch 结果不受影响；多 launch 且有中止程序的组合结果需重跑。
+
 另有两处小修正：
 
 - `arith.constant true/false` 在 MLIR 里不打印类型，解析器补成 i1（原来导致 IndexError）；
 - `tt.dot` 不打印 `inputPrecision` 时默认是 IEEE（与 `emulate.py` 一致）；原来把它标成 tf32，只影响
   原因标签，不影响参照值。
 
-## 3. 已知局限
+## 3. 第二轮改动（同日）
+
+| 改动 | 起因 | 内容 | 测试 |
+|---|---|---|---|
+| 掩码通道补 0 的声明假设 | flash-attn / mamba 归一化反向、FlexAttention 反向读取不带 `other` 的掩码通道，TTIR 里是未定义值 | `masked_fill_zero` 选项：只有在 `ptx_zero_fills` 核实该调用每个 launch 的 PTX 都先把目标寄存器置 0 后，入口才自动启用；报告记 `masked_lane_assumption` | `test_zero_fill_assumption_is_checked_on_ptx_and_defines_masked_lanes` |
+| 内联 PTX 片段解释器 | FLA 的 softplus 用多条谓词化 PTX（`setp` / `mov` / `mul` / `ex2.approx` / `add` / `lg2.approx`） | `parse_ptx_program` 解析直线型 f32 子集；算术取精确实数，`.approx` 函数取精确函数（近似误差归 K − K_R），谓词执行写成 select；f32 立即数按 f32 舍入 | `test_straight_line_ptx_snippet_has_exact_lanewise_semantics` |
+| 多操作数 scan | Inductor 的 cummax（值 + 下标） | 走通用折叠 | 由 Inductor 用例覆盖 |
+| 依赖非 Triton 中间值的输出单列为"混合" | FLA 反向的 dg：先由 torch 对分块部分和归约，再进入后续 Triton kernel；组合求值把这个捕获值当成精确输入，dg 的 K_R 带上了上游 TF32 误差（e_sem 1.7e-3），而 dq/dk/dv/dbeta 是 1.3e-8 | 评估器记录每个 launch 实际读了哪些存储、哪些读到的是参照从未写过的初始值；入口按内容（不只按地址，地址会被缓存分配器复用）追踪来源，读到的初始值既不是用例输入、也不是全零常量时，记为非 Triton 中间值，下游输出的 e_sem 标为混合 | FLA 反向用例：dg 标为混合，其余 4 个输出不标 |
+| 被改过、未被写、写它的程序中止的输出分开报告 | FLA 的 `dk.add_(dk2)`、libdevice `erfinv` 等 | 报告分别列出 `outputs_modified_after_last_triton_write`、`outputs_not_written_by_triton`、`outputs_whose_writing_programs_aborted` | — |
+
+FLA 用例另把反向里的两次 torch 原地加（`dk.add_(dk2)`、`dg.add_(dg2)`）换成逐位相同的 Triton 加法 kernel
+（与 Liger dW 累加的做法相同），使整个反向成为 Triton launch 链；dg 仍因上游的 torch 归约而为混合。
+
+评估器测试 55 项全过。
+
+## 4. 已知局限
 
 - 掩码读取不给 `other` 的值在 TTIR 语义里是未定义的。FlexAttention 反向在 Q_LEN 不是块大小整数倍时，
   dv 依赖这样一个值（越界行的 LSE 进入 exp2 后与 dO 相乘），工具判为参照未建立。PTX 显示 Triton 3.6

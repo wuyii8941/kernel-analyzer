@@ -231,7 +231,7 @@ def _ln_case(name, rms, residual=False, prenorm=False, zero_centered=False, para
 
     grads = ()
     if backward:
-        grads = ["x", "w"] + (["b"] if bias else []) + (["res"] if residual else []) + (["x1", "w1"] if parallel else [])
+        grads = ["x", "w"] + (["b"] if bias else []) + (["res"] if residual else []) + (["x1"] if parallel else [])
     kind = "rms_norm_fn" if rms else "layer_norm_fn"
     return FnCase(f"fa_{'rms' if rms else 'ln'}_{name}" + ("_bwd" if backward else ""),
                   f"flash_attn.ops.triton.layer_norm.{kind} (main)",

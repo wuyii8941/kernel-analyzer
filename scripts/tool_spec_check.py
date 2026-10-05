@@ -33,7 +33,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from kernel_analyzer.reference_eval import intervals as iv  # noqa: E402
 from kernel_analyzer.reference_eval.analysis import assess_units, residual_interval  # noqa: E402
 from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder  # noqa: E402
-from kernel_analyzer.reference_eval.ttir_eval import ST_OK, evaluate_sequence  # noqa: E402
+from kernel_analyzer.reference_eval.ttir_eval import ST_OK, evaluate_sequence, ptx_zero_fills  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_mapping import kernel_coverage  # noqa: E402
 from kernel_analyzer.reference_eval.ttir_parser import parse_ttir  # noqa: E402
 
@@ -95,7 +95,8 @@ def f64_point_spec(value, rel=2.0 ** -40):
 
 
 GROUPS = {"liger": "tool_spec_cases_liger", "flex": "tool_spec_cases_flex", "inductor": "tool_spec_cases_inductor",
-          "tridao": "tool_spec_cases_tridao", "fla": "tool_spec_cases_fla"}
+          "tridao": "tool_spec_cases_tridao", "fla": "tool_spec_cases_fla", "inductor2": "tool_spec_cases_inductor2",
+          "inductor3": "tool_spec_cases_inductor3"}
 
 
 def load_cases(group):
@@ -110,13 +111,50 @@ def load_cases(group):
 # ---------------------------------------------------------------------------------------------------------------
 
 
-def run(case, dev=DEV, conf=CONF):
+def torch_intermediates(launches, seq, inp):
+    """Per written storage: the float buffers upstream of it (through the recorded launches) that the reference
+    loaded but that are neither inputs of the case nor written by an earlier recorded launch, i.e. produced by a
+    torch / ATen op in between.  K_R treats their captured values as exact inputs, so an output depending on them
+    carries K's upstream numerical error in K_R, and its e_sem is mixed rather than purely semantic."""
+    import hashlib
+
+    def digest(a):
+        return hashlib.sha1(np.ascontiguousarray(np.asarray(a)).view(np.uint8).tobytes()).hexdigest()
+
+    inputs = {digest(v.detach().contiguous().cpu().numpy()) for v in inp.values()
+              if torch.is_tensor(v) and v.is_floating_point()}
+    deps = {}  # storage -> set of foreign buffer labels it depends on
+    last_after = {}  # storage -> digest of its bytes after the last recorded launch that wrote it
+    for i, (l, ref) in enumerate(zip(launches, seq.launches)):
+        tensors = [a for a in l.args if a.kind == "tensor"]
+        upstream = set()
+        for a in tensors:
+            if a.storage_ptr not in ref.loaded_any:
+                continue
+            raw = a.before.numpy() if hasattr(a.before, "numpy") else a.before
+            if a.storage_ptr in deps and last_after.get(a.storage_ptr) == digest(raw):
+                upstream |= deps[a.storage_ptr]  # unchanged since a recorded launch wrote it
+            elif a.storage_ptr in ref.loaded and str(a.dtype).startswith(("float", "bfloat")):
+                if digest(raw) not in inputs and np.asarray(raw).view(np.uint8).any():  # all-zero = exact constant
+                    upstream.add(f"L{i}:{l.kernel_name[:40]}:{a.name}")
+        for a in tensors:
+            before = np.asarray(a.before.numpy() if hasattr(a.before, "numpy") else a.before)
+            after = np.asarray(a.after.numpy() if hasattr(a.after, "numpy") else a.after)
+            if before.shape != after.shape or not np.array_equal(before.view(np.uint8), after.view(np.uint8)):
+                deps[a.storage_ptr] = set(upstream)
+                last_after[a.storage_ptr] = digest(after)
+    return {k: sorted(v) for k, v in deps.items()}
+
+
+def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.set_float32_matmul_precision("highest")
     TritonLaunchRecorder.install_hook()
     case.setup()
     per, coverage, launch_info = {}, None, None
-    not_triton, modified_after = set(), set()
+    not_triton, modified_after, aborted_outputs, mixed_by_output = set(), set(), {}, {}
+    external = None
+    mixed_sources = None
     t0 = time.time()
     for seed in list(dev) + list(conf):
         inp = case.inputs(seed)
@@ -128,7 +166,16 @@ def run(case, dev=DEV, conf=CONF):
             coverage = [kernel_coverage(parse_ttir(l.asm["ttir"]))["complete"] for l in rec.launches]
             launch_info = [{"kernel": l.kernel_name, "grid": list(l.grid), "triton": l.environment.get("triton")}
                            for l in rec.launches]
-        seq = evaluate_sequence(rec.launches)
+            zero_fill = [ptx_zero_fills(l.asm.get("ptx", "")) for l in rec.launches]
+            fill = zero_fill_mode == "auto" and all(zero_fill)
+        seq = evaluate_sequence(rec.launches, masked_fill_zero=fill)
+        if mixed_sources is None:
+            mixed_sources = torch_intermediates(rec.launches, seq, inp)
+        if external is None:
+            # a buffer changed between recorded launches (a torch op in between): from there on its captured value
+            # re-enters as an exact input, so K_R downstream carries the upstream numerical error of K
+            external = [{"launch": e["launch"], "kernel": rec.launches[e["launch"]].kernel_name, "buffer": e["buffer"]}
+                        for e in seq.external_writes]
         specs = case.spec(inp)
         reasons, aborted = {}, {}
         for r in seq.launches:
@@ -139,7 +186,10 @@ def run(case, dev=DEV, conf=CONF):
         for name, out in outs.items():
             buf = seq.memory.get(out.untyped_storage().data_ptr())
             if buf is None or not buf.written.any():
-                not_triton.add(name)  # produced by a non-Triton op (cuBLAS, ATen reduction): nothing to evaluate
+                if aborted and buf is not None:
+                    aborted_outputs.setdefault(name, sorted(aborted)[:3])  # the writing programs aborted
+                else:
+                    not_triton.add(name)  # produced by a non-Triton op (cuBLAS, ATen reduction): nothing to evaluate
                 continue
             m = buf.written
             idx = buf.global_indices()[m]
@@ -152,6 +202,8 @@ def run(case, dev=DEV, conf=CONF):
             f_lo_s, f_hi_s, pos = to_storage_order(out, *specs[name])
             f_lo, f_hi = f_lo_s[idx], f_hi_s[idx]
             k, r_lo, r_hi = buf.actual_after[m], buf.lo[m], buf.hi[m]
+            if name not in mixed_by_output:
+                mixed_by_output[name] = mixed_sources.get(out.untyped_storage().data_ptr(), [])
             n_lo, n_hi = residual_interval(k, r_lo, r_hi)
             s_lo, s_hi = iv.isub(r_lo, r_hi, f_lo, f_hi)
             per.setdefault(name, []).append({
@@ -166,11 +218,17 @@ def run(case, dev=DEV, conf=CONF):
               "seeds": {"development": [list(dev)[0], list(dev)[-1]], "confirmation": [list(conf)[0], list(conf)[-1]]},
               "seconds": round(seconds, 1), "outputs": {},
               "outputs_not_written_by_triton": sorted(not_triton),
-              "outputs_modified_after_last_triton_write": sorted(modified_after)}
+              "outputs_modified_after_last_triton_write": sorted(modified_after),
+              "outputs_whose_writing_programs_aborted": aborted_outputs,
+              "external_reentries_seed0": external,
+              "masked_lane_assumption": {"applied": fill, "ptx_zero_fills_per_launch": zero_fill,
+                                         "meaning": "masked-off lanes of loads without `other` taken as 0 (the "
+                                                    "lowering zero-initializes them; TTIR leaves them undefined)"}}
     for name, rows in per.items():
         ok = np.stack([p["ok"] for p in rows])
         kr = np.stack([p["kr"] for p in rows])
         entry = {"elements_per_seed": int(rows[0]["idx"].size), "shape": list(rows[0]["shape"]),
+                 "depends_on_non_triton_intermediates": mixed_by_output.get(name, []),
                  "reference_classes": {"complete_fraction": float(ok.mean())},
                  "not_established_reasons_seed0": rows[0]["reasons"],
                  "aborted_programs_seed0": rows[0]["aborted"]}
@@ -219,14 +277,19 @@ def main():
     parser.add_argument("--case", required=True, help="case name, or 'all'")
     parser.add_argument("--out", type=Path, required=True, help="directory; one JSON per case")
     parser.add_argument("--seeds", type=int, default=96, help="development = first third")
+    parser.add_argument("--zero-fill", default="auto", choices=("auto", "off"),
+                        help="auto: take masked lanes without `other` as 0 when the PTX of every launch zero-fills them")
     args = parser.parse_args()
+    import torch._inductor.config as inductor_config
+
+    inductor_config.use_static_cuda_launcher = False  # Inductor's static launcher bypasses the launch hook
     cases = load_cases(args.group)
     names = sorted(cases) if args.case == "all" else args.case.split(",")
     n_dev = args.seeds // 3
     args.out.mkdir(parents=True, exist_ok=True)
     for name in names:
         try:
-            report = run(cases[name], dev=range(0, n_dev), conf=range(n_dev, args.seeds))
+            report = run(cases[name], dev=range(0, n_dev), conf=range(n_dev, args.seeds), zero_fill_mode=args.zero_fill)
         except Exception as exc:  # noqa: BLE001
             import traceback
 

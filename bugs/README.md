@@ -20,6 +20,15 @@
 | B009 | `_AdamW(bf16_stochastic_round=True)` 只对参数做随机舍入，状态仍是 bf16 就近舍入，二阶矩同 B005 漂移 | torchao 0.16 | ①（状态） | v 比值 1.33（3k 步） | 未查 | 探针脚本 | 未跑 |
 | B010 | `torch.compile` 下 `avg_pool2d(ceil_mode=True, count_include_pad=True)` 的反向（上游 issue 也涵盖 1d；我们的 1d 用例窗口未越界，未触发）用整个核的大小作除数，ceil_mode 多出的越界窗口梯度错 | PyTorch 2.10 Inductor | ④ | 梯度相对误差 9.6%（最后一列）；编译后 gradcheck 失败，eager 通过；前向逐位相同 | 已知未修：pytorch/pytorch#198119（2026-09-22） | 工具（Inductor 对 eager 语义筛查） | 是：e_sem 检出，相对 RMS 9.4e-2，前向 e_sem 7.6e-17 |
 
+## 观察（不算缺陷，记录在案）
+
+| 编号 | 观察 | 组件 | 严重度 | 证据 |
+|---|---|---|---|---|
+| O01 | 反向 kernel 的正确性依赖"不带 `other` 的掩码读取在越界通道上为 0"。TTIR/Triton 文档里这个值是未定义的；Triton 3.6 的 NVIDIA 后端会先把目标寄存器置 0（PTX 已核实），所以结果正确。若越界通道是 NaN/Inf，整行梯度会被污染（0·NaN）。一行修法：读取时给 `other=0.0` | flash-attn `layer_norm.py` 反向（`w = tl.load(W + cols, mask=mask)` 之后 `wdy = w * dy` 进入整行求和 c1）、mamba_ssm `layer_norm.py` 反向（同一份代码）、mamba_ssm `layernorm_gated.py` 反向、PyTorch FlexAttention 反向在 Q_LEN 非块倍数时的 dv（越界行的 LSE） | 低（可移植性） | 工具判为参照未建立（`undefined:masked load without other`）；`ptx_zero_fills` 对这些 kernel 的 PTX 全部为真；工具加了经 PTX 核实才启用的"掩码通道补 0"假设后可评估 |
+| O02 | FlexAttention 用 fp32 舍入后的 log2(e) 做 exp2，softmax 温度偏 1.3e-8 | PyTorch FlexAttention | 可忽略 | 规格温度乘 (1 − 1.33e-8) 后 e_sem 从 1.76e-8 降到 8.5e-16 |
+| O03 | head_dim 96、以及带可学习 bias 的 score_mod，在 A6000（共享内存 101 KB）上编译失败（No valid triton configs / OutOfResources） | PyTorch FlexAttention | 可用性 | `results/tool_spec/flex/flex_*_d96.json`、`*_bias.json` |
+| O04 | 融合 kernel 内的门控用内联 PTX（`ex2.approx`/`lg2.approx` 拼成 softplus），工具没有它的语义，判为不评 | FLA `fla/ops/utils/softplus.py` | 工具局限 | `results/tool_spec/rerun_v2/fla/` |
+
 ## 正在进行的工具筛查（成熟算子）
 
 - PyTorch FlexAttention（Inductor Triton 模板）：12 种配置 × 前向/反向，见 `results/tool_spec/flex/`。
