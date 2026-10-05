@@ -284,6 +284,16 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
                                 "relative_rms": float(np.sqrt((mid[ok] ** 2).mean() / max((kr[ok] ** 2).mean(), 1e-300))),
                                 "max_K_R_width": float(np.stack([p["width"] for p in rows])[ok].max())}
             entry["numerical" if key == "n" else "semantic"] = rec
+        # the total K - f = e_num + e_sem: a semantic deviation that the rounded execution undoes (a branch that
+        # K_R decides on real values while the device decides on rounded ones, e.g. an equality between a
+        # compile-time rounded constant and a value cast at run time) shows as large e_sem and e_num of
+        # opposite sign with a small total
+        if ok.any():
+            tot = 0.5 * (np.stack([p["n"][0] for p in rows]) + np.stack([p["n"][1] for p in rows])) + \
+                0.5 * (np.stack([p["s"][0] for p in rows]) + np.stack([p["s"][1] for p in rows]))
+            entry["total"] = {"comparison": "K - f = e_num + e_sem (midpoints)",
+                              "relative_rms": float(np.sqrt((tot[ok] ** 2).mean() / max((kr[ok] ** 2).mean(), 1e-300))),
+                              "max_abs": float(np.abs(tot[ok]).max())}
         # where e_sem sits in seed 0: mean |e_sem| per index of the last logical axis
         r0 = rows[0]
         inv = np.full(int(max(r0["pos"].max(), r0["idx"].max(initial=0))) + 1, -1)

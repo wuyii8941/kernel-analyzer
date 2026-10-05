@@ -87,6 +87,20 @@ e_sem 只要"规则或检测器确认"或"有坐标被区间证实"，就算检�
 `unified_attention` 的 15 个用例里，B013 的三个用例（相对 RMS 0.905、0.115、0.216）都归入候选，其中两个只靠
 区间证实检出；对照用例为 0。
 
+## 6. 第四轮改动：总误差与"被舍入抵消"的语义偏差；视图级统计
+
+**总误差 K − f。** 每个输出另记 e_num 与 e_sem 中点之和的相对 RMS（`total`）。K_R 按参照值（实数语义）判定离散
+分支（`test_branch_is_decided_by_the_reference_value` 规定的设计），所以当程序的某个判断只靠运行时舍入才成立时，
+K_R 与设备走不同分支：e_sem 与 e_num 都很大、符号相反，K 本身却等于 f。实例：同一进程里先后编译两个 Rprop 优化器，
+Dynamo 把变化了的 `etaminus` 变成 f64 标量参数，而另一处仍是编译期写死的 f32 常数；kernel 里 `sign == etaminus`
+比较的是 fp32(0.3) 与 truncf(0.3)，执行时相等，按实数语义不等（`opt_rprop_etas` 的 prev：e_sem 0.56、e_num 0.56、
+总误差 0）。汇总把"e_sem 检出、相对 RMS ≥ 1e-5、但总误差 < 1e-5 且不到 e_sem 的十分之一"归为
+"compensated (rounding-dependent decision)"，不作为候选。
+
+**视图级统计。** 输出是共享缓冲区的视图时（AOTAutograd 把几个梯度作为一块缓冲区的视图返回），特殊值类别和参照
+完整度只统计本视图的元素（之前按整块缓冲区统计，别的视图的元素在本视图的 f 里是空位，被误计为 NaN 不一致，
+完整度也偏低）。0 维输出的剖面按单列处理。
+
 ## 4. 已知局限
 
 - 掩码读取不给 `other` 的值在 TTIR 语义里是未定义的。FlexAttention 反向在 Q_LEN 不是块大小整数倍时，
