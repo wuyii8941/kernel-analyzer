@@ -105,6 +105,10 @@ def run_case(case, seeds):
             f_mid = np.where(np.isfinite(f_lo) & np.isfinite(f_hi), 0.5 * (np.asarray(f_lo) + np.asarray(f_hi)), f_lo)
             rec["hp"].append(_hp(k, f_mid))
             rec["eager"].append(_hp(e, f_mid) if e is not None else None)
+            if e is not None and k.shape == e.shape and k.is_floating_point() and e.is_floating_point():
+                kz, ez = k.detach().float(), e.detach().float()
+                both0 = (kz == 0) & (ez == 0)
+                rec.setdefault("signed_zero", []).append(int((both0 & (torch.signbit(kz) != torch.signbit(ez))).sum()))
     outputs = {}
     for name, rec in per.items():
         fails = [c for c in rec["ci"] if c["verdict"] == "fail"]
@@ -118,6 +122,7 @@ def run_case(case, seeds):
             "eager_rel_rms_max": max((h["rel_rms"] for h in rec["eager"] if h and not h.get("shape_mismatch")),
                                      default=None),
             "shape_mismatch": any(h.get("shape_mismatch") for h in rec["hp"]),
+            "signed_zero_mismatch_vs_eager": max(rec.get("signed_zero", [0])),
         }
     return {"case": case.name, "op": op_name, "seconds": time.time() - t0, "seeds": list(seeds), "outputs": outputs}
 

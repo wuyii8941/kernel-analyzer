@@ -137,14 +137,15 @@ class OpInfoCase(Case):
     implementation = "torch.compile(op, dynamic=False) on float32 CUDA tensors -> Inductor Triton kernels"
     spec_bound = "float64 eager evaluation of the same op on the same inputs, declared bound 2^-40 * max|f|"
 
-    def __init__(self, name, op, index, structure, doc):
-        self.name, self.op, self.index, self.structure = name, op, index, structure
+    def __init__(self, name, op, index, structure, doc, source="sample"):
+        self.name, self.op, self.index, self.structure, self.source = name, op, index, structure, source
         self.specification = f"eager torch semantics of {op.name} (variant '{op.variant_test_name}') in float64: {doc}"
 
     def _sample(self, seed):
+        gen = getattr(self.op, f"{self.source}_inputs")  # sample_inputs, or reference_inputs (extremal values)
         for s in range(seed, seed + 50):
             torch.manual_seed(s)
-            samples = list(self.op.sample_inputs("cuda", torch.float32, requires_grad=False))
+            samples = list(gen("cuda", torch.float32, requires_grad=False))
             if self.index < len(samples) and _structure(samples[self.index]) == self.structure:
                 return samples[self.index]
         raise RuntimeError("no sample with the case structure")
@@ -264,25 +265,34 @@ def _build():
     # OPINFO_SELECT=onesample: only the ops that PyTorch's Inductor OpInfo test runs on one sample per op on CUDA
     # (inductor_one_sample["cuda"] in test/inductor/test_torchinductor_opinfo.py, main 2026-10-05), up to 12 samples
     one_sample = None
+    # OPINFO_SELECT=refelem: unary / binary ufuncs on reference_inputs (extremal values: NaN, +-inf, -0.0, huge, tiny),
+    # samples with special values first, forward only
+    ref_elem = os.environ.get("OPINFO_SELECT") == "refelem"
+    if ref_elem:
+        from torch.testing._internal.common_methods_invocations import binary_ufuncs, unary_ufuncs
+        elementwise = {id(o) for o in list(unary_ufuncs) + list(binary_ufuncs)}
     if os.environ.get("OPINFO_SELECT") == "onesample":
         from pathlib import Path
         one_sample = set((Path(__file__).resolve().parent / "data/inductor_one_sample_cuda.txt").read_text().split())
     cases = []
     for op in op_db:
         full = op.name + ("." + op.variant_test_name if op.variant_test_name else "")
+        if ref_elem and (id(op) not in elementwise or op.name in _SKIP_NAMES or op.name.startswith(_SKIP_PREFIX)):
+            continue
         if one_sample is not None:
             if full not in one_sample or op.name in _RANDOM:
                 continue
         elif op.name in _SKIP_NAMES or op.name.startswith(_SKIP_PREFIX):
             continue
         base = re.sub(r"[^A-Za-z0-9]+", "_", op.name + ("_" + op.variant_test_name if op.variant_test_name else ""))
-        if wanted and not any(re.fullmatch(rf"oib?_{re.escape(base)}_\d+", w) for w in wanted):
+        if wanted and not any(re.fullmatch(rf"oi[br]?_{re.escape(base)}_\d+", w) for w in wanted):
             continue
         try:
             if torch.float32 not in op.supported_dtypes("cuda") or torch.float64 not in op.supported_dtypes("cuda"):
                 continue
             torch.manual_seed(0)
-            samples = list(op.sample_inputs("cuda", torch.float32, requires_grad=False))
+            samples = list((op.reference_inputs if ref_elem else op.sample_inputs)("cuda", torch.float32,
+                                                                                 requires_grad=False))
         except Exception:  # noqa: BLE001
             continue
         # group by (arity, kwargs); per group the largest sample up to MAX_ELEMENTS; groups with kwargs first
@@ -297,6 +307,10 @@ def _build():
             if select_v2:  # options passed positionally (pooling flags, dims, ...) distinguish samples too
                 kw = kw + "|" + _options(smp.args)
             key = (len(_tensors(smp)), kw)
+            if ref_elem:  # prefer samples with special values, then size
+                special = any((~torch.isfinite(t)).any().item() for t in _tensors(smp) if t.is_floating_point())
+                key = key + (special,)
+                n = n + (10 ** 9 if special else 0)
             if key not in groups or n > groups[key][0]:
                 groups[key] = (n, i, smp)
         order = sorted(groups.items(), key=lambda kv: (kv[0][1] in ("", "[]", "[]|()"), -kv[1][0]))
@@ -305,6 +319,9 @@ def _build():
         for _, (n, i, smp) in order[:limit]:
             picked.append((i, _structure(smp), f"sample {i}: {smp.summary() if hasattr(smp, 'summary') else ''}"[:300]))
         for i, st, doc in picked:
+            if ref_elem:
+                cases.append(OpInfoCase(f"oir_{base}_{i}", op, i, st, doc, source="reference"))
+                continue
             cases.append(OpInfoCase(f"oi_{base}_{i}", op, i, st, doc))
             if op.supports_autograd:
                 cases.append(OpInfoBwdCase(f"oib_{base}_{i}", op, i, st, doc))
