@@ -1,0 +1,23 @@
+torch 2.10.0+cu128 cuda
+count              eager [5.0]  compiled [8.0]
+count_index_add    eager [5.5]  compiled [8.5]
+count_2_buckets    eager [5.0, 1.0]  compiled [5.0, 1.0]
+mean_pool num_graphs=1: max |eager - compiled| = 6.634e-02
+mean_pool num_graphs=2: max |eager - compiled| = 0.000e+00
+scatter_reduce(mean, include_self) backward, 1 element: eager [0.5, 0.5], compiled [1.0, 1.0]
+--- PyG scatter-mean
+torch 2.10.0+cu128
+nodes=   7 graphs=1: max|eager-compiled| 8.58e-02, compiled/eager for graph 0 = 0.8750
+nodes=   7 graphs=2: max|eager-compiled| 1.19e-07, compiled/eager for graph 0 = 1.0000
+nodes=  30 graphs=1: max|eager-compiled| 1.38e-02, compiled/eager for graph 0 = 0.9375
+nodes=  30 graphs=2: max|eager-compiled| 8.94e-08, compiled/eager for graph 0 = 1.0000
+nodes= 300 graphs=1: max|eager-compiled| 2.15e-02, compiled/eager for graph 0 = 0.7813
+nodes= 300 graphs=2: max|eager-compiled| 5.96e-08, compiled/eager for graph 0 = 1.0000
+--- CPU
+torch 2.10.0+cu128 cpu
+count              eager [5.0]  compiled [5.0]
+count_index_add    eager [5.5]  compiled InductorError: AssertionError: 
+count_2_buckets    eager [5.0, 1.0]  compiled [5.0, 1.0]
+mean_pool num_graphs=1: max |eager - compiled| = 0.000e+00
+mean_pool num_graphs=2: max |eager - compiled| = 0.000e+00
+scatter_reduce(mean, include_self) backward, 1 element: eager [0.5, 0.5], compiled [0.5, 0.5]

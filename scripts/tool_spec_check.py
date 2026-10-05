@@ -98,7 +98,7 @@ def f64_point_spec(value, rel=2.0 ** -40):
 GROUPS = {"liger": "tool_spec_cases_liger", "flex": "tool_spec_cases_flex", "inductor": "tool_spec_cases_inductor",
           "tridao": "tool_spec_cases_tridao", "fla": "tool_spec_cases_fla", "inductor2": "tool_spec_cases_inductor2",
           "inductor3": "tool_spec_cases_inductor3", "tutorials": "tool_spec_cases_triton_tutorials",
-          "inductor4": "tool_spec_cases_inductor4", "vllm": "tool_spec_cases_vllm", "opinfo": "tool_spec_cases_opinfo"}
+          "inductor4": "tool_spec_cases_inductor4", "vllm": "tool_spec_cases_vllm", "opinfo": "tool_spec_cases_opinfo", "optim2": "tool_spec_cases_optim2", "scatter1": "tool_spec_cases_scatter1"}
 
 
 def load_cases(group):

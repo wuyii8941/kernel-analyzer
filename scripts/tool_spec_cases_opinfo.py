@@ -202,7 +202,13 @@ class OpInfoBwdCase(OpInfoCase):
             samples = list(self.op.sample_inputs("cuda", torch.float32, requires_grad=True))
             if self.index < len(samples) and _structure(samples[self.index]) == self.structure:
                 return samples[self.index]
-        raise RuntimeError("no sample with the case structure")
+        # some generators build a different sample list with requires_grad=True (masked ops): fall back to the
+        # requires_grad=False sample with every floating tensor differentiable
+        sample = super()._sample(seed)
+        for t in _tensors(sample):
+            if t.is_floating_point():
+                t.requires_grad_(True)
+        return sample
 
     def inputs(self, seed):
         sample = self._sample(seed)

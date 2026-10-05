@@ -78,3 +78,10 @@ query。
 - 编码器类型（ENCODER_ONLY，如 ModernBERT）走的是 `context_attention_fwd`，不经过这段代码。
 - 检索 vLLM issue / PR（unified_attention 非因果滑窗、sw_mask_v、per_seq_causal sliding）：没有报告；#51257 的测试会
   暴露它，但 PR 描述认为"today's main computes this correctly on both backends"。
+
+## 相关：ROCm 的 `prefix_prefill` 非因果滑窗只有左边界
+
+`vllm/v1/attention/ops/prefix_prefill.py`（`context_attention_fwd`，ROCM_ATTN 等后端；`CAUSAL=False` 用于 DFlash 的
+双向草稿块）在 query 自注意力部分的滑窗掩码是 `offs_m - k < SLIDING_WINDOW`，非因果时右侧没有限制，而
+`unified_attention`（`compute_kv_seq_mask`）与 FlashAttention 后端（窗口对称化为 (w, w)）都是 |q − k| < W。
+同样只在双向段长于窗口时有差别，与 B013 同属"非因果 + 滑窗"这一少有人用的组合；未单独复现，记为观察。
