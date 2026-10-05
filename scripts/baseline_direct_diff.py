@@ -61,6 +61,8 @@ def _ci(k, e, op_name, backward=False):
     if backward and kw.get("check_gradient") is False:
         return {"verdict": "skipped (check_gradient False)"}
     rtol, atol = kw.get("rtol", CI_RTOL), kw.get("atol", CI_ATOL)
+    if backward:  # check_model compares gradients with grad_atol / grad_rtol when given
+        rtol, atol = kw.get("grad_rtol", rtol), kw.get("grad_atol", atol)
     try:
         torch.testing.assert_close(k, e, rtol=rtol, atol=atol, equal_nan=True, check_dtype=False)
         return {"verdict": "pass", "rtol": rtol, "atol": atol}

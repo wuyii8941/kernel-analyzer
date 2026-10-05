@@ -26,6 +26,9 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from tool_spec_summary import sem_bin  # noqa: E402
 
 OVERRIDES = json.load(open(ROOT / "scripts/data/inductor_override_cuda_f32.json"))
+CI_LISTS = json.load(open(ROOT / "scripts/data/inductor_skips_xfails_cuda_f32.json"))
+# limits of the baseline harness itself (not CI results): complex outputs, case names not built in this selection
+BASELINE_NA = ("TypeError: complex output", "KeyError:")
 
 
 def tool_rows(tool_dir, override_dir):
@@ -50,6 +53,7 @@ def tool_rows(tool_dir, override_dir):
             b = sem_bin(e.get("semantic"), ext, (e.get("total") or {}).get("relative_rms"), e.get("semantic_elementwise"))
             out[(case, o)] = {"tool": b, "special": (sv.get("kr_vs_f_class_mismatch", 0), sv.get("k_vs_f_class_mismatch", 0)),
                               "sem_rel": ((e.get("semantic") or {}).get("scale") or {}).get("relative_rms"),
+                              "num_rel": ((e.get("numerical") or {}).get("scale") or {}).get("relative_rms"),
                               "seconds": r.get("seconds")}
     return out
 
@@ -60,9 +64,18 @@ def base_rows(base_dir):
         r = json.load(open(f))
         case = r["case"]
         if "error" in r:
-            out[(case, "*")] = {"ci": True, "hp": True, "error": r["error"].splitlines()[0][:120]}
+            if r["error"].startswith(BASELINE_NA):
+                out[(case, "*")] = {"na": r["error"].splitlines()[0][:80]}
+            else:
+                out[(case, "*")] = {"ci": True, "hp": True, "error": r["error"].splitlines()[0][:120]}
             continue
         bwd = case.startswith("oib_")
+        op = r.get("op", "")
+        if op in CI_LISTS["skips"] or op in CI_LISTS["expected_failures"] or (
+                bwd and op in CI_LISTS["gradient_expected_failures"]):
+            for o in r["outputs"]:
+                out[(case, o)] = {"na": "CI skip / expected failure"}
+            continue
         skip_grad = bwd and OVERRIDES.get(r.get("op", ""), {}).get("check_gradient") is False
         for o, e in r["outputs"].items():
             ci = e["ci_found"] and not skip_grad and not str(e["ci_example"].get("verdict", "")).startswith("skipped")
@@ -88,6 +101,8 @@ def main():
     for pair in a.pair:
         tool_dir, _, override = pair.partition(":")
         t, b = tool_rows(tool_dir, override or None), base_rows(tool_dir)
+        na_cases = {c for (c, o), v in b.items() if "na" in v}
+        b = {k: v for k, v in b.items() if k[0] not in na_cases}
         cases_err_b = {c for (c, o) in b if o == "*"}
         cases_err_t = {c for (c, o) in t if o == "*"}
         for key in sorted(set(t) | set(b)):
@@ -114,10 +129,10 @@ def main():
         both = sum(1 for r in tal if r["base_ci"])
         lines += ["", f"工具报警（候选、错误、特殊值类别不一致）{len(tal)} 个输出，其中 CI 式差分也失败 {both} 个；"
                   f"CI 式差分失败而工具未报警 {sum(1 for r in rs if r['base_ci'] and r not in tal)} 个。", ""]
-    lines += ["## CI 式差分失败而工具未报警的输出", "", "| 集合 | 用例 | 输出 | 工具分档 | 高精度相对 RMS | eager fp32 相对 RMS |", "|---|---|---|---|---:|---:|"]
+    lines += ["## CI 式差分失败而工具未报警的输出", "", "| 集合 | 用例 | 输出 | 工具分档 | 工具 e_num 相对 RMS | 高精度相对 RMS | eager fp32 相对 RMS |", "|---|---|---|---|---:|---:|---:|"]
     for r in rows:
         if r["base_ci"] and not tool_alarm({"tool": r["tool_tool"], "special": r.get("tool_special", (0, 0))}):
-            lines.append(f"| {r['set']} | {r['case']} | {r['output']} | {r['tool_tool']} | {r.get('base_hp_rel')} | {r.get('base_eager_rel')} |")
+            lines.append(f"| {r['set']} | {r['case']} | {r['output']} | {r['tool_tool']} | {r.get('tool_num_rel')} | {r.get('base_hp_rel')} | {r.get('base_eager_rel')} |")
     lines += ["", "## 工具报警而 CI 式差分通过的输出", "", "| 集合 | 用例 | 输出 | 工具分档 | e_sem 相对 RMS | 特殊值 | 高精度相对 RMS | 梯度检查被关 |", "|---|---|---|---|---:|---|---:|---|"]
     for r in rows:
         if tool_alarm({"tool": r["tool_tool"], "special": r.get("tool_special", (0, 0))}) and not r["base_ci"]:
