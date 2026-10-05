@@ -29,11 +29,12 @@ class FlexCase(Case):
     spec_bound = "float64 eager evaluation, declared bound 2^-40 * max|f|"
 
     def __init__(self, name, B=1, H=2, HKV=None, Q=256, KV=256, D=64, DV=None, score="none", mask="none",
-                 backward=False, bias_grad=False):
+                 backward=False, bias_grad=False, kernel_options=None):
         self.name = name
         self.B, self.H, self.HKV, self.Q, self.KV, self.D = B, H, HKV or H, Q, KV, D
         self.DV = DV or D
         self.score, self.mask, self.backward, self.bias_grad = score, mask, backward, bias_grad
+        self.kernel_options = kernel_options
         self.specification = (f"FlexAttention semantics in float64: B={B} H={H} H_kv={self.HKV} Q={Q} KV={KV} D={D} "
                               f"Dv={self.DV} score_mod={score} mask_mod={mask}" + ("; backward dq dk dv" if backward else ""))
 
@@ -104,7 +105,7 @@ class FlexCase(Case):
             if bias is not None and self.bias_grad:
                 bias = bias.clone().requires_grad_(True)
         out = self._flex(q, k, v, score_mod=self._score_mod(bias), block_mask=self._block_mask,
-                         enable_gqa=self.HKV != self.H)
+                         enable_gqa=self.HKV != self.H, kernel_options=self.kernel_options)
         if not self.backward:
             return {"out": out}
         out.backward(inp["g"])
@@ -155,6 +156,9 @@ class FlexCase(Case):
         return res
 
 
+# smaller tiles so the templates fit the A6000's 101 KB of shared memory (the default configs do not)
+_SMALL = {"BLOCK_M": 64, "BLOCK_N": 64, "BLOCK_M1": 32, "BLOCK_N1": 32, "BLOCK_M2": 32, "BLOCK_N2": 32, "num_stages": 1}
+
 _CONFIGS = [
     ("plain", {}),
     ("causal", {"mask": "causal"}),
@@ -165,12 +169,83 @@ _CONFIGS = [
     ("document", {"mask": "document"}),
     ("len200_causal", {"Q": 200, "KV": 200, "mask": "causal"}),
     ("q100_kv300", {"Q": 100, "KV": 300}),
-    ("d96", {"D": 96, "mask": "causal"}),
+    ("d96", {"D": 96, "mask": "causal", "kernel_options": _SMALL}),
     ("dv32", {"DV": 32, "mask": "causal"}),
-    ("bias", {"score": "bias", "Q": 128, "KV": 128, "bias_grad": True}),
+    ("bias", {"score": "bias", "Q": 128, "KV": 128, "bias_grad": True, "kernel_options": _SMALL}),
 ]
 
 CASES = []
 for _name, _kw in _CONFIGS:
     CASES.append(FlexCase(f"flex_fwd_{_name}", **{k: v for k, v in _kw.items() if k != "bias_grad"}))
     CASES.append(FlexCase(f"flex_bwd_{_name}", backward=True, **_kw))
+
+
+class FlexNewer(FlexCase):
+    """Newer FlexAttention paths: a captured per-head ALiBi slope tensor that requires grad (its gradient is a
+    reduction over every (q, kv) pair, accumulated by the backward template), and the gradient through the returned
+    log-sum-exp (return_lse=True; loss = <out, g> + <lse, g2>)."""
+
+    def __init__(self, name, kind, **kw):
+        super().__init__(name, backward=True, **kw)
+        self.kind = kind
+        self.specification += f"; {kind}"
+
+    def inputs(self, seed):
+        inp = super().inputs(seed)
+        g = torch.Generator(device="cpu").manual_seed(seed + 77_777)
+        if self.kind == "learned_alibi":
+            inp["slopes"] = (0.05 * torch.rand(self.H, generator=g) + 0.01).cuda()
+        else:
+            inp["g2"] = torch.randn(self.B, self.H, self.Q, generator=g).cuda()
+        return inp
+
+    def launch(self, inp):
+        q, k, v = (inp[n].clone().requires_grad_(True) for n in ("q", "k", "v"))
+        if self.kind == "learned_alibi":
+            slopes = inp["slopes"].clone().requires_grad_(True)
+            out = self._flex(q, k, v, score_mod=lambda s, b, h, i, j: s + slopes[h] * (j - i),
+                             block_mask=self._block_mask, kernel_options=self.kernel_options)
+            out.backward(inp["g"])
+            return {"dq": q.grad, "dk": k.grad, "dv": v.grad, "dslopes": slopes.grad}
+        out, lse = self._flex(q, k, v, block_mask=self._block_mask, return_lse=True,
+                              kernel_options=self.kernel_options)
+        ((out * inp["g"]).sum() + (lse * inp["g2"]).sum()).backward()
+        return {"dq": q.grad, "dk": k.grad, "dv": v.grad}
+
+    def spec(self, inp):
+        q, k, v = (inp[n].double().requires_grad_(True) for n in ("q", "k", "v"))
+        s = (q @ k.transpose(-1, -2)) * (self.D ** -0.5)
+        i_idx = torch.arange(self.Q, device=s.device)[:, None]
+        j_idx = torch.arange(self.KV, device=s.device)[None, :]
+        leaves = [q, k, v]
+        if self.kind == "learned_alibi":
+            slopes = inp["slopes"].double().requires_grad_(True)
+            leaves.append(slopes)
+            s = s + slopes[None, :, None, None] * (j_idx - i_idx)
+        mm = self._mask_mod()
+        if mm is not None:
+            keep = mm(None, None, i_idx, j_idx)
+            s = s.masked_fill(~keep, float("-inf"))
+        lse = torch.logsumexp(s, -1)
+        out = torch.softmax(s, -1) @ v
+        loss = (out * inp["g"].double()).sum()
+        if self.kind == "lse":
+            loss = loss + (lse * inp["g2"].double()).sum()
+        grads = torch.autograd.grad(loss, leaves)
+        names = ["dq", "dk", "dv"] + (["dslopes"] if self.kind == "learned_alibi" else [])
+        return {n: f64_point_spec(gr.detach().cpu().numpy()) for n, gr in zip(names, grads)}
+
+    def setup(self):
+        from torch.nn.attention.flex_attention import create_block_mask, flex_attention
+
+        mm = self._mask_mod()
+        self._doc = None
+        self._block_mask = None if mm is None else create_block_mask(mm, self.B, self.H, self.Q, self.KV, device="cuda")
+        self._flex = torch.compile(flex_attention)
+        self.launch(self.inputs(10_000))
+        torch.cuda.synchronize()
+
+
+CASES += [FlexNewer("flex_bwd_learned_alibi", "learned_alibi", mask="causal", kernel_options=_SMALL),
+          FlexNewer("flex_bwd_lse_grad", "lse", mask="causal"),
+          FlexNewer("flex_bwd_lse_grad_plain", "lse")]

@@ -19,6 +19,7 @@
 | B008 | AdamW4bit 的两个矩都缩小步长，差距主要等价于学习率 ×0.7 | torchao 0.16 | ①（状态） | 训练损失差约等于 LR 降 30% | 量化设计取舍 | 训练对照（`lowbit_adam_*.py`） | 未跑 |
 | B009 | `_AdamW(bf16_stochastic_round=True)` 只对参数做随机舍入，状态仍是 bf16 就近舍入，二阶矩同 B005 漂移 | torchao 0.16 | ①（状态） | v 比值 1.33（3k 步） | 未查 | 探针脚本 | 未跑 |
 | B010 | `torch.compile` 下 `avg_pool2d(ceil_mode=True, count_include_pad=True)` 的反向（上游 issue 也涵盖 1d；我们的 1d 用例窗口未越界，未触发）用整个核的大小作除数，ceil_mode 多出的越界窗口梯度错 | PyTorch 2.10 Inductor | ④ | 梯度相对误差 9.6%（最后一列）；编译后 gradcheck 失败，eager 通过；前向逐位相同 | 已知未修：pytorch/pytorch#198119（2026-09-22） | 工具（Inductor 对 eager 语义筛查） | 是：e_sem 检出，相对 RMS 9.4e-2，前向 e_sem 7.6e-17 |
+| B011 | Triton 官方教程 06-fused-attention 的反向不支持非因果：`causal=False` 时不报错，dq/dk/dv 与真实梯度相差约 100%（前向正确） | Triton v3.6.0 `python/tutorials/06-fused-attention.py` | ④ | e_sem 相对 RMS ≈ 1.0（dq 0.998、dk 0.992、dv 0.980）；e_num 3e-4 | 已知：教程测试只跑 `causal=[True]`，注释 `# FIXME: Non-causal tests do not pass at the moment.`；包装函数没有拦截 | 工具（教程 kernel 筛查） | 是 |
 
 ## 观察（不算缺陷，记录在案）
 
@@ -27,7 +28,8 @@
 | O01 | 反向 kernel 的正确性依赖"不带 `other` 的掩码读取在越界通道上为 0"。TTIR/Triton 文档里这个值是未定义的；Triton 3.6 的 NVIDIA 后端会先把目标寄存器置 0（PTX 已核实），所以结果正确。若越界通道是 NaN/Inf，整行梯度会被污染（0·NaN）。一行修法：读取时给 `other=0.0` | flash-attn `layer_norm.py` 反向（`w = tl.load(W + cols, mask=mask)` 之后 `wdy = w * dy` 进入整行求和 c1）、mamba_ssm `layer_norm.py` 反向（同一份代码）、mamba_ssm `layernorm_gated.py` 反向、PyTorch FlexAttention 反向在 Q_LEN 非块倍数时的 dv（越界行的 LSE） | 低（可移植性） | 工具判为参照未建立（`undefined:masked load without other`）；`ptx_zero_fills` 对这些 kernel 的 PTX 全部为真；工具加了经 PTX 核实才启用的"掩码通道补 0"假设后可评估 |
 | O02 | FlexAttention 用 fp32 舍入后的 log2(e) 做 exp2，softmax 温度偏 1.3e-8 | PyTorch FlexAttention | 可忽略 | 规格温度乘 (1 − 1.33e-8) 后 e_sem 从 1.76e-8 降到 8.5e-16 |
 | O03 | head_dim 96、以及带可学习 bias 的 score_mod，在 A6000（共享内存 101 KB）上编译失败（No valid triton configs / OutOfResources） | PyTorch FlexAttention | 可用性 | `results/tool_spec/flex/flex_*_d96.json`、`*_bias.json` |
-| O04 | 融合 kernel 内的门控用内联 PTX（`ex2.approx`/`lg2.approx` 拼成 softplus），工具没有它的语义，判为不评 | FLA `fla/ops/utils/softplus.py` | 工具局限 | `results/tool_spec/rerun_v2/fla/` |
+| O04 | 融合 kernel 内的门控用内联 PTX（`setp`/`mov`/`mul`/`ex2.approx`/`add`/`lg2.approx` 拼成 softplus）。工具已补上直线型 PTX 子集的语义后可评估：chunk / recurrent 两条路径 e_sem 1.7e-8 / 1.9e-8（常数取整级），无语义问题 | FLA `fla/ops/utils/softplus.py`（`use_gate_in_kernel=True`） | 无 | `results/tool_spec/rerun_v2/fla/fla_gdr_*_gate.json` |
+| O05 | `selective_state_update(..., dt_bias=None)` 或 `D=None`（文档里的可选默认值）直接 TypeError：`*(dt_bias.stride(0), dt_bias.stride(1)) if dt_bias is not None else 0` 被解析成 `*(... if ... else 0)` | mamba_ssm v2.2.4–v2.3.2 与 main | 崩溃（非数值） | 已知未修：state-spaces/mamba#1028（开着，2026-08-31），#912 关闭未合入 |
 
 ## 正在进行的工具筛查（成熟算子）
 

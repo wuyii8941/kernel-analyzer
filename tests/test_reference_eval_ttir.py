@@ -262,6 +262,28 @@ def test_straight_line_ptx_snippet_has_exact_lanewise_semantics():
 
 
 @cuda
+def test_store_through_a_not_established_address_invalidates_the_target():
+    """Indices produced by an aborted program feed a scatter (Inductor's max(dim) backward): no element of the
+    scatter target may stay established, since the reference cannot know where the writes went."""
+    from kernel_analyzer.reference_eval.ttir_eval import evaluate_sequence
+
+    k = _kernels()
+    x = torch.randn(64, device="cuda")
+    idx = torch.randperm(64, device="cuda").to(torch.int32)
+    idx2 = torch.empty_like(idx)
+    y = torch.zeros(64, device="cuda")
+    rec = TritonLaunchRecorder()
+    with rec:
+        k.index_via_unsupported_asm[(1,)](idx, idx2, BLOCK=64)
+        k.scatter_by_index[(1,)](idx2, x, y, BLOCK=64)
+        torch.cuda.synchronize()
+    seq = evaluate_sequence(rec.launches)
+    assert seq.launches[0].aborted
+    by = seq.memory[y.untyped_storage().data_ptr()]
+    assert (by.st != 0).all()
+
+
+@cuda
 def test_atomic_return_value_is_not_established_when_used():
     k = _kernels()
     n = 1000

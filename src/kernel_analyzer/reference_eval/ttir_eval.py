@@ -531,6 +531,7 @@ class KernelReferenceEvaluator:
         self._outside_window = False
         self._loaded = set()
         self._loaded_any = set()
+        self._poisoned = set()
         for buf in memory.values():
             buf.writer[:] = -1  # kernel boundaries order all earlier writes
         aborted = {}
@@ -546,6 +547,11 @@ class KernelReferenceEvaluator:
                 for buf in memory.values():
                     hit = buf.writer == index
                     buf.st = np.where(hit, ST_NE, buf.st).astype(np.int8)
+        for ident in self._poisoned:
+            tb = memory.get(ident)
+            if tb is not None:
+                tb.st = np.full(tb.st.shape, ST_NE, dtype=np.int8)
+                tb.written[:] = True
         if aborted:
             # An aborted program may stop before some of its stores: elements the kernel changed but the reference
             # did not write in this launch keep their earlier reference value, which a later launch would read as
@@ -895,12 +901,23 @@ class KernelReferenceEvaluator:
         ptr, value = args[0], args[1]
         mask = args[2] if len(args) > 2 else None
         shape = ptr.shape
-        buf, index, in_range = self._addresses(op, ptr, state)
-        if buf is None:
-            return None
         m = np.ones(shape, dtype=np.int8) if mask is None else mask.lo.astype(np.int8)
         m_st = np.zeros(shape, dtype=np.int8) if mask is None else mask.st
         active = (m != 0)
+        p_st = np.broadcast_to(ptr.st, shape)
+        blind = (active | (m == MAYBE) | (m_st >= ST_UNDEF)) & (p_st != ST_OK)
+        if blind.any():
+            # A lane stores through an address that is not established: any element of the target buffer may have
+            # been written, so none of them keeps an established reference value.
+            targets = np.unique(np.broadcast_to(ptr.base, shape)[blind]) if ptr.base is not None else []
+            if len(targets) == 0:
+                raise ProgramAbort(f"{op.node_id}: store through an address of unknown buffer")
+            self._poisoned.update(int(i) for i in targets)  # applied at the end of the launch (no program order)
+            self._reasons[f"not_established:store through a not-established address@{op.node_id}"] += int(blind.sum())
+            active = active & ~blind
+        buf, index, in_range = self._addresses(op, ptr, state)
+        if buf is None:
+            return None
         v_lo = np.broadcast_to(value.lo, shape)
         v_hi = np.broadcast_to(value.hi, shape) if value.kind == "f" else None
         v_st = np.broadcast_to(value.st, shape).copy()

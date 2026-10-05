@@ -96,7 +96,7 @@ def f64_point_spec(value, rel=2.0 ** -40):
 
 GROUPS = {"liger": "tool_spec_cases_liger", "flex": "tool_spec_cases_flex", "inductor": "tool_spec_cases_inductor",
           "tridao": "tool_spec_cases_tridao", "fla": "tool_spec_cases_fla", "inductor2": "tool_spec_cases_inductor2",
-          "inductor3": "tool_spec_cases_inductor3"}
+          "inductor3": "tool_spec_cases_inductor3", "tutorials": "tool_spec_cases_triton_tutorials"}
 
 
 def load_cases(group):
@@ -247,10 +247,12 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
             entry["numerical" if key == "n" else "semantic"] = rec
         # where e_sem sits in seed 0: mean |e_sem| per index of the last logical axis
         r0 = rows[0]
-        inv = np.full(int(r0["pos"].max()) + 1, -1)
+        inv = np.full(int(max(r0["pos"].max(), r0["idx"].max(initial=0))) + 1, -1)
         inv[r0["pos"]] = np.arange(r0["pos"].size)
         full = np.zeros(r0["pos"].size)
-        full[inv[r0["idx"]]] = np.abs(0.5 * (r0["s"][0] + r0["s"][1]))
+        where = inv[r0["idx"]]
+        inside = where >= 0  # written elements of the storage that belong to this tensor view
+        full[where[inside]] = np.abs(0.5 * (r0["s"][0] + r0["s"][1]))[inside]
         entry["sem_profile_last_axis"] = [round(float(x), 8) for x in full.reshape(-1, r0["shape"][-1]).mean(0)]
         report["outputs"][name] = entry
     return report

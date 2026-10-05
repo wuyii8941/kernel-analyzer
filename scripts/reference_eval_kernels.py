@@ -285,6 +285,23 @@ def softplus_inline_ptx(X, Y, BLOCK: tl.constexpr):
 
 
 @triton.jit
+def index_via_unsupported_asm(IDX, OUT, BLOCK: tl.constexpr):
+    """OUT = IDX through two bit reversals in inline PTX (identity on the hardware; no reference semantics)."""
+    offs = tl.arange(0, BLOCK)
+    v = tl.load(IDX + offs)
+    r = tl.inline_asm_elementwise("brev.b32 $0, $1; brev.b32 $0, $0;", "=r,r", [v], dtype=tl.int32, is_pure=True,
+                                  pack=1)
+    tl.store(OUT + offs, r)
+
+
+@triton.jit
+def scatter_by_index(IDX, V, Y, BLOCK: tl.constexpr):
+    """Y[IDX[i]] = V[i] (a scatter through loaded addresses, as Inductor's max(dim) backward)."""
+    offs = tl.arange(0, BLOCK)
+    tl.store(Y + tl.load(IDX + offs), tl.load(V + offs))
+
+
+@triton.jit
 def accumulate(ACC, C, n, BLOCK: tl.constexpr):
     offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
     mask = offs < n

@@ -458,5 +458,5 @@ def _ssu_case(name, D=True, z=True, dt_bias=True, softplus=True, g=1):
                   make, run, ref)
 
 
-CASES += [_ssu_case("full"), _ssu_case("plain", D=False, z=False, dt_bias=False, softplus=False),
+CASES += [_ssu_case("full"), _ssu_case("plain", z=False, softplus=False),  # D=None / dt_bias=None crash: mamba #1028
           _ssu_case("groups2", g=2)]
