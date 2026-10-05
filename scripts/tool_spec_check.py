@@ -163,6 +163,9 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.set_float32_matmul_precision("highest")
     TritonLaunchRecorder.install_hook()
+    # every case starts from an empty Dynamo cache, as PyTorch's own tests do: cases run several to a process, and a
+    # cached graph can be reused for a different op when its guards do not pin the callable (pytorch#197811; B017)
+    torch._dynamo.reset()
     case.setup()
     per, coverage, launch_info = {}, None, None
     not_triton, modified_after, aborted_outputs, mixed_by_output = set(), set(), {}, {}
