@@ -5,6 +5,11 @@ Per output: reference completeness, e_sem / e_num verdicts (any rule or default-
 relative RMS (midpoints over the complete coordinates).  e_sem bins: none (not detected), constant-level
 (detected, rel < 1e-7: constant rounding such as fp32 log2(e)), small (1e-7 .. 1e-5), candidate (>= 1e-5).
 
+e_sem is "detected" when a rule or the default detector confirms it, or when it is certified: some coordinate's
+residual interval K_R - f excludes zero (the spec's declared bound is inside f's interval, so this is a proof that
+the kernel's real-arithmetic semantics differ from f there, with no statistics).  Certification covers deviations
+whose sign follows the inputs (no systematic direction for the rules to find), e.g. dropped attention keys.
+
     python scripts/tool_spec_summary.py --groups flex inductor tridao fla inductor2 --out results/tool_spec/summary.md
 """
 
@@ -27,10 +32,17 @@ def detected(rec):
     return hit
 
 
+def certified(rec):
+    """Some coordinate's residual interval excludes zero (fractions over all units and used coordinates)."""
+    res = (rec or {}).get("residual") or {}
+    return (res.get("positive_frac") or 0) + (res.get("negative_frac") or 0) > 0
+
+
 def sem_bin(rec, external=False):
     d = detected(rec)
     if d is None:
         return "unresolved"
+    d = d or certified(rec)
     rel = (rec.get("scale") or {}).get("relative_rms", float("nan"))
     if not d:
         return "none"

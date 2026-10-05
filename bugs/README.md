@@ -21,6 +21,7 @@
 | B010 | `torch.compile` 下 `avg_pool2d(ceil_mode=True, count_include_pad=True)` 的反向（上游 issue 也涵盖 1d；我们的 1d 用例窗口未越界，未触发）用整个核的大小作除数，ceil_mode 多出的越界窗口梯度错 | PyTorch 2.10 Inductor | ④ | 梯度相对误差 9.6%（最后一列）；编译后 gradcheck 失败，eager 通过；前向逐位相同 | 已知未修：pytorch/pytorch#198119（2026-09-22） | 工具（Inductor 对 eager 语义筛查） | 是：e_sem 检出，相对 RMS 9.4e-2，前向 e_sem 7.6e-17 |
 | B011 | Triton 官方教程 06-fused-attention 的反向不支持非因果：`causal=False` 时不报错，dq/dk/dv 与真实梯度相差约 100%（前向正确） | Triton v3.6.0 `python/tutorials/06-fused-attention.py` | ④ | e_sem 相对 RMS ≈ 1.0（dq 0.998、dk 0.992、dv 0.980）；e_num 3e-4 | 已知：教程测试只跑 `causal=[True]`，注释 `# FIXME: Non-causal tests do not pass at the moment.`；包装函数没有拦截 | 工具（教程 kernel 筛查） | 是 |
 | [B012](B012_torch_radam_fp32_rectification.md) | `torch.optim.RAdam` 的 capturable 路径与 `torch.compile(opt.step)` 在 fp32 里算整流项 ρ_t（两个接近 ρ_∞ 的数相减，β₂ 先被舍入到 fp32），β₂ 接近 1 时整流判据 ρ_t > 5 在前几步翻转 | PyTorch 2.10 与 main | ④ | 更新相对误差：β₂=0.999 达 6e-3；0.9995 第 5 步 0.99；0.9999 第 2/4/5 步 0.99、第 10 步 0.24；0.99999 达 18 倍（eager 非 capturable 为 2e-4–2e-3） | 检索未见报告 | 工具筛查（`opt_radam` 报出"小"档 e_sem），随后定向用例 | 是：β₂=0.9995 第 5 步 param 的 e_sem 1.45e-2（≈ 整步更新），e_num 2.4e-7 |
+| [B013](B013_vllm_unified_attention_bidir_swa.md) | vLLM TRITON_ATTN `unified_attention` 的 V 掩码按 q 块第一行算窗口右边界，非因果滑窗时块内后面的行丢掉窗口右侧的 key | vLLM main 与 v0.24.0–v0.31.0（#45163 引入） | ④ | 输出相对误差 0.08–0.90（PR #51257 自带的测试配置下 0.15，bf16 噪声 2e-3）；现有模型的默认配置双向段短于窗口，不触发（潜在） | 检索未见报告；#51257 新增的测试会暴露它，但该 PR 认为 main 已正确 | 读代码后用工具用例确认 | 是：三个用例 e_sem 相对 RMS 0.905 / 0.115 / 0.216，区间证实（区间不含 0 的坐标 26–87%），e_num 仅 fp16 舍入；对照用例 e_sem 为 0 |
 
 ## 观察（不算缺陷，记录在案）
 
@@ -46,6 +47,8 @@
   初步：e_sem 有 1e-8 量级的系统偏差，已核实来自 fp32 舍入后的 log2(e)（常数取整）：规格的温度乘 (1 − 1.33e-8) 后 e_sem 从 1.76e-8 降到 8.5e-16。量级可忽略。
 
 ## 相关但不计入（不是我们发现的）
+- vLLM Triton top-k/top-p（`apply_top_k_top_p_triton`，V2 model runner 在批里有贪心请求、带 seed 的请求或需要 processed logprobs 时整批走它；投机解码的 rejection sampler 也用它）：我们的差分探针（`scripts/vllm/probe_topk_topp*.py`）独立发现三类偏差——少量有限 logits（语法掩码）+ top_k ≥ 有限个数 + top_p < 1 时丢掉 top-p 必须保留的 token（2 个 token 时 20–60% 的行出错，丢失质量达 0.5）；首块统计量估出的 `max_sample` 偏小、`exp` 上溢后整行不截断；bf16 并列时 top-k 只保留恰好 k 个（PyTorch 路径保留全部并列）。前两类已有上游记录：vLLM #59785（2026-10-02）、修复 PR #59804（根因同我们的分析：二分只在 [min_prob, max_prob] 内取 pivot 且用严格 >）、#60030（2026-10-05）。第三类是语义取舍。均不是工具检出。
+- vLLM 其余 Triton 算子的差分筛查（`scripts/vllm/probe_gdn_conv.py`）：自带 FLA 的 chunk / recurrent / sigmoid gating（含投机解码的逐 token 状态）、`causal_conv1d_fn` / `causal_conv1d_update`（含投机解码变长）、`merge_attn_states`，全部在 bf16 噪声内，状态逐位一致。观察：`causal_conv1d_fn` 的主循环只处理宽度 2–4（宽度 5 读入 col3 却不用，update 支持到 6）；GDN 两个 decode kernel 不使用传入的 `stride_indices_tok`；KDA 分支对 `a`/`dt_bias` 的读取不带掩码。现有模型都不触发。
 
 - TRL 融合 LM head 绕过 `logits_scaling` / `lm_head_multiplier`：TRL #7439（2026-10-03 合并）。
 - TRL GRPO + Liger 丢掉 MoE 辅助损失：TRL #7161。

@@ -2,7 +2,7 @@
 
 ## census/inductor
 
-用例 86，输出 89；e_sem 分档：candidate 1，constant-level 20，none 62，small 6；报错 0；不评（非 Triton 写出或之后被改）5
+用例 86，输出 89；e_sem 分档：candidate 1，constant-level 22，none 60，small 6；报错 0；不评（非 Triton 写出或之后被改）5
 
 | 用例 | 输出 | 参照完整 | e_sem | e_sem 相对 RMS | e_num 检出 | e_num 相对 RMS |
 |---|---|---|---|---|---|---|
@@ -36,7 +36,7 @@
 | ind_gelu_tanh_bwd | dx | 1.00 | constant-level | 5.7e-09 | 是 | 1.4e-07 |
 | ind_grid_sample | out | 1.00 | none | 8.4e-17 | 否 | 4.7e-07 |
 | ind_group_norm | out | 1.00 | none | 1.3e-13 | 是 | 7.0e-08 |
-| ind_group_norm_bwd | dx | 1.00 | none | 2.1e-09 | 是 | 6.5e-08 |
+| ind_group_norm_bwd | dx | 1.00 | constant-level | 2.1e-09 | 是 | 6.5e-08 |
 | ind_group_norm_bwd | dw | 1.00 | none | 1.3e-13 | 是 | 1.1e-07 |
 | ind_group_norm_bwd | db | 1.00 | none | 0.0e+00 | 是 | 8.4e-08 |
 | ind_hardswish | out | 1.00 | none | 2.3e-17 | 是 | 4.1e-08 |
@@ -78,7 +78,7 @@
 | ind_pad_reflect | out | 1.00 | none | 0.0e+00 | 否 | 0.0e+00 |
 | ind_pad_reflect_bwd | dx | 1.00 | none | 0.0e+00 | 是 | 3.4e-08 |
 | ind_rms_norm | out | 1.00 | none | 1.3e-15 | 是 | 6.1e-08 |
-| ind_rms_norm_bwd | dx | 1.00 | none | 1.5e-09 | 是 | 6.7e-08 |
+| ind_rms_norm_bwd | dx | 1.00 | constant-level | 1.5e-09 | 是 | 6.7e-08 |
 | ind_rms_norm_bwd | dw | 1.00 | none | 1.3e-15 | 是 | 8.8e-08 |
 | ind_selu | out | 1.00 | constant-level | 3.1e-08 | 是 | 2.6e-08 |
 | ind_selu_bwd | dx | 1.00 | constant-level | 2.9e-08 | 是 | 3.5e-08 |
@@ -100,7 +100,7 @@
 
 ## census/inductor2
 
-用例 77，输出 100；e_sem 分档：constant-level 50，none 47，small 2，unresolved 1；报错 2；不评（非 Triton 写出或之后被改）10
+用例 77，输出 100；e_sem 分档：constant-level 54，none 43，small 2，unresolved 1；报错 2；不评（非 Triton 写出或之后被改）10
 
 | 用例 | 输出 | 参照完整 | e_sem | e_sem 相对 RMS | e_num 检出 | e_num 相对 RMS |
 |---|---|---|---|---|---|---|
@@ -170,11 +170,11 @@
 | ind_vector_norm_half_bwd | dx | 1.00 | none | 1.4e-16 | 是 | 7.0e-08 |
 | ind_vector_norm_p3 | out | 1.00 | constant-level | 6.0e-08 | 是 | 4.2e-08 |
 | ind_vector_norm_p3_bwd | dx | 1.00 | small | 1.2e-07 | 是 | 1.0e-07 |
-| opt_adadelta | param | 1.00 | none | 2.6e-11 | 否 | 2.5e-08 |
+| opt_adadelta | param | 1.00 | constant-level | 2.6e-11 | 否 | 2.5e-08 |
 | opt_adadelta | square_avg | 1.00 | constant-level | 1.2e-08 | 是 | 5.4e-08 |
 | opt_adadelta | acc_delta | 1.00 | constant-level | 1.1e-08 | 是 | 6.5e-08 |
-| opt_adagrad | param | 1.00 | none | 1.5e-10 | 否 | 2.5e-08 |
-| opt_adagrad | sum | 1.00 | none | 1.8e-10 | 否 | 4.5e-08 |
+| opt_adagrad | param | 1.00 | constant-level | 1.5e-10 | 否 | 2.5e-08 |
+| opt_adagrad | sum | 1.00 | constant-level | 1.8e-10 | 否 | 4.5e-08 |
 | opt_adam_amsgrad | param | 1.00 | constant-level | 3.6e-08 | 是 | 3.4e-08 |
 | opt_adam_amsgrad | exp_avg | 1.00 | constant-level | 1.2e-08 | 是 | 3.8e-08 |
 | opt_adam_amsgrad | exp_avg_sq | 1.00 | constant-level | 3.8e-08 | 否 | 5.2e-08 |
@@ -200,7 +200,7 @@
 | opt_rmsprop_centered | square_avg | 1.00 | constant-level | 1.2e-08 | 是 | 5.4e-08 |
 | opt_rmsprop_centered | momentum_buffer | 1.00 | constant-level | 2.3e-08 | 是 | 3.7e-08 |
 | opt_rmsprop_centered | grad_avg | 1.00 | constant-level | 1.2e-08 | 是 | 3.8e-08 |
-| opt_sgd_dampening | param | 1.00 | none | 1.3e-09 | 否 | 2.5e-08 |
+| opt_sgd_dampening | param | 1.00 | constant-level | 1.3e-09 | 否 | 2.5e-08 |
 | opt_sgd_dampening | momentum_buffer | 1.00 | constant-level | 2.1e-08 | 是 | 3.8e-08 |
 | opt_sgd_nesterov | param | 1.00 | constant-level | 2.9e-09 | 否 | 2.5e-08 |
 | opt_sgd_nesterov | momentum_buffer | 1.00 | constant-level | 1.6e-08 | 否 | 3.2e-08 |
@@ -213,7 +213,7 @@
 
 ## census/inductor3
 
-用例 68，输出 55；e_sem 分档：constant-level 6，mixed (external re-entry) 2，none 42，small 1，unresolved 4；报错 0；不评（非 Triton 写出或之后被改）8
+用例 68，输出 55；e_sem 分档：candidate 1，constant-level 6，mixed (external re-entry) 3，none 40，small 1，unresolved 4；报错 0；不评（非 Triton 写出或之后被改）8
 
 | 用例 | 输出 | 参照完整 | e_sem | e_sem 相对 RMS | e_num 检出 | e_num 相对 RMS |
 |---|---|---|---|---|---|---|
@@ -236,7 +236,7 @@
 | ind_i0e_bwd | dx | 1.00 | mixed (external re-entry) | 1.4e-07 | 否 | 3.5e-08 |
 | ind_i1_bwd | dx | 0.00 | unresolved | — | — | — |
 | ind_i1e_bwd | dx | 1.00 | mixed (external re-entry) | 3.8e-07 | 是 | 9.6e-08 |
-| ind_lgamma_bwd | dx | 1.00 | none | 5.4e-08 | 否 | 1.6e-08 |
+| ind_lgamma_bwd | dx | 1.00 | mixed (external re-entry) | 5.4e-08 | 否 | 1.6e-08 |
 | ind_log1p_small | out | 1.00 | none | 8.2e-17 | 否 | 2.5e-08 |
 | ind_log1p_small_bwd | dx | 1.00 | none | 8.2e-17 | 是 | 4.7e-08 |
 | ind_log_ndtr_bwd | dx | 0.00 | unresolved | 0.0e+00 | — | 0.0e+00 |
@@ -262,7 +262,7 @@
 | ind_sort_desc_stable_idx | out | 1.00 | none | 3.5e-18 | 否 | 0.0e+00 |
 | ind_sort_stable_idx | out | 1.00 | none | 3.5e-18 | 否 | 0.0e+00 |
 | ind_sort_values | out | 1.00 | none | 5.5e-21 | 否 | 0.0e+00 |
-| ind_sort_values_bwd | dx | 1.00 | none | 1.4e-03 | 否 | 0.0e+00 |
+| ind_sort_values_bwd | dx | 1.00 | candidate | 1.4e-03 | 否 | 0.0e+00 |
 | ind_tanh_tail | out | 1.00 | none | 6.6e-17 | 是 | 1.6e-08 |
 | ind_tanh_tail_bwd | dx | 1.00 | none | 4.9e-16 | 是 | 1.2e-07 |
 | ind_topk_values_bwd | dx | 1.00 | none | 0.0e+00 | 否 | 0.0e+00 |
@@ -424,7 +424,7 @@
 
 ## census/fla
 
-用例 24，输出 50；e_sem 分档：constant-level 35，mixed (external re-entry) 5，none 10；报错 1；不评（非 Triton 写出或之后被改）0
+用例 24，输出 50；e_sem 分档：constant-level 41，mixed (external re-entry) 5，none 3，small 1；报错 1；不评（非 Triton 写出或之后被改）0
 
 | 用例 | 输出 | 参照完整 | e_sem | e_sem 相对 RMS | e_num 检出 | e_num 相对 RMS |
 |---|---|---|---|---|---|---|
@@ -466,17 +466,17 @@
 | fla_gdr_chunk_varlen_bwd | dbeta | 1.00 | constant-level | 1.4e-08 | 是 | 2.0e-03 |
 | fla_gdr_chunk_vfirst | o | 1.00 | constant-level | 1.3e-08 | 是 | 1.4e-03 |
 | fla_gdr_chunk_vfirst | final_state | 1.00 | constant-level | 7.7e-09 | 是 | 7.9e-04 |
-| fla_gdr_recurrent_basic | o | 1.00 | none | 1.7e-08 | 否 | 2.1e-07 |
+| fla_gdr_recurrent_basic | o | 1.00 | constant-level | 1.7e-08 | 否 | 2.1e-07 |
 | fla_gdr_recurrent_gate | o | 1.00 | constant-level | 1.9e-08 | 是 | 1.1e-07 |
-| fla_gdr_recurrent_gva | o | 1.00 | none | 1.7e-08 | 否 | 2.1e-07 |
-| fla_gdr_recurrent_h0_final | o | 1.00 | none | 1.7e-08 | 否 | 2.1e-07 |
+| fla_gdr_recurrent_gva | o | 1.00 | constant-level | 1.7e-08 | 否 | 2.1e-07 |
+| fla_gdr_recurrent_h0_final | o | 1.00 | constant-level | 1.7e-08 | 否 | 2.1e-07 |
 | fla_gdr_recurrent_h0_final | final_state | 1.00 | none | 2.7e-16 | 否 | 2.0e-07 |
-| fla_gdr_recurrent_l2_sigmoid | o | 1.00 | none | 1.7e-08 | 否 | 2.1e-07 |
-| fla_gdr_recurrent_neg_eig | o | 1.00 | none | 2.0e-07 | 否 | 2.9e-07 |
-| fla_gdr_recurrent_t100 | o | 1.00 | none | 1.7e-08 | 否 | 2.0e-07 |
+| fla_gdr_recurrent_l2_sigmoid | o | 1.00 | constant-level | 1.7e-08 | 否 | 2.1e-07 |
+| fla_gdr_recurrent_neg_eig | o | 1.00 | small | 2.0e-07 | 否 | 2.9e-07 |
+| fla_gdr_recurrent_t100 | o | 1.00 | constant-level | 1.7e-08 | 否 | 2.0e-07 |
 | fla_gdr_recurrent_varlen | o | 1.00 | constant-level | 1.7e-08 | 是 | 2.1e-07 |
 | fla_gdr_recurrent_varlen | final_state | 1.00 | none | 2.7e-16 | 是 | 2.0e-07 |
-| fla_gdr_recurrent_vfirst | o | 1.00 | none | 1.7e-08 | 否 | 2.1e-07 |
+| fla_gdr_recurrent_vfirst | o | 1.00 | constant-level | 1.7e-08 | 否 | 2.1e-07 |
 | fla_gdr_recurrent_vfirst | final_state | 1.00 | none | 2.7e-16 | 否 | 2.1e-07 |
 
 报错：
@@ -484,19 +484,19 @@
 
 ## census/tutorials
 
-用例 9，输出 17；e_sem 分档：constant-level 3，mixed (external re-entry) 3，none 5，unresolved 6；报错 0；不评（非 Triton 写出或之后被改）0
+用例 9，输出 17；e_sem 分档：constant-level 3，mixed (external re-entry) 6，none 2，unresolved 6；报错 0；不评（非 Triton 写出或之后被改）0
 
 | 用例 | 输出 | 参照完整 | e_sem | e_sem 相对 RMS | e_num 检出 | e_num 相对 RMS |
 |---|---|---|---|---|---|---|
 | tut_attention_causal | o | 1.00 | constant-level | 1.2e-08 | 否 | 2.4e-04 |
 | tut_attention_causal_bwd | dq | 1.00 | mixed (external re-entry) | 3.8e-04 | 是 | 3.2e-04 |
-| tut_attention_causal_bwd | dk | 1.00 | none | 3.1e-04 | 否 | 3.1e-04 |
+| tut_attention_causal_bwd | dk | 1.00 | mixed (external re-entry) | 3.1e-04 | 否 | 3.1e-04 |
 | tut_attention_causal_bwd | dv | 1.00 | mixed (external re-entry) | 3.0e-04 | 否 | 2.9e-04 |
 | tut_attention_d128_causal | o | 1.00 | constant-level | 2.8e-08 | 否 | 2.4e-04 |
 | tut_attention_plain | o | 1.00 | constant-level | 1.8e-08 | 是 | 2.7e-04 |
 | tut_attention_plain_bwd | dq | 1.00 | mixed (external re-entry) | 9.9e-01 | 是 | 3.0e-04 |
-| tut_attention_plain_bwd | dk | 1.00 | none | 9.9e-01 | 是 | 2.9e-04 |
-| tut_attention_plain_bwd | dv | 1.00 | none | 9.9e-01 | 否 | 2.9e-04 |
+| tut_attention_plain_bwd | dk | 1.00 | mixed (external re-entry) | 9.9e-01 | 是 | 2.9e-04 |
+| tut_attention_plain_bwd | dv | 1.00 | mixed (external re-entry) | 9.9e-01 | 否 | 2.9e-04 |
 | tut_layernorm_fp32 | y | 1.00 | none | 3.2e-14 | 是 | 6.8e-08 |
 | tut_layernorm_fp32_bwd | dx | 0.00 | unresolved | — | — | — |
 | tut_layernorm_fp32_bwd | dw | 0.00 | unresolved | — | — | — |
@@ -508,13 +508,13 @@
 
 ## census/radam
 
-用例 4，输出 12；e_sem 分档：candidate 3，constant-level 5，none 3，small 1；报错 0；不评（非 Triton 写出或之后被改）0
+用例 4，输出 12；e_sem 分档：candidate 3，constant-level 6，none 2，small 1；报错 0；不评（非 Triton 写出或之后被改）0
 
 | 用例 | 输出 | 参照完整 | e_sem | e_sem 相对 RMS | e_num 检出 | e_num 相对 RMS |
 |---|---|---|---|---|---|---|
 | opt_radam | param | 1.00 | small | 7.3e-07 | 是 | 3.5e-07 |
 | opt_radam | exp_avg | 1.00 | constant-level | 1.0e-08 | 是 | 3.5e-08 |
-| opt_radam | exp_avg_sq | 1.00 | none | 6.9e-11 | 是 | 5.1e-08 |
+| opt_radam | exp_avg_sq | 1.00 | constant-level | 6.9e-11 | 是 | 5.1e-08 |
 | opt_radam_b9995_step5 | param | 1.00 | candidate | 1.5e-02 | 是 | 2.4e-07 |
 | opt_radam_b9995_step5 | exp_avg | 1.00 | constant-level | 1.1e-08 | 是 | 3.2e-08 |
 | opt_radam_b9995_step5 | exp_avg_sq | 1.00 | constant-level | 2.8e-08 | 否 | 3.4e-08 |
@@ -524,4 +524,26 @@
 | opt_radam_b9999_step6 | param | 1.00 | candidate | 2.9e-05 | 是 | 7.3e-06 |
 | opt_radam_b9999_step6 | exp_avg | 1.00 | constant-level | 1.1e-08 | 是 | 3.1e-08 |
 | opt_radam_b9999_step6 | exp_avg_sq | 1.00 | none | 8.2e-17 | 是 | 3.9e-08 |
+
+## census/vllm
+
+用例 15，输出 15；e_sem 分档：candidate 3，constant-level 1，none 11；报错 0；不评（非 Triton 写出或之后被改）0
+
+| 用例 | 输出 | 参照完整 | e_sem | e_sem 相对 RMS | e_num 检出 | e_num 相对 RMS |
+|---|---|---|---|---|---|---|
+| ua_bidir | out | 1.00 | none | 2.9e-16 | 否 | 2.6e-04 |
+| ua_bidir_sw24_gqa4 | out | 1.00 | candidate | 1.1e-01 | 否 | 2.5e-04 |
+| ua_bidir_sw8_mha | out | 1.00 | candidate | 9.1e-01 | 否 | 2.5e-04 |
+| ua_bidir_sw8_qpkv16 | out | 1.00 | none | 2.2e-16 | 否 | 2.5e-04 |
+| ua_causal | out | 1.00 | none | 2.4e-16 | 是 | 2.3e-04 |
+| ua_causal_alibi | out | 1.00 | none | 2.0e-16 | 否 | 2.3e-04 |
+| ua_causal_gqa4_d80 | out | 1.00 | constant-level | 9.0e-09 | 是 | 2.3e-04 |
+| ua_causal_sinks | out | 1.00 | none | 2.6e-16 | 是 | 2.5e-04 |
+| ua_causal_sinks_sw24 | out | 1.00 | none | 2.3e-16 | 否 | 2.5e-04 |
+| ua_causal_softcap | out | 1.00 | none | 3.0e-16 | 否 | 2.3e-04 |
+| ua_causal_sw24 | out | 1.00 | none | 2.2e-16 | 否 | 2.3e-04 |
+| ua_causal_sw24_nan_stale | out | 1.00 | none | 2.2e-16 | 否 | 2.3e-04 |
+| ua_decode_3d | out | 1.00 | none | 2.6e-16 | 是 | 2.5e-04 |
+| ua_decode_3d_sinks_sw | out | 1.00 | none | 2.5e-16 | 是 | 2.5e-04 |
+| ua_perseq_causal_sw8 | out | 1.00 | candidate | 2.2e-01 | 是 | 2.3e-04 |
 
