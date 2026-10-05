@@ -254,3 +254,6 @@ CASES += [
     OptimStep("opt_radam_b9999_step2", "RAdam", dict(lr=1e-2, betas=(0.9, 0.9999)), warm=1),
     OptimStep("opt_radam_b9999_step6", "RAdam", dict(lr=1e-2, betas=(0.9, 0.9999)), warm=5),
 ]
+# B012 deep case, new conditions predicted before running (docs/radam_prediction_20261006.md); step = warm + 1
+CASES += [OptimStep(f"opt_radam_b{str(b2)[2:]}_step{t}", "RAdam", dict(lr=1e-2, betas=(0.9, b2)), warm=t - 1)
+          for b2, t in [(0.99985, 2), (0.99985, 3), (0.99985, 6), (0.9997, 5), (0.9997, 6), (0.9993, 6), (0.99995, 2)]]
