@@ -88,6 +88,10 @@ TTIR 里那条原子写本来就没有掩码，K_R 如实算进了填充通道�
 同一个 kernel）。附带的教训：代码生成器的补丁不改变 Inductor 缓存的键，第一次重测读到了缓存里未打补丁的 kernel，
 结果"全部不变"；`KA_PRELOAD` 现在会强制关闭缓存并在结束时报告补丁改了哪些缓冲区。
 
+**确认级规格（2026-10-06，计划 WP2）**：用严格包围的 f 重跑（对 fp32 输入做精确有理数运算，向外舍入；`sc1_mean_pool_one_graph`、`sc1_scaled_count`，`scripts/strict_specs.py`，
+`results/tool_spec/final/strict/`）：判定分档、e_sem 大小与区间证实比例与筛查级 f（fp64 eager + 2⁻⁴⁰ 预算）完全相同。
+本问题的结论标签为"严格包围"，不只是交叉核验。
+
 ## 证据
 
 `bugs/repro/B016_repro_inductor_scatter_size1_fusion.py`、`bugs/repro/B016_pyg_scatter_mean.py`（输出

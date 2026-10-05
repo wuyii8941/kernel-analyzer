@@ -257,3 +257,24 @@ CASES += [
 # B012 deep case, new conditions predicted before running (docs/radam_prediction_20261006.md); step = warm + 1
 CASES += [OptimStep(f"opt_radam_b{str(b2)[2:]}_step{t}", "RAdam", dict(lr=1e-2, betas=(0.9, b2)), warm=t - 1)
           for b2, t in [(0.99985, 2), (0.99985, 3), (0.99985, 6), (0.9997, 5), (0.9997, 6), (0.9993, 6), (0.99995, 2)]]
+
+
+class OptimStepStrictRAdam(OptimStep):
+    """The same RAdam step with f as a strict enclosure (MPFR 256 bits, scripts/strict_specs.py) instead of the
+    float64 eager optimizer (plan WP2)."""
+    spec_bound = "strict enclosure: MPFR 256-bit RAdam step, rounded outward to float64"
+
+    def spec(self, inp):
+        from strict_specs import radam_step
+
+        st, kw = inp["state"], self.kw
+        b1, b2 = kw.get("betas", (0.9, 0.999))
+        res, _ = radam_step(inp["p"].cpu().numpy(), inp["g"].cpu().numpy(), st["exp_avg"].cpu().numpy(),
+                            st["exp_avg_sq"].cpu().numpy(), int(st["step"]) + 1, kw["lr"], b1, b2,
+                            kw.get("eps", 1e-8), kw.get("weight_decay", 0.0))
+        return res
+
+
+CASES += [OptimStepStrictRAdam(f"opt_radam_b{str(b2)[2:]}_step{t}_strict", "RAdam", dict(lr=1e-2, betas=(0.9, b2)),
+                               warm=t - 1)
+          for b2, t in [(0.99985, 2), (0.99985, 3), (0.99985, 6), (0.9997, 5), (0.9997, 6), (0.9993, 6), (0.99995, 2)]]

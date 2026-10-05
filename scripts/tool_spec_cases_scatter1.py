@@ -47,3 +47,35 @@ CASES = [
            lambda g: {"x": rn(g, N), "idx": torch.zeros(N, dtype=torch.long)},
            doc="sum(x) / count, count by scatter_add of ones into one bucket"),
 ]
+
+
+# strict enclosures of f (plan WP2): exact rational arithmetic on the float32 inputs instead of float64 eager
+class StrictOpCase(OpCase):
+    spec_bound = "strict enclosure: exact rational arithmetic on the float32 inputs, rounded outward to float64"
+
+    def __init__(self, name, fn, make, strict, doc=""):
+        super().__init__(name, fn, make, doc=doc)
+        self.strict = strict
+
+    def spec(self, inp):
+        return {"out": self.strict(inp)}
+
+
+def _strict_mean_pool(inp):
+    from strict_specs import scatter_mean_one_segment
+    return scatter_mean_one_segment(inp["x"].cpu().numpy())
+
+
+def _strict_scaled_count(inp):
+    from strict_specs import scaled_count
+    return scaled_count(inp["x"].cpu().numpy())
+
+
+CASES += [
+    StrictOpCase("sc1_mean_pool_one_graph_strict", lambda x, batch: _mean_pool(x, batch),
+                 lambda g: {"x": rn(g, N, F), "batch": torch.zeros(N, dtype=torch.long)}, _strict_mean_pool,
+                 doc="scatter-mean of one segment = column means, exact"),
+    StrictOpCase("sc1_scaled_count_strict", lambda x, idx: _scaled_count(x, idx),
+                 lambda g: {"x": rn(g, N), "idx": torch.zeros(N, dtype=torch.long)}, _strict_scaled_count,
+                 doc="sum(x) / N, exact"),
+]
