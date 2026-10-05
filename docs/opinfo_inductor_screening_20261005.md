@@ -54,6 +54,28 @@ index_put、插值、各类损失、归一化。也就是说，这些算子的�
 
 **判不了：** masked.* 系列（mask 参与的组合工具未建立参照）、`__rpow__` 反向。
 
+## 3b. `dynamic=True` 筛查（2026-10-06，直接差分预筛）
+
+假设：PyTorch 的 Inductor OpInfo 测试只用静态形状编译（v2.10.0 的测试文件里没有 dynamic），符号尺寸路径（0/1 特化、
+符号下标化简、自动 dynamic 重编译走的路径）覆盖较少。做法：同一批 2149 个用例改 `OPINFO_DYNAMIC=1`
+（`torch.compile(dynamic=True)`），先用便宜约 60 倍的直接差分（`scripts/baseline_direct_diff.py`）预筛，再与静态结果比较
+（`scripts/baseline_dynamic_diff.py`）。结果在 `results/baseline/dyn_*`。
+
+静态通过、dynamic 失败的全部是**编译崩溃**，没有静默错误；检索后都是已知或 main 已修：
+
+| 写法 | 错误 | 状态 |
+|---|---|---|
+| `F.binary_cross_entropy(..., weight=w)`（含 `nn.BCELoss(weight=w)`；默认编译下第二个 batch 大小即触发） | `_infer_size` 不接受 SymInt | main 已修（#180583，2026-04-17），2.10 仍有 |
+| `F.cross_entropy` 概率标签 + `weight`（`dynamic=True`，类别维为符号尺寸） | `numel()` 遇到符号尺寸 | main 部分修复（#182004，2026-06-01），nightly 待测 |
+| `F.interpolate` 双线性 / 双三次 / 三线性，`align_corners=True`，非整数 `scale_factor` | `OverflowError: float infinity to integer` | 已知 #169757（该 issue 称 CUDA 正常；2.10 上 CUDA 同样失败） |
+| `adaptive_avg_pool2d` / `interpolate(mode='area')` | `cannot determine truth value of Relational ... > 25` | 已知 #159550 |
+| `torch.quantile` / `nanquantile` 张量 q | `numel()` 遇到符号尺寸 | 已知 #179383 |
+| `repeat` 含 0 的重复次数 | `reduce() of empty iterable` | 已知 #188217 |
+| 直接调用 `aten.max_pool2d_with_indices_backward`（kernel_size 为单个 int） | SymInt 不能当 `int[2]` | 直接调用 aten 的写法，不报 |
+
+另有 `binary_cross_entropy_with_logits_24`、`logcumsumexp_1` 在 dynamic 下 CI 式差分失败而静态通过，两者 eager fp32
+本身与 fp64 相差 1e-4 量级（病态），是归约次序不同造成的数值差，不是语义错误。
+
 ## 4. 筛查中发现并修正的工具 / 用例问题
 
 - 反向用例的上游梯度原先存成 float64、launch 时再转 float32，转出来的张量不在输入摘要里，被当成外来中间值
