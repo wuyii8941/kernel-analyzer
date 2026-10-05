@@ -46,7 +46,8 @@ structurally right, it is the replacement that is not equivalent.
 Separately, on the 2.10 release the pattern constants are wildcards: pattern 5 (`/ math.sqrt(query.size(-1))`) matches
 any divisor and is replaced with SDPA's default scale (dividing by `sqrt(d_model) = 16` instead of `sqrt(head_dim) = 8`
 gives a max difference of 1.19; a temperature of 4.0 gives 1.7), and pattern 15 matches any `masked_fill` value
-(`0.0` gives 0.55). We expect #195383 to fix this on main and will confirm on a nightly; it may be worth a backport.
+(`0.0` gives 0.55). This part is fixed on main by #195383 (confirmed on nightly 2.15.0.dev20261005); it may be worth
+a backport.
 
 ### Suggested fix
 
@@ -56,4 +57,5 @@ gives a max difference of 1.19; a temperature of 4.0 gives 1.7), and pattern 15 
 
 ### Versions
 
-torch 2.10.0+cu128, RTX A6000. `fuse_attention.py` replacements unchanged on main (2026-10-06).
+torch 2.10.0+cu128 (RTX A6000) and nightly 2.15.0.dev20261005+cpu: the segment-id / soft-mask / padding-only rows
+above reproduce on the nightly (1.76 / 1.63 / NaN vs 0).

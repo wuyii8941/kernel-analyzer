@@ -41,7 +41,9 @@ if "--fixed" in sys.argv or "--pr197845" in sys.argv:
     BaseTorchVariable.create_with_source = classmethod(create_with_source)
 
 dev = "cuda" if torch.cuda.is_available() else "cpu"
-print(torch.__version__, dev, [a for a in sys.argv[1:]])
+# B017_BACKEND=eager: the bug is in Dynamo's guards, so it shows without any code generation
+BACKEND = os.environ.get("B017_BACKEND", "inductor")
+print(torch.__version__, dev, BACKEND, [a for a in sys.argv[1:]])
 
 
 def show(name, eager, compiled):
@@ -55,7 +57,7 @@ print("1. argument of a compiled function (same output shape, different values)"
 torch._dynamo.reset()
 
 
-@torch.compile
+@torch.compile(backend=BACKEND)
 def apply(pool, x, k):
     return pool(x, k)
 
@@ -81,7 +83,7 @@ class Head(nn.Module):
 for pool in (F.adaptive_max_pool1d, F.max_pool1d):
     torch.manual_seed(0)
     m = Head(pool).to(dev)
-    show(f"Head({pool.__name__})", m(x), torch.compile(m)(x))
+    show(f"Head({pool.__name__})", m(x), torch.compile(m, backend=BACKEND)(x))
 
 print("3. closure (factory of per-config functions)")
 torch._dynamo.reset()
@@ -90,7 +92,7 @@ torch._dynamo.reset()
 def make(pool):
     def f(t):
         return pool(t, 3)
-    return torch.compile(f)
+    return torch.compile(f, backend=BACKEND)
 
 
 for pool in (F.max_pool1d, F.adaptive_max_pool1d):
@@ -100,7 +102,7 @@ print("4. control: method descriptors (pytorch#197811, PR #197845)")
 torch._dynamo.reset()
 a, b = torch.rand(5, device=dev) + 1, torch.rand(5, device=dev) + 1
 for op in (torch.Tensor.add, torch.Tensor.mul):
-    show("Tensor." + op.__name__, op(a, b), torch.compile(lambda o, u, v: o(u, v))(op, a, b))
+    show("Tensor." + op.__name__, op(a, b), torch.compile(lambda o, u, v: o(u, v), backend=BACKEND)(op, a, b))
 
 print("5. regional compilation (one compile per submodule) of a two-branch model")
 
@@ -128,8 +130,8 @@ torch.manual_seed(0)
 m = TwoBranch(3).to(dev)
 eager = m(x)
 torch._dynamo.reset()
-show("torch.compile(model)", eager, torch.compile(m)(x))
+show("torch.compile(model)", eager, torch.compile(m, backend=BACKEND)(x))
 torch._dynamo.reset()
-m.a.compile()
-m.b.compile()
+m.a.compile(backend=BACKEND)
+m.b.compile(backend=BACKEND)
 show("m.a.compile(); m.b.compile()", eager, m(x))

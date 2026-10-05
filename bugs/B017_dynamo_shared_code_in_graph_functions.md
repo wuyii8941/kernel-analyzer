@@ -95,4 +95,4 @@ onesample 与放宽容差两批中的报错与候选用例正在重跑（`opinfo
 ## 状态
 
 检索未见报告。main 的 `create_with_source` 与 `CLOSURE_MATCH`（2026-10-06）相同，trace_rules 仍把这些函数列为图内函数，
-`functional.py` 仍有 8 处 `boolean_dispatch`。nightly 实测待补。上游 issue 草稿：`bugs/upstream_drafts/B017_*.md`（由用户提交）。
+`functional.py` 仍有 8 处 `boolean_dispatch`。**nightly 实测（2.15.0.dev20261005+cpu，`B017_BACKEND=eager`）：五种写法全部仍然错误**（`results/tool_spec/final/dynamo_guard/B017_repro_output_nightly_cpu.txt`）；描述符对照也仍错（PR #197845 未合入）。上游 issue 草稿：`bugs/upstream_drafts/B017_*.md`（由用户提交）。

@@ -67,5 +67,5 @@ compilation) correct.
 
 ### Versions
 
-torch 2.10.0+cu128 (CUDA and CPU). `create_with_source`, `CLOSURE_MATCH` and the trace_rules entries are unchanged on
-main (2026-10-06).
+torch 2.10.0+cu128 (CUDA and CPU) and nightly 2.15.0.dev20261005+cpu (all five forms above still wrong with
+`backend="eager"`). `create_with_source`, `CLOSURE_MATCH` and the trace_rules entries are unchanged on main (2026-10-06).
