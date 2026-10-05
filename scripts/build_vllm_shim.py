@@ -40,6 +40,18 @@ FILES = [
     "model_executor/layers/mamba/ops/layernorm_gated.py",
     "model_executor/layers/mamba/ops/triton_helpers.py",
     "utils/math_utils.py",
+    "lora/ops/triton_ops/lora_shrink_op.py",
+    "lora/ops/triton_ops/lora_expand_op.py",
+    "lora/ops/triton_ops/kernel_utils.py",
+    "lora/ops/triton_ops/utils.py",
+    "model_executor/layers/fused_moe/fused_moe.py",
+    "model_executor/determinism/batch_invariant.py",
+    "kernels/triton/activation.py",
+    "v1/attention/ops/triton_reshape_and_cache_flash.py",
+    "v1/worker/gpu/sample/logit_bias.py",
+    "v1/worker/gpu/sample/bad_words.py",
+    "v1/sample/rejection_sampler.py",
+    "model_executor/layers/lightning_attn.py",
     "model_executor/warmup/jit_warmup.py",
     "model_executor/warmup/jit_warmup_triton_helper.py",
     "utils/gpu_sync_debug.py",
@@ -56,7 +68,14 @@ from pathlib import Path
 _HERE = Path(__file__).resolve().parent
 
 
-class _Stub:
+class _StubMeta(type):
+    def __getattr__(cls, name):
+        if name.startswith("__"):
+            raise AttributeError(name)
+        return _Stub()
+
+
+class _Stub(metaclass=_StubMeta):
     def __init__(self, *a, **k):
         pass
 
@@ -118,6 +137,11 @@ sys.meta_path.append(_Finder())
 TORCH_UTILS = '''import torch
 
 
+def is_quantized_kv_cache(kv_cache_dtype):  # vllm/utils/torch_utils.py
+    return (kv_cache_dtype.startswith("fp8") or kv_cache_dtype.endswith("per_token_head")
+            or kv_cache_dtype.startswith("nvfp4"))
+
+
 def async_tensor_h2d(data, device=None, dtype=None, out=None):
     t = torch.as_tensor(data, dtype=dtype)
     if out is not None:
@@ -158,6 +182,23 @@ def __getattr__(name):
     return type(name, (_Stub,), {})
 '''
 
+QUANT_UTILS = '''import torch
+
+FP8_DTYPE = torch.float8_e4m3fn
+
+
+def get_fp8_min_max(dtype=None):
+    fi = torch.finfo(dtype or FP8_DTYPE)
+    return float(fi.min), float(fi.max)
+
+
+def __getattr__(name):
+    if name.startswith("__"):
+        raise AttributeError(name)
+    from vllm import _Stub
+    return type(name, (_Stub,), {})
+'''
+
 TRITON_UTILS = '''import triton
 import triton.language as tl
 import triton.language.extra.libdevice as tldevice
@@ -180,8 +221,22 @@ ENVS = '''def __getattr__(name):
 LOGGER = '''import logging
 
 
+class _Logger(logging.LoggerAdapter):
+    def __init__(self, name):
+        super().__init__(logging.getLogger(name), {})
+
+    def info_once(self, msg, *a, **k):
+        self.info(msg, *a)
+
+    def warning_once(self, msg, *a, **k):
+        self.warning(msg, *a)
+
+    def debug_once(self, msg, *a, **k):
+        self.debug(msg, *a)
+
+
 def init_logger(name):
-    return logging.getLogger(name)
+    return _Logger(name)
 '''
 
 PLATFORMS = '''import torch
@@ -238,7 +293,8 @@ def main():
                       "platforms/__init__.py": PLATFORMS,
                       "utils/torch_utils.py": TORCH_UTILS,
                       "v1/attention/backends/utils.py": BACKEND_UTILS,
-                      "utils/platform_utils.py": PLATFORM_UTILS}.items():
+                      "utils/platform_utils.py": PLATFORM_UTILS,
+                      "model_executor/layers/quantization/utils/quant_utils.py": QUANT_UTILS}.items():
         (DST / rel).parent.mkdir(parents=True, exist_ok=True)
         (DST / rel).write_text(text)
     # kv_cache_interface: only the enum

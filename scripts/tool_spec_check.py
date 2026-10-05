@@ -98,7 +98,7 @@ def f64_point_spec(value, rel=2.0 ** -40):
 GROUPS = {"liger": "tool_spec_cases_liger", "flex": "tool_spec_cases_flex", "inductor": "tool_spec_cases_inductor",
           "tridao": "tool_spec_cases_tridao", "fla": "tool_spec_cases_fla", "inductor2": "tool_spec_cases_inductor2",
           "inductor3": "tool_spec_cases_inductor3", "tutorials": "tool_spec_cases_triton_tutorials",
-          "inductor4": "tool_spec_cases_inductor4", "vllm": "tool_spec_cases_vllm", "opinfo": "tool_spec_cases_opinfo", "optim2": "tool_spec_cases_optim2", "scatter1": "tool_spec_cases_scatter1"}
+          "inductor4": "tool_spec_cases_inductor4", "vllm": "tool_spec_cases_vllm", "opinfo": "tool_spec_cases_opinfo", "optim2": "tool_spec_cases_optim2", "scatter1": "tool_spec_cases_scatter1", "vllm2": "tool_spec_cases_vllm2"}
 
 
 def load_cases(group):
@@ -133,7 +133,9 @@ def torch_intermediates(launches, seq, inp):
             for v in obj:
                 yield from tensors(v)
 
-    inputs = {digest(v.detach().contiguous().cpu().numpy()) for v in tensors(inp) if v.is_floating_point()}
+    # raw bytes (bf16 / fp8 have no NumPy dtype)
+    inputs = {digest(v.detach().contiguous().cpu().reshape(-1).view(torch.uint8).numpy()) for v in tensors(inp)
+              if v.is_floating_point()}
     deps = {}  # storage -> set of foreign buffer labels it depends on
     last_after = {}  # storage -> digest of its bytes after the last recorded launch that wrote it
     for i, (l, ref) in enumerate(zip(launches, seq.launches)):
@@ -206,7 +208,10 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
             m = buf.written
             idx = buf.global_indices()[m]
             final = torch.empty(0, dtype=out.dtype, device=out.device).set_(out.untyped_storage()).reshape(-1)
-            final = final.detach().cpu().numpy()[idx] if idx.size else final.detach().cpu().numpy()[:0]
+            final = final.detach().cpu()
+            final = (final.float() if final.dtype in (torch.bfloat16,) or final.dtype.itemsize == 1 and final.is_floating_point()
+                     else final).numpy()  # bf16 / fp8 -> float32 is exact
+            final = final[idx] if idx.size else final[:0]
             actual = np.asarray(buf.actual_after[m], dtype=np.float64)
             if buf.actual_after_st is not None:  # the decoder stores special values as 0 plus a status
                 a_st = buf.actual_after_st[m]
@@ -244,10 +249,29 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
             for j in np.flatnonzero(mism | k_mism)[: max(0, 5 - len(sv["examples"]))]:
                 sv["examples"].append({"index": int(idx[j]), "f": names_[int(f_cls[j])], "K_R": names_[int(kr_cls[j])],
                                        "K": names_[int(k_cls[j])], "K_value": float(k_arr[j])})
+            # one coordinate frame per output: the elements of its view (the written set can change between seeds,
+            # e.g. atomic scatters whose targets follow the data); unwritten elements are not ok
+            nv = pos.size
+            inv_pos = np.full(max(int(pos.max(initial=-1)), int(idx.max(initial=-1))) + 1, -1, dtype=np.int64)
+            inv_pos[pos] = np.arange(nv)
+            w = inv_pos[idx]
+            sel = w >= 0
+
+            def frame(a, fill=0.0):
+                a = np.asarray(a)
+                o = np.full(nv, fill, dtype=a.dtype if a.dtype != bool else bool)
+                o[w[sel]] = a[sel]
+                return o
+
+            ok_e = (buf.st[m] == ST_OK) & ~buf.cond[m] & np.isfinite(f_lo)
+            special_agree = decided & (f_cls > 0) & (kr_cls == f_cls)
             per.setdefault(name, []).append({
-                "n": (n_lo, n_hi), "s": (s_lo, s_hi), "kr": 0.5 * (r_lo + r_hi), "k": k,
-                "ok": (buf.st[m] == ST_OK) & ~buf.cond[m] & np.isfinite(f_lo), "inside": inside, "idx": idx, "pos": pos,
-                "shape": tuple(out.shape), "width": r_hi - r_lo, "reasons": reasons, "aborted": aborted})
+                "n": (frame(n_lo), frame(n_hi)), "s": (frame(s_lo), frame(s_hi)),
+                "kr": frame(0.5 * (r_lo + r_hi)), "k": frame(np.asarray(k, dtype=np.float64)),
+                "ok": frame(ok_e, False), "written": frame(np.ones(idx.size, dtype=bool), False),
+                "resolved": frame(ok_e | special_agree, False), "inside": np.ones(nv, dtype=bool), "idx": pos,
+                "pos": pos, "shape": tuple(out.shape), "width": frame(r_hi - r_lo), "reasons": reasons,
+                "aborted": aborted})
     seconds = time.time() - t0
     n_dev = len(list(dev))
     report = {"case": case.name, "implementation": case.implementation, "specification": case.specification,
@@ -265,9 +289,14 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
     for name, rows in per.items():
         ok = np.stack([p["ok"] for p in rows])
         kr = np.stack([p["kr"] for p in rows])
-        entry = {"elements_per_seed": int(rows[0]["idx"].size), "shape": list(rows[0]["shape"]),
+        written = np.stack([p["written"] for p in rows])
+        resolved = np.stack([p["resolved"] for p in rows])
+        entry = {"elements_per_seed": int(written[0].sum()), "shape": list(rows[0]["shape"]),
                  "depends_on_non_triton_intermediates": mixed_by_output.get(name, []),
-                 "reference_classes": {"complete_fraction": float(ok[np.stack([p["inside"] for p in rows])].mean())},
+                 # written elements whose reference is complete and finite, or a special value of f's class
+                 "reference_classes": {"complete_fraction": float(resolved[written].mean()) if written.any() else 0.0,
+                                       "finite_complete_fraction": float(ok[written].mean()) if written.any() else 0.0,
+                                       "written_fraction": float(written.mean())},
                  "special_values": special.get(name),
                  "not_established_reasons_seed0": rows[0]["reasons"],
                  "aborted_programs_seed0": rows[0]["aborted"]}
@@ -284,6 +313,17 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
                                 "relative_rms": float(np.sqrt((mid[ok] ** 2).mean() / max((kr[ok] ** 2).mean(), 1e-300))),
                                 "max_K_R_width": float(np.stack([p["width"] for p in rows])[ok].max())}
             entry["numerical" if key == "n" else "semantic"] = rec
+        # element-wise view of e_sem over every (seed, element) with a complete finite reference, independent of
+        # the coordinate set fixed on the development units (outputs whose finite positions move with the data,
+        # e.g. masks that set data-dependent entries to -inf, leave that set nearly empty)
+        if ok.any():
+            s_lo_all = np.stack([p["s"][0] for p in rows])[ok]
+            s_hi_all = np.stack([p["s"][1] for p in rows])[ok]
+            mid_all = 0.5 * (s_lo_all + s_hi_all)
+            entry["semantic_elementwise"] = {
+                "elements": int(ok.sum()),
+                "certified_frac": float(((s_lo_all > 0) | (s_hi_all < 0)).mean()),
+                "relative_rms": float(np.sqrt((mid_all ** 2).mean() / max((kr[ok] ** 2).mean(), 1e-300)))}
         # the total K - f = e_num + e_sem: a semantic deviation that the rounded execution undoes (a branch that
         # K_R decides on real values while the device decides on rounded ones, e.g. an equality between a
         # compile-time rounded constant and a value cast at run time) shows as large e_sem and e_num of

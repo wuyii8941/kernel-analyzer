@@ -38,10 +38,18 @@ def certified(rec):
     return (res.get("positive_frac") or 0) + (res.get("negative_frac") or 0) > 0
 
 
-def sem_bin(rec, external=False, total=None):
+def sem_bin(rec, external=False, total=None, elementwise=None):
     d = detected(rec)
     if d is None:
-        return "unresolved"
+        # no coordinate set common to the development units: fall back to the element-wise certification
+        if not elementwise or not elementwise.get("elements"):
+            return "unresolved"
+        if elementwise.get("certified_frac", 0) == 0:
+            return "none"
+        rel = elementwise.get("relative_rms", float("nan"))
+        if external:
+            return "mixed (external re-entry)"
+        return "constant-level" if rel < 1e-7 else ("small" if rel < 1e-5 else "candidate")
     d = d or certified(rec)
     rel = (rec.get("scale") or {}).get("relative_rms", float("nan"))
     if d and total is not None and rel >= 1e-5 and total < 0.1 * rel and total < 1e-5:
@@ -83,7 +91,8 @@ def main():
                 rows.append({"group": grp, "case": r["case"], "output": o,
                              "special_mismatch": (sv.get("kr_vs_f_class_mismatch", 0), sv.get("k_vs_f_class_mismatch", 0)),
                              "complete": e["reference_classes"]["complete_fraction"],
-                             "sem": sem_bin(s, ext, (e.get("total") or {}).get("relative_rms")),
+                             "sem": sem_bin(s, ext, (e.get("total") or {}).get("relative_rms"),
+                                            e.get("semantic_elementwise")),
                              "sem_rel": (s.get("scale") or {}).get("relative_rms"),
                              "total_rel": (e.get("total") or {}).get("relative_rms"),
                              "num_detected": detected(n), "num_rel": (n.get("scale") or {}).get("relative_rms")})
