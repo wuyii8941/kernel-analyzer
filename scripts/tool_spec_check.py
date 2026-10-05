@@ -121,8 +121,17 @@ def torch_intermediates(launches, seq, inp):
     def digest(a):
         return hashlib.sha1(np.ascontiguousarray(np.asarray(a)).view(np.uint8).tobytes()).hexdigest()
 
-    inputs = {digest(v.detach().contiguous().cpu().numpy()) for v in inp.values()
-              if torch.is_tensor(v) and v.is_floating_point()}
+    def tensors(obj):
+        if torch.is_tensor(obj):
+            yield obj
+        elif isinstance(obj, dict):
+            for v in obj.values():
+                yield from tensors(v)
+        elif isinstance(obj, (list, tuple)):
+            for v in obj:
+                yield from tensors(v)
+
+    inputs = {digest(v.detach().contiguous().cpu().numpy()) for v in tensors(inp) if v.is_floating_point()}
     deps = {}  # storage -> set of foreign buffer labels it depends on
     last_after = {}  # storage -> digest of its bytes after the last recorded launch that wrote it
     for i, (l, ref) in enumerate(zip(launches, seq.launches)):

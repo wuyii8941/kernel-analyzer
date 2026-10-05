@@ -245,3 +245,12 @@ CASES += [
     OptimStep("opt_adadelta", "Adadelta", dict(lr=1.0, rho=0.9, weight_decay=0.05)),
     OptimStep("opt_asgd", "ASGD", dict(lr=1e-2, t0=2.0, weight_decay=0.05), warm=4),
 ]
+
+# RAdam's rho_t = rho_inf - 2 t beta2^t / (1 - beta2^t) cancels two numbers near rho_inf; the compiled step keeps the
+# step counter as a float32 tensor (eager's non-capturable path uses Python floats), so for beta2 close to 1 the
+# rectification threshold rho_t > 5 can flip.  Steps 2 and 5 are where it flips for beta2 = 0.9999 / 0.9995.
+CASES += [
+    OptimStep("opt_radam_b9995_step5", "RAdam", dict(lr=1e-2, betas=(0.9, 0.9995)), warm=4),
+    OptimStep("opt_radam_b9999_step2", "RAdam", dict(lr=1e-2, betas=(0.9, 0.9999)), warm=1),
+    OptimStep("opt_radam_b9999_step6", "RAdam", dict(lr=1e-2, betas=(0.9, 0.9999)), warm=5),
+]

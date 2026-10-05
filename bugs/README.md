@@ -20,6 +20,7 @@
 | B009 | `_AdamW(bf16_stochastic_round=True)` 只对参数做随机舍入，状态仍是 bf16 就近舍入，二阶矩同 B005 漂移 | torchao 0.16 | ①（状态） | v 比值 1.33（3k 步） | 未查 | 探针脚本 | 未跑 |
 | B010 | `torch.compile` 下 `avg_pool2d(ceil_mode=True, count_include_pad=True)` 的反向（上游 issue 也涵盖 1d；我们的 1d 用例窗口未越界，未触发）用整个核的大小作除数，ceil_mode 多出的越界窗口梯度错 | PyTorch 2.10 Inductor | ④ | 梯度相对误差 9.6%（最后一列）；编译后 gradcheck 失败，eager 通过；前向逐位相同 | 已知未修：pytorch/pytorch#198119（2026-09-22） | 工具（Inductor 对 eager 语义筛查） | 是：e_sem 检出，相对 RMS 9.4e-2，前向 e_sem 7.6e-17 |
 | B011 | Triton 官方教程 06-fused-attention 的反向不支持非因果：`causal=False` 时不报错，dq/dk/dv 与真实梯度相差约 100%（前向正确） | Triton v3.6.0 `python/tutorials/06-fused-attention.py` | ④ | e_sem 相对 RMS ≈ 1.0（dq 0.998、dk 0.992、dv 0.980）；e_num 3e-4 | 已知：教程测试只跑 `causal=[True]`，注释 `# FIXME: Non-causal tests do not pass at the moment.`；包装函数没有拦截 | 工具（教程 kernel 筛查） | 是 |
+| [B012](B012_torch_radam_fp32_rectification.md) | `torch.optim.RAdam` 的 capturable 路径与 `torch.compile(opt.step)` 在 fp32 里算整流项 ρ_t（两个接近 ρ_∞ 的数相减，β₂ 先被舍入到 fp32），β₂ 接近 1 时整流判据 ρ_t > 5 在前几步翻转 | PyTorch 2.10 与 main | ④ | 更新相对误差：β₂=0.999 达 6e-3；0.9995 第 5 步 0.99；0.9999 第 2/4/5 步 0.99、第 10 步 0.24；0.99999 达 18 倍（eager 非 capturable 为 2e-4–2e-3） | 检索未见报告 | 工具筛查（`opt_radam` 报出"小"档 e_sem），随后定向用例 | 是：β₂=0.9995 第 5 步 param 的 e_sem 1.45e-2（≈ 整步更新），e_num 2.4e-7 |
 
 ## 观察（不算缺陷，记录在案）
 
