@@ -185,6 +185,50 @@ def test_masked_load_without_other_is_undefined_only_where_used():
 
 
 @cuda
+def test_undefined_integer_times_established_zero_is_determined():
+    """FlexAttention's block-sparse walk: an undefined prefetched index enters the pointer jump only as
+    jump * needs_jump with needs_jump = 0 on the last block, so every loaded value and the output are determined."""
+    k = _kernels()
+    x = torch.randn(4 * 2 * 16, device="cuda")
+    idx = torch.tensor([0, 2, 3], device="cuda", dtype=torch.int32)
+    y = torch.empty(16, device="cuda")
+    result = _evaluate(_capture(lambda: k.masked_prefetch_jump[(1,)](x, idx, y, 3, BLOCK=16, MULT=2)))
+    _, by = _buffer(result, "Y")
+    assert (by.st[by.written] == 0).all()
+    expect = x.view(4, 2, 16)[[0, 2, 3]].sum((0, 1)).double().cpu().numpy()
+    assert np.all(by.lo <= expect + 1e-5) and np.all(by.hi >= expect - 1e-5)
+    assert np.allclose(y.double().cpu().numpy(), expect, atol=1e-5)
+
+
+@cuda
+def test_comparison_of_a_value_with_itself_is_decided_by_nan_alone():
+    """x != x (Inductor's NaN-propagating maximum) must not split the reference into both select paths."""
+    k = _kernels()
+    x = torch.cat([torch.randn(2, 96, device="cuda"), 1e-5 * torch.randn(2, 96, device="cuda")])
+    y = torch.empty_like(x)
+    result = _evaluate(_capture(lambda: k.nan_propagating_clamp_div[(4,)](x, y, 96, 1e-3, BLOCK=128)))
+    _, by = _buffer(result, "Y")
+    m = by.written
+    assert (by.st[m] == 0).all()
+    assert np.max(by.hi[m] - by.lo[m]) < 1e-12 * np.max(np.abs(by.lo[m])) + 1e-30
+    assert not any(r.startswith("path_union") for r in result.reasons)
+
+
+@cuda
+def test_scan_with_a_custom_combine_region_encloses_the_exact_prefix():
+    k = _kernels()
+    x = torch.randn(2, 64, device="cuda", dtype=torch.float64).float()
+    y = torch.empty_like(x)
+    result = _evaluate(_capture(lambda: k.log_cumsum_exp[(2,)](x, y, BLOCK=64)))
+    _, by = _buffer(result, "Y")
+    exact = torch.logcumsumexp(x.double(), -1).cpu().numpy().ravel()
+    assert (by.st == 0).all()
+    assert np.all(by.lo <= exact + 1e-12) and np.all(by.hi >= exact - 1e-12)
+    assert np.max(by.hi - by.lo) < 1e-9
+    assert np.allclose(y.cpu().numpy().ravel(), exact, atol=1e-5)
+
+
+@cuda
 def test_atomic_return_value_is_not_established_when_used():
     k = _kernels()
     n = 1000

@@ -747,7 +747,7 @@ class KernelReferenceEvaluator:
             return None, None, None
         buf = state.memory[int(idents[0])]
         if ELEM_SIZE[buf.elem] != size or (kind_of(pointee) != buf.kind and not
-                                           (pointee == "i1" and buf.elem == "i8")):
+                                           ((pointee, buf.elem) in (("i1", "i8"), ("i8", "i1")))):
             raise ProgramAbort(f"{op.node_id}: {pointee} access to a {buf.elem} buffer (reinterpretation)")
         index = ptr.lo // size
         aligned = (ptr.lo % size) == 0
@@ -795,6 +795,8 @@ class KernelReferenceEvaluator:
             if kind == "f":
                 hi = np.where(safe, src_hi[idx], 0.0)
             st = np.where(safe, src_st[idx], st)
+            if kind == "i" and buf.kind == "b":  # int8 view of a bool buffer: an undecided bool is not a byte
+                st = np.where(safe & (np.asarray(lo) == MAYBE), ST_NE, st)
             cond = np.where(safe, src_cond[idx], False)
             if kind == "f" and buf.d is not None and not pinned:
                 dlo = np.where(safe, buf.d[0][idx], 0.0)
@@ -874,7 +876,11 @@ class KernelReferenceEvaluator:
         sel = active & in_range
         idx = index[sel].astype(np.int64)
         lo_w = v_lo[sel]
-        if buf.kind == "i" and buf.dtype in ("uint8", "bool"):
+        if buf.kind == "b" and value.kind == "i":
+            # A torch.bool storage written through an int8 pointer (Inductor casts bool outputs to int8):
+            # the byte holds 0 or 1.
+            lo_w = (np.asarray(lo_w, dtype=np.int64) != 0).astype(np.int8)
+        elif buf.kind == "i" and buf.dtype in ("uint8", "bool"):
             lo_w = np.asarray(lo_w, dtype=np.int64) & 0xFF
         elif buf.kind == "i":
             lo_w = _wrap(np.asarray(lo_w, dtype=np.int64), INT_WIDTH[buf.elem])
@@ -1265,7 +1271,37 @@ class KernelReferenceEvaluator:
             out = np.cumsum(vals, axis=axis)
             out = np.flip(out, axis) if reverse else out
             return TV("i", x.elem, _wrap(out, INT_WIDTH[x.elem]), None, None, x.st, x.cond, x.reasons)
+        if combiner is None and self.mode != NumericMode.ROUNDING_CHECK:
+            return self._generic_scan(op, args, axis, reverse, env, state)
         raise ProgramAbort(f"{op.node_id}: scan combiner {combiner} not supported")
+
+    def _generic_scan(self, op, args, axis, reverse, env, state):
+        """A scan with its own combine region (e.g. Inductor's logcumsumexp), folded sequentially in scan order.
+        Exact in real arithmetic for an associative combiner, which a Triton scan requires (the hardware order
+        is a tree); the interval of each prefix encloses its real value."""
+
+        n = args[0].shape[axis]
+        order = list(range(n - 1, -1, -1)) if reverse else list(range(n))
+        take = lambda t, i: t.map(lambda a: np.take(a, i, axis=axis))  # noqa: E731
+        carry = [take(x, order[0]) for x in args]
+        outs = [{order[0]: c} for c in carry]
+        for i in order[1:]:
+            _, carry = self._run_region(op.regions[0], env, state, carry + [take(x, i) for x in args])
+            for j, c in enumerate(carry):
+                outs[j][i] = c
+        result = []
+        for j, x in enumerate(args):
+            parts = [outs[j][i] for i in range(n)]
+            st = lambda f: np.stack([f(p) for p in parts], axis=axis)  # noqa: E731
+            d = None
+            if any(p.d is not None for p in parts):
+                d = (st(lambda p: p.tangent()[0]), st(lambda p: p.tangent()[1]))
+            result.append(TV(parts[0].kind, parts[0].elem, st(lambda p: p.lo),
+                             None if parts[0].hi is None else st(lambda p: p.hi),
+                             None if parts[0].base is None else st(lambda p: p.base),
+                             st(lambda p: np.broadcast_to(p.st, p.shape)), st(lambda p: np.broadcast_to(p.cond, p.shape)),
+                             frozenset().union(*(p.reasons for p in parts)), d))
+        return result if len(result) > 1 else result[0]
 
     def _op_dot(self, op, args, env, state):
         a, b, c = args
@@ -1285,7 +1321,7 @@ class KernelReferenceEvaluator:
             col_bad = np.any(b.st != ST_OK, axis=-2)[..., None, :]
             st = np.where(row_bad | col_bad | (c.st != ST_OK), ST_NE, st).astype(np.int8)
         cond = np.any(a.cond, axis=-1)[..., :, None] | np.any(b.cond, axis=-2)[..., None, :] | c.cond
-        precision = op.attrs.get("inputPrecision", "tf32" if a.elem == "f32" else "ieee")
+        precision = op.attrs.get("inputPrecision", "ieee").strip()  # the default (ieee) is not printed
         out = _ftv(c.elem, lo, hi, st, cond, a.reasons | b.reasons | c.reasons | {f"dot_input_precision:{precision}"})
         if a.d is not None or b.d is not None or c.d is not None:
             ok = lambda v, t: np.where(v.st == ST_OK, t, 0.0)  # noqa: E731
@@ -1708,6 +1744,13 @@ def _cmpf(op, args) -> TV:
     a_lo, a_hi = _float_reps(a, "lo"), _float_reps(a, "hi")
     b_lo, b_hi = _float_reps(b, "lo"), _float_reps(b, "hi")
     nan = (a.st == ST_NAN) | (b.st == ST_NAN)
+    if a is b and pred in _PRED:
+        # The same SSA value on both sides (e.g. the NaN test x != x in Inductor's maximum / clamp): the two
+        # sides are one real number, not two independent members of the interval, so only NaN decides.
+        base, unordered = _PRED[pred]
+        v = np.where(nan, 1 if unordered else 0, 1 if base in ("eq", "ge", "le") else 0)
+        return TV("b", "i1", np.broadcast_to(v, shape).astype(np.int8), None, None, _merge_status(a, b),
+                  _merge_cond(a, b), _merge_reasons(a, b))
     if pred in ("ord", "uno", "true", "false"):
         val = {"ord": ~nan, "uno": nan, "true": np.ones(shape, bool), "false": np.zeros(shape, bool)}[pred]
         v = val.astype(np.int8)
@@ -1944,6 +1987,14 @@ def _int_op(name, op, args) -> TV:
             v = np.abs(vals[0])
         else:
             raise ProgramAbort(f"{op.node_id}: integer op {name}")
+    if name in ("muli", "andi"):
+        # An established exact zero absorbs the other operand: x * 0 = x & 0 = 0 for every integer x, so a lane
+        # whose other operand is undefined (e.g. a masked load without `other`) is still determined.
+        a, b = args
+        zero = ((a.st == ST_OK) & (vals[0] == 0)) | ((b.st == ST_OK) & (vals[1] == 0))
+        if zero.any():
+            st = np.where(zero, ST_OK, st).astype(np.int8)
+            v = np.where(zero, 0, v)
     return TV("i", out_elem, _wrap(v, width), None, None, st, cond, reasons)
 
 

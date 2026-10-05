@@ -446,6 +446,8 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
         value_text = head.strip()
         op.attrs["value"] = value_text
         op.result_types = operand_types
+        if not operand_types and value_text in ("true", "false"):
+            op.result_types = [parse_type("i1")]  # MLIR prints i1 constants without a type
     elif name in _CAST_OPS:
         idx = _find_top(rest_no_attrs, " : ")
         sig = rest_no_attrs[idx + 3:]

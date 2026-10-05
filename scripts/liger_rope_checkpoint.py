@@ -41,6 +41,7 @@ def main():
     parser.add_argument("--model", required=True)
     parser.add_argument("--batches", type=int, default=16)
     parser.add_argument("--seq", type=int, default=1024)
+    parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--device-map", default=None, help="e.g. auto for models that do not fit one GPU")
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
@@ -56,7 +57,7 @@ def main():
         model = model.cuda()
     model.eval()
     first = next(model.parameters()).device
-    it = batches(tok, "validation", args.seq, 2, seed=1)
+    it = batches(tok, "validation", args.seq, args.batch_size, seed=1)
     data = [next(it) for _ in range(args.batches)]
 
     @torch.no_grad()
@@ -91,7 +92,7 @@ def main():
     rec = {"liger_kernel": md.version("liger-kernel"), "liger_path": liger_kernel.__file__,
            "transformers": md.version("transformers"), "model": args.model, "model_type": model.config.model_type,
            "head_dim": q.shape[-1], "cos_width": cos.shape[-1], "patched_fn": f"{patched.__module__}.{patched.__name__}",
-           "tokens": args.batches * 2 * args.seq, "val_loss_hf": loss_ref, "val_loss_liger_rope": loss_liger,
+           "tokens": args.batches * args.batch_size * args.seq, "val_loss_hf": loss_ref, "val_loss_liger_rope": loss_liger,
            "q_rope_max_abs_diff": float(diff.max()), "q_rope_rel_diff": float(diff.norm() / q_ref.norm())}
     print(json.dumps(rec, indent=1))
     args.out.parent.mkdir(parents=True, exist_ok=True)

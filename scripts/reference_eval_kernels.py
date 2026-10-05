@@ -227,6 +227,48 @@ def masked_copy(X, Y, Z, n, BLOCK: tl.constexpr):
 
 
 @triton.jit
+def masked_prefetch_jump(X, IDX, Y, n_blocks, BLOCK: tl.constexpr, MULT: tl.constexpr):
+    """The block-sparse walk of FlexAttention's template: the next block index is prefetched with a masked load
+    (no `other`) and only enters the pointer jump multiplied by needs_jump, which is 0 except at block ends."""
+    offs = tl.arange(0, BLOCK)
+    ptr = X + tl.load(IDX) * BLOCK * MULT + offs
+    acc = tl.zeros((BLOCK,), tl.float32)
+    for it in range(0, n_blocks * MULT):
+        acc += tl.load(ptr)
+        cur_idx = it // MULT
+        cur = tl.load(IDX + cur_idx)
+        nxt = tl.load(IDX + cur_idx + 1, mask=cur_idx + 1 < n_blocks)
+        needs_jump = ((it + 1) % MULT == 0).to(tl.int32)
+        jump = (nxt - cur) * BLOCK * MULT - (MULT - 1) * BLOCK
+        ptr += jump * needs_jump + (1 - needs_jump) * BLOCK
+    tl.store(Y + offs, acc)
+
+
+@triton.jit
+def nan_propagating_clamp_div(X, Y, n, eps, BLOCK: tl.constexpr):
+    """Inductor's clamp_min(norm, eps): maximum(a, b) = where((a > b) | (a != a), a, b), then x / that."""
+    offs = tl.arange(0, BLOCK)
+    x = tl.load(X + tl.program_id(0) * n + offs, mask=offs < n, other=0.0)
+    norm = tl.sqrt(tl.sum(x * x, axis=0))
+    den = tl.where((norm > eps) | (norm != norm), norm, eps)
+    tl.store(Y + tl.program_id(0) * n + offs, x / den, mask=offs < n)
+
+
+@triton.jit
+def _logaddexp_combine(a, b):
+    hi = tl.maximum(a, b)
+    lo = tl.minimum(a, b)
+    return hi + tl.log(1.0 + tl.exp(lo - hi))
+
+
+@triton.jit
+def log_cumsum_exp(X, Y, BLOCK: tl.constexpr):
+    """A scan with a custom combine region (Inductor's logcumsumexp has the same shape)."""
+    offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
+    tl.store(Y + offs, tl.associative_scan(tl.load(X + offs), 0, _logaddexp_combine))
+
+
+@triton.jit
 def accumulate(ACC, C, n, BLOCK: tl.constexpr):
     offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
     mask = offs < n
