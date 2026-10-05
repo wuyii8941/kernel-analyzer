@@ -268,6 +268,13 @@ def log_cumsum_exp(X, Y, BLOCK: tl.constexpr):
     tl.store(Y + offs, tl.associative_scan(tl.load(X + offs), 0, _logaddexp_combine))
 
 
+
+@triton.jit
+def cumprod_rows(X, Y, BLOCK: tl.constexpr):
+    """tl.cumprod: a scan whose combiner is recognized as a product (Inductor's cumprod and masked.prod backward)."""
+    offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
+    tl.store(Y + offs, tl.cumprod(tl.load(X + offs), 0))
+
 _SOFTPLUS_PTX = tl.constexpr(" { .reg .pred p; setp.gt.f32  p, $1, 20.; @p  mov.f32  $0, $1; "
                  "@!p mul.f32 $0, $1, 1.4426950408889634; @!p ex2.approx.ftz.f32 $0, $0; "
                  "@!p add.f32 $0, $0, 1.0; @!p lg2.approx.ftz.f32 $0, $0; "

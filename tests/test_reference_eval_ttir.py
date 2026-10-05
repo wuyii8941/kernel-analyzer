@@ -228,6 +228,21 @@ def test_scan_with_a_custom_combine_region_encloses_the_exact_prefix():
     assert np.allclose(y.cpu().numpy().ravel(), exact, atol=1e-5)
 
 
+
+@cuda
+def test_product_scan_encloses_the_exact_prefix_products():
+    k = _kernels()
+    x = (1 + 0.1 * torch.randn(2, 32, device="cuda", dtype=torch.float64)).float()
+    x[1, 5] = 0.0  # a zero factor: every later prefix is exactly 0
+    y = torch.empty_like(x)
+    result = _evaluate(_capture(lambda: k.cumprod_rows[(2,)](x, y, BLOCK=32)))
+    _, by = _buffer(result, "Y")
+    exact = torch.cumprod(x.double(), -1).cpu().numpy().ravel()
+    assert (by.st == 0).all()
+    assert np.all(by.lo <= exact) and np.all(by.hi >= exact)
+    assert np.max(by.hi - by.lo) < 1e-12
+    assert (by.lo[32 + 5:] == 0).all() and (by.hi[32 + 5:] == 0).all()
+
 @cuda
 def test_zero_fill_assumption_is_checked_on_ptx_and_defines_masked_lanes():
     from kernel_analyzer.reference_eval.ttir_eval import ptx_zero_fills

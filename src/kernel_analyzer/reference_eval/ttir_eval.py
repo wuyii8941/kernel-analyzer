@@ -1374,7 +1374,9 @@ class KernelReferenceEvaluator:
             out = np.cumsum(vals, axis=axis)
             out = np.flip(out, axis) if reverse else out
             return TV("i", x.elem, _wrap(out, INT_WIDTH[x.elem]), None, None, x.st, x.cond, x.reasons)
-        if combiner is None and self.mode != NumericMode.ROUNDING_CHECK:
+        if self.mode != NumericMode.ROUNDING_CHECK:
+            # any other combiner (an unrecognized region, prod, max/min): fold its region in scan order, exact in real
+            # arithmetic for the associative combiner a Triton scan requires
             return self._generic_scan(op, args, axis, reverse, env, state)
         raise ProgramAbort(f"{op.node_id}: scan combiner {combiner} not supported")
 

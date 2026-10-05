@@ -84,7 +84,62 @@ def main(argv=None) -> None:
     audit = tcmp_sub.add_parser("audit")
     audit.add_argument("ledger", type=Path)
     audit.add_argument("dispositions", type=Path)
+    check = sub.add_parser("check", help="mode A (e_num) / mode B (e_num, e_sem, e_total) on a binding file")
+    check.add_argument("binding", type=Path, help="defines CASES, or make_inputs(seed), run(inputs), optional spec(inputs)")
+    check.add_argument("--case", default="all", help="case name(s), comma-separated, or 'all'")
+    check.add_argument("--out", type=Path, required=True, help="directory; one JSON report per case")
+    check.add_argument("--seeds", type=int, default=96, help="development = first third, confirmation = the rest")
+    check.add_argument("--zero-fill", default="auto", choices=("auto", "off"))
+    detect = sub.add_parser("detect", help="the frozen blind-test detection protocol (scripts/run_detection.py)")
+    detect.add_argument("rest", nargs=argparse.REMAINDER)
+    replay = sub.add_parser("replay", help="rerun stored reports and list decision-relevant differences")
+    replay.add_argument("reports", type=Path, nargs="+", help="stored JSON reports (each names its case)")
+    replay.add_argument("--binding", type=Path, required=True)
+    replay.add_argument("--seeds", type=int, required=True)
     args = parser.parse_args(argv)
+
+    if args.command == "check":
+        from .check import load_binding, run, verdicts
+
+        cases = {c.name: c for c in load_binding(args.binding)}
+        names = sorted(cases) if args.case == "all" else args.case.split(",")
+        args.out.mkdir(parents=True, exist_ok=True)
+        n_dev = args.seeds // 3
+        for name in names:
+            try:
+                report = run(cases[name], dev=range(0, n_dev), conf=range(n_dev, args.seeds),
+                             zero_fill_mode=args.zero_fill)
+            except Exception as exc:  # noqa: BLE001
+                import traceback
+
+                report = {"case": name, "error": f"{type(exc).__name__}: {exc}", "traceback": traceback.format_exc()[-1500:]}
+            (args.out / f"{name}.json").write_text(json.dumps(report, indent=1, default=float) + "\n")
+            print(name, report.get("mode"), report.get("error", "")[:200] or
+                  {o: {k: verdicts(e[k]) for k in ("numerical", "semantic") if k in e} for o, e in report["outputs"].items()},
+                  flush=True)
+        return
+    if args.command == "detect":
+        import sys as _sys
+
+        from scripts import run_detection
+
+        _sys.argv = ["run_detection.py"] + [a for a in args.rest if a != "--"]
+        run_detection.main()
+        return
+    if args.command == "replay":
+        from .check import compare_reports, load_binding, run
+
+        cases = {c.name: c for c in load_binding(args.binding)}
+        n_dev = args.seeds // 3
+        changed = 0
+        for path in args.reports:
+            old = json.loads(path.read_text())
+            new = run(cases[old["case"]], dev=range(0, n_dev), conf=range(n_dev, args.seeds))
+            diffs = compare_reports(old, new)
+            changed += bool(diffs)
+            print(json.dumps({"case": old["case"], "differences": diffs}, default=str))
+        print(json.dumps({"reports": len(args.reports), "changed": changed}))
+        return
 
     if args.command in {"analyze", "resume"}:
         spec = load_spec(args.spec)
