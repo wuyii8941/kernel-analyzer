@@ -1,4 +1,4 @@
-# B016：Inductor 把 scatter / index_add / index_put(accumulate) 写进只有一个元素的目标时结果错误
+# B016：Inductor 在 scatter / index_add / index_put(accumulate) 的下标可证明为常数时结果错误（单元素目标、图内常量下标）
 
 日期：2026-10-05。对象：PyTorch 2.10.0（`ka_main`），CUDA（错误结果）与 CPU（部分写法编译崩溃）；PyTorch main
 （2026-10-05 的 `torch/_inductor/codegen/triton.py`）的相关代码未变，nightly 实测见"状态"。类：④（编译后的语义与
@@ -13,10 +13,19 @@ f(idx)                 # tensor([5.])
 torch.compile(f)(idx)  # tensor([8.])
 ```
 
-只要目标在 scatter 维上只有一个元素（下标恒为 0），且 src 是计算出来的值（常数 1、`x + 1`、`exp(x)`、`cos(x)` 等，
+只要 scatter 的下标能被编译器证明是常数——目标在 scatter 维上只有一个元素（下标被区间推理化简为 0），或下标张量本身是图内构造的常量（`torch.zeros(N, dtype=long)`、`torch.full`、`arange(N) // 1000` 之类），目标可以有多个元素——且 src 是计算出来的值（常数 1、`x + 1`、`exp(x)`、`cos(x)` 等，
 而不是直接读入的张量），`scatter_add`、`index_add`、`index_put(..., accumulate=True)`、`scatter_reduce(sum)`、
 `index_reduce(mean)` 的编译结果都把 N 个贡献算成 ⌈N / XBLOCK⌉·XBLOCK 个（N=5→8，30→32，1000→1024，
 5000→5120）。
+
+补充（多元素目标，常量下标，CUDA）：
+
+| 写法 | eager | compiled |
+|---|---|---|
+| `zeros(4).index_put((zeros(30, long),), x + 1, accumulate=True)` | [27.32, 0, 0, 0] | **[29.32, 0, 0, 0]** |
+| `zeros(4).scatter_add(0, full((30,), 2), x.exp())` | [0, 0, 46.43, 0] | **[0, 0, 48.43, 0]** |
+| `zeros(4).index_add(0, arange(30) // 1000, x.cos())` | [17.90, 0, 0, 0] | **[19.90, 0, 0, 0]** |
+| 对照：下标由数据决定（`(x > 100).long()`） | [30, 0, 0] | [30, 0, 0] |
 
 ## 机制（两处）
 
@@ -29,7 +38,7 @@ torch.compile(f)(idx)  # tensor([8.])
    tl.atomic_add(out_ptr0 + (tl.full([XBLOCK], 0, tl.int32)), tmp2, None, sem='relaxed')
    ```
 
-   运行时给原子写补上迭代掩码（`xmask`）后，计数、`index_add`、PyG 式 mean pool 全部恢复正确
+   运行时给原子写补上迭代掩码（`xmask`）后，计数、`index_add`、PyG 式 mean pool、多元素目标的常量下标写法全部恢复正确
    （`bugs/repro/B016_*` 与下文"证据"）。
 
 2. **消费者被融合到原子写之前。** 同样因为下标化简成常数，调度器认为 scatter 的写和后续读取的是"同一下标"，

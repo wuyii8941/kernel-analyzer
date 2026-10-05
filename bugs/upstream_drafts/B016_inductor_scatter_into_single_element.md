@@ -1,9 +1,9 @@
-# [inductor] scatter_add / index_add / index_put(accumulate) into a one-element target gives wrong results on CUDA (unmasked atomic_add; consumer fused before the atomics)
+# [inductor] scatter_add / index_add / index_put(accumulate) with a provably constant index give wrong results on CUDA (unmasked atomic_add; reader fused before the atomics)
 
 ### 🐛 Describe the bug
 
-When the target of an accumulating scatter has a single element along the scattered dim, Inductor simplifies the
-indirect index to the constant 0 and then (1) emits the atomic store without a mask and (2) may fuse readers of the
+When the index of an accumulating scatter is provably constant (a target with a single element along the scattered
+dim, whose index Inductor simplifies to 0, or an index tensor built as a constant in the graph), Inductor (1) emits the atomic store without a mask and (2) may fuse readers of the
 target into the scatter kernel, ahead of the atomics. Both give silently wrong results on CUDA.
 
 ```python
@@ -27,7 +27,10 @@ variable, so the mask is `None`. That is harmless for a plain store but not for 
 (`xindex >= xnumel`) add too. A source loaded from memory is 0 there, but a computed source (`ones`, `x + 1`,
 `x.exp()`, `x.cos()`, ...) is not, so the result counts `ceil(N / XBLOCK) * XBLOCK` contributions: N = 5 -> 8,
 30 -> 32, 1000 -> 1024, 5000 -> 5120. Affected: `scatter_add`, `index_add`, `index_put(accumulate=True)`,
-`scatter_reduce("sum")`, `index_reduce("mean")` into a one-element target. Adding the iteration mask to the atomic
+`scatter_reduce("sum")`, `index_reduce("mean")` whenever the index is provably constant: a one-element target, or
+an index tensor built as a constant in the graph (`torch.zeros(n, dtype=torch.long)`, `torch.full`,
+`torch.arange(n) // big`) into a target of any size, e.g. `torch.zeros(4).index_put((torch.zeros(30, dtype=torch.long),), x + 1, accumulate=True)`
+adds 2 too much at index 0 on CUDA. Adding the iteration mask to the atomic
 store (patched at runtime) fixes all of these.
 
 **(2) Reader fused ahead of the atomics.** With the index constant, the scheduler treats the scatter's write and a
