@@ -194,6 +194,16 @@ class OpInfoBwdCase(OpInfoCase):
         super().__init__(name, op, index, structure, doc)
         self.specification += " ; backward (float64 eager autograd)"
 
+    def _sample(self, seed):
+        # requires_grad=True samples: the op's generator marks exactly the differentiable tensors (not, e.g., the
+        # class weights of nll_loss); only those become leaves
+        for s in range(seed, seed + 50):
+            torch.manual_seed(s)
+            samples = list(self.op.sample_inputs("cuda", torch.float32, requires_grad=True))
+            if self.index < len(samples) and _structure(samples[self.index]) == self.structure:
+                return samples[self.index]
+        raise RuntimeError("no sample with the case structure")
+
     def inputs(self, seed):
         sample = self._sample(seed)
         with torch.no_grad():
@@ -211,8 +221,11 @@ class OpInfoBwdCase(OpInfoCase):
         conv = []
         for t in tens:
             if t.is_floating_point():
-                t = (t.to(dtype) if dtype is not None else t.clone()).detach().requires_grad_(True)
-                leaves.append(t)
+                differentiable = t.requires_grad
+                t = (t.to(dtype) if dtype is not None else t.clone()).detach()
+                if differentiable:
+                    t.requires_grad_(True)
+                    leaves.append(t)
             conv.append(t)
         it = iter(conv)
         y = fn(_replace(sample.input, it), *_replace(sample.args, it), **_replace(sample.kwargs, it))
