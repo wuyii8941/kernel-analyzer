@@ -48,6 +48,14 @@ torch.compile(f)(idx)  # tensor([8.])
    `c = ones(1).scatter_add(0, idx, ones_like(s)); return t / c, t.gather(0, idx) / c.gather(0, idx)`，编译结果
    为 t / 1。补上掩码不能修好这一处。
 
+**PyTorch 自己的测试因此关掉了一项检查（2026-10-06 补充）。** `test/inductor/test_torchinductor_opinfo.py`（v2.10.0）对
+`index_reduce.amax` / `index_reduce.amin` 在 CUDA float16/32/64 上设 `check_gradient: False`，注释是
+"Gradient contains non-finite entries"。逐样例核对：编译后的反向只在单元素样例上出现非有限值（amax 8 个样例中 4 个，
+amin 8 个中 2 个，正是 0 维与长度 1 的样例），eager 梯度有限（如 1.0，编译后为 inf）。生成代码与第 2 处机制相同：
+同一个 kernel 里先读计数、再对单元素计数缓冲区 `tl.atomic_add`，计数读到 0，`grad / count` 得 inf。也就是说，那条
+被关掉的梯度检查报的就是本问题；修好后可以重新打开。工具在放宽容差批次里对这些用例报"特殊值类别不一致"（K 有
+9 个 inf/NaN，f 有限）。
+
 CPU（C++ 代码生成）上 `count` 与 mean pool 结果正确，`zeros(1).index_add(0, idx, ones)` 编译时
 `AssertionError`（`cpp.py` store 断言下标是向量）。
 

@@ -52,6 +52,11 @@ This is what breaks the backward of `scatter_reduce` on one-element tensors (the
 `[0.5, 0.5]`, and `"amax"`/`"amin"` give `inf`/`nan`. `aot_eager` is correct in every case. These OpInfo samples
 (0-dim `scatter_reduce`) are in the database, but `test_torchinductor_opinfo.py` runs `scatter_reduce.*` on one sample.
 
+This is also why `test_torchinductor_opinfo.py` disables `check_gradient` for `index_reduce.amax` / `index_reduce.amin`
+on CUDA ("Gradient contains non-finite entries"): the non-finite entries appear only on the one-element samples
+(4 of 8 for amax, 2 of 8 for amin), the eager gradient is finite there (e.g. 1.0 vs `inf` compiled), and the backward
+kernel reads the count and then `tl.atomic_add`s into the one-element count buffer in the same kernel, so it divides by 0.
+
 **Impact.** Any compiled code that accumulates computed values into a single bucket. One concrete case is PyG's
 scatter-mean (`torch_geometric.utils.scatter(..., reduce="mean")`, used by `global_mean_pool` and mean aggregation),
 whose count is `src.new_zeros(dim_size).scatter_add_(0, index, src.new_ones(n)).clamp(min=1)`: with one graph in
