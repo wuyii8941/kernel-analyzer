@@ -41,3 +41,6 @@ kernel-analyzer replay OLD.json ... --binding BINDING.py --seeds N # 重跑并�
 - 每个用例开始时 `torch._dynamo.reset()`（B017：同进程的用例会复用别的算子的图）。
 - `tt.scan` 的其他组合器（乘积、max/min）在数值差异模式下按组合区域顺序折叠，实数下精确；新增
   `tl.cumprod` 的单元测试（包含零因子）。此前 masked.prod 反向的 36 个输出因此判为"program 中止"。
+- `KA_PRELOAD=path.py[,...]`（`scripts/tool_spec_check.py`）：运行前加载模块并调用 `apply()`，用于运行时修复补丁的
+  验证（WP5）。加载后强制 `TORCHINDUCTOR_FORCE_DISABLE_CACHES=1`——补丁不改变 Inductor 缓存的键，否则会读到缓存里未打
+  补丁的 kernel（B016 的第一次重测就是这样"全部不变"）；结束时打印模块的 `PATCHED` 报告。

@@ -70,6 +70,24 @@ OpInfo × Inductor 筛查（`scatter_reduce.*` 在 PyTorch 的 Inductor OpInfo �
 一个图，30 个节点）e_sem 相对 RMS **0.067**，**100%** 的坐标区间不含 0，R2/R3 检出"幅度被拉向 0"，e_num 1e-7。
 TTIR 里那条原子写本来就没有掩码，K_R 如实算进了填充通道的贡献，所以偏差完全落在 e_sem。
 
+## 修复验证（工具，2026-10-06）
+
+运行前的预测（本文"机制"一节）：补上原子写掩码只修第 1 处，第 2 处（读取者被融合到原子写之前）不受影响。
+补丁 `bugs/repro/B016_mask_patch.py`（`TritonKernel.store` 对无掩码的 `tl.atomic_add` 补 `xmask`），经
+`KA_PRELOAD` 加载后用工具重测，种子与未打补丁时相同（`results/tool_spec/final/scatter1_patched/`）：
+
+| 用例 | 机制 | 未打补丁 e_sem | 打补丁后 |
+|---|---|---|---|
+| `sc1_mean_pool_one_graph`（PyG 单图 mean pool） | 1 | 相对 RMS 0.067，100% 坐标证实 | 6e-17，未检出 |
+| `sc1_scaled_count` | 1 | 0.067，100% 证实 | 6e-17，未检出 |
+| `sc1_mean_pool_two_graphs`（对照） | — | 未检出 | 未检出 |
+| `oib_scatter_reduce_mean_19` 反向 | 2 | 0.5，证实 | 0.5，证实 |
+| `oib_scatter_reduce_amax_19`、`oib_index_reduce_amax_0` 反向 | 2 | K 有 9 个 inf/NaN | 不变 |
+
+预测成立：工具把同一个补丁的作用精确地分到两处机制上，第 2 处需要另外修（调度器不应把读取原子写目标的节点融合进
+同一个 kernel）。附带的教训：代码生成器的补丁不改变 Inductor 缓存的键，第一次重测读到了缓存里未打补丁的 kernel，
+结果"全部不变"；`KA_PRELOAD` 现在会强制关闭缓存并在结束时报告补丁改了哪些缓冲区。
+
 ## 证据
 
 `bugs/repro/B016_repro_inductor_scatter_size1_fusion.py`、`bugs/repro/B016_pyg_scatter_mean.py`（输出

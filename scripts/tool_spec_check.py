@@ -75,6 +75,11 @@ def main():
         spec.loader.exec_module(module)
         module.apply()
         print("preloaded", path, flush=True)
+        # a patch of the code generator is invisible to Inductor's caches (keys do not cover it): compile afresh
+        os.environ["TORCHINDUCTOR_FORCE_DISABLE_CACHES"] = "1"
+        import atexit
+
+        atexit.register(lambda m=module: print("patch report:", getattr(m, "PATCHED", None), flush=True))
     import torch._inductor.config as inductor_config
 
     inductor_config.use_static_cuda_launcher = False  # Inductor's static launcher bypasses the launch hook
