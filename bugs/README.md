@@ -50,6 +50,7 @@
   初步：e_sem 有 1e-8 量级的系统偏差，已核实来自 fp32 舍入后的 log2(e)（常数取整）：规格的温度乘 (1 − 1.33e-8) 后 e_sem 从 1.76e-8 降到 8.5e-16。量级可忽略。
 
 ## 相关但不计入（不是我们发现的）
+- OpInfo × Inductor 筛查顺带召回或排除的：`avg_pool1d` 的 ceil_mode 反向（三个样例，相对 0.06–0.16）即 pytorch#198119 已覆盖的 1d；`index_fill` 以需要梯度的 0 维 value 张量、多个不同下标时编译后的反向触发 `aten._unique` 的 size 断言（fake 实现缺失，main 上已补，见 `torch/_subclasses/fake_impls.py` 的 `aten._unique.default`，2.10 仍有）；`normalize` 0 维与单元素 `rms_norm` 的反向候选是规格问题（精确导数为 0 / eps 随 dtype 变），不是缺陷。
 - vLLM Triton top-k/top-p（`apply_top_k_top_p_triton`，V2 model runner 在批里有贪心请求、带 seed 的请求或需要 processed logprobs 时整批走它；投机解码的 rejection sampler 也用它）：我们的差分探针（`scripts/vllm/probe_topk_topp*.py`）独立发现三类偏差——少量有限 logits（语法掩码）+ top_k ≥ 有限个数 + top_p < 1 时丢掉 top-p 必须保留的 token（2 个 token 时 20–60% 的行出错，丢失质量达 0.5）；首块统计量估出的 `max_sample` 偏小、`exp` 上溢后整行不截断；bf16 并列时 top-k 只保留恰好 k 个（PyTorch 路径保留全部并列）。前两类已有上游记录：vLLM #59785（2026-10-02）、修复 PR #59804（根因同我们的分析：二分只在 [min_prob, max_prob] 内取 pivot 且用严格 >）、#60030（2026-10-05）。第三类是语义取舍。均不是工具检出。
 - vLLM 其余 Triton 算子的差分筛查（`scripts/vllm/probe_gdn_conv.py`）：自带 FLA 的 chunk / recurrent / sigmoid gating（含投机解码的逐 token 状态）、`causal_conv1d_fn` / `causal_conv1d_update`（含投机解码变长）、`merge_attn_states`，全部在 bf16 噪声内，状态逐位一致。观察：`causal_conv1d_fn` 的主循环只处理宽度 2–4（宽度 5 读入 col3 却不用，update 支持到 6）；GDN 两个 decode kernel 不使用传入的 `stride_indices_tok`；KDA 分支对 `a`/`dt_bias` 的读取不带掩码。现有模型都不触发。
 
