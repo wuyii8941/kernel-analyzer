@@ -37,18 +37,15 @@
 | O04 | 融合 kernel 内的门控用内联 PTX（`setp`/`mov`/`mul`/`ex2.approx`/`add`/`lg2.approx` 拼成 softplus）。工具已补上直线型 PTX 子集的语义后可评估：chunk / recurrent 两条路径 e_sem 1.7e-8 / 1.9e-8（常数取整级），无语义问题 | FLA `fla/ops/utils/softplus.py`（`use_gate_in_kernel=True`） | 无 | `results/tool_spec/rerun_v2/fla/fla_gdr_*_gate.json` |
 | O05 | `selective_state_update(..., dt_bias=None)` 或 `D=None`（文档里的可选默认值）直接 TypeError：`*(dt_bias.stride(0), dt_bias.stride(1)) if dt_bias is not None else 0` 被解析成 `*(... if ... else 0)` | mamba_ssm v2.2.4–v2.3.2 与 main | 崩溃（非数值） | 已知未修：state-spaces/mamba#1028（开着，2026-08-31），#912 关闭未合入 |
 
-## 正在进行的工具筛查（成熟算子）
+## 工具筛查的状态（成熟算子，2026-10-06）
 
-- PyTorch FlexAttention（Inductor Triton 模板）：12 种配置 × 前向/反向，见 `results/tool_spec/flex/`。
-  - 反向在 Q_LEN 不是块大小整数倍时，dv 依赖一个不带 `other` 的掩码读取（越界行的 LSE）。Triton 3.6 的
-    NVIDIA 后端把这个寄存器置 0，所以结果正确；但这依赖实现行为，文档里该值是未定义的。记作低严重度观察。
-  - head_dim 96、以及带可学习 bias 的 score_mod，在 A6000（共享内存 101 KB）上编译失败
-    （"No valid triton configs. OutOfResources"），属可用性问题，未查上游。
-- PyTorch Inductor（torch.compile）：86 个用例（归一化、softmax 族、激活、损失、池化/插值、填充），
-  对照 eager 语义。第一轮（工具修正前）结果：除 B010 外，e_sem 都在常数取整量级（≤ 7e-7；插值的坐标比例常数在 fp32 下取整）；修正后重跑中。
-- FlashAttention 仓库 Triton 算子（rotary、layer_norm/rms_norm、cross_entropy）与 mamba_ssm（gated RMSNorm、
-  SSD、selective_state_update）、FLA 门控 delta rule：进行中。
-  初步：e_sem 有 1e-8 量级的系统偏差，已核实来自 fp32 舍入后的 log2(e)（常数取整）：规格的温度乘 (1 − 1.33e-8) 后 e_sem 从 1.76e-8 降到 8.5e-16。量级可忽略。
+- 普查：FlexAttention、Inductor、FlashAttention / mamba_ssm、FLA、Triton 教程、PyTorch 优化器（eager 与 compiled）、
+  vLLM（注意力族、RoPE、KV cache 写入、V2 采样器、拒绝采样、top-k/top-p、LoRA、fused MoE、batch-invariant），
+  见 `docs/census_mature_kernels_20261005.md` 与 `results/tool_spec/census/`。
+- OpInfo × Inductor：onesample 1440、放宽容差 210、前向全量 773 个用例，见 `docs/opinfo_inductor_screening_20261005.md`；
+  同一批用例的直接差分基线与对照见 `docs/baseline_direct_diff_20261006.md`。
+- 进行中：OpInfo 的 `dynamic=True` 筛查（符号尺寸路径，先用直接差分预筛）；B016 的修复验证（运行时补掩码后用工具
+  重测）。
 
 ## 相关但不计入（不是我们发现的）
 - OpInfo × Inductor 筛查顺带召回或排除的：`avg_pool1d` 的 ceil_mode 反向（三个样例，相对 0.06–0.16）即 pytorch#198119 已覆盖的 1d；`index_fill` 以需要梯度的 0 维 value 张量、多个不同下标时编译后的反向触发 `aten._unique` 的 size 断言（fake 实现缺失，main 上已补，见 `torch/_subclasses/fake_impls.py` 的 `aten._unique.default`，2.10 仍有）；`normalize` 0 维与单元素 `rms_norm` 的反向候选是规格问题（精确导数为 0 / eps 随 dtype 变），不是缺陷。

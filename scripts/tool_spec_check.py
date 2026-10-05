@@ -64,6 +64,17 @@ def main():
     parser.add_argument("--zero-fill", default="auto", choices=("auto", "off"),
                         help="auto: take masked lanes without `other` as 0 when the PTX of every launch zero-fills them")
     args = parser.parse_args()
+    # KA_PRELOAD=path.py[,path2.py]: modules whose apply() runs before the cases (runtime fix patches, WP5)
+    import os
+
+    for path in filter(None, os.environ.get("KA_PRELOAD", "").split(",")):
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(Path(path).stem, path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.apply()
+        print("preloaded", path, flush=True)
     import torch._inductor.config as inductor_config
 
     inductor_config.use_static_cuda_launcher = False  # Inductor's static launcher bypasses the launch hook

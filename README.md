@@ -30,7 +30,13 @@ Kernel Analyzer 检验训练中数值实现差异的系统性作用：给定一�
    参照坐标与 518 项投影，没有区间违反。冻结判定矩阵已提交，评分待揭盲。盲测暴露了第 1 版默认检测器的缺陷——把参照
    区间的中点当精确观测，在 6 个语义差异为零的输出上误报；第 2 版每个出口都按区间做端点保守检验，判定统一走
    `analysis.assess_units`，接口舍入与编译期常数单列。修复版把盲测当回归集重跑：协议判定 0 处变化，默认检测器只去掉
-   了这 6 项误报。见 [工具修订](docs/tool_changes_20261003.md)。
+   了这 6 项误报。见 [工具修订](docs/tool_changes_20261003.md)。blind_test_v2：38 个程序，检测器在开包前冻结为
+   `detector-v2.1`，阶段 1（K − K_R）、阶段 2（K_R − f）、阶段 3（参数更新层：计分口径为理想响应，另报实际 FP32 写入）
+   的判定矩阵已提交，评分待揭盲。
+6. **模式 A / 模式 B 与真实问题。** 同一个引擎（`kernel_analyzer.check`）：无规格时只报 e_num（任务语义未检验），有规格
+   时同时报 e_num、e_sem 与总差 K − f。在成熟库（PyTorch Inductor / Dynamo / 优化器、vLLM）上的筛查发现了上游未报告的
+   语义错误，见 [问题登记](bugs/README.md)；同输入的直接差分基线说明了哪些发现靠用例覆盖、哪些靠工具的归因与定位
+   （[基线对照](docs/baseline_direct_diff_20261006.md)）。
 
 ## 使用
 
@@ -49,7 +55,14 @@ python scripts/run_reference_analysis.py --declaration D.json --stage reference 
 python scripts/run_reference_analysis.py --declaration D.json --stage statistics --out REF --report R.json
 ```
 
-陌生算子的默认检测（不给机制、方向或参照，只给输入来源与调用方式）：
+对一个调用做检查（绑定文件给 `make_inputs(seed)`、`run(inputs) -> {名字: 张量}`，可选 `spec(inputs)`；不给规格即
+模式 A，示例在 `examples/bindings/`）：
+
+```bash
+kernel-analyzer check examples/bindings/softmax.py --out DIR --seeds 96
+```
+
+盲测冻结的默认检测协议（不给机制、方向或参照，只给输入来源与调用方式）：
 
 ```bash
 python scripts/run_detection.py --binding binding.py --units 128 --out report.json   # 可选 --rules R1,R3
@@ -69,8 +82,12 @@ python scripts/run_detection.py --binding binding.py --units 128 --out report.js
 - 判定规则在平均为零时误报率接近 5%（给出区间），灵敏度随维度下降，已画出曲线。默认检测器第 2 版：点残差上
   向量均值族误报 3.0–5.4%、对齐族 3.0–4.2%；参照区间的中点带系统偏移而真值为零时 0/1000
   （`results/reference_eval/detector_calibration_v2.json`）。
-- 尚未经过盲测的：参数更新层（研究主张依赖的那一层）；第 2 版在一批未参与修改的新组合上的成绩。到目前为止工具找到的
-  真实现象都很小（远低于训练噪声），还没有影响训练的发现。
+- 盲测：blind_test_v1（阶段 1–2）与 blind_test_v2（阶段 1–3，含参数更新层）都已运行并提交冻结判定矩阵，**评分待
+  出题方揭盲**；揭盲前不报告检出率与误报率。揭盲后两套转为回归集，泛化成绩只来自另留的新组合。
+- 真实问题：B012（RAdam 整流判据）、B015（avg_pool3d 反向）、B016（Inductor 常量下标的 scatter）、B017（Dynamo 对
+  图内函数只按代码对象守卫）由工具筛查先报警；B013（vLLM 滑窗）读代码后由工具确认。直接差分基线表明 OpInfo 上的
+  发现主要来自用例覆盖。还没有经训练对照证实的训练质量影响。
+- 接口整合的回归：代表性 15 个用例，重构前后 0 处判定变化（`docs/tool_changes_20261006.md` 第 3 节）。
 - 局限：区间依赖问题会让少量离散判定成为参照未建立；逐 program 求值较慢；kernel 内部中间值不可观测，
   核内定位依赖逐位模拟，张量核点积、扫描与 atomic 处停止，两类由 ptxas/LLVM 调度决定的合成选择要由
   输出确定并报告；结论限于声明的总体、坐标与测量点。

@@ -16,6 +16,7 @@ finfo(dtype).eps defaults) show up as candidates and are triaged by hand.
 
 from __future__ import annotations
 
+import os
 import re
 
 import torch
@@ -166,7 +167,8 @@ class OpInfoCase(Case):
         def f(inp, *args, **kwargs):
             return op(inp, *args, **kwargs)
 
-        self._compiled = torch.compile(f, dynamic=False)
+        # OPINFO_DYNAMIC=1: symbolic sizes (0/1 specialized), the path automatic-dynamic recompilation takes
+        self._compiled = torch.compile(f, dynamic=os.environ.get("OPINFO_DYNAMIC") == "1")
         self.launch(self.inputs(10_000))
         torch.cuda.synchronize()
 
