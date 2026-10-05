@@ -29,7 +29,11 @@ from typing import Optional
 from .ttir_parser import TFunc, TModule, TOp
 
 LOCKED_TRITON = "3.6.0"
-REGISTRY_PATH = Path(__file__).resolve().parents[3] / "results" / "reference_eval" / "ttir_op_registry.json"
+# canonical copy in the repository; an installed package uses the copy shipped as package data (kept identical,
+# tests/test_packaging.py)
+_REPO_REGISTRY = Path(__file__).resolve().parents[3] / "results" / "reference_eval" / "ttir_op_registry.json"
+_PACKAGED_REGISTRY = Path(__file__).resolve().parent / "data" / "ttir_op_registry.json"
+REGISTRY_PATH = _REPO_REGISTRY if _REPO_REGISTRY.exists() else _PACKAGED_REGISTRY
 
 
 @dataclass(frozen=True)

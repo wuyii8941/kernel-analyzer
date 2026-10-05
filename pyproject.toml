@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kernel-analyzer"
-version = "1.4.0"
+version = "3.0.0.dev0"
 description = "Automated forward/backward numerical-bias analysis"
 requires-python = ">=3.8"
 
@@ -17,8 +17,12 @@ reference = ["gmpy2>=2.2", "python-flint"]
 kernel-analyzer = "kernel_analyzer.cli:main"
 
 [tool.setuptools]
-packages = ["kernel_analyzer", "scripts"]
+packages = ["kernel_analyzer", "kernel_analyzer.reference_eval", "scripts"]
 package-dir = {kernel_analyzer = "src/kernel_analyzer", scripts = "scripts"}
+
+[tool.setuptools.package-data]
+"kernel_analyzer.reference_eval" = ["data/*.json"]
+scripts = ["data/*.json", "data/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
