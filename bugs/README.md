@@ -53,6 +53,7 @@
 - vLLM Triton top-k/top-p（`apply_top_k_top_p_triton`，V2 model runner 在批里有贪心请求、带 seed 的请求或需要 processed logprobs 时整批走它；投机解码的 rejection sampler 也用它）：我们的差分探针（`scripts/vllm/probe_topk_topp*.py`）独立发现三类偏差——少量有限 logits（语法掩码）+ top_k ≥ 有限个数 + top_p < 1 时丢掉 top-p 必须保留的 token（2 个 token 时 20–60% 的行出错，丢失质量达 0.5）；首块统计量估出的 `max_sample` 偏小、`exp` 上溢后整行不截断；bf16 并列时 top-k 只保留恰好 k 个（PyTorch 路径保留全部并列）。前两类已有上游记录：vLLM #59785（2026-10-02）、修复 PR #59804（根因同我们的分析：二分只在 [min_prob, max_prob] 内取 pivot 且用严格 >）、#60030（2026-10-05）。第三类是语义取舍。均不是工具检出。
 - vLLM 其余 Triton 算子的差分筛查（`scripts/vllm/probe_gdn_conv.py`）：自带 FLA 的 chunk / recurrent / sigmoid gating（含投机解码的逐 token 状态）、`causal_conv1d_fn` / `causal_conv1d_update`（含投机解码变长）、`merge_attn_states`，全部在 bf16 噪声内，状态逐位一致。观察：`causal_conv1d_fn` 的主循环只处理宽度 2–4（宽度 5 读入 col3 却不用，update 支持到 6）；GDN 两个 decode kernel 不使用传入的 `stride_indices_tok`；KDA 分支对 `a`/`dt_bias` 的读取不带掩码。现有模型都不触发。
 
+- Inductor 的 `pointless_convert`（`fx_passes/joint_graph.py`）把 `x.to(bf16).to(fp32)` 这类往返转换改成一次转换，显式的低精度舍入在编译后消失（与 eager 差半个 bf16 ulp），`emulate_precision_casts=True` 时也一样：已知（pytorch#181568），探针`scripts/probes/` 中的复现见 B018 同批记录。不计入。
 - TRL 融合 LM head 绕过 `logits_scaling` / `lm_head_multiplier`：TRL #7439（2026-10-03 合并）。
 - TRL GRPO + Liger 丢掉 MoE 辅助损失：TRL #7161。
 - `torch._functorch.config.activation_memory_budget < 1` 与 dropout 同用时，编译后的反向重算 dropout 掩码（重新抽随机数），GPT-2 梯度错 33–84%（有限差分已核实）：PyTorch #190758、#190717（开着）。工具不建模随机数，这一条是对照实验发现的，召回已知问题，不计入。
