@@ -39,7 +39,8 @@
 | 31 | 外部接入试验 | RQ5 | 尚未运行：需要未参与开发的人；找不到时写入局限，不用作者代替 | `docs/reuse_trial_protocol.md` |
 
 | 32 | 重要性标定（阶段 B）：种子波动 σ = 0.0145；剂量反应阈值 d*_γ = d*_b = 0.1；9 个替换的单步作用与 ρ；预测效度——类别 9/9，Spearman 0.45，按事先规则记为「差」（噪声底以下不能排序）；δ_γ = δ_b = 0.05（冻结） | RQ3、RQ4 | 已完成且有报告 | `docs/importance_calibration_results_20261006.md`；`results/importance/`（预测在训练前提交，25a9788） |
-| 33 | 第二个规模上的 ρ 稳定性；更大剂量范围的标定 | RQ4 | 尚未运行 | 阶段 B 局限 |
+| 33 | 第二个规模上的 ρ 稳定性（d = 512、8 层）：稳定 3、不稳定 7、无定义 10——尺子（bf16 autocast 的作用）随规模变化，ρ 与 δ 只在所测设置成立 | RQ4 | 已完成且有报告 | `results/importance/scale_check/`；`docs/importance_calibration_results_20261006.md` 第 8 节 |
+| 33b | 更大剂量范围的标定 | RQ4 | 尚未运行 | 阶段 B 局限 |
 
 | 34 | 定向搜索（阶段 C）：9 个候选按冻结尺子分类（两颗种子一致）——低精度优化器状态与 bf16 EMA 超过，bnb 8 位、bf16 随机舍入、Muon bf16 Newton–Schulz、bf16 梯度累加在尺子之内；深案例 C4（AdamW4bit：归因 81%/32%，配对训练 ΔL −0.066，已知设计取舍）与 C9（bf16 EMA：真实接口复现 +3.86，修正逐位恢复，登记 B019） | RQ5 | 已完成且有报告 | `docs/directed_search_results_20261007.md`；`results/directed_search/`；`bugs/B019_*` |
 | 35 | B019 的上游提交 | RQ5 | 尚未运行（草稿待用户决定） | `bugs/upstream_drafts/B019_averagedmodel_bf16_ema.md` |
