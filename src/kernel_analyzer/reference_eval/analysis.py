@@ -309,6 +309,22 @@ def _robust_companion(l, h, alpha_one_sided: float, delta=None) -> dict:
     return rec
 
 
+ZERO_VARIANCE = ("zero sample variance of the endpoint that carries the test: an all-equal sample does not "
+                 "establish the population mean")
+
+
+def _sample_guard(l, h):
+    """Guards shared by the nonzero test and the equivalence test: (verdict, reason) when the t inference cannot
+    judge at all, else None.  The zero-variance guard depends on which endpoint carries the test and is applied by
+    each test with ``ZERO_VARIANCE``."""
+
+    if l.size < 2:
+        return "UNRESOLVED_SAMPLE", f"{l.size} unit(s): the t inference needs at least 2"
+    if not (np.isfinite(l).all() and np.isfinite(h).all()):
+        return "UNRESOLVED_NUMERICAL", "non-finite projection bounds"
+    return None
+
+
 def _summarize(name, rule, l, h, alpha):
     """Endpoint-conservative t inference for the mean projection mu, known only to lie in [E[l], E[h]].
 
@@ -320,11 +336,9 @@ def _summarize(name, rule, l, h, alpha):
     # Guards: the t inference needs at least two units, finite values and a nonzero spread of the endpoint
     # that would carry a detection; otherwise the test cannot judge (it never reports a detection).
     l, h = np.asarray(l, dtype=np.float64), np.asarray(h, dtype=np.float64)
-    if l.size < 2:
-        return _unresolved(name, rule, "UNRESOLVED_SAMPLE", f"{l.size} unit(s): the t inference needs at least 2",
-                           l.size)
-    if not (np.isfinite(l).all() and np.isfinite(h).all()):
-        return _unresolved(name, rule, "UNRESOLVED_NUMERICAL", "non-finite projection bounds", l.size)
+    guard = _sample_guard(l, h)
+    if guard is not None:
+        return _unresolved(name, rule, guard[0], guard[1], l.size)
     with np.errstate(all="ignore"):
         mean, sd, interval, p_mid = _t_stats(0.5 * (l + h), alpha)
         m_l, sd_l, ci_l, _ = _t_stats(l, alpha)
@@ -332,8 +346,7 @@ def _summarize(name, rule, l, h, alpha):
     if not all(np.isfinite([mean, sd, m_l, sd_l, m_h, sd_h, ci_l[0], ci_h[1]])):
         return _unresolved(name, rule, "UNRESOLVED_NUMERICAL", "overflow in the t statistics", l.size)
     if (sd_l == 0 and m_l > 0) or (sd_h == 0 and m_h < 0):
-        return _unresolved(name, rule, "UNRESOLVED_SAMPLE", "zero sample variance of the endpoint that would carry "
-                           "the detection: the t inference is undefined", l.size)
+        return _unresolved(name, rule, "UNRESOLVED_SAMPLE", ZERO_VARIANCE, l.size)
     lower, upper = ci_l[0], ci_h[1]  # endpoint-conservative: lower bound of E[l], upper bound of E[h]
     verdict = "DETECTED_POSITIVE" if lower > 0 else ("DETECTED_NEGATIVE" if upper < 0 else "NOT_CONFIRMED")
     p = min(1.0, 2.0 * min(_one_sided_p(l, True), _one_sided_p(h, False)))
@@ -359,19 +372,25 @@ def equivalence(l, h, delta: float, alpha: float) -> dict:
 
     l, h = np.asarray(l, dtype=np.float64), np.asarray(h, dtype=np.float64)
     rec = {"delta_projection": float(delta), "alpha": alpha}
-    if l.size < 2 or not (np.isfinite(l).all() and np.isfinite(h).all()) or not np.isfinite(delta):
-        rec.update(verdict="UNRESOLVED", reason="needs at least 2 units and finite bounds")
+    guard = _sample_guard(l, h)
+    if guard is None and not np.isfinite(delta):
+        guard = ("UNRESOLVED_NUMERICAL", "non-finite margin")
+    if guard is not None:
+        rec.update(verdict=guard[0], reason=guard[1])
         return rec
     n = l.size
     q = float(t.ppf(1 - alpha, n - 1))
     m_l, sd_l = float(l.mean()), float(l.std(ddof=1))
     m_h, sd_h = float(h.mean()), float(h.std(ddof=1))
+    if sd_l == 0 or sd_h == 0:
+        # both one-sided tests carry the equivalence claim, so either endpoint without spread leaves it undecided
+        # (the former p = 0 for an all-zero sample claimed equivalence from a sample that says nothing about spread)
+        rec.update(verdict="UNRESOLVED_SAMPLE", reason=ZERO_VARIANCE, mean_E_l=m_l, mean_E_h=m_h)
+        return rec
     lo = m_l - q * sd_l / math.sqrt(n)
     hi = m_h + q * sd_h / math.sqrt(n)
 
     def p_one(mean, sd, bound, greater):
-        if sd == 0:
-            return 0.0 if ((mean > bound) if greater else (mean < bound)) else 1.0
         z = (mean - bound) / (sd / math.sqrt(n))
         return float(t.sf(z, n - 1) if greater else t.cdf(z, n - 1))
 

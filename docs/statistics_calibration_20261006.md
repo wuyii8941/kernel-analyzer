@@ -12,7 +12,19 @@
 - δ 的尺度：每坐标 δ_rel·q_R，q_R 为坐标集上参照中点的 RMS，在开发单元上估计后冻结；投影到单位方向上为
   δ_rel·q_R·√n。学习方向（交叉拟合）不给等价结论。δ_rel 的取值见评价计划第 5 节（待确认）。
 
-## 2. 校准结果（`scripts/calibrate_equivalence.py`，每格 4000 次，α = 0.05，δ = 0.5 个单位噪声标准差）
+**零方差保护（2026-10-06，阶段 A 第 1 项）。** 等价判定原先在某个端点样本方差为零时直接给出 p = 0（全零样本被判为
+「在 ±δ 内」），而样本全相等并不说明总体。现在与非零检验共用同一套退化处理（`analysis._sample_guard`、`ZERO_VARIANCE`）：
+单位少于 2 个或端点不是有限值时分别记为 UNRESOLVED_SAMPLE / UNRESOLVED_NUMERICAL，承载检验的端点样本方差为零时记为
+UNRESOLVED_SAMPLE；回归测试 `test_reference_eval_equivalence::test_zero_variance_leaves_both_axes_unresolved`（64 个全零样本、
+单端点零方差、`assess_units` 全零残差）。用已存的逐单位区间按新规则复算全部 6,359 条等价记录
+（`results/reference_eval/equivalence_zero_variance_recheck.json`）：173 条由 WITHIN_DELTA 改为 UNRESOLVED_SAMPLE（relu 的
+e_num 恒为 0、NumPy softmax 在 H = 1 时输出恒为 1 等精确情形），其余不变；这些记录都标为「δ 待确认」，没有进入任何结论。
+
+## 2. 校准结果：完成校准并给出失效范围（`scripts/calibrate_equivalence.py`，每格 4000 次，α = 0.05，δ = 0.5 个单位噪声标准差）
+
+结论的写法：在正态与重尾（t₃）噪声下，区间覆盖率与错误等价率都在名义水平附近；**在强偏斜（对数正态，偏度约 3.3）下失效**：
+覆盖率只有 0.895–0.936，错误等价率 0.090–0.141。所以报告不写「名义 5% 保证」，只写「已校准，失效范围如下，偏斜时按第 4 节
+处理」。
 
 | 噪声 | 单位形式 | 区间覆盖率（名义 0.95） | |μ| = δ 时错误宣布等价（须 ≤ 0.05） |
 |---|---|---|---|

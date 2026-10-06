@@ -21,10 +21,10 @@ def test_nonzero_and_equivalence_are_separate_axes():
 
 
 def test_equivalence_needs_both_endpoints_inside_the_margin():
-    x = np.full(32, 0.9)
+    x = 0.9 + 0.01 * np.random.default_rng(2).normal(size=32)
     assert equivalence(x - 0.05, x + 0.05, 1.0, 0.05)["verdict"] == "WITHIN_DELTA"
     assert equivalence(x - 0.05, x + 0.2, 1.0, 0.05)["verdict"] == "NOT_SHOWN"  # E[h] reaches the margin
-    assert equivalence(x[:1], x[:1], 1.0, 0.05)["verdict"] == "UNRESOLVED"
+    assert equivalence(x[:1], x[:1], 1.0, 0.05)["verdict"] == "UNRESOLVED_SAMPLE"
 
 
 def test_skewed_units_are_flagged_and_get_a_bootstrap_companion():
@@ -34,3 +34,22 @@ def test_skewed_units_are_flagged_and_get_a_bootstrap_companion():
     assert _t_approximation(rng.normal(size=64))["t_approximation"] == "ok"
     rec = equivalence(z, z, 100.0, 0.05)
     assert "robust" in rec and rec["robust"]["method"].startswith("bootstrap-t")
+
+
+def test_zero_variance_leaves_both_axes_unresolved():
+    """64 all-zero units say nothing about the spread of the population: no equivalence (formerly p = 0), and
+    the nonzero test does not detect; the same guard covers a single endpoint without spread."""
+    from kernel_analyzer.reference_eval.analysis import _summarize
+
+    z = np.zeros(64)
+    rec = equivalence(z, z, 1e-6, 0.05)
+    assert rec["verdict"] == "UNRESOLVED_SAMPLE" and "p_value_tost" not in rec
+    assert not str(_summarize("c", "R1", z, z, 0.05)["verdict"]).startswith("DETECTED")
+    h = np.random.default_rng(3).normal(size=64)
+    assert equivalence(z, np.abs(h), 1.0, 0.05)["verdict"] == "UNRESOLVED_SAMPLE"
+    units, d = 96, 16
+    ref = 3.0 + np.random.default_rng(4).normal(size=(units, d))
+    e = np.zeros((units, d))
+    rec, _ = assess_units("z", e, e, ref, np.ones((units, d), bool), 32, ["R1", "R2", "R3"], run_detector=False,
+                          equivalence_rel=1e-2)
+    assert all(r["equivalence"]["verdict"] == "UNRESOLVED_SAMPLE" for r in rec["rules"])

@@ -87,7 +87,7 @@ python scripts/run_detection.py --binding binding.py --units 128 --out report.js
 - 盲测：两轮揭盲计分已完成并入库（出题方记录与被测方冻结判定矩阵复算一致，`scripts/blind_records_recount.py`）。揭盲后两套只作回归集，泛化成绩只来自外部语料与陌生组合（[评价计划](docs/evaluation_plan_20261006.md)）。
 - 外部数据（2026-10-06，运行前登记协议）：The Correctness Illusion 公开包 699 个 Triton 条件全部建立参照、独立复算与
   FPCore 第三方复算 0 违反；植入错误 238/238、控制组 0/404，与作者的容差判定一致，增量在归因与容差以下的平均作用
-  （[结果](docs/external_eval_results_20261006.md)）。Unsloth 14 个 Triton 入口参照 31/31 完整、无规格差异；经 Holm
+  （[结果](docs/external_eval_results_20261006.md)）。Unsloth 14 个 Triton 入口的 32 个输出中 31 个进入评价（1 个在 Triton 写入后被 torch 改过），参照全部完整、无规格差异；经 Holm
   确认的 bf16 平均作用都来自中间转换或运算次序，机制已逐位核实（[结果](docs/unfamiliar_subset_results_20261006.md)）。
   逐层表、诊断对照、同等预算比较与统一普查见[成绩核账](docs/status_ledger_20261006.md)。
 - 真实问题：B012（RAdam 整流判据）、B015（avg_pool3d 反向）、B017（Dynamo 对图内函数只按代码对象守卫）由工具筛查

@@ -1,7 +1,7 @@
 # 文档入口
 
 **最高优先级入口：[阶段性总结与系统 prompt（2026-10-02）](stage_summary_20261002.md)。**
-**当前计划：[评价设计与工作计划（2026-10-06）](evaluation_plan_20261006.md)**（取代 [plan_20261006.md](plan_20261006.md) 未完成的部分）；成绩核账见 [status_ledger_20261006.md](status_ledger_20261006.md)。
+**当前计划：[下一阶段计划：从「存在作用」到「作用是否重要」（2026-10-06）](next_phase_plan_20261006.md)**；M1–M4 的记录见[评价设计与工作计划](evaluation_plan_20261006.md)；成绩核账见 [status_ledger_20261006.md](status_ledger_20261006.md)。
 评价：[Benchmark](benchmark_20261006.md)；外部受控集合（[协议](external_eval_protocol_20261006.md)、[结果](external_eval_results_20261006.md)）；陌生组合子集（[协议](unfamiliar_subset_protocol_20261006.md)、[结果](unfamiliar_subset_results_20261006.md)）；[统计校准](statistics_calibration_20261006.md)；逐层表（[协议](layer_table_protocol_20261006.md)、[结果](layer_table_results_20261006.md)）；[诊断对照](diagnosis_comparison_20261006.md)；[成本](cost_equal_budget_20261006.md)；[普查统一报告](census_unified_20261006.md)。接入：[接入指南](binding_guide.md)、[外部接入试验协议](reuse_trial_protocol.md)。本轮进展：[执行进展](progress_20261006.md)、[工具改动 2026-10-06](tool_changes_20261006.md)（一个引擎、两种模式、命令行、回归比较）、[直接差分基线](baseline_direct_diff_20261006.md)（运行前的[预测](baseline_predictions_20261006.md)）、[问题登记](../bugs/README.md)。
 凡与它冲突的旧结论以它为准；下列文档是其证据与细节来源。运行环境见
 [environments.md](environments.md)；自动参照求值器（第 11 节步 1）在
