@@ -1,0 +1,318 @@
+{
+  "programs": {
+    "prog_01": {
+      "class": "negative",
+      "expected_output": "bitwise identical to clean",
+      "family": "G1",
+      "localization": null,
+      "mechanism": "z*gamma -> gamma*z",
+      "variant": "N-comm"
+    },
+    "prog_02": {
+      "class": "semantic",
+      "expected_output": "K-K_R: only RN; K_R-f: large",
+      "family": "G2",
+      "localization": "n/a",
+      "mechanism": "gate on b, multiply by a",
+      "variant": "S-swap"
+    },
+    "prog_03": {
+      "class": "semantic",
+      "expected_output": "K-K_R: only RN; K_R-f: large on a<0 elements, sign not pre-specified",
+      "family": "G2",
+      "localization": "n/a",
+      "mechanism": "|a| instead of max(a,0)",
+      "variant": "S-abs"
+    },
+    "prog_04": {
+      "class": "clean-only",
+      "expected_output": "not scored; report findings",
+      "family": "G7",
+      "localization": null,
+      "mechanism": "none injected; causal ReLU attention with +1 in the denominator; exact ops only",
+      "variant": "clean"
+    },
+    "prog_05": {
+      "class": "semantic",
+      "expected_output": "K-K_R: only RN; K_R-f: large, sign not pre-specified",
+      "family": "G5",
+      "localization": "n/a",
+      "mechanism": "low/high nibble roles swapped (spec: low nibble = even index)",
+      "variant": "S-nibble-swap"
+    },
+    "prog_06": {
+      "class": "positive",
+      "expected_output": "R1 positive, ~ -0.5 ulp(|theta|) per element",
+      "family": "G4",
+      "localization": "fma.rm node at the output",
+      "mechanism": "theta - lr*d via fma.rm: rounded toward -inf",
+      "variant": "P-fma-rm"
+    },
+    "prog_07": {
+      "class": "negative",
+      "expected_output": "bitwise identical to clean expected; if not, attribute to fma fusion choice and report",
+      "family": "G4",
+      "localization": null,
+      "mechanism": "mu*v + g -> g + mu*v",
+      "variant": "N-comm"
+    },
+    "prog_08": {
+      "class": "positive",
+      "expected_output": "R3 negative (e aligned with +theta which dominates K_R); magnitude ~ lr*wd*4e-8*||theta|| ~ 1.5e-13*sqrt(n)",
+      "family": "G4",
+      "localization": "mul.rz node on the decay term",
+      "mechanism": "wd*theta via mul.rz: decay term shrinks by ~4e-8 rel -> theta' = theta - lr(v' + wd theta (1-c)) -> e = +lr c wd theta",
+      "variant": "P-wd-rz"
+    },
+    "prog_09": {
+      "class": "clean",
+      "expected_output": "only RN residuals",
+      "family": "G6",
+      "localization": null,
+      "mechanism": "none",
+      "variant": "clean"
+    },
+    "prog_10": {
+      "class": "unknown",
+      "expected_output": "difference present iff default lowering fused z*gamma+beta; mean not pre-specified",
+      "family": "G1",
+      "localization": "mulf/addf vs fma",
+      "mechanism": "same source, enable_fp_fusion=False",
+      "variant": "U-nofusion"
+    },
+    "prog_11": {
+      "class": "positive",
+      "expected_output": "R1 positive; ~ -0.5 ulp(|y|) per element",
+      "family": "G1",
+      "localization": "tt.elementwise_inline_asm add.rm at the output",
+      "mechanism": "final residual add via add.rm: every output rounded toward -inf",
+      "variant": "P-res-rm"
+    },
+    "prog_12": {
+      "class": "clean-only",
+      "expected_output": "not scored; coverage test: scan must be either supported with exact prefix sums or reported as not established, never silently approximated",
+      "family": "G8",
+      "localization": null,
+      "mechanism": "none injected; tl.cumsum (tt.scan with addf) then exact division by 1024",
+      "variant": "clean"
+    },
+    "prog_13": {
+      "class": "positive",
+      "expected_output": "R3 negative, ~4e-8 of ||K_R||",
+      "family": "G6",
+      "localization": "mul.rz nodes feeding the two norm reduces",
+      "mechanism": "a*a and b*b via mul.rz: both norms underestimated by ~2e-8 rel each -> |cos| overestimated by ~4e-8 rel",
+      "variant": "P-norm-rz"
+    },
+    "prog_14": {
+      "class": "negative",
+      "expected_output": "bitwise identical to clean",
+      "family": "G2",
+      "localization": null,
+      "mechanism": "r2*b -> b*r2",
+      "variant": "N-comm"
+    },
+    "prog_15": {
+      "class": "semantic",
+      "expected_output": "K-K_R: only RN residuals; K_R-f: rstd larger by eps (2^-20 ~ 9.5e-7 absolute) -> normalised term scaled up by ~9.5e-7 rel -> R3 negative",
+      "family": "G1",
+      "localization": "n/a",
+      "mechanism": "eps added to rstd instead of inside the sqrt (spec: inside)",
+      "variant": "S-eps-out"
+    },
+    "prog_16": {
+      "class": "negative",
+      "expected_output": "bitwise identical to clean",
+      "family": "G5",
+      "localization": null,
+      "mechanism": "verbatim copy",
+      "variant": "N-copy"
+    },
+    "prog_17": {
+      "class": "positive",
+      "expected_output": "R3 negative (output-layer); magnitude ~2e-8 of ||z*gamma||; beta and res add zero-mean cross terms",
+      "family": "G1",
+      "localization": "tt.elementwise_inline_asm mul.rz feeding the variance reduce",
+      "mechanism": "(x-mean)^2 via mul.rz: variance underestimated by ~4e-8 rel -> rstd overestimated by ~2e-8 rel -> normalised term scaled up",
+      "variant": "P-var-rz"
+    },
+    "prog_18": {
+      "class": "unknown",
+      "expected_output": "difference present; mean not pre-specified",
+      "family": "G6",
+      "localization": "arith.divf",
+      "mechanism": "final division via div.full",
+      "variant": "U-divfull"
+    },
+    "prog_19": {
+      "class": "unknown",
+      "expected_output": "difference present; mean not pre-specified",
+      "family": "G1",
+      "localization": "variance computation",
+      "mechanism": "variance by E[x^2]-E[x]^2",
+      "variant": "U-onepass"
+    },
+    "prog_20": {
+      "class": "negative",
+      "expected_output": "bitwise identical to clean",
+      "family": "G6",
+      "localization": null,
+      "mechanism": "a*b -> b*a inside the dot",
+      "variant": "N-comm"
+    },
+    "prog_21": {
+      "class": "semantic",
+      "expected_output": "K-K_R: only RN; K_R-f: large; sign not pre-specified (den can be near zero or negative)",
+      "family": "G3",
+      "localization": "n/a",
+      "mechanism": "denominator sums h/(1+|h|) without the +1 (spec: sum of 1+h/(1+|h|))",
+      "variant": "S-noone"
+    },
+    "prog_22": {
+      "class": "clean",
+      "expected_output": "only RN residuals",
+      "family": "G2",
+      "localization": null,
+      "mechanism": "none",
+      "variant": "clean"
+    },
+    "prog_23": {
+      "class": "clean",
+      "expected_output": "only RN residuals",
+      "family": "G3",
+      "localization": null,
+      "mechanism": "none",
+      "variant": "clean"
+    },
+    "prog_24": {
+      "class": "positive",
+      "expected_output": "R3 positive (shrink toward zero), ~4e-8 of ||K_R||",
+      "family": "G2",
+      "localization": "mul.rz node",
+      "mechanism": "r*r via mul.rz: |r^2| shrinks by ~4e-8 rel",
+      "variant": "P-sq-rz"
+    },
+    "prog_25": {
+      "class": "unknown",
+      "expected_output": "difference present; mean not pre-specified",
+      "family": "G3",
+      "localization": "arith.divf",
+      "mechanism": "final division via div.full",
+      "variant": "U-divfull"
+    },
+    "prog_26": {
+      "class": "semantic",
+      "expected_output": "K-K_R: only RN; K_R-f: |K_R| much smaller than |f| (divided by sqrt(sum a^2) ~ 64 extra) -> R3 positive",
+      "family": "G6",
+      "localization": "n/a",
+      "mechanism": "na = sum(a^2) without sqrt (spec: sqrt)",
+      "variant": "S-nosqrt"
+    },
+    "prog_27": {
+      "class": "positive",
+      "expected_output": "R1 negative (uniform upward shift), ~ +0.5 ulp(|y|) per element",
+      "family": "G2",
+      "localization": "mul.rp node at the output",
+      "mechanism": "final r2*b via mul.rp: rounded toward +inf",
+      "variant": "P-mul-rp"
+    },
+    "prog_28": {
+      "class": "semantic",
+      "expected_output": "K-K_R: division by 2047 lowers to div.full -> real numerical difference (declared now); K_R-f: normalised term scaled by sqrt((D-1)/D) ~ 1-2.4e-4 -> R3 positive on the z*gamma part",
+      "family": "G1",
+      "localization": "n/a",
+      "mechanism": "variance over D-1 (spec: D)",
+      "variant": "S-dm1"
+    },
+    "prog_29": {
+      "class": "negative",
+      "expected_output": "bitwise identical to clean",
+      "family": "G3",
+      "localization": null,
+      "mechanism": "verbatim copy",
+      "variant": "N-copy"
+    },
+    "prog_30": {
+      "class": "positive",
+      "expected_output": "R3 negative; relative ~ (8 truncations x ~2e-8) ~ 1e-7 of ||K_R||",
+      "family": "G3",
+      "localization": "add.rz nodes in the chunk loop",
+      "mechanism": "denominator accumulated over 8 chunks with add.rz (positive terms): denominator underestimated -> every p scaled up",
+      "variant": "P-den-rz"
+    },
+    "prog_31": {
+      "class": "clean",
+      "expected_output": "only RN residuals; any confirmed mean is a finding to verify",
+      "family": "G1",
+      "localization": null,
+      "mechanism": "none",
+      "variant": "clean"
+    },
+    "prog_32": {
+      "class": "clean",
+      "expected_output": "only RN/fma residuals",
+      "family": "G4",
+      "localization": null,
+      "mechanism": "none",
+      "variant": "clean"
+    },
+    "prog_33": {
+      "class": "unknown",
+      "expected_output": "difference present; mean not pre-specified",
+      "family": "G5",
+      "localization": "reshape + two reduces",
+      "mechanism": "group partial sums then sum of partials",
+      "variant": "U-twostage"
+    },
+    "prog_34": {
+      "class": "unknown",
+      "expected_output": "difference present, large; mean not pre-specified",
+      "family": "G2",
+      "localization": "truncf/extf on a",
+      "mechanism": "a rounded to bf16 before the gate",
+      "variant": "U-bf16"
+    },
+    "prog_35": {
+      "class": "semantic",
+      "expected_output": "K-K_R: only RN; K_R-f: e_sem = -lr (mu-1) g = +lr(1-mu) g -> along g, sign not along K_R",
+      "family": "G4",
+      "localization": "n/a",
+      "mechanism": "v' = mu (v+g) instead of mu v + g",
+      "variant": "S-mom-after"
+    },
+    "prog_36": {
+      "class": "positive",
+      "expected_output": "R3 positive (shrink), ~4e-8 of ||K_R||",
+      "family": "G5",
+      "localization": "mul.rz nodes",
+      "mechanism": "both products via mul.rz",
+      "variant": "P-mul-rz"
+    },
+    "prog_37": {
+      "class": "unknown",
+      "expected_output": "difference present; mean not pre-specified",
+      "family": "G4",
+      "localization": "order of mulf/subf",
+      "mechanism": "(1-lr wd) theta - lr v' : same real function, different rounding sequence",
+      "variant": "U-decoupled"
+    },
+    "prog_38": {
+      "class": "clean",
+      "expected_output": "only RN residuals",
+      "family": "G5",
+      "localization": null,
+      "mechanism": "none; integer nibble unpack (exact), dequant, fp16->f32 exact",
+      "variant": "clean"
+    }
+  },
+  "specs_phase2": {
+    "G1": "mean = mean_d(x[r,:]); var = mean_d((x - mean)^2); rstd = (var + eps)^(-1/2); y[r,d] = (x[r,d] - mean)*rstd*gamma[d] + beta[d] + res[r,d]",
+    "G2": "r = max(a, 0); y = r^2 * b (elementwise)",
+    "G3": "t_i = 1 + h_i/(1+|h_i|); y_i = t_i / sum_j t_j (per row)",
+    "G4": "v' = mu*v + g; y = theta - lr*(v' + wd*theta) (elementwise; lr, mu, wd runtime scalars, exactly representable)",
+    "G5": "byte_j = packed[r,j]; q_{2j} = (byte_j & 15) - 8; q_{2j+1} = ((byte_j >> 4) & 15) - 8; y[r] = sum_k q_k * sc[r, floor(k/G)] * a[k]",
+    "G6": "y[r] = <a_r, b_r> / (sqrt(<a_r,a_r>) * sqrt(<b_r,b_r>))",
+    "G7": "s_j = max(<q, k_j>*scale, 0) for j <= pos else 0; y = sum_j s_j v_j / (sum_j s_j + 1)",
+    "G8": "y[r,d] = (sum_{i<=d} x[r,i]) / D"
+  }
+}

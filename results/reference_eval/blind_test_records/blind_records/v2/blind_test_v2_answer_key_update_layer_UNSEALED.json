@@ -1,0 +1,245 @@
+{
+  "controls": "clean, negative, unknown and semantic programs are scored as in protocol v1.1 at the update layer (negatives: identical to partner; clean detections: findings to verify)",
+  "definitions": {
+    "adamw_history": {
+      "beta1": 0.9,
+      "beta2": 0.999,
+      "eps": "2^-27",
+      "lr": "2^-10",
+      "moments": "EMA of the family's CLEAN program outputs over history seeds H_s = {20000 + 16 s + i, i = 0..15} (16 steps), bias-corrected with t = 17 at the measured step; the same (theta, m, v, t) is used for K and for K_R",
+      "weight_decay": 0
+    },
+    "adamw_zero_moments": {
+      "beta1": 0.9,
+      "beta2": 0.999,
+      "eps": "2^-27",
+      "lr": "2^-10",
+      "moments": "m = v = 0, t = 1",
+      "weight_decay": 0
+    },
+    "gradient": "the program output y (row-major flattened) is the gradient g of a parameter block theta of the same shape",
+    "reference_replay": "g_R = K_R as an interval; the optimizer step is propagated in interval arithmetic (or evaluated at lo/mid/hi with the hull taken and widened by 2 ulp, declared); u = step(K) - step(g_R)",
+    "reference_update": "r = step(g_R) - theta (midpoint)",
+    "rules": {
+      "R1": "w = -1/sqrt(n)",
+      "R2": "w = -sign(r)/sqrt(n)",
+      "R3": "w = -r/||r|| (positive = pushes less along the reference update)",
+      "R5": "learned on development seeds (program-level replication)"
+    },
+    "scoring": "delta mu = mu(variant) - mu(clean of the same family) under the designated rule; sign must match; magnitudes compared with the derivation",
+    "sgd": {
+      "lr": "2^-10",
+      "update": "theta' = theta - lr g"
+    },
+    "theta": "theta_s ~ N(0,1), deterministic from the measurement seed s (torch Generator seed 5000+s)"
+  },
+  "positives": {
+    "prog_06": {
+      "adamw_history": {
+        "derivation": "u ~ -lr (1-beta1) delta / (sqrt(v_hat)+eps) per coordinate: same sign as SGD, magnitude ~0.1 x delta/sqrt(v_hat)",
+        "rule": "R1",
+        "sign": "-"
+      },
+      "adamw_zero_moments": {
+        "derivation": "with m=v=0 and t=1 the AdamW update is lr * g/(|g|+eps): e changes the update only where |e| is comparable to |g| (sign flips or |g| ~ eps); pre-registered as a near-cancellation case",
+        "rule": "all",
+        "sign": "mostly NOT_CONFIRMED"
+      },
+      "family": "G4",
+      "output_layer": {
+        "rule": "R1",
+        "sign": "+"
+      },
+      "sgd": {
+        "derivation": "u = -lr e: a uniform downward shift of e becomes a uniform upward shift of u (R1 sign flips)",
+        "rule": "R1",
+        "sign": "-"
+      },
+      "variant": "P-fma-rm"
+    },
+    "prog_08": {
+      "adamw_history": {
+        "derivation": "first order: u ~ -lr (1-beta1) e / (sqrt(v_hat)+eps) minus a (1-beta2) term; with history moments the current step enters m with weight (1-beta1)=0.1, so the effect survives at about 0.1 x the SGD ratio |mu|/||r||",
+        "rule": "R3",
+        "sign": "-"
+      },
+      "adamw_zero_moments": {
+        "derivation": "with m=v=0 and t=1 the AdamW update is lr * g/(|g|+eps): e changes the update only where |e| is comparable to |g| (sign flips or |g| ~ eps); pre-registered as a near-cancellation case",
+        "rule": "all",
+        "sign": "mostly NOT_CONFIRMED"
+      },
+      "family": "G4",
+      "output_layer": {
+        "rule": "R3",
+        "sign": "-"
+      },
+      "sgd": {
+        "derivation": "u = -lr e exactly; e and r both flip sign, so R3 keeps the output-layer sign; |mu| = lr * c * ||K_R|| ~ SGD scale",
+        "rule": "R3",
+        "sign": "-"
+      },
+      "variant": "P-wd-rz"
+    },
+    "prog_11": {
+      "adamw_history": {
+        "derivation": "u ~ -lr (1-beta1) delta / (sqrt(v_hat)+eps) per coordinate: same sign as SGD, magnitude ~0.1 x delta/sqrt(v_hat)",
+        "rule": "R1",
+        "sign": "-"
+      },
+      "adamw_zero_moments": {
+        "derivation": "with m=v=0 and t=1 the AdamW update is lr * g/(|g|+eps): e changes the update only where |e| is comparable to |g| (sign flips or |g| ~ eps); pre-registered as a near-cancellation case",
+        "rule": "all",
+        "sign": "mostly NOT_CONFIRMED"
+      },
+      "family": "G1",
+      "output_layer": {
+        "rule": "R1",
+        "sign": "+"
+      },
+      "sgd": {
+        "derivation": "u = -lr e: a uniform downward shift of e becomes a uniform upward shift of u (R1 sign flips)",
+        "rule": "R1",
+        "sign": "-"
+      },
+      "variant": "P-res-rm"
+    },
+    "prog_13": {
+      "adamw_history": {
+        "derivation": "first order: u ~ -lr (1-beta1) e / (sqrt(v_hat)+eps) minus a (1-beta2) term; with history moments the current step enters m with weight (1-beta1)=0.1, so the effect survives at about 0.1 x the SGD ratio |mu|/||r||",
+        "rule": "R3",
+        "sign": "-"
+      },
+      "adamw_zero_moments": {
+        "derivation": "with m=v=0 and t=1 the AdamW update is lr * g/(|g|+eps): e changes the update only where |e| is comparable to |g| (sign flips or |g| ~ eps); pre-registered as a near-cancellation case",
+        "rule": "all",
+        "sign": "mostly NOT_CONFIRMED"
+      },
+      "family": "G6",
+      "output_layer": {
+        "rule": "R3",
+        "sign": "-"
+      },
+      "sgd": {
+        "derivation": "u = -lr e exactly; e and r both flip sign, so R3 keeps the output-layer sign; |mu| = lr * c * ||K_R|| ~ SGD scale",
+        "rule": "R3",
+        "sign": "-"
+      },
+      "variant": "P-norm-rz"
+    },
+    "prog_17": {
+      "adamw_history": {
+        "derivation": "first order: u ~ -lr (1-beta1) e / (sqrt(v_hat)+eps) minus a (1-beta2) term; with history moments the current step enters m with weight (1-beta1)=0.1, so the effect survives at about 0.1 x the SGD ratio |mu|/||r||",
+        "rule": "R3",
+        "sign": "-"
+      },
+      "adamw_zero_moments": {
+        "derivation": "with m=v=0 and t=1 the AdamW update is lr * g/(|g|+eps): e changes the update only where |e| is comparable to |g| (sign flips or |g| ~ eps); pre-registered as a near-cancellation case",
+        "rule": "all",
+        "sign": "mostly NOT_CONFIRMED"
+      },
+      "family": "G1",
+      "output_layer": {
+        "rule": "R3",
+        "sign": "-"
+      },
+      "sgd": {
+        "derivation": "u = -lr e exactly; e and r both flip sign, so R3 keeps the output-layer sign; |mu| = lr * c * ||K_R|| ~ SGD scale",
+        "rule": "R3",
+        "sign": "-"
+      },
+      "variant": "P-var-rz"
+    },
+    "prog_24": {
+      "adamw_history": {
+        "derivation": "first order: u ~ -lr (1-beta1) e / (sqrt(v_hat)+eps) minus a (1-beta2) term; with history moments the current step enters m with weight (1-beta1)=0.1, so the effect survives at about 0.1 x the SGD ratio |mu|/||r||",
+        "rule": "R3",
+        "sign": "+"
+      },
+      "adamw_zero_moments": {
+        "derivation": "with m=v=0 and t=1 the AdamW update is lr * g/(|g|+eps): e changes the update only where |e| is comparable to |g| (sign flips or |g| ~ eps); pre-registered as a near-cancellation case",
+        "rule": "all",
+        "sign": "mostly NOT_CONFIRMED"
+      },
+      "family": "G2",
+      "output_layer": {
+        "rule": "R3",
+        "sign": "+"
+      },
+      "sgd": {
+        "derivation": "u = -lr e exactly; e and r both flip sign, so R3 keeps the output-layer sign; |mu| = lr * c * ||K_R|| ~ SGD scale",
+        "rule": "R3",
+        "sign": "+"
+      },
+      "variant": "P-sq-rz"
+    },
+    "prog_27": {
+      "adamw_history": {
+        "derivation": "u ~ -lr (1-beta1) delta / (sqrt(v_hat)+eps) per coordinate: same sign as SGD, magnitude ~0.1 x delta/sqrt(v_hat)",
+        "rule": "R1",
+        "sign": "+"
+      },
+      "adamw_zero_moments": {
+        "derivation": "with m=v=0 and t=1 the AdamW update is lr * g/(|g|+eps): e changes the update only where |e| is comparable to |g| (sign flips or |g| ~ eps); pre-registered as a near-cancellation case",
+        "rule": "all",
+        "sign": "mostly NOT_CONFIRMED"
+      },
+      "family": "G2",
+      "output_layer": {
+        "rule": "R1",
+        "sign": "-"
+      },
+      "sgd": {
+        "derivation": "u = -lr e: a uniform downward shift of e becomes a uniform upward shift of u (R1 sign flips)",
+        "rule": "R1",
+        "sign": "+"
+      },
+      "variant": "P-mul-rp"
+    },
+    "prog_30": {
+      "adamw_history": {
+        "derivation": "first order: u ~ -lr (1-beta1) e / (sqrt(v_hat)+eps) minus a (1-beta2) term; with history moments the current step enters m with weight (1-beta1)=0.1, so the effect survives at about 0.1 x the SGD ratio |mu|/||r||",
+        "rule": "R3",
+        "sign": "-"
+      },
+      "adamw_zero_moments": {
+        "derivation": "with m=v=0 and t=1 the AdamW update is lr * g/(|g|+eps): e changes the update only where |e| is comparable to |g| (sign flips or |g| ~ eps); pre-registered as a near-cancellation case",
+        "rule": "all",
+        "sign": "mostly NOT_CONFIRMED"
+      },
+      "family": "G3",
+      "output_layer": {
+        "rule": "R3",
+        "sign": "-"
+      },
+      "sgd": {
+        "derivation": "u = -lr e exactly; e and r both flip sign, so R3 keeps the output-layer sign; |mu| = lr * c * ||K_R|| ~ SGD scale",
+        "rule": "R3",
+        "sign": "-"
+      },
+      "variant": "P-den-rz"
+    },
+    "prog_36": {
+      "adamw_history": {
+        "derivation": "first order: u ~ -lr (1-beta1) e / (sqrt(v_hat)+eps) minus a (1-beta2) term; with history moments the current step enters m with weight (1-beta1)=0.1, so the effect survives at about 0.1 x the SGD ratio |mu|/||r||",
+        "rule": "R3",
+        "sign": "+"
+      },
+      "adamw_zero_moments": {
+        "derivation": "with m=v=0 and t=1 the AdamW update is lr * g/(|g|+eps): e changes the update only where |e| is comparable to |g| (sign flips or |g| ~ eps); pre-registered as a near-cancellation case",
+        "rule": "all",
+        "sign": "mostly NOT_CONFIRMED"
+      },
+      "family": "G5",
+      "output_layer": {
+        "rule": "R3",
+        "sign": "+"
+      },
+      "sgd": {
+        "derivation": "u = -lr e exactly; e and r both flip sign, so R3 keeps the output-layer sign; |mu| = lr * c * ||K_R|| ~ SGD scale",
+        "rule": "R3",
+        "sign": "+"
+      },
+      "variant": "P-mul-rz"
+    }
+  }
+}
