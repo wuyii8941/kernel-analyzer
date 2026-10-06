@@ -38,6 +38,9 @@
 | 30 | 逐层表实际写入在 CUDA `foreach` 与 `fused` 路径上的重放（同一批梯度与状态） | RQ4 | 已完成且有报告 | `results/reference_eval/layer_table/cuda_replay.json`；`docs/layer_table_results_20261006.md` |
 | 31 | 外部接入试验 | RQ5 | 尚未运行：需要未参与开发的人；找不到时写入局限，不用作者代替 | `docs/reuse_trial_protocol.md` |
 
+| 32 | 重要性标定（阶段 B）：种子波动 σ = 0.0145；剂量反应阈值 d*_γ = d*_b = 0.1；9 个替换的单步作用与 ρ；预测效度——类别 9/9，Spearman 0.45，按事先规则记为「差」（噪声底以下不能排序）；δ_γ = δ_b = 0.05（冻结） | RQ3、RQ4 | 已完成且有报告 | `docs/importance_calibration_results_20261006.md`；`results/importance/`（预测在训练前提交，25a9788） |
+| 33 | 第二个规模上的 ρ 稳定性；更大剂量范围的标定 | RQ4 | 尚未运行 | 阶段 B 局限 |
+
 阶段 A 的审计项（`docs/next_phase_plan_20261006.md` 第 1 节）：零方差保护（29）、偏斜失效范围（统计校准文档第 2 节）、RQ2 两栏与核验两栏（外部评价结果文档）、逐层表的设备与路径（30）、口径修正（外部评价、Unsloth、成本文档）已关闭；外部接入试验（31）未做。
 
 注：盲测揭盲后，v1、v2 只作回归集；之后的泛化成绩只来自外部语料与陌生组合。

@@ -58,6 +58,10 @@ class Config:
     checkpoints: tuple = ()     # steps after which the full training state is saved
     log_every: int = 50
     compile: bool = False       # torch.compile the model (Inductor)
+    ema: float = 0.0            # weight EMA decay (0: off); the EMA model is evaluated next to the trained one
+    ema_dtype: str = "fp32"     # "fp32" | "bf16": storage of the EMA buffer
+    grad_accum: int = 1         # micro-batches per optimizer step (the batch is split)
+    accum_fp32: bool = False    # accumulate micro-batch gradients in an fp32 buffer instead of the parameter dtype
 
 
 # ------------------------------------------------------------------------------------------------ components
@@ -255,7 +259,90 @@ def make_optimizer(model, c: Config):
     decay = [p for n, p in model.named_parameters() if p.dim() >= 2]
     no_decay = [p for n, p in model.named_parameters() if p.dim() < 2]
     groups = [{"params": decay, "weight_decay": c.weight_decay}, {"params": no_decay, "weight_decay": 0.0}]
-    return torch.optim.AdamW(groups, lr=c.lr, betas=c.betas, eps=c.eps, foreach=False)
+    kw = dict(lr=c.lr, betas=c.betas, eps=c.eps)
+    o = c.optimizer
+    if o in ("adamw", "adamw_bf16"):
+        return torch.optim.AdamW(groups, foreach=False, **kw)
+    if o == "adamw_bf16_foreach":
+        return torch.optim.AdamW(groups, foreach=True, **kw)
+    if o == "adamw_bf16_fused":
+        return torch.optim.AdamW(groups, fused=True, **kw)
+    if o.startswith("ao_"):  # torchao low-bit optimizers (liger environment)
+        import torchao.optim as ao
+
+        cls = {"ao_adamw8bit": ao.AdamW8bit, "ao_adamw4bit": ao.AdamW4bit, "ao_adamwfp8": ao.AdamWFp8}.get(o)
+        if cls is not None:
+            return cls(groups, **kw)
+        if o == "ao_adamw_bf16sr":
+            return ao._AdamW(groups, bf16_stochastic_round=True, **kw)
+    if o == "bnb_adamw8bit":
+        import bitsandbytes as bnb
+
+        return bnb.optim.AdamW8bit(groups, **kw)
+    if o in ("muon", "muon_fp32ns"):
+        hidden = [p for n, p in model.named_parameters() if p.dim() == 2 and not n.startswith("emb")]
+        hid = {id(p) for p in hidden}
+        rest = [p for p in model.parameters() if id(p) not in hid]
+        return Combined([torch.optim.Muon(hidden, lr=c.lr, weight_decay=c.weight_decay, adjust_lr_fn="match_rms_adamw"),
+                         torch.optim.AdamW([{"params": [p for p in rest if p.dim() >= 2], "weight_decay": c.weight_decay},
+                                            {"params": [p for p in rest if p.dim() < 2], "weight_decay": 0.0}],
+                                           foreach=False, **kw)], fp32_ns=o == "muon_fp32ns")
+    raise KeyError(o)
+
+
+class Combined:
+    """Muon on the hidden matrices and AdamW on the rest, as one optimizer object.  ``fp32_ns`` runs Muon's
+    Newton-Schulz iteration in float32 instead of torch's bfloat16."""
+
+    def __init__(self, opts, fp32_ns=False):
+        self.opts, self.fp32_ns = opts, fp32_ns
+
+    @property
+    def param_groups(self):
+        return [g for o in self.opts for g in o.param_groups]
+
+    def step(self):
+        if not self.fp32_ns:
+            for o in self.opts:
+                o.step()
+            return
+        import torch.optim._muon as M
+
+        orig = M._zeropower_via_newtonschulz
+        M._zeropower_via_newtonschulz = _ns_fp32
+        try:
+            for o in self.opts:
+                o.step()
+        finally:
+            M._zeropower_via_newtonschulz = orig
+
+    def zero_grad(self, set_to_none=True):
+        for o in self.opts:
+            o.zero_grad(set_to_none=set_to_none)
+
+    def state_dict(self):
+        return {"opts": [o.state_dict() for o in self.opts]}
+
+    def load_state_dict(self, sd):
+        for o, s in zip(self.opts, sd["opts"]):
+            o.load_state_dict(s)
+
+
+def _ns_fp32(grad, ns_coefficients, ns_steps, eps):
+    """torch.optim._muon._zeropower_via_newtonschulz (torch 2.10) line for line, except that the iteration runs in
+    float32: the original starts with ``grad.bfloat16()``."""
+    a, b, c = ns_coefficients
+    ortho_grad = grad.float()
+    if grad.size(0) > grad.size(1):
+        ortho_grad = ortho_grad.T
+    ortho_grad.div_(ortho_grad.norm().clamp(min=eps))
+    for _ in range(ns_steps):
+        gram_matrix = ortho_grad @ ortho_grad.T
+        gram_update = torch.addmm(gram_matrix, gram_matrix, gram_matrix, beta=b, alpha=c)
+        ortho_grad = torch.addmm(ortho_grad, gram_update, ortho_grad, beta=a)
+    if grad.size(0) > grad.size(1):
+        ortho_grad = ortho_grad.T
+    return ortho_grad
 
 
 def lr_at(step, c: Config):
@@ -302,13 +389,31 @@ def forward(model, x, y, c: Config):
     return model(x, y)
 
 
-def train_step(model, opt, data, step, c: Config, nu=None):
+def train_step(model, opt, data, step, c: Config, nu=None, ema=None):
     for g in opt.param_groups:
         g["lr"] = lr_at(step, c)
     x, y = data.batch(step)
-    with autocast(c):
-        loss = forward(model, x, y, c)
-    loss.backward()
+    if c.grad_accum == 1:
+        with autocast(c):
+            loss = forward(model, x, y, c)
+        loss.backward()
+    else:
+        k = c.grad_accum
+        buf = {n: torch.zeros_like(p, dtype=torch.float32) for n, p in model.named_parameters()} if c.accum_fp32 else None
+        tot = 0.0
+        for xs, ys in zip(x.chunk(k), y.chunk(k)):
+            with autocast(c):
+                l = forward(model, xs, ys, c) / k
+            l.backward()
+            tot += float(l.detach())
+            if buf is not None:
+                for n, p in model.named_parameters():
+                    buf[n].add_(p.grad.float())
+                    p.grad = None
+        if buf is not None:
+            for n, p in model.named_parameters():
+                p.grad = buf[n].to(p.dtype)
+        loss = torch.tensor(tot)
     if c.clip:
         torch.nn.utils.clip_grad_norm_(model.parameters(), c.clip)
     prev = {n: p.detach().clone() for n, p in model.named_parameters()} if c.inject != "none" else None
@@ -323,6 +428,10 @@ def train_step(model, opt, data, step, c: Config, nu=None):
                 rnorm = math.sqrt(sum(float(((p.double() - prev[n].double()) ** 2).sum()) for n, p in model.named_parameters()))
                 for n, p in model.named_parameters():
                     p.add_(nu[n], alpha=c.dose * rnorm)
+    if ema is not None:
+        with torch.no_grad():
+            for n, p in model.named_parameters():
+                ema[n].mul_(c.ema).add_(p.detach().to(ema[n].dtype), alpha=1 - c.ema)
     return float(loss.detach())
 
 
@@ -333,16 +442,28 @@ def train(c: Config, out_dir: Path | None = None, device="cuda"):
     model, opt = build(c, device)
     data = Data(c, device)
     nu = directions(model, c.inject_seed) if c.inject == "direction" else None
+    ema = ({n: p.detach().clone().to(torch.bfloat16 if c.ema_dtype == "bf16" else torch.float32)
+            for n, p in model.named_parameters()} if c.ema else None)
     log, t0 = [], time.time()
     ckpts = set(c.checkpoints)
     for step in range(c.steps):
-        loss = train_step(model, opt, data, step, c, nu)
+        loss = train_step(model, opt, data, step, c, nu, ema)
         if step % c.log_every == 0 or step == c.steps - 1:
             log.append({"step": step, "train_loss": loss})
         if out_dir is not None and (step + 1) in ckpts:
             out_dir.mkdir(parents=True, exist_ok=True)
-            torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "step": step + 1, "config": asdict(c)},
-                       out_dir / f"ckpt_{step + 1:05d}.pt")
+            torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "step": step + 1, "config": asdict(c),
+                        "ema": ema}, out_dir / f"ckpt_{step + 1:05d}.pt")
     val = evaluate(model, data, c)
-    return {"config": asdict(c), "val_loss": val, "log": log, "seconds": round(time.time() - t0, 1),
-            "final_train_loss": log[-1]["train_loss"]}
+    out = {"config": asdict(c), "val_loss": val, "log": log, "seconds": round(time.time() - t0, 1),
+           "final_train_loss": log[-1]["train_loss"]}
+    if ema is not None:  # evaluate the EMA weights in place of the trained ones
+        saved = {n: p.detach().clone() for n, p in model.named_parameters()}
+        with torch.no_grad():
+            for n, p in model.named_parameters():
+                p.copy_(ema[n].to(p.dtype))
+        out["ema_val_loss"] = evaluate(model, data, c)
+        with torch.no_grad():
+            for n, p in model.named_parameters():
+                p.copy_(saved[n])
+    return out

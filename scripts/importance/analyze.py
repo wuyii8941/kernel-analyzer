@@ -156,5 +156,46 @@ def summary():
     print("agreement", res["category_agreement"], "spearman", rho, "->", verdict, "delta", delta)
 
 
+def figure():
+    """Calibration figure: single-step effect (x, log) against |paired dL| (y), dose-response with 95% intervals,
+    the seed band, the 0.25% line, and each replacement at its single-step effect with its observed |dL|."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    cv = json.loads((OUT / "curves.json").read_text())
+    sm = json.loads((OUT / "summary.json").read_text()) if (OUT / "summary.json").exists() else None
+    pr = json.loads((OUT / "predictions.json").read_text())
+    fig, ax = plt.subplots(figsize=(7.2, 4.6))
+    for kind, color, label in (("gamma", "tab:blue", "injected u = γ·r"), ("direction", "tab:orange", "injected u = b·|r|·ν")):
+        pts = sorted((float(k), v) for k, v in cv["dose_response"][kind].items() if float(k) > 0)
+        x = [d for d, _ in pts]
+        y = [abs(v["mean"]) for _, v in pts]
+        lo = [max(abs(v["mean"]) - (v["hi"] - v["mean"]), 1e-6) for _, v in pts]
+        hi = [abs(v["mean"]) + (v["hi"] - v["mean"]) for _, v in pts]
+        ax.fill_between(x, lo, hi, color=color, alpha=0.15)
+        ax.plot(x, y, "o-", color=color, label=label)
+    sig = cv["seed_band"]["sigma_seed"]
+    ax.axhline(sig, color="k", ls="--", lw=1, label=f"seed σ = {sig:.4f}")
+    ax.axhline(cv["seed_band"]["deepseek_relative_0p25pct"], color="gray", ls=":", lw=1, label="0.25 % of loss")
+    if sm:
+        for name, o in sm["observed"].items():
+            if o.get("missing"):
+                continue
+            ss = pr["predictions"][name]
+            x = max(abs(ss["gamma_hat"]["mean"]), abs(ss["b_hat"]["mean"]), 1e-9)
+            ax.plot([x], [max(abs(o["mean"]), 1e-6)], "s", color="tab:red" if name.startswith("X") else "tab:green")
+            ax.annotate(name, (x, max(abs(o["mean"]), 1e-6)), textcoords="offset points", xytext=(4, 3), fontsize=8)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("single-step effect at the update layer (|γ̂| or |b̂|, relative to the update norm)")
+    ax.set_ylabel("|paired Δ validation loss| after 2,000 steps")
+    ax.legend(fontsize=8, loc="upper left")
+    fig.tight_layout()
+    fig.savefig(OUT / "calibration.png", dpi=150)
+    print("wrote", OUT / "calibration.png")
+
+
 if __name__ == "__main__":
-    {"curves": curves, "predict": predict, "summary": summary}[sys.argv[1]]()
+    {"curves": curves, "predict": predict, "summary": summary, "figure": figure}[sys.argv[1]]()
