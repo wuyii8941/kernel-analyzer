@@ -49,13 +49,26 @@ class Stepper:
         model.load_state_dict({k: v for k, v in ck["model"].items()})  # copies into the existing parameters
         opt = S.make_optimizer(model, c)
         opt.load_state_dict(copy.deepcopy(ck["opt"]))
-        for g in opt.param_groups:
-            g["lr"] = S.lr_at(ck["step"], c)
+        S.set_lr(opt, S.lr_at(ck["step"], c))
         before = torch.cat([p.detach().double().reshape(-1) for p in model.parameters()])
         x, y = batch
-        with S.autocast(c):
-            loss = S.forward(model, x, y, c)
-        loss.backward()
+        if c.grad_accum == 1:
+            with S.autocast(c):
+                loss = S.forward(model, x, y, c)
+            loss.backward()
+        else:  # as small_lm.train_step: micro-batches, accumulated in the parameter dtype or an fp32 buffer
+            buf = {n: torch.zeros_like(p, dtype=torch.float32) for n, p in model.named_parameters()} if c.accum_fp32 else None
+            for xs, ys in zip(x.chunk(c.grad_accum), y.chunk(c.grad_accum)):
+                with S.autocast(c):
+                    l = S.forward(model, xs, ys, c) / c.grad_accum
+                l.backward()
+                if buf is not None:
+                    for n, p in model.named_parameters():
+                        buf[n].add_(p.grad.float())
+                        p.grad = None
+            if buf is not None:
+                for n, p in model.named_parameters():
+                    p.grad = buf[n].to(p.dtype)
         if c.clip:
             torch.nn.utils.clip_grad_norm_(model.parameters(), c.clip)
         opt.step()

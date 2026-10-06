@@ -345,6 +345,15 @@ def _ns_fp32(grad, ns_coefficients, ns_steps, eps):
     return ortho_grad
 
 
+def set_lr(opt, lr):
+    """torchao keeps lr as a tensor and refuses a float (it must be filled in place)."""
+    for g in opt.param_groups:
+        if isinstance(g["lr"], torch.Tensor):
+            g["lr"].fill_(lr)
+        else:
+            g["lr"] = lr
+
+
 def lr_at(step, c: Config):
     if step < c.warmup:
         return c.lr * (step + 1) / c.warmup
@@ -390,8 +399,7 @@ def forward(model, x, y, c: Config):
 
 
 def train_step(model, opt, data, step, c: Config, nu=None, ema=None):
-    for g in opt.param_groups:
-        g["lr"] = lr_at(step, c)
+    set_lr(opt, lr_at(step, c))
     x, y = data.batch(step)
     if c.grad_accum == 1:
         with autocast(c):
