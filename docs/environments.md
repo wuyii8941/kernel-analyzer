@@ -39,3 +39,4 @@
 | pt213_scan | 3.11 | 2.13.0+cu130 | 3.7.1 | cu130，本机驱动下 GPU 不可用；能否只编译到 TTIR 未验证 |
 | pt211_operator_tomography / pt220_operator_tomography | 3.11 | CPU 版 | — | 只能做 CPU 测试 |
 | kernel_analyzer | 3.8 | — | — | 空环境，未使用 |
+| fpcore | 3.11（由 ka_main 的解释器建立的 venv） | — | — | 只装 titanfp 0.1.2 与 numpy：FPCore 交叉复算的第三方求值器（`scripts/fpcore_crosscheck.py evaluate`），与工具代码隔离 |

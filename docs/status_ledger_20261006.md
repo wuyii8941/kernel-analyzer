@@ -22,11 +22,16 @@
 | 15 | 真实问题登记 B012–B018（B017、B018 的 B 部分在 main 上仍在；B018 非工具检出） | RQ5 | 已完成且有报告 | `bugs/README.md` 与各报告；nightly 实测输出 |
 | 16 | benchmark 修复前后 38 个单位，评分 38/38 | RQ5 | 已完成且有报告 | `docs/benchmark_20261006.md`；`results/benchmark/` |
 | 17 | 接口整合回归：15 个用例 0 处判定变化；干净克隆安装 38 项测试通过 | RQ1、RQ5 | 已完成且有报告 | `docs/tool_changes_20261006.md`；`results/regression/` |
-| 18 | 外部受控集合、陌生组合子集上的建立率与对照 | RQ1–RQ3 | 尚未运行 | M2 |
-| 19 | 外部基线（默认配置与扫描）与三项消融 | RQ2、RQ3 | 尚未运行 | M2 |
-| 20 | 等价性两项校准；敏感性曲线 | RQ3、RQ4 | 尚未运行 | M1 |
-| 21 | 真实场景的输出、梯度、实际写入逐层表 | RQ4 | 尚未运行 | M4 |
-| 22 | 外部接入试验；诊断收益对照；普查统一报告；成本的同等预算比较 | RQ5 | 尚未运行 | M3 |
-| 23 | FPCore 交叉复算 | RQ1 | 尚未运行 | M2 |
+| 18 | 外部受控集合（The Correctness Illusion，699 个 Triton 条件 + 141 个黑箱条件）：参照 100% 建立、独立复算 696,816 个元素 0 违反；RQ2 工具 238/238、控制组 0/404、未触发 0/57；RQ3 通过容差而平均作用经 Holm 确认 9 个 | RQ1–RQ3 | 已完成且有报告 | `docs/external_eval_results_20261006.md`；`results/external/gpuemu/`（协议 `docs/external_eval_protocol_20261006.md`，偏离 1 条） |
+| 19 | 外部基线 B1–B3（默认与扫描）、消融 A1、A2 | RQ2、RQ3 | 已完成且有报告 | 同上；B4 随机算术式尚未运行（协议写明本轮不做）；A3 不适用于该集合 |
+| 20 | 陌生组合子集（Unsloth 14 个入口，bf16）：参照 31/31 完整；无规格差异；经 Holm 确认的平均作用全部为实现特有，RoPE、RMSNorm、SwiGLU 的机制已核实 | RQ1、RQ3 | 已完成且有报告 | `docs/unfamiliar_subset_results_20261006.md`；`results/external/unsloth*`（协议偏离 3 条）；GeGLU 扩张等机制待核实 |
+| 21 | 等价轴两项校准；敏感性曲线（正参照与正负混合参照） | RQ3、RQ4 | 已完成且有报告 | `docs/statistics_calibration_20261006.md`；`results/reference_eval/calibration_equivalence.json`、`sensitivity_curves*.json`；δ 取值待确认 |
+| 22 | 真实场景的逐层表（编译后的 HF RMSNorm：输出、梯度、SGD / AdamW 理想响应与实际写入） | RQ4 | 已完成且有报告 | `docs/layer_table_results_20261006.md`；`results/reference_eval/layer_table/`；L1/L2 作用机制待核实 |
+| 23 | FPCore 交叉复算：56 个片段、9,120 个元素，0 违反（titanfp，MPFR 241 位） | RQ1 | 已完成且有报告 | `results/fpcore/`；`scripts/fpcore_crosscheck.py` |
+| 24 | 诊断收益对照（B016、B012 上工具与直接差分） | RQ5 | 已完成且有报告 | `docs/diagnosis_comparison_20261006.md` |
+| 25 | 普查统一报告 | RQ5 | 已完成且有报告 | `docs/census_unified_20261006.md`；`results/tool_spec/final/summary.{md,json}` |
+| 26 | 成本：分段计时（含捕获开销修正）；同等预算下的比较 | RQ1、RQ5 | 分段计时已完成且有报告；同等预算比较尚未写成报告 | 各报告的 `timing_seconds`；`docs/external_eval_results_20261006.md` RQ1 |
+| 27 | 外部接入试验（未参与开发的人按指南接入） | RQ5 | 尚未运行（需要外部人员） | `docs/reuse_trial_protocol.md` |
+| 28 | 上游提交 B012、B016、B017、B018 | RQ5 | 尚未运行（草稿待用户提交） | `bugs/upstream_drafts/` |
 
 注：盲测揭盲后，v1、v2 只作回归集；之后的泛化成绩只来自外部语料与陌生组合。
