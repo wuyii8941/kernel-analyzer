@@ -275,6 +275,18 @@ def make_optimizer(model, c: Config):
             return cls(groups, **kw)
         if o == "ao_adamw_bf16sr":
             return ao._AdamW(groups, bf16_stochastic_round=True, **kw)
+        if o == "ao_adamw4bit_b32":  # deep case C4c: block size 128 -> 32
+            return ao.AdamW4bit(groups, block_size=32, **kw)
+        if o in ("ao_adamw4bit_vonly", "ao_adamw4bit_monly"):  # deep case C4a / C4b: quantize one moment only
+            quant_v = o.endswith("vonly")
+
+            class _OneMoment4bit(ao.AdamW4bit):
+                def _new_buffer(self, p, signed):
+                    if (not signed) == quant_v:
+                        return super()._new_buffer(p, signed)
+                    return torch.zeros_like(p, dtype=torch.float32)
+
+            return _OneMoment4bit(groups, **kw)
     if o == "bnb_adamw8bit":
         import bitsandbytes as bnb
 

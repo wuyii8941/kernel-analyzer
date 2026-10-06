@@ -42,6 +42,9 @@ GROUPS = {
                          "C6": {"optimizer": "ao_adamw_bf16sr"},
                          "C7": {"optimizer": "bnb_adamw8bit"}}, False),
     "muon": ({**RP, "optimizer": "muon_fp32ns"}, {"C8": {"optimizer": "muon"}}, False),
+    # deep case C4 (protocol section 9): attribution and the block-size intervention, next to C4 in the same run
+    "c4deep": (dict(RP), {"C4": {"optimizer": "ao_adamw4bit"}, "C4a": {"optimizer": "ao_adamw4bit_vonly"},
+                          "C4b": {"optimizer": "ao_adamw4bit_monly"}, "C4c": {"optimizer": "ao_adamw4bit_b32"}}, False),
 }
 BF16_PARAMS = {"adamw_bf16", "adamw_bf16_foreach", "adamw_bf16_fused", "ao_adamw_bf16sr"}
 STEPS = None  # smoke runs only

@@ -17,7 +17,8 @@ DELTA = 0.05
 NAMES = {"C1": "torch AdamW bf16, foreach", "C2": "torch AdamW bf16, fused", "C3": "torchao AdamW8bit",
          "C4": "torchao AdamW4bit", "C6": "torchao _AdamW bf16 stochastic rounding", "C7": "bitsandbytes AdamW8bit",
          "C8": "torch Muon, Newton-Schulz in bf16 (vs fp32)", "C9": "weight EMA stored in bf16 (vs fp32)",
-         "C10": "bf16 gradient accumulation in pure bf16 training (vs fp32 buffer)"}
+         "C10": "bf16 gradient accumulation in pure bf16 training (vs fp32 buffer)",
+         "C4a": "deep case C4: only v in 4-bit", "C4b": "deep case C4: only m in 4-bit", "C4c": "deep case C4: block size 32"}
 
 
 def classify(e):
@@ -63,7 +64,7 @@ def main():
         per["C10"] = {"states_P_s0": {"effects": e, "class": classify(e)}}
     stage_b = {a: json.loads((ROOT / "results/importance/single_step" / f"{a}.json").read_text()) for a in ("A1", "A2", "A3")}
     table = {}
-    for name, seeds in sorted(per.items(), key=lambda kv: int(kv[0][1:])):
+    for name, seeds in sorted(per.items(), key=lambda kv: (int(kv[0][1:].rstrip("abc")), kv[0])):
         classes = {s: v["class"] for s, v in seeds.items()}
         combined = list(classes.values())[0] if len(set(classes.values())) == 1 else "undecided (seeds disagree)"
         first = list(seeds.values())[0]["effects"]
