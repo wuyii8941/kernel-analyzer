@@ -100,4 +100,10 @@
 
 ## 10. 偏离记录
 
-（运行后追加。）
+1. **2026-10-06 18:30，第二层的选点并列（在查看任何第二层结果之前发现并处理）。** 第 2 节的规则（输出元素最多，
+   并列取末维更大者）对 attention、flash_attention、matmul 的 Triton 控制组与植入变体以及 NumPy matmul 共 7 个条目
+   仍有并列（输出只由 M、D 或 M、N 决定）；脚本按枚举顺序取了第一个，即 N = 1 或 K = 1——没有键或 K 维归约的退化
+   形状（matmul_triton_buggy 在 K = 1 时与规格相同）。处理：并列时再取输入元素最多者（attention、flash_attention 为
+   M8_N256_D64，matmul_triton 为 M64_K64_N64，NumPy matmul 为 M128_K256_N15），这 7 个条目的第二层重跑。原来的报告与
+   基线行移到 `results/external/gpuemu/superseded_tier2_tiebreak/`，保留不删，汇总只用重跑结果。其余 19 个条目的
+   选点不变。
