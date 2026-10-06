@@ -171,7 +171,11 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
     # every case starts from an empty Dynamo cache, as PyTorch's own tests do: cases run several to a process, and a
     # cached graph can be reused for a different op when its guards do not pin the callable (pytorch#197811; B017)
     torch._dynamo.reset()
+    timing = {"setup_compile_warmup": 0.0, "inputs": 0.0, "capture_first_seed": 0.0, "capture": 0.0, "reference": 0.0,
+              "specification": 0.0, "statistics": 0.0}
+    t_phase = time.time()
     case.setup()
+    timing["setup_compile_warmup"] = time.time() - t_phase
     per, coverage, launch_info = {}, None, None
     not_triton, modified_after, aborted_outputs, mixed_by_output = set(), set(), {}, {}
     external = None
@@ -180,11 +184,16 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
     mode = None
     t0 = time.time()
     for seed in list(dev) + list(conf):
+        t_phase = time.time()
         inp = case.inputs(seed)
+        timing["inputs"] += time.time() - t_phase
+        t_phase = time.time()
         rec = TritonLaunchRecorder()
         with rec:
             outs = case.launch(inp)
             torch.cuda.synchronize()
+        # the first seed's capture also pays any JIT compilation the case's setup did not warm up
+        timing["capture_first_seed" if seed == list(dev)[0] else "capture"] += time.time() - t_phase
         if coverage is None:
             coverage = [kernel_coverage(parse_ttir(l.asm["ttir"]))["complete"] for l in rec.launches]
             # float atomics make K depend on the run-time order of the atomic updates: e_num (and verdicts that
@@ -193,7 +202,9 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
                             "float_atomics": _float_atomics(l.asm["ttir"])} for l in rec.launches]
             zero_fill = [ptx_zero_fills(l.asm.get("ptx", "")) for l in rec.launches]
             fill = zero_fill_mode == "auto" and all(zero_fill)
+        t_phase = time.time()
         seq = evaluate_sequence(rec.launches, masked_fill_zero=fill)
+        timing["reference"] += time.time() - t_phase
         if mixed_sources is None:
             mixed_sources = torch_intermediates(rec.launches, seq, inp)
         if external is None:
@@ -201,7 +212,9 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
             # re-enters as an exact input, so K_R downstream carries the upstream numerical error of K
             external = [{"launch": e["launch"], "kernel": rec.launches[e["launch"]].kernel_name, "buffer": e["buffer"]}
                         for e in seq.external_writes]
+        t_phase = time.time()
         specs = case.spec(inp)
+        timing["specification"] += time.time() - t_phase
         this_mode = "A" if specs is None else "B"
         if mode not in (None, this_mode):
             raise ValueError("spec() must return f for every seed or for none")
@@ -339,8 +352,10 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
         for key, label in (("n", "e_num = K - K_R"), ("s", "e_sem = K_R - f"))[: 2 if mode == "B" else 1]:
             lo = np.stack([p[key][0] for p in rows])
             hi = np.stack([p[key][1] for p in rows])
+            t_phase = time.time()
             rec, _ = assess_units(f"{name}: {label}", lo, hi, kr, ok, n_dev, RULES, alignment_reference=kr,
                                   unit_ids=list(dev) + list(conf))
+            timing["statistics"] += time.time() - t_phase
             mid = 0.5 * (lo + hi)
             if ok.any():
                 rec["scale"] = {"mean_abs_residual": float(np.abs(mid[ok]).mean()),
@@ -385,6 +400,9 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
         if mode == "A":
             entry["task_semantics"] = "not checked (no specification)"
         report["outputs"][name] = entry
+    # cost by phase (evaluation plan, work item H): compile / warm-up, input generation, capture (the launches under
+    # the recorder), reference (TTIR evaluation), specification, statistics; "seconds" keeps its old meaning
+    report["timing_seconds"] = {k: round(v, 3) for k, v in timing.items()}
     return report
 
 
