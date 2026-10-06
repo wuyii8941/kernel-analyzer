@@ -26,7 +26,7 @@
 | 19 | 外部基线 B1–B3（默认与扫描）、消融 A1、A2 | RQ2、RQ3 | 已完成且有报告 | 同上；B4 随机算术式尚未运行（协议写明本轮不做）；A3 不适用于该集合 |
 | 20 | 陌生组合子集（Unsloth 14 个入口，bf16）：参照 31/31 完整；无规格差异；经 Holm 确认的平均作用全部为实现特有，bf16 上的作用全部由中间 bf16 舍入解释（RoPE 逐位核实，其余模拟定量复现） | RQ1、RQ3 | 已完成且有报告 | `docs/unfamiliar_subset_results_20261006.md`；`results/external/unsloth*`（协议偏离 3 条）；softcap loss（fp32）的机制待核实 |
 | 21 | 等价轴两项校准；敏感性曲线（正参照与正负混合参照） | RQ3、RQ4 | 已完成且有报告 | `docs/statistics_calibration_20261006.md`；`results/reference_eval/calibration_equivalence.json`、`sensitivity_curves*.json`；δ 取值待确认 |
-| 22 | 真实场景的逐层表（编译后的 HF RMSNorm：输出、梯度、SGD / AdamW 理想响应与实际写入） | RQ4 | 已完成且有报告 | `docs/layer_table_results_20261006.md`；`results/reference_eval/layer_table/`；L1/L2 作用机制待核实 |
+| 22 | 真实场景的逐层表（编译后的 HF RMSNorm：输出、梯度、SGD / AdamW 理想响应与实际写入） | RQ4 | 已完成且有报告 | `docs/layer_table_results_20261006.md`；`results/reference_eval/layer_table/`（含 L1/L2 的核内定位） |
 | 23 | FPCore 交叉复算：56 个片段、9,120 个元素，0 违反（titanfp，MPFR 241 位） | RQ1 | 已完成且有报告 | `results/fpcore/`；`scripts/fpcore_crosscheck.py` |
 | 24 | 诊断收益对照（B016、B012 上工具与直接差分） | RQ5 | 已完成且有报告 | `docs/diagnosis_comparison_20261006.md` |
 | 25 | 普查统一报告 | RQ5 | 已完成且有报告 | `docs/census_unified_20261006.md`；`results/tool_spec/final/summary.{md,json}` |
