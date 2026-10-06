@@ -79,4 +79,8 @@ df = DW·f(e)、de = DW·g·f′(e)）；交叉熵：loss = logsumexp(z) − z_l
 
 ## 8. 偏离记录
 
-（运行后追加。）
+1. **测量的输出（运行前更正）。** 第 3 节为 U1–U3 列了 dW（与 db），但 Unsloth 的这两个入口在反向中对 W、b 返回
+   None（微调时范数权重冻结），不计算这些量；测量的输出改为 Y、dX。
+2. **冒烟运行。** 正式运行前用 6 个种子（写到 `.cache/tmp/unsloth_smoke/`，不入库、不报告其判定）确认 14 个绑定都能
+   执行。发现 U13 的 dQ、dK 经 `.backward()` 时被 autograd 以 torch 操作复制到叶张量的布局，不是 kernel 写出的
+   张量；绑定改用 `torch.autograd.grad` 取反向自身的输出（kernel 写出的缓冲区的视图）。形状、输入与规格不变。
