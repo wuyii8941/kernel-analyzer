@@ -275,6 +275,14 @@ def cumprod_rows(X, Y, BLOCK: tl.constexpr):
     offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
     tl.store(Y + offs, tl.cumprod(tl.load(X + offs), 0))
 
+
+@triton.jit
+def racy_store(Y, SAME: tl.constexpr):
+    """Every program stores to Y[0]: the same value (benign) or its own program id (a race between instances)."""
+    pid = tl.program_id(0)
+    val = tl.full((), 1.0, tl.float32) if SAME else pid.to(tl.float32)
+    tl.store(Y, val)
+
 _SOFTPLUS_PTX = tl.constexpr(" { .reg .pred p; setp.gt.f32  p, $1, 20.; @p  mov.f32  $0, $1; "
                  "@!p mul.f32 $0, $1, 1.4426950408889634; @!p ex2.approx.ftz.f32 $0, $0; "
                  "@!p add.f32 $0, $0, 1.0; @!p lg2.approx.ftz.f32 $0, $0; "

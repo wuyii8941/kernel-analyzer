@@ -243,6 +243,22 @@ def test_product_scan_encloses_the_exact_prefix_products():
     assert np.max(by.hi - by.lo) < 1e-12
     assert (by.lo[32 + 5:] == 0).all() and (by.hi[32 + 5:] == 0).all()
 
+
+@cuda
+@pytest.mark.parametrize("same", [True, False])
+def test_stores_from_several_instances_to_one_address_are_a_race_unless_equal(same):
+    """Negative control for the cross-instance rule: instances writing different values to one address leave it
+    not established (the order between programs is not declared); equal values stay established."""
+    k = _kernels()
+    y = torch.zeros(1, device="cuda")
+    result = _evaluate(_capture(lambda: k.racy_store[(4,)](y, SAME=same)))
+    _, by = _buffer(result, "Y")
+    if same:
+        assert (by.st == 0).all() and by.lo[0] == 1.0
+    else:
+        assert (by.st != 0).all()
+        assert any("race" in r for r in result.reasons)
+
 @cuda
 def test_zero_fill_assumption_is_checked_on_ptx_and_defines_masked_lanes():
     from kernel_analyzer.reference_eval.ttir_eval import ptx_zero_fills

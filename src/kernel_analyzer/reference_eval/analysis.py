@@ -257,6 +257,58 @@ def _unresolved(name, rule, verdict, reason, n):
     return {"comparison": name, "rule": rule, "n": int(n), "verdict": verdict, "reason": reason}
 
 
+SKEW_SUSPECT = 1.0  # calibration_equivalence: from |skewness| ~ 1 the t interval under-covers at n <= 128
+
+
+def _t_approximation(values) -> dict:
+    """Sample skewness of the per-unit projections and whether the t approximation is suspect (no verdict
+    changes: a diagnostic, docs/statistics_calibration_20261006.md)."""
+
+    v = np.asarray(values, dtype=np.float64)
+    if v.size < 3 or not np.isfinite(v).all():
+        return {"unit_skewness": None, "t_approximation": "unknown"}
+    d = v - v.mean()
+    m2 = float((d * d).mean())
+    g1 = float((d ** 3).mean() / m2 ** 1.5) if m2 > 0 else 0.0
+    n = v.size
+    g1 = g1 * math.sqrt(n * (n - 1)) / (n - 2)  # adjusted Fisher-Pearson
+    return {"unit_skewness": g1,
+            "t_approximation": "ok" if abs(g1) < SKEW_SUSPECT else
+            "suspect: skewed per-unit projections (|skewness| >= 1); the t interval may under-cover"}
+
+
+def _bootstrap_t_bound(values, alpha_one_sided: float, upper: bool, b: int = 1999, seed: int = 0) -> float:
+    """One-sided bootstrap-t bound for the mean (second-order accurate under skew, where the t interval is only
+    first-order).  Fixed seed: the bound is reproducible."""
+
+    x = np.asarray(values, dtype=np.float64)
+    n = x.size
+    m, sd = float(x.mean()), float(x.std(ddof=1))
+    if sd == 0:
+        return m
+    rng = np.random.default_rng(seed)
+    xb = x[rng.integers(0, n, size=(b, n))]
+    sb = xb.std(axis=1, ddof=1)
+    tb = (xb.mean(axis=1) - m) / np.where(sb > 0, sb, np.inf) * math.sqrt(n)
+    if upper:
+        return m - float(np.quantile(tb, alpha_one_sided)) * sd / math.sqrt(n)
+    return m - float(np.quantile(tb, 1 - alpha_one_sided)) * sd / math.sqrt(n)
+
+
+def _robust_companion(l, h, alpha_one_sided: float, delta=None) -> dict:
+    """Bootstrap-t companion of the endpoint-conservative bounds, reported when the t approximation is suspect
+    (pre-registered policy, docs/statistics_calibration_20261006.md); the frozen verdict fields are unchanged."""
+
+    lo = _bootstrap_t_bound(l, alpha_one_sided, upper=False)
+    hi = _bootstrap_t_bound(h, alpha_one_sided, upper=True)
+    rec = {"method": "bootstrap-t (1999 resamples, seed 0)", "lower_bound_of_E_l": lo, "upper_bound_of_E_h": hi}
+    if delta is None:
+        rec["verdict"] = "DETECTED_POSITIVE" if lo > 0 else ("DETECTED_NEGATIVE" if hi < 0 else "NOT_CONFIRMED")
+    else:
+        rec["verdict"] = "WITHIN_DELTA" if (lo > -delta and hi < delta) else "NOT_SHOWN"
+    return rec
+
+
 def _summarize(name, rule, l, h, alpha):
     """Endpoint-conservative t inference for the mean projection mu, known only to lie in [E[l], E[h]].
 
@@ -289,7 +341,74 @@ def _summarize(name, rule, l, h, alpha):
             "t_interval": list(interval), "lower_bound_of_E_l": lower, "upper_bound_of_E_h": upper,
             "positive": int((l > 0).sum()), "negative": int((h < 0).sum()),
             "zero_or_ambiguous": int(((l <= 0) & (h >= 0)).sum()), "verdict": verdict,
-            "p_value_two_sided_conservative": p}
+            "p_value_two_sided_conservative": p, **_t_approximation(0.5 * (l + h)),
+            **({"robust": _robust_companion(l, h, alpha / 2)}
+               if _t_approximation(0.5 * (l + h))["t_approximation"].startswith("suspect") else {})}
+
+
+def equivalence(l, h, delta: float, alpha: float) -> dict:
+    """The second axis next to the nonzero verdict: is the mean projection shown to lie within (-delta, delta)?
+
+    mu is only known to lie in [E[l], E[h]], so the two one-sided tests (TOST) are run on the endpoints that
+    carry them: H0 mu <= -delta is rejected when the one-sided (1 - alpha) lower bound of E[l] exceeds -delta,
+    H0 mu >= delta when the one-sided upper bound of E[h] is below delta.  Equivalence and a nonzero verdict can
+    hold together (a small but certain effect).  Equivalence is a statement about the declared margin delta,
+    never a proof that mu = 0."""
+
+    from scipy.stats import t
+
+    l, h = np.asarray(l, dtype=np.float64), np.asarray(h, dtype=np.float64)
+    rec = {"delta_projection": float(delta), "alpha": alpha}
+    if l.size < 2 or not (np.isfinite(l).all() and np.isfinite(h).all()) or not np.isfinite(delta):
+        rec.update(verdict="UNRESOLVED", reason="needs at least 2 units and finite bounds")
+        return rec
+    n = l.size
+    q = float(t.ppf(1 - alpha, n - 1))
+    m_l, sd_l = float(l.mean()), float(l.std(ddof=1))
+    m_h, sd_h = float(h.mean()), float(h.std(ddof=1))
+    lo = m_l - q * sd_l / math.sqrt(n)
+    hi = m_h + q * sd_h / math.sqrt(n)
+
+    def p_one(mean, sd, bound, greater):
+        if sd == 0:
+            return 0.0 if ((mean > bound) if greater else (mean < bound)) else 1.0
+        z = (mean - bound) / (sd / math.sqrt(n))
+        return float(t.sf(z, n - 1) if greater else t.cdf(z, n - 1))
+
+    p = max(p_one(m_l, sd_l, -delta, True), p_one(m_h, sd_h, delta, False))
+    rec.update(lower_one_sided_bound_of_E_l=lo, upper_one_sided_bound_of_E_h=hi, p_value_tost=p,
+               verdict="WITHIN_DELTA" if (lo > -delta and hi < delta) else "NOT_SHOWN", **_t_approximation(0.5 * (l + h)))
+    if rec["t_approximation"].startswith("suspect"):
+        rec["robust"] = _robust_companion(l, h, alpha, delta)
+    return rec
+
+
+def add_equivalence(record: dict, ref_mid, n_dev: int, delta_rel: float, alpha: float = 0.05) -> None:
+    """Attach the equivalence axis to every fixed-direction rule of an assess_units record.
+
+    delta is declared relative to the reference scale q_R (RMS of the reference midpoints over the coordinate
+    set on the development units, frozen there); on a rule's projection scale it is delta_rel * q_R * sqrt(n)
+    -- the projection, onto a unit direction, of a uniform per-coordinate bias of delta_rel * q_R.  Learned
+    (cross-fitted) directions get no equivalence statement."""
+
+    if "rules" not in record:
+        return
+    ref_mid = np.asarray(ref_mid, dtype=np.float64)
+    used = record.get("coordinates", {}).get("used", 0)
+    if not used:
+        return
+    dev = ref_mid[:n_dev]
+    q_r = float(np.sqrt(np.mean(dev ** 2))) if dev.size else float("nan")
+    record["equivalence_scale"] = {"q_R": q_r, "delta_rel": delta_rel, "frozen_on": "development units",
+                                   "meaning": "delta = delta_rel * q_R per coordinate; on a projection, times sqrt(n)"}
+    for r in record["rules"]:
+        bounds = r.get("per_unit_bounds")
+        if bounds is None:
+            r["equivalence"] = {"verdict": "NOT_DEFINED", "reason": "learned or unresolved direction"}
+            continue
+        n_coords = r.get("coordinates_used") or used  # grouped rules: complete groups, about the used set
+        lh = np.asarray(bounds, dtype=np.float64)
+        r["equivalence"] = equivalence(lh[:, 0], lh[:, 1], delta_rel * q_r * math.sqrt(max(n_coords, 1)), alpha)
 
 
 def _project(lows: np.ndarray, highs: np.ndarray, w: np.ndarray):
@@ -521,8 +640,11 @@ def residual_summary(lows, highs, valid) -> dict:
 
 def assess_units(name, lows, highs, ref_mid, ok, n_dev, rules, alpha=0.05, groups=None, declared_vectors=None,
                  alignment_reference=None, detector_shape=None, run_detector=True, cross_fit_folds=2,
-                 confirmation_invalid="unresolved", measurement=None, unit_ids=None, seed=0):
+                 confirmation_invalid="unresolved", measurement=None, unit_ids=None, seed=0, equivalence_rel=None):
     """The decision layer for one measured quantity: units x coordinates residual intervals -> record.
+
+    ``equivalence_rel``: when given, every fixed-direction rule also reports the equivalence axis (TOST against
+    delta = equivalence_rel * q_R, :func:`add_equivalence`) next to its nonzero verdict.
 
     lows, highs: residual interval endpoints; ref_mid: the reference midpoints that define the
     reference-dependent directions; ok: coordinates whose reference is of a declared class, per unit.  The
@@ -578,6 +700,8 @@ def assess_units(name, lows, highs, ref_mid, ok, n_dev, rules, alpha=0.05, group
             if np.ndim(vec) == 1:  # unit-dependent directions are rebuilt from the saved references
                 arrays[f"{name}__detector__{key}"] = vec
         record["default_detector"] = det
+    if equivalence_rel is not None:
+        add_equivalence(record, ref_mid[:, valid], n_dev, equivalence_rel, alpha)
     return record, arrays
 
 
