@@ -1,7 +1,7 @@
 # 文档入口
 
 **最高优先级入口：[阶段性总结与系统 prompt（2026-10-02）](stage_summary_20261002.md)。**
-**当前计划：[一套工具、两种模式、四份证据（2026-10-06）](plan_20261006.md)，取代阶段总结第 11 节。**
+**当前计划：[评价设计与工作计划（2026-10-06）](evaluation_plan_20261006.md)**（取代 [plan_20261006.md](plan_20261006.md) 未完成的部分）；成绩核账见 [status_ledger_20261006.md](status_ledger_20261006.md)。
 评价：[Benchmark](benchmark_20261006.md)。接入：[接入指南](binding_guide.md)、[外部接入试验协议](reuse_trial_protocol.md)。本轮进展：[执行进展](progress_20261006.md)、[工具改动 2026-10-06](tool_changes_20261006.md)（一个引擎、两种模式、命令行、回归比较）、[直接差分基线](baseline_direct_diff_20261006.md)（运行前的[预测](baseline_predictions_20261006.md)）、[问题登记](../bugs/README.md)。
 凡与它冲突的旧结论以它为准；下列文档是其证据与细节来源。运行环境见
 [environments.md](environments.md)；自动参照求值器（第 11 节步 1）在
