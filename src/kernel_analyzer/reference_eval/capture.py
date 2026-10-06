@@ -80,7 +80,12 @@ class CapturedLaunch:
         return out
 
 
+_LIBTRITON_DIGESTS: dict = {}
+
+
 def _libtriton_sha256() -> Optional[str]:
+    """SHA256 of the loaded libtriton; computed once per (path, size, mtime) and process -- hashing the library took
+    ~1.3 s per recorder, which dominated the capture time of small kernels."""
     try:
         import glob
 
@@ -89,11 +94,16 @@ def _libtriton_sha256() -> Optional[str]:
         paths = sorted(glob.glob(os.path.join(os.path.dirname(triton.__file__), "_C", "libtriton*.so")))
         if not paths:
             return None
+        st = os.stat(paths[0])
+        key = (paths[0], st.st_size, st.st_mtime_ns)
+        if key in _LIBTRITON_DIGESTS:
+            return _LIBTRITON_DIGESTS[key]
         digest = hashlib.sha256()
         with open(paths[0], "rb") as handle:
             for chunk in iter(lambda: handle.read(1 << 20), b""):
                 digest.update(chunk)
-        return digest.hexdigest()
+        _LIBTRITON_DIGESTS[key] = digest.hexdigest()
+        return _LIBTRITON_DIGESTS[key]
     except Exception:  # pragma: no cover - recorded as unknown
         return None
 

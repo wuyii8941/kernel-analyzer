@@ -3,7 +3,10 @@
 declared effect structures, through the production decision layer (analysis.assess_units).
 
 Residuals e[u, j] = b * s_j(u) + sigma * eps[u, j] (sigma = 1) on d coordinates, 96 units (32 development, 64
-confirmation), reference r[u, j] = 3 + N(0, 1):
+confirmation), reference r[u, j] = 3 + N(0, 1) (``--reference positive``) or 3 N(0, 1) (``--reference mixed``).  With
+the positive reference -sign(r) is -1 almost everywhere, so toward_zero coincides with a uniform negative shift and
+R1, R2, R3 cannot be told apart; the mixed reference separates them (uniform: no alignment with the reference;
+toward_zero: zero coordinate mean):
   uniform        s_j = 1 for every coordinate (target of R1, the fixed -1/sqrt(n) direction)
   toward_zero    s_j = -sign(r[u, j]) (shrinkage; target of R2 / R3)
   fixed_random   s_j = a random +-1 pattern fixed across units (no declared rule targets it; R5 learns it)
@@ -11,6 +14,7 @@ The effect is reported as theta = b * sqrt(d) / sigma, the mean of the projectio
 units of its per-unit noise; with 64 confirmation units a t test has ~50% power near theta = 0.25.
 
     python scripts/sensitivity_curves.py --reps 200 --out results/reference_eval/sensitivity_curves.json
+    python scripts/sensitivity_curves.py --reps 200 --reference mixed --out results/reference_eval/sensitivity_curves_mixed.json
 """
 import argparse
 import json
@@ -32,6 +36,7 @@ def main():
     ap.add_argument("--reps", type=int, default=200)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", type=Path, default=ROOT / "results/reference_eval/sensitivity_curves.json")
+    ap.add_argument("--reference", choices=("positive", "mixed"), default="positive")
     a = ap.parse_args()
     rng = np.random.default_rng(a.seed)
     rows = []
@@ -42,7 +47,7 @@ def main():
                 b = theta / np.sqrt(d)
                 hits = {r: 0 for r in RULES}
                 for _ in range(a.reps):
-                    ref = 3.0 + rng.normal(size=(96, d))
+                    ref = (3.0 + rng.normal(size=(96, d))) if a.reference == "positive" else 3.0 * rng.normal(size=(96, d))
                     if structure == "uniform":
                         s = np.ones((96, d))
                     elif structure == "toward_zero":
@@ -59,7 +64,7 @@ def main():
                     fh.write(json.dumps(rows[-1]) + "\n")
                 print(f"{structure:12s} d={d:5d} theta={theta:4.2f} " + " ".join(f"{k}={v / a.reps:.2f}" for k, v in hits.items()),
                       flush=True)
-    a.out.write_text(json.dumps({"reps": a.reps, "units": {"development": 32, "confirmation": 64}, "rules": RULES,
+    a.out.write_text(json.dumps({"reps": a.reps, "reference": a.reference, "units": {"development": 32, "confirmation": 64}, "rules": RULES,
                                  "alpha_per_test": 0.05, "multiplicity": "none (per test)", "rows": rows}, indent=1))
 
 

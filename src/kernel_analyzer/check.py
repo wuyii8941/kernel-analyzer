@@ -161,7 +161,10 @@ def torch_intermediates(launches, seq, inp):
     return {k: sorted(v) for k, v in deps.items()}
 
 
-def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
+def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_rel=None):
+    """One case through mode A or B.  ``keep``: a dict that receives, per output and seed, the reference interval
+    and K in the output's logical element order (for independent recomputation of K_R); ``equivalence_rel``: passed
+    to the decision layer (the equivalence axis next to each nonzero verdict)."""
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.set_float32_matmul_precision("highest")
     import torch._inductor.config as inductor_config
@@ -312,6 +315,10 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
                 special_agree = decided & (f_cls > 0) & (kr_cls == f_cls)
             else:
                 special_agree = decided & (kr_cls > 0) & (k_cls == kr_cls)
+            if keep is not None:
+                keep.setdefault(name, []).append({"seed": seed, "r_lo": frame(r_lo), "r_hi": frame(r_hi),
+                                                  "k": frame(np.asarray(k, dtype=np.float64)), "ok": frame(ok_e, False),
+                                                  "shape": tuple(out.shape)})
             per.setdefault(name, []).append({
                 "n": (frame(n_lo), frame(n_hi)), "s": (frame(s_lo), frame(s_hi)) if has_f else None,
                 "kr": frame(0.5 * (r_lo + r_hi)), "k": frame(np.asarray(k, dtype=np.float64)),
@@ -354,7 +361,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
             hi = np.stack([p[key][1] for p in rows])
             t_phase = time.time()
             rec, _ = assess_units(f"{name}: {label}", lo, hi, kr, ok, n_dev, RULES, alignment_reference=kr,
-                                  unit_ids=list(dev) + list(conf))
+                                  unit_ids=list(dev) + list(conf), equivalence_rel=equivalence_rel)
             timing["statistics"] += time.time() - t_phase
             mid = 0.5 * (lo + hi)
             if ok.any():
@@ -402,6 +409,68 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto"):
         report["outputs"][name] = entry
     # cost by phase (evaluation plan, work item H): compile / warm-up, input generation, capture (the launches under
     # the recorder), reference (TTIR evaluation), specification, statistics; "seconds" keeps its old meaning
+    report["timing_seconds"] = {k: round(v, 3) for k, v in timing.items()}
+    return report
+
+
+def run_black_box(case, dev=DEV, conf=CONF, equivalence_rel=None):
+    """Black-box mode (evaluation plan, work item C) for implementations without TTIR (NumPy, CUDA, cuBLAS): the
+    specification is the only reference, so only the total K - f is measured, through the same decision layer.
+    No decomposition into e_num and e_sem; reported separately from the decomposed results."""
+    timing = {"setup_compile_warmup": 0.0, "inputs": 0.0, "call": 0.0, "specification": 0.0, "statistics": 0.0}
+    t_phase = time.time()
+    case.setup()
+    timing["setup_compile_warmup"] = time.time() - t_phase
+    rows, special = {}, {}
+    t0 = time.time()
+    for seed in list(dev) + list(conf):
+        t_phase = time.time()
+        inp = case.inputs(seed)
+        timing["inputs"] += time.time() - t_phase
+        t_phase = time.time()
+        outs = case.launch(inp)
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        timing["call"] += time.time() - t_phase
+        t_phase = time.time()
+        specs = case.spec(inp)
+        timing["specification"] += time.time() - t_phase
+        if specs is None:
+            raise ValueError("black-box mode needs spec(inputs): the specification is the only reference")
+        for name, out in outs.items():
+            k = (out.detach().cpu().double().numpy() if torch.is_tensor(out) else np.asarray(out, np.float64)).reshape(-1)
+            f_lo, f_hi = (np.asarray(a, dtype=np.float64).reshape(-1) for a in specs[name])
+            lo, hi = residual_interval(k, f_lo, f_hi)
+            f_fin = np.isfinite(f_lo) & np.isfinite(f_hi)
+            ok = f_fin & np.isfinite(k)
+            sv = special.setdefault(name, {"elements_with_special_f": 0, "k_vs_f_class_mismatch": 0})
+            sv["elements_with_special_f"] += int((~f_fin).sum())
+            f_cls = np.where(np.isnan(f_lo), 1, np.where(f_lo == np.inf, 2, np.where(f_hi == -np.inf, 3, 0)))
+            k_cls = np.where(np.isnan(k), 1, np.where(k == np.inf, 2, np.where(k == -np.inf, 3, 0)))
+            sv["k_vs_f_class_mismatch"] += int((f_cls != k_cls).sum())
+            rows.setdefault(name, []).append((np.where(ok, lo, 0.0), np.where(ok, hi, 0.0),
+                                              np.where(f_fin, 0.5 * (f_lo + f_hi), 0.0), ok, tuple(np.shape(out))))
+    n_dev = len(list(dev))
+    report = {"case": case.name, "mode": "black-box", "implementation": case.implementation,
+              "specification": case.specification, "spec_bound": case.spec_bound,
+              "comparison": "K - f only (no TTIR: no reference K_R, no decomposition)",
+              "seeds": {"development": [list(dev)[0], list(dev)[-1]], "confirmation": [list(conf)[0], list(conf)[-1]]},
+              "seconds": round(time.time() - t0, 1), "outputs": {}}
+    for name, r in rows.items():
+        lo, hi, fm, ok = (np.stack([x[i] for x in r]) for i in range(4))
+        t_phase = time.time()
+        rec, _ = assess_units(f"{name}: K - f (black box)", lo, hi, fm, ok, n_dev, RULES, alignment_reference=fm,
+                              unit_ids=list(dev) + list(conf), equivalence_rel=equivalence_rel)
+        timing["statistics"] += time.time() - t_phase
+        mid = 0.5 * (lo + hi)
+        if ok.any():
+            rec["scale"] = {"mean_abs_residual": float(np.abs(mid[ok]).mean()),
+                            "max_abs_residual": float(np.abs(mid[ok]).max()),
+                            "rms_reference": float(np.sqrt((fm[ok] ** 2).mean())),
+                            "relative_rms": float(np.sqrt((mid[ok] ** 2).mean() / max((fm[ok] ** 2).mean(), 1e-300)))}
+        report["outputs"][name] = {"elements_per_seed": int(ok.shape[1]), "shape": list(r[0][4]),
+                                   "finite_fraction": float(ok.mean()), "total_black_box": rec,
+                                   "special_values": special[name]}
     report["timing_seconds"] = {k: round(v, 3) for k, v in timing.items()}
     return report
 
