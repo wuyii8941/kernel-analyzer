@@ -1,3 +1,5 @@
+> **不提交（2026-10-06）**：上游已知（pytorch/pytorch#178871），修复 #179833 已于 2026-04-16 合入 main；nightly 2.15.0.dev20260907 上两处机制的例子都已正确。保留本草稿仅作记录。
+
 # [inductor] scatter_add / index_add / index_put(accumulate) with a provably constant index give wrong results on CUDA (unmasked atomic_add; reader fused before the atomics)
 
 ### 🐛 Describe the bug

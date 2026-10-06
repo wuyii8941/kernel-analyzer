@@ -90,8 +90,8 @@ python scripts/run_detection.py --binding binding.py --units 128 --out report.js
   （[结果](docs/external_eval_results_20261006.md)）。Unsloth 14 个 Triton 入口参照 31/31 完整、无规格差异；经 Holm
   确认的 bf16 平均作用都来自中间转换或运算次序，机制已逐位核实（[结果](docs/unfamiliar_subset_results_20261006.md)）。
   逐层表、诊断对照、同等预算比较与统一普查见[成绩核账](docs/status_ledger_20261006.md)。
-- 真实问题：B012（RAdam 整流判据）、B015（avg_pool3d 反向）、B016（Inductor 常量下标的 scatter）、B017（Dynamo 对
-  图内函数只按代码对象守卫）由工具筛查先报警；B013（vLLM 滑窗）读代码后由工具确认。直接差分基线表明 OpInfo 上的
+- 真实问题：B012（RAdam 整流判据）、B015（avg_pool3d 反向）、B017（Dynamo 对图内函数只按代码对象守卫）由工具筛查
+  先报警；B016（Inductor 常量下标的 scatter）同样由工具先报警，但复查发现上游已知（pytorch#178871）、main 已修；B013（vLLM 滑窗）读代码后由工具确认。直接差分基线表明 OpInfo 上的
   发现主要来自用例覆盖。还没有经训练对照证实的训练质量影响。
 - 接口整合的回归：代表性 15 个用例，重构前后 0 处判定变化（`docs/tool_changes_20261006.md` 第 3 节）。
 - 局限：区间依赖问题会让少量离散判定成为参照未建立；逐 program 求值较慢；kernel 内部中间值不可观测，

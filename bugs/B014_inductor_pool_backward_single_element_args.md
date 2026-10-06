@@ -45,4 +45,5 @@ max_pool1d 等只跑第一个样例（`inductor_one_sample["cuda"]`），所以�
   训练编译直接失败，不会给出错误结果。
 - 检索 pytorch/pytorch issue（avg_pool2d_backward / max_pool2d_with_indices_backward LoweringException、
   pad_listlike）：未见报告。
+- nightly 实测（2026-10-06，2.15.0.dev20260907+cu126，CUDA）：`max_pool2d` 的两种单元素写法已通过（前向与梯度与 eager 相同，修复来源未查）；`avg_pool2d`（两种写法）与 `avg_pool3d` 仍然 `LoweringException: AssertionError`。GitHub 检索（2026-10-06，API）仍未见报告。
 - 修法：三个反向 lowering 开头对 kernel_size / stride / padding（/ dilation）调用 `pad_listlike`，与前向一致。

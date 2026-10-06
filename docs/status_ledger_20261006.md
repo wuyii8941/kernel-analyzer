@@ -32,6 +32,6 @@
 | 25 | 普查统一报告 | RQ5 | 已完成且有报告 | `docs/census_unified_20261006.md`；`results/tool_spec/final/summary.{md,json}` |
 | 26 | 成本：分段计时（含捕获开销修正）；同等预算下的比较 | RQ1、RQ5 | 已完成且有报告 | `docs/cost_equal_budget_20261006.md`；`results/external/gpuemu/equal_budget.json` |
 | 27 | 外部接入试验（未参与开发的人按指南接入） | RQ5 | 尚未运行（需要外部人员） | `docs/reuse_trial_protocol.md` |
-| 28 | 上游提交 B012、B016、B017、B018 | RQ5 | 尚未运行（草稿待用户提交） | `bugs/upstream_drafts/` |
+| 28 | 上游提交 B012、B017、B018（B016 经复查为上游已知、main 已修，撤回） | RQ5 | 尚未运行（草稿待用户提交） | `bugs/upstream_drafts/`；`bugs/README.md` |
 
 注：盲测揭盲后，v1、v2 只作回归集；之后的泛化成绩只来自外部语料与陌生组合。

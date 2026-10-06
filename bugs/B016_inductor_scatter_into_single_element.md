@@ -119,9 +119,17 @@ TTIR 里那条原子写本来就没有掩码，K_R 如实算进了填充通道�
 
 ## 状态
 
-检索 pytorch/pytorch issue（scatter_add size 1 compile、index_add single element inductor、atomic_add mask 等）未见
-报告；main 上 `TritonKernel.store` 的 atomic_add 分支仍直接用 `indexing.mask_str`。nightly 实测见
-`results/tool_spec/final/scatter1/B016_repro_output_nightly.txt`（若已生成）。
+**更正（2026-10-06 19:30）：上游已知且已在 main 修复，不作为新问题提交。** 此前的检索（scatter_add size 1 compile、
+index_add single element inductor、atomic_add mask 等关键词）漏掉了 pytorch/pytorch#178871（2026-03-31 报告：标量广播与
+scatter_add 融合时 `tl.atomic_add` 的 mask 为 None，误差恰为 (next_pow2(N) − N)·标量）；修复 PR #179833（提交
+7e9892106e，2026-04-16，在 2.10 发布之后）给 `indexing()` 加了强制掩码，`store()` 对 `atomic_add` 使用。此前写的
+「main 上 atomic_add 分支仍直接用 `indexing.mask_str`」来自较早的源码，不成立。
+
+nightly 实测（2.15.0.dev20260907+cu126，CUDA，`bugs/repro/B016_repro_inductor_scatter_size1_fusion.py`）：计数 5（2.10
+为 8）、index_add 5.5、单图 mean pool 与 eager 差 7.5·10⁻⁸、单元素 `scatter_reduce(mean)` 反向 [0.5, 0.5]（2.10 为
+[1.0, 1.0]）。生成代码：原子写带 `xmask`，读取者（clamp）在单独的 kernel 里——第 2 处机制在 nightly 上同样不再出现，
+是否由同一 PR 修复未查。受影响的是 2.10 及更早的发布版。工具在这一条上的检出与修复验证仍然成立（作为对已知问题的
+召回），但「上游未见报告」的说法撤回。
 
 修法：`store` 的 `atomic_add` 分支在下标不含迭代变量时用迭代掩码（或更一般地，原子写永远带迭代掩码）；调度器
 不应把读取 scatter（原子写）目标的节点融合进同一个 kernel，或者不应因为下标化简成常数就判定"同一下标"。
