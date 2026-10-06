@@ -81,31 +81,22 @@ def run_job(job):
     print(f"done {job['name']} s{job['seed']} {res['seconds']}s", flush=True)  # the loss is not printed (sealing)
 
 
-def single_step():
-    import numpy as np
-
+def single_step(only=None):
     import single_step as SS
     import small_lm as S
 
     (OUT / "single_step").mkdir(parents=True, exist_ok=True)
     for name, (kw, ref) in ITEMS.items():
         path = OUT / "single_step" / f"{name}.json"
-        if path.exists():
+        if path.exists() or (only and name not in only):
             continue
         S._COMPILED.clear()
         ck = [CKPT / f"{ref}_s0" / f"ckpt_{t:05d}.pt" for t in STATE_STEPS]
         ref_cfg = S.Config(**REFS[ref])
         cand_cfg = S.Config(**kw)
-        u, r, n_dev = SS.measure(ck, ref_cfg, cand_cfg)
-        eff = SS.effects(u, r, n_dev)
-        from kernel_analyzer.reference_eval.analysis import assess_units
-
-        units = u.shape[0]
-        rec, _ = assess_units(f"{name}: u at the update layer", u, u, r, np.ones_like(u, dtype=bool), n_dev,
-                              ["R1", "R2", "R3", "R5"], alignment_reference=r, run_detector=False,
-                              unit_ids=list(range(units)))
-        eff["rules"] = [{k: x.get(k) for k in ("rule", "verdict", "mean_projection", "p_value_two_sided_conservative",
-                                                 "unit_skewness", "t_approximation")} for x in rec["rules"]]
+        rows, n_dev, extra = SS.measure(ck, ref_cfg, cand_cfg)
+        eff = SS.effects(rows, n_dev, extra)
+        units = len(rows)
         eff.update(item=name, reference=ref, config=kw, states=list(STATE_STEPS), units=units, development=n_dev)
         path.write_text(json.dumps(eff, indent=1, default=float) + "\n")
         print(f"single-step {name}: gamma {eff['gamma']['mean']:.3e} [{eff['gamma']['lo']:.3e}, {eff['gamma']['hi']:.3e}] "
@@ -119,6 +110,7 @@ def main():
     ap.add_argument("--phase", default="b1")
     ap.add_argument("--worker", type=int, default=0)
     ap.add_argument("--workers", type=int, default=1)
+    ap.add_argument("--items", default="", help="single-step: comma-separated items (default all)")
     a = ap.parse_args()
     if a.command == "list":
         for j in jobs(a.phase):
@@ -126,7 +118,7 @@ def main():
         return
     if a.command == "single-step":
         sys.path.insert(0, str(ROOT / "src"))
-        single_step()
+        single_step(set(filter(None, a.items.split(","))))
         return
     if a.phase == "b3" and not (OUT / "predictions.json").exists():
         raise SystemExit("predictions.json must be committed before the replacement trainings (protocol section 6)")
