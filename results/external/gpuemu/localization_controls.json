@@ -1,0 +1,366 @@
+{
+ "sigmoid_triton": {
+  "condition": "B2_S7_H256",
+  "seeds": [
+   32,
+   47
+  ],
+  "verified_elements_per_seed": {
+   "out_ptr": 3584
+  },
+  "nodes": [
+   {
+    "node": "arith.divf@19",
+    "lowering": "oracle",
+    "text": "%y_9 = arith.divf %cst, %y_8 : tensor<1024xf32>",
+    "aligned_relative": -6.691198408259367e-09,
+    "se": 1.2717795633527223e-10
+   },
+   {
+    "node": "math.exp@17",
+    "lowering": "oracle",
+    "text": "%y_7 = math.exp %y : tensor<1024xf32>",
+    "aligned_relative": 6.704926778459589e-10,
+    "se": 8.882305403762873e-11
+   },
+   {
+    "node": "arith.addf@18",
+    "lowering": "oracle_group",
+    "text": "%y_8 = arith.addf %y_7, %cst : tensor<1024xf32>",
+    "aligned_relative": -1.8717953263369783e-10,
+    "se": 1.765281409754993e-10
+   },
+   {
+    "node": "arith.subf@16",
+    "lowering": "ieee",
+    "text": "%y = arith.subf %cst_0, %x_6 : tensor<1024xf32>",
+    "aligned_relative": 0.0,
+    "se": 0.0
+   }
+  ]
+ },
+ "l2norm_triton": {
+  "condition": "B2_S7_H256",
+  "seeds": [
+   32,
+   47
+  ],
+  "verified_elements_per_seed": {
+   "out_ptr": 3584
+  },
+  "nodes": [
+   {
+    "node": "arith.divf@23",
+    "lowering": "oracle",
+    "text": "%inv_8 = arith.divf %cst, %inv_7 : f32",
+    "aligned_relative": 6.953655768769313e-09,
+    "se": 2.0887958204784215e-09
+   },
+   {
+    "node": "math.sqrt@22",
+    "lowering": "oracle",
+    "text": "%inv_7 = math.sqrt %inv : f32",
+    "aligned_relative": 5.254767688040552e-09,
+    "se": 1.9514246821046168e-09
+   },
+   {
+    "node": "tt.reduce@16",
+    "lowering": "reduce_tree_fused",
+    "text": "%sum_sq = \"tt.reduce\"(%sq) <{axis = 0 : i32}> ({",
+    "aligned_relative": -2.296412351610908e-09,
+    "se": 2.5337498067811843e-09
+   },
+   {
+    "node": "arith.mulf@15",
+    "lowering": "ieee",
+    "text": "%sq = arith.mulf %x_6, %x_6 : tensor<256xf32>",
+    "aligned_relative": 1.1073239433722998e-09,
+    "se": 1.2823913583925319e-09
+   },
+   {
+    "node": "arith.mulf@25",
+    "lowering": "ieee",
+    "text": "%y_9 = arith.mulf %x_6, %y : tensor<256xf32>",
+    "aligned_relative": -3.290195784816729e-11,
+    "se": 1.5035361384477608e-10
+   },
+   {
+    "node": "arith.addf@21",
+    "lowering": "ieee",
+    "text": "%inv = arith.addf %sum_sq, %cst_0 : f32",
+    "aligned_relative": 0.0,
+    "se": 0.0
+   }
+  ]
+ },
+ "silu_triton": {
+  "condition": "B2_S7_H256",
+  "seeds": [
+   32,
+   47
+  ],
+  "verified_elements_per_seed": {
+   "out_ptr": 3584
+  },
+  "nodes": [
+   {
+    "node": "arith.divf@19",
+    "lowering": "oracle",
+    "text": "%sig_9 = arith.divf %cst, %sig_8 : tensor<1024xf32>",
+    "aligned_relative": -1.1023952612250766e-08,
+    "se": 2.8684764560077234e-10
+   },
+   {
+    "node": "arith.mulf@20",
+    "lowering": "ieee",
+    "text": "%y = arith.mulf %x_6, %sig_9 : tensor<1024xf32>",
+    "aligned_relative": 7.501949131554236e-10,
+    "se": 2.526528515447772e-10
+   },
+   {
+    "node": "arith.addf@18",
+    "lowering": "oracle_group",
+    "text": "%sig_8 = arith.addf %sig_7, %cst : tensor<1024xf32>",
+    "aligned_relative": 4.512022394029068e-10,
+    "se": 4.13180329124083e-10
+   },
+   {
+    "node": "math.exp@17",
+    "lowering": "oracle",
+    "text": "%sig_7 = math.exp %sig : tensor<1024xf32>",
+    "aligned_relative": -3.372023137862038e-11,
+    "se": 3.446391756562529e-11
+   },
+   {
+    "node": "arith.subf@16",
+    "lowering": "ieee",
+    "text": "%sig = arith.subf %cst_0, %x_6 : tensor<1024xf32>",
+    "aligned_relative": 0.0,
+    "se": 0.0
+   }
+  ]
+ },
+ "tanh_triton": {
+  "condition": "B2_S7_H256",
+  "seeds": [
+   32,
+   47
+  ],
+  "verified_elements_per_seed": {
+   "out_ptr": 3584
+  },
+  "nodes": [
+   {
+    "node": "math.exp@23",
+    "lowering": "oracle",
+    "text": "%y_11 = math.exp %y : tensor<1024xf32>",
+    "aligned_relative": 1.4244270421087598e-10,
+    "se": 3.6408136298346486e-11
+   },
+   {
+    "node": "arith.divf@25",
+    "lowering": "oracle",
+    "text": "%y_13 = arith.divf %cst, %y_12 : tensor<1024xf32>",
+    "aligned_relative": -1.0801610339957939e-10,
+    "se": 3.787740226624271e-11
+   },
+   {
+    "node": "arith.addf@24",
+    "lowering": "oracle_group",
+    "text": "%y_12 = arith.addf %y_11, %cst_0 : tensor<1024xf32>",
+    "aligned_relative": 1.7609106879608753e-12,
+    "se": 8.26472059188571e-12
+   },
+   {
+    "node": "arith.subf@19",
+    "lowering": "ieee",
+    "text": "%ax_8 = arith.subf %cst_1, %x_7 : tensor<1024xf32>",
+    "aligned_relative": 0.0,
+    "se": 0.0
+   },
+   {
+    "node": "arith.mulf@22",
+    "lowering": "ieee",
+    "text": "%y = arith.mulf %ax_9, %cst : tensor<1024xf32>",
+    "aligned_relative": 0.0,
+    "se": 0.0
+   },
+   {
+    "node": "arith.subf@26",
+    "lowering": "oracle_group",
+    "text": "%y_14 = arith.subf %cst_0, %y_13 : tensor<1024xf32>",
+    "aligned_relative": 0.0,
+    "se": 0.0
+   },
+   {
+    "node": "arith.mulf@27",
+    "lowering": "ieee",
+    "text": "%y_15 = arith.mulf %sign_10, %y_14 : tensor<1024xf32>",
+    "aligned_relative": 0.0,
+    "se": 0.0
+   }
+  ]
+ },
+ "elu_triton": {
+  "condition": "B2_S7_H256",
+  "seeds": [
+   32,
+   47
+  ],
+  "verified_elements_per_seed": {
+   "out_ptr": 3584
+  },
+  "nodes": [
+   {
+    "node": "math.exp@16",
+    "lowering": "oracle",
+    "text": "%neg = math.exp %x_6 : tensor<1024xf32>",
+    "aligned_relative": 3.6557358096489004e-11,
+    "se": 1.5246509440182514e-12
+   },
+   {
+    "node": "arith.subf@17",
+    "lowering": "oracle_group",
+    "text": "%neg_7 = arith.subf %neg, %cst : tensor<1024xf32>",
+    "aligned_relative": -2.7369617320642257e-12,
+    "se": 2.095585130888904e-12
+   }
+  ]
+ },
+ "softmax_triton": {
+  "condition": "B2_S7_H256",
+  "seeds": [
+   32,
+   47
+  ],
+  "verified_elements_per_seed": {
+   "out_ptr": 3584
+  },
+  "nodes": [
+   {
+    "node": "arith.divf@27",
+    "lowering": "oracle",
+    "text": "%y_10 = arith.divf %e, %y_9 : tensor<256xf32>",
+    "aligned_relative": 5.7305834524831976e-09,
+    "se": 2.014342659205292e-09
+   },
+   {
+    "node": "tt.reduce@21",
+    "lowering": "reduce_tree",
+    "text": "%y = \"tt.reduce\"(%e) <{axis = 0 : i32}> ({",
+    "aligned_relative": 1.8415612174775984e-09,
+    "se": 2.4430687713636432e-09
+   },
+   {
+    "node": "arith.subf@19",
+    "lowering": "ieee",
+    "text": "%x_8 = arith.subf %x_5, %x_7 : tensor<256xf32>",
+    "aligned_relative": -8.980151404422491e-10,
+    "se": 6.141184450946526e-10
+   },
+   {
+    "node": "math.exp@20",
+    "lowering": "oracle",
+    "text": "%e = math.exp %x_8 : tensor<256xf32>",
+    "aligned_relative": -1.4152378617501063e-10,
+    "se": 3.390396901471786e-09
+   }
+  ]
+ },
+ "gelu_triton": {
+  "condition": "B2_S7_H256",
+  "seeds": [
+   32,
+   47
+  ],
+  "verified_elements_per_seed": {
+   "out_ptr": 3584
+  },
+  "nodes": [
+   {
+    "node": "arith.subf@34",
+    "lowering": "oracle_group",
+    "text": "%th_20 = arith.subf %cst_0, %th_19 : tensor<1024xf32>",
+    "aligned_relative": 3.951390685869451e-10,
+    "se": 4.964822271500373e-11
+   },
+   {
+    "node": "arith.mulf@38",
+    "lowering": "ieee",
+    "text": "%y_24 = arith.mulf %y_22, %y_23 : tensor<1024xf32>",
+    "aligned_relative": -1.644998955204265e-10,
+    "se": 3.8597239190445764e-11
+   },
+   {
+    "node": "arith.addf@37",
+    "lowering": "fma_contraction",
+    "text": "%y_23 = arith.addf %th_21, %cst_0 : tensor<1024xf32>",
+    "aligned_relative": 2.8216910351510363e-11,
+    "se": 4.89099693021619e-11
+   },
+   {
+    "node": "math.exp@31",
+    "lowering": "oracle",
+    "text": "%th_17 = math.exp %th : tensor<1024xf32>",
+    "aligned_relative": -7.037873686941047e-12,
+    "se": 3.593617652641732e-12
+   },
+   {
+    "node": "arith.addf@24",
+    "lowering": "fma_contraction",
+    "text": "%inner_12 = arith.addf %x_8, %inner_11 : tensor<1024xf32>",
+    "aligned_relative": 3.4016635198036594e-12,
+    "se": 3.5356541239302557e-12
+   },
+   {
+    "node": "arith.divf@33",
+    "lowering": "oracle",
+    "text": "%th_19 = arith.divf %cst, %th_18 : tensor<1024xf32>",
+    "aligned_relative": -1.1773205494383589e-12,
+    "se": 2.7135936387490646e-12
+   },
+   {
+    "node": "arith.mulf@21",
+    "lowering": "ieee",
+    "text": "%inner_9 = arith.mulf %x_8, %inner_1 : tensor<1024xf32>",
+    "aligned_relative": -7.077078623910965e-13,
+    "se": 1.4455700786462018e-12
+   },
+   {
+    "node": "arith.addf@32",
+    "lowering": "oracle_group",
+    "text": "%th_18 = arith.addf %th_17, %cst_0 : tensor<1024xf32>",
+    "aligned_relative": -3.2958653403943097e-13,
+    "se": 2.896451112123134e-13
+   },
+   {
+    "node": "arith.mulf@22",
+    "lowering": "ieee",
+    "text": "%inner_10 = arith.mulf %inner_9, %x_8 : tensor<1024xf32>",
+    "aligned_relative": 1.8861680768306697e-13,
+    "se": 1.2823943381765512e-12
+   },
+   {
+    "node": "arith.subf@27",
+    "lowering": "fma_contraction",
+    "text": "%abs_inner_14 = arith.subf %cst_2, %inner_13 : tensor<1024xf",
+    "aligned_relative": 0.0,
+    "se": 0.0
+   },
+   {
+    "node": "arith.mulf@30",
+    "lowering": "ieee",
+    "text": "%th = arith.mulf %abs_inner_15, %cst : tensor<1024xf32>",
+    "aligned_relative": 0.0,
+    "se": 0.0
+   },
+   {
+    "node": "arith.mulf@36",
+    "lowering": "ieee",
+    "text": "%y_22 = arith.mulf %x_8, %y : tensor<1024xf32>",
+    "aligned_relative": 0.0,
+    "se": 0.0
+   }
+  ]
+ }
+}
