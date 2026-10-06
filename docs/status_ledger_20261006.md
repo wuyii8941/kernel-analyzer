@@ -27,11 +27,17 @@
 | 20 | 陌生组合子集（Unsloth 14 个入口，bf16）：32 个输出中 31 个进入评价（U11 的 loss 被 torch 后改，不评），参照全部完整；无规格差异；经 Holm 确认的平均作用全部为实现特有，bf16 上的作用全部由中间 bf16 舍入解释（RoPE 逐位核实，其余模拟定量复现） | RQ1、RQ3 | 已完成且有报告 | `docs/unfamiliar_subset_results_20261006.md`；`results/external/unsloth*`（协议偏离 3 条）；softcap loss（fp32）的机制待核实 |
 | 21 | 等价轴两项校准；敏感性曲线（正参照与正负混合参照） | RQ3、RQ4 | 已完成且有报告 | `docs/statistics_calibration_20261006.md`；`results/reference_eval/calibration_equivalence.json`、`sensitivity_curves*.json`；δ 取值待确认 |
 | 22 | 真实场景的逐层表（编译后的 HF RMSNorm：输出、梯度、SGD / AdamW 理想响应与实际写入） | RQ4 | 已完成且有报告 | `docs/layer_table_results_20261006.md`；`results/reference_eval/layer_table/`（含 L1/L2 的核内定位） |
-| 23 | FPCore 交叉复算：56 个片段、9,120 个元素，0 违反（titanfp，MPFR 241 位） | RQ1 | 已完成且有报告 | `results/fpcore/`；`scripts/fpcore_crosscheck.py` |
+| 23 | 独立交叉核验（带声明余量）：NumPy 696,816 个元素、FPCore 9,120 个元素，均无超出余量的差异；严格包围验证（无余量，mpmath 区间算术，不经 TTIR 解析器）：9,120/9,120 在 K_R 之内 | RQ1 | 已完成且有报告 | `results/external/gpuemu/declared_check*.jsonl`；`results/fpcore/summary.json`、`results/fpcore/strict_enclosure.json`；`scripts/fpcore_crosscheck.py`、`scripts/strict_enclosure_check.py` |
 | 24 | 诊断收益对照（B016、B012 上工具与直接差分） | RQ5 | 已完成且有报告 | `docs/diagnosis_comparison_20261006.md` |
 | 25 | 普查统一报告 | RQ5 | 已完成且有报告 | `docs/census_unified_20261006.md`；`results/tool_spec/final/summary.{md,json}` |
 | 26 | 成本：分段计时（含捕获开销修正）；同等预算下的比较 | RQ1、RQ5 | 已完成且有报告 | `docs/cost_equal_budget_20261006.md`；`results/external/gpuemu/equal_budget.json` |
 | 27 | 外部接入试验（未参与开发的人按指南接入） | RQ5 | 尚未运行（需要外部人员） | `docs/reuse_trial_protocol.md` |
 | 28 | 上游提交 B012、B017、B018（B016 经复查为上游已知、main 已修，撤回） | RQ5 | 尚未运行（草稿待用户提交） | `bugs/upstream_drafts/`；`bugs/README.md` |
+
+| 29 | 等价判定的零方差保护（与非零检验共用退化处理）与 CPU 回归；已存 6,359 条等价记录按新规则复算，173 条改为未建立 | RQ3 | 已完成且有报告 | `src/kernel_analyzer/reference_eval/analysis.py`（`_sample_guard`）；`tests/test_reference_eval_equivalence.py`；`results/reference_eval/equivalence_zero_variance_recheck.json` |
+| 30 | 逐层表实际写入在 CUDA `foreach` 与 `fused` 路径上的重放（同一批梯度与状态） | RQ4 | 已完成且有报告 | `results/reference_eval/layer_table/cuda_replay.json`；`docs/layer_table_results_20261006.md` |
+| 31 | 外部接入试验 | RQ5 | 尚未运行：需要未参与开发的人；找不到时写入局限，不用作者代替 | `docs/reuse_trial_protocol.md` |
+
+阶段 A 的审计项（`docs/next_phase_plan_20261006.md` 第 1 节）：零方差保护（29）、偏斜失效范围（统计校准文档第 2 节）、RQ2 两栏与核验两栏（外部评价结果文档）、逐层表的设备与路径（30）、口径修正（外部评价、Unsloth、成本文档）已关闭；外部接入试验（31）未做。
 
 注：盲测揭盲后，v1、v2 只作回归集；之后的泛化成绩只来自外部语料与陌生组合。
