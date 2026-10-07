@@ -33,8 +33,25 @@ if (!include_self) {
 
 The `mean` branch of the same function already handles this (`N = include_self ? ones_like(grad) : zeros_like(grad)`). A fix would set `self_is_result` to 0 at the scattered positions when `include_self=False` before computing `N_to_distribute`.
 
+**gradcheck sees it** on such an input (it is a differentiable point):
+
+```
+torch.autograd.gradcheck(lambda a, b: a.scatter_reduce(0, idx, b, "amax", include_self=False), (s.double(), src.double()))
+# GradcheckError: Jacobian mismatch for output 0 with respect to input 1,
+# numerical: [[1., 0.], [0., 0.]]   analytical: [[0.5, 0.], [0., 0.]]
+```
+
 **Why tests do not see it.** The OpInfo sample inputs for `scatter_reduce` / `index_reduce` use continuous random tensors, so an excluded `self` essentially never equals the result, and gradcheck never reaches this case. It shows up with integer-valued or repeated data (counts, one-hot style features, `-inf`/`0` initialised buffers combined with clamped values, etc.).
 
 ### Versions
 
 torch 2.10.0+cu128 (CPU and CUDA); nightly 2.15.0.dev20261005+cpu and 2.15.0.dev20260907+cu126 reproduce; `FunctionsManual.cpp` on main unchanged as of 2026-10-07.
+
+<!-- search record (for the submitter, not part of the issue), 2026-10-07:
+1. issues/PRs: "scatter_reduce include_self amax gradient", "scatter_reduce include_self=False backward", "index_reduce amax backward",
+   "N_to_distribute", "scatter_reduce amax include_self tie": only #168358 (compiled NaN, closed) and PR #169263 (N_to_distribute == 0
+   -> NaN, closed without merge); neither covers an excluded self that equals the result.
+2. tests: OpInfo samples (continuous random values; prod has zero cases, amax/amin no tie cases); test_scatter_gather_ops.py
+   test_scatter_reduce_amax/_amin check forward values only; no amax/amin gradient test.
+3. recent PRs touching FunctionsManual.cpp scatter_reduce_backward / index_reduce_backward: none changing the amax/amin branch.
+4. nightly: 2.15.0.dev20261005+cpu and 2.15.0.dev20260907+cu126 reproduce; main unchanged. -->

@@ -13,6 +13,10 @@ y.backward(torch.ones_like(y))     # Assertion `index out of bounds: 0 <= ...` f
 
 Expected: `x.grad == 0` (no input is in any window), which is what eager and torch 2.10 Inductor return. The arguments are legal (`padding <= ((kernel_size - 1) * dilation + 1) / 2`). It also crashes with `return_indices=True`, and for inputs where a window's real values are all `-inf` next to padding.
 
+The same `-1` appears for a window whose real values are all `-inf` next to padding (e.g. `F.max_pool1d(x, 2, 2, 1,
+ceil_mode=True, return_indices=True)` on `x = [-inf, -inf, 2., 3.]`: eager returns index `0` for the first window, Inductor `-1`); on
+torch 2.10 that window's gradient is silently not routed, on nightly the backward crashes as above.
+
 **Cause.** The global decomposition `torch/_decomp/decompositions.py::max_pool2d_with_indices_backward` (used by Inductor unless deterministic algorithms are enabled) does
 
 ```python
@@ -24,3 +28,13 @@ with the indices from the forward. Inductor's forward stores `-1` for a window t
 ### Versions
 
 nightly 2.15.0.dev20260907+cu126 (CUDA); the decomposition body on main is identical as of 2026-10-07; torch 2.10.0 is not affected.
+
+<!-- search record (for the submitter), 2026-10-07:
+1. issues/PRs: "max_pool inductor device-side assert", "max_pool2d_with_indices_backward index out of bounds inductor", "max_pool -inf
+   padding indices -1", "max_pool2d_with_indices_backward scatter_add decomposition": nothing about -1 indices; the decomposition came
+   with the #167318 line (fixes #66042); #195124 (open) adds a non-overlapping fast path and does not handle -1.
+2. tests: OpInfo max_pool samples have no padding-only window (see the B021 draft); test_torchinductor_opinfo runs
+   max_pool2d_with_indices_backward on one sample only.
+3. recent PRs: #195124 (open), #195123 (issue, redundant computation) - neither addresses invalid indices.
+4. nightly: 2.15.0.dev20260907+cu126 (newest CUDA nightly runnable on driver 535) crashes; main's decomposition body is identical;
+   torch 2.10.0 is not affected. -->

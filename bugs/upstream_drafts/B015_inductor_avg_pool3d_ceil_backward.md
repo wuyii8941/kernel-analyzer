@@ -35,3 +35,10 @@ Relative gradient error of the compiled backward (aot_eager is exact in every ro
 
 So the fix needs the same clipped window size in `avg_pool3d_backward` as in `avg_pool2d_backward`. (The OpInfo
 samples hit this, but `test_torchinductor_opinfo.py` runs avg_pool1d/2d/3d on one sample only.)
+
+Still present on nightly 2.15.0.dev20260907+cu126 (CUDA): in a grid of 384 avg_pool conditions, the compiled backward follows the
+full-kernel divisor on all 22 overhanging `ceil_mode` + `count_include_pad` conditions - 14 1-d, 2 2-d and 6 3-d - while the compiled
+forward and eager use the clipped window; `torch.autograd.gradcheck` through the compiled function fails on all 22.
+
+<!-- search record (for the submitter), 2026-10-07: #198119 is the only report (open, 1d/2d, states 3d is right); no fix PR found;
+test_torchinductor_opinfo runs avg_pool1d/2d/3d on one sample; nightly 2.15.0.dev20260907 reproduces 1d/2d/3d. -->
