@@ -28,6 +28,7 @@ from .reference_eval.ttir_eval import ST_NINF, ST_OK, evaluate_sequence, ptx_zer
 from .reference_eval.ttir_mapping import kernel_coverage
 from .reference_eval.ttir_parser import parse_ttir
 
+TOOL_VERSION = "2.2"   # 2.2: output binding by storage identity (2.1: by address)
 DEV = list(range(0, 32))
 CONF = list(range(32, 96))
 RULES = ["R1", "R2", "R3", "R5"]
@@ -181,6 +182,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     timing["setup_compile_warmup"] = time.time() - t_phase
     per, coverage, launch_info = {}, None, None
     not_triton, modified_after, aborted_outputs, mixed_by_output = set(), set(), {}, {}
+    binding_unconfirmed, reused_address = set(), set()  # detector 2.2: output-to-producer binding by storage identity
     external = None
     mixed_sources = None
     special = {}
@@ -230,7 +232,21 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             for why in (r.aborted.values() if isinstance(r.aborted, dict) else r.aborted):
                 aborted[str(why)[:200]] = aborted.get(str(why)[:200], 0) + 1
         for name, out in outs.items():
-            buf = seq.memory.get(out.untyped_storage().data_ptr())
+            ptr = out.untyped_storage().data_ptr()
+            buf = seq.memory.get(ptr)
+            if buf is not None and buf.written.any():
+                # an address identifies a storage only while that storage lives: bind the output to the recorded
+                # writes only if it IS the recorded storage instance (detector 2.2)
+                ids = rec.storage_ids(ptr)
+                # identities (data address, StorageImpl address) are unique only among live storages: without the
+                # recorder's keep-alive a freed intermediate's addresses can both be reused, so nothing is provable
+                if not getattr(rec, "keep_storages", False) or not ids or None in ids:
+                    binding_unconfirmed.add(name)  # no binding claimed
+                    continue
+                if out.untyped_storage()._cdata not in ids:
+                    reused_address.add(name)       # another storage at a recorded address: not written by Triton
+                    not_triton.add(name)
+                    continue
             if buf is None or not buf.written.any():
                 if aborted and buf is not None:
                     aborted_outputs.setdefault(name, sorted(aborted)[:3])  # the writing programs aborted
@@ -335,7 +351,10 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
               "versions": {k: _version(k) for k in ("liger-kernel", "transformers", "torch", "triton")},
               "seeds": {"development": [list(dev)[0], list(dev)[-1]], "confirmation": [list(conf)[0], list(conf)[-1]]},
               "seconds": round(seconds, 1), "outputs": {},
+              "tool_version": TOOL_VERSION,
               "outputs_not_written_by_triton": sorted(not_triton),
+              "outputs_binding_not_established": sorted(binding_unconfirmed),
+              "outputs_at_address_of_another_recorded_storage": sorted(reused_address),
               "outputs_modified_after_last_triton_write": sorted(modified_after),
               "outputs_whose_writing_programs_aborted": aborted_outputs,
               "external_reentries_seed0": external,

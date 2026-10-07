@@ -44,6 +44,9 @@ class CapturedArg:
     data_ptr: Optional[int] = None
     storage_ptr: Optional[int] = None
     storage_nbytes: Optional[int] = None
+    # identity of the storage instance (StorageImpl), not just its address: a later tensor can reuse the address of a
+    # freed one, so output binding compares this (detector 2.2)
+    storage_id: Optional[int] = None
     before: Any = None  # CPU copy (uint8) of the storage, or of the window elements, before launch
     after: Any = None  # the same after launch
     window: Any = None  # storage-relative element indices of a windowed copy (None: whole storage)
@@ -159,11 +162,15 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
 
     def __init__(self, select: Callable[[str, int], bool] = lambda name, index: True,
                  copy_tensors: bool = True, max_launches: Optional[int] = None,
-                 window: Optional[Callable] = None, keep_kernel: bool = True):
+                 window: Optional[Callable] = None, keep_kernel: bool = True, keep_storages: bool = True):
         """``window(kernel_name, arg_name, tensor) -> element indices or None``.
 
         Returned indices are relative to the tensor's first element in its
         flattened (contiguous) layout; only those elements are copied.
+
+        ``keep_storages``: hold a reference to every storage a recorded launch touches until the recorder exits, so the
+        caching allocator cannot hand a freed intermediate's address to another tensor inside the recorded region
+        (an address then identifies one storage instance; ``storage_id`` makes the identity explicit).
         """
 
         self.select = select
@@ -174,6 +181,8 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
         self.launches: list[CapturedLaunch] = []
         self.implicit_tensors: list = []
         self.launch_count = 0
+        self.keep_storages = keep_storages
+        self._kept = []
         self._original = None
         self._inductor_static = None
         self._libtriton = _libtriton_sha256()
@@ -248,6 +257,7 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
 
     def __exit__(self, *exc):
         TritonLaunchRecorder._active = None
+        self._kept = []  # identities are recorded as integers; tensors created inside the region are already bound
         if self._installed_here:  # a hook installed by install_hook() beforehand stays
             TritonLaunchRecorder.remove_hook()
         if self._inductor_static is not None:
@@ -272,11 +282,14 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
             sig = signature.get(name)
             constexpr = sig == "constexpr"
             if isinstance(arg, torch.Tensor):
+                storage = arg.untyped_storage()
                 item = CapturedArg(
                     i, name, "tensor", constexpr, sig, dtype=str(arg.dtype).replace("torch.", ""),
                     shape=tuple(arg.shape), stride=tuple(arg.stride()), element_size=arg.element_size(),
-                    data_ptr=arg.data_ptr(), storage_ptr=arg.untyped_storage().data_ptr(),
-                    storage_nbytes=arg.untyped_storage().nbytes())
+                    data_ptr=arg.data_ptr(), storage_ptr=storage.data_ptr(),
+                    storage_nbytes=storage.nbytes(), storage_id=storage._cdata)
+                if self.keep_storages:
+                    self._kept.append(storage)
                 if self.copy_tensors:
                     indices = self.window(kernel.name, name, arg) if self.window is not None else None
                     if indices is None:
@@ -310,7 +323,9 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
             item = CapturedArg(-1 - j, f"implicit{j}", "tensor", False, None, dtype=str(t.dtype).replace("torch.", ""),
                                shape=tuple(t.shape), stride=tuple(t.stride()), element_size=t.element_size(),
                                data_ptr=t.data_ptr(), storage_ptr=t.untyped_storage().data_ptr(),
-                               storage_nbytes=t.untyped_storage().nbytes())
+                               storage_nbytes=t.untyped_storage().nbytes(), storage_id=t.untyped_storage()._cdata)
+            if self.keep_storages:
+                self._kept.append(t.untyped_storage())
             if self.copy_tensors:
                 item.before = _storage_copy(t)
             record.implicit.append(item)
@@ -321,6 +336,11 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
                           for k, v in (getattr(src, "constants", {}) or {}).items()],
         }
         return record
+
+    def storage_ids(self, storage_ptr: int) -> set:
+        """Identities of the storage instances recorded at ``storage_ptr`` (None among them: not recorded)."""
+        return {a.storage_id for launch in self.launches for a in list(launch.args) + list(launch.implicit)
+                if a.kind == "tensor" and a.storage_ptr == storage_ptr}
 
     def _after(self, record: CapturedLaunch, args):
         import torch
