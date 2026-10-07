@@ -82,13 +82,16 @@ def main():
                         fs["fr"][cand]["error"] += 1
                         continue
                     for name, o in fr["outputs"].items():
+                        if o.get("not_established"):
+                            fs["fr"][cand][f"{name}: not established (tool)"] += 1
+                            continue
                         if o["semantic_vs_main"] is None:
                             fs["fr"][cand][f"{name}: no spec value"] += 1
                         elif o["semantic_vs_main"]:
                             fs["fr"][cand][f"{name}: semantic vs main"] += 1
                         else:
                             fs["fr"][cand][f"{name}: no semantic difference vs main"] += 1
-                        if o["readings"].get(list(o["readings"])[0]) and o["readings"][list(o["readings"])[0]]["interface_elements"]:
+                        if o["readings"] and o["readings"].get(list(o["readings"])[0]) and o["readings"][list(o["readings"])[0]]["interface_elements"]:
                             fs["fr"][cand][f"{name}: interface/constant items"] += 1
                     for k in fr["notes"].get("outputs_not_written_by_triton") or []:
                         fs["fr"][cand][f"{k}: not written by Triton"] += 1

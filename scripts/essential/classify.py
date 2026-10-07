@@ -436,7 +436,15 @@ def fr_assess(family, cond, cand, fr, specs_f32):
         return {"status": "error", "reason": fr.get("reason")}
     rds = readings_of(family, cond)
     out = {"status": "ok", "notes": fr["notes"], "mixed": fr["mixed"], "outputs": {}}
+    modified = set(fr["notes"].get("outputs_modified_after_last_triton_write") or [])
     for name, per in fr["keep"].items():
+        # the tool flags outputs that a non-Triton op changed after the last Triton write (e.g. an ATen fallback writing
+        # at the address of a freed Triton intermediate): their K_R is not about the returned tensor
+        if name in modified or len(per) < len(R.C.SEEDS):
+            out["outputs"][name] = {"phase": PHASE[family].get(name), "semantic_vs_main": None, "readings": {},
+                                    "not_established": "tool: output modified after the last Triton write"
+                                    if name in modified else f"tool: {len(per)} of {len(R.C.SEEDS)} seeds"}
+            continue
         o = {"phase": PHASE[family].get(name), "seeds": len(per), "ok_elements": 0, "e_num_excludes_zero": 0,
              "readings": {}}
         for rd in rds:
