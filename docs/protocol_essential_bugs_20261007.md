@@ -169,3 +169,8 @@ label_smoothing 等标量用实际收到的值：ATen 收到 float64，Triton ke
    float64 / float32、eager CUDA float32（CE 另加 bfloat16）、Inductor CUDA float32（CE 另加 bfloat16，FR 组只有 Inductor）、
    nightly eager / Inductor CUDA float32。条件总数变为 1,652（CE 274、池化 776、index/scatter 602）× 3 seed；`conditions.py`
    不改动，运行时跳过 FLCE。W7 中 4.57.3 的测量只用到 `liger` 环境里已装的 transformers，与 Liger kernel 无关。
+6. **（任何候选测量之前）FR 组 e_sem 的计分细则与标量口径。** Inductor 把 label_smoothing 这类 Python 标量（或其折叠值，如
+   ε/C）作为 float32 常数写进生成的 Triton，K_R 按 kernel 实际的常数求值，所以 e_sem = K_R − f 可能因常数舍入而以约 10⁻¹⁰ 的
+   量级不含零。计分：e_sem 区间不含零且 |e_sem 中点| > 2⁻²⁰·(1 + |f|) 记为**语义差异**；不含零但不超过该界记为**接口 /
+   常数舍入项**（CE-A6 一栏），不计语义差异。规格的标量口径：eager 候选按 float64 收到的值，Inductor 候选按 float32(ε)；
+   F 组的 τ₃₂ 远大于这一差别。形状与参数完全相同的三个 seed 共用一次编译（Inductor 缓存在 `.cache/essential/inductor`）。
