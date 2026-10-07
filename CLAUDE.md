@@ -16,9 +16,12 @@
   triton 3.6.0、gmpy2、python-flint）。`liger` 等其他环境保留作测试与旧结果复现，
   清单见 `docs/environments.md`。旧测试套件仍在 `liger` 环境中跑。
 - 资源规则见 `docs/resource_policy.md`。
-- 按 `docs/next_phase_plan_20261006.md`（A 发布收尾、B 重要性标定、C 定向搜索、D 写作；M1–M4 的记录见
-  `docs/evaluation_plan_20261006.md`）推进，不在每一步之后征求确认；只有遇到无法自行解决的
-  问题才停下来询问。成绩只按三种状态写（`docs/status_ledger_20261006.md`）。盲测 v1、v2 已揭盲，只作回归集。
+- 当前任务：本质错误一轮（独立规格 vs eager 差分）。第一阶段按 `docs/protocol_essential_bugs_20261007.md`（结果冻结，
+  `results/essential/phase1/`）；第二阶段（2a 定向收尾、2b 搜索扩张）按 `docs/protocol_essential_bugs_phase2_20261007.md`。
+  独立规格（「DSL」的规格层）以 `specs/` 中最新入库的审阅版本为准（第一阶段三个切片为 `specs/phase1`，v0.4）；新家族的规格由
+  审阅方交付、入库后才开放 F 与模式 B 的 FR；执行方不改规格语义。此前的 `docs/next_phase_plan_20261006.md`（A–D）已完成，只作历史
+  记录。不在每一步之后征求确认；只有遇到无法自行解决的问题才停下来询问。成绩只按三种状态写（`docs/status_ledger_20261006.md`）。
+  盲测 v1、v2 已揭盲，只作回归集。
 - 自动参照 K_R 的代码在 `src/kernel_analyzer/reference_eval/`（解析、映射、区间求值、捕获、重放），
   说明与结果见 `docs/auto_reference_results_20261002.md`。需要 Liger/torchao/transformers 的捕获
   在 `liger` 环境跑（只依赖 `reference_eval.capture`），分析统一在 `ka_main` 跑。
