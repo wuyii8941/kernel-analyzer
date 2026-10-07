@@ -1,0 +1,33 @@
+  return s.index_reduce(0, idx, x, red, include_self=False)
+  return s.index_reduce(0, idx, x, red, include_self=False)
+torch 2.10.0+cu128
+cpu  scatter_reduce amax: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cpu  scatter_reduce amin: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cpu  index_reduce   amax: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cpu  index_reduce   amin: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cuda scatter_reduce amax: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cuda scatter_reduce amin: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cuda index_reduce   amax: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cuda index_reduce   amin: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+MISMATCHES: 8
+--- nightly CPU (2.15.0.dev20261005)
+  return s.index_reduce(0, idx, x, red, include_self=False)
+torch 2.15.0.dev20261005+cpu
+cpu  scatter_reduce amax: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cpu  scatter_reduce amin: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cpu  index_reduce   amax: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cpu  index_reduce   amin: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+MISMATCHES: 4
+--- nightly CUDA (2.15.0.dev20260907)
+  return s.index_reduce(0, idx, x, red, include_self=False)
+  return s.index_reduce(0, idx, x, red, include_self=False)
+torch 2.15.0.dev20260907+cu126
+cpu  scatter_reduce amax: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cpu  scatter_reduce amin: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cpu  index_reduce   amax: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cpu  index_reduce   amin: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cuda scatter_reduce amax: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cuda scatter_reduce amin: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cuda index_reduce   amax: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+cuda index_reduce   amin: autograd d out[0]/d src[0] = 0.5000, exact difference = 1.0000;  d out[0]/d self[0]: autograd 0.0000, difference 0.0000
+MISMATCHES: 8

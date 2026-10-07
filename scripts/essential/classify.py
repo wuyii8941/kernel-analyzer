@@ -166,7 +166,7 @@ def classify_one(family, cond, cand, raw, specs):
                 else:
                     srec["status"] = "ok"
                     per_reading, distinct = {}, False
-                    judged_any = False
+                    judged_any = compared_any = False
                     for rd in rds:
                         so = spec_outputs(family, cond, sp, rd)
                         if so is None:
@@ -178,6 +178,7 @@ def classify_one(family, cond, cand, raw, specs):
                                 continue
                             dev, judged = output_deviation(r["outputs"][n], so[n], dtype, exact)
                             judged_any |= bool(judged.any())
+                            compared_any = True
                             devs[n] = int(dev.sum())
                         per_reading[rd] = devs
                         if rd != rds[0] and so is not None:
@@ -192,11 +193,14 @@ def classify_one(family, cond, cand, raw, specs):
                     srec["deviations"] = per_reading
                     srec["readings_distinct"] = distinct
                     srec["judged"] = judged_any
+                    srec["compared"] = compared_any
             rec["seeds"].append(srec)
         oks = [s for s in rec["seeds"] if s["status"] == "ok"]
         statuses = sorted({s["status"] for s in rec["seeds"]})
         if not oks:
             rec["class"] = statuses[0] if len(statuses) == 1 else "mixed:" + ",".join(statuses)
+        elif not any(s.get("compared") for s in oks):
+            rec["class"] = "set_checks_only"             # no strict spec value (max-pool ties, NaN windows)
         elif not any(s["judged"] for s in oks):
             rec["class"] = "recorded_only"
             rec["max_deviating_elements_main"] = max(sum((s["deviations"].get(rds[0]) or {}).values()) for s in oks)
@@ -250,7 +254,7 @@ def combine(c, e, eref_class):
     def dev(x):
         return x.startswith(("deviates", "error_variant"))
     if not (c.startswith(("compatible", "deviates", "reading", "error_variant"))):
-        return c
+        return c                                         # recorded_only, set_checks_only, statuses
     if eref_class is None:
         return "eager_itself:" + c
     if not eref_class.startswith(("compatible", "deviates", "reading", "error_variant")):
