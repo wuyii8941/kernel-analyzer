@@ -70,6 +70,7 @@ OpInfo 的 max_pool 样例：kernel 3、padding ≤ 1、信号长度 3 和 6（2
   cpu out of bounds`、`max_pool gradient wrong channel` 等）：未见报告。相邻：PR #191920（开着，CUDA max_pool2d/3d 在超大 dilation
   下的越界**读**，循环计数溢出），不是本问题。
 - main 的 `MaxPoolKernel.cpp`：初值与反向检查未改。
-- nightly：CPU 2.15.0.dev20261005 复现；CUDA 3d 部分待最新 CUDA nightly 核对（cu126 通道的最新构建为 20260907）。
+- nightly：CPU 2.15.0.dev20261005 复现；CUDA 2.15.0.dev20260907（本机驱动 535 能运行的最新 CUDA nightly）复现 CPU 1d/2d/3d 与 CUDA 3d，
+  其中 CPU 3d 在 `MALLOC_CHECK_=3` 下以 `malloc(): memory corruption (fast)` 中止。
 - PyTorch 的 `SECURITY.md` 把「越界访问、崩溃」列为普通 bug，不走安全通告，所以草稿按普通 issue 写。
 - 状态：新问题候选；草稿 `bugs/upstream_drafts/B021_max_pool_empty_window_backward_oob.md`，是否提交由用户决定。
