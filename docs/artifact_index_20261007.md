@@ -18,6 +18,7 @@
 | 从作用到重要性（标定、预测、δ） | `docs/importance_calibration_protocol_20261006.md` | `scripts/importance/run.py work --phase b1/b3`；`run.py single-step`；`scripts/importance/analyze.py curves / predict / summary / figure` | `results/importance/{runs/, runs_sealed/, single_step/, curves.json, predictions.json, summary.json, calibration.png}` |
 | 第二规模的 ρ | 同上第 10 节 | `scripts/importance/scale_check.py train --ref R/Rp`；`measure`；`compare` | `results/importance/scale_check/` |
 | 定向搜索与深案例 | `docs/directed_search_protocol_20261007.md` | `scripts/importance/shadow.py --group ka/liger/muon/c4deep --seed 0/1`（liger 组用 liger 环境，再在 ka_main 中 `--effects`）；`--group c10`；`scripts/importance/ema_deep.py --seed 0..3`；`scripts/importance/directed_summary.py` | `results/directed_search/` |
+| 非精度定向搜索 | `docs/nonprecision_search_protocol_20261007.md` | `scripts/importance/nonprecision.py shadow --group D/F/R --seed 0/1`；`train --name D/N1/F/N3/N4/N5/R --seed …`；`shadow --group F_attr --seed 0`；`weights`；`n4-attribution`；`summary` | `results/nonprecision/` |
 | B019 | `bugs/B019_averagedmodel_bf16_ema_stagnation.md` | `python bugs/repro/B019_repro_averagedmodel_bf16_ema.py` | `results/directed_search/B019_repro_output.txt` |
 | 诊断对照、普查、成本 | — | 文档汇总已有结果 | `docs/diagnosis_comparison_20261006.md`、`docs/census_unified_20261006.md`、`docs/cost_equal_budget_20261006.md` |
 
