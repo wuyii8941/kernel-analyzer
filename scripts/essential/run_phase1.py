@@ -39,6 +39,16 @@ FAMILIES = {"ce": (C.ce_conditions, C.make_ce_inputs), "pool": (C.pool_condition
 if SUITE == "s3":
     import conditions_supplement as CS
     FAMILIES = {"pool": (CS.pool_conditions, CS.make_pool_inputs), "index": (CS.index_conditions, CS.make_index_inputs)}
+if SUITE == "g8":
+    # 2b G8 discovery queue (phase-2 item B): the operators whose PyTorch tests are skipped, first-sample-only or
+    # eager-referenced, on the phase-1 conditions (same ids and inputs, so the phase-1 spec cache and eager runs are reused)
+    def _g8(conds, keep):
+        return lambda: [c for c in conds() if keep(c)]
+    FAMILIES = {
+        "index": (_g8(C.index_conditions, lambda c: (c["op"] == "index_reduce") or
+                      (c["op"] == "scatter_reduce" and c.get("reduce") in ("amax", "amin", "mean"))), C.make_index_inputs),
+        "pool": (_g8(C.pool_conditions, lambda c: c["op"] == "max_pool"), C.make_pool_inputs),
+        "ce": (C.ce_conditions, C.make_ce_inputs)}
 
 
 def _env_tag():

@@ -1,0 +1,606 @@
+{
+ "family": "reductions",
+ "conditions": 53,
+ "candidates": {
+  "eager_cpu_float32": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 1.6,
+    "env": "ka_main",
+    "family": "reductions"
+   },
+   "statuses": {
+    "ok": 198,
+    "error": 6
+   },
+   "judged": true,
+   "errors": {
+    "redu_amax_empty-extent_gauss_1/base: IndexError: amax(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_amin_empty-extent_gauss_1/base: IndexError: amin(): Expected reduction dim -1 to have non-zero size.": 3
+   },
+   "E": null,
+   "E64": {
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    },
+    "violating_conditions": []
+   },
+   "P": {
+    "P_D1_amax_ties_even_split": "0/21",
+    "P_softmax_shift_invariance": "0/24",
+    "P_logsumexp_shift": "0/12",
+    "P_cumsum_last_equals_sum": "0/3",
+    "P_permutation_invariance": "0/6"
+   },
+   "conventions_seed0": {
+    "redu_var_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_sum_single_neg_inf_row_1: non-finite output (1 elements)": 1,
+    "redu_mean_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_amax_empty-extent_gauss_1: raises IndexError: amax(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_amin_empty-extent_gauss_1: raises IndexError: amin(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_var_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_single_neg_inf_row_1: non-finite output (1 elements)": 1
+   }
+  },
+  "eager_cpu_float64": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 2.5,
+    "env": "ka_main",
+    "family": "reductions"
+   },
+   "statuses": {
+    "ok": 198,
+    "error": 6
+   },
+   "judged": true,
+   "errors": {
+    "redu_amax_empty-extent_gauss_1/base: IndexError: amax(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_amin_empty-extent_gauss_1/base: IndexError: amin(): Expected reduction dim -1 to have non-zero size.": 3
+   },
+   "E": null,
+   "E64": null,
+   "P": {
+    "P_D1_amax_ties_even_split": "0/21",
+    "P_softmax_shift_invariance": "0/24",
+    "P_logsumexp_shift": "0/12",
+    "P_cumsum_last_equals_sum": "0/3",
+    "P_permutation_invariance": "0/6"
+   },
+   "conventions_seed0": {
+    "redu_var_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_sum_single_neg_inf_row_1: non-finite output (1 elements)": 1,
+    "redu_mean_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_amax_empty-extent_gauss_1: raises IndexError: amax(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_amin_empty-extent_gauss_1: raises IndexError: amin(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_var_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_single_neg_inf_row_1: non-finite output (1 elements)": 1
+   }
+  },
+  "eager_cuda_bfloat16": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 1.3,
+    "env": "ka_main",
+    "family": "reductions"
+   },
+   "statuses": {
+    "ok": 198,
+    "error": 6
+   },
+   "judged": false,
+   "errors": {
+    "redu_amax_empty-extent_gauss_1/base: IndexError: amax(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_amin_empty-extent_gauss_1/base: IndexError: amin(): Expected reduction dim -1 to have non-zero size.": 3
+   },
+   "E": null,
+   "E64": {
+    "by_output": {
+     "out": "3/153",
+     "dx": "3/144"
+    },
+    "violating_conditions": [
+     "redu_cumsum_multi_gauss_1",
+     "redu_log_softmax_multi_gauss_1",
+     "redu_sum_single_gauss_4099",
+     "redu_var_multi_gauss_1"
+    ]
+   },
+   "P": {
+    "P_D1_amax_ties_even_split": "0/21",
+    "P_permutation_invariance": "0/6"
+   },
+   "conventions_seed0": {
+    "redu_var_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_sum_single_neg_inf_row_1: non-finite output (1 elements)": 1,
+    "redu_mean_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_amax_empty-extent_gauss_1: raises IndexError: amax(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_amin_empty-extent_gauss_1: raises IndexError: amin(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_var_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_single_neg_inf_row_1: non-finite output (1 elements)": 1
+   }
+  },
+  "eager_cuda_float32": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 0.2,
+    "env": "ka_main",
+    "family": "reductions"
+   },
+   "statuses": {
+    "ok": 198,
+    "error": 6
+   },
+   "judged": true,
+   "errors": {
+    "redu_amax_empty-extent_gauss_1/base: IndexError: amax(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_amin_empty-extent_gauss_1/base: IndexError: amin(): Expected reduction dim -1 to have non-zero size.": 3
+   },
+   "E": null,
+   "E64": {
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    },
+    "violating_conditions": []
+   },
+   "P": {
+    "P_D1_amax_ties_even_split": "0/21",
+    "P_softmax_shift_invariance": "0/24",
+    "P_logsumexp_shift": "0/12",
+    "P_cumsum_last_equals_sum": "0/3",
+    "P_permutation_invariance": "0/6"
+   },
+   "conventions_seed0": {
+    "redu_var_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_sum_single_neg_inf_row_1: non-finite output (1 elements)": 1,
+    "redu_mean_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_amax_empty-extent_gauss_1: raises IndexError: amax(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_amin_empty-extent_gauss_1: raises IndexError: amin(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_var_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_single_neg_inf_row_1: non-finite output (1 elements)": 1
+   }
+  },
+  "eager_cuda_float64": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 1.1,
+    "env": "ka_main",
+    "family": "reductions"
+   },
+   "statuses": {
+    "ok": 198,
+    "error": 6
+   },
+   "judged": true,
+   "errors": {
+    "redu_amax_empty-extent_gauss_1/base: IndexError: amax(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_amin_empty-extent_gauss_1/base: IndexError: amin(): Expected reduction dim -1 to have non-zero size.": 3
+   },
+   "E": {
+    "reference": "eager_cpu_float64",
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    },
+    "violating_conditions": [],
+    "max_ratio": 2.4613380494252916e-07
+   },
+   "E64": {
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    },
+    "violating_conditions": []
+   },
+   "P": {
+    "P_D1_amax_ties_even_split": "0/21",
+    "P_softmax_shift_invariance": "0/24",
+    "P_logsumexp_shift": "0/12",
+    "P_cumsum_last_equals_sum": "0/3",
+    "P_permutation_invariance": "0/6"
+   },
+   "conventions_seed0": {
+    "redu_var_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_sum_single_neg_inf_row_1: non-finite output (1 elements)": 1,
+    "redu_mean_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_amax_empty-extent_gauss_1: raises IndexError: amax(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_amin_empty-extent_gauss_1: raises IndexError: amin(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_var_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_single_neg_inf_row_1: non-finite output (1 elements)": 1
+   }
+  },
+  "inductor_cuda_bfloat16": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 24.4,
+    "env": "ka_main",
+    "family": "reductions"
+   },
+   "statuses": {
+    "ok": 198,
+    "error": 6
+   },
+   "judged": false,
+   "errors": {
+    "redu_amax_empty-extent_gauss_1/base: TorchRuntimeError: Dynamo failed to run FX node with fake tensors: call_function <built-in method amax of type object at": 3,
+    "redu_amin_empty-extent_gauss_1/base: TorchRuntimeError: Dynamo failed to run FX node with fake tensors: call_function <built-in method amin of type object at": 3
+   },
+   "E": {
+    "reference": "eager_cuda_bfloat16",
+    "by_output": {
+     "out": "2/153",
+     "dx": "2/144"
+    },
+    "violating_conditions": [
+     "redu_cumsum_multi_gauss_1",
+     "redu_var_multi_gauss_1"
+    ],
+    "max_ratio": 1.8640776699029127
+   },
+   "E64": {
+    "by_output": {
+     "out": "2/153",
+     "dx": "2/144"
+    },
+    "violating_conditions": [
+     "redu_cumsum_multi_gauss_1",
+     "redu_log_softmax_multi_gauss_1",
+     "redu_sum_single_gauss_4099"
+    ]
+   },
+   "P": {
+    "P_D1_amax_ties_even_split": "0/21",
+    "P_permutation_invariance": "0/6"
+   },
+   "conventions_seed0": {
+    "redu_var_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_sum_single_neg_inf_row_1: non-finite output (1 elements)": 1,
+    "redu_mean_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_amax_empty-extent_gauss_1: raises TorchRuntimeError: Dynamo failed to run FX node with fake tensors: call_function <built-in": 3,
+    "redu_amin_empty-extent_gauss_1: raises TorchRuntimeError: Dynamo failed to run FX node with fake tensors: call_function <built-in": 3,
+    "redu_var_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_single_neg_inf_row_1: non-finite output (1 elements)": 1
+   }
+  },
+  "inductor_cuda_float32": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 36.9,
+    "env": "ka_main",
+    "family": "reductions"
+   },
+   "statuses": {
+    "ok": 198,
+    "error": 6
+   },
+   "judged": true,
+   "errors": {
+    "redu_amax_empty-extent_gauss_1/base: TorchRuntimeError: Dynamo failed to run FX node with fake tensors: call_function <built-in method amax of type object at": 3,
+    "redu_amin_empty-extent_gauss_1/base: TorchRuntimeError: Dynamo failed to run FX node with fake tensors: call_function <built-in method amin of type object at": 3
+   },
+   "E": {
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    },
+    "violating_conditions": [],
+    "max_ratio": 0.006734798404102702
+   },
+   "E64": {
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    },
+    "violating_conditions": []
+   },
+   "P": {
+    "P_D1_amax_ties_even_split": "0/21",
+    "P_softmax_shift_invariance": "0/24",
+    "P_logsumexp_shift": "0/12",
+    "P_cumsum_last_equals_sum": "0/3",
+    "P_permutation_invariance": "0/6"
+   },
+   "conventions_seed0": {
+    "redu_var_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_sum_single_neg_inf_row_1: non-finite output (1 elements)": 1,
+    "redu_mean_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_amax_empty-extent_gauss_1: raises TorchRuntimeError: Dynamo failed to run FX node with fake tensors: call_function <built-in": 3,
+    "redu_amin_empty-extent_gauss_1: raises TorchRuntimeError: Dynamo failed to run FX node with fake tensors: call_function <built-in": 3,
+    "redu_var_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_single_neg_inf_row_1: non-finite output (1 elements)": 1
+   }
+  },
+  "liger_softmax": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 6.5,
+    "env": "liger",
+    "family": "reductions"
+   },
+   "statuses": {
+    "unsupported": 198,
+    "ok": 6
+   },
+   "judged": true,
+   "errors": {},
+   "E": {
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/3",
+     "dx": "0/3"
+    },
+    "violating_conditions": [],
+    "max_ratio": 0.0
+   },
+   "E64": {
+    "by_output": {
+     "out": "0/3",
+     "dx": "0/3"
+    },
+    "violating_conditions": []
+   },
+   "P": {
+    "P_softmax_shift_invariance": "0/3"
+   },
+   "conventions_seed0": {}
+  },
+  "nightly_eager_cuda_float32": {
+   "meta": {
+    "torch": "2.15.0.dev20260907+cu126",
+    "seconds": 2.7,
+    "env": "nightly",
+    "family": "reductions"
+   },
+   "statuses": {
+    "ok": 198,
+    "error": 6
+   },
+   "judged": true,
+   "errors": {
+    "redu_amax_empty-extent_gauss_1/base: IndexError: amax(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_amin_empty-extent_gauss_1/base: IndexError: amin(): Expected reduction dim -1 to have non-zero size.": 3
+   },
+   "E": {
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    },
+    "violating_conditions": [],
+    "max_ratio": 0.0
+   },
+   "E64": {
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    },
+    "violating_conditions": []
+   },
+   "P": {
+    "P_D1_amax_ties_even_split": "0/21",
+    "P_softmax_shift_invariance": "0/24",
+    "P_logsumexp_shift": "0/12",
+    "P_cumsum_last_equals_sum": "0/3",
+    "P_permutation_invariance": "0/6"
+   },
+   "conventions_seed0": {
+    "redu_var_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_sum_single_neg_inf_row_1: non-finite output (1 elements)": 1,
+    "redu_mean_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_amax_empty-extent_gauss_1: raises IndexError: amax(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_amin_empty-extent_gauss_1: raises IndexError: amin(): Expected reduction dim -1 to have non-zero size.": 3,
+    "redu_var_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_single_neg_inf_row_1: non-finite output (1 elements)": 1
+   }
+  },
+  "nightly_inductor_cuda_float32": {
+   "meta": {
+    "torch": "2.15.0.dev20260907+cu126",
+    "seconds": 33.6,
+    "env": "nightly",
+    "family": "reductions"
+   },
+   "statuses": {
+    "ok": 198,
+    "error": 6
+   },
+   "judged": true,
+   "errors": {
+    "redu_amax_empty-extent_gauss_1/base: TorchRuntimeError: RuntimeError when making fake tensor call": 3,
+    "redu_amin_empty-extent_gauss_1/base: TorchRuntimeError: RuntimeError when making fake tensor call": 3
+   },
+   "E": {
+    "reference": "nightly_eager_cuda_float32",
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    },
+    "violating_conditions": [],
+    "max_ratio": 0.006734798404102702
+   },
+   "E64": {
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    },
+    "violating_conditions": []
+   },
+   "P": {
+    "P_D1_amax_ties_even_split": "0/21",
+    "P_softmax_shift_invariance": "0/24",
+    "P_logsumexp_shift": "0/12",
+    "P_cumsum_last_equals_sum": "0/3",
+    "P_permutation_invariance": "0/6"
+   },
+   "conventions_seed0": {
+    "redu_var_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_single_gauss_1: non-finite output (3 elements)": 1,
+    "redu_sum_single_neg_inf_row_1: non-finite output (1 elements)": 1,
+    "redu_mean_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_amax_empty-extent_gauss_1: raises TorchRuntimeError: RuntimeError when making fake tensor call": 3,
+    "redu_amin_empty-extent_gauss_1: raises TorchRuntimeError: RuntimeError when making fake tensor call": 3,
+    "redu_var_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_std_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_empty-extent_gauss_1: non-finite output (3 elements)": 1,
+    "redu_logsumexp_single_neg_inf_row_1: non-finite output (1 elements)": 1
+   }
+  }
+ },
+ "examples": {
+  "E": [
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "vs": "eager_cpu_float64",
+    "condition": "redu_sum_single_gauss_4099",
+    "seed": 0,
+    "output": "out",
+    "violating": 1,
+    "max_ratio": 7.537503214989575
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "vs": "eager_cpu_float64",
+    "condition": "redu_sum_single_gauss_4099",
+    "seed": 1,
+    "output": "out",
+    "violating": 1,
+    "max_ratio": 1.0773144638249612
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "vs": "eager_cpu_float64",
+    "condition": "redu_var_multi_gauss_1",
+    "seed": 1,
+    "output": "dx",
+    "violating": 2,
+    "max_ratio": 1.0686766267093017
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "vs": "eager_cpu_float64",
+    "condition": "redu_log_softmax_multi_gauss_1",
+    "seed": 0,
+    "output": "dx",
+    "violating": 1,
+    "max_ratio": 1.3743683053474005
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "vs": "eager_cpu_float64",
+    "condition": "redu_cumsum_multi_gauss_1",
+    "seed": 2,
+    "output": "out",
+    "violating": 1,
+    "max_ratio": 1.101107104506606
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "vs": "eager_cpu_float64",
+    "condition": "redu_cumsum_multi_gauss_1",
+    "seed": 2,
+    "output": "dx",
+    "violating": 1,
+    "max_ratio": 1.0910772410240557
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "vs": "eager_cpu_float64",
+    "condition": "redu_sum_single_gauss_4099",
+    "seed": 0,
+    "output": "out",
+    "violating": 1,
+    "max_ratio": 7.537503214989575
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "vs": "eager_cpu_float64",
+    "condition": "redu_sum_single_gauss_4099",
+    "seed": 1,
+    "output": "out",
+    "violating": 1,
+    "max_ratio": 1.0773144638249612
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "vs": "eager_cuda_bfloat16",
+    "condition": "redu_var_multi_gauss_1",
+    "seed": 1,
+    "output": "dx",
+    "violating": 2,
+    "max_ratio": 1.1743119266055047
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "vs": "eager_cpu_float64",
+    "condition": "redu_log_softmax_multi_gauss_1",
+    "seed": 0,
+    "output": "dx",
+    "violating": 1,
+    "max_ratio": 1.3743683053474005
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "vs": "eager_cuda_bfloat16",
+    "condition": "redu_cumsum_multi_gauss_1",
+    "seed": 1,
+    "output": "out",
+    "violating": 1,
+    "max_ratio": 1.248780487804878
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "vs": "eager_cuda_bfloat16",
+    "condition": "redu_cumsum_multi_gauss_1",
+    "seed": 1,
+    "output": "dx",
+    "violating": 1,
+    "max_ratio": 1.8640776699029127
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "vs": "eager_cpu_float64",
+    "condition": "redu_cumsum_multi_gauss_1",
+    "seed": 1,
+    "output": "dx",
+    "violating": 1,
+    "max_ratio": 1.015036959617015
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "vs": "eager_cuda_bfloat16",
+    "condition": "redu_cumsum_multi_gauss_1",
+    "seed": 2,
+    "output": "out",
+    "violating": 1,
+    "max_ratio": 1.0711297071129706
+   }
+  ]
+ }
+}

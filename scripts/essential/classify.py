@@ -38,7 +38,8 @@ A3_VERIFIED = _a3()
 NIGHTLY = ["nightly_eager_cuda32", "nightly_inductor_cuda32"]
 EREF = {"eager_cpu32": "eager_cpu64", "eager_cuda32": "eager_cpu64", "eager_cuda_bf16": "eager_cpu64",
         "inductor_cuda32": "eager_cuda32", "inductor_cuda_bf16": "eager_cuda_bf16",
-        "nightly_eager_cuda32": "eager_cpu64", "nightly_inductor_cuda32": "nightly_eager_cuda32"}
+        "nightly_eager_cuda32": "eager_cpu64", "nightly_inductor_cuda32": "nightly_eager_cuda32",
+        "inductor_cpu32": "eager_cpu32"}
 PHASE = {"ce": {"loss": "fwd", "grad": "bwd"}, "pool": {"out": "fwd", "indices": "fwd", "grad": "bwd"},
          "index": {"out": "fwd", "grad_self": "bwd", "grad_source": "bwd"}}
 
@@ -516,7 +517,7 @@ def main():
     fam = a.family
     out_dir = a.out
     conds = [c for c in R.FAMILIES[fam][0]() if c["op"] != "flce"]
-    cands = K.FAMILY_CANDIDATES[fam] + NIGHTLY
+    cands = K.FAMILY_CANDIDATES[fam] + NIGHTLY + ["inductor_cpu32"]      # the last only where a raw run exists (G8)
     raws = {c: load_raw(fam, c) for c in cands}
     frs = {}
     for c in ("inductor_cuda32", "inductor_cuda_bf16"):

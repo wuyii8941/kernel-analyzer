@@ -21,6 +21,7 @@ CANDIDATES = {
     "eager_cuda_bf16": ("cuda", torch.bfloat16, False),
     "inductor_cuda32": ("cuda", torch.float32, True),
     "inductor_cuda_bf16": ("cuda", torch.bfloat16, True),
+    "inductor_cpu32": ("cpu", torch.float32, True),      # 2b G8 discovery queue (Inductor CPU / C++ backend)
 }
 FAMILY_CANDIDATES = {
     "ce": list(CANDIDATES),

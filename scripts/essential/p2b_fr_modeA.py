@@ -29,6 +29,7 @@ import torch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # noqa: E402
 import p2b_attention as A  # noqa: E402
+import p2b_basic as BA  # noqa: E402
 import p2b_normalization as NM  # noqa: E402
 import p2b_optimizers as O  # noqa: E402
 
@@ -255,9 +256,10 @@ def normalization_case(dtype, cond):
 
 
 def kr_vs_reference(keep, ref_outputs, seed_of_row=None):
-    """E applied to K_R: max |mid(K_R) - K_ref| / τ32(1 + |K_ref|) over elements with a complete finite K_R, and the count
-    beyond τ32.  K_ref is the float64 eager run on the same inputs; K_R is the exact evaluation of the candidate's own TTIR,
-    so a K_R close to K_ref while K is not attributes the deviation to rounding (e_num)."""
+    """E applied to K_R: distance of K_ref from the K_R interval [lo, hi] over τ32(1 + |K_ref|), over elements with a
+    complete finite K_R, and the count beyond τ32.  K_ref is the float64 eager run on the same inputs; K_R is the exact
+    evaluation of the candidate's own TTIR (an enclosure: transcendental functions carry their error bounds), so K_ref
+    inside K_R while K is not attributes the deviation to rounding (e_num)."""
     out = {}
     for name, rows in keep.items():
         n_bad = n = 0
@@ -267,12 +269,13 @@ def kr_vs_reference(keep, ref_outputs, seed_of_row=None):
             if ref is None:
                 continue
             ok = np.asarray(r["ok"], bool)
-            mid = 0.5 * (np.asarray(r["r_lo"], float) + np.asarray(r["r_hi"], float))
+            lo, hi = np.asarray(r["r_lo"], float), np.asarray(r["r_hi"], float)
             refv = np.asarray(ref, float).reshape(-1)
-            if refv.size != mid.size:
+            if refv.size != lo.size:
                 continue
             tol = O.TAU32 * (1 + np.abs(refv))
-            d = np.abs(mid - refv)
+            with np.errstate(invalid="ignore"):
+                d = np.nan_to_num(np.maximum(np.maximum(lo - refv, refv - hi), 0.0), nan=np.inf)
             n += int(ok.sum())
             n_bad += int((ok & (d > tol)).sum())
             if ok.any():
@@ -339,5 +342,82 @@ def run_normalization():
     path.write_text(json.dumps({"seconds": round(time.time() - t0, 1), "cases": res}, indent=1, default=str) + "\n")
 
 
+def basic_case(family, cond):
+    fam = BA.FAMILIES[family]
+    st = {}
+
+    def setup():
+        torch._dynamo.reset()
+        st["fn"] = torch.compile(lambda t: fam.run(cond, t, "base"), dynamic=False)
+        launch(inputs(0))
+        torch.cuda.synchronize()
+
+    def inputs(seed):
+        d = fam.inputs(cond, seed, "base")
+        gi = fam.grad_inputs(cond)
+        t = {}
+        for k, v in d.items():
+            if v is None:
+                t[k] = None
+            elif k == "idx":
+                t[k] = torch.as_tensor(v, dtype=torch.long, device="cuda")
+            else:
+                t[k] = BA.layout(v, cond.get("layout", "contiguous") if k in gi else "contiguous", torch.float32, "cuda")
+                if k in gi:
+                    t[k].requires_grad_(True)
+        t["_seed"] = seed
+        return t
+
+    def launch(t):
+        gi = fam.grad_inputs(cond)
+        for k in gi:
+            if t.get(k) is not None:
+                t[k].grad = None
+        out = st["fn"](t)["out"]
+        outs = {"out": out}
+        if out.requires_grad and out.numel():
+            out.backward(t["g"].reshape(out.shape))
+            for k in gi:
+                if t.get(k) is not None and t[k].grad is not None:
+                    outs["d" + k] = t[k].grad
+        return outs
+
+    return setup, inputs, launch
+
+
+def run_basic(family):
+    ref = pickle.loads((BA.CACHE / f"{family}__eager_cpu_float64.pkl").read_bytes())["res"]
+    res, t0 = {}, time.time()
+    for cond in BA.FAMILIES[family].conditions():
+        key = f"inductor_cuda_float32/{cond['id']}"
+        try:
+            setup, inputs, launch = basic_case(family, cond)
+            rep, keep = common.fr_run(f"{family}/{key}", setup, inputs, launch, lambda _t: None)
+            refs = {sd: ref[(cond["id"], sd)]["base"]["outputs"] for sd in (0, 1, 2)}
+            res[key] = {"status": "ok", "verdict": verdict(keep), "kr_vs_float64_eager": kr_vs_reference(keep, refs),
+                        "notes": {k: rep.get(k) for k in ("outputs_not_written_by_triton", "outputs_binding_not_established",
+                                                          "outputs_modified_after_last_triton_write", "ttir_coverage_complete")},
+                        "special": {k: v.get("special_values") for k, v in rep.get("outputs", {}).items()},
+                        "complete_fraction": {k: v["reference_classes"]["finite_complete_fraction"] for k, v in rep.get("outputs", {}).items()}}
+        except Exception as exc:  # noqa: BLE001
+            res[key] = {"status": "error", "reason": f"{type(exc).__name__}: {exc}"[:400], "trace": traceback.format_exc()[-1500:]}
+        r = res[key]
+        if r["status"] == "ok":
+            sv = {k: (v or {}).get("k_vs_kr_class_mismatch") for k, v in r["special"].items()}
+            kr = r["kr_vs_float64_eager"]
+            print(key, "e_num beyond", sum(x["beyond_tau32"] for x in r["verdict"].values()),
+                  "| K_R vs f64 beyond", sum(x["kr_beyond_tau32_vs_float64"] for x in kr.values()),
+                  "| K vs K_R class mismatch", sv, "| complete", {k: round(x, 2) for k, x in r["complete_fraction"].items()},
+                  "| not-Triton", r["notes"]["outputs_not_written_by_triton"], flush=True)
+        else:
+            print(key, r["status"], r.get("reason", "")[:200], flush=True)
+    path = OUT / family / "fr_modeA.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"seconds": round(time.time() - t0, 1), "cases": res}, indent=1, default=str) + "\n")
+
+
 if __name__ == "__main__":
-    {"optimizers": run_optimizers, "attention": run_attention, "normalization": run_normalization}[sys.argv[1]]()
+    if sys.argv[1] in BA.FAMILIES:
+        run_basic(sys.argv[1])
+    else:
+        {"optimizers": run_optimizers, "attention": run_attention, "normalization": run_normalization}[sys.argv[1]]()
