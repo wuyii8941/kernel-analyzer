@@ -174,3 +174,8 @@ label_smoothing 等标量用实际收到的值：ATen 收到 float64，Triton ke
    量级不含零。计分：e_sem 区间不含零且 |e_sem 中点| > 2⁻²⁰·(1 + |f|) 记为**语义差异**；不含零但不超过该界记为**接口 /
    常数舍入项**（CE-A6 一栏），不计语义差异。规格的标量口径：eager 候选按 float64 收到的值，Inductor 候选按 float32(ε)；
    F 组的 τ₃₂ 远大于这一差别。形状与参数完全相同的三个 seed 共用一次编译（Inductor 缓存在 `.cache/essential/inductor`）。
+7. **（运行中，结果使用之前）CE 的上游梯度种子错误，CE 第一轮结果作废重跑。** `candidates.ce_upstream` 起初用 Python 的
+   `hash()` 播种，而它在每个进程中随机加盐，所以候选进程与规格进程用了不同的上游梯度 v：分类的冒烟检查中所有 CE 反向
+   （包括 eager CPU float64）都「偏离」，由此发现。改为 sha256 播种后，删除用旧种子得到的 CE 原始结果与 CE 规格缓存，全部
+   重跑；池化与 index 的 v 来自条件生成器的确定性种子，不受影响。分类程序加了两道保护：候选记录的 v 必须等于确定性的 v，
+   候选收到的输入必须等于规格所用的输入，否则记为 `harness_mismatch`，不计任何类别。
