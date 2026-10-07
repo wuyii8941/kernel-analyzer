@@ -91,6 +91,42 @@ B020（附 gradcheck、OpInfo 缺口、最小例子、版本）；B021（优先�
 在第一次 2b 运行之前追加为第 3.1、3.2 节并提交。搜索单位为「契约 × 实际实现路径 × 输入条件 × 调用 / 状态场景 × 检查方法」。
 预算按家族登记 CPU、GPU、接入人工、单例超时四项，首个小规模试跑后按第 6 节规则估算剩余预算。
 
+### 3.1 候选清单（G4，2b 运行之前提交）
+
+机器可读：`results/essential/phase2b/candidates.json`，由 `scripts/essential/p2b_registry.py` 生成。每个候选登记库与版本、API、设备、
+dtype、申请的后端、所在环境、是否可取得 TTIR、与其他候选共享的源码 / 分解规则 / 后端；实际运行的后端（SDPA 选中的后端、Inductor
+生成的 kernel 或回退）在运行时记录。回退到同一实现不算新的独立覆盖；多个包装入口调用同一内核算多个 API 条件。环境不可用：
+DeepSpeed、apex、独立的 flash-attn、megatron-core（未安装，状态记为「环境不可用」；MoE 的 Megatron 风格参考在仓库内书写）。
+
+### 3.2 覆盖矩阵（G3，2b 运行之前提交）
+
+机器可读：`results/essential/phase2b/coverage_plan.json`。每个家族登记契约来源、要查的语义点、因素与水平；计划组合 = 每个因素的
+单因素边界（其余因素取第一水平）+ 前两个因素的两两组合 + 登记的高风险多因素组合；每个计划组合 3 个 seed。F 与模式 B 的 FR
+在规格交付前关闭（训练程序层的累加窗口已有 `specs/phase1/spec_accumulation.py`）。
+
+| 家族 | 组 | 计划组合 | 候选 | FR |
+|---|---|---|---|---|
+| matmul_linear | basic | 19 | 9 | mode A (Inductor; matmul itself is cuBLAS/extern unless fuse |
+| reductions | basic | 54 | 10 | mode A (Inductor, Liger) |
+| activations | basic | 27 | 11 | mode A |
+| gather_layout | basic | 18 | 9 | mode A |
+| checkpoint | recompute | 12 | 4 | not applicable (property check, no f needed) |
+| embedding | embedding | 13 | 7 | mode A |
+| attention | attention | 27 | 11 | mode A for Inductor / flex (Triton); SDPA backends are CUDA  |
+| packing | attention | 12 | 3 | mode A (flex) |
+| rope | attention | 7 | 4 | mode A (Liger, Unsloth) |
+| normalization | norm | 25 | 11 | mode A |
+| optimizers | optimizer | 31 | 11 | mode A (compiled step) |
+| schedulers | optimizer | 12 | 3 | not applicable |
+| clip_amp | optimizer | 16 | 5 | not applicable |
+| training_program | program | 21 | 6 | not applicable |
+| moe | moe | 10 | 3 | mode A (compiled) |
+
+第二档进入扩展队列（KLDiv batchmean、BCEWithLogits pos_weight、CTC、adaptive pooling 的 bin 边界、interpolate align_corners、conv same
+padding）；量化训练的缩放取整与 selective scan 的 chunk 边界登记为**延期**；不查：dropout 的随机性（只在固定 mask 下查 1/(1−p)
+缩放）、autocast 的 dtype 策略、推理期 KV cache 量化。执行顺序按规格交付的预期收益：优化器、注意力与打包、训练程序层、归一化、
+嵌入、调度、裁剪，基础算子与 MoE 随后；每个家族先小规模试跑并按第 6 节估算预算。
+
 ## 4 预登记的决定规则（任务书第三部分）
 
 - 若 C 显示加入 D 类检查后，轻量方法在全部反向错误上与 F 效果相同，则论文侧重为前向共有错误、归因成本与陌生组合的复用；2b 的

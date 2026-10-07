@@ -36,7 +36,7 @@ assert in the CUDA gather kernel (`scatter gather kernel index out of bounds`).
 
 ### Versions
 
-torch 2.10.0+cu128 (CPU, CUDA); nightly 2.15.0.dev20261005+cpu reproduces the CPU part; `MaxPoolKernel.cpp` on main unchanged as of 2026-10-07.
+torch 2.10.0+cu128 (CPU, CUDA); nightly 2.15.0.dev20261005+cpu and 2.15.0.dev20260907+cu126 reproduce (CPU 1d/2d/3d, CUDA 3d); `MaxPoolKernel.cpp` on main unchanged as of 2026-10-07.
 
 <!-- search record (for the submitter), 2026-10-07:
 1. issues/PRs: "max_pool empty window gradient", "max_pool dilation padding -inf indices", "max_pool2d_with_indices_backward cpu out

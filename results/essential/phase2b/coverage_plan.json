@@ -1,0 +1,2610 @@
+{
+ "tier1": {
+  "matmul_linear": {
+   "group": "basic",
+   "contract": "torch.mm/bmm/matmul/addmm/F.linear docs",
+   "points": [
+    "transpose and broadcast",
+    "bias",
+    "zero and one-element reduced dims",
+    "dims not multiples of a tile",
+    "dX/dW/db",
+    "gradient accumulation into .grad"
+   ],
+   "factors": {
+    "shape": [
+     "(1,k)x(k,1)",
+     "(m,0)x(0,n)",
+     "(37,129)x(129,61)",
+     "batch-broadcast"
+    ],
+    "layout": [
+     "contiguous",
+     "transposed",
+     "offset"
+    ],
+    "bias": [
+     null,
+     "vector",
+     "broadcast"
+    ],
+    "values": [
+     "gauss",
+     "small_ints",
+     "cancel",
+     "mixed_scale"
+    ]
+   },
+   "planned_conditions": 19,
+   "conditions": [
+    {
+     "shape": "(1,k)x(k,1)",
+     "layout": "contiguous",
+     "bias": null,
+     "values": "gauss"
+    },
+    {
+     "shape": "(m,0)x(0,n)",
+     "layout": "contiguous",
+     "bias": null,
+     "values": "gauss"
+    },
+    {
+     "shape": "(37,129)x(129,61)",
+     "layout": "contiguous",
+     "bias": null,
+     "values": "gauss"
+    },
+    {
+     "shape": "batch-broadcast",
+     "layout": "contiguous",
+     "bias": null,
+     "values": "gauss"
+    },
+    {
+     "shape": "(1,k)x(k,1)",
+     "layout": "transposed",
+     "bias": null,
+     "values": "gauss"
+    },
+    {
+     "shape": "(1,k)x(k,1)",
+     "layout": "offset",
+     "bias": null,
+     "values": "gauss"
+    },
+    {
+     "shape": "(1,k)x(k,1)",
+     "layout": "contiguous",
+     "bias": "vector",
+     "values": "gauss"
+    },
+    {
+     "shape": "(1,k)x(k,1)",
+     "layout": "contiguous",
+     "bias": "broadcast",
+     "values": "gauss"
+    },
+    {
+     "shape": "(1,k)x(k,1)",
+     "layout": "contiguous",
+     "bias": null,
+     "values": "small_ints"
+    },
+    {
+     "shape": "(1,k)x(k,1)",
+     "layout": "contiguous",
+     "bias": null,
+     "values": "cancel"
+    },
+    {
+     "shape": "(1,k)x(k,1)",
+     "layout": "contiguous",
+     "bias": null,
+     "values": "mixed_scale"
+    },
+    {
+     "shape": "(m,0)x(0,n)",
+     "layout": "transposed",
+     "bias": null,
+     "values": "gauss"
+    },
+    {
+     "shape": "(m,0)x(0,n)",
+     "layout": "offset",
+     "bias": null,
+     "values": "gauss"
+    },
+    {
+     "shape": "(37,129)x(129,61)",
+     "layout": "transposed",
+     "bias": null,
+     "values": "gauss"
+    },
+    {
+     "shape": "(37,129)x(129,61)",
+     "layout": "offset",
+     "bias": null,
+     "values": "gauss"
+    },
+    {
+     "shape": "batch-broadcast",
+     "layout": "transposed",
+     "bias": null,
+     "values": "gauss"
+    },
+    {
+     "shape": "batch-broadcast",
+     "layout": "offset",
+     "bias": null,
+     "values": "gauss"
+    },
+    {
+     "shape": "(m,0)x(0,n)",
+     "layout": "contiguous",
+     "bias": "vector",
+     "values": "gauss",
+     "high_risk": true
+    },
+    {
+     "shape": "(1,k)x(k,1)",
+     "layout": "transposed",
+     "bias": null,
+     "values": "small_ints",
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "linearity in each argument (exact for small ints)",
+     "transpose identity (A B)^T = B^T A^T",
+     "gradient accumulation: two backward calls add (.grad semantics)"
+    ],
+    "FR": "mode A (Inductor; matmul itself is cuBLAS/extern unless fused, so mostly not Triton)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  },
+  "reductions": {
+   "group": "basic",
+   "contract": "sum/mean/prod/amax/amin/var/std/softmax/log_softmax/logsumexp/cumsum docs",
+   "points": [
+    "multi-axis",
+    "empty set",
+    "effective count (correction for var/std)",
+    "blocked merge",
+    "all -inf row (softmax / logsumexp)",
+    "ties (amax/amin gradient)"
+   ],
+   "factors": {
+    "op": [
+     "sum",
+     "mean",
+     "prod",
+     "amax",
+     "amin",
+     "var",
+     "std",
+     "softmax",
+     "log_softmax",
+     "logsumexp",
+     "cumsum"
+    ],
+    "dims": [
+     "single",
+     "multi",
+     "all",
+     "empty-extent"
+    ],
+    "values": [
+     "gauss",
+     "small_ints",
+     "all_equal",
+     "neg_inf_row",
+     "zeros",
+     "cancel"
+    ],
+    "size": [
+     "1",
+     "1027",
+     "4099"
+    ]
+   },
+   "planned_conditions": 54,
+   "conditions": [
+    {
+     "op": "sum",
+     "dims": "single",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "mean",
+     "dims": "single",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "prod",
+     "dims": "single",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "amax",
+     "dims": "single",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "amin",
+     "dims": "single",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "var",
+     "dims": "single",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "std",
+     "dims": "single",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "softmax",
+     "dims": "single",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "log_softmax",
+     "dims": "single",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "logsumexp",
+     "dims": "single",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "cumsum",
+     "dims": "single",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "sum",
+     "dims": "multi",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "sum",
+     "dims": "all",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "sum",
+     "dims": "empty-extent",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "sum",
+     "dims": "single",
+     "values": "small_ints",
+     "size": "1"
+    },
+    {
+     "op": "sum",
+     "dims": "single",
+     "values": "all_equal",
+     "size": "1"
+    },
+    {
+     "op": "sum",
+     "dims": "single",
+     "values": "neg_inf_row",
+     "size": "1"
+    },
+    {
+     "op": "sum",
+     "dims": "single",
+     "values": "zeros",
+     "size": "1"
+    },
+    {
+     "op": "sum",
+     "dims": "single",
+     "values": "cancel",
+     "size": "1"
+    },
+    {
+     "op": "sum",
+     "dims": "single",
+     "values": "gauss",
+     "size": "1027"
+    },
+    {
+     "op": "sum",
+     "dims": "single",
+     "values": "gauss",
+     "size": "4099"
+    },
+    {
+     "op": "mean",
+     "dims": "multi",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "mean",
+     "dims": "all",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "mean",
+     "dims": "empty-extent",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "prod",
+     "dims": "multi",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "prod",
+     "dims": "all",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "prod",
+     "dims": "empty-extent",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "amax",
+     "dims": "multi",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "amax",
+     "dims": "all",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "amax",
+     "dims": "empty-extent",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "amin",
+     "dims": "multi",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "amin",
+     "dims": "all",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "amin",
+     "dims": "empty-extent",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "var",
+     "dims": "multi",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "var",
+     "dims": "all",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "var",
+     "dims": "empty-extent",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "std",
+     "dims": "multi",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "std",
+     "dims": "all",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "std",
+     "dims": "empty-extent",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "softmax",
+     "dims": "multi",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "softmax",
+     "dims": "all",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "softmax",
+     "dims": "empty-extent",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "log_softmax",
+     "dims": "multi",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "log_softmax",
+     "dims": "all",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "log_softmax",
+     "dims": "empty-extent",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "logsumexp",
+     "dims": "multi",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "logsumexp",
+     "dims": "all",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "logsumexp",
+     "dims": "empty-extent",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "cumsum",
+     "dims": "multi",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "cumsum",
+     "dims": "all",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "cumsum",
+     "dims": "empty-extent",
+     "values": "gauss",
+     "size": "1"
+    },
+    {
+     "op": "logsumexp",
+     "dims": "single",
+     "values": "neg_inf_row",
+     "size": "1",
+     "high_risk": true
+    },
+    {
+     "op": "amax",
+     "dims": "single",
+     "values": "small_ints",
+     "size": "1",
+     "high_risk": true
+    },
+    {
+     "op": "var",
+     "dims": "empty-extent",
+     "values": "gauss",
+     "size": "1",
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "shift invariance (softmax, log_softmax)",
+     "logsumexp(x + c) = logsumexp(x) + c",
+     "D1 for amax/amin ties",
+     "cumsum last element = sum",
+     "permutation invariance of full reductions (exact for small ints)"
+    ],
+    "FR": "mode A (Inductor, Liger)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  },
+  "activations": {
+   "group": "basic",
+   "contract": "ReLU/SiLU/GELU (approximate='none' erf form, 'tanh' form)/SwiGLU/GeGLU docs",
+   "points": [
+    "threshold and branch at 0",
+    "broadcast",
+    "fused vs unfused forward and backward",
+    "GELU erf vs tanh declared formulas"
+   ],
+   "factors": {
+    "op": [
+     "relu",
+     "silu",
+     "gelu_erf",
+     "gelu_tanh",
+     "swiglu",
+     "geglu"
+    ],
+    "values": [
+     "gauss",
+     "zeros",
+     "huge",
+     "tiny"
+    ],
+    "layout": [
+     "contiguous",
+     "offset"
+    ]
+   },
+   "planned_conditions": 27,
+   "conditions": [
+    {
+     "op": "relu",
+     "values": "gauss",
+     "layout": "contiguous"
+    },
+    {
+     "op": "silu",
+     "values": "gauss",
+     "layout": "contiguous"
+    },
+    {
+     "op": "gelu_erf",
+     "values": "gauss",
+     "layout": "contiguous"
+    },
+    {
+     "op": "gelu_tanh",
+     "values": "gauss",
+     "layout": "contiguous"
+    },
+    {
+     "op": "swiglu",
+     "values": "gauss",
+     "layout": "contiguous"
+    },
+    {
+     "op": "geglu",
+     "values": "gauss",
+     "layout": "contiguous"
+    },
+    {
+     "op": "relu",
+     "values": "zeros",
+     "layout": "contiguous"
+    },
+    {
+     "op": "relu",
+     "values": "huge",
+     "layout": "contiguous"
+    },
+    {
+     "op": "relu",
+     "values": "tiny",
+     "layout": "contiguous"
+    },
+    {
+     "op": "relu",
+     "values": "gauss",
+     "layout": "offset"
+    },
+    {
+     "op": "silu",
+     "values": "zeros",
+     "layout": "contiguous"
+    },
+    {
+     "op": "silu",
+     "values": "huge",
+     "layout": "contiguous"
+    },
+    {
+     "op": "silu",
+     "values": "tiny",
+     "layout": "contiguous"
+    },
+    {
+     "op": "gelu_erf",
+     "values": "zeros",
+     "layout": "contiguous"
+    },
+    {
+     "op": "gelu_erf",
+     "values": "huge",
+     "layout": "contiguous"
+    },
+    {
+     "op": "gelu_erf",
+     "values": "tiny",
+     "layout": "contiguous"
+    },
+    {
+     "op": "gelu_tanh",
+     "values": "zeros",
+     "layout": "contiguous"
+    },
+    {
+     "op": "gelu_tanh",
+     "values": "huge",
+     "layout": "contiguous"
+    },
+    {
+     "op": "gelu_tanh",
+     "values": "tiny",
+     "layout": "contiguous"
+    },
+    {
+     "op": "swiglu",
+     "values": "zeros",
+     "layout": "contiguous"
+    },
+    {
+     "op": "swiglu",
+     "values": "huge",
+     "layout": "contiguous"
+    },
+    {
+     "op": "swiglu",
+     "values": "tiny",
+     "layout": "contiguous"
+    },
+    {
+     "op": "geglu",
+     "values": "zeros",
+     "layout": "contiguous"
+    },
+    {
+     "op": "geglu",
+     "values": "huge",
+     "layout": "contiguous"
+    },
+    {
+     "op": "geglu",
+     "values": "tiny",
+     "layout": "contiguous"
+    },
+    {
+     "op": "relu",
+     "values": "zeros",
+     "layout": "contiguous",
+     "high_risk": true
+    },
+    {
+     "op": "gelu_tanh",
+     "values": "huge",
+     "layout": "contiguous",
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "relu derivative convention at 0 is 0 (documented subgradient)",
+     "odd/even identities (gelu(x) - gelu(-x) = x)",
+     "fused == composed (silu(a) * b)"
+    ],
+    "FR": "mode A",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  },
+  "gather_layout": {
+   "group": "basic",
+   "contract": "gather/index_select/take_along_dim/narrow/cat/split/transpose/reshape/view docs",
+   "points": [
+    "repeated indices (backward accumulation)",
+    "non-contiguous layouts",
+    "non-zero storage offset",
+    "aliasing views"
+   ],
+   "factors": {
+    "op": [
+     "gather",
+     "index_select",
+     "take_along_dim",
+     "cat_split",
+     "view_alias"
+    ],
+    "index": [
+     "distinct",
+     "repeated",
+     "all_same"
+    ],
+    "layout": [
+     "contiguous",
+     "transposed",
+     "offset"
+    ]
+   },
+   "planned_conditions": 18,
+   "conditions": [
+    {
+     "op": "gather",
+     "index": "distinct",
+     "layout": "contiguous"
+    },
+    {
+     "op": "index_select",
+     "index": "distinct",
+     "layout": "contiguous"
+    },
+    {
+     "op": "take_along_dim",
+     "index": "distinct",
+     "layout": "contiguous"
+    },
+    {
+     "op": "cat_split",
+     "index": "distinct",
+     "layout": "contiguous"
+    },
+    {
+     "op": "view_alias",
+     "index": "distinct",
+     "layout": "contiguous"
+    },
+    {
+     "op": "gather",
+     "index": "repeated",
+     "layout": "contiguous"
+    },
+    {
+     "op": "gather",
+     "index": "all_same",
+     "layout": "contiguous"
+    },
+    {
+     "op": "gather",
+     "index": "distinct",
+     "layout": "transposed"
+    },
+    {
+     "op": "gather",
+     "index": "distinct",
+     "layout": "offset"
+    },
+    {
+     "op": "index_select",
+     "index": "repeated",
+     "layout": "contiguous"
+    },
+    {
+     "op": "index_select",
+     "index": "all_same",
+     "layout": "contiguous"
+    },
+    {
+     "op": "take_along_dim",
+     "index": "repeated",
+     "layout": "contiguous"
+    },
+    {
+     "op": "take_along_dim",
+     "index": "all_same",
+     "layout": "contiguous"
+    },
+    {
+     "op": "cat_split",
+     "index": "repeated",
+     "layout": "contiguous"
+    },
+    {
+     "op": "cat_split",
+     "index": "all_same",
+     "layout": "contiguous"
+    },
+    {
+     "op": "view_alias",
+     "index": "repeated",
+     "layout": "contiguous"
+    },
+    {
+     "op": "view_alias",
+     "index": "all_same",
+     "layout": "contiguous"
+    },
+    {
+     "op": "gather",
+     "index": "all_same",
+     "layout": "offset",
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "counting: backward of a gather with repeated indices accumulates (ones -> counts)",
+     "round trip split -> cat is the identity",
+     "views share storage (write through)"
+    ],
+    "FR": "mode A",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  },
+  "checkpoint": {
+   "group": "recompute",
+   "contract": "torch.utils.checkpoint docs (use_reentrant=False/True); dropout p = 0",
+   "points": [
+    "checkpoint on vs off: same forward value and gradients",
+    "shared parameters",
+    "an intermediate used twice"
+   ],
+   "factors": {
+    "impl": [
+     "non_reentrant",
+     "reentrant",
+     "hf_gradient_checkpointing"
+    ],
+    "graph": [
+     "mlp",
+     "shared_param",
+     "reuse_twice"
+    ],
+    "compile": [
+     false,
+     true
+    ]
+   },
+   "planned_conditions": 12,
+   "conditions": [
+    {
+     "impl": "non_reentrant",
+     "graph": "mlp",
+     "compile": false
+    },
+    {
+     "impl": "reentrant",
+     "graph": "mlp",
+     "compile": false
+    },
+    {
+     "impl": "hf_gradient_checkpointing",
+     "graph": "mlp",
+     "compile": false
+    },
+    {
+     "impl": "non_reentrant",
+     "graph": "shared_param",
+     "compile": false
+    },
+    {
+     "impl": "non_reentrant",
+     "graph": "reuse_twice",
+     "compile": false
+    },
+    {
+     "impl": "non_reentrant",
+     "graph": "mlp",
+     "compile": true
+    },
+    {
+     "impl": "reentrant",
+     "graph": "shared_param",
+     "compile": false
+    },
+    {
+     "impl": "reentrant",
+     "graph": "reuse_twice",
+     "compile": false
+    },
+    {
+     "impl": "hf_gradient_checkpointing",
+     "graph": "shared_param",
+     "compile": false
+    },
+    {
+     "impl": "hf_gradient_checkpointing",
+     "graph": "reuse_twice",
+     "compile": false
+    },
+    {
+     "impl": "reentrant",
+     "graph": "shared_param",
+     "compile": false,
+     "high_risk": true
+    },
+    {
+     "impl": "non_reentrant",
+     "graph": "mlp",
+     "compile": true,
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "on == off (bitwise for float64 on CPU; tau otherwise)"
+    ],
+    "FR": "not applicable (property check, no f needed)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  },
+  "embedding": {
+   "group": "embedding",
+   "contract": "F.embedding / F.embedding_bag docs",
+   "points": [
+    "padding_idx (no gradient)",
+    "max_norm in-place renormalisation",
+    "scale_grad_by_freq",
+    "empty bag",
+    "mode sum/mean/max",
+    "per_sample_weights"
+   ],
+   "factors": {
+    "op": [
+     "embedding",
+     "embedding_bag"
+    ],
+    "padding_idx": [
+     null,
+     0
+    ],
+    "max_norm": [
+     null,
+     1.0
+    ],
+    "scale_grad_by_freq": [
+     false,
+     true
+    ],
+    "mode": [
+     "sum",
+     "mean",
+     "max"
+    ],
+    "bags": [
+     "normal",
+     "empty",
+     "single"
+    ],
+    "per_sample_weights": [
+     false,
+     true
+    ]
+   },
+   "planned_conditions": 13,
+   "conditions": [
+    {
+     "op": "embedding",
+     "padding_idx": null,
+     "max_norm": null,
+     "scale_grad_by_freq": false,
+     "mode": "sum",
+     "bags": "normal",
+     "per_sample_weights": false
+    },
+    {
+     "op": "embedding_bag",
+     "padding_idx": null,
+     "max_norm": null,
+     "scale_grad_by_freq": false,
+     "mode": "sum",
+     "bags": "normal",
+     "per_sample_weights": false
+    },
+    {
+     "op": "embedding",
+     "padding_idx": 0,
+     "max_norm": null,
+     "scale_grad_by_freq": false,
+     "mode": "sum",
+     "bags": "normal",
+     "per_sample_weights": false
+    },
+    {
+     "op": "embedding",
+     "padding_idx": null,
+     "max_norm": 1.0,
+     "scale_grad_by_freq": false,
+     "mode": "sum",
+     "bags": "normal",
+     "per_sample_weights": false
+    },
+    {
+     "op": "embedding",
+     "padding_idx": null,
+     "max_norm": null,
+     "scale_grad_by_freq": true,
+     "mode": "sum",
+     "bags": "normal",
+     "per_sample_weights": false
+    },
+    {
+     "op": "embedding",
+     "padding_idx": null,
+     "max_norm": null,
+     "scale_grad_by_freq": false,
+     "mode": "mean",
+     "bags": "normal",
+     "per_sample_weights": false
+    },
+    {
+     "op": "embedding",
+     "padding_idx": null,
+     "max_norm": null,
+     "scale_grad_by_freq": false,
+     "mode": "max",
+     "bags": "normal",
+     "per_sample_weights": false
+    },
+    {
+     "op": "embedding",
+     "padding_idx": null,
+     "max_norm": null,
+     "scale_grad_by_freq": false,
+     "mode": "sum",
+     "bags": "empty",
+     "per_sample_weights": false
+    },
+    {
+     "op": "embedding",
+     "padding_idx": null,
+     "max_norm": null,
+     "scale_grad_by_freq": false,
+     "mode": "sum",
+     "bags": "single",
+     "per_sample_weights": false
+    },
+    {
+     "op": "embedding",
+     "padding_idx": null,
+     "max_norm": null,
+     "scale_grad_by_freq": false,
+     "mode": "sum",
+     "bags": "normal",
+     "per_sample_weights": true
+    },
+    {
+     "op": "embedding_bag",
+     "padding_idx": 0,
+     "max_norm": null,
+     "scale_grad_by_freq": false,
+     "mode": "sum",
+     "bags": "normal",
+     "per_sample_weights": false
+    },
+    {
+     "op": "embedding_bag",
+     "padding_idx": null,
+     "max_norm": null,
+     "scale_grad_by_freq": false,
+     "mode": "mean",
+     "bags": "empty",
+     "per_sample_weights": false,
+     "high_risk": true
+    },
+    {
+     "op": "embedding",
+     "padding_idx": 0,
+     "max_norm": 1.0,
+     "scale_grad_by_freq": false,
+     "mode": "sum",
+     "bags": "normal",
+     "per_sample_weights": false,
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "padding_idx row gets zero gradient",
+     "scale_grad_by_freq: gradient divided by the index frequency",
+     "embedding_bag(mode=sum) == sum of embedding rows",
+     "empty bag output is zero (sum/mean)"
+    ],
+    "FR": "mode A",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  },
+  "attention": {
+   "group": "attention",
+   "contract": "F.scaled_dot_product_attention docs (attn_mask, is_causal, scale, enable_gqa)",
+   "points": [
+    "causal alignment when q_len != k_len",
+    "fully masked rows",
+    "GQA",
+    "softcap",
+    "sliding window",
+    "scale"
+   ],
+   "factors": {
+    "q_len_k_len": [
+     "equal",
+     "q<k",
+     "q>k",
+     "q=1"
+    ],
+    "mask": [
+     "none",
+     "causal",
+     "padding",
+     "fully_masked_row",
+     "sliding_window"
+    ],
+    "gqa": [
+     false,
+     true
+    ],
+    "scale": [
+     null,
+     0.5
+    ],
+    "head_dim": [
+     16,
+     64,
+     72
+    ]
+   },
+   "planned_conditions": 27,
+   "conditions": [
+    {
+     "q_len_k_len": "equal",
+     "mask": "none",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q<k",
+     "mask": "none",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q>k",
+     "mask": "none",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q=1",
+     "mask": "none",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "equal",
+     "mask": "causal",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "equal",
+     "mask": "padding",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "equal",
+     "mask": "fully_masked_row",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "equal",
+     "mask": "sliding_window",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "equal",
+     "mask": "none",
+     "gqa": true,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "equal",
+     "mask": "none",
+     "gqa": false,
+     "scale": 0.5,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "equal",
+     "mask": "none",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 64
+    },
+    {
+     "q_len_k_len": "equal",
+     "mask": "none",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 72
+    },
+    {
+     "q_len_k_len": "q<k",
+     "mask": "causal",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q<k",
+     "mask": "padding",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q<k",
+     "mask": "fully_masked_row",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q<k",
+     "mask": "sliding_window",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q>k",
+     "mask": "causal",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q>k",
+     "mask": "padding",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q>k",
+     "mask": "fully_masked_row",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q>k",
+     "mask": "sliding_window",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q=1",
+     "mask": "causal",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q=1",
+     "mask": "padding",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q=1",
+     "mask": "fully_masked_row",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q=1",
+     "mask": "sliding_window",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16
+    },
+    {
+     "q_len_k_len": "q<k",
+     "mask": "causal",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16,
+     "high_risk": true
+    },
+    {
+     "q_len_k_len": "equal",
+     "mask": "fully_masked_row",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16,
+     "high_risk": true
+    },
+    {
+     "q_len_k_len": "q=1",
+     "mask": "causal",
+     "gqa": false,
+     "scale": null,
+     "head_dim": 16,
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "masked keys do not influence the output",
+     "softmax rows sum to 1 (no fully masked row)",
+     "causal: output at position i does not depend on keys > i (+ offset when q_len != k_len)",
+     "GQA == repeated KV heads"
+    ],
+    "FR": "mode A for Inductor / flex (Triton); SDPA backends are CUDA kernels -> black box",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  },
+  "packing": {
+   "group": "attention",
+   "contract": "block-diagonal attention mask with position_ids reset per document",
+   "points": [
+    "no cross-document leakage",
+    "position ids reset"
+   ],
+   "factors": {
+    "docs": [
+     1,
+     2,
+     5
+    ],
+    "lengths": [
+     "equal",
+     "unequal",
+     "one_token_doc"
+    ],
+    "impl": [
+     "sdpa_mask",
+     "flex_block_mask",
+     "hf_packed_position_ids"
+    ]
+   },
+   "planned_conditions": 12,
+   "conditions": [
+    {
+     "docs": 1,
+     "lengths": "equal",
+     "impl": "sdpa_mask"
+    },
+    {
+     "docs": 2,
+     "lengths": "equal",
+     "impl": "sdpa_mask"
+    },
+    {
+     "docs": 5,
+     "lengths": "equal",
+     "impl": "sdpa_mask"
+    },
+    {
+     "docs": 1,
+     "lengths": "unequal",
+     "impl": "sdpa_mask"
+    },
+    {
+     "docs": 1,
+     "lengths": "one_token_doc",
+     "impl": "sdpa_mask"
+    },
+    {
+     "docs": 1,
+     "lengths": "equal",
+     "impl": "flex_block_mask"
+    },
+    {
+     "docs": 1,
+     "lengths": "equal",
+     "impl": "hf_packed_position_ids"
+    },
+    {
+     "docs": 2,
+     "lengths": "unequal",
+     "impl": "sdpa_mask"
+    },
+    {
+     "docs": 2,
+     "lengths": "one_token_doc",
+     "impl": "sdpa_mask"
+    },
+    {
+     "docs": 5,
+     "lengths": "unequal",
+     "impl": "sdpa_mask"
+    },
+    {
+     "docs": 5,
+     "lengths": "one_token_doc",
+     "impl": "sdpa_mask"
+    },
+    {
+     "docs": 1,
+     "lengths": "one_token_doc",
+     "impl": "sdpa_mask",
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "packed output of each document == the document run alone (no leakage)"
+    ],
+    "FR": "mode A (flex)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  },
+  "rope": {
+   "group": "attention",
+   "contract": "RoPE: rotate-half (GPT-NeoX / HF Llama) and interleaved (GPT-J / original) conventions",
+   "points": [
+    "convention differences separated from real errors",
+    "position offset",
+    "scaling variants (linear, ntk)"
+   ],
+   "factors": {
+    "convention": [
+     "rotate_half",
+     "interleaved"
+    ],
+    "offset": [
+     0,
+     7
+    ],
+    "scaling": [
+     null,
+     "linear2"
+    ],
+    "head_dim": [
+     64,
+     72
+    ]
+   },
+   "planned_conditions": 7,
+   "conditions": [
+    {
+     "convention": "rotate_half",
+     "offset": 0,
+     "scaling": null,
+     "head_dim": 64
+    },
+    {
+     "convention": "interleaved",
+     "offset": 0,
+     "scaling": null,
+     "head_dim": 64
+    },
+    {
+     "convention": "rotate_half",
+     "offset": 7,
+     "scaling": null,
+     "head_dim": 64
+    },
+    {
+     "convention": "rotate_half",
+     "offset": 0,
+     "scaling": "linear2",
+     "head_dim": 64
+    },
+    {
+     "convention": "rotate_half",
+     "offset": 0,
+     "scaling": null,
+     "head_dim": 72
+    },
+    {
+     "convention": "interleaved",
+     "offset": 7,
+     "scaling": null,
+     "head_dim": 64
+    },
+    {
+     "convention": "interleaved",
+     "offset": 7,
+     "scaling": null,
+     "head_dim": 64,
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "norm preservation per pair",
+     "relative position: <R(m) q, R(n) k> depends on m - n only",
+     "R(0) = identity"
+    ],
+    "FR": "mode A (Liger, Unsloth)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  },
+  "normalization": {
+   "group": "norm",
+   "contract": "LayerNorm / RMSNorm / GroupNorm / BatchNorm docs (eps inside the sqrt; BN training uses the biased batch variance, running_var the unbiased one)",
+   "points": [
+    "eps position",
+    "variance definition",
+    "BN running statistics",
+    "BN eval vs train"
+   ],
+   "factors": {
+    "op": [
+     "layer_norm",
+     "rms_norm",
+     "group_norm",
+     "batch_norm_train",
+     "batch_norm_eval"
+    ],
+    "values": [
+     "gauss",
+     "constant_rows",
+     "huge_offset",
+     "tiny"
+    ],
+    "affine": [
+     true,
+     false
+    ],
+    "batch": [
+     1,
+     2,
+     7
+    ]
+   },
+   "planned_conditions": 25,
+   "conditions": [
+    {
+     "op": "layer_norm",
+     "values": "gauss",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "rms_norm",
+     "values": "gauss",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "group_norm",
+     "values": "gauss",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "batch_norm_train",
+     "values": "gauss",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "batch_norm_eval",
+     "values": "gauss",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "layer_norm",
+     "values": "constant_rows",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "layer_norm",
+     "values": "huge_offset",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "layer_norm",
+     "values": "tiny",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "layer_norm",
+     "values": "gauss",
+     "affine": false,
+     "batch": 1
+    },
+    {
+     "op": "layer_norm",
+     "values": "gauss",
+     "affine": true,
+     "batch": 2
+    },
+    {
+     "op": "layer_norm",
+     "values": "gauss",
+     "affine": true,
+     "batch": 7
+    },
+    {
+     "op": "rms_norm",
+     "values": "constant_rows",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "rms_norm",
+     "values": "huge_offset",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "rms_norm",
+     "values": "tiny",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "group_norm",
+     "values": "constant_rows",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "group_norm",
+     "values": "huge_offset",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "group_norm",
+     "values": "tiny",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "batch_norm_train",
+     "values": "constant_rows",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "batch_norm_train",
+     "values": "huge_offset",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "batch_norm_train",
+     "values": "tiny",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "batch_norm_eval",
+     "values": "constant_rows",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "batch_norm_eval",
+     "values": "huge_offset",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "batch_norm_eval",
+     "values": "tiny",
+     "affine": true,
+     "batch": 1
+    },
+    {
+     "op": "batch_norm_train",
+     "values": "gauss",
+     "affine": true,
+     "batch": 1,
+     "high_risk": true
+    },
+    {
+     "op": "rms_norm",
+     "values": "constant_rows",
+     "affine": true,
+     "batch": 1,
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "scale invariance (norm(a x) = norm(x) for a > 0, eps -> 0 limit)",
+     "BN running_var uses n / (n - 1)",
+     "BN eval uses running statistics only"
+    ],
+    "FR": "mode A",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  },
+  "optimizers": {
+   "group": "optimizer",
+   "contract": "torch.optim AdamW/Adam/SGD/RMSprop docs (algorithm boxes); Adafactor (paper / implementation docs)",
+   "points": [
+    "weight decay position (decoupled vs L2)",
+    "amsgrad max over v (not v_hat)",
+    "maximize",
+    "eps position",
+    "nesterov / dampening",
+    "RMSprop centered",
+    "Adafactor factorisation and clipping threshold",
+    "parameter-group differences"
+   ],
+   "factors": {
+    "opt": [
+     "adamw",
+     "adam",
+     "adam_amsgrad",
+     "sgd_nesterov",
+     "sgd_dampening",
+     "rmsprop_centered",
+     "adafactor"
+    ],
+    "impl": [
+     "for_loop",
+     "foreach",
+     "fused"
+    ],
+    "maximize": [
+     false,
+     true
+    ],
+    "weight_decay": [
+     0.0,
+     0.1
+    ],
+    "state": [
+     "cold",
+     "warm",
+     "zero_grad",
+     "grad_none",
+     "nonfinite_skip",
+     "save_restore"
+    ]
+   },
+   "planned_conditions": 31,
+   "conditions": [
+    {
+     "opt": "adamw",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adam",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adam_amsgrad",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "sgd_nesterov",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "sgd_dampening",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "rmsprop_centered",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adafactor",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adamw",
+     "impl": "foreach",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adamw",
+     "impl": "fused",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adamw",
+     "impl": "for_loop",
+     "maximize": true,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adamw",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.1,
+     "state": "cold"
+    },
+    {
+     "opt": "adamw",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "warm"
+    },
+    {
+     "opt": "adamw",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "zero_grad"
+    },
+    {
+     "opt": "adamw",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "grad_none"
+    },
+    {
+     "opt": "adamw",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "nonfinite_skip"
+    },
+    {
+     "opt": "adamw",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "save_restore"
+    },
+    {
+     "opt": "adam",
+     "impl": "foreach",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adam",
+     "impl": "fused",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adam_amsgrad",
+     "impl": "foreach",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adam_amsgrad",
+     "impl": "fused",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "sgd_nesterov",
+     "impl": "foreach",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "sgd_nesterov",
+     "impl": "fused",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "sgd_dampening",
+     "impl": "foreach",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "sgd_dampening",
+     "impl": "fused",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "rmsprop_centered",
+     "impl": "foreach",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "rmsprop_centered",
+     "impl": "fused",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adafactor",
+     "impl": "foreach",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adafactor",
+     "impl": "fused",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "cold"
+    },
+    {
+     "opt": "adam_amsgrad",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "save_restore",
+     "high_risk": true
+    },
+    {
+     "opt": "adamw",
+     "impl": "for_loop",
+     "maximize": false,
+     "weight_decay": 0.0,
+     "state": "grad_none",
+     "high_risk": true
+    },
+    {
+     "opt": "sgd_nesterov",
+     "impl": "for_loop",
+     "maximize": true,
+     "weight_decay": 0.0,
+     "state": "cold",
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "for_loop == foreach == fused (same contract)",
+     "maximize(g) == minimize(-g)",
+     "zero grad vs grad None: documented difference (None skips the parameter)",
+     "save/restore mid-run continues identically",
+     "amsgrad: max_exp_avg_sq non-decreasing"
+    ],
+    "FR": "mode A (compiled step)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": [
+    "init -> normal -> zero-grad -> restore",
+    "init -> steps -> save/restore -> continue",
+    "init -> skipped (non-finite) -> next normal"
+   ]
+  },
+  "schedulers": {
+   "group": "optimizer",
+   "contract": "torch.optim.lr_scheduler docs (closed forms), transformers get_cosine_schedule_with_warmup",
+   "points": [
+    "closed form vs recursion",
+    "last_epoch / resume",
+    "phase boundaries (warmup end, cycle end)"
+   ],
+   "factors": {
+    "sched": [
+     "warmup_cosine_hf",
+     "cosine_annealing",
+     "one_cycle",
+     "linear_warmup_torch"
+    ],
+    "resume": [
+     false,
+     true
+    ],
+    "steps": [
+     1,
+     10,
+     1000
+    ]
+   },
+   "planned_conditions": 12,
+   "conditions": [
+    {
+     "sched": "warmup_cosine_hf",
+     "resume": false,
+     "steps": 1
+    },
+    {
+     "sched": "cosine_annealing",
+     "resume": false,
+     "steps": 1
+    },
+    {
+     "sched": "one_cycle",
+     "resume": false,
+     "steps": 1
+    },
+    {
+     "sched": "linear_warmup_torch",
+     "resume": false,
+     "steps": 1
+    },
+    {
+     "sched": "warmup_cosine_hf",
+     "resume": true,
+     "steps": 1
+    },
+    {
+     "sched": "warmup_cosine_hf",
+     "resume": false,
+     "steps": 10
+    },
+    {
+     "sched": "warmup_cosine_hf",
+     "resume": false,
+     "steps": 1000
+    },
+    {
+     "sched": "cosine_annealing",
+     "resume": true,
+     "steps": 1
+    },
+    {
+     "sched": "one_cycle",
+     "resume": true,
+     "steps": 1
+    },
+    {
+     "sched": "linear_warmup_torch",
+     "resume": true,
+     "steps": 1
+    },
+    {
+     "sched": "cosine_annealing",
+     "resume": true,
+     "steps": 1,
+     "high_risk": true
+    },
+    {
+     "sched": "one_cycle",
+     "resume": false,
+     "steps": 1,
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "recursive (step) == closed form (get_closed_form / documented formula)",
+     "resume at k == continuous run",
+     "values at phase boundaries"
+    ],
+    "FR": "not applicable",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  },
+  "clip_amp": {
+   "group": "optimizer",
+   "contract": "clip_grad_norm_ / clip_grad_value_ / GradScaler docs",
+   "points": [
+    "norm_type (2, inf, 1)",
+    "non-finite handling (error_if_nonfinite)",
+    "unscale before clip",
+    "skipped steps",
+    "merging sharded norms (sum of squares, not sum of norms)"
+   ],
+   "factors": {
+    "op": [
+     "clip_norm",
+     "clip_value",
+     "scaler_step"
+    ],
+    "norm_type": [
+     2.0,
+     "inf",
+     1.0
+    ],
+    "grads": [
+     "normal",
+     "with_nan",
+     "with_inf",
+     "zero"
+    ],
+    "foreach": [
+     false,
+     true
+    ],
+    "shards": [
+     1,
+     2
+    ]
+   },
+   "planned_conditions": 16,
+   "conditions": [
+    {
+     "op": "clip_norm",
+     "norm_type": 2.0,
+     "grads": "normal",
+     "foreach": false,
+     "shards": 1
+    },
+    {
+     "op": "clip_value",
+     "norm_type": 2.0,
+     "grads": "normal",
+     "foreach": false,
+     "shards": 1
+    },
+    {
+     "op": "scaler_step",
+     "norm_type": 2.0,
+     "grads": "normal",
+     "foreach": false,
+     "shards": 1
+    },
+    {
+     "op": "clip_norm",
+     "norm_type": "inf",
+     "grads": "normal",
+     "foreach": false,
+     "shards": 1
+    },
+    {
+     "op": "clip_norm",
+     "norm_type": 1.0,
+     "grads": "normal",
+     "foreach": false,
+     "shards": 1
+    },
+    {
+     "op": "clip_norm",
+     "norm_type": 2.0,
+     "grads": "with_nan",
+     "foreach": false,
+     "shards": 1
+    },
+    {
+     "op": "clip_norm",
+     "norm_type": 2.0,
+     "grads": "with_inf",
+     "foreach": false,
+     "shards": 1
+    },
+    {
+     "op": "clip_norm",
+     "norm_type": 2.0,
+     "grads": "zero",
+     "foreach": false,
+     "shards": 1
+    },
+    {
+     "op": "clip_norm",
+     "norm_type": 2.0,
+     "grads": "normal",
+     "foreach": true,
+     "shards": 1
+    },
+    {
+     "op": "clip_norm",
+     "norm_type": 2.0,
+     "grads": "normal",
+     "foreach": false,
+     "shards": 2
+    },
+    {
+     "op": "clip_value",
+     "norm_type": "inf",
+     "grads": "normal",
+     "foreach": false,
+     "shards": 1
+    },
+    {
+     "op": "clip_value",
+     "norm_type": 1.0,
+     "grads": "normal",
+     "foreach": false,
+     "shards": 1
+    },
+    {
+     "op": "scaler_step",
+     "norm_type": "inf",
+     "grads": "normal",
+     "foreach": false,
+     "shards": 1
+    },
+    {
+     "op": "scaler_step",
+     "norm_type": 1.0,
+     "grads": "normal",
+     "foreach": false,
+     "shards": 1
+    },
+    {
+     "op": "clip_norm",
+     "norm_type": "inf",
+     "grads": "with_inf",
+     "foreach": false,
+     "shards": 1,
+     "high_risk": true
+    },
+    {
+     "op": "clip_norm",
+     "norm_type": 2.0,
+     "grads": "normal",
+     "foreach": false,
+     "shards": 2,
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "clip(c) leaves norms <= c unchanged and scales others to c",
+     "shard merge: sqrt(sum of squares) == global norm",
+     "a non-finite step is skipped and the scale halves (GradScaler)"
+    ],
+    "FR": "not applicable",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  },
+  "training_program": {
+   "group": "program",
+   "contract": "label shift and token counting; accumulation-window normalisation (specs/phase1/spec_accumulation.py); loss averaging across ranks",
+   "points": [
+    "mean over unequal token counts",
+    "label shift",
+    "cross-rank averaging (2 gloo processes on CPU)"
+   ],
+   "factors": {
+    "impl": [
+     "hf_trainer_4452",
+     "hf_trainer_4460",
+     "hf_trainer_4573",
+     "hf_trainer_5190",
+     "accelerate_loop",
+     "own_loop"
+    ],
+    "tokens": [
+     "equal",
+     "unequal",
+     "empty_microbatch"
+    ],
+    "ranks": [
+     1,
+     2
+    ]
+   },
+   "planned_conditions": 21,
+   "conditions": [
+    {
+     "impl": "hf_trainer_4452",
+     "tokens": "equal",
+     "ranks": 1
+    },
+    {
+     "impl": "hf_trainer_4460",
+     "tokens": "equal",
+     "ranks": 1
+    },
+    {
+     "impl": "hf_trainer_4573",
+     "tokens": "equal",
+     "ranks": 1
+    },
+    {
+     "impl": "hf_trainer_5190",
+     "tokens": "equal",
+     "ranks": 1
+    },
+    {
+     "impl": "accelerate_loop",
+     "tokens": "equal",
+     "ranks": 1
+    },
+    {
+     "impl": "own_loop",
+     "tokens": "equal",
+     "ranks": 1
+    },
+    {
+     "impl": "hf_trainer_4452",
+     "tokens": "unequal",
+     "ranks": 1
+    },
+    {
+     "impl": "hf_trainer_4452",
+     "tokens": "empty_microbatch",
+     "ranks": 1
+    },
+    {
+     "impl": "hf_trainer_4452",
+     "tokens": "equal",
+     "ranks": 2
+    },
+    {
+     "impl": "hf_trainer_4460",
+     "tokens": "unequal",
+     "ranks": 1
+    },
+    {
+     "impl": "hf_trainer_4460",
+     "tokens": "empty_microbatch",
+     "ranks": 1
+    },
+    {
+     "impl": "hf_trainer_4573",
+     "tokens": "unequal",
+     "ranks": 1
+    },
+    {
+     "impl": "hf_trainer_4573",
+     "tokens": "empty_microbatch",
+     "ranks": 1
+    },
+    {
+     "impl": "hf_trainer_5190",
+     "tokens": "unequal",
+     "ranks": 1
+    },
+    {
+     "impl": "hf_trainer_5190",
+     "tokens": "empty_microbatch",
+     "ranks": 1
+    },
+    {
+     "impl": "accelerate_loop",
+     "tokens": "unequal",
+     "ranks": 1
+    },
+    {
+     "impl": "accelerate_loop",
+     "tokens": "empty_microbatch",
+     "ranks": 1
+    },
+    {
+     "impl": "own_loop",
+     "tokens": "unequal",
+     "ranks": 1
+    },
+    {
+     "impl": "own_loop",
+     "tokens": "empty_microbatch",
+     "ranks": 1
+    },
+    {
+     "impl": "hf_trainer_4452",
+     "tokens": "unequal",
+     "ranks": 2,
+     "high_risk": true
+    },
+    {
+     "impl": "hf_trainer_4452",
+     "tokens": "empty_microbatch",
+     "ranks": 1,
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "split invariance",
+     "padding-free == padded (TRL-style invariance)",
+     "rank invariance: 2 ranks == 1 rank on the concatenated batch"
+    ],
+    "FR": "not applicable",
+    "F": "spec_accumulation.py (phase-1 package) covers the accumulation window"
+   },
+   "state_sequences": null
+  },
+  "moe": {
+   "group": "moe",
+   "contract": "top-k routing with renormalised weights; permute / unpermute; capacity drop; auxiliary load-balancing loss (Switch / Megatron-style definitions)",
+   "points": [
+    "top-k routing ties",
+    "permute / unpermute round trip",
+    "empty expert",
+    "capacity boundary",
+    "weighted combine",
+    "aux-loss counting"
+   ],
+   "factors": {
+    "topk": [
+     1,
+     2
+    ],
+    "experts": [
+     4,
+     8
+    ],
+    "capacity": [
+     null,
+     "exact",
+     "overflow"
+    ],
+    "routing": [
+     "random",
+     "ties",
+     "one_expert"
+    ]
+   },
+   "planned_conditions": 10,
+   "conditions": [
+    {
+     "topk": 1,
+     "experts": 4,
+     "capacity": null,
+     "routing": "random"
+    },
+    {
+     "topk": 2,
+     "experts": 4,
+     "capacity": null,
+     "routing": "random"
+    },
+    {
+     "topk": 1,
+     "experts": 8,
+     "capacity": null,
+     "routing": "random"
+    },
+    {
+     "topk": 1,
+     "experts": 4,
+     "capacity": "exact",
+     "routing": "random"
+    },
+    {
+     "topk": 1,
+     "experts": 4,
+     "capacity": "overflow",
+     "routing": "random"
+    },
+    {
+     "topk": 1,
+     "experts": 4,
+     "capacity": null,
+     "routing": "ties"
+    },
+    {
+     "topk": 1,
+     "experts": 4,
+     "capacity": null,
+     "routing": "one_expert"
+    },
+    {
+     "topk": 2,
+     "experts": 8,
+     "capacity": null,
+     "routing": "random"
+    },
+    {
+     "topk": 1,
+     "experts": 4,
+     "capacity": "overflow",
+     "routing": "one_expert",
+     "high_risk": true
+    },
+    {
+     "topk": 2,
+     "experts": 4,
+     "capacity": null,
+     "routing": "ties",
+     "high_risk": true
+    }
+   ],
+   "methods": {
+    "E": "yes",
+    "P": [
+     "permute -> unpermute is the identity",
+     "combine weights per token sum to 1",
+     "dropped tokens contribute zero",
+     "aux loss equals its documented formula on counts"
+    ],
+    "FR": "mode A (compiled)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   },
+   "state_sequences": null
+  }
+ },
+ "tier2": {
+  "queued": [
+   "KLDiv batchmean",
+   "BCEWithLogits pos_weight",
+   "CTC",
+   "adaptive pooling bin edges",
+   "interpolate align_corners",
+   "conv same padding"
+  ],
+  "registered_subset_or_deferred": {
+   "quantised-training scale rounding": "deferred to the extension queue",
+   "selective-scan chunk boundaries and state reset": "deferred to the extension queue"
+  },
+  "not_checked": [
+   "dropout randomness (only the 1/(1-p) scaling under a fixed mask)",
+   "autocast dtype policy",
+   "inference-time KV-cache quantisation"
+  ]
+ }
+}
