@@ -123,4 +123,13 @@ B020（附 gradcheck、OpInfo 缺口、最小例子、版本）；B021（优先�
 
 ## 9 偏离记录
 
-（运行后追加。）
+1. **（S3 运行之前）** `scripts/essential/conditions_supplement.py` 没有随本文一起提交，而是在 S3 的第一次运行之前提交（池化 108、
+   index/scatter 114 个条件：数值 {1e30 级, 1e−30 级, 1e−30 到 1e30 的混合} × 布局 {步长视图, 非零 storage offset, 转置存储} × 两组
+   参数 / 较大的非整块尺寸；prod 只用 1e−30 级数值，以免乘积越出浮点范围）。运行入口用环境变量 `ESSENTIAL_SUITE` 切换条件集与缓存
+   （`phase1` 默认、`s2`、`s3`），第一阶段的代码路径与结果不变。
+2. **（A3 运行之后、使用之前）「接口 / 常量来源已核实」的判定**：对第一阶段 FR 中出现接口项的 Inductor 条件重新捕获一个 seed，
+   用工具的 `interface.inventory` 清点生成的 kernel：存在经舍入的编译期常数或运行时标量（如 float32(ε)、float32(ε/C)、float32(1/除数)）
+   即记为「已核实」，并列出这些常数；否则记为「未核实」。这是可指认的来源，不是逐常数的反事实重算。结果 404 个条件中 362 个已核实、
+   42 个未核实（`results/essential/phase2a/a3_constants.json`）。
+3. **分类与汇总的输出目录。** `classify.py --out`、`summarize.py --dir`：2a 中用新分类层（A2、A3）重新分类第一阶段数据时写入
+   `results/essential/phase2a/reclassified/`，第一阶段目录不动。

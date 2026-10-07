@@ -77,10 +77,11 @@ def _case(family, cond, cand):
             v = torch.as_tensor(K.ce_upstream(cond, seed), dtype=dtype, device=device)
             return {"base": base, "target": tgt, "weight": w, "v": v}
         if family == "pool":
-            x = K._t(inp["x"][None], device, dtype).requires_grad_(True)
+            x = K._t(inp["x"][None], device, dtype, cond.get("layout", "contiguous")).requires_grad_(True)
             return {"x": x, "inp": inp}
-        s = K._t(inp["self"], device, dtype).requires_grad_(True)
-        src = K._t(inp["source"], device, dtype).requires_grad_(True)
+        lay = cond.get("layout", "contiguous")
+        s = K._t(inp["self"], device, dtype, lay).requires_grad_(True)
+        src = K._t(inp["source"], device, dtype, lay).requires_grad_(True)
         idx = torch.as_tensor(inp["index"], dtype=torch.long, device=device)
         v = torch.as_tensor(K.index_upstream(inp, tuple(s.shape)), dtype=dtype, device=device)
         return {"s": s, "src": src, "idx": idx, "v": v}

@@ -30,9 +30,15 @@ import common  # noqa: E402
 import conditions as C  # noqa: E402
 
 ROOT = common.ROOT
-CACHE = ROOT / ".cache/essential"
+# ESSENTIAL_SUITE (phase-2 protocol section 1): "phase1" (default, frozen), "s2" (phase-1 conditions with the
+# supplementary property runs only), "s3" (supplementary boundary conditions, full E/F/P/FR)
+SUITE = os.environ.get("ESSENTIAL_SUITE", "phase1")
+CACHE = ROOT / ".cache/essential" if SUITE == "phase1" else ROOT / f".cache/essential/suite_{SUITE}"
 FAMILIES = {"ce": (C.ce_conditions, C.make_ce_inputs), "pool": (C.pool_conditions, C.make_pool_inputs),
             "index": (C.index_conditions, C.make_index_inputs)}
+if SUITE == "s3":
+    import conditions_supplement as CS
+    FAMILIES = {"pool": (CS.pool_conditions, CS.make_pool_inputs), "index": (CS.index_conditions, CS.make_index_inputs)}
 
 
 def _env_tag():
@@ -77,7 +83,9 @@ def _index_reverse(cond, inp):
 
 
 def variants(family, cond, inp):
-    """the base run and the transformed runs of the property checks."""
+    """the base run and the transformed runs of the property checks (suite s2: the supplementary ones, S2)."""
+    if SUITE == "s2":
+        return variants_s2(family, cond, inp)
     out = {"base": (cond, inp)}
     if family == "ce":
         out["shift"] = (cond, dict(inp, logits=inp["logits"] + 2.0))
@@ -87,6 +95,30 @@ def variants(family, cond, inp):
     elif family == "index":
         out["ones"] = (cond, dict(inp, self=np.ones_like(inp["self"]), source=np.ones_like(inp["source"])))
         out["reverse"] = (cond, _index_reverse(cond, inp))
+    return out
+
+
+def variants_s2(family, cond, inp):
+    """S2: properties phase 1 did not check.  CE: changing the logits of ignored rows changes neither the loss nor the
+    other rows' gradients; avg pool: linearity f(2x + 3y) = 2 f(x) + 3 f(y); index_add / sum / mean: linearity in
+    (self, source) jointly; pooling: equivariance under reversing the channels."""
+    out = {"base": (cond, inp)}
+    if family == "ce" and cond["target"] == "index":
+        ign = np.array([t == cond["ignore_index"] for t in inp["target"]])
+        if ign.any():
+            lg = inp["logits"].copy()
+            lg[ign] = lg[ign][:, ::-1] * 3.0 + 7.0                     # anything: these rows must not matter
+            out["masked_rows_changed"] = (cond, dict(inp, logits=lg))
+    elif family == "pool":
+        y = np.flip(inp["x"], axis=-1).copy() * 0.5 + 1.0
+        if cond["op"] == "avg_pool":
+            out["lin_y"] = (cond, dict(inp, x=y))
+            out["lin_2x3y"] = (cond, dict(inp, x=2.0 * inp["x"] + 3.0 * y))
+        out["channels_reversed"] = (cond, dict(inp, x=inp["x"][::-1].copy()))
+    elif family == "index" and (cond["op"] == "index_add" or cond.get("reduce") in ("sum", "mean")):
+        ys, yv = np.flip(inp["self"]).copy() + 1.0, np.flip(inp["source"]).copy() - 1.0
+        out["lin_y"] = (cond, dict(inp, self=ys, source=yv))
+        out["lin_2x3y"] = (cond, dict(inp, self=2.0 * inp["self"] + 3.0 * ys, source=2.0 * inp["source"] + 3.0 * yv))
     return out
 
 

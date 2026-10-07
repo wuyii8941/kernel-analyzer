@@ -1,0 +1,1317 @@
+{
+ "sources": "v2.10.0: torch/testing/_internal/common_methods_invocations.py; test/inductor/test_torchinductor_opinfo.py; test/test_scatter_gather_ops.py; test/nn/test_pooling.py; test/test_nn.py",
+ "review": {
+  "scatter_reduce": {
+   "opinfo": "variants sum / prod / mean / amin / amax; amin, amax: supports_forward_ad=True, supports_fwgrad_bwgrad=True (gradcheck and forward-mode AD against finite differences run on the samples)",
+   "samples": "sample_inputs_scatter_reduce: make_tensor (continuous random values), include_self in (False, True, False); hand-written zero cases for prod only",
+   "samples_reach": {
+    "include_self=False with the excluded value equal to the result": false,
+    "ties among participants": false,
+    "padding-only window": "not applicable"
+   },
+   "eager_as_reference": "Inductor OpInfo test compares compiled against eager (test_comprehensive)",
+   "skipped_or_disabled": [
+    {
+     "where": "inductor_one_sample['cuda']",
+     "what": "scatter_reduce.amax / .amin / .mean run only the first sample (f16, f32, f64)",
+     "reason": "not stated (speed list)"
+    }
+   ],
+   "dedicated_tests": "test_scatter_reduce_amax / _amin (test_scatter_gather_ops.py 312-345): forward values and NaN / inf propagation for include_self True and False; no gradient test",
+   "tolerances": "OpInfo defaults"
+  },
+  "index_reduce": {
+   "opinfo": "variants mean / prod / amin / amax; gradcheck on the samples (no forward-mode AD)",
+   "samples": "sample_inputs_index_reduce: make_tensor (continuous random values), include_self in (True, False); hand-written zero cases for prod only",
+   "samples_reach": {
+    "include_self=False with the excluded value equal to the result": false,
+    "ties among participants": false,
+    "padding-only window": "not applicable"
+   },
+   "eager_as_reference": "Inductor OpInfo test compares compiled against eager",
+   "skipped_or_disabled": [
+    {
+     "where": "inductor_override_kwargs['cuda']",
+     "what": "index_reduce.mean check_gradient False (f16, f32, f64)",
+     "reason": "'Unreasonably high atol requirement'"
+    },
+    {
+     "where": "inductor_override_kwargs['cuda']",
+     "what": "index_reduce.amin / .amax check_gradient False (f16, f32, f64)",
+     "reason": "'Gradient contains non-finite entries' (the compiled backward on single-element samples: B016)"
+    },
+    {
+     "where": "inductor_skips['cpu']",
+     "what": "index_reduce prod / mean f16",
+     "reason": "'flaky'"
+    }
+   ],
+   "dedicated_tests": "none for amax / amin gradients",
+   "tolerances": "OpInfo defaults; f16 atol 2e-3 rtol 3e-3 in TestInductorOpInfo"
+  },
+  "max_pool": {
+   "opinfo": "nn.functional.max_pool1d / 2d / 3d and max_pool2d_with_indices_backward; supports_forward_ad=True",
+   "samples": "kernel 3 / (3,2) / (3,2,3), stride 2 / None / (2,1) / (2,1,2), padding 0 / 1 / (1,1), dilation 1 / (1,2) / (1,2,1), signal sizes 3 and 6 (2d adds 6, 3d adds 6 and 5); make_tensor values",
+   "samples_reach": {
+    "padding-only window": false,
+    "ties": "not deliberately",
+    "why": "with kernel >= 2, padding <= 1 and dilation <= 2 on axes of size >= 3, every window samples at least one input position; a padding-only window needs a very short axis"
+   },
+   "eager_as_reference": "Inductor OpInfo test compares compiled against eager",
+   "skipped_or_disabled": [
+    {
+     "where": "inductor_one_sample['cuda']",
+     "what": "max_pool1d (f16, f32, f64), max_pool3d (f16), max_pool2d_with_indices_backward (f16, f32, f64) run only the first sample",
+     "reason": "not stated"
+    },
+    {
+     "where": "inductor_one_sample['cpu']",
+     "what": "max_pool2d_with_indices_backward (f16, f32, f64)",
+     "reason": "not stated"
+    }
+   ],
+   "dedicated_tests": "test_max_pool1d_corner_cases (test/nn/test_pooling.py ~1110, onlyCPU): checks exactly the padding-only geometry (input [[1]], kernel 2, padding 1, dilation 2) but only the forward output (-inf) with return_indices=False - neither the returned index nor the backward",
+   "tolerances": "OpInfo defaults; max_pool2d f16 atol 1e-4 rtol 2e-3 (xpu)"
+  },
+  "cross_entropy": {
+   "opinfo": "nn.functional.cross_entropy; supports_forward_ad=True",
+   "samples": "shape (2, 3) and spatial variants; reductions; class weight = make_tensor((3,)) (random, can be negative); ignore_index=1; probability targets; NO label_smoothing sample",
+   "samples_reach": {
+    "label_smoothing": false,
+    "all targets ignored ('mean' denominator zero)": false,
+    "zero class weight on a present target": false
+   },
+   "eager_as_reference": "Inductor OpInfo test compares compiled against eager",
+   "skipped_or_disabled": [
+    {
+     "where": "inductor_one_sample['cuda'] and ['cpu']",
+     "what": "cross_entropy runs only the first sample (f16, f32, f64)",
+     "reason": "not stated"
+    },
+    {
+     "where": "OpInfo skips",
+     "what": "TestJit test_variant_consistency_jit expectedFailure on CUDA",
+     "reason": "CUDA memory leak"
+    }
+   ],
+   "dedicated_tests": "test_nn: test_cross_entropy_label_smoothing_* (consistency between index and probability targets, errors); these compare two PyTorch code paths with each other",
+   "tolerances": "OpInfo defaults"
+  }
+ },
+ "gradcheck_on_B020": {
+  "conditions": 50,
+  "conditions_with_a_gradcheck_failure": 50,
+  "by_seed": {
+   "no_ties": {
+    "seeds": 49,
+    "gradcheck_fails": 32
+   },
+   "ties": {
+    "seeds": 101,
+    "gradcheck_fails": 82
+   }
+  },
+  "rows": [
+   {
+    "condition": "idx266",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx266",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx266",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx267",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx267",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx267",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx272",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx272",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx272",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx273",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx273",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx273",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx284",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx284",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx284",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx285",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx285",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx285",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx288",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx288",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx288",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx290",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx290",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx290",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx291",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx291",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx291",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx296",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx296",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx296",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx297",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx297",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx297",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx299",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx299",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx299",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx300",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx300",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx300",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx302",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx302",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx302",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx303",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx303",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx303",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx305",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx305",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx305",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx306",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx306",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx306",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx356",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx356",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx356",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx357",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx357",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx357",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx365",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx365",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx365",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx368",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx368",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx368",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx369",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx369",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx369",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx372",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx372",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx372",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx374",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx374",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx374",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx375",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx375",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx375",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx377",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx377",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx377",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx380",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx380",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx380",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx381",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx381",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx381",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx383",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx383",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx383",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx384",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx384",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx384",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx386",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx386",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx386",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx387",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx387",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx387",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx389",
+    "seed": 0,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx389",
+    "seed": 1,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx389",
+    "seed": 2,
+    "op": "index_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx539",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx539",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx539",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx540",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx540",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx540",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx542",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx542",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx542",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx548",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx548",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx548",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx549",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx549",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx549",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx552",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx552",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx552",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx554",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx554",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx554",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx555",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx555",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx555",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx558",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx558",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx558",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amax",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx581",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx581",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx581",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx582",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx582",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx582",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx588",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx588",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx588",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx590",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx590",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx590",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx591",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx591",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx591",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx593",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx593",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx593",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx596",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx596",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx596",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": true,
+    "ties_among_participants": false
+   },
+   {
+    "condition": "idx597",
+    "seed": 0,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx597",
+    "seed": 1,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   },
+   {
+    "condition": "idx597",
+    "seed": 2,
+    "op": "scatter_reduce",
+    "reduce": "amin",
+    "gradcheck_passes": false,
+    "ties_among_participants": true
+   }
+  ]
+ }
+}

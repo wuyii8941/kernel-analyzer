@@ -20,6 +20,12 @@ def is_dev(c):
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--dir", type=Path, default=OUT, help="directory with classification_*.json.gz (and for summary.json)")
+    d_args = ap.parse_args()
+    global OUT
+    OUT = d_args.dir
     summary = {}
     for fam in ("ce", "pool", "index"):
         p = OUT / f"classification_{fam}.json.gz"

@@ -24,6 +24,17 @@ import spec_pooling as spo  # noqa: E402
 
 OUT = common.ROOT / "results/essential/phase1"
 SEM_REL = 2.0 ** -20                       # protocol section 12 entry 6
+
+
+def _a3():
+    """phase-2 item A3: whether the source of interface items was verified from the captured constants."""
+    p = common.ROOT / "results/essential/phase2a/a3_constants.json"
+    if not p.exists():
+        return {}
+    return {(r["family"], r["candidate"], r["condition"]): r["verified"] for r in json.loads(p.read_text())}
+
+
+A3_VERIFIED = _a3()
 NIGHTLY = ["nightly_eager_cuda32", "nightly_inductor_cuda32"]
 EREF = {"eager_cpu32": "eager_cpu64", "eager_cuda32": "eager_cpu64", "eager_cuda_bf16": "eager_cpu64",
         "inductor_cuda32": "eager_cuda32", "inductor_cuda_bf16": "eager_cuda_bf16",
@@ -259,7 +270,10 @@ def combine(c, e, eref_class):
         return "eager_itself:" + c
     if not eref_class.startswith(("compatible", "deviates", "reading", "error_variant")):
         return c + " | eager_ref:" + eref_class
-    e_dev = e["deviating_elements"] > 0
+    if e is None or e.get("compared_outputs", 0) == 0:   # A2: no comparable candidate / eager pair
+        if dev(c) and dev(eref_class):
+            return "shared_relation_not_established"
+    e_dev = e["deviating_elements"] > 0 if e else False
     if c.startswith("compatible") and eref_class.startswith("compatible"):
         return "compatible"
     if dev(c) and dev(eref_class) and not e_dev:
@@ -446,7 +460,8 @@ def fr_assess(family, cond, cand, fr, specs_f32):
                                     if name in modified else f"tool: {len(per)} of {len(R.C.SEEDS)} seeds"}
             continue
         o = {"phase": PHASE[family].get(name), "seeds": len(per), "ok_elements": 0, "e_num_excludes_zero": 0,
-             "readings": {}}
+             "readings": {}, "e_sem_excludes_zero": False, "above_action_threshold": False,
+             "interface_source_verified": None}
         for rd in rds:
             sem = iface = 0
             usable = True
@@ -464,11 +479,22 @@ def fr_assess(family, cond, cand, fr, specs_f32):
                 sem += int((excl & big).sum())
                 iface += int((excl & ~big).sum())
             o["readings"][rd] = {"semantic_elements": sem, "interface_elements": iface} if usable else None
+            if rd == rds[0] and usable:              # A3: the three fields, against the main reading
+                o["e_sem_excludes_zero"] = (sem + iface) > 0
+                o["above_action_threshold"] = sem > 0
+                if iface > 0:
+                    o["interface_source_verified"] = A3_VERIFIED.get((family, cand, cond["id"]))
         for p in per:
             o["ok_elements"] += int(p["ok"].sum())
             n_lo, n_hi = p["k"] - p["r_hi"], p["k"] - p["r_lo"]
             o["e_num_excludes_zero"] += int((((n_lo > 0) | (n_hi < 0)) & p["ok"]).sum())
         main = o["readings"].get(rds[0])
+        if o["ok_elements"] == 0:                  # A2: nothing was compared -> no FR conclusion
+            o["not_established"] = "no element with a complete finite K_R and f (ok_elements = 0)"
+            o["semantic_vs_main"] = None
+            o["compatible_readings"] = []
+            out["outputs"][name] = o
+            continue
         o["semantic_vs_main"] = None if main is None else main["semantic_elements"] > 0
         o["compatible_readings"] = [rd for rd, v in o["readings"].items() if v is not None and v["semantic_elements"] == 0]
         out["outputs"][name] = o
@@ -485,8 +511,10 @@ def load_raw(family, cand):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--family", choices=list(R.FAMILIES), required=True)
+    ap.add_argument("--out", type=Path, default=OUT, help="output directory (phase-1 results stay frozen)")
     a = ap.parse_args()
     fam = a.family
+    out_dir = a.out
     conds = [c for c in R.FAMILIES[fam][0]() if c["op"] != "flce"]
     cands = K.FAMILY_CANDIDATES[fam] + NIGHTLY
     raws = {c: load_raw(fam, c) for c in cands}
@@ -531,9 +559,9 @@ def main():
                 cat = cat.split(" (")[0] if cat.startswith(("compatible", "deviates", "reading:", "error_variant")) else cat
                 d = counts.setdefault(cand, {}).setdefault(phase, {})
                 d[cat] = d.get(cat, 0) + 1
-    OUT.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
     import gzip
-    with gzip.open(OUT / f"classification_{fam}.json.gz", "wt") as fh:     # per-seed detail: compressed
+    with gzip.open(out_dir / f"classification_{fam}.json.gz", "wt") as fh:     # per-seed detail: compressed
         json.dump({"family": fam, "conditions": len(conds), "counts": counts, "records": records}, fh,
                   default=lambda o: o.tolist() if isinstance(o, np.ndarray) else str(o))
     for cand, ph in counts.items():

@@ -30,8 +30,27 @@ FAMILY_CANDIDATES = {
 DTYPE_NAME = {torch.float64: "float64", torch.float32: "float32", torch.bfloat16: "bfloat16"}
 
 
-def _t(a, device, dtype):
-    return torch.as_tensor(np.asarray(a, dtype=np.float64)).to(dtype).to(device)
+def _t(a, device, dtype, layout="contiguous"):
+    """values rounded to dtype on the CPU, placed with the requested storage layout (phase-1 supplement S3):
+    "contiguous"; "strided" (every second element of a buffer twice as long in the last dimension);
+    "offset" (a view starting 3 elements into a larger buffer: non-zero storage offset);
+    "transposed" (the last two dimensions swapped in storage, then viewed back)."""
+    t = torch.as_tensor(np.asarray(a, dtype=np.float64)).to(dtype)
+    if layout == "contiguous":
+        return t.to(device)
+    if layout == "strided":
+        buf = torch.zeros(tuple(t.shape[:-1]) + (2 * t.shape[-1],), dtype=dtype)
+        buf[..., ::2] = t
+        return buf.to(device)[..., ::2]
+    if layout == "offset":
+        flat = torch.zeros(t.numel() + 3, dtype=dtype)
+        flat[3:] = t.reshape(-1)
+        return flat.to(device)[3:].view(t.shape)
+    if layout == "transposed":
+        if t.dim() < 2:
+            return _t(a, device, dtype, "strided")
+        return t.transpose(-1, -2).contiguous().to(device).transpose(-1, -2)
+    raise KeyError(layout)
 
 
 def _np(t):
@@ -110,7 +129,7 @@ def run_ce(cond, inp, name, seed, fn_cache=None):
 def run_pool(cond, inp, name):
     device, dtype, compiled = CANDIDATES[name]
     nd = cond["nd"]
-    x = _t(inp["x"][None], device, dtype).requires_grad_(True)                 # batch of 1
+    x = _t(inp["x"][None], device, dtype, cond.get("layout", "contiguous")).requires_grad_(True)   # batch of 1
     if cond["op"] == "avg_pool":
         if nd == 1 and cond["divisor_override"] is not None:
             return {"status": "unsupported", "reason": "avg_pool1d has no divisor_override"}
@@ -147,8 +166,9 @@ def run_pool(cond, inp, name):
 
 def run_index(cond, inp, name):
     device, dtype, compiled = CANDIDATES[name]
-    s = _t(inp["self"], device, dtype).requires_grad_(True)
-    src = _t(inp["source"], device, dtype).requires_grad_(True)
+    lay = cond.get("layout", "contiguous")
+    s = _t(inp["self"], device, dtype, lay).requires_grad_(True)
+    src = _t(inp["source"], device, dtype, lay).requires_grad_(True)
     idx = torch.as_tensor(inp["index"], dtype=torch.long, device=device)
     dim = inp["dim"]
     op = cond["op"]
