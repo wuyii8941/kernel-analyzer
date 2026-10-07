@@ -1,0 +1,105 @@
+{
+ "note": "post-hoc comparison (phase-2 item C); the pre-registered phase-1 P result (28/50 for B020) is unchanged",
+ "methods": {
+  "gradcheck": {
+   "needs_f": false,
+   "needs_ttir": false
+  },
+  "jvp_vjp_dot": {
+   "needs_f": false,
+   "needs_ttir": false,
+   "limit": "eager only; ops with forward-mode AD"
+  },
+  "P_preregistered": {
+   "needs_f": false,
+   "needs_ttir": false
+  },
+  "F": {
+   "needs_f": true,
+   "needs_ttir": false
+  },
+  "FR": {
+   "needs_f": true,
+   "needs_ttir": true,
+   "limit": "Triton candidates only"
+  }
+ },
+ "targets": {
+  "B020": {
+   "conditions": 50,
+   "gradcheck": "50/50",
+   "jvp_vjp_dot": "17/17 (scatter_reduce only; index_reduce has no forward-mode AD: 33 conditions not applicable)",
+   "P_preregistered": "28/50",
+   "F": "50/50",
+   "FR": "48/50 (Inductor backward kernels)"
+  },
+  "B021": {
+   "cases": {
+    "pool654": {
+     "gradcheck_passes": false,
+     "gradcheck_error": null,
+     "seconds": 1.16,
+     "jvp_vjp_status": [
+      "cpu: forward-mode not supported",
+      "cuda: error"
+     ]
+    },
+    "pool655": {
+     "gradcheck_passes": false,
+     "gradcheck_error": null,
+     "seconds": 0.43,
+     "jvp_vjp_status": [
+      "cpu: forward-mode not supported",
+      "cuda: error"
+     ]
+    }
+   },
+   "gradcheck": "2/2 detect",
+   "jvp_vjp_dot": "forward-mode AD raises on CPU and hits a device-side assert on CUDA (the out-of-range index): seen as an error, not as an inconsistency",
+   "P_preregistered": "True/True",
+   "F": "2/2",
+   "FR": "not applicable (eager CPU is not Triton)"
+  },
+  "inductor_avg_pool_backward": {
+   "conditions": 22,
+   "gradcheck_compiled": "22/22",
+   "gradcheck_seconds_total": 51.9,
+   "jvp_vjp_dot": "not applicable (no forward-mode AD through compiled graphs)",
+   "P_preregistered": "22/22 (adjoint)",
+   "F": "22/22",
+   "FR": "22/22"
+  },
+  "B016": {
+   "cases": {
+    "count": {
+     "gradcheck_passes": true,
+     "error": null,
+     "seconds": 2.17
+    },
+    "const_index": {
+     "gradcheck_passes": true,
+     "error": null,
+     "seconds": 2.48
+    },
+    "mean_bwd": {
+     "gradcheck_passes": false,
+     "error": null,
+     "seconds": 2.18
+    }
+   },
+   "gradcheck_compiled": "1/3 detect (a wrong forward whose derivative is right - 'count' - passes)",
+   "jvp_vjp_dot": "not applicable (compiled)",
+   "P_preregistered": "3/3 (W7)",
+   "F": "3/3 (W7)",
+   "FR": "3/3 (W7)"
+  },
+  "HF_grad_accum": {
+   "gradcheck": "cannot see it: the per-micro-batch normalisation is a forward-level contract; backward is the exact derivative of the (wrong) objective",
+   "jvp_vjp_dot": "cannot see it (same reason)",
+   "E_accum_vs_not": "4.45.2: yes for unequal token counts; 4.57.3: no (shared)",
+   "P_split_invariance": "4.45.2: yes; 4.57.3: no",
+   "F": "yes in both",
+   "FR": "not applicable (not a Triton kernel)"
+  }
+ }
+}
