@@ -10,6 +10,11 @@ F 与模式 B 的 FR 在各家族的规格入库前关闭（训练程序层的�
 | optimizers | 已执行且可裁决 | 已执行且可裁决 | 已执行且可裁决 | 模式 A：已执行且可裁决（Adafactor 未建立） | 未运行（规格未交付） | GPU 约 2.5 分钟、CPU 约 10 秒；人工 736 行、约 1.5 小时 |
 | attention | 已执行且可裁决（float32）；bf16 只记录 | 已执行且可裁决 | 不适用 | 模式 A：flex 已执行且可裁决；Inductor 手写注意力的输出由 cuBLAS 写出，未建立 | 未运行（规格未交付） | GPU 约 13 分钟（其中 FR 10 分钟）；人工约 560 行、约 2 小时 |
 | packing | 已执行且可裁决 | 已执行且可裁决 | 不适用 | 未运行（flex 的 kernel 与 attention 家族相同，FR 已在那里执行） | 未运行（规格未交付） | GPU 约 2 分钟；人工 258 行、约 0.5 小时 |
+| training_program | 已执行且可裁决 | 已执行且可裁决 | 不适用 | 不适用 | **已执行且可裁决**（`spec_accumulation.py`） | CPU 约 27 分钟（6 个候选并行约 5.5 分钟）；人工 358 行、约 1.5 小时 |
+| normalization | 已执行且可裁决（float32）；bf16 只记录 | 已执行且可裁决 | 不适用 | 模式 A：Inductor float32 / bf16 已执行且可裁决；Liger 未运行（liger 环境没有求值依赖） | 未运行（规格未交付） | GPU 约 1 分钟（FR 另计）；人工约 480 行、约 2 小时 |
+| embedding | 已执行且可裁决 | 已执行且可裁决 | 不适用 | 未运行（排在基础算子之后） | 未运行（规格未交付） | GPU 约 1 分钟；人工 334 行、约 1 小时 |
+| schedulers | 已执行且可裁决（nightly 对 2.10） | 已执行且可裁决 | 不适用 | 不适用 | 未运行（规格未交付） | CPU 数秒；人工 225 行、约 0.5 小时 |
+| clip_amp | 已执行且可裁决 | 已执行且可裁决 | 不适用 | 不适用 | 未运行（规格未交付） | 数秒；人工 285 行、约 0.5 小时 |
 
 ## 1. optimizers
 
@@ -110,3 +115,71 @@ cuDNN 一行的原因：2.10 的 `convert_boolean_attn_mask_cudnn` 把布尔掩�
 单 token 文档（登记的高风险组合）与 5 个文档的情形都没有串扰；HF 4.57.3 的 position_ids 打包路径对 sdpa 与 eager 都隔离了文档。
 
 **结论。** 零结果。
+
+## 4. training_program
+
+**设置。** 条件 5 个（覆盖计划的 (tokens, ranks) 组合）× 3 seed；窗口固定为 4 条序列、k = 2；2 个 rank 用 torchrun + gloo（CPU）。
+候选 6 个：HF Trainer 4.45.2 / 4.46.0 / 4.57.3 / 5.19.0（各自环境），Accelerate 1.7.0 按其梯度累积指南基础示例写的循环
+（`accelerator.accumulate` + `accelerator.backward(loss)`），PyTorch 按 AMP / DDP 示例写的普通循环（`loss / k`，DDP 除最后一个
+micro-batch 外 `no_sync`）。**F 开放**：`specs/phase1/spec_accumulation.py` 的窗口要求（全局批次所有非忽略 token 的平均）。数据
+`results/essential/phase2b/training_program/`，脚本 `scripts/essential/p2b_training_program.py`。
+
+| 候选 | F（偏离的条件 / 15） | K / f（unequal，1 rank） | E（不累积对累积） | P 重新划分 | P padding-free | P rank 不变 | 归属 |
+|---|---|---|---|---|---|---|---|
+| HF 4.45.2 | 9 | 0.974 | 9 | 6 | 不适用 | 3/6 | 召回：均值的均值（#34191，4.46 修复） |
+| HF 4.46.0 | **3**（只在 2 rank、token 不等） | 1.000 | 0 | 3 | 不适用 | **3/6** | 召回：跨 rank 不汇总 token 数（#34242；之后加 `average_tokens_across_devices`） |
+| HF 4.57.3 | **15**（含 token 相等） | 0.857 | 0 | 0 | **9/9** | 0/6 | 召回：每行多计首个标签（#46204，第一阶段 W7 已见） |
+| HF 5.19.0 | 0 | 1.000 | 0 | 0 | 0/9 | 0/6 | 全部相容 |
+| Accelerate 1.7.0 循环 | 9 | 0.974 | 9 | 6 | 不适用 | 3/6 | 按文档基础示例写的循环即均值的均值；同一份文档另有「可变长度样本的梯度累积」一节给出按 token 归一的写法 |
+| PyTorch 普通循环 | 9 | 0.974 | 9 | 6 | 不适用 | 3/6 | 同上（示例的 `loss / k`） |
+
+每个 2 rank 的运行两个 rank 的梯度逐位相同。方法上：E（不累积对累积）只看到 4.45.2 式的累积错误；跨 rank 问题只有 F 与 rank 不变性
+看得到；4.57.3 的计数问题只有 F 与 **padding-free 不变性**看得到——第一阶段预注册的重新划分不变性看不到它，2b 预注册的
+padding-free 不变性 9/9 看到（与上游的发现路径一致）。**结论：** 无新错误；三个 HF 版本的已知问题全部被重新发现，5.19.0 全部相容。
+
+## 5. normalization
+
+**设置。** 条件 23 个（覆盖计划去重）× 3 seed，前向与反向（y、dx、dw、db，BN 训练另有 running_mean / running_var）。候选：eager CPU /
+CUDA（float64、float32、CUDA bf16）、Inductor（float32、bf16）、nightly eager / Inductor（float32）、Liger RMSNorm / LayerNorm（只覆盖各自的
+算子、带仿射的条件）。所有候选收到同一组 float32 可表示的输入（偏离 9）。数据 `results/essential/phase2b/normalization/`。
+
+**E 与 E64。** 超出 τ₃₂ 的 float32 偏离全部落在两类输入上：huge_offset（1e4 + N(0, 1)：LayerNorm、GroupNorm、BN 训练；eager、Inductor、
+nightly、Liger LayerNorm 都有）与 GroupNorm 的 constant_rows（Inductor）。**裁决：数值（条件数），不是语义差异**，两条独立证据：
+(1) 在精确平移后的输入上（x − 1e4，或减去行常数；float32 中精确）每个候选都与 float64 eager 相容（偏离 9 的规则）；(2) 模式 A 的 FR：
+Inductor 的 K_R（自身 TTIR 的精确求值）与 float64 eager 在 τ₃₂ 内一致（全部 23 个条件，最大 0.005 τ₃₂），超出的部分全部是 e_num = K − K_R
+（舍入）。bf16（只记录）：K_R 与在同一 bf16 输入上的 float64 eager 一致（最大 0.005 τ₃₂），K 的偏离全部是 e_num。
+
+**P。** 尺度不变（norm(2x) = norm(x)，前提：集合方差 ≥ 1e3·eps）：Inductor、Liger 与 float64 零违反；eager float32（CPU、CUDA、nightly）的
+GroupNorm 与 BN 训练在 huge_offset 上 6/36——eager 按 y = x·s + t（s = rstd·w，t = b − μ·s）计算，两项都约 1e4 而相消；在平移后的输入上
+尺度不变恢复，归为数值。BN running_var 用 n / (n − 1)：0/12。BN eval 只用 running 统计量：batch ≥ 2 的条件不在覆盖计划中，未执行。
+事后：行独立（扰动其他行，第 0 行逐位不变）0/45。
+
+**FR（模式 A）。** Inductor float32 与 bf16 全部 46 个（条件, dtype）的全部输出由 Triton 写出、K_R 完整。Liger 的 FR 未运行：liger 环境没有
+求值依赖（gmpy2），需要「liger 中捕获、ka_main 中求值」的捕获包流程，留待之后。
+
+**结论。** 零结果；E 与 P 的全部 float32 超差都由条件数解释，并由 FR 归到 e_num。
+
+## 6. embedding
+
+**设置。** 条件 13 个（覆盖计划；`mode` / `bags` / `per_sample_weights` 的单因素边界移到 embedding_bag，偏离 9）× 3 seed。候选：eager CPU /
+CUDA（float64、float32）、Inductor、nightly eager / Inductor。数据 `results/essential/phase2b/embedding/`。
+
+**E / E64** 全部 0 超出（Inductor 最大 0.00075 τ₃₂）。**P** 零违反：padding_idx 行梯度为零（0/9）；scale_grad_by_freq 等于按频次相除（0/3）；
+embedding_bag(sum) 等于逐行 F.embedding 之和（0/15）；空 bag 为零（0/6）。事后：mean / max 同样等于逐行结果（0/6、0/3）；只含 padding 的
+bag 为零（0/3）；max_norm 原地重归一化（被引用且超限的行缩到 max_norm、未超限行与未引用行不动、输出行范数 ≤ max_norm）0/6。**结论：** 零结果。
+
+## 7. schedulers
+
+**设置。** 条件 10 个（覆盖计划）× 3 个基础学习率。候选：torch 2.10、torch nightly 20261005（CPU）的 CosineAnnealingLR / OneCycleLR / LinearLR，
+transformers 4.57.3 的 `get_cosine_schedule_with_warmup`。**P：** 链式 step 等于类自身的闭式（`_get_closed_form_lr`）0/12；中途 state_dict 恢复等于
+连续运行（逐位）0/12；阶段边界值：steps ≥ 10 全部相符；**steps = 1 的退化计划**中文档给出的两个边界值落在同一步、互相矛盾（OneCycleLR：
+起点 max_lr / div_factor 与终点 initial_lr / final_div_factor 同在第 0 步，实现取终点值；HF：warmup 结束值 base 与训练结束值 0 同在第 1 步，
+实现取 base）——记为约定，不计违反。OneCycleLR 在 total_steps 之后拒绝再 step（文档行为）。**E：** nightly 对 2.10 逐位相同 0/18。**结论：** 零结果。
+
+## 8. clip_amp
+
+**设置。** 条件 11 个（覆盖计划合并空组合）+ 2 个事后条件（GradScaler 性质所需的 scaler_step × with_inf / with_nan）× 3 seed。候选：
+`clip_grad_norm_` / `clip_grad_value_` / GradScaler（torch 2.10 CPU、CUDA）、Accelerate 1.7.0 的 `Accelerator.clip_grad_norm_`；另有只作参照的
+float64 CPU；DeepSpeed 环境不可用。**P** 零违反：总范数 ≤ c 时逐位不变（0/15）、否则缩到 c（0/18）；clip_value 精确截断（0/3）；分片范数合并
+等于全局范数（0/3）；非有限一步被跳过且 scale 减半（0/6）；有限一步精确反缩放（事后，0/3）。**E**：Accelerate 对 torch CUDA 0/27；E64 0/39。
+非有限梯度（error_if_nonfinite = False，默认）：总范数为 NaN / inf，裁剪后梯度非有限——文档行为，记为约定。**结论：** 零结果。

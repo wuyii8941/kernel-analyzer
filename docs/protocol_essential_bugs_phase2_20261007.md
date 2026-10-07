@@ -198,3 +198,18 @@ padding）；量化训练的缩放取整与 selective scan 的 chunk 边界登�
    未编译的 flex、HF eager）。运行中修正：xformers 在 GQA 上「No operator found」第一次被记为错误，改记「不支持」后重跑该候选（数值结果
    不变）。打包：条件取覆盖计划 (docs, lengths) 的 9 个组合（`impl` 去掉，每个实现都是候选）；HF 候选用随机权重的 2 层 Llama 而不是
    预训练模型（只查文档隔离与位置重置）。
+9. **（2b 训练程序层、归一化、嵌入、调度、裁剪；运行之前定，归一化与裁剪各有运行中修正）** 训练程序层：条件取覆盖计划的 5 个
+   (tokens, ranks) 组合，窗口 4 条序列、k = 2；Accelerate 与 PyTorch 循环按各自文档的基础示例书写；PyTorch 循环与 Accelerate 循环在
+   liger 环境运行（模型需要 transformers；torch 与 ka_main 同为 2.10.0+cu128），登记的 `torch_ddp_gloo`（ka_main）因此换环境；padding-free
+   变体只对 transformers ≥ 4.57 执行（更早的版本只在 flash_attention_2 下隔离打包序列，需要 CUDA）。归一化：第一次运行时 float64 候选
+   收到未舍入的输入，float32 候选收到舍入后的输入，E64 因此混入输入舍入；改为所有候选收到 float32 可表示的输入后全部重跑。GroupNorm 的
+   行独立性质第一次扰动了同组的通道（通道 0、1 同组），改为只扰动其他组后重跑。数值裁决（看到结果之后定，事后）：平移不变的归一化
+   （LayerNorm、GroupNorm、BN 训练）在 huge_offset / constant_rows 上超出 τ₃₂ 时，若候选在精确平移后的输入（x − 1e4 或减去集合常数，
+   float32 中精确）上与 float64 eager 相容，则记为「数值（条件数）」；为此增加 `translated` 与 `translated_scaled` 两个辅助运行。嵌入：
+   覆盖计划把 mode / bags / per_sample_weights 的单因素边界放在 op = embedding 上（这三个参数只属于 embedding_bag），改在 embedding_bag
+   上执行。裁剪：合并 norm_type 对 clip_value 与 scaler_step 无作用的重复组合；为预注册的 GradScaler 性质加两个事后条件（scaler_step ×
+   with_inf / with_nan）；第一次运行时 float64 CPU 参照的记录与梯度共享内存（`.numpy()` 对 float64 CPU 张量不复制），且分片范数的分组
+   写错（`params[:2] is params[:2]` 恒假），两处修正后全部重跑。调度：steps = 1 时文档的两个边界值落在同一步，记为约定。
+10. **（模式 A 的 FR，看到第一批结果之后加，事后）** 模式 A 没有规格，「K 落在 K_R ± τ₃₂ 内」只量 e_num 的大小：条件数差或 bf16 时它必然
+   超出，不表示语义问题。为此对 K_R 增加一个比较：K_R 对同一输入上的 float64 eager（bf16 候选用其收到的 bf16 输入）——K_R 与它一致、
+   而 K 不一致时，偏离归为舍入（e_num）。这是对 eager 语义的比较，不是对规格的比较；规格交付后由模式 B 的 e_sem 取代。

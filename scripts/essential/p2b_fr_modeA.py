@@ -29,6 +29,7 @@ import torch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # noqa: E402
 import p2b_attention as A  # noqa: E402
+import p2b_normalization as NM  # noqa: E402
 import p2b_optimizers as O  # noqa: E402
 
 OUT = O.ROOT / "results/essential/phase2b"
@@ -219,5 +220,124 @@ def run_attention():
     path.write_text(json.dumps({"seconds": round(time.time() - t0, 1), "cases": res}, indent=1, default=str) + "\n")
 
 
+def normalization_case(dtype, cond):
+    st = {}
+    dt = getattr(torch, dtype)
+
+    def setup():
+        torch._dynamo.reset()
+        st["fn"] = torch.compile(NM.norm_fn(cond), dynamic=False)
+        launch(inputs(0))
+        torch.cuda.synchronize()
+
+    def inputs(seed):
+        d = NM.make_inputs(cond, seed, "base")
+        t = {k: torch.tensor(d[k], dtype=dt, device="cuda", requires_grad=k in ("x", "w", "b")) for k in ("x", "w", "b", "g")}
+        t["rm"], t["rv"] = (torch.tensor(d[k], dtype=dt, device="cuda") for k in ("rm", "rv"))
+        t["_seed"] = seed
+        return t
+
+    def launch(t):
+        for k in ("x", "w", "b"):
+            t[k].grad = None
+        y = st["fn"](t["x"], t["w"], t["b"], t["rm"], t["rv"])
+        y.backward(t["g"])
+        out = {"y": y, "dx": t["x"].grad}
+        if cond["affine"]:
+            out["dw"] = t["w"].grad
+            if cond["op"] != "rms_norm":
+                out["db"] = t["b"].grad
+        if cond["op"] == "batch_norm_train":
+            out["rm"], out["rv"] = t["rm"], t["rv"]
+        return out
+
+    return setup, inputs, launch
+
+
+def kr_vs_reference(keep, ref_outputs, seed_of_row=None):
+    """E applied to K_R: max |mid(K_R) - K_ref| / τ32(1 + |K_ref|) over elements with a complete finite K_R, and the count
+    beyond τ32.  K_ref is the float64 eager run on the same inputs; K_R is the exact evaluation of the candidate's own TTIR,
+    so a K_R close to K_ref while K is not attributes the deviation to rounding (e_num)."""
+    out = {}
+    for name, rows in keep.items():
+        n_bad = n = 0
+        worst = 0.0
+        for r in rows:
+            ref = ref_outputs.get(r["seed"], {}).get(name)
+            if ref is None:
+                continue
+            ok = np.asarray(r["ok"], bool)
+            mid = 0.5 * (np.asarray(r["r_lo"], float) + np.asarray(r["r_hi"], float))
+            refv = np.asarray(ref, float).reshape(-1)
+            if refv.size != mid.size:
+                continue
+            tol = O.TAU32 * (1 + np.abs(refv))
+            d = np.abs(mid - refv)
+            n += int(ok.sum())
+            n_bad += int((ok & (d > tol)).sum())
+            if ok.any():
+                worst = max(worst, float((d / tol)[ok].max()))
+        out[name] = {"elements": n, "kr_beyond_tau32_vs_float64": n_bad, "max_kr_dev_over_tau32": worst}
+    return out
+
+
+def float64_on_rounded(cond, seed, dt):
+    d = NM.make_inputs(cond, seed, "base")
+    r = {k: torch.tensor(d[k], dtype=dt).double() for k in ("x", "w", "b", "rm", "rv", "g")}
+    x, w, b = (r[k].clone().requires_grad_(True) for k in ("x", "w", "b"))
+    y = NM.norm_fn(cond)(x, w, b, r["rm"], r["rv"])
+    y.backward(r["g"])
+    out = {"y": y.detach().numpy(), "dx": x.grad.numpy()}
+    if cond["affine"]:
+        out["dw"] = w.grad.numpy()
+        if cond["op"] != "rms_norm":
+            out["db"] = b.grad.numpy()
+    if cond["op"] == "batch_norm_train":
+        out["rm"], out["rv"] = r["rm"].numpy(), r["rv"].numpy()
+    return out
+
+
+def run_normalization():
+    res, t0 = {}, time.time()
+    ref = pickle.loads((NM.CACHE / "eager_cpu_float64.pkl").read_bytes())["res"]
+    for dtype in ("float32", "bfloat16"):
+        for cond in NM.conditions():
+            key = f"inductor_cuda_{dtype}/{cond['id']}"
+            try:
+                setup, inputs, launch = normalization_case(dtype, cond)
+                rep, keep = common.fr_run(f"normalization/{key}", setup, inputs, launch, lambda _t: None)
+                if dtype == "float32":
+                    refs = {sd: ref[(cond["id"], sd)]["base"]["outputs"] for sd in (0, 1, 2)}
+                else:                                         # float64 eager on the bfloat16-rounded inputs the candidate received
+                    refs = {sd: float64_on_rounded(cond, sd, torch.bfloat16) for sd in (0, 1, 2)}
+                res[key] = {"status": "ok", "verdict": verdict(keep), "kr_vs_float64_eager": kr_vs_reference(keep, refs),
+                            "notes": {k: rep.get(k) for k in (
+                                "outputs_not_written_by_triton", "outputs_binding_not_established",
+                                "outputs_at_address_of_another_recorded_storage", "outputs_modified_after_last_triton_write",
+                                "outputs_whose_writing_programs_aborted", "ttir_coverage_complete", "tool_version")},
+                            "launches": [l["kernel"][:60] for l in rep.get("launches") or []],
+                            "special": {k: v.get("special_values") for k, v in rep.get("outputs", {}).items()},
+                            "complete_fraction": {k: v["reference_classes"]["finite_complete_fraction"]
+                                                  for k, v in rep.get("outputs", {}).items()},
+                            "seconds": rep.get("seconds")}
+            except Exception as exc:  # noqa: BLE001
+                res[key] = {"status": "error", "reason": f"{type(exc).__name__}: {exc}"[:400], "trace": traceback.format_exc()[-1500:]}
+            r = res[key]
+            if r["status"] == "ok":
+                v = r["verdict"]
+                kr = r["kr_vs_float64_eager"]
+                print(key, "ok-el", sum(x["ok_elements"] for x in v.values()), "e_num beyond", sum(x["beyond_tau32"] for x in v.values()),
+                      "| K_R vs f64 beyond", sum(x["kr_beyond_tau32_vs_float64"] for x in kr.values()),
+                      "max", round(max([x["max_kr_dev_over_tau32"] for x in kr.values()] or [0]), 3),
+                      "complete", {k: round(x, 2) for k, x in r["complete_fraction"].items()},
+                      "not-Triton", r["notes"]["outputs_not_written_by_triton"], "unbound", r["notes"]["outputs_binding_not_established"],
+                      "modified", r["notes"]["outputs_modified_after_last_triton_write"], flush=True)
+            else:
+                print(key, r["status"], r.get("reason", "")[:200], flush=True)
+    path = OUT / "normalization" / "fr_modeA.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"seconds": round(time.time() - t0, 1), "cases": res}, indent=1, default=str) + "\n")
+
+
 if __name__ == "__main__":
-    {"optimizers": run_optimizers, "attention": run_attention}[sys.argv[1]]()
+    {"optimizers": run_optimizers, "attention": run_attention, "normalization": run_normalization}[sys.argv[1]]()

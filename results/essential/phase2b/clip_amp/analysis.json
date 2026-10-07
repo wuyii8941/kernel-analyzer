@@ -1,0 +1,91 @@
+{
+ "conditions": 13,
+ "candidates": {
+  "accelerate_clip": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 0.79,
+    "env": "liger"
+   },
+   "P": {
+    "P_clip_norm_scales_to_c": "0/18",
+    "P_clip_norm_leaves_small_unchanged": "0/15",
+    "P_shard_merge": "0/3"
+   },
+   "E": "0/27",
+   "E64": "0/27",
+   "non_finite_conventions": {
+    "with_nan (norm 2.0): total_norm=nan, clipped grads finite: False": 3,
+    "with_inf (norm 2.0): total_norm=inf, clipped grads finite: False": 3,
+    "with_inf (norm inf): total_norm=inf, clipped grads finite: False": 3
+   }
+  },
+  "torch_clip_cpu": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 1.11,
+    "env": "ka_main"
+   },
+   "P": {
+    "P_clip_norm_scales_to_c": "0/18",
+    "P_clip_norm_leaves_small_unchanged": "0/15",
+    "P_clip_value_clamps": "0/3",
+    "H_scaler_finite_step_unscaled_exactly": "0/3",
+    "P_shard_merge": "0/3",
+    "P_scaler_nonfinite_skipped_scale_halves": "0/6"
+   },
+   "E": null,
+   "E64": "0/39",
+   "non_finite_conventions": {
+    "with_nan (norm 2.0): total_norm=nan, clipped grads finite: False": 3,
+    "with_inf (norm 2.0): total_norm=inf, clipped grads finite: False": 3,
+    "with_inf (norm inf): total_norm=inf, clipped grads finite: False": 3
+   }
+  },
+  "torch_clip_cpu_float64": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 0.02,
+    "env": "ka_main"
+   },
+   "P": {
+    "P_clip_norm_scales_to_c": "0/18",
+    "P_clip_norm_leaves_small_unchanged": "0/15",
+    "P_clip_value_clamps": "0/3",
+    "H_scaler_finite_step_unscaled_exactly": "0/3",
+    "P_shard_merge": "0/3",
+    "P_scaler_nonfinite_skipped_scale_halves": "0/6"
+   },
+   "E": null,
+   "E64": null,
+   "non_finite_conventions": {
+    "with_nan (norm 2.0): total_norm=nan, clipped grads finite: False": 3,
+    "with_inf (norm 2.0): total_norm=inf, clipped grads finite: False": 3,
+    "with_inf (norm inf): total_norm=inf, clipped grads finite: False": 3
+   }
+  },
+  "torch_clip_cuda": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 0.42,
+    "env": "ka_main"
+   },
+   "P": {
+    "P_clip_norm_scales_to_c": "0/18",
+    "P_clip_norm_leaves_small_unchanged": "0/15",
+    "P_clip_value_clamps": "0/3",
+    "H_scaler_finite_step_unscaled_exactly": "0/3",
+    "P_shard_merge": "0/3",
+    "P_scaler_nonfinite_skipped_scale_halves": "0/6"
+   },
+   "E": null,
+   "E64": "0/39",
+   "non_finite_conventions": {
+    "with_nan (norm 2.0): total_norm=nan, clipped grads finite: False": 3,
+    "with_inf (norm 2.0): total_norm=inf, clipped grads finite: False": 3,
+    "with_inf (norm inf): total_norm=inf, clipped grads finite: False": 3
+   }
+  }
+ },
+ "examples": []
+}

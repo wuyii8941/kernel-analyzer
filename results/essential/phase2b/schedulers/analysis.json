@@ -1,0 +1,365 @@
+{
+ "candidates": {
+  "hf_schedulers": {
+   "meta": {
+    "candidate": "hf_schedulers",
+    "torch": "2.10.0+cu128",
+    "seconds": 2.04,
+    "env": "liger",
+    "transformers": "4.57.3"
+   },
+   "P": {
+    "P_phase_boundaries": "12/36",
+    "P_resume_equals_continuous": "0/3"
+   },
+   "E_vs_2.10": null,
+   "stopped_early": []
+  },
+  "torch_lr_scheduler": {
+   "meta": {
+    "candidate": "torch_lr_scheduler",
+    "torch": "2.10.0+cu128",
+    "seconds": 1.0,
+    "env": "ka_main"
+   },
+   "P": {
+    "P_chained_equals_closed_form": "0/12",
+    "P_phase_boundaries": "6/42",
+    "P_resume_equals_continuous": "0/9"
+   },
+   "E_vs_2.10": null,
+   "stopped_early": [
+    {
+     "condition": "sch_one_cycle_cont_n1",
+     "base": 0.1,
+     "after_steps": 1,
+     "note": "ValueError: Tried to step 2 times. The specified number of total steps is 1"
+    },
+    {
+     "condition": "sch_one_cycle_cont_n1",
+     "base": 0.03,
+     "after_steps": 1,
+     "note": "ValueError: Tried to step 2 times. The specified number of total steps is 1"
+    },
+    {
+     "condition": "sch_one_cycle_cont_n1",
+     "base": 1.0,
+     "after_steps": 1,
+     "note": "ValueError: Tried to step 2 times. The specified number of total steps is 1"
+    },
+    {
+     "condition": "sch_one_cycle_resume_n1",
+     "base": 0.1,
+     "after_steps": 1,
+     "note": "ValueError: Tried to step 2 times. The specified number of total steps is 1"
+    },
+    {
+     "condition": "sch_one_cycle_resume_n1",
+     "base": 0.03,
+     "after_steps": 1,
+     "note": "ValueError: Tried to step 2 times. The specified number of total steps is 1"
+    },
+    {
+     "condition": "sch_one_cycle_resume_n1",
+     "base": 1.0,
+     "after_steps": 1,
+     "note": "ValueError: Tried to step 2 times. The specified number of total steps is 1"
+    }
+   ]
+  },
+  "torch_nightly_lr_scheduler": {
+   "meta": {
+    "candidate": "torch_nightly_lr_scheduler",
+    "torch": "2.15.0.dev20261005+cpu",
+    "seconds": 1.28,
+    "env": "nightly"
+   },
+   "P": {
+    "P_chained_equals_closed_form": "0/12",
+    "P_phase_boundaries": "6/42",
+    "P_resume_equals_continuous": "0/9"
+   },
+   "E_vs_2.10": "0/18",
+   "stopped_early": [
+    {
+     "condition": "sch_one_cycle_cont_n1",
+     "base": 0.1,
+     "after_steps": 1,
+     "note": "ValueError: Tried to step 2 times. The specified number of total steps is 1"
+    },
+    {
+     "condition": "sch_one_cycle_cont_n1",
+     "base": 0.03,
+     "after_steps": 1,
+     "note": "ValueError: Tried to step 2 times. The specified number of total steps is 1"
+    },
+    {
+     "condition": "sch_one_cycle_cont_n1",
+     "base": 1.0,
+     "after_steps": 1,
+     "note": "ValueError: Tried to step 2 times. The specified number of total steps is 1"
+    },
+    {
+     "condition": "sch_one_cycle_resume_n1",
+     "base": 0.1,
+     "after_steps": 1,
+     "note": "ValueError: Tried to step 2 times. The specified number of total steps is 1"
+    },
+    {
+     "condition": "sch_one_cycle_resume_n1",
+     "base": 0.03,
+     "after_steps": 1,
+     "note": "ValueError: Tried to step 2 times. The specified number of total steps is 1"
+    },
+    {
+     "condition": "sch_one_cycle_resume_n1",
+     "base": 1.0,
+     "after_steps": 1,
+     "note": "ValueError: Tried to step 2 times. The specified number of total steps is 1"
+    }
+   ]
+  }
+ },
+ "examples": [
+  {
+   "candidate": "hf_schedulers",
+   "condition": "sch_warmup_cosine_hf_cont_n1",
+   "base": 0.1,
+   "property": "P_phase_boundaries",
+   "label": "warmup == total",
+   "step": 1,
+   "got": 0.1,
+   "expected": 0.0
+  },
+  {
+   "candidate": "hf_schedulers",
+   "condition": "sch_warmup_cosine_hf_cont_n1",
+   "base": 0.1,
+   "property": "P_phase_boundaries",
+   "label": "0 at num_training_steps",
+   "step": 1,
+   "got": 0.1,
+   "expected": 0.0
+  },
+  {
+   "candidate": "hf_schedulers",
+   "condition": "sch_warmup_cosine_hf_cont_n1",
+   "base": 0.03,
+   "property": "P_phase_boundaries",
+   "label": "warmup == total",
+   "step": 1,
+   "got": 0.03,
+   "expected": 0.0
+  },
+  {
+   "candidate": "hf_schedulers",
+   "condition": "sch_warmup_cosine_hf_cont_n1",
+   "base": 0.03,
+   "property": "P_phase_boundaries",
+   "label": "0 at num_training_steps",
+   "step": 1,
+   "got": 0.03,
+   "expected": 0.0
+  },
+  {
+   "candidate": "hf_schedulers",
+   "condition": "sch_warmup_cosine_hf_cont_n1",
+   "base": 1.0,
+   "property": "P_phase_boundaries",
+   "label": "warmup == total",
+   "step": 1,
+   "got": 1.0,
+   "expected": 0.0
+  },
+  {
+   "candidate": "hf_schedulers",
+   "condition": "sch_warmup_cosine_hf_cont_n1",
+   "base": 1.0,
+   "property": "P_phase_boundaries",
+   "label": "0 at num_training_steps",
+   "step": 1,
+   "got": 1.0,
+   "expected": 0.0
+  },
+  {
+   "candidate": "hf_schedulers",
+   "condition": "sch_warmup_cosine_hf_resume_n1",
+   "base": 0.1,
+   "property": "P_phase_boundaries",
+   "label": "warmup == total",
+   "step": 1,
+   "got": 0.1,
+   "expected": 0.0
+  },
+  {
+   "candidate": "hf_schedulers",
+   "condition": "sch_warmup_cosine_hf_resume_n1",
+   "base": 0.1,
+   "property": "P_phase_boundaries",
+   "label": "0 at num_training_steps",
+   "step": 1,
+   "got": 0.1,
+   "expected": 0.0
+  },
+  {
+   "candidate": "hf_schedulers",
+   "condition": "sch_warmup_cosine_hf_resume_n1",
+   "base": 0.03,
+   "property": "P_phase_boundaries",
+   "label": "warmup == total",
+   "step": 1,
+   "got": 0.03,
+   "expected": 0.0
+  },
+  {
+   "candidate": "hf_schedulers",
+   "condition": "sch_warmup_cosine_hf_resume_n1",
+   "base": 0.03,
+   "property": "P_phase_boundaries",
+   "label": "0 at num_training_steps",
+   "step": 1,
+   "got": 0.03,
+   "expected": 0.0
+  },
+  {
+   "candidate": "hf_schedulers",
+   "condition": "sch_warmup_cosine_hf_resume_n1",
+   "base": 1.0,
+   "property": "P_phase_boundaries",
+   "label": "warmup == total",
+   "step": 1,
+   "got": 1.0,
+   "expected": 0.0
+  },
+  {
+   "candidate": "hf_schedulers",
+   "condition": "sch_warmup_cosine_hf_resume_n1",
+   "base": 1.0,
+   "property": "P_phase_boundaries",
+   "label": "0 at num_training_steps",
+   "step": 1,
+   "got": 1.0,
+   "expected": 0.0
+  },
+  {
+   "candidate": "torch_lr_scheduler",
+   "condition": "sch_one_cycle_cont_n1",
+   "base": 0.1,
+   "property": "P_phase_boundaries",
+   "label": "start = max_lr / div_factor",
+   "step": 0,
+   "got": 4e-07,
+   "expected": 0.004
+  },
+  {
+   "candidate": "torch_lr_scheduler",
+   "condition": "sch_one_cycle_cont_n1",
+   "base": 0.03,
+   "property": "P_phase_boundaries",
+   "label": "start = max_lr / div_factor",
+   "step": 0,
+   "got": 1.2e-07,
+   "expected": 0.0012
+  },
+  {
+   "candidate": "torch_lr_scheduler",
+   "condition": "sch_one_cycle_cont_n1",
+   "base": 1.0,
+   "property": "P_phase_boundaries",
+   "label": "start = max_lr / div_factor",
+   "step": 0,
+   "got": 4e-06,
+   "expected": 0.04
+  },
+  {
+   "candidate": "torch_lr_scheduler",
+   "condition": "sch_one_cycle_resume_n1",
+   "base": 0.1,
+   "property": "P_phase_boundaries",
+   "label": "start = max_lr / div_factor",
+   "step": 0,
+   "got": 4e-07,
+   "expected": 0.004
+  },
+  {
+   "candidate": "torch_lr_scheduler",
+   "condition": "sch_one_cycle_resume_n1",
+   "base": 0.03,
+   "property": "P_phase_boundaries",
+   "label": "start = max_lr / div_factor",
+   "step": 0,
+   "got": 1.2e-07,
+   "expected": 0.0012
+  },
+  {
+   "candidate": "torch_lr_scheduler",
+   "condition": "sch_one_cycle_resume_n1",
+   "base": 1.0,
+   "property": "P_phase_boundaries",
+   "label": "start = max_lr / div_factor",
+   "step": 0,
+   "got": 4e-06,
+   "expected": 0.04
+  },
+  {
+   "candidate": "torch_nightly_lr_scheduler",
+   "condition": "sch_one_cycle_cont_n1",
+   "base": 0.1,
+   "property": "P_phase_boundaries",
+   "label": "start = max_lr / div_factor",
+   "step": 0,
+   "got": 4e-07,
+   "expected": 0.004
+  },
+  {
+   "candidate": "torch_nightly_lr_scheduler",
+   "condition": "sch_one_cycle_cont_n1",
+   "base": 0.03,
+   "property": "P_phase_boundaries",
+   "label": "start = max_lr / div_factor",
+   "step": 0,
+   "got": 1.2e-07,
+   "expected": 0.0012
+  },
+  {
+   "candidate": "torch_nightly_lr_scheduler",
+   "condition": "sch_one_cycle_cont_n1",
+   "base": 1.0,
+   "property": "P_phase_boundaries",
+   "label": "start = max_lr / div_factor",
+   "step": 0,
+   "got": 4e-06,
+   "expected": 0.04
+  },
+  {
+   "candidate": "torch_nightly_lr_scheduler",
+   "condition": "sch_one_cycle_resume_n1",
+   "base": 0.1,
+   "property": "P_phase_boundaries",
+   "label": "start = max_lr / div_factor",
+   "step": 0,
+   "got": 4e-07,
+   "expected": 0.004
+  },
+  {
+   "candidate": "torch_nightly_lr_scheduler",
+   "condition": "sch_one_cycle_resume_n1",
+   "base": 0.03,
+   "property": "P_phase_boundaries",
+   "label": "start = max_lr / div_factor",
+   "step": 0,
+   "got": 1.2e-07,
+   "expected": 0.0012
+  },
+  {
+   "candidate": "torch_nightly_lr_scheduler",
+   "condition": "sch_one_cycle_resume_n1",
+   "base": 1.0,
+   "property": "P_phase_boundaries",
+   "label": "start = max_lr / div_factor",
+   "step": 0,
+   "got": 4e-06,
+   "expected": 0.04
+  }
+ ]
+}

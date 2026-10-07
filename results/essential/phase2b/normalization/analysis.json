@@ -1,0 +1,1340 @@
+{
+ "conditions": 23,
+ "candidates": {
+  "eager_cpu_float32": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 0.1,
+    "slowest": [
+     0.0,
+     "norm_group_norm_huge_offset_aff_b1/0/translated"
+    ],
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 219
+   },
+   "judged": true,
+   "E": null,
+   "E64": {
+    "by_output": {
+     "y": "9/69",
+     "dx": "8/69",
+     "dw": "9/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    },
+    "violating_conditions": [
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1",
+     "norm_layer_norm_huge_offset_aff_b1"
+    ]
+   },
+   "P": {
+    "P_scale_invariance": "6/36",
+    "P_bn_running_var_unbiased": "0/12"
+   },
+   "posthoc": {
+    "H_row_independence": "0/45"
+   },
+   "adjudication": {
+    "norm_batch_norm_train_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input",
+    "norm_group_norm_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input",
+    "norm_layer_norm_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input"
+   }
+  },
+  "eager_cpu_float64": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 0.7,
+    "slowest": [
+     0.51,
+     "norm_layer_norm_gauss_aff_b1/0/base"
+    ],
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 219
+   },
+   "judged": true,
+   "E": null,
+   "E64": null,
+   "P": {
+    "P_scale_invariance": "0/36",
+    "P_bn_running_var_unbiased": "0/12"
+   },
+   "posthoc": {
+    "H_row_independence": "0/45"
+   },
+   "adjudication": {}
+  },
+  "eager_cuda_bfloat16": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 0.2,
+    "slowest": [
+     0.0,
+     "norm_layer_norm_gauss_aff_b1/0/base"
+    ],
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 219
+   },
+   "judged": false,
+   "E": null,
+   "E64": {
+    "by_output": {
+     "y": "24/69",
+     "dx": "49/69",
+     "dw": "39/66",
+     "db": "30/54",
+     "rm": "0/24",
+     "rv": "3/24"
+    },
+    "violating_conditions": [
+     "norm_batch_norm_eval_constant_rows_aff_b1",
+     "norm_batch_norm_eval_gauss_aff_b1",
+     "norm_batch_norm_eval_huge_offset_aff_b1",
+     "norm_batch_norm_eval_tiny_aff_b1",
+     "norm_batch_norm_train_constant_rows_aff_b1",
+     "norm_batch_norm_train_gauss_aff_b1",
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_batch_norm_train_tiny_aff_b1",
+     "norm_group_norm_constant_rows_aff_b1",
+     "norm_group_norm_gauss_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1",
+     "norm_group_norm_tiny_aff_b1",
+     "norm_layer_norm_constant_rows_aff_b1",
+     "norm_layer_norm_gauss_aff_b1",
+     "norm_layer_norm_gauss_aff_b2",
+     "norm_layer_norm_gauss_aff_b7",
+     "norm_layer_norm_huge_offset_aff_b1",
+     "norm_layer_norm_tiny_aff_b1",
+     "norm_rms_norm_constant_rows_aff_b1",
+     "norm_rms_norm_gauss_aff_b1",
+     "norm_rms_norm_huge_offset_aff_b1",
+     "norm_rms_norm_tiny_aff_b1"
+    ]
+   },
+   "P": {},
+   "posthoc": {
+    "H_row_independence": "0/15"
+   },
+   "adjudication": {}
+  },
+  "eager_cuda_float32": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 0.2,
+    "slowest": [
+     0.02,
+     "norm_layer_norm_gauss_aff_b1/0/base"
+    ],
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 219
+   },
+   "judged": true,
+   "E": null,
+   "E64": {
+    "by_output": {
+     "y": "9/69",
+     "dx": "8/69",
+     "dw": "9/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    },
+    "violating_conditions": [
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1",
+     "norm_layer_norm_huge_offset_aff_b1"
+    ]
+   },
+   "P": {
+    "P_scale_invariance": "6/36",
+    "P_bn_running_var_unbiased": "0/12"
+   },
+   "posthoc": {
+    "H_row_independence": "0/45"
+   },
+   "adjudication": {
+    "norm_batch_norm_train_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input",
+    "norm_group_norm_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input",
+    "norm_layer_norm_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input"
+   }
+  },
+  "eager_cuda_float64": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 0.5,
+    "slowest": [
+     0.24,
+     "norm_layer_norm_gauss_aff_b1/0/base"
+    ],
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 219
+   },
+   "judged": true,
+   "E": {
+    "reference": "eager_cpu_float64",
+    "by_output": {
+     "y": "0/69",
+     "dx": "0/69",
+     "dw": "0/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    },
+    "violating_conditions": [],
+    "max_ratio": 0.005025306679141493
+   },
+   "E64": {
+    "by_output": {
+     "y": "0/69",
+     "dx": "0/69",
+     "dw": "0/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    },
+    "violating_conditions": []
+   },
+   "P": {
+    "P_scale_invariance": "0/36",
+    "P_bn_running_var_unbiased": "0/12"
+   },
+   "posthoc": {
+    "H_row_independence": "0/45"
+   },
+   "adjudication": {}
+  },
+  "inductor_cuda_bfloat16": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 2.2,
+    "slowest": [
+     0.3,
+     "norm_batch_norm_train_gauss_aff_b1/0/base"
+    ],
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 219
+   },
+   "judged": false,
+   "E": {
+    "reference": "eager_cuda_bfloat16",
+    "by_output": {
+     "y": "5/69",
+     "dx": "11/69",
+     "dw": "14/66",
+     "db": "13/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    },
+    "violating_conditions": [
+     "norm_batch_norm_eval_constant_rows_aff_b1",
+     "norm_batch_norm_eval_gauss_aff_b1",
+     "norm_batch_norm_eval_huge_offset_aff_b1",
+     "norm_batch_norm_eval_tiny_aff_b1",
+     "norm_batch_norm_train_constant_rows_aff_b1",
+     "norm_batch_norm_train_gauss_aff_b1",
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_batch_norm_train_tiny_aff_b1",
+     "norm_group_norm_gauss_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1"
+    ],
+    "max_ratio": 159.2
+   },
+   "E64": {
+    "by_output": {
+     "y": "24/69",
+     "dx": "49/69",
+     "dw": "35/66",
+     "db": "26/54",
+     "rm": "0/24",
+     "rv": "3/24"
+    },
+    "violating_conditions": [
+     "norm_batch_norm_eval_constant_rows_aff_b1",
+     "norm_batch_norm_eval_gauss_aff_b1",
+     "norm_batch_norm_eval_huge_offset_aff_b1",
+     "norm_batch_norm_eval_tiny_aff_b1",
+     "norm_batch_norm_train_constant_rows_aff_b1",
+     "norm_batch_norm_train_gauss_aff_b1",
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_batch_norm_train_tiny_aff_b1",
+     "norm_group_norm_constant_rows_aff_b1",
+     "norm_group_norm_gauss_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1",
+     "norm_group_norm_tiny_aff_b1",
+     "norm_layer_norm_constant_rows_aff_b1",
+     "norm_layer_norm_gauss_aff_b1",
+     "norm_layer_norm_gauss_aff_b2",
+     "norm_layer_norm_gauss_aff_b7",
+     "norm_layer_norm_huge_offset_aff_b1",
+     "norm_layer_norm_tiny_aff_b1",
+     "norm_rms_norm_constant_rows_aff_b1",
+     "norm_rms_norm_gauss_aff_b1",
+     "norm_rms_norm_huge_offset_aff_b1",
+     "norm_rms_norm_tiny_aff_b1"
+    ]
+   },
+   "P": {},
+   "posthoc": {
+    "H_row_independence": "0/15"
+   },
+   "adjudication": {}
+  },
+  "inductor_cuda_float32": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 5.3,
+    "slowest": [
+     1.67,
+     "norm_layer_norm_gauss_aff_b1/0/base"
+    ],
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 219
+   },
+   "judged": true,
+   "E": {
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "y": "9/69",
+     "dx": "7/69",
+     "dw": "11/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    },
+    "violating_conditions": [
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_group_norm_constant_rows_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1",
+     "norm_layer_norm_huge_offset_aff_b1"
+    ],
+    "max_ratio": 28.416723727812986
+   },
+   "E64": {
+    "by_output": {
+     "y": "9/69",
+     "dx": "9/69",
+     "dw": "11/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    },
+    "violating_conditions": [
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_group_norm_constant_rows_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1",
+     "norm_layer_norm_huge_offset_aff_b1"
+    ]
+   },
+   "P": {
+    "P_scale_invariance": "0/36",
+    "P_bn_running_var_unbiased": "0/12"
+   },
+   "posthoc": {
+    "H_row_independence": "0/45"
+   },
+   "adjudication": {
+    "norm_batch_norm_train_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input",
+    "norm_group_norm_constant_rows_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input",
+    "norm_group_norm_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input",
+    "norm_layer_norm_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input"
+   }
+  },
+  "liger_layernorm": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 0.2,
+    "slowest": [
+     0.01,
+     "norm_layer_norm_gauss_aff_b1/0/base"
+    ],
+    "env": "liger"
+   },
+   "statuses": {
+    "ok": 66,
+    "unsupported": 153
+   },
+   "judged": true,
+   "E": {
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "y": "2/18",
+     "dx": "2/18",
+     "dw": "2/18",
+     "db": "0/18"
+    },
+    "violating_conditions": [
+     "norm_layer_norm_huge_offset_aff_b1"
+    ],
+    "max_ratio": 5.800353544993075
+   },
+   "E64": {
+    "by_output": {
+     "y": "3/18",
+     "dx": "3/18",
+     "dw": "3/18",
+     "db": "0/18"
+    },
+    "violating_conditions": [
+     "norm_layer_norm_huge_offset_aff_b1"
+    ]
+   },
+   "P": {
+    "P_scale_invariance": "0/12"
+   },
+   "posthoc": {
+    "H_row_independence": "0/18"
+   },
+   "adjudication": {
+    "norm_layer_norm_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input"
+   }
+  },
+  "liger_rmsnorm": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 7.7,
+    "slowest": [
+     5.91,
+     "norm_layer_norm_gauss_aff_b1/0/base"
+    ],
+    "env": "liger"
+   },
+   "statuses": {
+    "unsupported": 183,
+    "ok": 36
+   },
+   "judged": true,
+   "E": {
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "y": "0/12",
+     "dx": "0/12",
+     "dw": "0/12"
+    },
+    "violating_conditions": [],
+    "max_ratio": 0.0035286165692324737
+   },
+   "E64": {
+    "by_output": {
+     "y": "0/12",
+     "dx": "0/12",
+     "dw": "0/12"
+    },
+    "violating_conditions": []
+   },
+   "P": {
+    "P_scale_invariance": "0/9"
+   },
+   "posthoc": {
+    "H_row_independence": "0/12"
+   },
+   "adjudication": {}
+  },
+  "nightly_eager_cuda_float32": {
+   "meta": {
+    "torch": "2.15.0.dev20260907+cu126",
+    "seconds": 1.0,
+    "slowest": [
+     0.6,
+     "norm_layer_norm_gauss_aff_b1/0/base"
+    ],
+    "env": "nightly"
+   },
+   "statuses": {
+    "ok": 219
+   },
+   "judged": true,
+   "E": {
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "y": "3/69",
+     "dx": "3/69",
+     "dw": "3/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    },
+    "violating_conditions": [
+     "norm_group_norm_huge_offset_aff_b1"
+    ],
+    "max_ratio": 10.94434831176273
+   },
+   "E64": {
+    "by_output": {
+     "y": "9/69",
+     "dx": "8/69",
+     "dw": "9/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    },
+    "violating_conditions": [
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1",
+     "norm_layer_norm_huge_offset_aff_b1"
+    ]
+   },
+   "P": {
+    "P_scale_invariance": "6/36",
+    "P_bn_running_var_unbiased": "0/12"
+   },
+   "posthoc": {
+    "H_row_independence": "0/45"
+   },
+   "adjudication": {
+    "norm_batch_norm_train_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input",
+    "norm_group_norm_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input",
+    "norm_layer_norm_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input"
+   }
+  },
+  "nightly_inductor_cuda_float32": {
+   "meta": {
+    "torch": "2.15.0.dev20260907+cu126",
+    "seconds": 8.0,
+    "slowest": [
+     2.67,
+     "norm_layer_norm_gauss_aff_b1/0/base"
+    ],
+    "env": "nightly"
+   },
+   "statuses": {
+    "ok": 219
+   },
+   "judged": true,
+   "E": {
+    "reference": "nightly_eager_cuda_float32",
+    "by_output": {
+     "y": "8/69",
+     "dx": "5/69",
+     "dw": "4/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    },
+    "violating_conditions": [
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1",
+     "norm_layer_norm_huge_offset_aff_b1"
+    ],
+    "max_ratio": 10.929561677499034
+   },
+   "E64": {
+    "by_output": {
+     "y": "9/69",
+     "dx": "8/69",
+     "dw": "10/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    },
+    "violating_conditions": [
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_group_norm_constant_rows_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1",
+     "norm_layer_norm_huge_offset_aff_b1"
+    ]
+   },
+   "P": {
+    "P_scale_invariance": "0/36",
+    "P_bn_running_var_unbiased": "0/12"
+   },
+   "posthoc": {
+    "H_row_independence": "0/45"
+   },
+   "adjudication": {
+    "norm_batch_norm_train_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input",
+    "norm_group_norm_constant_rows_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input",
+    "norm_group_norm_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input",
+    "norm_layer_norm_huge_offset_aff_b1": "numerical (conditioning): compatible with the float64 run on the exactly translated input"
+   }
+  }
+ },
+ "examples": {
+  "E64": [
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_layer_norm_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "y",
+    "violating": 30,
+    "max_ratio": 6.317400493782345
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_layer_norm_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "dx",
+    "violating": 9,
+    "max_ratio": 1.8398013022472854
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_layer_norm_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "dw",
+    "violating": 9,
+    "max_ratio": 5.510121393548012
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_layer_norm_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "y",
+    "violating": 30,
+    "max_ratio": 3.5247257077507683
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_layer_norm_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "dx",
+    "violating": 14,
+    "max_ratio": 3.5606790961999013
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_layer_norm_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "dw",
+    "violating": 10,
+    "max_ratio": 7.9939633688000065
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_layer_norm_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "y",
+    "violating": 27,
+    "max_ratio": 3.002362852432988
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_layer_norm_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "dx",
+    "violating": 16,
+    "max_ratio": 3.18104205378555
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_layer_norm_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "dw",
+    "violating": 4,
+    "max_ratio": 4.6357139346592255
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "y",
+    "violating": 22,
+    "max_ratio": 4.606565032247254
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "dx",
+    "violating": 12,
+    "max_ratio": 2.2826766322965084
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "dw",
+    "violating": 4,
+    "max_ratio": 8.2070151702672
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "y",
+    "violating": 36,
+    "max_ratio": 4.271119139825956
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "dx",
+    "violating": 10,
+    "max_ratio": 2.4216763676366293
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "dw",
+    "violating": 3,
+    "max_ratio": 5.468838731829016
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "y",
+    "violating": 37,
+    "max_ratio": 4.5139108376249535
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "dx",
+    "violating": 21,
+    "max_ratio": 6.84618269726511
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "dw",
+    "violating": 4,
+    "max_ratio": 6.831579358148501
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "y",
+    "violating": 18,
+    "max_ratio": 7.133351689349019
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "dx",
+    "violating": 4,
+    "max_ratio": 1.7937394980837336
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "dw",
+    "violating": 3,
+    "max_ratio": 3.8324636657783917
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "y",
+    "violating": 28,
+    "max_ratio": 4.477577979584467
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "dw",
+    "violating": 2,
+    "max_ratio": 2.183025338935134
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "y",
+    "violating": 19,
+    "max_ratio": 2.5969822644716913
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "dx",
+    "violating": 2,
+    "max_ratio": 1.0173574319881928
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "dw",
+    "violating": 2,
+    "max_ratio": 7.2223474781750365
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_layer_norm_gauss_aff_b1",
+    "seed": 0,
+    "output": "y",
+    "violating": 1,
+    "max_ratio": 1.2860372090901993
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_layer_norm_gauss_aff_b1",
+    "seed": 0,
+    "output": "dx",
+    "violating": 1,
+    "max_ratio": 1.3689006323317883
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_layer_norm_gauss_aff_b1",
+    "seed": 0,
+    "output": "dw",
+    "violating": 2,
+    "max_ratio": 1.4679001578424988
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_layer_norm_gauss_aff_b1",
+    "seed": 1,
+    "output": "dx",
+    "violating": 1,
+    "max_ratio": 1.0883743734317681
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_layer_norm_gauss_aff_b1",
+    "seed": 1,
+    "output": "dw",
+    "violating": 1,
+    "max_ratio": 1.1383027342572452
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_layer_norm_gauss_aff_b1",
+    "seed": 1,
+    "output": "db",
+    "violating": 1,
+    "max_ratio": 1.3345889294154398
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_layer_norm_gauss_aff_b1",
+    "seed": 2,
+    "output": "dw",
+    "violating": 1,
+    "max_ratio": 1.735966266965056
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_rms_norm_gauss_aff_b1",
+    "seed": 0,
+    "output": "dx",
+    "violating": 2,
+    "max_ratio": 1.2670220734649376
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_rms_norm_gauss_aff_b1",
+    "seed": 1,
+    "output": "y",
+    "violating": 1,
+    "max_ratio": 1.1180656898514287
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_rms_norm_gauss_aff_b1",
+    "seed": 1,
+    "output": "dx",
+    "violating": 2,
+    "max_ratio": 1.1849888322788262
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_rms_norm_gauss_aff_b1",
+    "seed": 1,
+    "output": "dw",
+    "violating": 1,
+    "max_ratio": 1.1946521220133128
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_rms_norm_gauss_aff_b1",
+    "seed": 2,
+    "output": "dx",
+    "violating": 1,
+    "max_ratio": 1.2631687102008877
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_rms_norm_gauss_aff_b1",
+    "seed": 2,
+    "output": "dw",
+    "violating": 1,
+    "max_ratio": 1.0860841074716725
+   },
+   {
+    "candidate": "eager_cuda_bfloat16",
+    "condition": "norm_group_norm_gauss_aff_b1",
+    "seed": 0,
+    "output": "dx",
+    "violating": 6,
+    "max_ratio": 1.190646667920283
+   }
+  ],
+  "P": [
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 0,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0004869699478149414
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 1,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0007165670394897461
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 2,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0006755590438842773
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 0,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0013580322265625
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 1,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0017622709274291992
+   },
+   {
+    "candidate": "eager_cpu_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 2,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0012178421020507812
+   },
+   {
+    "candidate": "eager_cuda_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 0,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0005017518997192383
+   },
+   {
+    "candidate": "eager_cuda_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 1,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.00040328502655029297
+   },
+   {
+    "candidate": "eager_cuda_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 2,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0007196664810180664
+   },
+   {
+    "candidate": "eager_cuda_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 0,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0007412433624267578
+   },
+   {
+    "candidate": "eager_cuda_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 1,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0017622709274291992
+   },
+   {
+    "candidate": "eager_cuda_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 2,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0016491413116455078
+   },
+   {
+    "candidate": "nightly_eager_cuda_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 0,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0004869699478149414
+   },
+   {
+    "candidate": "nightly_eager_cuda_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 1,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.00037217140197753906
+   },
+   {
+    "candidate": "nightly_eager_cuda_float32",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 2,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0007429122924804688
+   },
+   {
+    "candidate": "nightly_eager_cuda_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 0,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0007412433624267578
+   },
+   {
+    "candidate": "nightly_eager_cuda_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 1,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0017622709274291992
+   },
+   {
+    "candidate": "nightly_eager_cuda_float32",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 2,
+    "property": "P_scale_invariance",
+    "max_abs_change": 0.0016491413116455078
+   }
+  ],
+  "E": [
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_group_norm_gauss_aff_b1",
+    "seed": 0,
+    "output": "y",
+    "violating": 1,
+    "max_ratio": 1.0491803278688525
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_group_norm_gauss_aff_b1",
+    "seed": 2,
+    "output": "y",
+    "violating": 1,
+    "max_ratio": 1.158371040723982
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_gauss_aff_b1",
+    "seed": 0,
+    "output": "dw",
+    "violating": 1,
+    "max_ratio": 2.015748031496063
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_gauss_aff_b1",
+    "seed": 0,
+    "output": "db",
+    "violating": 1,
+    "max_ratio": 1.1636363636363636
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_gauss_aff_b1",
+    "seed": 1,
+    "output": "dw",
+    "violating": 2,
+    "max_ratio": 1.4927113702623906
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_gauss_aff_b1",
+    "seed": 1,
+    "output": "db",
+    "violating": 3,
+    "max_ratio": 1.299492385786802
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_gauss_aff_b1",
+    "seed": 2,
+    "output": "dw",
+    "violating": 2,
+    "max_ratio": 1.2307692307692308
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_gauss_aff_b1",
+    "seed": 0,
+    "output": "dw",
+    "violating": 1,
+    "max_ratio": 1.1228070175438596
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_gauss_aff_b1",
+    "seed": 1,
+    "output": "dw",
+    "violating": 1,
+    "max_ratio": 1.1327433628318584
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_gauss_aff_b1",
+    "seed": 2,
+    "output": "dw",
+    "violating": 4,
+    "max_ratio": 1.9176029962546817
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "y",
+    "violating": 60,
+    "max_ratio": 28.75
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "y",
+    "violating": 60,
+    "max_ratio": 22.2
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "dx",
+    "violating": 5,
+    "max_ratio": 2.098360655737705
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "y",
+    "violating": 60,
+    "max_ratio": 27.875
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_group_norm_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "dx",
+    "violating": 20,
+    "max_ratio": 159.2
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_constant_rows_aff_b1",
+    "seed": 0,
+    "output": "dx",
+    "violating": 10,
+    "max_ratio": 9.142857142857142
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_constant_rows_aff_b1",
+    "seed": 1,
+    "output": "dx",
+    "violating": 11,
+    "max_ratio": 7.901234567901234
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_constant_rows_aff_b1",
+    "seed": 2,
+    "output": "dx",
+    "violating": 6,
+    "max_ratio": 3.4439461883408073
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_constant_rows_aff_b1",
+    "seed": 2,
+    "output": "db",
+    "violating": 2,
+    "max_ratio": 1.2427184466019416
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "dx",
+    "violating": 10,
+    "max_ratio": 4.682926829268292
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "db",
+    "violating": 1,
+    "max_ratio": 1.158371040723982
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "dx",
+    "violating": 13,
+    "max_ratio": 10.502564102564103
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "dx",
+    "violating": 8,
+    "max_ratio": 8.452830188679245
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_tiny_aff_b1",
+    "seed": 0,
+    "output": "dx",
+    "violating": 6,
+    "max_ratio": 1.9104477611940298
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_tiny_aff_b1",
+    "seed": 0,
+    "output": "db",
+    "violating": 2,
+    "max_ratio": 1.0578512396694215
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_tiny_aff_b1",
+    "seed": 1,
+    "output": "dx",
+    "violating": 5,
+    "max_ratio": 4.45993031358885
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_tiny_aff_b1",
+    "seed": 1,
+    "output": "db",
+    "violating": 1,
+    "max_ratio": 1.3763440860215055
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_tiny_aff_b1",
+    "seed": 2,
+    "output": "dx",
+    "violating": 9,
+    "max_ratio": 8.311688311688311
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_train_tiny_aff_b1",
+    "seed": 2,
+    "output": "db",
+    "violating": 1,
+    "max_ratio": 2.2621502209131075
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_constant_rows_aff_b1",
+    "seed": 0,
+    "output": "dw",
+    "violating": 1,
+    "max_ratio": 1.158371040723982
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_constant_rows_aff_b1",
+    "seed": 0,
+    "output": "db",
+    "violating": 1,
+    "max_ratio": 1.1327433628318584
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_constant_rows_aff_b1",
+    "seed": 1,
+    "output": "dw",
+    "violating": 2,
+    "max_ratio": 1.5705521472392638
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_constant_rows_aff_b1",
+    "seed": 1,
+    "output": "db",
+    "violating": 1,
+    "max_ratio": 1.0987124463519313
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_constant_rows_aff_b1",
+    "seed": 2,
+    "output": "dw",
+    "violating": 1,
+    "max_ratio": 1.3264248704663213
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_constant_rows_aff_b1",
+    "seed": 2,
+    "output": "db",
+    "violating": 1,
+    "max_ratio": 1.4883720930232558
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_huge_offset_aff_b1",
+    "seed": 0,
+    "output": "dw",
+    "violating": 3,
+    "max_ratio": 1.8821367030442275
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "dw",
+    "violating": 3,
+    "max_ratio": 1.1962180119008505
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_huge_offset_aff_b1",
+    "seed": 1,
+    "output": "db",
+    "violating": 2,
+    "max_ratio": 1.147982062780269
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_huge_offset_aff_b1",
+    "seed": 2,
+    "output": "dw",
+    "violating": 3,
+    "max_ratio": 1.7901608893987817
+   },
+   {
+    "candidate": "inductor_cuda_bfloat16",
+    "condition": "norm_batch_norm_eval_tiny_aff_b1",
+    "seed": 0,
+    "output": "dw",
+    "violating": 1,
+    "max_ratio": 2.1363004172461753
+   }
+  ]
+ }
+}
