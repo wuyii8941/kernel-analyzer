@@ -49,8 +49,10 @@
 | 36b | 按 loss 敏感度加权的更新层作用（⟨∇L_val, u⟩，或按参数组标定剂量反应） | RQ4 | 尚未运行 | 非精度结果第 4 节 |
 
 | 37 | 本质错误一轮第一阶段（独立规格 vs eager 差分）：W0 执行协议（采用审阅后的规格包 v0.4 主协议）、W7 召回（B016 四组都能发现；B014 属规格之外的编译崩溃；HF 梯度累加 4.45.2 / 4.46.0 / 4.57.3 / 5.19.0，其中 4.57.3 的计数问题只有独立规格能看到，已知 #46204）、交叉熵 / 池化 / index-scatter 的 W1–W4（1,652 个条件 × 3 seed，PyTorch eager CPU/CUDA、Inductor、nightly）：H1 成立（B020，248 个共有错误单位，一个根因）；H2 成立（F 50/50，E 与 FP64 参照 0/50）；H3 部分（P 28/50）；交叉熵零偏离 | RQ5 | 已完成且有报告（中期，待审阅） | `docs/essential_bugs_phase1_interim_20261007.md`；`docs/protocol_essential_bugs_20261007.md`；`results/essential/phase1/` |
-| 38 | 本质错误一轮：W5 测试判据审查、注意力 / 归一化 / 优化器 / 训练程序层的其余算子、nightly 最新 CUDA 构建上的复核 | RQ5 | 尚未运行（阶段闸门：等待中期审阅） | 中期报告第 6、8 节 |
-| 39 | B020、B021 的上游提交；B015 对 #198119 的补充评论 | RQ5 | 尚未运行（草稿待用户决定） | `bugs/upstream_drafts/B020_*.md`、`B021_*.md`、`B015_*.md` |
+| 38 | 本质错误一轮 2b：优化器之外的家族（注意力与打包、训练程序层、归一化、嵌入、调度、裁剪、基础算子、MoE；G6 组合、G7 数值流）的 E / P / 状态序列 / 模式 A 的 FR；各家族的 F 与模式 B 的 FR（等规格） | RQ5 | 尚未运行（按协议 v2 第 3 节的顺序进行中） | `docs/protocol_essential_bugs_phase2_20261007.md` 第 3 节；`results/essential/phase2b/coverage_plan.json` |
+| 39 | B020、B021、B022 的上游提交；B015 对 #198119 的补充评论；MaxPool1d 文档公式的文档 issue | RQ5 | 尚未运行（草稿待用户决定） | `bugs/upstream_drafts/B020_*.md`、`B021_*.md`、`B015_*.md` |
+| 40 | 本质错误一轮 2a：第一阶段补充 S1–S3（事后补充；S3 两处召回 #188344、#197434，index 前向的超 τ₃₂ 元素全部在 float32 求和误差界内）、S4；A1 检测器 2.2（重捕获 24 个条件，第一阶段结论不变）、A2 / A3 重新分类（E / F / P 类别逐条不变，FR 的空集一致改为未建立）、B W5 审查（B020 上 gradcheck 50/50）、C 轻量方法对照（反向错误上 gradcheck 与 F 相同）、D 触发检查、E 措辞修正、F 草稿 | RQ5 | 已完成且有报告 | `docs/essential_bugs_phase2a_record_20261007.md`；`results/essential/phase2a/`；`results/essential/phase1_supplement/` |
+| 41 | 本质错误一轮 2b 优化器家族：24 个条件 × 3 seed × 10 个候选（torch for_loop / foreach / fused、编译的 step、bnb、torchao、HF），E 0 超出 τ₃₂，预注册 P 与三条状态序列零违反，模式 A 的 FR 9/10 个设置全部在 K_R 之内（Adafactor 未建立）；F 未运行（规格未交付） | RQ5 | 已完成且有报告（零结果） | `docs/essential_bugs_phase2b_record_20261007.md` 第 1 节；`results/essential/phase2b/optimizers/` |
 
 阶段 A 的审计项（`docs/next_phase_plan_20261006.md` 第 1 节）：零方差保护（29）、偏斜失效范围（统计校准文档第 2 节）、RQ2 两栏与核验两栏（外部评价结果文档）、逐层表的设备与路径（30）、口径修正（外部评价、Unsloth、成本文档）已关闭；外部接入试验（31）未做。
 

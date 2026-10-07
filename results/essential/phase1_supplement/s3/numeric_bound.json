@@ -1,0 +1,516 @@
+{
+ "rule": "\u03c432 = 2^-12 (1 + |f|) is relative to |f|; a float32 sum whose terms cancel cannot meet it.  For every element where a candidate's forward output deviates from f by more than \u03c432, compare |K - f| with the a-priori forward-error bound of recursive float32 summation in any order: \u03b3_k \u00b7 \u03a3|terms| (/ count for mean), \u03b3_k = k u / (1 - k u), u = 2^-24, k = number of terms + 2 (the alpha product and the final division).  f is the exact sum (math.fsum on float64 terms, which are exact: inputs are float32 values, alpha = 2.5).  Elements within the bound are numerical (cancellation), not semantic.  Also checks that each deviating element involves terms of opposite sign.",
+ "candidates": {
+  "eager_cpu32": {
+   "elements_beyond_tau32": 7,
+   "within_summation_bound": 7,
+   "with_terms_of_both_signs": 7,
+   "max_dev_over_bound": 0.08478355086491027,
+   "examples": [
+    {
+     "condition": "s3idx005",
+     "seed": 0,
+     "position": [
+      11,
+      7
+     ],
+     "K": -1.2482253534850704e+27,
+     "f": -1.2467107282226662e+27,
+     "abs_dev": 1.5146252624041439e+24,
+     "tau32": 3.043727363824869e+23,
+     "bound": 4.677825407612615e+26,
+     "within_bound": true,
+     "terms": 62,
+     "sum_abs_over_abs_f": 98359.55992581949
+    },
+    {
+     "condition": "s3idx005",
+     "seed": 0,
+     "position": [
+      36,
+      24
+     ],
+     "K": 3.9064926703572223e+27,
+     "f": 3.9046565552391016e+27,
+     "abs_dev": 1.836115118120754e+24,
+     "tau32": 9.532852918064213e+23,
+     "bound": 3.857356239386449e+26,
+     "within_bound": true,
+     "terms": 56,
+     "sum_abs_over_abs_f": 28575.72842832729
+    },
+    {
+     "condition": "s3idx005",
+     "seed": 0,
+     "position": [
+      31,
+      9
+     ],
+     "K": 2.0092536016654452e+27,
+     "f": 2.0084664422023318e+27,
+     "abs_dev": 7.87159463113334e+23,
+     "tau32": 4.903482524908037e+23,
+     "bound": 4.635355978816187e+26,
+     "within_bound": true,
+     "terms": 67,
+     "sum_abs_over_abs_f": 56116.10655847678
+    },
+    {
+     "condition": "s3idx038",
+     "seed": 0,
+     "position": [
+      515
+     ],
+     "K": 2.142065436629671e+25,
+     "f": 2.1399403717123797e+25,
+     "abs_dev": 2.1250649172913403e+22,
+     "tau32": 5.224463798125927e+21,
+     "bound": 2.5064589718320588e+23,
+     "within_bound": true,
+     "terms": 4,
+     "sum_abs_over_abs_f": 32751.215160542866
+    },
+    {
+     "condition": "s3idx038",
+     "seed": 1,
+     "position": [
+      156
+     ],
+     "K": -4.961633205057908e+25,
+     "f": -4.962892349063806e+25,
+     "abs_dev": 1.2591440058982441e+22,
+     "tau32": 1.2116436399081558e+22,
+     "bound": 4.995175508065757e+23,
+     "within_bound": true,
+     "terms": 3,
+     "sum_abs_over_abs_f": 33772.690433900025
+    },
+    {
+     "condition": "s3idx039",
+     "seed": 0,
+     "position": [
+      5,
+      30
+     ],
+     "K": -8.82731755928847e+24,
+     "f": -8.820233729568943e+24,
+     "abs_dev": 7.083829719527506e+21,
+     "tau32": 2.1533773753830427e+21,
+     "bound": 3.6683888936506815e+24,
+     "within_bound": true,
+     "terms": 70,
+     "sum_abs_over_abs_f": 96912.72647101566
+    }
+   ]
+  },
+  "eager_cuda32": {
+   "elements_beyond_tau32": 9,
+   "within_summation_bound": 9,
+   "with_terms_of_both_signs": 9,
+   "max_dev_over_bound": 0.08977096278605998,
+   "examples": [
+    {
+     "condition": "s3idx002",
+     "seed": 2,
+     "position": [
+      790
+     ],
+     "K": 1.503601488145695e+26,
+     "f": 1.5028754242989538e+26,
+     "abs_dev": 7.2606384674120795e+22,
+     "tau32": 3.6691294538548677e+22,
+     "bound": 8.087958780965133e+23,
+     "within_bound": true,
+     "terms": 3,
+     "sum_abs_over_abs_f": 18057.836176388566
+    },
+    {
+     "condition": "s3idx005",
+     "seed": 0,
+     "position": [
+      11,
+      7
+     ],
+     "K": -1.2462514042952309e+27,
+     "f": -1.2467107282226662e+27,
+     "abs_dev": 4.5932392743536784e+23,
+     "tau32": 3.043727363824869e+23,
+     "bound": 4.677825407612615e+26,
+     "within_bound": true,
+     "terms": 62,
+     "sum_abs_over_abs_f": 98359.55992581949
+    },
+    {
+     "condition": "s3idx005",
+     "seed": 0,
+     "position": [
+      36,
+      24
+     ],
+     "K": 3.905963765311141e+27,
+     "f": 3.9046565552391016e+27,
+     "abs_dev": 1.3072100720393537e+24,
+     "tau32": 9.532852918064213e+23,
+     "bound": 3.857356239386449e+26,
+     "within_bound": true,
+     "terms": 56,
+     "sum_abs_over_abs_f": 28575.72842832729
+    },
+    {
+     "condition": "s3idx005",
+     "seed": 0,
+     "position": [
+      31,
+      9
+     ],
+     "K": 2.0102075196949848e+27,
+     "f": 2.0084664422023318e+27,
+     "abs_dev": 1.7410774926530023e+24,
+     "tau32": 4.903482524908037e+23,
+     "bound": 4.635355978816187e+26,
+     "within_bound": true,
+     "terms": 67,
+     "sum_abs_over_abs_f": 56116.10655847678
+    },
+    {
+     "condition": "s3idx038",
+     "seed": 0,
+     "position": [
+      515
+     ],
+     "K": 2.1418293183055276e+25,
+     "f": 2.1399403717123797e+25,
+     "abs_dev": 1.888946593147858e+22,
+     "tau32": 5.224463798125927e+21,
+     "bound": 2.5064589718320588e+23,
+     "within_bound": true,
+     "terms": 4,
+     "sum_abs_over_abs_f": 32751.215160542866
+    },
+    {
+     "condition": "s3idx039",
+     "seed": 0,
+     "position": [
+      8,
+      32
+     ],
+     "K": 6.158805220517371e+25,
+     "f": 6.155884554360308e+25,
+     "abs_dev": 2.920666157062776e+22,
+     "tau32": 1.5029015025293722e+22,
+     "bound": 2.598502280037375e+24,
+     "within_bound": true,
+     "terms": 54,
+     "sum_abs_over_abs_f": 12646.287619935161
+    }
+   ]
+  },
+  "inductor_cuda32": {
+   "elements_beyond_tau32": 9,
+   "within_summation_bound": 9,
+   "with_terms_of_both_signs": 9,
+   "max_dev_over_bound": 0.08977096278605998,
+   "examples": [
+    {
+     "condition": "s3idx002",
+     "seed": 2,
+     "position": [
+      790
+     ],
+     "K": 1.503601488145695e+26,
+     "f": 1.5028754242989538e+26,
+     "abs_dev": 7.2606384674120795e+22,
+     "tau32": 3.6691294538548677e+22,
+     "bound": 8.087958780965133e+23,
+     "within_bound": true,
+     "terms": 3,
+     "sum_abs_over_abs_f": 18057.836176388566
+    },
+    {
+     "condition": "s3idx003",
+     "seed": 2,
+     "position": [
+      28,
+      18
+     ],
+     "K": -1.375515797557525e+28,
+     "f": -1.37588248931492e+28,
+     "abs_dev": 3.6669175739482795e+24,
+     "tau32": 3.3590881086790037e+24,
+     "bound": 5.5067405435805994e+26,
+     "within_bound": true,
+     "terms": 67,
+     "sum_abs_over_abs_f": 9731.55609275918
+    },
+    {
+     "condition": "s3idx005",
+     "seed": 0,
+     "position": [
+      11,
+      7
+     ],
+     "K": -1.244286899838357e+27,
+     "f": -1.2467107282226662e+27,
+     "abs_dev": 2.42382838430914e+24,
+     "tau32": 3.043727363824869e+23,
+     "bound": 4.677825407612615e+26,
+     "within_bound": true,
+     "terms": 62,
+     "sum_abs_over_abs_f": 98359.55992581949
+    },
+    {
+     "condition": "s3idx005",
+     "seed": 0,
+     "position": [
+      31,
+      9
+     ],
+     "K": 2.0067035237646956e+27,
+     "f": 2.0084664422023318e+27,
+     "abs_dev": 1.7629184376362744e+24,
+     "tau32": 4.903482524908037e+23,
+     "bound": 4.635355978816187e+26,
+     "within_bound": true,
+     "terms": 67,
+     "sum_abs_over_abs_f": 56116.10655847678
+    },
+    {
+     "condition": "s3idx013",
+     "seed": 1,
+     "position": [
+      19,
+      14
+     ],
+     "K": 2.596168197622416e+27,
+     "f": 2.596834646789483e+27,
+     "abs_dev": 6.664491670670906e+23,
+     "tau32": 6.339928336888387e+23,
+     "bound": 1.9412572989646166e+25,
+     "within_bound": true,
+     "terms": 62,
+     "sum_abs_over_abs_f": 1959.643494250311
+    },
+    {
+     "condition": "s3idx038",
+     "seed": 1,
+     "position": [
+      156
+     ],
+     "K": -4.961633205057908e+25,
+     "f": -4.962892349063806e+25,
+     "abs_dev": 1.2591440058982441e+22,
+     "tau32": 1.2116436399081558e+22,
+     "bound": 4.995175508065757e+23,
+     "within_bound": true,
+     "terms": 3,
+     "sum_abs_over_abs_f": 33772.690433900025
+    }
+   ]
+  },
+  "nightly_eager_cuda32": {
+   "elements_beyond_tau32": 7,
+   "within_summation_bound": 7,
+   "with_terms_of_both_signs": 7,
+   "max_dev_over_bound": 0.08977096278605998,
+   "examples": [
+    {
+     "condition": "s3idx002",
+     "seed": 2,
+     "position": [
+      790
+     ],
+     "K": 1.503601488145695e+26,
+     "f": 1.5028754242989538e+26,
+     "abs_dev": 7.2606384674120795e+22,
+     "tau32": 3.6691294538548677e+22,
+     "bound": 8.087958780965133e+23,
+     "within_bound": true,
+     "terms": 3,
+     "sum_abs_over_abs_f": 18057.836176388566
+    },
+    {
+     "condition": "s3idx015",
+     "seed": 2,
+     "position": [
+      3,
+      5
+     ],
+     "K": 2.200592805058135e+23,
+     "f": 2.2015882794718812e+23,
+     "abs_dev": 9.95474413746326e+19,
+     "tau32": 5.3749713854293975e+19,
+     "bound": 1.708119636002484e+22,
+     "within_bound": true,
+     "terms": 62,
+     "sum_abs_over_abs_f": 20338.57147204704
+    },
+    {
+     "condition": "s3idx038",
+     "seed": 0,
+     "position": [
+      515
+     ],
+     "K": 2.1418293183055276e+25,
+     "f": 2.1399403717123797e+25,
+     "abs_dev": 1.888946593147858e+22,
+     "tau32": 5.224463798125927e+21,
+     "bound": 2.5064589718320588e+23,
+     "within_bound": true,
+     "terms": 4,
+     "sum_abs_over_abs_f": 32751.215160542866
+    },
+    {
+     "condition": "s3idx039",
+     "seed": 0,
+     "position": [
+      5,
+      30
+     ],
+     "K": -8.837032075886288e+24,
+     "f": -8.820233729568943e+24,
+     "abs_dev": 1.6798346317344799e+22,
+     "tau32": 2.1533773753830427e+21,
+     "bound": 3.6683888936506815e+24,
+     "within_bound": true,
+     "terms": 70,
+     "sum_abs_over_abs_f": 96912.72647101566
+    },
+    {
+     "condition": "s3idx039",
+     "seed": 0,
+     "position": [
+      2,
+      19
+     ],
+     "K": -5.150348008617975e+25,
+     "f": -5.148610654732376e+25,
+     "abs_dev": 1.7373538855991437e+22,
+     "tau32": 1.2569850231280214e+22,
+     "bound": 2.7050567381993633e+24,
+     "within_bound": true,
+     "terms": 56,
+     "sum_abs_over_abs_f": 15197.660153370916
+    },
+    {
+     "condition": "s3idx041",
+     "seed": 0,
+     "position": [
+      5,
+      21
+     ],
+     "K": -1.8275047544478986e+25,
+     "f": -1.8259500647269688e+25,
+     "abs_dev": 1.5546897209298417e+22,
+     "tau32": 4.457885900212326e+21,
+     "bound": 3.2428018755881446e+24,
+     "within_bound": true,
+     "terms": 74,
+     "sum_abs_over_abs_f": 39204.4942217807
+    }
+   ]
+  },
+  "nightly_inductor_cuda32": {
+   "elements_beyond_tau32": 11,
+   "within_summation_bound": 11,
+   "with_terms_of_both_signs": 11,
+   "max_dev_over_bound": 0.034990978980944054,
+   "examples": [
+    {
+     "condition": "s3idx005",
+     "seed": 0,
+     "position": [
+      11,
+      7
+     ],
+     "K": -1.2459491728403272e+27,
+     "f": -1.2467107282226662e+27,
+     "abs_dev": 7.615553823390251e+23,
+     "tau32": 3.043727363824869e+23,
+     "bound": 4.677825407612615e+26,
+     "within_bound": true,
+     "terms": 62,
+     "sum_abs_over_abs_f": 98359.55992581949
+    },
+    {
+     "condition": "s3idx005",
+     "seed": 0,
+     "position": [
+      36,
+      24
+     ],
+     "K": 3.906643786084674e+27,
+     "f": 3.9046565552391016e+27,
+     "abs_dev": 1.9872308455725826e+24,
+     "tau32": 9.532852918064213e+23,
+     "bound": 3.857356239386449e+26,
+     "within_bound": true,
+     "terms": 56,
+     "sum_abs_over_abs_f": 28575.72842832729
+    },
+    {
+     "condition": "s3idx005",
+     "seed": 0,
+     "position": [
+      31,
+      9
+     ],
+     "K": 2.0095369436544173e+27,
+     "f": 2.0084664422023318e+27,
+     "abs_dev": 1.0705014520855127e+24,
+     "tau32": 4.903482524908037e+23,
+     "bound": 4.635355978816187e+26,
+     "within_bound": true,
+     "terms": 67,
+     "sum_abs_over_abs_f": 56116.10655847678
+    },
+    {
+     "condition": "s3idx015",
+     "seed": 2,
+     "position": [
+      3,
+      5
+     ],
+     "K": 2.2010138015513015e+23,
+     "f": 2.2015882794718812e+23,
+     "abs_dev": 5.744779205797321e+19,
+     "tau32": 5.3749713854293975e+19,
+     "bound": 1.708119636002484e+22,
+     "within_bound": true,
+     "terms": 62,
+     "sum_abs_over_abs_f": 20338.57147204704
+    },
+    {
+     "condition": "s3idx038",
+     "seed": 1,
+     "position": [
+      156
+     ],
+     "K": -4.961633205057908e+25,
+     "f": -4.962892349063806e+25,
+     "abs_dev": 1.2591440058982441e+22,
+     "tau32": 1.2116436399081558e+22,
+     "bound": 4.995175508065757e+23,
+     "within_bound": true,
+     "terms": 3,
+     "sum_abs_over_abs_f": 33772.690433900025
+    },
+    {
+     "condition": "s3idx039",
+     "seed": 0,
+     "position": [
+      5,
+      30
+     ],
+     "K": -8.846207025219949e+24,
+     "f": -8.820233729568943e+24,
+     "abs_dev": 2.5973295651006087e+22,
+     "tau32": 2.1533773753830427e+21,
+     "bound": 3.6683888936506815e+24,
+     "within_bound": true,
+     "terms": 70,
+     "sum_abs_over_abs_f": 96912.72647101566
+    }
+   ]
+  }
+ }
+}

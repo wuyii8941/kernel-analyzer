@@ -169,3 +169,23 @@ padding）；量化训练的缩放取整与 selective scan 的 chunk 边界登�
    42 个未核实（`results/essential/phase2a/a3_constants.json`）。
 3. **分类与汇总的输出目录。** `classify.py --out`、`summarize.py --dir`：2a 中用新分类层（A2、A3）重新分类第一阶段数据时写入
    `results/essential/phase2a/reclassified/`，第一阶段目录不动。
+4. **（S3 结果出来之后定的裁决规则，事后）index/scatter 前向在极端数值上超出 τ₃₂ 的元素**：对每个超出 τ₃₂ 的元素，若其项含正负
+   两号、且 |K − f| ≤ γ_k·Σ|项|（mean 再除以项数；γ_k = k·u/(1 − k·u)，u = 2⁻²⁴，k = 项数 + 2）——float32 递归求和在任意顺序下的
+   先验误差界——则记为「数值（抵消）」，不记为语义错误。该规则在看到 S3 结果之后制定，只用于 S3 的 index/scatter 前向；第一阶段
+   与 S3 的分类文件本身不改，裁决写在 `results/essential/phase1_supplement/s3/numeric_bound.json`
+   （`scripts/essential/s3_numeric_bound.py`）。
+5. **（S2 首次评估之后、报告之前）** `s2_props.py` 的「被忽略行改变时 loss 逐位不变」把两边都是 NaN（全部行被忽略、0/0）的 loss
+   判为不等，每个候选都得 71/552 个假违反；改为 NaN 视作相等后为 0/552。
+6. **（2a 汇总时）** `summarize.py --dir` 在提交 6244f83 中写错（`global` 声明在使用之后，脚本无法运行）；改为局部变量，第一阶段
+   的输出不受影响。
+7. **（2b 优化器家族，运行之前定、运行中修正一处）** 条件取覆盖计划（`coverage_plan.json` 的 31 个组合）中去掉因素 `impl` 后的 17 个
+   （每条实现路径都是候选、跑全部条件，覆盖计划中的每个（impl, 其余因素）组合因此都被执行），加上每个优化器一条登记的状态序列 1
+   （init → 正常 → 零梯度 → 恢复）；状态序列 2、3 即覆盖计划的 save_restore 与 nonfinite_skip。P 的辅助运行：`mirror`（maximize 取反、
+   梯度取负）、`uninterrupted`（save/restore 条件不做 save/restore）、`removed`（非有限跳过的条件去掉被跳过的一步）；两组参数（第二组
+   lr × 2、无权重衰减）；梯度只取决于（状态, seed），不同优化器看到同一序列。试跑：全部 eager 候选跑完整个网格不到 1 分钟，试跑与
+   完整运行重合；编译候选先试跑 3 个条件（16 秒）再完整运行（86 秒）。不支持的组合记为「不支持」：torch 2.10 的 RMSprop、Adafactor
+   没有 fused；bnb `AdamW32bit` 与 torchao `_AdamW` 只接 AdamW（无 amsgrad、无 maximize）；HF Adafactor 与 `torch.optim.Adafactor` 是
+   不同算法，E 不适用、只做 P。编译的 Adafactor 在 `step.item()` 处断图、实际以 eager 运行：不算独立覆盖，模式 A 的 FR 记为「未建立
+   （没有 Triton 启动）」。运行中修正：非有限跳过的条件第一次运行时没有经过 `scaler.scale()`，GradScaler 的缩放未初始化而报错
+   （每个候选 9 个运行）；改为用 `scaler.scale(g)` 生成梯度后全部重跑，结果只用重跑。预注册之外的性质（步数计数、wd = 0 时 Adam 与
+   AdamW 相同、SGD 第一步动量缓冲等于有效梯度、Adafactor 行 / 列二阶矩均值一致、全部有限）标为「事后」，单独报告。

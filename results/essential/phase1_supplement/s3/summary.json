@@ -1,0 +1,2801 @@
+{
+ "pool": {
+  "conditions": 108,
+  "counts": {
+   "eager_cpu64": {
+    "fwd": {
+     "eager_itself:compatible": 108
+    },
+    "bwd": {
+     "eager_itself:compatible": 108
+    }
+   },
+   "eager_cpu32": {
+    "fwd": {
+     "compatible": 108
+    },
+    "bwd": {
+     "compatible": 108
+    }
+   },
+   "eager_cuda32": {
+    "fwd": {
+     "compatible": 108
+    },
+    "bwd": {
+     "compatible": 105,
+     "candidate_error": 3
+    }
+   },
+   "inductor_cuda32": {
+    "fwd": {
+     "compatible": 108
+    },
+    "bwd": {
+     "compatible": 93,
+     "candidate_compatible_eager_deviates": 3,
+     "reading_difference (eager: compatible; candidate: reading:R1)": 9,
+     "candidate_error": 3
+    }
+   },
+   "nightly_eager_cuda32": {
+    "fwd": {
+     "compatible": 108
+    },
+    "bwd": {
+     "compatible": 108
+    }
+   },
+   "nightly_inductor_cuda32": {
+    "fwd": {
+     "compatible": 108
+    },
+    "bwd": {
+     "compatible": 96,
+     "reading_difference (eager: compatible; candidate: reading:R1)": 9,
+     "candidate_error": 3
+    }
+   }
+  },
+  "shared": [],
+  "candidate_errors": [
+   {
+    "condition": "s3pool004",
+    "candidate": "eager_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "avg_pool",
+     "nd": 1,
+     "size": [
+      1027
+     ],
+     "kernel": [
+      3
+     ],
+     "stride": [
+      2
+     ],
+     "padding": [
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "large",
+     "layout": "transposed"
+    }
+   },
+   {
+    "condition": "s3pool010",
+    "candidate": "eager_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "avg_pool",
+     "nd": 1,
+     "size": [
+      1027
+     ],
+     "kernel": [
+      3
+     ],
+     "stride": [
+      2
+     ],
+     "padding": [
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "small",
+     "layout": "transposed"
+    }
+   },
+   {
+    "condition": "s3pool016",
+    "candidate": "eager_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "avg_pool",
+     "nd": 1,
+     "size": [
+      1027
+     ],
+     "kernel": [
+      3
+     ],
+     "stride": [
+      2
+     ],
+     "padding": [
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "mixed",
+     "layout": "transposed"
+    }
+   },
+   {
+    "condition": "s3pool094",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "max_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "dilation": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "values": "large",
+     "layout": "transposed"
+    }
+   },
+   {
+    "condition": "s3pool094",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "max_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "dilation": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "values": "large",
+     "layout": "transposed"
+    }
+   },
+   {
+    "condition": "s3pool100",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "max_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "dilation": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "values": "small",
+     "layout": "transposed"
+    }
+   },
+   {
+    "condition": "s3pool100",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "max_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "dilation": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "values": "small",
+     "layout": "transposed"
+    }
+   },
+   {
+    "condition": "s3pool106",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "max_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "dilation": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "values": "mixed",
+     "layout": "transposed"
+    }
+   },
+   {
+    "condition": "s3pool106",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "max_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "dilation": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "values": "mixed",
+     "layout": "transposed"
+    }
+   }
+  ],
+  "eager_deviations": [],
+  "eager_compatible_candidate_deviates": [
+   {
+    "condition": "s3pool004",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "compatible",
+    "category": "candidate_compatible_eager_deviates",
+    "params": {
+     "op": "avg_pool",
+     "nd": 1,
+     "size": [
+      1027
+     ],
+     "kernel": [
+      3
+     ],
+     "stride": [
+      2
+     ],
+     "padding": [
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "large",
+     "layout": "transposed"
+    }
+   },
+   {
+    "condition": "s3pool010",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "compatible",
+    "category": "candidate_compatible_eager_deviates",
+    "params": {
+     "op": "avg_pool",
+     "nd": 1,
+     "size": [
+      1027
+     ],
+     "kernel": [
+      3
+     ],
+     "stride": [
+      2
+     ],
+     "padding": [
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "small",
+     "layout": "transposed"
+    }
+   },
+   {
+    "condition": "s3pool016",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "compatible",
+    "category": "candidate_compatible_eager_deviates",
+    "params": {
+     "op": "avg_pool",
+     "nd": 1,
+     "size": [
+      1027
+     ],
+     "kernel": [
+      3
+     ],
+     "stride": [
+      2
+     ],
+     "padding": [
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "mixed",
+     "layout": "transposed"
+    }
+   }
+  ],
+  "readings": {
+   "eager_cpu64/fwd": {
+    "R2": 6
+   },
+   "eager_cpu64/bwd": {
+    "R2": 9
+   },
+   "eager_cpu32/fwd": {
+    "R2": 6
+   },
+   "eager_cpu32/bwd": {
+    "R2": 9
+   },
+   "eager_cuda32/fwd": {
+    "R2": 6
+   },
+   "eager_cuda32/bwd": {
+    "R2": 9
+   },
+   "inductor_cuda32/fwd": {
+    "R2": 6
+   },
+   "inductor_cuda32/bwd": {
+    "R1": 9
+   },
+   "nightly_eager_cuda32/fwd": {
+    "R2": 6
+   },
+   "nightly_eager_cuda32/bwd": {
+    "R2": 9
+   },
+   "nightly_inductor_cuda32/fwd": {
+    "R2": 6
+   },
+   "nightly_inductor_cuda32/bwd": {
+    "R1": 9
+   }
+  },
+  "undefined_conventions": {},
+  "properties": {
+   "eager_cpu64": {
+    "adjoint": {
+     "checked": 162,
+     "violated": 0
+    },
+    "shift": {
+     "checked": 162,
+     "violated": 0
+    },
+    "grad_mass": {
+     "checked": 162,
+     "violated": 0
+    },
+    "indices_in_argmax_set": {
+     "checked": 162,
+     "violated": 0
+    }
+   },
+   "eager_cpu32": {
+    "adjoint": {
+     "checked": 162,
+     "violated": 0
+    },
+    "shift": {
+     "checked": 162,
+     "violated": 0
+    },
+    "grad_mass": {
+     "checked": 162,
+     "violated": 0
+    },
+    "indices_in_argmax_set": {
+     "checked": 162,
+     "violated": 0
+    }
+   },
+   "eager_cuda32": {
+    "adjoint": {
+     "checked": 162,
+     "violated": 6
+    },
+    "shift": {
+     "checked": 162,
+     "violated": 0
+    },
+    "grad_mass": {
+     "checked": 162,
+     "violated": 0
+    },
+    "indices_in_argmax_set": {
+     "checked": 162,
+     "violated": 0
+    }
+   },
+   "inductor_cuda32": {
+    "adjoint": {
+     "checked": 162,
+     "violated": 14
+    },
+    "shift": {
+     "checked": 162,
+     "violated": 0
+    },
+    "grad_mass": {
+     "checked": 162,
+     "violated": 8
+    },
+    "indices_in_argmax_set": {
+     "checked": 162,
+     "violated": 9
+    }
+   },
+   "nightly_eager_cuda32": {
+    "adjoint": {
+     "checked": 162,
+     "violated": 0
+    },
+    "shift": {
+     "checked": 162,
+     "violated": 0
+    },
+    "grad_mass": {
+     "checked": 162,
+     "violated": 0
+    },
+    "indices_in_argmax_set": {
+     "checked": 162,
+     "violated": 0
+    }
+   },
+   "nightly_inductor_cuda32": {
+    "adjoint": {
+     "checked": 162,
+     "violated": 14
+    },
+    "shift": {
+     "checked": 162,
+     "violated": 0
+    },
+    "grad_mass": {
+     "checked": 162,
+     "violated": 8
+    },
+    "indices_in_argmax_set": {
+     "checked": 162,
+     "violated": 9
+    }
+   }
+  },
+  "fr": {
+   "inductor_cuda32": {
+    "out: no semantic difference vs main": 93,
+    "grad: no semantic difference vs main": 51,
+    "grad: not written by Triton": 51,
+    "grad: semantic vs main": 6,
+    "out: not written by Triton": 9
+   }
+  },
+  "w8": [
+   {
+    "condition": "s3pool004",
+    "candidate": "eager_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "avg_pool",
+     "nd": 1,
+     "size": [
+      1027
+     ],
+     "kernel": [
+      3
+     ],
+     "stride": [
+      2
+     ],
+     "padding": [
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "large",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool010",
+    "candidate": "eager_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "avg_pool",
+     "nd": 1,
+     "size": [
+      1027
+     ],
+     "kernel": [
+      3
+     ],
+     "stride": [
+      2
+     ],
+     "padding": [
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "small",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": false,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool016",
+    "candidate": "eager_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "avg_pool",
+     "nd": 1,
+     "size": [
+      1027
+     ],
+     "kernel": [
+      3
+     ],
+     "stride": [
+      2
+     ],
+     "padding": [
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "mixed",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool036",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "large",
+     "layout": "strided"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": true
+   },
+   {
+    "condition": "s3pool036",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "large",
+     "layout": "strided"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool038",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "large",
+     "layout": "offset"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": true
+   },
+   {
+    "condition": "s3pool038",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "large",
+     "layout": "offset"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool040",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "large",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3pool040",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "large",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool042",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "small",
+     "layout": "strided"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": false,
+    "FR_semantic": true
+   },
+   {
+    "condition": "s3pool042",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "small",
+     "layout": "strided"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": false,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool044",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "small",
+     "layout": "offset"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": false,
+    "FR_semantic": true
+   },
+   {
+    "condition": "s3pool044",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "small",
+     "layout": "offset"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": false,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool046",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "small",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": false,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3pool046",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "small",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": false,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool048",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "mixed",
+     "layout": "strided"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": true
+   },
+   {
+    "condition": "s3pool048",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "mixed",
+     "layout": "strided"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool050",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "mixed",
+     "layout": "offset"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": true
+   },
+   {
+    "condition": "s3pool050",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "mixed",
+     "layout": "offset"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool052",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "mixed",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3pool052",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "reading:R1",
+    "category": "reading_difference (eager: compatible; candidate: reading:R1)",
+    "params": {
+     "op": "avg_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "count_include_pad": true,
+     "divisor_override": null,
+     "values": "mixed",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool094",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "max_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "dilation": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "values": "large",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3pool094",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "max_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "dilation": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "values": "large",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool100",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "max_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "dilation": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "values": "small",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3pool100",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "max_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "dilation": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "values": "small",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3pool106",
+    "candidate": "inductor_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "max_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "dilation": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "values": "mixed",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3pool106",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "bwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "max_pool",
+     "nd": 3,
+     "size": [
+      9,
+      10,
+      11
+     ],
+     "kernel": [
+      3,
+      3,
+      3
+     ],
+     "stride": [
+      2,
+      2,
+      2
+     ],
+     "padding": [
+      1,
+      1,
+      1
+     ],
+     "dilation": [
+      1,
+      1,
+      1
+     ],
+     "ceil_mode": true,
+     "values": "mixed",
+     "layout": "transposed"
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   }
+  ],
+  "held": 0
+ },
+ "index": {
+  "conditions": 114,
+  "counts": {
+   "eager_cpu64": {
+    "fwd": {
+     "eager_itself:compatible": 114
+    },
+    "bwd": {
+     "eager_itself:compatible": 114
+    }
+   },
+   "eager_cpu32": {
+    "fwd": {
+     "compatible": 110,
+     "candidate_error": 4
+    },
+    "bwd": {
+     "compatible": 114
+    }
+   },
+   "eager_cuda32": {
+    "fwd": {
+     "compatible": 109,
+     "candidate_error": 5
+    },
+    "bwd": {
+     "compatible": 114
+    }
+   },
+   "inductor_cuda32": {
+    "fwd": {
+     "compatible": 107,
+     "shared_deviation": 1,
+     "candidate_error": 2,
+     "both_deviate_differently": 4
+    },
+    "bwd": {
+     "compatible": 114
+    }
+   },
+   "nightly_eager_cuda32": {
+    "fwd": {
+     "compatible": 109,
+     "candidate_error": 5
+    },
+    "bwd": {
+     "compatible": 114
+    }
+   },
+   "nightly_inductor_cuda32": {
+    "fwd": {
+     "compatible": 107,
+     "candidate_compatible_eager_deviates": 1,
+     "candidate_error": 2,
+     "shared_deviation": 1,
+     "both_deviate_differently": 3
+    },
+    "bwd": {
+     "compatible": 114
+    }
+   }
+  },
+  "shared": [
+   {
+    "condition": "s3idx002",
+    "candidate": "inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "shared_deviation",
+    "params": {
+     "op": "index_add",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    }
+   },
+   {
+    "condition": "s3idx015",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "shared_deviation",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "mixed",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    }
+   }
+  ],
+  "candidate_errors": [
+   {
+    "condition": "s3idx002",
+    "candidate": "eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    }
+   },
+   {
+    "condition": "s3idx002",
+    "candidate": "nightly_eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    }
+   },
+   {
+    "condition": "s3idx003",
+    "candidate": "inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    }
+   },
+   {
+    "condition": "s3idx005",
+    "candidate": "eager_cpu32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "m": 2051,
+     "alpha": 2.5
+    }
+   },
+   {
+    "condition": "s3idx005",
+    "candidate": "eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "m": 2051,
+     "alpha": 2.5
+    }
+   },
+   {
+    "condition": "s3idx005",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "m": 2051,
+     "alpha": 2.5
+    }
+   },
+   {
+    "condition": "s3idx013",
+    "candidate": "inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "mixed",
+     "layout": "strided",
+     "m": 2051,
+     "alpha": 2.5
+    }
+   },
+   {
+    "condition": "s3idx015",
+    "candidate": "nightly_eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "mixed",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    }
+   },
+   {
+    "condition": "s3idx038",
+    "candidate": "eager_cpu32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    }
+   },
+   {
+    "condition": "s3idx038",
+    "candidate": "eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    }
+   },
+   {
+    "condition": "s3idx038",
+    "candidate": "nightly_eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    }
+   },
+   {
+    "condition": "s3idx039",
+    "candidate": "eager_cpu32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    }
+   },
+   {
+    "condition": "s3idx039",
+    "candidate": "eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    }
+   },
+   {
+    "condition": "s3idx039",
+    "candidate": "nightly_eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    }
+   },
+   {
+    "condition": "s3idx041",
+    "candidate": "eager_cpu32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    }
+   },
+   {
+    "condition": "s3idx041",
+    "candidate": "eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    }
+   },
+   {
+    "condition": "s3idx041",
+    "candidate": "nightly_eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    }
+   },
+   {
+    "condition": "s3idx062",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "scatter_reduce",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "sum",
+     "include_self": false
+    }
+   }
+  ],
+  "eager_deviations": [],
+  "eager_compatible_candidate_deviates": [
+   {
+    "condition": "s3idx002",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "fwd",
+    "class": "compatible",
+    "category": "candidate_compatible_eager_deviates",
+    "params": {
+     "op": "index_add",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    }
+   }
+  ],
+  "readings": {
+   "eager_cpu64/fwd": {
+    "main": 12
+   },
+   "eager_cpu32/fwd": {
+    "main": 9,
+    "none": 3
+   },
+   "eager_cuda32/fwd": {
+    "main": 9,
+    "none": 3
+   },
+   "inductor_cuda32/fwd": {
+    "main": 9,
+    "none": 3
+   },
+   "nightly_eager_cuda32/fwd": {
+    "main": 9,
+    "none": 3
+   },
+   "nightly_inductor_cuda32/fwd": {
+    "main": 9,
+    "none": 3
+   }
+  },
+  "undefined_conventions": {},
+  "properties": {
+   "eager_cpu64": {
+    "untouched_unchanged": {
+     "checked": 342,
+     "violated": 0
+    },
+    "counting_on_ones": {
+     "checked": 342,
+     "violated": 0
+    },
+    "order_invariance": {
+     "checked": 342,
+     "violated": 0
+    }
+   },
+   "eager_cpu32": {
+    "untouched_unchanged": {
+     "checked": 342,
+     "violated": 0
+    },
+    "counting_on_ones": {
+     "checked": 342,
+     "violated": 0
+    },
+    "order_invariance": {
+     "checked": 342,
+     "violated": 9
+    }
+   },
+   "eager_cuda32": {
+    "untouched_unchanged": {
+     "checked": 342,
+     "violated": 0
+    },
+    "counting_on_ones": {
+     "checked": 342,
+     "violated": 0
+    },
+    "order_invariance": {
+     "checked": 342,
+     "violated": 11
+    }
+   },
+   "inductor_cuda32": {
+    "untouched_unchanged": {
+     "checked": 342,
+     "violated": 0
+    },
+    "counting_on_ones": {
+     "checked": 342,
+     "violated": 25
+    },
+    "order_invariance": {
+     "checked": 342,
+     "violated": 8
+    }
+   },
+   "nightly_eager_cuda32": {
+    "untouched_unchanged": {
+     "checked": 342,
+     "violated": 0
+    },
+    "counting_on_ones": {
+     "checked": 342,
+     "violated": 0
+    },
+    "order_invariance": {
+     "checked": 342,
+     "violated": 9
+    }
+   },
+   "nightly_inductor_cuda32": {
+    "untouched_unchanged": {
+     "checked": 342,
+     "violated": 0
+    },
+    "counting_on_ones": {
+     "checked": 342,
+     "violated": 25
+    },
+    "order_invariance": {
+     "checked": 342,
+     "violated": 10
+    }
+   }
+  },
+  "fr": {
+   "inductor_cuda32": {
+    "out: no semantic difference vs main": 54,
+    "grad_source: no semantic difference vs main": 102,
+    "grad_self: not written by Triton": 31,
+    "grad_source: not written by Triton": 12,
+    "grad_self: no semantic difference vs main": 83,
+    "out: not written by Triton": 42,
+    "grad_self: interface/constant items": 3,
+    "grad_source: interface/constant items": 3
+   }
+  },
+  "w8": [
+   {
+    "condition": "s3idx002",
+    "candidate": "eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    },
+    "E_detects": false,
+    "FP64_ref_detects": false,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx002",
+    "candidate": "inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "shared_deviation",
+    "params": {
+     "op": "index_add",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    },
+    "E_detects": false,
+    "FP64_ref_detects": false,
+    "P_any_violation": true,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3idx002",
+    "candidate": "nightly_eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    },
+    "E_detects": false,
+    "FP64_ref_detects": false,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx003",
+    "candidate": "inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    },
+    "E_detects": false,
+    "FP64_ref_detects": true,
+    "P_any_violation": false,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3idx005",
+    "candidate": "eager_cpu32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "m": 2051,
+     "alpha": 2.5
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx005",
+    "candidate": "eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "m": 2051,
+     "alpha": 2.5
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx005",
+    "candidate": "inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "both_deviate_differently",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "m": 2051,
+     "alpha": 2.5
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3idx005",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "m": 2051,
+     "alpha": 2.5
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx013",
+    "candidate": "inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "mixed",
+     "layout": "strided",
+     "m": 2051,
+     "alpha": 2.5
+    },
+    "E_detects": false,
+    "FP64_ref_detects": true,
+    "P_any_violation": false,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3idx015",
+    "candidate": "nightly_eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "mixed",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": false,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx015",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "shared_deviation",
+    "params": {
+     "op": "index_add",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "mixed",
+     "layout": "offset",
+     "m": 2051,
+     "alpha": 2.5
+    },
+    "E_detects": false,
+    "FP64_ref_detects": false,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx038",
+    "candidate": "eager_cpu32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx038",
+    "candidate": "eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx038",
+    "candidate": "inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "both_deviate_differently",
+    "params": {
+     "op": "index_reduce",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3idx038",
+    "candidate": "nightly_eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx038",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "both_deviate_differently",
+    "params": {
+     "op": "index_reduce",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx039",
+    "candidate": "eager_cpu32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx039",
+    "candidate": "eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx039",
+    "candidate": "inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "both_deviate_differently",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3idx039",
+    "candidate": "nightly_eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx039",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "both_deviate_differently",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx041",
+    "candidate": "eager_cpu32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx041",
+    "candidate": "eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx041",
+    "candidate": "inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "both_deviate_differently",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": false
+   },
+   {
+    "condition": "s3idx041",
+    "candidate": "nightly_eager_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx041",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "both_deviate_differently",
+    "params": {
+     "op": "index_reduce",
+     "shape": "2d_dim1_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "transposed",
+     "reduce": "mean",
+     "include_self": true,
+     "m": 2051
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   },
+   {
+    "condition": "s3idx062",
+    "candidate": "nightly_inductor_cuda32",
+    "phase": "fwd",
+    "class": "deviates",
+    "category": "candidate_error",
+    "params": {
+     "op": "scatter_reduce",
+     "shape": "1d_large",
+     "dup": "some",
+     "values": "large",
+     "layout": "offset",
+     "reduce": "sum",
+     "include_self": false
+    },
+    "E_detects": true,
+    "FP64_ref_detects": true,
+    "P_any_violation": true,
+    "FR_semantic": null
+   }
+  ],
+  "held": 0
+ }
+}

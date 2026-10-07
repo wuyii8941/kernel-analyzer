@@ -1,0 +1,624 @@
+{
+ "conditions": 23,
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "candidates": {
+  "bnb_adamw32bit_cuda": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 3.9,
+    "slowest": [
+     3.54,
+     "opt_adamw_cold_min_wd0.0/0/base"
+    ],
+    "conditions": 23,
+    "env": "liger",
+    "lib_version": "0.49.2"
+   },
+   "statuses": {
+    "ok": 36,
+    "unsupported": 132
+   }
+  },
+  "hf_adafactor_cuda": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 1.0,
+    "slowest": [
+     0.66,
+     "opt_adamw_cold_min_wd0.0/0/base"
+    ],
+    "conditions": 23,
+    "env": "liger",
+    "lib_version": "4.57.3"
+   },
+   "statuses": {
+    "unsupported": 159,
+    "ok": 9
+   }
+  },
+  "torch_compiled_step_cuda": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 86.4,
+    "slowest": [
+     3.94,
+     "opt_adamw_cold_min_wd0.0/0/base"
+    ],
+    "conditions": 23,
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 168
+   }
+  },
+  "torch_for_loop_cpu": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 3.3,
+    "slowest": [
+     2.15,
+     "opt_adamw_cold_min_wd0.0/0/base"
+    ],
+    "conditions": 23,
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 168
+   }
+  },
+  "torch_for_loop_cuda": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 3.7,
+    "slowest": [
+     0.64,
+     "opt_adamw_cold_min_wd0.0/0/base"
+    ],
+    "conditions": 23,
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 168
+   }
+  },
+  "torch_foreach_cpu": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 1.4,
+    "slowest": [
+     0.27,
+     "opt_adafactor_seq_zero_restore_min_wd0.0/1/base"
+    ],
+    "conditions": 23,
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 168
+   }
+  },
+  "torch_foreach_cuda": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 3.1,
+    "slowest": [
+     0.13,
+     "opt_adamw_cold_min_wd0.0/0/base"
+    ],
+    "conditions": 23,
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 168
+   }
+  },
+  "torch_fused_cpu": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 0.8,
+    "slowest": [
+     0.01,
+     "opt_adam_amsgrad_save_restore_min_wd0.0/0/mirror"
+    ],
+    "conditions": 23,
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 138,
+    "unsupported": 30
+   }
+  },
+  "torch_fused_cuda": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 1.0,
+    "slowest": [
+     0.01,
+     "opt_adam_amsgrad_save_restore_min_wd0.0/1/mirror"
+    ],
+    "conditions": 23,
+    "env": "ka_main"
+   },
+   "statuses": {
+    "ok": 138,
+    "unsupported": 30
+   }
+  },
+  "torchao_adamw_fp32_cuda": {
+   "meta": {
+    "torch": "2.10.0+cu128",
+    "seconds": 2.9,
+    "slowest": [
+     2.07,
+     "opt_adamw_cold_min_wd0.0/0/base"
+    ],
+    "conditions": 23,
+    "env": "liger",
+    "lib_version": "0.16.0"
+   },
+   "statuses": {
+    "ok": 36,
+    "unsupported": 132
+   }
+  }
+ },
+ "E": {
+  "bnb_adamw32bit_cuda": {
+   "compared": 24,
+   "violating_conditions": 0,
+   "bitwise_param_trajectories": 0,
+   "max_ratio": 0.11054060950269794,
+   "unsupported": 45,
+   "error": 0,
+   "status": "executed",
+   "reference": "torch_for_loop_cuda"
+  },
+  "hf_adafactor_cuda": {
+   "status": "not applicable",
+   "why": "HF Adafactor is a different algorithm from torch.optim.Adafactor"
+  },
+  "torch_compiled_step_cuda": {
+   "compared": 69,
+   "violating_conditions": 0,
+   "bitwise_param_trajectories": 8,
+   "max_ratio": 0.0015022338393233766,
+   "unsupported": 0,
+   "error": 0,
+   "status": "executed",
+   "reference": "torch_for_loop_cuda"
+  },
+  "torch_for_loop_cpu": {
+   "status": "reference (K_eager)"
+  },
+  "torch_for_loop_cuda": {
+   "status": "reference (K_eager)"
+  },
+  "torch_foreach_cpu": {
+   "compared": 69,
+   "violating_conditions": 0,
+   "bitwise_param_trajectories": 63,
+   "max_ratio": 0.00019973569155386713,
+   "unsupported": 0,
+   "error": 0,
+   "status": "executed",
+   "reference": "torch_for_loop_cpu"
+  },
+  "torch_foreach_cuda": {
+   "compared": 69,
+   "violating_conditions": 0,
+   "bitwise_param_trajectories": 37,
+   "max_ratio": 0.00042411991493579286,
+   "unsupported": 0,
+   "error": 0,
+   "status": "executed",
+   "reference": "torch_for_loop_cuda"
+  },
+  "torch_fused_cpu": {
+   "compared": 57,
+   "violating_conditions": 0,
+   "bitwise_param_trajectories": 39,
+   "max_ratio": 0.0015022338393233766,
+   "unsupported": 12,
+   "error": 0,
+   "status": "executed",
+   "reference": "torch_for_loop_cpu"
+  },
+  "torch_fused_cuda": {
+   "compared": 57,
+   "violating_conditions": 0,
+   "bitwise_param_trajectories": 1,
+   "max_ratio": 0.0017025316845664935,
+   "unsupported": 12,
+   "error": 0,
+   "status": "executed",
+   "reference": "torch_for_loop_cuda"
+  },
+  "torchao_adamw_fp32_cuda": {
+   "compared": 24,
+   "violating_conditions": 0,
+   "bitwise_param_trajectories": 0,
+   "max_ratio": 0.0005064174648745005,
+   "unsupported": 45,
+   "error": 0,
+   "status": "executed",
+   "reference": "torch_for_loop_cuda"
+  }
+ },
+ "P": {
+  "bnb_adamw32bit_cuda": {
+   "P_none": {
+    "checked": 6,
+    "violated": 0
+   },
+   "P_skip_sequence": {
+    "checked": 3,
+    "violated": 0
+   },
+   "P_restore": {
+    "checked": 6,
+    "violated": 0
+   }
+  },
+  "hf_adafactor_cuda": {
+   "P_restore": {
+    "checked": 3,
+    "violated": 0
+   }
+  },
+  "torch_compiled_step_cuda": {
+   "P_mirror": {
+    "checked": 69,
+    "violated": 0
+   },
+   "P_amsgrad": {
+    "checked": 9,
+    "violated": 0
+   },
+   "P_none": {
+    "checked": 6,
+    "violated": 0
+   },
+   "P_skip_sequence": {
+    "checked": 3,
+    "violated": 0
+   },
+   "P_restore": {
+    "checked": 27,
+    "violated": 0
+   }
+  },
+  "torch_for_loop_cpu": {
+   "P_mirror": {
+    "checked": 69,
+    "violated": 0
+   },
+   "P_amsgrad": {
+    "checked": 9,
+    "violated": 0
+   },
+   "P_none": {
+    "checked": 6,
+    "violated": 0
+   },
+   "P_skip_sequence": {
+    "checked": 3,
+    "violated": 0
+   },
+   "P_restore": {
+    "checked": 27,
+    "violated": 0
+   }
+  },
+  "torch_for_loop_cuda": {
+   "P_mirror": {
+    "checked": 69,
+    "violated": 0
+   },
+   "P_amsgrad": {
+    "checked": 9,
+    "violated": 0
+   },
+   "P_none": {
+    "checked": 6,
+    "violated": 0
+   },
+   "P_skip_sequence": {
+    "checked": 3,
+    "violated": 0
+   },
+   "P_restore": {
+    "checked": 27,
+    "violated": 0
+   }
+  },
+  "torch_foreach_cpu": {
+   "P_mirror": {
+    "checked": 69,
+    "violated": 0
+   },
+   "P_amsgrad": {
+    "checked": 9,
+    "violated": 0
+   },
+   "P_none": {
+    "checked": 6,
+    "violated": 0
+   },
+   "P_skip_sequence": {
+    "checked": 3,
+    "violated": 0
+   },
+   "P_restore": {
+    "checked": 27,
+    "violated": 0
+   }
+  },
+  "torch_foreach_cuda": {
+   "P_mirror": {
+    "checked": 69,
+    "violated": 0
+   },
+   "P_amsgrad": {
+    "checked": 9,
+    "violated": 0
+   },
+   "P_none": {
+    "checked": 6,
+    "violated": 0
+   },
+   "P_skip_sequence": {
+    "checked": 3,
+    "violated": 0
+   },
+   "P_restore": {
+    "checked": 27,
+    "violated": 0
+   }
+  },
+  "torch_fused_cpu": {
+   "P_mirror": {
+    "checked": 57,
+    "violated": 0
+   },
+   "P_amsgrad": {
+    "checked": 9,
+    "violated": 0
+   },
+   "P_none": {
+    "checked": 6,
+    "violated": 0
+   },
+   "P_skip_sequence": {
+    "checked": 3,
+    "violated": 0
+   },
+   "P_restore": {
+    "checked": 21,
+    "violated": 0
+   }
+  },
+  "torch_fused_cuda": {
+   "P_mirror": {
+    "checked": 57,
+    "violated": 0
+   },
+   "P_amsgrad": {
+    "checked": 9,
+    "violated": 0
+   },
+   "P_none": {
+    "checked": 6,
+    "violated": 0
+   },
+   "P_skip_sequence": {
+    "checked": 3,
+    "violated": 0
+   },
+   "P_restore": {
+    "checked": 21,
+    "violated": 0
+   }
+  },
+  "torchao_adamw_fp32_cuda": {
+   "P_none": {
+    "checked": 6,
+    "violated": 0
+   },
+   "P_skip_sequence": {
+    "checked": 3,
+    "violated": 0
+   },
+   "P_restore": {
+    "checked": 6,
+    "violated": 0
+   }
+  }
+ },
+ "posthoc": {
+  "bnb_adamw32bit_cuda": {
+   "H_step_count": {
+    "checked": 24,
+    "violated": 0
+   },
+   "H_finite": {
+    "checked": 24,
+    "violated": 0
+   }
+  },
+  "hf_adafactor_cuda": {
+   "H_step_count": {
+    "checked": 6,
+    "violated": 0
+   },
+   "H_finite": {
+    "checked": 6,
+    "violated": 0
+   },
+   "H_adafactor_factor_means": {
+    "checked": 6,
+    "violated": 0
+   }
+  },
+  "torch_compiled_step_cuda": {
+   "H_step_count": {
+    "checked": 69,
+    "violated": 0
+   },
+   "H_finite": {
+    "checked": 69,
+    "violated": 0
+   },
+   "H_sgd_first_buffer": {
+    "checked": 15,
+    "violated": 0
+   },
+   "H_adafactor_factor_means": {
+    "checked": 6,
+    "violated": 0
+   },
+   "H_adam_eq_adamw_wd0": {
+    "checked": 6,
+    "violated": 0
+   }
+  },
+  "torch_for_loop_cpu": {
+   "H_step_count": {
+    "checked": 69,
+    "violated": 0
+   },
+   "H_finite": {
+    "checked": 69,
+    "violated": 0
+   },
+   "H_sgd_first_buffer": {
+    "checked": 15,
+    "violated": 0
+   },
+   "H_adafactor_factor_means": {
+    "checked": 6,
+    "violated": 0
+   },
+   "H_adam_eq_adamw_wd0": {
+    "checked": 6,
+    "violated": 0
+   }
+  },
+  "torch_for_loop_cuda": {
+   "H_step_count": {
+    "checked": 69,
+    "violated": 0
+   },
+   "H_finite": {
+    "checked": 69,
+    "violated": 0
+   },
+   "H_sgd_first_buffer": {
+    "checked": 15,
+    "violated": 0
+   },
+   "H_adafactor_factor_means": {
+    "checked": 6,
+    "violated": 0
+   },
+   "H_adam_eq_adamw_wd0": {
+    "checked": 6,
+    "violated": 0
+   }
+  },
+  "torch_foreach_cpu": {
+   "H_step_count": {
+    "checked": 69,
+    "violated": 0
+   },
+   "H_finite": {
+    "checked": 69,
+    "violated": 0
+   },
+   "H_sgd_first_buffer": {
+    "checked": 15,
+    "violated": 0
+   },
+   "H_adafactor_factor_means": {
+    "checked": 6,
+    "violated": 0
+   },
+   "H_adam_eq_adamw_wd0": {
+    "checked": 6,
+    "violated": 0
+   }
+  },
+  "torch_foreach_cuda": {
+   "H_step_count": {
+    "checked": 69,
+    "violated": 0
+   },
+   "H_finite": {
+    "checked": 69,
+    "violated": 0
+   },
+   "H_sgd_first_buffer": {
+    "checked": 15,
+    "violated": 0
+   },
+   "H_adafactor_factor_means": {
+    "checked": 6,
+    "violated": 0
+   },
+   "H_adam_eq_adamw_wd0": {
+    "checked": 6,
+    "violated": 0
+   }
+  },
+  "torch_fused_cpu": {
+   "H_step_count": {
+    "checked": 57,
+    "violated": 0
+   },
+   "H_finite": {
+    "checked": 57,
+    "violated": 0
+   },
+   "H_sgd_first_buffer": {
+    "checked": 15,
+    "violated": 0
+   },
+   "H_adam_eq_adamw_wd0": {
+    "checked": 6,
+    "violated": 0
+   }
+  },
+  "torch_fused_cuda": {
+   "H_step_count": {
+    "checked": 57,
+    "violated": 0
+   },
+   "H_finite": {
+    "checked": 57,
+    "violated": 0
+   },
+   "H_sgd_first_buffer": {
+    "checked": 15,
+    "violated": 0
+   },
+   "H_adam_eq_adamw_wd0": {
+    "checked": 6,
+    "violated": 0
+   }
+  },
+  "torchao_adamw_fp32_cuda": {
+   "H_step_count": {
+    "checked": 24,
+    "violated": 0
+   },
+   "H_finite": {
+    "checked": 24,
+    "violated": 0
+   }
+  }
+ },
+ "cross": {},
+ "examples": {}
+}

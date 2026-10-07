@@ -43,7 +43,7 @@ def props(family, cond, cand, rec):
         if t and t["status"] == "ok":
             g0, g1 = np.asarray(o["grad"]), np.asarray(t["outputs"]["grad"])   # rows compared in main(): per-seed targets
             res["masked_rows_do_not_matter"] = close(t["outputs"]["loss"], o["loss"], dtype, False)
-            res["masked_rows_bitwise"] = bool(np.array_equal(np.asarray(t["outputs"]["loss"]), np.asarray(o["loss"])))
+            res["masked_rows_bitwise"] = bool(np.array_equal(np.asarray(t["outputs"]["loss"]), np.asarray(o["loss"]), equal_nan=True))
             res["_grads"] = (g0, g1)
     elif family == "pool":
         t = rec.get("channels_reversed")

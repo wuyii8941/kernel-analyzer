@@ -24,11 +24,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", type=Path, default=OUT, help="directory with classification_*.json.gz (and for summary.json)")
     d_args = ap.parse_args()
-    global OUT
-    OUT = d_args.dir
+    out_dir = d_args.dir
     summary = {}
     for fam in ("ce", "pool", "index"):
-        p = OUT / f"classification_{fam}.json.gz"
+        p = out_dir / f"classification_{fam}.json.gz"
         if not p.exists():
             continue
         import gzip
@@ -106,7 +105,7 @@ def main():
         fs["properties"] = {c: {p: {"checked": a[0], "violated": a[1]} for p, a in v.items()} for c, v in fs["properties"].items()}
         fs["fr"] = {k: dict(v) for k, v in fs["fr"].items()}
         summary[fam] = fs
-    (OUT / "summary.json").write_text(json.dumps(summary, indent=1, default=str) + "\n")
+    (out_dir / "summary.json").write_text(json.dumps(summary, indent=1, default=str) + "\n")
     for fam, fs in summary.items():
         print(f"== {fam}: {fs['conditions']} conditions; held (doc split) {fs['held']}")
         for cand, ph in fs["counts"].items():
