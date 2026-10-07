@@ -8,7 +8,11 @@ distinct (optimizer, maximize, weight decay) settings of the optimizer condition
 tensor.  Verdict per output: elements with a complete finite K_R whose K lies outside [K_R lo, K_R hi] widened by
 τ32 = 2^-12 (1 + |K_R|).
 
+Family "attention": flex_attention and the compiled manual attention (Inductor), forward and backward, every condition
+except head_dim 72 for flex (2.10 fails to compile it: #164931); outputs out, dq, dk, dv.  The block mask is built in setup.
+
     python scripts/essential/p2b_fr_modeA.py optimizers
+    python scripts/essential/p2b_fr_modeA.py attention
 """
 from __future__ import annotations
 
@@ -24,6 +28,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # noqa: E402
+import p2b_attention as A  # noqa: E402
 import p2b_optimizers as O  # noqa: E402
 
 OUT = O.ROOT / "results/essential/phase2b"
@@ -137,5 +142,82 @@ def run_optimizers():
     path.write_text(json.dumps({"seconds": round(time.time() - t0, 1), "cases": res}, indent=1, default=str) + "\n")
 
 
+def attention_case(cand_id, cond):
+    from torch.nn.attention.flex_attention import create_block_mask, flex_attention
+    st = {}
+    a = A.allowed(cond)
+    scale = cond["scale"] if cond["scale"] is not None else 1.0 / cond["head_dim"] ** 0.5
+
+    def setup():
+        torch._dynamo.reset()
+        mask_t = None if cond["mask"] == "none" else torch.as_tensor(a, device="cuda")
+        if cand_id == "flex_attention_float32":
+            bm = None
+            if mask_t is not None:
+                def mask_mod(b, h, qi, ki):
+                    return mask_t[b, qi, ki]
+                lq, lk = A.LENS[cond["q_len_k_len"]]
+                bm = create_block_mask(mask_mod, A.B, None, lq, lk, device="cuda")
+            f = torch.compile(flex_attention, dynamic=False)
+            st["fn"] = lambda q, k, v: f(q, k, v, block_mask=bm, scale=cond["scale"], enable_gqa=cond["gqa"])
+        else:
+            f = torch.compile(A.manual_attention, dynamic=False)
+            st["fn"] = lambda q, k, v: f(q, k, v, mask_t, scale, q.shape[1] // k.shape[1])
+        launch(inputs(0))
+        torch.cuda.synchronize()
+
+    def inputs(seed):
+        d = A.make_inputs(cond, seed, "base")
+        t = {x: torch.tensor(d[x], dtype=torch.float32, device="cuda", requires_grad=x != "g") for x in ("q", "k", "v", "g")}
+        t["_seed"] = seed
+        return t
+
+    def launch(t):
+        for x in ("q", "k", "v"):
+            t[x].grad = None
+        o = st["fn"](t["q"], t["k"], t["v"])
+        o.backward(t["g"])
+        return {"out": o, "dq": t["q"].grad, "dk": t["k"].grad, "dv": t["v"].grad}
+
+    return setup, inputs, launch
+
+
+def run_attention():
+    res, t0 = {}, time.time()
+    for cand_id in ("flex_attention_float32", "inductor_attention_float32"):
+        for cond in A.conditions():
+            key = f"{cand_id}/{cond['id']}"
+            if cand_id == "flex_attention_float32" and cond["head_dim"] == 72:
+                res[key] = {"status": "not run", "reason": "2.10 does not compile flex decoding for head_dim 72 (#164931)"}
+                continue
+            try:
+                setup, inputs, launch = attention_case(cand_id, cond)
+                rep, keep = common.fr_run(f"attention/{key}", setup, inputs, launch, lambda _t: None)
+                res[key] = {"status": "ok", "verdict": verdict(keep),
+                            "notes": {k: rep.get(k) for k in (
+                                "outputs_not_written_by_triton", "outputs_binding_not_established",
+                                "outputs_at_address_of_another_recorded_storage", "outputs_modified_after_last_triton_write",
+                                "outputs_whose_writing_programs_aborted", "ttir_coverage_complete", "tool_version")},
+                            "launches": [l["kernel"][:60] for l in rep.get("launches") or []],
+                            "special": {k: v.get("special_values") for k, v in rep.get("outputs", {}).items()},
+                            "complete_fraction": {k: v["reference_classes"]["finite_complete_fraction"]
+                                                  for k, v in rep.get("outputs", {}).items()},
+                            "seconds": rep.get("seconds"), "timing": rep.get("timing_seconds")}
+            except Exception as exc:  # noqa: BLE001
+                res[key] = {"status": "error", "reason": f"{type(exc).__name__}: {exc}"[:400],
+                            "trace": traceback.format_exc()[-1500:]}
+            r = res[key]
+            if r["status"] == "ok":
+                v = r["verdict"]
+                print(key, "ok-el", {k: x["ok_elements"] for k, x in v.items()}, "beyond", sum(x["beyond_tau32"] for x in v.values()),
+                      "complete", {k: round(x, 2) for k, x in r["complete_fraction"].items()},
+                      "not-Triton", r["notes"]["outputs_not_written_by_triton"], flush=True)
+            else:
+                print(key, r["status"], r.get("reason", "")[:200], flush=True)
+    path = OUT / "attention" / "fr_modeA.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"seconds": round(time.time() - t0, 1), "cases": res}, indent=1, default=str) + "\n")
+
+
 if __name__ == "__main__":
-    {"optimizers": run_optimizers}[sys.argv[1]]()
+    {"optimizers": run_optimizers, "attention": run_attention}[sys.argv[1]]()

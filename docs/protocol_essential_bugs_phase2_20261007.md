@@ -189,3 +189,12 @@ padding）；量化训练的缩放取整与 selective scan 的 chunk 边界登�
    （没有 Triton 启动）」。运行中修正：非有限跳过的条件第一次运行时没有经过 `scaler.scale()`，GradScaler 的缩放未初始化而报错
    （每个候选 9 个运行）；改为用 `scaler.scale(g)` 生成梯度后全部重跑，结果只用重跑。预注册之外的性质（步数计数、wd = 0 时 Adam 与
    AdamW 相同、SGD 第一步动量缓冲等于有效梯度、Adafactor 行 / 列二阶矩均值一致、全部有限）标为「事后」，单独报告。
+8. **（2b 注意力与打包，运行之前定、运行中修正一处）** 注意力：条件取覆盖计划去重后的 24 个；掩码一律左上对齐（SDPA 文档的
+   `tril(diagonal=0)`），fully_masked_row 为第 2 个样本的第 0 行与第 Lq // 2 行，滑动窗口宽 5；没有任何允许键的行视为规格无定义——
+   不进入 E 与 P，按候选记录约定，上游梯度在这些行上为零；候选或参照在这些行上产生 NaN 并进入 dk / dv 时，该条件的 dk / dv 不做 E
+   比较（约定已记录）。P 的辅助运行：`repeat`（判定逐位性质前确认可重复）、`perturb`（被掩码键与值换成 10 倍随机值）、`v_ones`、
+   `gqa_repeated`；预注册之外加了「对所有行都被掩码的键梯度为零」（标为 P_dead_keys_zero_grad，同属掩码性质，单独列出）。bf16 的 E
+   只记录，报告相对 2⁻⁸(1 + |K_eager|) 的倍数。为 E 增加只作参照的 eager：手写注意力 eager、未编译的 flex_attention（打包家族：SDPA math、
+   未编译的 flex、HF eager）。运行中修正：xformers 在 GQA 上「No operator found」第一次被记为错误，改记「不支持」后重跑该候选（数值结果
+   不变）。打包：条件取覆盖计划 (docs, lengths) 的 9 个组合（`impl` 去掉，每个实现都是候选）；HF 候选用随机权重的 2 层 Llama 而不是
+   预训练模型（只查文档隔离与位置重置）。
