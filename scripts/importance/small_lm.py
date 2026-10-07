@@ -2,7 +2,8 @@
 docs/next_phase_plan_20261006.md).
 
 Everything that the calibration varies is a switch here:
-- precision: "fp32" (TF32 off), "tf32" (TF32 matmuls), "bf16" (bf16 autocast, fp32 master weights);
+- precision: "fp32" (TF32 off), "tf32" (TF32 matmuls), "bf16" (bf16 autocast, fp32 master weights), "fp16" (fp16
+  autocast with a GradScaler; ``clip_order`` decides whether the gradient is unscaled before or after clipping);
 - component implementations (``impl``): rmsnorm / rope / swiglu / ce, each "torch" (fp32 reference math) or an
   alternative (e.g. "hf_bf16" for the HF-style intermediate bf16 cast, "unsloth" for the Unsloth Triton kernels);
 - optimizer: "adamw" (fp32 states) or "adamw_bf16" (bf16 parameters and states, pure bf16 training);
@@ -11,6 +12,8 @@ Everything that the calibration varies is a switch here:
 
 Data: GPT-2 tokens of wikitext-103 (``.cache/data/wikitext103_gpt2_{train,val}.npy``); the order of training
 blocks is a permutation drawn from the run's data seed, so two runs with the same seed see the same batches.
+``data="docs"`` instead puts one wikitext paragraph per row (padded, label -100 on padding), for the loss
+normalisation under gradient accumulation (``loss_norm``) of docs/nonprecision_search_protocol_20261007.md.
 """
 from __future__ import annotations
 
@@ -62,6 +65,13 @@ class Config:
     ema_dtype: str = "fp32"     # "fp32" | "bf16": storage of the EMA buffer
     grad_accum: int = 1         # micro-batches per optimizer step (the batch is split)
     accum_fp32: bool = False    # accumulate micro-batch gradients in an fp32 buffer instead of the parameter dtype
+    data: str = "blocks"        # "blocks" | "docs" (one paragraph per row, padded, label -100 on padding)
+    loss_norm: str = "microbatch"  # under grad_accum: "microbatch" (each micro-batch's mean / k) | "token" (sum / all
+                                   # valid tokens of the batch, i.e. the un-accumulated batch mean)
+    clip_order: str = "unscale_first"  # fp16 + GradScaler: "unscale_first" | "clip_first" (clip the scaled gradient)
+    scaler_init: float = 65536.0
+    wd_all: bool = False        # weight decay on the 1-D parameters too (the 2-D ones, tied embedding included, always)
+    lr_shift: int = 0           # learning rate of step + lr_shift
 
 
 # ------------------------------------------------------------------------------------------------ components
@@ -145,9 +155,11 @@ class _UnslothSwiGLU(torch.autograd.Function):
         return g2.view(shape), e2.view(shape)
 
 
-def cross_entropy(logits, targets, impl):
-    if impl == "torch":
-        return F.cross_entropy(logits.float().reshape(-1, logits.shape[-1]), targets.reshape(-1))
+def cross_entropy(logits, targets, impl, reduction="mean"):
+    if impl == "torch":  # label -100 is ignored (torch's default ignore_index); "mean" is over the valid labels
+        return F.cross_entropy(logits.float().reshape(-1, logits.shape[-1]), targets.reshape(-1), reduction=reduction)
+    if reduction != "mean":
+        raise NotImplementedError(reduction)
     if impl == "unsloth":
         from unsloth.kernels.cross_entropy_loss import Fast_CrossEntropyLoss
 
@@ -198,7 +210,7 @@ class SmallLM(torch.nn.Module):
             torch.nn.init.normal_(b.o.weight, std=0.02 / math.sqrt(2 * c.layers))
             torch.nn.init.normal_(b.down.weight, std=0.02 / math.sqrt(2 * c.layers))
 
-    def forward(self, idx, targets):
+    def forward(self, idx, targets, reduction="mean"):
         c = self.c
         if self.cos is None or self.cos.device != idx.device:
             self.cos, self.sin = rope_tables(c.seq, c.d // c.heads, c.rope_theta, idx.device)
@@ -207,7 +219,7 @@ class SmallLM(torch.nn.Module):
             x = b(x, self.cos, self.sin)
         x = rmsnorm(x, self.nf, c.norm_eps, c.impl["rmsnorm"])
         logits = x @ self.emb.weight.to(x.dtype).T
-        return cross_entropy(logits, targets, c.impl["ce"])
+        return cross_entropy(logits, targets, c.impl["ce"], reduction)
 
 
 # ------------------------------------------------------------------------------------------------ data
@@ -243,6 +255,49 @@ class Data:
             yield self._blocks(self.val, starts[i:i + self.c.batch])
 
 
+class DocData:
+    """One wikitext paragraph per row (headings removed; ``.cache/data/wikitext103_gpt2_docs_*``), truncated to
+    seq + 1 tokens and padded at the end; padded positions get label -100.  The paragraph order is a permutation
+    drawn from the data seed.  Validation covers every validation paragraph; its loss is the token-weighted mean."""
+
+    PAD = 50256
+
+    def __init__(self, c: Config, device):
+        self.c, self.device = c, device
+        self.train = np.load(DATA / "wikitext103_gpt2_docs_train_tokens.npy", mmap_mode="r")
+        self.train_off = np.load(DATA / "wikitext103_gpt2_docs_train_offsets.npy")
+        self.val = np.load(DATA / "wikitext103_gpt2_docs_val_tokens.npy")
+        self.val_off = np.load(DATA / "wikitext103_gpt2_docs_val_offsets.npy")
+        rng = np.random.default_rng(1_000_000 + c.seed)
+        self.order = rng.permutation(self.train_off.size - 1)
+
+    def _rows(self, arr, off, ids):
+        n = self.c.seq
+        x = np.full((len(ids), n), self.PAD, dtype=np.int64)
+        y = np.full((len(ids), n), -100, dtype=np.int64)
+        for j, i in enumerate(ids):
+            t = np.asarray(arr[off[i]:min(off[i + 1], off[i] + n + 1)], dtype=np.int64)
+            x[j, :t.size - 1], y[j, :t.size - 1] = t[:-1], t[1:]
+        return torch.from_numpy(x).to(self.device), torch.from_numpy(y).to(self.device)
+
+    def batch(self, step, batch=None):
+        b = batch or self.c.batch
+        s = (step * b) % self.order.size
+        return self._rows(self.train, self.train_off, self.order[s:s + b])
+
+    def random_batch(self, rng):
+        return self._rows(self.train, self.train_off, rng.integers(0, self.order.size, self.c.batch))
+
+    def val_batches(self):
+        n = self.val_off.size - 1
+        for i in range(0, n, self.c.batch):
+            yield self._rows(self.val, self.val_off, range(i, min(n, i + self.c.batch)))
+
+
+def make_data(c: Config, device):
+    return DocData(c, device) if c.data == "docs" else Data(c, device)
+
+
 # ------------------------------------------------------------------------------------------------ training
 
 def setup_precision(c: Config):
@@ -252,13 +307,20 @@ def setup_precision(c: Config):
 
 
 def autocast(c: Config):
+    if c.precision == "fp16":
+        return torch.autocast("cuda", dtype=torch.float16)
     return torch.autocast("cuda", dtype=torch.bfloat16, enabled=c.precision == "bf16")
+
+
+def make_scaler(c: Config):
+    return torch.amp.GradScaler("cuda", init_scale=c.scaler_init) if c.precision == "fp16" else None
 
 
 def make_optimizer(model, c: Config):
     decay = [p for n, p in model.named_parameters() if p.dim() >= 2]
     no_decay = [p for n, p in model.named_parameters() if p.dim() < 2]
-    groups = [{"params": decay, "weight_decay": c.weight_decay}, {"params": no_decay, "weight_decay": 0.0}]
+    groups = [{"params": decay, "weight_decay": c.weight_decay},
+              {"params": no_decay, "weight_decay": c.weight_decay if c.wd_all else 0.0}]
     kw = dict(lr=c.lr, betas=c.betas, eps=c.eps)
     o = c.optimizer
     if o in ("adamw", "adamw_bf16"):
@@ -387,8 +449,12 @@ def evaluate(model, data, c: Config):
     tot, n = 0.0, 0
     for x, y in data.val_batches():
         with autocast(c):
-            tot += float(model(x, y)) * x.shape[0]
-        n += x.shape[0]
+            if c.data == "docs":  # token-weighted over the padded rows
+                tot += float(model(x, y, reduction="sum"))
+                n += int((y != -100).sum())
+            else:
+                tot += float(model(x, y)) * x.shape[0]
+                n += x.shape[0]
     model.train()
     return tot / n
 
@@ -402,29 +468,30 @@ def build(c: Config, device="cuda"):
     return model, opt
 
 
-def forward(model, x, y, c: Config):
+def forward(model, x, y, c: Config, reduction="mean"):
     if c.compile:
         if "model" not in _COMPILED or _COMPILED["model"][0] is not model:
             _COMPILED["model"] = (model, torch.compile(model, dynamic=False))
-        return _COMPILED["model"][1](x, y)
-    return model(x, y)
+        return _COMPILED["model"][1](x, y, reduction)
+    return model(x, y, reduction)
 
 
-def train_step(model, opt, data, step, c: Config, nu=None, ema=None):
-    set_lr(opt, lr_at(step, c))
+def train_step(model, opt, data, step, c: Config, nu=None, ema=None, scaler=None):
+    set_lr(opt, lr_at(step + c.lr_shift, c))
     x, y = data.batch(step)
     if c.grad_accum == 1:
         with autocast(c):
             loss = forward(model, x, y, c)
-        loss.backward()
+        (scaler.scale(loss) if scaler is not None else loss).backward()
     else:
         k = c.grad_accum
         buf = {n: torch.zeros_like(p, dtype=torch.float32) for n, p in model.named_parameters()} if c.accum_fp32 else None
+        n_tok = int((y != -100).sum()) if c.loss_norm == "token" else None
         tot = 0.0
         for xs, ys in zip(x.chunk(k), y.chunk(k)):
             with autocast(c):
-                l = forward(model, xs, ys, c) / k
-            l.backward()
+                l = forward(model, xs, ys, c) / k if n_tok is None else forward(model, xs, ys, c, "sum") / n_tok
+            (scaler.scale(l) if scaler is not None else l).backward()
             tot += float(l.detach())
             if buf is not None:
                 for n, p in model.named_parameters():
@@ -434,10 +501,16 @@ def train_step(model, opt, data, step, c: Config, nu=None, ema=None):
             for n, p in model.named_parameters():
                 p.grad = buf[n].to(p.dtype)
         loss = torch.tensor(tot)
+    if scaler is not None and c.clip_order == "unscale_first":
+        scaler.unscale_(opt)
     if c.clip:
         torch.nn.utils.clip_grad_norm_(model.parameters(), c.clip)
     prev = {n: p.detach().clone() for n, p in model.named_parameters()} if c.inject != "none" else None
-    opt.step()
+    if scaler is not None:  # skips the step when the scaled gradient overflowed
+        scaler.step(opt)
+        scaler.update()
+    else:
+        opt.step()
     opt.zero_grad(set_to_none=True)
     if c.inject != "none":
         with torch.no_grad():
@@ -460,14 +533,20 @@ def train(c: Config, out_dir: Path | None = None, device="cuda"):
     torch.use_deterministic_algorithms(True)
     setup_precision(c)
     model, opt = build(c, device)
-    data = Data(c, device)
+    data = make_data(c, device)
+    scaler = make_scaler(c)
+    skipped = []
     nu = directions(model, c.inject_seed) if c.inject == "direction" else None
     ema = ({n: p.detach().clone().to(torch.bfloat16 if c.ema_dtype == "bf16" else torch.float32)
             for n, p in model.named_parameters()} if c.ema else None)
     log, t0 = [], time.time()
     ckpts = set(c.checkpoints)
     for step in range(c.steps):
-        loss = train_step(model, opt, data, step, c, nu, ema)
+        if scaler is not None:
+            s_before = scaler.get_scale()
+        loss = train_step(model, opt, data, step, c, nu, ema, scaler)
+        if scaler is not None and scaler.get_scale() < s_before:
+            skipped.append(step)
         if step % c.log_every == 0 or step == c.steps - 1:
             log.append({"step": step, "train_loss": loss})
         if out_dir is not None and (step + 1) in ckpts:
@@ -477,6 +556,8 @@ def train(c: Config, out_dir: Path | None = None, device="cuda"):
     val = evaluate(model, data, c)
     out = {"config": asdict(c), "val_loss": val, "log": log, "seconds": round(time.time() - t0, 1),
            "final_train_loss": log[-1]["train_loss"]}
+    if scaler is not None:
+        out.update(final_scale=scaler.get_scale(), skipped_steps=skipped)
     if ema is not None:  # evaluate the EMA weights in place of the trained ones
         saved = {n: p.detach().clone() for n, p in model.named_parameters()}
         with torch.no_grad():
