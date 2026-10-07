@@ -1,0 +1,793 @@
+{
+ "torch": "2.10.0+cu128",
+ "cases": {
+  "count": {
+   "rows": [
+    {
+     "seed": 0,
+     "size": 5,
+     "eager_cuda_fp32/out": {
+      "K": [
+       5.0
+      ],
+      "deviates_from_f": false
+     },
+     "inductor_cuda_fp32/out": {
+      "K": [
+       8.0
+      ],
+      "deviates_from_f": true
+     },
+     "f/out": [
+      5.0
+     ],
+     "E/out": true,
+     "P_counting/eager_cuda_fp32": {
+      "got": [
+       5.0
+      ],
+      "expected": [
+       5.0
+      ],
+      "violated": false
+     },
+     "P_counting/inductor_cuda_fp32": {
+      "got": [
+       8.0
+      ],
+      "expected": [
+       5.0
+      ],
+      "violated": true
+     }
+    },
+    {
+     "seed": 1,
+     "size": 30,
+     "eager_cuda_fp32/out": {
+      "K": [
+       30.0
+      ],
+      "deviates_from_f": false
+     },
+     "inductor_cuda_fp32/out": {
+      "K": [
+       32.0
+      ],
+      "deviates_from_f": true
+     },
+     "f/out": [
+      30.0
+     ],
+     "E/out": true,
+     "P_counting/eager_cuda_fp32": {
+      "got": [
+       30.0
+      ],
+      "expected": [
+       30.0
+      ],
+      "violated": false
+     },
+     "P_counting/inductor_cuda_fp32": {
+      "got": [
+       32.0
+      ],
+      "expected": [
+       30.0
+      ],
+      "violated": true
+     }
+    },
+    {
+     "seed": 2,
+     "size": 1000,
+     "eager_cuda_fp32/out": {
+      "K": [
+       1000.0
+      ],
+      "deviates_from_f": false
+     },
+     "inductor_cuda_fp32/out": {
+      "K": [
+       1024.0
+      ],
+      "deviates_from_f": true
+     },
+     "f/out": [
+      1000.0
+     ],
+     "E/out": true,
+     "P_counting/eager_cuda_fp32": {
+      "got": [
+       1000.0
+      ],
+      "expected": [
+       1000.0
+      ],
+      "violated": false
+     },
+     "P_counting/inductor_cuda_fp32": {
+      "got": [
+       1024.0
+      ],
+      "expected": [
+       1000.0
+      ],
+      "violated": true
+     }
+    }
+   ],
+   "FR": {
+    "outputs": {
+     "out": [
+      {
+       "seed": 0,
+       "K": [
+        8.0
+       ],
+       "K_R": [
+        [
+         7.999999999999992
+        ],
+        [
+         8.000000000000009
+        ]
+       ],
+       "e_sem_excludes_zero": true,
+       "e_num_excludes_zero": false,
+       "ok_elements": 1,
+       "elements": 1
+      },
+      {
+       "seed": 1,
+       "K": [
+        32.0
+       ],
+       "K_R": [
+        [
+         31.999999999999883
+        ],
+        [
+         32.00000000000012
+        ]
+       ],
+       "e_sem_excludes_zero": true,
+       "e_num_excludes_zero": false,
+       "ok_elements": 1,
+       "elements": 1
+      },
+      {
+       "seed": 2,
+       "K": [
+        1024.0
+       ],
+       "K_R": [
+        [
+         1023.9999999999849
+        ],
+        [
+         1024.0000000000152
+        ]
+       ],
+       "e_sem_excludes_zero": true,
+       "e_num_excludes_zero": false,
+       "ok_elements": 1,
+       "elements": 1
+      }
+     ]
+    },
+    "outputs_not_written_by_triton": [],
+    "ttir_coverage_complete": [
+     true,
+     true
+    ],
+    "launches": [
+     "triton_poi_fused_add_scatter_add_zeros_0",
+     "triton_poi_fused_add_scatter_add_zeros_1"
+    ],
+    "float_atomics": [
+     false,
+     true
+    ]
+   }
+  },
+  "const_index": {
+   "rows": [
+    {
+     "seed": 0,
+     "size": 30,
+     "eager_cuda_fp32/out": {
+      "K": [
+       16.582962036132812,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "deviates_from_f": false
+     },
+     "inductor_cuda_fp32/out": {
+      "K": [
+       18.582962036132812,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "deviates_from_f": true
+     },
+     "f/out": [
+      16.58296091434843,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "E/out": true,
+     "P_counting/eager_cuda_fp32": {
+      "got": [
+       30.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "expected": [
+       30.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "violated": false
+     },
+     "P_counting/inductor_cuda_fp32": {
+      "got": [
+       32.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "expected": [
+       30.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "violated": true
+     }
+    },
+    {
+     "seed": 1,
+     "size": 30,
+     "eager_cuda_fp32/out": {
+      "K": [
+       21.74974822998047,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "deviates_from_f": false
+     },
+     "inductor_cuda_fp32/out": {
+      "K": [
+       23.74974822998047,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "deviates_from_f": true
+     },
+     "f/out": [
+      21.749751573271773,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "E/out": true,
+     "P_counting/eager_cuda_fp32": {
+      "got": [
+       30.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "expected": [
+       30.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "violated": false
+     },
+     "P_counting/inductor_cuda_fp32": {
+      "got": [
+       32.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "expected": [
+       30.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "violated": true
+     }
+    },
+    {
+     "seed": 2,
+     "size": 1000,
+     "eager_cuda_fp32/out": {
+      "K": [
+       608.4623413085938,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "deviates_from_f": false
+     },
+     "inductor_cuda_fp32/out": {
+      "K": [
+       632.4625244140625,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "deviates_from_f": true
+     },
+     "f/out": [
+      608.4623656442842,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "E/out": true,
+     "P_counting/eager_cuda_fp32": {
+      "got": [
+       1000.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "expected": [
+       1000.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "violated": false
+     },
+     "P_counting/inductor_cuda_fp32": {
+      "got": [
+       1024.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "expected": [
+       1000.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "violated": true
+     }
+    }
+   ],
+   "FR": {
+    "outputs": {
+     "out": [
+      {
+       "seed": 0,
+       "K": [
+        18.582962036132812,
+        0.0,
+        0.0,
+        0.0
+       ],
+       "K_R": [
+        [
+         18.582960914348345,
+         0.0,
+         0.0,
+         0.0
+        ],
+        [
+         18.58296091434852,
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "e_sem_excludes_zero": true,
+       "e_num_excludes_zero": true,
+       "ok_elements": 4,
+       "elements": 4
+      },
+      {
+       "seed": 1,
+       "K": [
+        23.74974822998047,
+        0.0,
+        0.0,
+        0.0
+       ],
+       "K_R": [
+        [
+         23.749751573271684,
+         0.0,
+         0.0,
+         0.0
+        ],
+        [
+         23.749751573271865,
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "e_sem_excludes_zero": true,
+       "e_num_excludes_zero": true,
+       "ok_elements": 4,
+       "elements": 4
+      },
+      {
+       "seed": 2,
+       "K": [
+        632.4627685546875,
+        0.0,
+        0.0,
+        0.0
+       ],
+       "K_R": [
+        [
+         632.4623656442739,
+         0.0,
+         0.0,
+         0.0
+        ],
+        [
+         632.4623656442947,
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "e_sem_excludes_zero": true,
+       "e_num_excludes_zero": true,
+       "ok_elements": 4,
+       "elements": 4
+      }
+     ]
+    },
+    "outputs_not_written_by_triton": [],
+    "ttir_coverage_complete": [
+     true,
+     true
+    ],
+    "launches": [
+     "triton_poi_fused_zeros_0",
+     "triton_poi_fused_arange_cos_floor_divide_index_add_zeros_1"
+    ],
+    "float_atomics": [
+     false,
+     true
+    ]
+   }
+  },
+  "mean_bwd": {
+   "rows": [
+    {
+     "seed": 0,
+     "size": 1,
+     "eager_cuda_fp32/grad_self": {
+      "K": [
+       0.25
+      ],
+      "deviates_from_f": false
+     },
+     "inductor_cuda_fp32/grad_self": {
+      "K": [
+       0.20000000298023224
+      ],
+      "deviates_from_f": true
+     },
+     "f/grad_self": [
+      0.25
+     ],
+     "E/grad_self": true,
+     "eager_cuda_fp32/grad_src": {
+      "K": [
+       0.25,
+       0.25,
+       0.25
+      ],
+      "deviates_from_f": false
+     },
+     "inductor_cuda_fp32/grad_src": {
+      "K": [
+       1.0,
+       1.0,
+       1.0
+      ],
+      "deviates_from_f": true
+     },
+     "f/grad_src": [
+      0.25,
+      0.25,
+      0.25
+     ],
+     "E/grad_src": true,
+     "P_adjoint/eager_cuda_fp32": {
+      "<B(v),u>": 0.75,
+      "<v,Ju>": 0.75,
+      "violated": false
+     },
+     "P_adjoint/inductor_cuda_fp32": {
+      "<B(v),u>": 1.4000000059604645,
+      "<v,Ju>": 0.75,
+      "violated": true
+     }
+    },
+    {
+     "seed": 1,
+     "size": 1,
+     "eager_cuda_fp32/grad_self": {
+      "K": [
+       0.25
+      ],
+      "deviates_from_f": false
+     },
+     "inductor_cuda_fp32/grad_self": {
+      "K": [
+       0.20000000298023224
+      ],
+      "deviates_from_f": true
+     },
+     "f/grad_self": [
+      0.25
+     ],
+     "E/grad_self": true,
+     "eager_cuda_fp32/grad_src": {
+      "K": [
+       0.25,
+       0.25,
+       0.25
+      ],
+      "deviates_from_f": false
+     },
+     "inductor_cuda_fp32/grad_src": {
+      "K": [
+       1.0,
+       1.0,
+       1.0
+      ],
+      "deviates_from_f": true
+     },
+     "f/grad_src": [
+      0.25,
+      0.25,
+      0.25
+     ],
+     "E/grad_src": true,
+     "P_adjoint/eager_cuda_fp32": {
+      "<B(v),u>": 0.25,
+      "<v,Ju>": 0.25,
+      "violated": false
+     },
+     "P_adjoint/inductor_cuda_fp32": {
+      "<B(v),u>": 2.5999999940395355,
+      "<v,Ju>": 0.25,
+      "violated": true
+     }
+    },
+    {
+     "seed": 2,
+     "size": 1,
+     "eager_cuda_fp32/grad_self": {
+      "K": [
+       0.25
+      ],
+      "deviates_from_f": false
+     },
+     "inductor_cuda_fp32/grad_self": {
+      "K": [
+       0.20000000298023224
+      ],
+      "deviates_from_f": true
+     },
+     "f/grad_self": [
+      0.25
+     ],
+     "E/grad_self": true,
+     "eager_cuda_fp32/grad_src": {
+      "K": [
+       0.25,
+       0.25,
+       0.25
+      ],
+      "deviates_from_f": false
+     },
+     "inductor_cuda_fp32/grad_src": {
+      "K": [
+       1.0,
+       1.0,
+       1.0
+      ],
+      "deviates_from_f": true
+     },
+     "f/grad_src": [
+      0.25,
+      0.25,
+      0.25
+     ],
+     "E/grad_src": true,
+     "P_adjoint/eager_cuda_fp32": {
+      "<B(v),u>": 0.5,
+      "<v,Ju>": 0.5,
+      "violated": false
+     },
+     "P_adjoint/inductor_cuda_fp32": {
+      "<B(v),u>": -0.3999999910593033,
+      "<v,Ju>": 0.5,
+      "violated": true
+     }
+    }
+   ],
+   "FR": {
+    "outputs": {
+     "grad_self": [
+      {
+       "seed": 0,
+       "K": [
+        0.20000000298023224
+       ],
+       "K_R": [
+        [
+         0.19999999999999987
+        ],
+        [
+         0.20000000000000012
+        ]
+       ],
+       "e_sem_excludes_zero": true,
+       "e_num_excludes_zero": true,
+       "ok_elements": 1,
+       "elements": 1
+      },
+      {
+       "seed": 1,
+       "K": [
+        0.20000000298023224
+       ],
+       "K_R": [
+        [
+         0.19999999999999987
+        ],
+        [
+         0.20000000000000012
+        ]
+       ],
+       "e_sem_excludes_zero": true,
+       "e_num_excludes_zero": true,
+       "ok_elements": 1,
+       "elements": 1
+      },
+      {
+       "seed": 2,
+       "K": [
+        0.20000000298023224
+       ],
+       "K_R": [
+        [
+         0.19999999999999987
+        ],
+        [
+         0.20000000000000012
+        ]
+       ],
+       "e_sem_excludes_zero": true,
+       "e_num_excludes_zero": true,
+       "ok_elements": 1,
+       "elements": 1
+      }
+     ],
+     "grad_src": [
+      {
+       "seed": 0,
+       "K": [
+        1.0,
+        1.0,
+        1.0
+       ],
+       "K_R": [
+        [
+         1.0,
+         1.0,
+         1.0
+        ],
+        [
+         1.0,
+         1.0,
+         1.0
+        ]
+       ],
+       "e_sem_excludes_zero": true,
+       "e_num_excludes_zero": false,
+       "ok_elements": 3,
+       "elements": 3
+      },
+      {
+       "seed": 1,
+       "K": [
+        1.0,
+        1.0,
+        1.0
+       ],
+       "K_R": [
+        [
+         1.0,
+         1.0,
+         1.0
+        ],
+        [
+         1.0,
+         1.0,
+         1.0
+        ]
+       ],
+       "e_sem_excludes_zero": true,
+       "e_num_excludes_zero": false,
+       "ok_elements": 3,
+       "elements": 3
+      },
+      {
+       "seed": 2,
+       "K": [
+        1.0,
+        1.0,
+        1.0
+       ],
+       "K_R": [
+        [
+         1.0,
+         1.0,
+         1.0
+        ],
+        [
+         1.0,
+         1.0,
+         1.0
+        ]
+       ],
+       "e_sem_excludes_zero": true,
+       "e_num_excludes_zero": false,
+       "ok_elements": 3,
+       "elements": 3
+      }
+     ]
+    },
+    "outputs_not_written_by_triton": [],
+    "ttir_coverage_complete": [
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "launches": [
+     "triton_poi_fused_scatter_reduce_0",
+     "triton_poi_fused_scatter_reduce_0",
+     "triton_poi_fused_ones_like_scatter_add_0",
+     "triton_poi_fused_div_eq_expand_gather_masked_fill_ones_like_scatter_add_1",
+     "triton_poi_fused_div_eq_expand_masked_fill_2"
+    ],
+    "float_atomics": [
+     false,
+     false,
+     false,
+     true,
+     false
+    ]
+   }
+  }
+ }
+}

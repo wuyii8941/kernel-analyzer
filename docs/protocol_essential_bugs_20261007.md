@@ -150,4 +150,15 @@ label_smoothing 等标量用实际收到的值：ATen 收到 float64，Triton ke
 
 ## 12. 偏离记录
 
-（运行后追加。）
+1. **（W7 运行中）HF Trainer 是 float32 候选。** Llama 头在 `logits.float()` 上算 loss（4.45.2 `modeling_llama.py` 第 1219 行；
+   4.57.3 `ForCausalLMLoss`），float64 模型的 loss 也在 float32 中计算，所以 HF 召回按 τ₃₂ 裁决（第 6 节的 float32 契约），
+   不是 τ₆₄；第一次按 τ₆₄ 的运行结果被覆盖（相等 token 数时 1e-7 的相对差是 float32 舍入）。
+2. **（W7 运行中）召回范围的扩展。** 第 8 节写的是修复前后两个版本；实测时另加了 `liger` 环境已有的 4.57.3 与最新发布
+   5.19.0（新建环境 `hf_ga_5190`），因为 4.57.3 在修复后的计数上又出现偏离（见结果）。W9 检索确认这是已知问题
+   （#46204，2026-05-27 合并，首次发布于 v5.10.1），只作为召回案例。
+3. **（W7 运行中）B014 召回的 E 比较**第一次用逐位相等，把 1 ulp 的舍入差当成了差异；改为 float32 契约后重跑（协议第 6 节）。
+4. **文档版本比对（第 1 节第 4 项）的结果**：`results/essential/phase1/doc_clauses.json`。CE、AvgPool1d/2d/3d、MaxPool2d/3d、
+   scatter_reduce_ 的条款在 2.10 与 main 中逐句相同；index_add_ / index_reduce_ 只有 `index` 参数的说明不同（2.10：
+   "indices of source to select from"，main："indices of self to add to / accumulate into"；即规格已记录的 IDX-A6，功能句相同）；
+   **MaxPool1d 的 ceil_mode 输出长度公式不同**（2.10：⌈(L+2p−d(k−1)−1+(s−1))/s⌉+1；main：⌊…⌋+1，等于 ⌈(L+2p−d(k−1)−1)/s⌉+1，
+   规格按后者）。按第 1 节第 4 项上报；1-D max pool、ceil_mode、stride ≥ 2 的条件照常测量，但在用户决定之前不进入分类计数。
