@@ -162,3 +162,10 @@ label_smoothing 等标量用实际收到的值：ATen 收到 float64，Triton ke
    "indices of source to select from"，main："indices of self to add to / accumulate into"；即规格已记录的 IDX-A6，功能句相同）；
    **MaxPool1d 的 ceil_mode 输出长度公式不同**（2.10：⌈(L+2p−d(k−1)−1+(s−1))/s⌉+1；main：⌊…⌋+1，等于 ⌈(L+2p−d(k−1)−1)/s⌉+1，
    规格按后者）。按第 1 节第 4 项上报；1-D max pool、ceil_mode、stride ≥ 2 的条件照常测量，但在用户决定之前不进入分类计数。
+5. **（用户指示，2026-10-07，任何候选测量之前）候选集只保留 PyTorch 自身的实现。** 第 3 节表中 Liger
+   `LigerCrossEntropyLoss`、Liger `LigerFusedLinearCrossEntropyLoss`、Unsloth `fast_cross_entropy_loss` 三行作废。理由：候选应由
+   研究问题（eager 差分看不到、独立规格看得到的错误）决定，不应由本机恰好装了哪些库决定。FLCE 家族（72 个条件）只为 Liger 的
+   融合 kernel 设计，PyTorch 核心没有融合的 linear + CE 算子，第一阶段不测，计入「无范围内候选」。第一阶段的候选为：eager CPU
+   float64 / float32、eager CUDA float32（CE 另加 bfloat16）、Inductor CUDA float32（CE 另加 bfloat16，FR 组只有 Inductor）、
+   nightly eager / Inductor CUDA float32。条件总数变为 1,652（CE 274、池化 776、index/scatter 602）× 3 seed；`conditions.py`
+   不改动，运行时跳过 FLCE。W7 中 4.57.3 的测量只用到 `liger` 环境里已装的 transformers，与 Liger kernel 无关。
