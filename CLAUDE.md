@@ -17,7 +17,7 @@
   清单见 `docs/environments.md`。旧测试套件仍在 `liger` 环境中跑。
 - 资源规则见 `docs/resource_policy.md`。
 - 当前任务：本质错误一轮（独立规格 vs eager 差分）。第一阶段按 `docs/protocol_essential_bugs_20261007.md`（结果冻结，
-  `results/essential/phase1/`）；第二阶段（2a 定向收尾、2b 搜索扩张）按 `docs/protocol_essential_bugs_phase2_20261007.md`。
+  `results/essential/phase1/`）；第二阶段（2a 定向收尾、2b 搜索扩张）按 `docs/protocol_essential_bugs_phase2_20261007.md`，记录在 `docs/essential_bugs_phase2a_record_20261007.md` 与 `docs/essential_bugs_phase2b_record_20261007.md`（2b 脚本 `scripts/essential/p2b_*.py`，结果 `results/essential/phase2b/`）。
   独立规格（「DSL」的规格层）以 `specs/` 中最新入库的审阅版本为准（第一阶段三个切片为 `specs/phase1`，v0.4）；新家族的规格由
   审阅方交付、入库后才开放 F 与模式 B 的 FR；执行方不改规格语义。此前的 `docs/next_phase_plan_20261006.md`（A–D）已完成，只作历史
   记录。不在每一步之后征求确认；只有遇到无法自行解决的问题才停下来询问。成绩只按三种状态写（`docs/status_ledger_20261006.md`）。
