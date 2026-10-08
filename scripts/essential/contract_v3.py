@@ -64,16 +64,19 @@ def _verdict(v):
             "NOT_CONFIRMED": "not confirmed"}.get(v, f"unmapped: {v}")
 
 
-def precision_invariance(k32, k64, f_mid) -> dict:
+def precision_invariance(k32, k64, f_mid, f_mid64=None) -> dict:
     """Black-box semantic / numerical classification (numeric_contract_v3 section 2).
 
-    k32, k64: outputs of the same algorithm in float32 and float64 on the same (float32-representable) inputs;
-    f_mid: spec interval midpoints.  Non-finite candidate values go to column 4 and are not ratioed."""
+    k32, k64: outputs of the same algorithm in float32 and float64 (same inputs, or each on its own received inputs with
+    the spec evaluated on those: then f_mid is the spec on the float32 candidate's inputs and f_mid64 on the float64
+    candidate's); f_mid: spec interval midpoints.  Non-finite candidate values go to column 4 and are not ratioed.
+    Anomalies (float32 exact, float64 off) are reported with how many lie within the float64 evaluation noise."""
     k32, k64, f = (np.asarray(a, dtype=np.float64).ravel() for a in (k32, k64, f_mid))
+    f64 = f if f_mid64 is None else np.asarray(f_mid64, dtype=np.float64).ravel()
     nonfin32, nonfin64 = ~np.isfinite(k32), ~np.isfinite(k64)
-    nonfinite = nonfin32 | nonfin64 | ~np.isfinite(f)
+    nonfinite = nonfin32 | nonfin64 | ~np.isfinite(f) | ~np.isfinite(f64)
     d32 = np.abs(k32 - f)
-    d64 = np.abs(k64 - f)
+    d64 = np.abs(k64 - f64)
     fin = ~nonfinite
     agree = fin & (d32 == 0) & (d64 == 0)
     anomaly = fin & (d32 == 0) & (d64 != 0)
@@ -82,10 +85,13 @@ def precision_invariance(k32, k64, f_mid) -> dict:
     numerical = fin & (d32 > 0) & (r < R_NUMERICAL)
     semantic = fin & (d32 > 0) & (r > R_SEMANTIC)
     undecided = fin & (d32 > 0) & ~numerical & ~semantic
-    semantic_real = semantic & (d64 > F64_NOISE * (1 + np.abs(f)))
+    noise64 = F64_NOISE * (1 + np.abs(f64))
+    semantic_real = semantic & (d64 > noise64)
+    anomaly_noise = anomaly & (d64 <= noise64)
     out = {"elements": int(f.size), "agree": int(agree.sum()), "numerical": int(numerical.sum()),
            "semantic": int(semantic.sum()), "semantic_above_f64_noise": int(semantic_real.sum()),
            "undecided": int(undecided.sum()), "anomaly_f32_exact_f64_off": int(anomaly.sum()),
+           "anomaly_within_f64_noise": int(anomaly_noise.sum()),
            "nonfinite_f32_only": int((nonfin32 & ~nonfin64).sum()), "nonfinite_f64_only": int((nonfin64 & ~nonfin32).sum()),
            "nonfinite_both": int((nonfin32 & nonfin64).sum())}
     if semantic_real.any():
