@@ -1,0 +1,31 @@
+{
+  "version": "v1.1",
+  "arrows": [
+    {"id": 0, "name": "声明与执行绑定",
+     "preconditions": ["输入/初始内存/启动顺序/实例数与捕获一致", "IR 与产物同一次编译", "输出与写入缓冲区的配对按存储实例可证"],
+     "rules": ["保存 IR/配置/产物哈希", "同一输入重放两次逐位相同", "配对按存储实例追踪"],
+     "code": [{"function": "", "file": ""}],
+     "tests": [{"name": "", "file": ""}],
+     "degrade_paths": [{"condition": "配对不可证", "action": "输出未建立", "triggered_record": ""}]},
+    {"id": 1, "name": "组合包含性", "preconditions": ["A1", "A2", "A3", "A4", "A5", "kappa=complete"],
+     "rules": ["规则表逐节点求值", "kappa 单调传播"], "code": [{"function": "", "file": ""}],
+     "tests": [{"name": "", "file": ""}],
+     "degrade_paths": [{"condition": "kappa=conditional", "action": "不进统计，报告比例", "triggered_record": ""},
+                       {"condition": "kappa=unestablished", "action": "不进统计，报告比例", "triggered_record": ""},
+                       {"condition": "未识别语义", "action": "拒绝", "triggered_record": ""}]},
+    {"id": 2, "name": "残差与投影", "preconditions": ["箭头1成立", "有向舍入向外", "方向在确认前确定", "D_m 有区间扩展"],
+     "rules": ["e_num 区间", "区间点积"], "code": [{"function": "", "file": ""}], "tests": [{"name": "", "file": ""}],
+     "degrade_paths": [{"condition": "D_m 无区间扩展", "action": "未建立", "triggered_record": ""},
+                       {"condition": "方向来源未登记", "action": "不出正式结论", "triggered_record": ""}]},
+    {"id": 3, "name": "均值区间", "preconditions": ["抽样单位独立或按 run 聚类", "端点检验前提", "开发/确认分离", "剔除已声明", "检验族事前固定"],
+     "rules": ["单侧界并集", "Holm", "TOST", "敏感性曲线"], "code": [{"function": "", "file": ""}], "tests": [{"name": "", "file": ""}],
+     "degrade_paths": [{"condition": "方差为零", "action": "无法判断（退化）", "triggered_record": ""},
+                       {"condition": "分布前提不成立", "action": "无法判断（分布）", "triggered_record": ""},
+                       {"condition": "样本不足", "action": "无法判断（样本）", "triggered_record": ""}]},
+    {"id": 4, "name": "结论分栏", "preconditions": ["箭头3成立", "契约已声明允许的数值行为"],
+     "rules": ["四栏", "精度不变性分类（黑箱）"], "code": [{"function": "", "file": ""}], "tests": [{"name": "", "file": ""}],
+     "degrade_paths": [{"condition": "ok_elements=0", "action": "未建立", "triggered_record": ""},
+                       {"condition": "无可比配对", "action": "共有关系未建立", "triggered_record": ""},
+                       {"condition": "契约未声明", "action": "只记录", "triggered_record": ""}]}
+  ]
+}
