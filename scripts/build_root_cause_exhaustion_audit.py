@@ -7,7 +7,10 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "results/property/root_cause_closure_v1/exhaustion_audit.json"
+# KA_OUTPUT_DIR (tests): write the output there instead of the tracked file
+_OUTPUT_DIR = __import__("os").environ.get("KA_OUTPUT_DIR")
+OUT = (Path(_OUTPUT_DIR) / "exhaustion_audit.json" if _OUTPUT_DIR
+       else ROOT / "results/property/root_cause_closure_v1/exhaustion_audit.json")
 
 
 def read(relative: str) -> dict:

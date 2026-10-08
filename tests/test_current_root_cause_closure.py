@@ -8,24 +8,25 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def load_ledger():
-    return json.loads(
-        (ROOT / "results/property/case_causal_audit_v1/root_cause_closure_current.json")
-        .read_text()
-    )
+def load_ledger(directory=None):
+    path = (Path(directory) / "root_cause_closure_current.json" if directory
+            else ROOT / "results/property/case_causal_audit_v1/root_cause_closure_current.json")
+    return json.loads(path.read_text())
 
 
 def by_group(data, group_id):
     return next(row for row in data["rows"] if row["problem_group"] == group_id)
 
 
-def test_current_root_cause_ledger_recomputes_and_keeps_open_branches():
+def test_current_root_cause_ledger_recomputes_and_keeps_open_branches(tmp_path):
+    import os
     subprocess.run(
         [sys.executable, "scripts/build_current_root_cause_closure.py"],
         cwd=ROOT,
         check=True,
+        env={**os.environ, "KA_OUTPUT_DIR": str(tmp_path)},
     )
-    data = load_ledger()
+    data = load_ledger(tmp_path)
     rows = data["rows"]
     assert len(rows) == len({row["problem_group"] for row in rows}) == 54
     assert data["summary"]["end_to_end_count"] == 1

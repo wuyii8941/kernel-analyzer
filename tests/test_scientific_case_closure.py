@@ -7,9 +7,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_scientific_case_closure_is_explicit_and_deduplicated():
-    subprocess.run([sys.executable, "scripts/build_scientific_case_closure.py"], cwd=ROOT, check=True)
-    data = json.loads((ROOT / "results/property/case_causal_audit_v1/scientific_case_closure.json").read_text())
+def test_scientific_case_closure_is_explicit_and_deduplicated(tmp_path):
+    import os
+    subprocess.run([sys.executable, "scripts/build_scientific_case_closure.py"], cwd=ROOT, check=True,
+                   env={**os.environ, "KA_OUTPUT_DIR": str(tmp_path)})
+    data = json.loads((tmp_path / "scientific_case_closure.json").read_text())
     rows = data["rows"]
     assert len(rows) == len({row["problem_group"] for row in rows}) == 9
     assert data["summary"]["scientific_problem_groups"] == 7

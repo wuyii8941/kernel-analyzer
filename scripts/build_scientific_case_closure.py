@@ -8,7 +8,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "results/property/case_causal_audit_v1/scientific_case_closure.json"
+# KA_OUTPUT_DIR (tests): write the output there instead of the tracked file
+_OUTPUT_DIR = __import__("os").environ.get("KA_OUTPUT_DIR")
+OUT = (Path(_OUTPUT_DIR) / "scientific_case_closure.json" if _OUTPUT_DIR
+       else ROOT / "results/property/case_causal_audit_v1/scientific_case_closure.json")
 
 ROWS = [
     {

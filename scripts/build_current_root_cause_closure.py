@@ -18,8 +18,11 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT_JSON = ROOT / "results/property/case_causal_audit_v1/root_cause_closure_current.json"
-OUT_MD = ROOT / "docs/root_cause_closure_current.md"
+# KA_OUTPUT_DIR (tests): write every output there instead of the tracked files, so a test run never rewrites them
+_OUTPUT_DIR = __import__("os").environ.get("KA_OUTPUT_DIR")
+OUT_JSON = (Path(_OUTPUT_DIR) / "root_cause_closure_current.json" if _OUTPUT_DIR
+            else ROOT / "results/property/case_causal_audit_v1/root_cause_closure_current.json")
+OUT_MD = Path(_OUTPUT_DIR) / "root_cause_closure_current.md" if _OUTPUT_DIR else ROOT / "docs/root_cause_closure_current.md"
 
 PROBLEM_NAMES = {
     "adamw8bit_moment_quantization": "AdamW8bit 保存的 moment",
@@ -5106,7 +5109,8 @@ def main() -> None:
         payload["summary"]["active_case_count"] - scoped_mean_bias_count
     )
     OUT_JSON.write_text(json.dumps(payload, indent=2, ensure_ascii=False, allow_nan=False) + "\n")
-    mean_out = ROOT / "results/property/root_cause_closure_v1/all_case_mean_bias_audit_v1.json"
+    mean_out = (Path(_OUTPUT_DIR) / "all_case_mean_bias_audit_v1.json" if _OUTPUT_DIR
+                else ROOT / "results/property/root_cause_closure_v1/all_case_mean_bias_audit_v1.json")
     mean_out.parent.mkdir(parents=True, exist_ok=True)
     mean_out.write_text(json.dumps(mean_report, indent=2, ensure_ascii=False, allow_nan=False) + "\n")
     legacy = read("results/property/declared_persistent_4096/all_bias_case_audit.json")
