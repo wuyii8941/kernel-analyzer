@@ -1,0 +1,276 @@
+{
+ "package_version": "1.1.0-rc1",
+ "status": "FILLED_BEFORE_MEASUREMENT",
+ "tool_commit": "52412958f8eda408a196b41104e530787cb85bc4",
+ "tool_dirty": false,
+ "semantic_registry_sha256": "a0be43f9f2ccbba956d81329af89f379f795bb00caca69b9c4b2fb42633ebae4",
+ "detector_files_manifest_sha256": "147a8a0f9763e40be631ccb86e9614d9b1966fbc8e0b7db3f4739190fc6ac3c3",
+ "rules_resolved": {
+  "rule_classes": {
+   "fixed_mean": [
+    "R1",
+    "R5"
+   ],
+   "aligned": [
+    "R2",
+    "R3"
+   ]
+  },
+  "rules_run": [
+   "R1",
+   "R2",
+   "R3",
+   "R5"
+  ],
+  "rules": {
+   "R1": {
+    "class": "fixed_mean",
+    "frozen_name": "negative_ones",
+    "definition": "w = -1 / sqrt(n)",
+    "positive": "the coordinate mean of the residual is negative",
+    "negative": "the coordinate mean of the residual is positive",
+    "coordinates": "valid on every development unit (assess_units)",
+    "development_source": "constant",
+    "weights_saved": "per-unit normalization scalars in each record; learned vectors (R5) in the job's arrays file (sha256 in the job)"
+   },
+   "R5": {
+    "class": "fixed_mean",
+    "frozen_name": "fixed_direction",
+    "definition": "w = normalized mean of the development midpoints (saved)",
+    "positive": "the residual points along the direction learned on the development units",
+    "negative": "the residual points against the learned direction",
+    "coordinates": "valid on every development unit (assess_units)",
+    "development_source": "seeds 0-31 (both rounds)",
+    "weights_saved": "per-unit normalization scalars in each record; learned vectors (R5) in the job's arrays file (sha256 in the job)"
+   },
+   "R2": {
+    "class": "aligned",
+    "frozen_name": "toward_zero",
+    "definition": "w = -sign(reference) / sqrt(n), per unit",
+    "positive": "the residual has the opposite sign of the reference: magnitudes pulled toward zero",
+    "negative": "the residual has the sign of the reference: magnitudes pushed away from zero",
+    "coordinates": "valid on every development unit (assess_units)",
+    "development_source": "per-unit reference midpoint (alignment)",
+    "weights_saved": "per-unit normalization scalars in each record; learned vectors (R5) in the job's arrays file (sha256 in the job)"
+   },
+   "R3": {
+    "class": "aligned",
+    "frozen_name": "scale_down",
+    "definition": "w = -reference / |reference|, per unit",
+    "positive": "the residual is anti-aligned with the reference: the output is scaled down",
+    "negative": "the residual is aligned with the reference: the output is scaled up",
+    "coordinates": "valid on every development unit (assess_units)",
+    "development_source": "per-unit reference midpoint (alignment)",
+    "weights_saved": "per-unit normalization scalars in each record; learned vectors (R5) in the job's arrays file (sha256 in the job)"
+   }
+  },
+  "code_sha256": {
+   "src/kernel_analyzer/reference_eval/analysis.py": "20fb9cd79be305b90e75f082f22515a81ab5a23cb9bc9cd44548dd2e065fc506",
+   "src/kernel_analyzer/measure.py": "9d5b12025dd1a4c6bbe2fb9d534ccd51cc041322fc12369738079f3c356348be",
+   "src/kernel_analyzer/check.py": "c193860b5ba5270cf9d7ec4788e7851e391c09671877d948596d7b4e7aa62542",
+   "scripts/essential/contract_v3.py": "1377575bc6889403c74f96a02792d5850ba271717ecbb52661659861a12ac1f2"
+  },
+  "source": "frozen production defaults (measure.DEFAULT_RULE_CLASSES, check.RULES)"
+ },
+ "package_sha256sums_sha256": "92fdb0fe046bb6b5dde24e57bf2944be46aad5d0e9662c4c567629791cd5ffd4",
+ "protocol_sha256": "f1f61238b35c9e7e09db2b7803fb3fc74f08bf49bd76daa1899ab6f34d80943c",
+ "exposure_log": [
+  {
+   "item": "v1 package, v1 answers, history/",
+   "status": "never opened (history/ seen only as a file listing)"
+  },
+  {
+   "item": "v1.1 package documents (README, PROTOCOL, CHANGELOG, docs/, manifest, seal_status, template)",
+   "status": "read for integration on 2026-10-08"
+  },
+  {
+   "item": "v1.1 program sources",
+   "status": "inspected during integration (the programs ship in the package): at least prog_01, prog_08, prog_11 in full, T7 programs by search"
+  },
+  {
+   "item": "package CPU validation and GPU preflight (seed 0, all 32 measurement programs)",
+   "status": "run 2026-10-08; outputs: shapes, dtypes, digests, non-finite counts only"
+  },
+  {
+   "item": "adapter pilot / smoke",
+   "status": "prog_01, prog_03, prog_07 on units 0-2; prog_01, prog_08, prog_11 on seeds 0-7 (development block only); seen: reference completeness, element-wise E/F, failure reasons"
+  },
+  {
+   "item": "confirmation seeds 32-95 and replication seeds 96-191",
+   "status": "not run before this freeze"
+  },
+  {
+   "item": "tool development",
+   "status": "the executor is the tool developer; the tool was frozen at tag general-v3.1 (2026-10-08 14:34 +0800) before the package was received; no tool change after receipt"
+  },
+  {
+   "item": "reviewer opinions",
+   "status": "seen: repository-tidy proposal and earlier round audits; none about the v1.1 labels"
+  }
+ ],
+ "seed_blocks": {
+  "development": [
+   0,
+   31
+  ],
+  "confirmation": [
+   32,
+   95
+  ],
+  "replication": [
+   96,
+   191
+  ],
+  "replication_development": "the development block 0-31 fixes the coordinate set and the learned direction in the replication round too; confirmation units 96-191 (96 units)"
+ },
+ "prior_confirmation_used_to_develop": false,
+ "alpha": 0.05,
+ "multiplicity": {
+  "method": "Holm",
+  "families_resolved": {
+   "file": "families.json",
+   "sha256": "270747643a288fb61cb9197b7c14de774d301c8b2d552a3c8139a0d72f10b887",
+   "count": 608,
+   "definition": "one family per round x program x output x comparison (FR_e_num, FR_e_sem, F_total, baseline) x rule class (fixed_mean: R1, R5; aligned: R2, R3)"
+  },
+  "missing_cells": "retain_as_unestablished; no post-hoc family shrinkage: a registered member without a p-value enters Holm as p = 1; the frozen class_statistics (Holm over tested members) is reported next to it and is never the final column",
+  "rounds": "confirmation and replication corrected separately; never pooled",
+  "mode_A": "consistency run of FR_e_num only; not a scoring family"
+ },
+ "statistics_method_id": "general-v3.1 frozen decision layer: analysis.assess_units (strict projection bounds, endpoint-conservative t per rule) + measure.class_statistics (contract_v3 cannot-judge rules S0 = 2, N0 = 64, n_min = 16, BOOTSTRAP_OK_N = 64)",
+ "statistics_assumptions": [
+  "statistical unit: the input seed (atomic programs: the mean of 8 executions)",
+  "units independent and identically distributed under the package input generator",
+  "the t approximation for the mean projection; not trusted when |skewness| > 2 with n <= 64 (cannot judge (distribution)) or n < 16 (cannot judge (sample))",
+  "zero sample variance / identical endpoints: cannot judge (degenerate), never p = 0",
+  "approximate route only: no validated magnitude bound, so no finite-sample distribution-free guarantee is claimed"
+ ],
+ "bound_M_source": "none (bounded route not applied by the entry; no validated per-unit magnitude bound)",
+ "equivalence_delta": null,
+ "equivalence_delta_basis": "not run: no delta with an independent basis was declared before measurement",
+ "atomic_repetitions": 8,
+ "atomic_independent_unit": "input_seed; average within-input execution projections before inference",
+ "budget": {
+  "gpu_seconds_per_program": {
+   "per job (program x mode x round), regular": 3600,
+   "per job, atomic (8 executions per input)": 14400
+  },
+  "reference_seconds_per_program": "included in the per-job budget (capture + reference + specification + statistics); over budget is a result",
+  "localization_seconds": 0
+ },
+ "environment": {
+  "python": "3.11.16",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "gpu_arch": "NVIDIA RTX A6000 sm_86",
+  "driver": "535.129.03",
+  "compile_options": "Triton 3.6.0 defaults plus the launch options in each program (num_warps); no TRITON_* environment overrides; check.run sets allow_tf32 = False and float32 matmul precision 'highest'; TRITON_CACHE_DIR under the repository",
+  "triton_env": {
+   "TRITON_CACHE_DIR": "/data1/tzh/kernel-analyzer/.cache/triton"
+  }
+ },
+ "answer_commitment": {
+  "status": "ISSUER_RESEAL_REQUIRED",
+  "sha256": null
+ },
+ "run_id": "r20261008T2030",
+ "filled_at": "2026-10-08T20:30:12+0800",
+ "tool_tag": "general-v3.1 (src tree and frozen paths identical; HEAD adds repository tidying and this adapter)",
+ "tool_src_tree": "cd21ef56cf46eb3cff2c00c50b8918b30a604d26",
+ "tool_src_tree_at_tag": "cd21ef56cf46eb3cff2c00c50b8918b30a604d26",
+ "tool_dirty_paths": [],
+ "tool_version": "3.1",
+ "semantic_registry_files": {
+  "results/general/rule_registry.json": "a0be43f9f2ccbba956d81329af89f379f795bb00caca69b9c4b2fb42633ebae4",
+  "results/reference_eval/ttir_op_registry.json": "4868cd4f4ab94dee85da3b51ee2d4a82cc5c5ef551d817d96cae85117d044fb6"
+ },
+ "package_path": ".cache/acceptance/structure_acceptance_v1_1_rc1",
+ "bindings": {
+  "generator": "package tools/make_bindings.py",
+  "dir": ".cache/acceptance/acceptance_v11_bindings",
+  "sha256": {
+   "prog_01_modeA.py": "ce0a00582cd799cd6745ecc81a1567be02f5071b085c8fcdc1c263c7e507510f",
+   "prog_01_modeB.py": "0716904183e122e1b5da01523127966a234d9e2261b38ab3f8d0a812ec75f026",
+   "prog_02_modeA.py": "f2e8e4957916891df6352143129bd2f4010082e215e55454a0dfe377b7f6c35a",
+   "prog_02_modeB.py": "2b28d28c870e6feb1fcbb5e8ff6e0b9b62d3f65f440927d366e6ce6f43e09db5",
+   "prog_03_modeA.py": "e8c973ae4cf21f8202faeab0d3143a0a9900f858b2e22d2c05218197aa09b835",
+   "prog_03_modeB.py": "c4c68cf94e5004d1e2b0de26a0ee6f73cfdb161879edfd087f1c7ed87a30b703",
+   "prog_04_modeA.py": "a25aa0cbe4699cb1414d16b0090d1f15c2a995f11a5ee895d9c6823f2678b9e9",
+   "prog_04_modeB.py": "5f5b824d6ce6f30126e6f1aab0c2cf2d198149ce06e40c43159e3dc76b593701",
+   "prog_05_modeA.py": "15b728a50cae0b39ed7701bcfac3a5827f0f8e9543a25c56e25a299950e17694",
+   "prog_05_modeB.py": "62ea048eeef7126558bde51e2b83b41bfea15b78ed63d3e6a321a0c6799b7827",
+   "prog_06_modeA.py": "f2eaf02fd61ad2887a91da04323e31741f9ffb3fc21c7391f0fd9be35164a6ae",
+   "prog_06_modeB.py": "dea8b039eae56110755d780777bf75324a77817bddaa0a47707c4fa202cd14a1",
+   "prog_07_modeA.py": "07041c40922a8150dbee9d3d5107276787b48367a0d55064c9172b3f55076b34",
+   "prog_07_modeB.py": "3383221cc4a2607df55a5f4000e72aa4918bee2ad55eac2dda7a2eb995c08e8a",
+   "prog_08_modeA.py": "d720e37dc0d1327ea54bae7463d52fa6e8915db77317c5bafcf0e3b843dbb51e",
+   "prog_08_modeB.py": "08473d9396c2532efef9b8e1dfedaa682c8e6a21c42b601e0a26c1c06f104c33",
+   "prog_09_modeA.py": "6c16f3d957d03410703674df06bf6823d5fd1eeaab2f339acbdfa95a938c1180",
+   "prog_09_modeB.py": "210057ccfd0b59ebaf2199507f5d45f37b1caf2a0607af8a7c8b98adaa858c00",
+   "prog_10_modeA.py": "41fdcce903530626a66d77348efe9aa151de56e11c9ffa49a9e946e115195c7b",
+   "prog_10_modeB.py": "4d4a51a342a234d5a76c739701a665c7286347169c2264fdc028ae7a23fab031",
+   "prog_11_modeA.py": "ca02df9a955ad3c572ff9817e846a45f9ac68331d6610d7e25c1a738d49de421",
+   "prog_11_modeB.py": "4226da3c6eef6c86cc7748d89f175679833c0940e5fb7c528e9416395c5119e2",
+   "prog_12_modeA.py": "e89632c6d677809c23cd7dc93aa103117d24a8b3ba71c62d8edf161fb2be664a",
+   "prog_12_modeB.py": "d9770ca5161a38e64e87f626d27aaa66744a2cb5d46c4ca6cb8f472ad9acf65e",
+   "prog_13_modeA.py": "c627692c1b90d6fd2f33c5df59a563bc58af41e1a52fdb531a5920c20c18f9e2",
+   "prog_13_modeB.py": "5d08843b36b4fd41ec324af65f7482e937b7426f34e4fe3aece9d9760502d6a3",
+   "prog_14_modeA.py": "00ab9f9c7ed16e9105d8188646d016144b64fb54446e910136d139a39f25a507",
+   "prog_14_modeB.py": "efb11eaf909d825ea94df491c910b9975fda197569834304cc9833fee0112428",
+   "prog_15_modeA.py": "15abf88257b126756462ed208bcdd214e213adda61a9c5ea108f091f3c110601",
+   "prog_15_modeB.py": "5a5efff6f8de3eb8283aba399998e3fca8c6de0f4b66882dfb060d480fae5ed1",
+   "prog_16_modeA.py": "8f339b6934d0e90346b281957331881c589567e82d08885e1c0b91cf0d7e1141",
+   "prog_16_modeB.py": "3d7a8b2bf0cf4a3a84fa917daf901fbde17a51d989fe528fd92e84060b29096d",
+   "prog_17_modeA.py": "765d9fb8f73b5034488b1d5222f68201e1f6b614d723faaa87d90d3191991c5f",
+   "prog_17_modeB.py": "89c5e17ae850cc4b653d0556f08643c687d80a7e157fca2d88ebe6933f5a5e2f",
+   "prog_18_modeA.py": "c68cb7392656ba928057101004f707f396ae61a0678c95cdd113801ef0acd968",
+   "prog_18_modeB.py": "d8ed15ae26595ece6f1f6f9b91b99874081206438d5e834227b53a38e2526bf0",
+   "prog_19_modeA.py": "0fdd35b2b17284835e6cffcaaae5906b7d7cc96007aaca79eb84d2079aa90262",
+   "prog_19_modeB.py": "7173f1818eb71d0180c49d01af78f0b1def527de2095818ba64307a2032e526a",
+   "prog_20_modeA.py": "1febbd04d2a00eff375e7d40e3ad92a9fb3a88ffd3ecf2b2fc8a465366366d29",
+   "prog_20_modeB.py": "4782cc1ef4d5296ad04e6ec5ef79b32b8764870f2a24bfaacdab9d43f8b527ea",
+   "prog_21_modeA.py": "60951c8a6a8cb837901b724bfc0e7b1f9fbeb4a9c840f3ad3a6506732965b46c",
+   "prog_21_modeB.py": "4dad9cbe407faa1ed085368148ed9521ce59875e9b0813575b506d423c087670",
+   "prog_22_modeA.py": "5fcbe108a050a17ea3e7bb8873f063f76dd92e7b0adb5cfd4674f518e7d2f7d4",
+   "prog_22_modeB.py": "a19e0b34fb204af54e338eb0046cb17981541dc443f9f7363923f3805baca5c7",
+   "prog_23_modeA.py": "386a2a5b6045256dc08b8f14235ff06f131ab1d78bae46503e3da28f8d7b08e6",
+   "prog_23_modeB.py": "0c3535cee2ce908bd7fd85b4d7a040d56829842dd5caee2241710288e0feccfc",
+   "prog_24_modeA.py": "4c262e740c59427d49fbccff204b123bf53fa34d28a8dfd9eed790937cec5ce4",
+   "prog_24_modeB.py": "90d0f3847afa479d353d2e486b3c84c303ad174619a723ccf65ce7dd11582b11",
+   "prog_25_modeA.py": "97ab3e9e1783c173d0d767045b3f4ff4e35fbb581d8915deefacbb33210c4b6b",
+   "prog_25_modeB.py": "1e243806a5a6264c6ebb945a402d94904bd8097ea66a8145c988d2d4306d33b0",
+   "prog_27_modeA.py": "afa8de2f02feaea2569cee8c30a4544f0dcc6f411dc00ef302b7f53f0a88249d",
+   "prog_27_modeB.py": "ea3eb7e46718effc9ca1620d63126f4aa0200614ccf307adfe2c286bf9dd32d4",
+   "prog_28_modeA.py": "07d21cb8f7b30399caba200028ead1bf5a22e9aa0947718fa61bccbfc65a0ad4",
+   "prog_28_modeB.py": "d8cf0ef87f8bececc866130f2ccc636d97ac23ab61bf2019b8a17f19087b13a9",
+   "prog_29_modeA.py": "53e91c3eb812f0e567093e6344f3e1a2ad74395a74010916ec51ded381f83b72",
+   "prog_29_modeB.py": "7d059ea213c00415fd838725eb342216044aaf40c0378e3981525814d18e285c",
+   "prog_30_modeA.py": "94f56e32ea4cb9e2b7206857e265f929b34d3e0151f7c0f2f497a15609aaa145",
+   "prog_30_modeB.py": "813ffbd584a287ee88ed03c89671f0e7b4588f4abe877f4986deb51f005c9234",
+   "prog_31_modeA.py": "848cb9b44e09068daab3a3b5259b021b9a4acdf9b7ab207f970c9c57f4b03625",
+   "prog_31_modeB.py": "e10b381c5b208c02b3b30988382368b492c5d7f083bf91d798ebc2aab4c32e3e",
+   "prog_32_modeA.py": "1610e108e8233611c940fac5b346f9f70bc20a1c493bd0d253898c6f8ff976b6",
+   "prog_32_modeB.py": "aef461bea21aa0224de1d830c00132ad6cb20f3273eaa0f9d728272f2e67ccdf",
+   "prog_33_modeA.py": "365283612573476a7a10265406decdc9f56417042e400164ea09d62ba5adbc98",
+   "prog_33_modeB.py": "d4d726c67bd0ac9612fe215962381277c79b6ba6d9c4fb85d545fd20c1734b22"
+  }
+ },
+ "atomic_protocol": "unit id = seed * 8 + execution; each execution regenerates the inputs from the seed (digests checked equal) and the program allocates a fresh zeroed output; per-execution residual intervals are averaged within the input (exact sums one ulp outward, exact division by 8); order metadata (execution index, launch order, launch time, stream) saved",
+ "localization": "not attempted in this run",
+ "isolated_boundary": "prog_26 not run: isolated opt-in not approved; counted in the 33-item denominator as not established and listed apart",
+ "comparison_objects": {
+  "FR_e_num": "K - G (check.run record)",
+  "FR_e_sem": "G - f (check.run record)",
+  "F_total": "K - f (check.run_black_box definition)",
+  "baseline": "K - ref_fp64, point residual, same rules, no detector (scripts/general/acceptance_run.py baseline definition)",
+  "E": "K vs ref_fp64 element-wise, descriptive",
+  "P": "family property relation, raw residuals, not_scored"
+ },
+ "reference_scope": "kernel-level only; call-level not established (PROTOCOL section 1)",
+ "jobs": {
+  "file": "jobs.json",
+  "sha256": "c36c3a1e14d2a0e1f9cc851254e44ba6169b65fd9e9209110286e3c4cd97a820",
+  "count": 96
+ },
+ "scoring": "no official blind sensitivity / specificity score until the issuer reseals (seal_status.json)"
+}
