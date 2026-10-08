@@ -1,0 +1,389 @@
+{
+ "family": "moe",
+ "seconds": 1.1,
+ "tally": {
+  "ref_loop_cpu/gradcheck": {
+   "pass": 10
+  },
+  "ref_loop_cpu/jvp_vjp": {
+   "pass": 10
+  },
+  "ref_loop_cpu_float32/jvp_vjp": {
+   "pass": 10
+  },
+  "vectorised_scatter_cuda_float64/gradcheck": {
+   "pass": 10
+  },
+  "vectorised_scatter_cuda_float64/jvp_vjp": {
+   "pass": 10
+  },
+  "vectorised_scatter_cuda/jvp_vjp": {
+   "pass": 10
+  },
+  "vectorised_compiled/jvp_vjp": {
+   "pass": 10
+  }
+ },
+ "conditions": {
+  "moe_1_4_None_random": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "ref_loop_cpu": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 3.539376360018893e-17,
+     "jvp_seconds": 0.018,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.014
+    },
+    "ref_loop_cpu_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 3.7026116198618154e-10,
+     "jvp_seconds": 0.012
+    },
+    "vectorised_scatter_cuda_float64": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.0112503885768267e-17,
+     "jvp_seconds": 0.074,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.013
+    },
+    "vectorised_scatter_cuda": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 4.643859912045596e-09,
+     "jvp_seconds": 0.007
+    },
+    "vectorised_compiled": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 4.643859912045596e-09,
+     "jvp_seconds": 0.025
+    }
+   },
+   "note": "derivatives in x and the expert weights; routing logits fixed (top-k selection is piecewise constant)"
+  },
+  "moe_2_4_None_random": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "ref_loop_cpu": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 2.04719633962557e-17,
+     "jvp_seconds": 0.023,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.026
+    },
+    "ref_loop_cpu_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.7331455049649975e-09,
+     "jvp_seconds": 0.022
+    },
+    "vectorised_scatter_cuda_float64": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 6.823987798751898e-18,
+     "jvp_seconds": 0.006,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.011
+    },
+    "vectorised_scatter_cuda": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.5043509037044576e-09,
+     "jvp_seconds": 0.005
+    },
+    "vectorised_compiled": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.5043509037044576e-09,
+     "jvp_seconds": 0.027
+    }
+   },
+   "note": "derivatives in x and the expert weights; routing logits fixed (top-k selection is piecewise constant)"
+  },
+  "moe_1_8_None_random": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "ref_loop_cpu": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 2.3006888964280537e-17,
+     "jvp_seconds": 0.013,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.013
+    },
+    "ref_loop_cpu_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 4.420008112628622e-09,
+     "jvp_seconds": 0.017
+    },
+    "vectorised_scatter_cuda_float64": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 5.7517222410701326e-18,
+     "jvp_seconds": 0.008,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.013
+    },
+    "vectorised_scatter_cuda": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 3.67764665363542e-09,
+     "jvp_seconds": 0.005
+    },
+    "vectorised_compiled": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 3.67764665363542e-09,
+     "jvp_seconds": 0.019
+    }
+   },
+   "note": "derivatives in x and the expert weights; routing logits fixed (top-k selection is piecewise constant)"
+  },
+  "moe_1_4_exact_random": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "ref_loop_cpu": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 6.817043948812503e-18,
+     "jvp_seconds": 0.011,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.014
+    },
+    "ref_loop_cpu_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 4.869165273568446e-09,
+     "jvp_seconds": 0.011
+    },
+    "vectorised_scatter_cuda_float64": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 2.045113184643751e-17,
+     "jvp_seconds": 0.006,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.011
+    },
+    "vectorised_scatter_cuda": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 2.6755062624295476e-09,
+     "jvp_seconds": 0.005
+    },
+    "vectorised_compiled": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 2.6755062624295476e-09,
+     "jvp_seconds": 0.019
+    }
+   },
+   "note": "derivatives in x and the expert weights; routing logits fixed (top-k selection is piecewise constant)"
+  },
+  "moe_1_4_overflow_random": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "ref_loop_cpu": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 0.0,
+     "jvp_seconds": 0.008,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.011
+    },
+    "ref_loop_cpu_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 7.918892948262247e-09,
+     "jvp_seconds": 0.008
+    },
+    "vectorised_scatter_cuda_float64": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 4.161284320465847e-17,
+     "jvp_seconds": 0.006,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.011
+    },
+    "vectorised_scatter_cuda": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 7.788771698600635e-09,
+     "jvp_seconds": 0.005
+    },
+    "vectorised_compiled": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 7.788771698600635e-09,
+     "jvp_seconds": 0.02
+    }
+   },
+   "note": "derivatives in x and the expert weights; routing logits fixed (top-k selection is piecewise constant)"
+  },
+  "moe_1_4_None_ties": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "ref_loop_cpu": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.7389457605799162e-17,
+     "jvp_seconds": 0.014,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.016
+    },
+    "ref_loop_cpu_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 8.348062337341573e-09,
+     "jvp_seconds": 0.014
+    },
+    "vectorised_scatter_cuda_float64": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 3.477891521159832e-18,
+     "jvp_seconds": 0.006,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.01
+    },
+    "vectorised_scatter_cuda": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 9.157577234319971e-09,
+     "jvp_seconds": 0.005
+    },
+    "vectorised_compiled": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 9.157577234319971e-09,
+     "jvp_seconds": 0.019
+    }
+   },
+   "note": "derivatives in x and the expert weights; routing logits fixed (top-k selection is piecewise constant)"
+  },
+  "moe_1_4_None_one_expert": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "ref_loop_cpu": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.1101381643951895e-17,
+     "jvp_seconds": 0.014,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.016
+    },
+    "ref_loop_cpu_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 6.083799761756e-09,
+     "jvp_seconds": 0.014
+    },
+    "vectorised_scatter_cuda_float64": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 4.440552657580758e-17,
+     "jvp_seconds": 0.006,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.011
+    },
+    "vectorised_scatter_cuda": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 3.4627802918078088e-09,
+     "jvp_seconds": 0.005
+    },
+    "vectorised_compiled": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 3.4627802918078088e-09,
+     "jvp_seconds": 0.019
+    }
+   },
+   "note": "derivatives in x and the expert weights; routing logits fixed (top-k selection is piecewise constant)"
+  },
+  "moe_2_8_None_random": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "ref_loop_cpu": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 3.2394007722505756e-17,
+     "jvp_seconds": 0.026,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.03
+    },
+    "ref_loop_cpu_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 2.31800695174151e-09,
+     "jvp_seconds": 0.026
+    },
+    "vectorised_scatter_cuda_float64": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.1934634424081067e-17,
+     "jvp_seconds": 0.007,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.011
+    },
+    "vectorised_scatter_cuda": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.7605305156856041e-09,
+     "jvp_seconds": 0.005
+    },
+    "vectorised_compiled": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.7605305156856041e-09,
+     "jvp_seconds": 0.021
+    }
+   },
+   "note": "derivatives in x and the expert weights; routing logits fixed (top-k selection is piecewise constant)"
+  },
+  "moe_1_4_overflow_one_expert": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "ref_loop_cpu": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 0.0,
+     "jvp_seconds": 0.004,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.006
+    },
+    "ref_loop_cpu_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 2.530185587419861e-08,
+     "jvp_seconds": 0.004
+    },
+    "vectorised_scatter_cuda_float64": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 0.0,
+     "jvp_seconds": 0.006,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.012
+    },
+    "vectorised_scatter_cuda": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.9137640853999502e-08,
+     "jvp_seconds": 0.006
+    },
+    "vectorised_compiled": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.9137640853999502e-08,
+     "jvp_seconds": 0.029
+    }
+   },
+   "note": "derivatives in x and the expert weights; routing logits fixed (top-k selection is piecewise constant)"
+  },
+  "moe_2_4_None_ties": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "ref_loop_cpu": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 2.5206951565383796e-17,
+     "jvp_seconds": 0.03,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.034
+    },
+    "ref_loop_cpu_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.1532635094891537e-08,
+     "jvp_seconds": 0.03
+    },
+    "vectorised_scatter_cuda_float64": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 7.201986161538227e-18,
+     "jvp_seconds": 0.007,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.013
+    },
+    "vectorised_scatter_cuda": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.1968238234521668e-08,
+     "jvp_seconds": 0.006
+    },
+    "vectorised_compiled": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.1968238234521668e-08,
+     "jvp_seconds": 0.025
+    }
+   },
+   "note": "derivatives in x and the expert weights; routing logits fixed (top-k selection is piecewise constant)"
+  }
+ }
+}

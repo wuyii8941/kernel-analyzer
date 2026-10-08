@@ -62,14 +62,20 @@ def compare(k, lo, hi, dtype):
     lo, hi = np.asarray(lo).ravel(), np.asarray(hi).ravel()
     if k.size != lo.size:
         return {"error": f"shape mismatch {k.size} vs {lo.size}"}
-    mid = 0.5 * (lo + hi)
-    nonfin = ~np.isfinite(k)
-    tau = TAU.get(dtype)
-    tol = (tau if tau else 2.0 ** -8) * (1 + np.abs(mid))
-    dist = np.maximum(np.maximum(lo - k, k - hi), 0.0)
-    bad = ~nonfin & (dist > tol)
+    fin_f = np.isfinite(lo) & np.isfinite(hi)
+    # f itself may be a special value the contract defines (logsumexp of an all -inf row = -inf): K equal to it agrees
+    same_special = ~fin_f & (lo == hi) & (k == lo)
+    special_mismatch = ~fin_f & ~same_special
+    nonfin = ~np.isfinite(k) & fin_f                        # non-finite K against a finite f -> column 4
+    with np.errstate(invalid="ignore"):
+        mid = np.where(fin_f, 0.5 * (lo + hi), 0.0)
+        tau = TAU.get(dtype)
+        tol = (tau if tau else 2.0 ** -8) * (1 + np.abs(mid))
+        dist = np.where(fin_f, np.maximum(np.maximum(lo - k, k - hi), 0.0), 0.0)
+    bad = fin_f & np.isfinite(k) & (dist > tol)
     return {"elements": int(k.size), "beyond": int(bad.sum()), "nonfinite_column4": int(nonfin.sum()),
-            "max_dist_over_tol": float(np.max(np.where(nonfin, 0, dist / tol), initial=0.0)),
+            "f_special_agree": int(same_special.sum()), "f_special_mismatch": int(special_mismatch.sum()),
+            "max_dist_over_tol": float(np.max(np.where(fin_f & np.isfinite(k), dist / tol, 0), initial=0.0)),
             "judged": tau is not None}
 
 

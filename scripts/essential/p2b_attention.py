@@ -145,6 +145,10 @@ def candidates_for(env):
                 {"id": "inductor_attention_float32", "kind": "manual", "compiled": True, "dtype": "float32", "device": "cuda"},
                 {"id": "flex_eager_float32", "kind": "flex", "dtype": "float32", "device": "cuda", "reference_only": True},
                 {"id": "flex_attention_float32", "kind": "flex", "compiled": True, "dtype": "float32", "device": "cuda"}]
+    if env == "ka_main_f64":                 # closure protocol v3 2.2: same-device float32 / float64 pairs (precision invariance)
+        return [{"id": "sdpa_math_cuda_float64", "kind": "sdpa", "backend": "MATH", "dtype": "float64", "device": "cuda"},
+                {"id": "manual_eager_float64", "kind": "manual", "dtype": "float64", "device": "cuda", "reference_only": True},
+                {"id": "sdpa_math_cpu_float32", "kind": "sdpa", "backend": "MATH", "dtype": "float32", "device": "cpu"}]
     if env == "liger":
         return [{"id": "hf_eager_attention", "kind": "hf", "dtype": "float32", "device": "cuda"},
                 {"id": "xformers_memory_efficient", "kind": "xformers", "dtype": "bfloat16", "device": "cuda"}]

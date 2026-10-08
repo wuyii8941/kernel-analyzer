@@ -28,7 +28,9 @@ from .reference_eval.ttir_eval import ST_NINF, ST_OK, evaluate_sequence, ptx_zer
 from .reference_eval.ttir_mapping import kernel_coverage
 from .reference_eval.ttir_parser import parse_ttir
 
-TOOL_VERSION = "2.2"   # 2.2: output binding by storage identity (2.1: by address)
+TOOL_VERSION = "2.3"   # 2.3: upstream (non-Triton) sources tracked through the launches' own stores, not byte changes,
+#                        and case inputs identified by their bytes before the launch (in-place ops inside it);
+#                        2.2: output binding by storage identity (2.1: by address)
 DEV = list(range(0, 32))
 CONF = list(range(32, 96))
 RULES = ["R1", "R2", "R3", "R5"]
@@ -116,7 +118,25 @@ def f64_point_spec(value, rel=2.0 ** -40):
     return (np.where(finite, iv.down(value - b), value), np.where(finite, iv.up(value + b), value))
 
 
-def torch_intermediates(launches, seq, inp):
+def input_digests(inp):
+    """Digests of the case's floating inputs, taken BEFORE the launch: an op inside the launch may modify an input in
+    place (e.g. ATen's embedding renorm on the weight), and that modified buffer is an intermediate, not an input."""
+    import hashlib
+
+    def tensors(obj):
+        if torch.is_tensor(obj):
+            yield obj
+        elif isinstance(obj, dict):
+            for v in obj.values():
+                yield from tensors(v)
+        elif isinstance(obj, (list, tuple)):
+            for v in obj:
+                yield from tensors(v)
+    return {hashlib.sha1(v.detach().contiguous().cpu().reshape(-1).view(torch.uint8).numpy().tobytes()).hexdigest()
+            for v in tensors(inp) if v.is_floating_point()}
+
+
+def torch_intermediates(launches, seq, inp, digests_before=None):
     """Per written storage: the float buffers upstream of it (through the recorded launches) that the reference
     loaded but that are neither inputs of the case nor written by an earlier recorded launch, i.e. produced by a
     torch / ATen op in between.  K_R treats their captured values as exact inputs, so an output depending on them
@@ -136,9 +156,10 @@ def torch_intermediates(launches, seq, inp):
             for v in obj:
                 yield from tensors(v)
 
-    # raw bytes (bf16 / fp8 have no NumPy dtype)
-    inputs = {digest(v.detach().contiguous().cpu().reshape(-1).view(torch.uint8).numpy()) for v in tensors(inp)
-              if v.is_floating_point()}
+    # raw bytes (bf16 / fp8 have no NumPy dtype); digests taken before the launch when the caller has them
+    inputs = digests_before if digests_before is not None else \
+        {digest(v.detach().contiguous().cpu().reshape(-1).view(torch.uint8).numpy()) for v in tensors(inp)
+         if v.is_floating_point()}
     deps = {}  # storage -> set of foreign buffer labels it depends on
     last_after = {}  # storage -> digest of its bytes after the last recorded launch that wrote it
     for i, (l, ref) in enumerate(zip(launches, seq.launches)):
@@ -153,10 +174,15 @@ def torch_intermediates(launches, seq, inp):
             elif a.storage_ptr in ref.loaded and str(a.dtype).startswith(("float", "bfloat")):
                 if digest(raw) not in inputs and np.asarray(raw).view(np.uint8).any():  # all-zero = exact constant
                     upstream.add(f"L{i}:{l.kernel_name[:40]}:{a.name}")
+        stored = getattr(ref, "stored", set())
         for a in tensors:
             before = np.asarray(a.before.numpy() if hasattr(a.before, "numpy") else a.before)
             after = np.asarray(a.after.numpy() if hasattr(a.after, "numpy") else a.after)
-            if before.shape != after.shape or not np.array_equal(before.view(np.uint8), after.view(np.uint8)):
+            # written by this launch: the reference's own stores decide; a byte change only adds to them.  Comparing
+            # bytes alone misses a store that rewrites identical values (an output buffer that the caching allocator
+            # hands back still holding the same result from a warm-up on the same inputs)
+            if a.storage_ptr in stored or before.shape != after.shape or \
+                    not np.array_equal(before.view(np.uint8), after.view(np.uint8)):
                 deps[a.storage_ptr] = set(upstream)
                 last_after[a.storage_ptr] = digest(after)
     return {k: sorted(v) for k, v in deps.items()}
@@ -193,6 +219,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         inp = case.inputs(seed)
         timing["inputs"] += time.time() - t_phase
         t_phase = time.time()
+        before = input_digests(inp) if mixed_sources is None else None
         rec = TritonLaunchRecorder()
         with rec:
             outs = case.launch(inp)
@@ -211,7 +238,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         seq = evaluate_sequence(rec.launches, masked_fill_zero=fill)
         timing["reference"] += time.time() - t_phase
         if mixed_sources is None:
-            mixed_sources = torch_intermediates(rec.launches, seq, inp)
+            mixed_sources = torch_intermediates(rec.launches, seq, inp, before)
         if external is None:
             # a buffer changed between recorded launches (a torch op in between): from there on its captured value
             # re-enters as an exact input, so K_R downstream carries the upstream numerical error of K

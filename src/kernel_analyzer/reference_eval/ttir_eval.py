@@ -349,6 +349,7 @@ class KernelReference:
     rules: dict = field(default_factory=dict)  # element/event counts per reference rule
     loaded: set = field(default_factory=set)  # storages whose captured initial values the reference loaded
     loaded_any: set = field(default_factory=set)  # storages the reference loaded from at all
+    stored: set = field(default_factory=set)  # storages this launch's reference wrote (stores, atomics, poisoned targets)
 
     def element_classes(self, ident: int):
         """Per element: complete_composed / conditional_local / not_established / not_written."""
@@ -544,6 +545,7 @@ class KernelReferenceEvaluator:
         self._outside_window = False
         self._loaded = set()
         self._loaded_any = set()
+        self._stored = set()
         self._poisoned = set()
         for buf in memory.values():
             buf.writer[:] = -1  # kernel boundaries order all earlier writes
@@ -595,7 +597,8 @@ class KernelReferenceEvaluator:
         if aborted:
             self._rules["path.program_aborted"] += len(aborted)
         return KernelReference(self.func.name, self.mode, memory, [tuple(p) for p in programs], aborted,
-                               notes, dict(reasons), dict(self._rules), set(self._loaded), set(self._loaded_any))
+                               notes, dict(reasons), dict(self._rules), set(self._loaded), set(self._loaded_any),
+                               set(self._stored))
 
     # -- functions and regions ----------------------------------------------------
 
@@ -954,6 +957,7 @@ class KernelReferenceEvaluator:
             if len(targets) == 0:
                 raise ProgramAbort(f"{op.node_id}: store through an address of unknown buffer")
             self._poisoned.update(int(i) for i in targets)  # applied at the end of the launch (no program order)
+            self._stored.update(int(i) for i in targets)
             self._reasons[f"not_established:store through a not-established address@{op.node_id}"] += int(blind.sum())
             active = active & ~blind
         buf, index, in_range = self._addresses(op, ptr, state)
@@ -1025,6 +1029,7 @@ class KernelReferenceEvaluator:
             buf.cond[idx] = cond_w
             buf.writer[idx] = state.pid_index
             buf.written[idx] = True
+            self._stored.add(buf.ident)
         for r in value.reasons:
             self._reasons[r] += 1
         return None
@@ -1107,6 +1112,7 @@ class KernelReferenceEvaluator:
             buf.cond[idx] = buf.cond[idx] | extra
         buf.writer[idx] = -2
         buf.written[idx] = True
+        self._stored.add(buf.ident)
         return olds if op.results else None
 
     # ---- control flow -----------------------------------------------------------

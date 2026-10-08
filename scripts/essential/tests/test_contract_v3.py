@@ -60,3 +60,13 @@ def test_precision_invariance_classes():
 def test_precision_invariance_nonfinite_goes_to_column4():
     r = C.precision_invariance([np.nan, 1.0], [1.0, 1.0], [1.0, 1.0])
     assert r["nonfinite_f32_only"] == 1 and r["column4_nonfinite"]
+
+
+def test_precision_invariance_condition_level_follows_contract():
+    f = np.array([1.0, 2.0, 3.0])
+    k32 = f + np.array([1e-7, 1e-7, 1e-7])
+    k64 = f + np.array([1e-16, 1e-16, 1e-9])                # one undecided element, no semantic element
+    r = C.precision_invariance(k32, k64, f)
+    assert r["undecided"] == 1 and r["condition"] == "no semantic element"
+    r = C.precision_invariance(f, f + np.array([0.0, 0.0, 1e-3]), f)  # float32 exact, float64 off beyond noise
+    assert r["condition"].endswith("review")

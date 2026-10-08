@@ -1,6 +1,6 @@
 # 保证链：规则 → 函数 → 测试 → 降级记录（工作项 A，2026-10-08）
 
-由 `results/closure/chain_table.json` 生成（`scripts/closure/build_chain_table.py`）；包内校验器 `specs/phase2/validate_chain_table.py`：**0 problems**（`results/closure/chain_table_validation.txt`）；表中引用的 45 个测试（含参数化展开）全部通过（`results/closure/chain_table_tests_run.txt`）。逐节点求值规则的细目（参照内存、atomic、路径、控制依赖、跨实例冲突、可观测性、三类输出、未知操作、接口、统计、等价轴）沿用 `docs/rules_to_code_20261006.md` 的 13 行，本表按保证链的五个箭头组织。
+由 `results/closure/chain_table.json` 生成（`scripts/closure/build_chain_table.py`，本文件由 `scripts/closure/render_rules_doc.py` 渲染）；包内校验器 `specs/phase2/validate_chain_table.py`：**0 problems**（`results/closure/chain_table_validation.txt`）；表中引用的测试（含参数化展开）：`48 passed in 7.17s`（`results/closure/chain_table_tests_run.txt`）。检测器 2.3（`docs/detector_changelog.md`）。逐节点求值规则的细目沿用 `docs/rules_to_code_20261006.md` 的 13 行，本表按保证链的五个箭头组织。
 
 ## 箭头 (0) 声明与执行绑定
 
@@ -45,6 +45,7 @@
 | `def kernel_coverage` | `src/kernel_analyzer/reference_eval/ttir_mapping.py` |
 | `def iadd` | `src/kernel_analyzer/reference_eval/intervals.py` |
 | `def imul` | `src/kernel_analyzer/reference_eval/intervals.py` |
+| `def torch_intermediates` | `src/kernel_analyzer/check.py` |
 
 | 测试 | 文件 |
 |---|---|
@@ -57,6 +58,9 @@
 | `test_registry_of_locked_build_is_covered_exhaustively` | `tests/test_reference_eval_ttir.py` |
 | `test_elementary_enclosure_contains_every_sampled_value` | `tests/test_reference_eval_enclosure.py` |
 | `test_composed_chain_contains_the_true_value_and_widens_monotonically` | `tests/test_reference_eval_enclosure.py` |
+| `test_output_with_identical_stale_bytes_still_depends_on_the_aten_intermediate` | `tests/test_upstream_sources.py` |
+| `test_output_reading_only_case_inputs_has_no_upstream_intermediate` | `tests/test_upstream_sources.py` |
+| `test_kernel_reference_records_the_storages_it_stored` | `tests/test_upstream_sources.py` |
 
 | 降级条件 | 处理 | 实际触发的记录 |
 |---|---|---|
@@ -152,4 +156,3 @@
 | 无可比配对 | 共有关系未建立 | `results/closure/degrade/arrow4_no_comparable_pair.json` |
 | 契约未声明 | 只记录 | `results/closure/degrade/arrow4_contract_not_declared.json` |
 
-说明：箭头 (2) 的「D_m 无区间扩展」用的是已有的真实记录（盲测 v2 阶段 3 的实际 FP32 写入，prog_01 等在 20 个坐标 × seed 上参照未建立，全部规则 UNRESOLVED_REFERENCE）；其余降级由 `scripts/closure/trigger_degrades.py` 用最小构造输入经生产代码触发一次。「方向来源未登记」在规则注册表查找时即拒绝（KeyError），不进入投影与检验，所以不出正式结论。

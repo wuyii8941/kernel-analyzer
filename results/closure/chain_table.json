@@ -117,6 +117,10 @@
     {
      "function": "def imul",
      "file": "src/kernel_analyzer/reference_eval/intervals.py"
+    },
+    {
+     "function": "def torch_intermediates",
+     "file": "src/kernel_analyzer/check.py"
     }
    ],
    "tests": [
@@ -155,6 +159,18 @@
     {
      "name": "test_composed_chain_contains_the_true_value_and_widens_monotonically",
      "file": "tests/test_reference_eval_enclosure.py"
+    },
+    {
+     "name": "test_output_with_identical_stale_bytes_still_depends_on_the_aten_intermediate",
+     "file": "tests/test_upstream_sources.py"
+    },
+    {
+     "name": "test_output_reading_only_case_inputs_has_no_upstream_intermediate",
+     "file": "tests/test_upstream_sources.py"
+    },
+    {
+     "name": "test_kernel_reference_records_the_storages_it_stored",
+     "file": "tests/test_upstream_sources.py"
     }
    ],
    "degrade_paths": [

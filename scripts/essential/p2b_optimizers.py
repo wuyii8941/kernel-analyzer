@@ -111,6 +111,9 @@ def candidates_for(env):
         out = [{"id": f"torch_{impl}_{dev}", "lib": "torch", "impl": impl, "device": dev}
                for dev in ("cpu", "cuda") for impl in ("for_loop", "foreach", "fused")]
         return out + [{"id": "torch_compiled_step_cuda", "lib": "torch", "impl": "compiled", "device": "cuda"}]
+    if env == "ka_main_f64":                 # closure protocol v3 2.2: float64 counterparts for precision invariance
+        return [{"id": f"torch_{impl}_{dev}_float64", "lib": "torch", "impl": impl, "device": dev, "dtype": "float64"}
+                for dev in ("cpu", "cuda") for impl in ("for_loop", "foreach")]
     if env == "nightly":                     # version check of findings only (not a registered candidate)
         return [{"id": f"nightly_torch_{impl}_{dev}", "lib": "torch", "impl": impl, "device": dev}
                 for dev in ("cpu", "cuda") for impl in ("for_loop", "foreach", "fused")]
@@ -190,7 +193,7 @@ class Runner:
 
 
 def run_one(cand, cond, seed, variant):
-    device, dtype = cand["device"], torch.float32
+    device, dtype = cand["device"], getattr(torch, cand.get("dtype", "float32"))
     maximize = cond["maximize"] != (variant == "mirror")
     params = [torch.tensor(a, dtype=dtype, device=device, requires_grad=True) for a in initial_params(seed)]
     run = Runner(cand, params, cond, maximize)

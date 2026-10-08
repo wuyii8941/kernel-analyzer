@@ -304,13 +304,17 @@ FAMS = {
     "rope": dict(keys=RO_KEYS, run=ro_run, variants=lambda c: ["base", "shifted", "zero_pos"],
                  cands={"ka_main": [{"id": "ref_torch", "device": "cuda", "dtype": "float32", "lib": "ref"},
                                     {"id": "ref_torch_float64", "device": "cpu", "dtype": "float64", "lib": "ref"}],
+                        "ka_main_f64": [{"id": "ref_torch_cuda_float64", "device": "cuda", "dtype": "float64", "lib": "ref"}],
                         "liger": [{"id": "hf_apply_rotary", "device": "cuda", "dtype": "float32", "lib": "hf"},
                                   {"id": "liger_rope", "device": "cuda", "dtype": "float32", "lib": "liger"},
                                   {"id": "unsloth_rope", "device": "cuda", "dtype": "float32", "lib": "unsloth"}]}),
     "moe": dict(keys=MO_KEYS, run=mo_run, variants=lambda c: ["base"],
                 cands={"ka_main": [{"id": "ref_loop_cpu", "device": "cpu", "dtype": "float64", "impl": "loop"},
                                    {"id": "vectorised_scatter_cuda", "device": "cuda", "dtype": "float32", "impl": "vectorised"},
-                                   {"id": "vectorised_compiled", "device": "cuda", "dtype": "float32", "impl": "compiled"}]}),
+                                   {"id": "vectorised_compiled", "device": "cuda", "dtype": "float32", "impl": "compiled"}],
+                       "ka_main_f64": [{"id": "ref_loop_cpu_float32", "device": "cpu", "dtype": "float32", "impl": "loop"},
+                                       {"id": "vectorised_scatter_cuda_float64", "device": "cuda", "dtype": "float64",
+                                        "impl": "vectorised"}]}),
 }
 
 

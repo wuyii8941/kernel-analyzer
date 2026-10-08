@@ -1,0 +1,414 @@
+{
+ "family": "embedding",
+ "seconds": 2.8,
+ "tally": {
+  "eager_cpu_float64/gradcheck": {
+   "pass": 9,
+   "fail": 2
+  },
+  "eager_cpu_float64/jvp_vjp": {
+   "pass": 1,
+   "unsupported": 8,
+   "fail": 2
+  },
+  "eager_cuda_float64/gradcheck": {
+   "pass": 9,
+   "fail": 2
+  },
+  "eager_cuda_float64/jvp_vjp": {
+   "pass": 1,
+   "unsupported": 8,
+   "fail": 2
+  },
+  "eager_cpu_float32/jvp_vjp": {
+   "pass": 1,
+   "unsupported": 8,
+   "fail": 2
+  },
+  "eager_cuda_float32/jvp_vjp": {
+   "pass": 1,
+   "unsupported": 8,
+   "fail": 2
+  },
+  "inductor_cuda_float32/jvp_vjp": {
+   "pass": 1,
+   "unsupported": 8,
+   "fail": 2
+  }
+ },
+ "conditions": {
+  "emb_embedding_padNone_mnNone_nofreq": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "eager_cpu_float64": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 5.083864030464857e-18,
+     "jvp_seconds": 0.001,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.001
+    },
+    "eager_cuda_float64": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.0167728060929715e-17,
+     "jvp_seconds": 0.004,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.002
+    },
+    "eager_cpu_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.3295627793101602e-09,
+     "jvp_seconds": 0.001
+    },
+    "eager_cuda_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.3295627894778883e-09,
+     "jvp_seconds": 0.001
+    },
+    "inductor_cuda_float32": {
+     "jvp_vjp": "pass",
+     "jvp_vjp_rel": 1.3295627894778883e-09,
+     "jvp_seconds": 0.013
+    }
+   }
+  },
+  "emb_embedding_bag_padNone_mnNone_nofreq_sum_normal_nopsw": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "eager_cpu_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.001,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.001
+    },
+    "eager_cuda_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.033
+    },
+    "eager_cpu_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "eager_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "inductor_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.015
+    }
+   }
+  },
+  "emb_embedding_pad0_mnNone_nofreq": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "eager_cpu_float64": {
+     "jvp_vjp": "fail",
+     "jvp_vjp_rel": 0.03374026714314845,
+     "jvp_seconds": 0.001,
+     "gradcheck": "fail",
+     "gradcheck_seconds": 0.045
+    },
+    "eager_cuda_float64": {
+     "jvp_vjp": "fail",
+     "jvp_vjp_rel": 0.03374026714314849,
+     "jvp_seconds": 0.001,
+     "gradcheck": "fail",
+     "gradcheck_seconds": 0.132
+    },
+    "eager_cpu_float32": {
+     "jvp_vjp": "fail",
+     "jvp_vjp_rel": 0.033740264613471495,
+     "jvp_seconds": 0.001
+    },
+    "eager_cuda_float32": {
+     "jvp_vjp": "fail",
+     "jvp_vjp_rel": 0.03374026461347148,
+     "jvp_seconds": 0.001
+    },
+    "inductor_cuda_float32": {
+     "jvp_vjp": "fail",
+     "jvp_vjp_rel": 0.03374026461347148,
+     "jvp_seconds": 0.017
+    }
+   }
+  },
+  "emb_embedding_padNone_mn1.0_nofreq": {
+   "status": "max_norm renormalises the weight in place: derivative checks not applicable"
+  },
+  "emb_embedding_padNone_mnNone_freq": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "eager_cpu_float64": {
+     "jvp_vjp": "fail",
+     "jvp_vjp_rel": 0.06703453736139059,
+     "jvp_seconds": 0.001,
+     "gradcheck": "fail",
+     "gradcheck_seconds": 0.053
+    },
+    "eager_cuda_float64": {
+     "jvp_vjp": "fail",
+     "jvp_vjp_rel": 0.06703453736139058,
+     "jvp_seconds": 0.002,
+     "gradcheck": "fail",
+     "gradcheck_seconds": 0.174
+    },
+    "eager_cpu_float32": {
+     "jvp_vjp": "fail",
+     "jvp_vjp_rel": 0.06703453135957417,
+     "jvp_seconds": 0.001
+    },
+    "eager_cuda_float32": {
+     "jvp_vjp": "fail",
+     "jvp_vjp_rel": 0.06703453135957417,
+     "jvp_seconds": 0.002
+    },
+    "inductor_cuda_float32": {
+     "jvp_vjp": "fail",
+     "jvp_vjp_rel": 0.06703453135957417,
+     "jvp_seconds": 0.017
+    }
+   }
+  },
+  "emb_embedding_bag_padNone_mnNone_nofreq_mean_normal_nopsw": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "eager_cpu_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.002
+    },
+    "eager_cuda_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.003
+    },
+    "eager_cpu_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "eager_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "inductor_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.016
+    }
+   }
+  },
+  "emb_embedding_bag_padNone_mnNone_nofreq_max_normal_nopsw": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "eager_cpu_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.002
+    },
+    "eager_cuda_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.003
+    },
+    "eager_cpu_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "eager_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "inductor_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.015
+    }
+   }
+  },
+  "emb_embedding_bag_padNone_mnNone_nofreq_sum_empty_nopsw": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "eager_cpu_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.002
+    },
+    "eager_cuda_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.004
+    },
+    "eager_cpu_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "eager_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "inductor_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.015
+    }
+   }
+  },
+  "emb_embedding_bag_padNone_mnNone_nofreq_sum_single_nopsw": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "eager_cpu_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.002
+    },
+    "eager_cuda_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.004
+    },
+    "eager_cpu_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "eager_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "inductor_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.015
+    }
+   }
+  },
+  "emb_embedding_bag_padNone_mnNone_nofreq_sum_normal_psw": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "eager_cpu_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.002
+    },
+    "eager_cuda_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.005
+    },
+    "eager_cpu_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "eager_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "inductor_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.015
+    }
+   },
+   "prop_bag_sum_linearity": {
+    "eager_cpu_float64": {
+     "max_rel": 1.3447186964295714e-16,
+     "verdict": "pass"
+    },
+    "eager_cuda_float64": {
+     "max_rel": 1.3447186964295714e-16,
+     "verdict": "pass"
+    },
+    "eager_cpu_float32": {
+     "max_rel": 1.3258809982027683e-07,
+     "verdict": "pass"
+    },
+    "eager_cuda_float32": {
+     "max_rel": 1.3258809982027683e-07,
+     "verdict": "pass"
+    },
+    "inductor_cuda_float32": {
+     "max_rel": 1.3258809982027683e-07,
+     "verdict": "pass"
+    }
+   }
+  },
+  "emb_embedding_bag_pad0_mnNone_nofreq_sum_normal_nopsw": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "eager_cpu_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.002
+    },
+    "eager_cuda_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.004
+    },
+    "eager_cpu_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "eager_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "inductor_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.013
+    }
+   }
+  },
+  "emb_embedding_bag_padNone_mnNone_nofreq_mean_empty_nopsw": {
+   "status": "run",
+   "kink": false,
+   "candidates": {
+    "eager_cpu_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.002
+    },
+    "eager_cuda_float64": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0,
+     "gradcheck": "pass",
+     "gradcheck_seconds": 0.003
+    },
+    "eager_cpu_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "eager_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.0
+    },
+    "inductor_cuda_float32": {
+     "jvp_vjp": "unsupported: NotImplementedError: Trying to use forward AD with _embedding_bag that does not support it because it has not been implemented yet.",
+     "jvp_seconds": 0.013
+    }
+   }
+  },
+  "emb_embedding_pad0_mn1.0_nofreq": {
+   "status": "max_norm renormalises the weight in place: derivative checks not applicable"
+  }
+ }
+}

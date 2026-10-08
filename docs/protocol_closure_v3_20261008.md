@@ -90,7 +90,29 @@ Inductor（两种精度各自编译，不保证同一算法）——有 TTIR 的
 按任务书第 8、9 节原文执行。规格 docstring 与文档原文不符 → 停该条款的裁决，交审阅方。
 
 ## 10 偏离记录
-（运行中追加。）
+1. **契约 v2 分类器（执行方代码）细化**：归约 `neg_inf_row` 的 softmax / log_softmax 原先整条记 C；改为按行：全 −inf 的那一行 C（BASE-A2），
+   其余行 A；`dims = all` 时行不是全 −inf，记 A（−inf 项概率为 0，规格 `softmax` 如此处理）。契约文本未改。
+2. **精度不变性的条件级标签**按契约 v3 第 2 节原文：只有「存在语义偏离的元素」与「无语义元素」两种，另把超出 float64 噪声的异常单列复核；
+   先前实现额外给出的条件级「未判定」「数值」标签删除（元素级计数照旧保留）。`test_contract_v3.py` 加 1 项（8 项通过）。
+3. **补跑的 float64 / float32 配对**（第 2.2 节「同设备、同 API」）：attention（CUDA SDPA math float64、CUDA 手写 eager float64、CPU SDPA math
+   float32）、optimizers（for_loop / foreach 的 CPU / CUDA float64）、packing（SDPA math、flex eager 的 float64）、rope（CUDA 参照 float64）、
+   moe（CPU 循环 float32、CUDA 向量化 float64）；harness 增加环境键 `ka_main_f64`，2b 的候选集合与历史结果不变。
+4. **规格问题 SPEC-ISSUE-1**（`docs/spec_issues_phase2.md`）：`spec_optimizers` O-D2 的 maximize 位置与 2.10 文档框不符；按第 8–9 节停止该条款
+   裁决（`contract_v2.PENDING["optimizers"]`），规格未改。
+5. **检测器 2.3**（`docs/detector_changelog.md`）：运行中发现上游（非 Triton）来源检测的两处漏判（按字节变化判写入；启动后取输入摘要），
+   修正并加 4 项回归测试；检测阈值未变。模式 B 的 FR 与三类组合在 2.3 上重跑；F、P、E 与精度不变性不经过该检测，不受影响。
+6. **模式 B 的归因诊断**（不作为 f）：超参数按 kernel 实际持有的 float32 值、GELU 常数按 TTIR 中的 float32 字面量重算一次 e_sem，只用来说明
+   「K_R ≠ f_r」的来源；flex 的 `RCP_LN2 = 1.44269504` 与 BatchNorm 训练模式中编译期折叠的 1 − momentum（0.9）、n/(n−1)（1.1111111111111112）只按机制归因（生成的 kernel 源码），未重算。这些差异的契约归属为「契约外，待审阅」：
+   契约 v3 第 1 节不允许用「在误差界内」回答是否违反，契约 v2 也没有关于编译期常数精度的条款。
+7. **组合覆盖未完全达到**（`docs/composition_checklists_20261008.md`）：三份清单合并覆盖 9 / 12 条降级路径；κ = conditional、D_m 无区间扩展、
+   无可比配对三条未在组合中出现（只有第 1 行的触发记录），交审阅方。声明变体：C1 保活关闭 / 8 个确认单位 / 未登记方向；C2 bf16 LayerNorm
+   （1027 宽）；C3 原子 ticket 的持久化 kernel。
+8. **P 的补充项**：gradcheck 只对 float64 eager；`|x| ≈ 1e30` 的条件中有限差分步长小于 float64 间距，gradcheck 记「不适用」（jvp 对 VJP 精确
+   通过）；嵌入的 padding_idx 与 scale_grad_by_freq 按文档「梯度不是导数」，导数类检查记「不适用（文档约定）」；ReLU 子梯度集合检查按候选
+   dtype 的 τ（bf16 只记录）。D2、D3 的对象（池化窗口、哨兵下标）不在第一档 15 个家族中，记「不适用」；D1 用 2b 的 amax / amin 并列检查。
+9. **attention 的 F**：规格按 harness 给每个候选的显式 mask 求值（ATT-C1 取 SDPA 文档的左上对齐，flex / 手写实现收到同一 mask）；flex 的
+   head_dim 72 在 2.10 无法编译（#164931），FR 记「未运行」。
+10. **数值作用流**按附录 A 执行（提交 84fe39e 在测量之前）；无其他偏离。
 
 ## 附录 A 数值作用流的 20 个程序（2026-10-08 声明，在任何作用测量之前提交）
 

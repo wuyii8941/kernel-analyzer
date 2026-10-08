@@ -76,7 +76,7 @@ def _run(scenario, keep):
 @pytest.mark.parametrize("keep", [True, False])
 def test_aten_output_at_freed_triton_address_is_not_bound(scenario, keep):
     case, report = _run(scenario, keep)
-    assert report["tool_version"] == "2.2"
+    assert float(report["tool_version"]) >= 2.2          # binding by storage identity since 2.2
     assert "out" not in report["outputs"]                      # never bound to the intermediate's writes
     if keep:
         assert not any(case.addresses), "keep-alive must prevent address reuse inside the recorded region"

@@ -77,7 +77,11 @@ def doc_mask(cond):
 
 # ------------------------------------------------------------------------------------------------ attention level
 
-def attn_candidates():
+def attn_candidates(env="ka_main"):
+    if env == "ka_main_f64":                 # closure protocol v3 2.2: float64 counterparts for precision invariance
+        return [{"id": "sdpa_math_block_mask_float64", "kind": "sdpa", "backend": "MATH", "dtype": "float64",
+                 "reference_only": True},
+                {"id": "flex_eager_block_mask_float64", "kind": "flex", "dtype": "float64", "reference_only": True}]
     return [{"id": "sdpa_block_mask", "kind": "sdpa", "backend": "EFFICIENT_ATTENTION"},
             {"id": "sdpa_math_block_mask", "kind": "sdpa", "backend": "MATH", "reference_only": True},
             {"id": "flex_block_mask", "kind": "flex", "compiled": True},
@@ -113,9 +117,10 @@ def attn_run(cand, cond, seed, cache):
     f = lambda x: x.detach().double().cpu().numpy()      # noqa: E731
 
     def go(sl, mask):
-        qq, kk, vv = (torch.tensor(a[:, :, sl], dtype=torch.float32, device="cuda", requires_grad=True) for a in (q, k, v))
+        dt = getattr(torch, cand.get("dtype", "float32"))
+        qq, kk, vv = (torch.tensor(a[:, :, sl], dtype=dt, device="cuda", requires_grad=True) for a in (q, k, v))
         o = attn_call(cand, qq, kk, vv, mask, cache)
-        o.backward(torch.tensor(g[:, :, sl], dtype=torch.float32, device="cuda"))
+        o.backward(torch.tensor(g[:, :, sl], dtype=dt, device="cuda"))
         return {"out": f(o), "dq": f(qq.grad), "dk": f(kk.grad), "dv": f(vv.grad)}
 
     packed = go(slice(0, t), doc_mask(cond))
@@ -158,7 +163,7 @@ def hf_run(model, cond, seed):
 
 def run(env):
     CACHE.mkdir(parents=True, exist_ok=True)
-    cands = attn_candidates() if env == "ka_main" else hf_candidates()
+    cands = attn_candidates(env) if env in ("ka_main", "ka_main_f64") else hf_candidates()
     for cand in cands:
         path = CACHE / f"{cand['id']}.pkl"
         if path.exists():

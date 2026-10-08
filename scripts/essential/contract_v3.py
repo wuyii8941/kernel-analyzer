@@ -94,16 +94,16 @@ def precision_invariance(k32, k64, f_mid, f_mid64=None) -> dict:
            "anomaly_within_f64_noise": int(anomaly_noise.sum()),
            "nonfinite_f32_only": int((nonfin32 & ~nonfin64).sum()), "nonfinite_f64_only": int((nonfin64 & ~nonfin32).sum()),
            "nonfinite_both": int((nonfin32 & nonfin64).sum())}
+    # condition level as the contract states it: "semantic deviation present" iff one semantic element lies above the
+    # float64 evaluation noise; otherwise no semantic element (the numerical / undecided / agree counts stay in the record).
+    # Anomalies beyond the float64 noise are flagged for review apart.
     if semantic_real.any():
         cond = "semantic deviation present"
-    elif anomaly.any():
-        cond = "anomaly (float32 exact, float64 off): review"
-    elif undecided.any():
-        cond = "undecided"
-    elif numerical.any():
-        cond = "numerical"
+    elif (anomaly & ~anomaly_noise).any():
+        cond = "no semantic element; anomaly beyond float64 noise: review"
     else:
-        cond = "agree"
+        cond = "no semantic element"
+    out["semantic_fraction"] = float(semantic.sum() / max(1, int(fin.sum())))
     out["condition"] = cond
     out["column4_nonfinite"] = bool(nonfinite.any() and np.isfinite(f).all())
     return out

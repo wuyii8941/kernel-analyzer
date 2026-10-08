@@ -159,7 +159,9 @@ def reduction_entry(c):
         if op == "logsumexp":
             return entry([A], ["logsumexp of an all -inf row = -inf (contract)"])
         if op in ("softmax", "log_softmax"):
-            return entry([C_], ["BASE-A2: softmax of an all -inf row"])
+            if dims == "all":                               # flattened: -inf entries in a row that is not all -inf
+                return entry([A], ["softmax with some -inf entries: probability 0 (spec_base_ops.softmax)"])
+            return entry([C_, A], ["BASE-A2: softmax of the all -inf row (row 0)", "the other rows: legal domain"])
         return entry([X], [], f"{op} of a row containing -inf: the contract does not name non-finite inputs to {op}")
     if op in ("amax", "amin") and v in ("small_ints", "all_equal"):
         return entry([A], ["ties: amax/amin evenly distribute the gradient (documented)"])
@@ -353,6 +355,9 @@ PENDING = {   # clauses stopped by the seven-item doc check (docs/doc_check_seve
                   (c["dims"] == "empty-extent" or c["size"] == "1" and c["dims"] == "single") else [],
     "embedding": lambda c: ["E-D2 (max_norm scope)"] if c.get("max_norm") else [],
     "matmul_linear": lambda c: ["BASE-A4 label (broadcast: spec scope, not illegal input)"] if c["shape"] == "batch-broadcast" else [],
+    # found in the F run (docs/spec_issues_phase2.md SPEC-ISSUE-1): O-D2 places maximize at the update, the locked 2.10 SGD box
+    # negates g_t first; parameters agree when weight_decay = 0, the momentum buffer has the opposite sign
+    "optimizers": lambda c: ["O-D2 (SGD maximize placement)"] if c["opt"].startswith("sgd") and c["maximize"] else [],
 }
 
 

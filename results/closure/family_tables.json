@@ -1,0 +1,3109 @@
+{
+ "matmul_linear": {
+  "g3": {
+   "factor_levels": {
+    "shape": 4,
+    "layout": 3,
+    "bias": 3,
+    "values": 4
+   },
+   "full_factorial": 144,
+   "planned": 19,
+   "executed": 19,
+   "uncovered_combinations": 125,
+   "risk_points": [
+    "transpose and broadcast",
+    "bias",
+    "zero and one-element reduced dims",
+    "dims not multiples of a tile",
+    "dX/dW/db",
+    "gradient accumulation into .grad"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "linearity in each argument (exact for small ints)",
+     "transpose identity (A B)^T = B^T A^T",
+     "gradient accumulation: two backward calls add (.grad semantics)"
+    ],
+    "FR": "mode A (Inductor; matmul itself is cuBLAS/extern unless fused, so mostly not Triton)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "A": 16,
+   "D": 3
+  },
+  "E": {
+   "eager_cpu_float32": "reference or recorded only (no E)",
+   "eager_cpu_float64": "reference or recorded only (no E)",
+   "eager_cuda_bfloat16": "reference or recorded only (no E)",
+   "eager_cuda_float32": "reference or recorded only (no E)",
+   "eager_cuda_float64": {
+    "violating_conditions": [],
+    "reference": "eager_cpu_float64",
+    "by_output": {
+     "out": "0/57",
+     "da": "0/57",
+     "db": "0/57",
+     "dbias": "0/9"
+    }
+   },
+   "inductor_cuda_bfloat16": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_bfloat16",
+    "by_output": {
+     "out": "0/57",
+     "da": "0/57",
+     "db": "0/57",
+     "dbias": "0/9"
+    }
+   },
+   "inductor_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/57",
+     "da": "0/57",
+     "db": "0/57",
+     "dbias": "0/9"
+    }
+   },
+   "nightly_eager_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/57",
+     "da": "0/57",
+     "db": "0/57",
+     "dbias": "0/9"
+    }
+   },
+   "nightly_inductor_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "nightly_eager_cuda_float32",
+    "by_output": {
+     "out": "0/57",
+     "da": "0/57",
+     "db": "0/57",
+     "dbias": "0/9"
+    }
+   }
+  },
+  "F": {
+   "spec": "specs/phase2/spec_base_ops.py v0.1",
+   "beyond_over_elements": {
+    "eager_cpu_float32": {
+     "out": "0/20700",
+     "da": "0/43956",
+     "db": "0/71820",
+     "dbias": "0/24"
+    },
+    "eager_cpu_float64": {
+     "out": "0/20700",
+     "da": "0/43956",
+     "db": "0/71820",
+     "dbias": "0/24"
+    },
+    "eager_cuda_bfloat16": {
+     "out": "6490/20700",
+     "da": "12502/43956",
+     "db": "18355/71820",
+     "dbias": "1/24"
+    },
+    "eager_cuda_float32": {
+     "out": "0/20700",
+     "da": "0/43956",
+     "db": "0/71820",
+     "dbias": "0/24"
+    },
+    "eager_cuda_float64": {
+     "out": "0/20700",
+     "da": "0/43956",
+     "db": "0/71820",
+     "dbias": "0/24"
+    },
+    "inductor_cuda_bfloat16": {
+     "out": "6490/20700",
+     "da": "12502/43956",
+     "db": "18355/71820",
+     "dbias": "1/24"
+    },
+    "inductor_cuda_float32": {
+     "out": "0/20700",
+     "da": "0/43956",
+     "db": "0/71820",
+     "dbias": "0/24"
+    },
+    "nightly_eager_cuda_float32": {
+     "out": "0/20700",
+     "da": "0/43956",
+     "db": "0/71820",
+     "dbias": "0/24"
+    },
+    "nightly_inductor_cuda_float32": {
+     "out": "0/20700",
+     "da": "0/43956",
+     "db": "0/71820",
+     "dbias": "0/24"
+    }
+   },
+   "spec_status": {
+    "ok": 48,
+    "refused: BASE-A4 (broadcast outside the spec)": 9
+   },
+   "precision_invariance": {
+    "no semantic element": 306
+   },
+   "no_f_outputs": {},
+   "seconds": 6.3
+  },
+  "P": {
+   "preregistered_2b": {
+    "eager_cpu_float32": {
+     "P_linearity": "0/48",
+     "P_transpose_identity": "0/48",
+     "P_grad_accumulates": "0/57"
+    },
+    "eager_cpu_float64": {
+     "P_linearity": "0/48",
+     "P_transpose_identity": "0/48",
+     "P_grad_accumulates": "0/57"
+    },
+    "eager_cuda_bfloat16": {
+     "P_grad_accumulates": "0/57",
+     "P_linearity": "0/6",
+     "P_transpose_identity": "0/6"
+    },
+    "eager_cuda_float32": {
+     "P_linearity": "0/48",
+     "P_transpose_identity": "0/48",
+     "P_grad_accumulates": "0/57"
+    },
+    "eager_cuda_float64": {
+     "P_linearity": "0/48",
+     "P_transpose_identity": "0/48",
+     "P_grad_accumulates": "0/57"
+    },
+    "inductor_cuda_bfloat16": {
+     "P_grad_accumulates": "0/57",
+     "P_linearity": "0/6",
+     "P_transpose_identity": "0/6"
+    },
+    "inductor_cuda_float32": {
+     "P_linearity": "0/48",
+     "P_transpose_identity": "0/48",
+     "P_grad_accumulates": "0/57"
+    },
+    "nightly_eager_cuda_float32": {
+     "P_linearity": "0/48",
+     "P_transpose_identity": "0/48",
+     "P_grad_accumulates": "0/57"
+    },
+    "nightly_inductor_cuda_float32": {
+     "P_linearity": "0/48",
+     "P_transpose_identity": "0/48",
+     "P_grad_accumulates": "0/57"
+    }
+   },
+   "closure_gradcheck_jvp": {
+    "eager_cpu_float64/gradcheck": {
+     "pass": 12
+    },
+    "eager_cpu_float64/jvp_vjp": {
+     "pass": 12
+    },
+    "eager_cuda_float64/gradcheck": {
+     "pass": 12
+    },
+    "eager_cuda_float64/jvp_vjp": {
+     "pass": 12
+    },
+    "eager_cpu_float32/jvp_vjp": {
+     "pass": 12
+    },
+    "eager_cuda_float32/jvp_vjp": {
+     "pass": 12
+    },
+    "inductor_cuda_float32/jvp_vjp": {
+     "pass": 12
+    }
+   },
+   "seconds": 28.6
+  },
+  "FR": {
+   "case_status": {
+    "ok": 16,
+    "no f": 3
+   },
+   "elements": {
+    "ok_elements": 21,
+    "e_num_beyond_tau32_finite_K": 0,
+    "K_special_vs_f_finite_column4": 0,
+    "f_undefined_excluded": 0,
+    "ok_elements_pure": 21,
+    "e_sem_certified_pure": 0
+   },
+   "max_pure_e_sem_gap_relative": 0.0,
+   "cases_not_ok": {
+    "inductor_cuda_float32/matm_batch-broadcast_contiguous_None_gauss": "refused: BASE-A4 (broadcast outside the spec)",
+    "inductor_cuda_float32/matm_batch-broadcast_transposed_None_gauss": "refused: BASE-A4 (broadcast outside the spec)",
+    "inductor_cuda_float32/matm_batch-broadcast_offset_None_gauss": "refused: BASE-A4 (broadcast outside the spec)"
+   },
+   "seconds": 23.5
+  },
+  "columns": {
+   "pending": [
+    "contract label of batch broadcast (3 conditions marked D; doc says legal, spec scope)"
+   ]
+  }
+ },
+ "reductions": {
+  "g3": {
+   "factor_levels": {
+    "op": 11,
+    "dims": 4,
+    "values": 6,
+    "size": 3
+   },
+   "full_factorial": 792,
+   "planned": 54,
+   "executed": 53,
+   "uncovered_combinations": 739,
+   "risk_points": [
+    "multi-axis",
+    "empty set",
+    "effective count (correction for var/std)",
+    "blocked merge",
+    "all -inf row (softmax / logsumexp)",
+    "ties (amax/amin gradient)"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "shift invariance (softmax, log_softmax)",
+     "logsumexp(x + c) = logsumexp(x) + c",
+     "D1 for amax/amin ties",
+     "cumsum last element = sum",
+     "permutation invariance of full reductions (exact for small ints)"
+    ],
+    "FR": "mode A (Inductor, Liger)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "A": 41,
+   "C": 7,
+   "X": 5
+  },
+  "E": {
+   "eager_cpu_float32": "reference or recorded only (no E)",
+   "eager_cpu_float64": "reference or recorded only (no E)",
+   "eager_cuda_bfloat16": "reference or recorded only (no E)",
+   "eager_cuda_float32": "reference or recorded only (no E)",
+   "eager_cuda_float64": {
+    "violating_conditions": [],
+    "reference": "eager_cpu_float64",
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    }
+   },
+   "inductor_cuda_bfloat16": {
+    "violating_conditions": [
+     "redu_cumsum_multi_gauss_1",
+     "redu_var_multi_gauss_1"
+    ],
+    "reference": "eager_cuda_bfloat16",
+    "by_output": {
+     "out": "2/153",
+     "dx": "2/144"
+    }
+   },
+   "inductor_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    }
+   },
+   "liger_softmax": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/3",
+     "dx": "0/3"
+    }
+   },
+   "nightly_eager_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    }
+   },
+   "nightly_inductor_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "nightly_eager_cuda_float32",
+    "by_output": {
+     "out": "0/153",
+     "dx": "0/144"
+    }
+   }
+  },
+  "F": {
+   "spec": "specs/phase2/spec_base_ops.py v0.1",
+   "beyond_over_elements": {
+    "eager_cpu_float32": {
+     "out": "0/402"
+    },
+    "eager_cpu_float64": {
+     "out": "0/402"
+    },
+    "eager_cuda_bfloat16": {
+     "out": "3/402"
+    },
+    "eager_cuda_float32": {
+     "out": "0/402"
+    },
+    "eager_cuda_float64": {
+     "out": "0/402"
+    },
+    "inductor_cuda_bfloat16": {
+     "out": "2/402"
+    },
+    "inductor_cuda_float32": {
+     "out": "0/402"
+    },
+    "nightly_eager_cuda_float32": {
+     "out": "0/402"
+    },
+    "nightly_inductor_cuda_float32": {
+     "out": "0/402"
+    },
+    "liger_softmax": {
+     "out": "0/9"
+    }
+   },
+   "spec_status": {
+    "ok": 144,
+    "contract v2: X 契约外，待审阅 (not judged against f)": 15
+   },
+   "precision_invariance": {
+    "no semantic element": 276
+   },
+   "no_f_outputs": {
+    "dx": 1245
+   },
+   "seconds": 10.4
+  },
+  "P": {
+   "preregistered_2b": {
+    "eager_cpu_float32": {
+     "P_D1_amax_ties_even_split": "0/21",
+     "P_softmax_shift_invariance": "0/24",
+     "P_logsumexp_shift": "0/12",
+     "P_cumsum_last_equals_sum": "0/3",
+     "P_permutation_invariance": "0/6"
+    },
+    "eager_cpu_float64": {
+     "P_D1_amax_ties_even_split": "0/21",
+     "P_softmax_shift_invariance": "0/24",
+     "P_logsumexp_shift": "0/12",
+     "P_cumsum_last_equals_sum": "0/3",
+     "P_permutation_invariance": "0/6"
+    },
+    "eager_cuda_bfloat16": {
+     "P_D1_amax_ties_even_split": "0/21",
+     "P_permutation_invariance": "0/6"
+    },
+    "eager_cuda_float32": {
+     "P_D1_amax_ties_even_split": "0/21",
+     "P_softmax_shift_invariance": "0/24",
+     "P_logsumexp_shift": "0/12",
+     "P_cumsum_last_equals_sum": "0/3",
+     "P_permutation_invariance": "0/6"
+    },
+    "eager_cuda_float64": {
+     "P_D1_amax_ties_even_split": "0/21",
+     "P_softmax_shift_invariance": "0/24",
+     "P_logsumexp_shift": "0/12",
+     "P_cumsum_last_equals_sum": "0/3",
+     "P_permutation_invariance": "0/6"
+    },
+    "inductor_cuda_bfloat16": {
+     "P_D1_amax_ties_even_split": "0/21",
+     "P_permutation_invariance": "0/6"
+    },
+    "inductor_cuda_float32": {
+     "P_D1_amax_ties_even_split": "0/21",
+     "P_softmax_shift_invariance": "0/24",
+     "P_logsumexp_shift": "0/12",
+     "P_cumsum_last_equals_sum": "0/3",
+     "P_permutation_invariance": "0/6"
+    },
+    "liger_softmax": {
+     "P_softmax_shift_invariance": "0/3"
+    },
+    "nightly_eager_cuda_float32": {
+     "P_D1_amax_ties_even_split": "0/21",
+     "P_softmax_shift_invariance": "0/24",
+     "P_logsumexp_shift": "0/12",
+     "P_cumsum_last_equals_sum": "0/3",
+     "P_permutation_invariance": "0/6"
+    },
+    "nightly_inductor_cuda_float32": {
+     "P_D1_amax_ties_even_split": "0/21",
+     "P_softmax_shift_invariance": "0/24",
+     "P_logsumexp_shift": "0/12",
+     "P_cumsum_last_equals_sum": "0/3",
+     "P_permutation_invariance": "0/6"
+    }
+   },
+   "closure_gradcheck_jvp": {
+    "eager_cpu_float64/gradcheck": {
+     "pass": 31,
+     "pass (kink": 7,
+     "fail": 3
+    },
+    "eager_cpu_float64/jvp_vjp": {
+     "pass": 31,
+     "pass (kink": 7,
+     "non-finite (column 4 if f finite)": 3
+    },
+    "eager_cuda_float64/gradcheck": {
+     "pass": 31,
+     "pass (kink": 7,
+     "fail": 3
+    },
+    "eager_cuda_float64/jvp_vjp": {
+     "pass": 31,
+     "pass (kink": 7,
+     "non-finite (column 4 if f finite)": 3
+    },
+    "eager_cpu_float32/jvp_vjp": {
+     "pass": 31,
+     "pass (kink": 7,
+     "non-finite (column 4 if f finite)": 3
+    },
+    "eager_cuda_float32/jvp_vjp": {
+     "pass": 31,
+     "pass (kink": 7,
+     "non-finite (column 4 if f finite)": 3
+    },
+    "inductor_cuda_float32/jvp_vjp": {
+     "pass": 31,
+     "pass (kink": 7,
+     "non-finite (column 4 if f finite)": 3
+    }
+   },
+   "seconds": 50.8
+  },
+  "FR": {
+   "case_status": {
+    "ok": 46,
+    "no f": 5,
+    "error": 2
+   },
+   "elements": {
+    "ok_elements": 399,
+    "e_num_beyond_tau32_finite_K": 0,
+    "K_special_vs_f_finite_column4": 0,
+    "f_undefined_excluded": 45,
+    "ok_elements_pure": 399,
+    "e_sem_certified_pure": 0
+   },
+   "max_pure_e_sem_gap_relative": 0.0,
+   "cases_not_ok": {
+    "inductor_cuda_float32/redu_sum_single_neg_inf_row_1": "contract v2: X 契约外，待审阅 (not judged against f)",
+    "inductor_cuda_float32/redu_amax_empty-extent_gauss_1": "TorchRuntimeError: Dynamo failed to run FX node with fake tensors: call_function <built-in method amax of type object at",
+    "inductor_cuda_float32/redu_amin_empty-extent_gauss_1": "TorchRuntimeError: Dynamo failed to run FX node with fake tensors: call_function <built-in method amin of type object at",
+    "inductor_cuda_float32/redu_softmax_empty-extent_gauss_1": "contract v2: X 契约外，待审阅 (not judged against f)",
+    "inductor_cuda_float32/redu_log_softmax_empty-extent_gauss_1": "contract v2: X 契约外，待审阅 (not judged against f)",
+    "inductor_cuda_float32/redu_logsumexp_empty-extent_gauss_1": "contract v2: X 契约外，待审阅 (not judged against f)",
+    "inductor_cuda_float32/redu_cumsum_empty-extent_gauss_1": "contract v2: X 契约外，待审阅 (not judged against f)"
+   },
+   "seconds": 25.8
+  },
+  "columns": {
+   "3": [
+    "BASE-A1 empty amax / amin: the candidates raise (Inductor and eager); empty mean: NaN (results/essential/phase2b/reductions/analysis.json conventions)"
+   ],
+   "pending": [
+    "BASE-A1 var / std with N - correction <= 0 (NaN observed): clause stopped by the doc check"
+   ]
+  }
+ },
+ "activations": {
+  "g3": {
+   "factor_levels": {
+    "op": 6,
+    "values": 4,
+    "layout": 2
+   },
+   "full_factorial": 48,
+   "planned": 27,
+   "executed": 25,
+   "uncovered_combinations": 23,
+   "risk_points": [
+    "threshold and branch at 0",
+    "broadcast",
+    "fused vs unfused forward and backward",
+    "GELU erf vs tanh declared formulas"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "relu derivative convention at 0 is 0 (documented subgradient)",
+     "odd/even identities (gelu(x) - gelu(-x) = x)",
+     "fused == composed (silu(a) * b)"
+    ],
+    "FR": "mode A",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "A": 25,
+   "B": 1
+  },
+  "E": {
+   "eager_cpu_float32": "reference or recorded only (no E)",
+   "eager_cpu_float64": "reference or recorded only (no E)",
+   "eager_cuda_bfloat16": "reference or recorded only (no E)",
+   "eager_cuda_float32": "reference or recorded only (no E)",
+   "eager_cuda_float64": {
+    "violating_conditions": [],
+    "reference": "eager_cpu_float64",
+    "by_output": {
+     "out": "0/75",
+     "da": "0/75",
+     "db": "0/24"
+    }
+   },
+   "inductor_cuda_bfloat16": {
+    "violating_conditions": [
+     "acti_geglu_gauss_contiguous",
+     "acti_swiglu_gauss_contiguous"
+    ],
+    "reference": "eager_cuda_bfloat16",
+    "by_output": {
+     "out": "6/75",
+     "da": "6/75",
+     "db": "6/24"
+    }
+   },
+   "inductor_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/75",
+     "da": "0/75",
+     "db": "0/24"
+    }
+   },
+   "liger_swiglu": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/12",
+     "da": "0/12",
+     "db": "0/12"
+    }
+   },
+   "nightly_eager_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/75",
+     "da": "0/75",
+     "db": "0/24"
+    }
+   },
+   "nightly_inductor_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "nightly_eager_cuda_float32",
+    "by_output": {
+     "out": "0/75",
+     "da": "0/75",
+     "db": "0/24"
+    }
+   },
+   "unsloth_swiglu": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_bfloat16",
+    "by_output": {
+     "out": "0/12"
+    }
+   }
+  },
+  "F": {
+   "spec": "specs/phase2/spec_base_ops.py v0.1",
+   "beyond_over_elements": {
+    "eager_cpu_float32": {
+     "out": "0/14850 (non-finite 595)",
+     "da_relu_set": "0/2970"
+    },
+    "eager_cpu_float64": {
+     "out": "0/14850",
+     "da_relu_set": "0/2970"
+    },
+    "eager_cuda_bfloat16": {
+     "out": "47/14850 (non-finite 595)",
+     "da_relu_set": "0/2970"
+    },
+    "eager_cuda_float32": {
+     "out": "0/14850 (non-finite 595)",
+     "da_relu_set": "0/2970"
+    },
+    "eager_cuda_float64": {
+     "out": "0/14850",
+     "da_relu_set": "0/2970"
+    },
+    "inductor_cuda_bfloat16": {
+     "out": "33/14850 (non-finite 595)",
+     "da_relu_set": "0/2970"
+    },
+    "inductor_cuda_float32": {
+     "out": "0/14850 (non-finite 595)",
+     "da_relu_set": "0/2970"
+    },
+    "nightly_eager_cuda_float32": {
+     "out": "0/14850 (non-finite 595)",
+     "da_relu_set": "0/2970"
+    },
+    "nightly_inductor_cuda_float32": {
+     "out": "0/14850 (non-finite 595)",
+     "da_relu_set": "0/2970"
+    },
+    "liger_swiglu": {
+     "out": "0/2376 (non-finite 294)"
+    },
+    "unsloth_swiglu": {
+     "out": "16/2376 (non-finite 294)"
+    }
+   },
+   "spec_status": {
+    "ok": 75
+   },
+   "precision_invariance": {
+    "no semantic element": 150
+   },
+   "no_f_outputs": {
+    "da": 687,
+    "db": 228
+   },
+   "seconds": 0.5
+  },
+  "P": {
+   "preregistered_2b": {
+    "eager_cpu_float32": {
+     "P_odd_identity_f(x)-f(-x)=x": "0/27",
+     "P_relu_grad_at_zero_is_zero": "0/3"
+    },
+    "eager_cpu_float64": {
+     "P_odd_identity_f(x)-f(-x)=x": "0/27",
+     "P_relu_grad_at_zero_is_zero": "0/3"
+    },
+    "eager_cuda_bfloat16": {
+     "P_relu_grad_at_zero_is_zero": "0/3"
+    },
+    "eager_cuda_float32": {
+     "P_odd_identity_f(x)-f(-x)=x": "0/27",
+     "P_relu_grad_at_zero_is_zero": "0/3"
+    },
+    "eager_cuda_float64": {
+     "P_odd_identity_f(x)-f(-x)=x": "0/27",
+     "P_relu_grad_at_zero_is_zero": "0/3"
+    },
+    "inductor_cuda_bfloat16": {
+     "P_relu_grad_at_zero_is_zero": "0/3"
+    },
+    "inductor_cuda_float32": {
+     "P_odd_identity_f(x)-f(-x)=x": "0/27",
+     "P_relu_grad_at_zero_is_zero": "0/3"
+    },
+    "nightly_eager_cuda_float32": {
+     "P_odd_identity_f(x)-f(-x)=x": "0/27",
+     "P_relu_grad_at_zero_is_zero": "0/3"
+    },
+    "nightly_inductor_cuda_float32": {
+     "P_odd_identity_f(x)-f(-x)=x": "0/27",
+     "P_relu_grad_at_zero_is_zero": "0/3"
+    }
+   },
+   "closure_gradcheck_jvp": {
+    "eager_cpu_float64/gradcheck": {
+     "pass (kink": 2,
+     "pass": 15,
+     "fail (kink": 3,
+     "fail": 5
+    },
+    "eager_cpu_float64/jvp_vjp": {
+     "pass (kink": 5,
+     "pass": 20
+    },
+    "eager_cuda_float64/gradcheck": {
+     "pass (kink": 2,
+     "pass": 15,
+     "fail (kink": 3,
+     "fail": 5
+    },
+    "eager_cuda_float64/jvp_vjp": {
+     "pass (kink": 5,
+     "pass": 20
+    },
+    "eager_cpu_float32/jvp_vjp": {
+     "pass (kink": 5,
+     "pass": 19,
+     "non-finite (column 4 if f finite)": 1
+    },
+    "eager_cuda_float32/jvp_vjp": {
+     "pass (kink": 5,
+     "pass": 19,
+     "non-finite (column 4 if f finite)": 1
+    },
+    "inductor_cuda_float32/jvp_vjp": {
+     "pass (kink": 5,
+     "pass": 19,
+     "non-finite (column 4 if f finite)": 1
+    }
+   },
+   "seconds": 24.9
+  },
+  "FR": {
+   "case_status": {
+    "ok": 25
+   },
+   "elements": {
+    "ok_elements": 14850,
+    "e_num_beyond_tau32_finite_K": 0,
+    "K_special_vs_f_finite_column4": 595,
+    "f_undefined_excluded": 0,
+    "ok_elements_pure": 14850,
+    "e_sem_certified_pure": 1780,
+    "e_sem_certified_after_attribution": 0,
+    "e_sem_certified_where_attribution_ran": 1780
+   },
+   "max_pure_e_sem_gap_relative": 1.845308672717842e-08,
+   "cases_not_ok": {},
+   "seconds": 5.9
+  },
+  "columns": {
+   "4": [
+    "B023 gelu(approximate='tanh') backward NaN for |x| >= 1.8447e19 (float32 / bf16; eager CPU, CUDA, Inductor): bugs/B023_*.md; seen again by the closure P (jvp vs VJP non-finite on acti_gelu_tanh_huge, results/closure/p_extra/activations.json)",
+    "swiglu / geglu huge: the real product exceeds FLT_MAX, K = ±inf (IEEE overflow) against a finite f (results/closure/fr_modeB/activations.json special_values; F non-finite counts)"
+   ]
+  }
+ },
+ "gather_layout": {
+  "g3": {
+   "factor_levels": {
+    "op": 5,
+    "index": 3,
+    "layout": 3
+   },
+   "full_factorial": 45,
+   "planned": 18,
+   "executed": 18,
+   "uncovered_combinations": 27,
+   "risk_points": [
+    "repeated indices (backward accumulation)",
+    "non-contiguous layouts",
+    "non-zero storage offset",
+    "aliasing views"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "counting: backward of a gather with repeated indices accumulates (ones -> counts)",
+     "round trip split -> cat is the identity",
+     "views share storage (write through)"
+    ],
+    "FR": "mode A",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "A": 12,
+   "X": 6
+  },
+  "E": {
+   "eager_cpu_float32": "reference or recorded only (no E)",
+   "eager_cpu_float64": "reference or recorded only (no E)",
+   "eager_cuda_bfloat16": "reference or recorded only (no E)",
+   "eager_cuda_float32": "reference or recorded only (no E)",
+   "eager_cuda_float64": {
+    "violating_conditions": [],
+    "reference": "eager_cpu_float64",
+    "by_output": {
+     "out": "0/54",
+     "dx": "0/54"
+    }
+   },
+   "inductor_cuda_bfloat16": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_bfloat16",
+    "by_output": {
+     "out": "0/54",
+     "dx": "0/54"
+    }
+   },
+   "inductor_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/54",
+     "dx": "0/54"
+    }
+   },
+   "nightly_eager_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/54",
+     "dx": "0/54"
+    }
+   },
+   "nightly_inductor_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "nightly_eager_cuda_float32",
+    "by_output": {
+     "out": "0/54",
+     "dx": "0/54"
+    }
+   }
+  },
+  "F": {
+   "spec": "specs/phase2/spec_base_ops.py v0.1",
+   "beyond_over_elements": {
+    "eager_cpu_float32": {
+     "out": "0/1080",
+     "dx": "0/1944"
+    },
+    "eager_cpu_float64": {
+     "out": "0/1080",
+     "dx": "0/1944"
+    },
+    "eager_cuda_bfloat16": {
+     "out": "0/1080",
+     "dx": "14/1944"
+    },
+    "eager_cuda_float32": {
+     "out": "0/1080",
+     "dx": "0/1944"
+    },
+    "eager_cuda_float64": {
+     "out": "0/1080",
+     "dx": "0/1944"
+    },
+    "inductor_cuda_bfloat16": {
+     "out": "0/1080",
+     "dx": "14/1944"
+    },
+    "inductor_cuda_float32": {
+     "out": "0/1080",
+     "dx": "0/1944"
+    },
+    "nightly_eager_cuda_float32": {
+     "out": "0/1080",
+     "dx": "0/1944"
+    },
+    "nightly_inductor_cuda_float32": {
+     "out": "0/1080",
+     "dx": "0/1944"
+    }
+   },
+   "spec_status": {
+    "ok": 36,
+    "outside the contract": 18
+   },
+   "precision_invariance": {
+    "no semantic element": 144
+   },
+   "no_f_outputs": {},
+   "seconds": 0.3
+  },
+  "P": {
+   "preregistered_2b": {
+    "eager_cpu_float32": {
+     "P_gather_backward_counts": "0/36",
+     "P_split_cat_identity": "0/9",
+     "P_view_write_through": "0/9"
+    },
+    "eager_cpu_float64": {
+     "P_gather_backward_counts": "0/36",
+     "P_split_cat_identity": "0/9",
+     "P_view_write_through": "0/9"
+    },
+    "eager_cuda_bfloat16": {
+     "P_gather_backward_counts": "0/36",
+     "P_split_cat_identity": "0/9",
+     "P_view_write_through": "0/9"
+    },
+    "eager_cuda_float32": {
+     "P_gather_backward_counts": "0/36",
+     "P_split_cat_identity": "0/9",
+     "P_view_write_through": "0/9"
+    },
+    "eager_cuda_float64": {
+     "P_gather_backward_counts": "0/36",
+     "P_split_cat_identity": "0/9",
+     "P_view_write_through": "0/9"
+    },
+    "inductor_cuda_bfloat16": {
+     "P_gather_backward_counts": "0/36",
+     "P_split_cat_identity": "0/9",
+     "P_view_write_through": "0/9"
+    },
+    "inductor_cuda_float32": {
+     "P_gather_backward_counts": "0/36",
+     "P_split_cat_identity": "0/9",
+     "P_view_write_through": "0/9"
+    },
+    "nightly_eager_cuda_float32": {
+     "P_gather_backward_counts": "0/36",
+     "P_split_cat_identity": "0/9",
+     "P_view_write_through": "0/9"
+    },
+    "nightly_inductor_cuda_float32": {
+     "P_gather_backward_counts": "0/36",
+     "P_split_cat_identity": "0/9",
+     "P_view_write_through": "0/9"
+    }
+   },
+   "closure_gradcheck_jvp": {
+    "eager_cpu_float64/gradcheck": {
+     "pass": 12
+    },
+    "eager_cpu_float64/jvp_vjp": {
+     "pass": 12
+    },
+    "eager_cuda_float64/gradcheck": {
+     "pass": 12
+    },
+    "eager_cuda_float64/jvp_vjp": {
+     "pass": 12
+    },
+    "eager_cpu_float32/jvp_vjp": {
+     "pass": 12
+    },
+    "eager_cuda_float32/jvp_vjp": {
+     "pass": 12
+    },
+    "inductor_cuda_float32/jvp_vjp": {
+     "pass": 12
+    }
+   },
+   "seconds": 16.6
+  },
+  "FR": {
+   "case_status": {
+    "ok": 12,
+    "no f": 6
+   },
+   "elements": {
+    "ok_elements": 2862,
+    "e_num_beyond_tau32_finite_K": 0,
+    "K_special_vs_f_finite_column4": 0,
+    "f_undefined_excluded": 0,
+    "ok_elements_pure": 2772,
+    "e_sem_certified_pure": 0,
+    "ok_elements_mixed": 90,
+    "e_sem_certified_mixed (not a semantic verdict)": 0
+   },
+   "max_pure_e_sem_gap_relative": 0.0,
+   "cases_not_ok": {
+    "inductor_cuda_float32/gath_cat_split_distinct_contiguous": "outside the contract",
+    "inductor_cuda_float32/gath_view_alias_distinct_contiguous": "outside the contract",
+    "inductor_cuda_float32/gath_cat_split_repeated_contiguous": "outside the contract",
+    "inductor_cuda_float32/gath_cat_split_all_same_contiguous": "outside the contract",
+    "inductor_cuda_float32/gath_view_alias_repeated_contiguous": "outside the contract",
+    "inductor_cuda_float32/gath_view_alias_all_same_contiguous": "outside the contract"
+   },
+   "seconds": 2.7
+  },
+  "columns": {}
+ },
+ "checkpoint": {
+  "g3": {
+   "factor_levels": {
+    "impl": 3,
+    "graph": 3,
+    "compile": 2
+   },
+   "full_factorial": 18,
+   "planned": 12,
+   "executed": 10,
+   "uncovered_combinations": 8,
+   "risk_points": [
+    "checkpoint on vs off: same forward value and gradients",
+    "shared parameters",
+    "an intermediate used twice"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "on == off (bitwise for float64 on CPU; tau otherwise)"
+    ],
+    "FR": "not applicable (property check, no f needed)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "A": 10
+  },
+  "E": {
+   "hf_gradient_checkpointing": "reference or recorded only (no E)",
+   "torch_checkpoint_compiled": "reference or recorded only (no E)",
+   "torch_checkpoint_cpu": "reference or recorded only (no E)",
+   "torch_checkpoint_cuda": "reference or recorded only (no E)"
+  },
+  "F": {
+   "status": null
+  },
+  "P": {
+   "preregistered_2b": {
+    "hf_gradient_checkpointing": {
+     "P_checkpoint_on_equals_off": "0/9"
+    },
+    "torch_checkpoint_compiled": {
+     "P_checkpoint_on_equals_off": "0/21"
+    },
+    "torch_checkpoint_cpu": {
+     "P_checkpoint_on_equals_off": "0/21"
+    },
+    "torch_checkpoint_cuda": {
+     "P_checkpoint_on_equals_off": "0/21"
+    }
+   },
+   "closure_gradcheck_jvp": "not run (no differentiable candidate output in this family or covered by the 2b P)",
+   "seconds": null
+  },
+  "FR": {
+   "status": "mode B not run (no Triton candidate with spec f in this family)"
+  },
+  "columns": {}
+ },
+ "embedding": {
+  "g3": {
+   "factor_levels": {
+    "op": 2,
+    "padding_idx": 2,
+    "max_norm": 2,
+    "scale_grad_by_freq": 2,
+    "mode": 3,
+    "bags": 3,
+    "per_sample_weights": 2
+   },
+   "full_factorial": 288,
+   "planned": 13,
+   "executed": 13,
+   "uncovered_combinations": 275,
+   "risk_points": [
+    "padding_idx (no gradient)",
+    "max_norm in-place renormalisation",
+    "scale_grad_by_freq",
+    "empty bag",
+    "mode sum/mean/max",
+    "per_sample_weights"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "padding_idx row gets zero gradient",
+     "scale_grad_by_freq: gradient divided by the index frequency",
+     "embedding_bag(mode=sum) == sum of embedding rows",
+     "empty bag output is zero (sum/mean)"
+    ],
+    "FR": "mode A",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "A": 13,
+   "B": 2
+  },
+  "E": {
+   "eager_cpu_float32": "reference or recorded only (no E)",
+   "eager_cpu_float64": "reference or recorded only (no E)",
+   "eager_cuda_float32": "reference or recorded only (no E)",
+   "eager_cuda_float64": {
+    "violating_conditions": [],
+    "reference": "eager_cpu_float64",
+    "by_output": {
+     "out": "0/39",
+     "dweight": "0/39",
+     "weight_after": "0/39",
+     "dpsw": "0/3"
+    }
+   },
+   "inductor_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/39",
+     "dweight": "0/39",
+     "weight_after": "0/39",
+     "dpsw": "0/3"
+    }
+   },
+   "nightly_eager_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "out": "0/39",
+     "dweight": "0/39",
+     "weight_after": "0/39",
+     "dpsw": "0/3"
+    }
+   },
+   "nightly_inductor_cuda_float32": {
+    "violating_conditions": [],
+    "reference": "nightly_eager_cuda_float32",
+    "by_output": {
+     "out": "0/39",
+     "dweight": "0/39",
+     "weight_after": "0/39",
+     "dpsw": "0/3"
+    }
+   }
+  },
+  "F": {
+   "spec": "specs/phase2/spec_embedding.py v0.1",
+   "beyond_over_elements": {
+    "eager_cpu_float32": {
+     "out": "0/3552",
+     "dweight": "0/1440",
+     "weight_after": "0/960"
+    },
+    "eager_cpu_float64": {
+     "out": "891/3552",
+     "dweight": "0/1440",
+     "weight_after": "340/960"
+    },
+    "eager_cuda_float32": {
+     "out": "0/3552",
+     "dweight": "0/1440",
+     "weight_after": "0/960"
+    },
+    "eager_cuda_float64": {
+     "out": "891/3552",
+     "dweight": "0/1440",
+     "weight_after": "340/960"
+    },
+    "inductor_cuda_float32": {
+     "out": "0/3552",
+     "dweight": "0/1440",
+     "weight_after": "0/960"
+    },
+    "nightly_eager_cuda_float32": {
+     "out": "0/3552",
+     "dweight": "0/1440",
+     "weight_after": "0/960"
+    },
+    "nightly_inductor_cuda_float32": {
+     "out": "0/3552",
+     "dweight": "0/1440",
+     "weight_after": "0/960"
+    }
+   },
+   "spec_status": {
+    "ok": 39
+   },
+   "precision_invariance": {
+    "no semantic element": 84,
+    "semantic deviation present": 24
+   },
+   "no_f_outputs": {
+    "weight_after": 231,
+    "dweight": 210,
+    "dpsw": 21
+   },
+   "seconds": 1.9
+  },
+  "P": {
+   "preregistered_2b": {
+    "eager_cpu_float32": {
+     "P_bag_sum_equals_embedding_sum": "0/15",
+     "P_padding_row_zero_grad": "0/9",
+     "P_scale_grad_by_freq": "0/3",
+     "P_empty_bag_zero": "0/6"
+    },
+    "eager_cpu_float64": {
+     "P_bag_sum_equals_embedding_sum": "0/15",
+     "P_padding_row_zero_grad": "0/9",
+     "P_scale_grad_by_freq": "0/3",
+     "P_empty_bag_zero": "0/6"
+    },
+    "eager_cuda_float32": {
+     "P_bag_sum_equals_embedding_sum": "0/15",
+     "P_padding_row_zero_grad": "0/9",
+     "P_scale_grad_by_freq": "0/3",
+     "P_empty_bag_zero": "0/6"
+    },
+    "eager_cuda_float64": {
+     "P_bag_sum_equals_embedding_sum": "0/15",
+     "P_padding_row_zero_grad": "0/9",
+     "P_scale_grad_by_freq": "0/3",
+     "P_empty_bag_zero": "0/6"
+    },
+    "inductor_cuda_float32": {
+     "P_bag_sum_equals_embedding_sum": "0/15",
+     "P_padding_row_zero_grad": "0/9",
+     "P_scale_grad_by_freq": "0/3",
+     "P_empty_bag_zero": "0/6"
+    },
+    "nightly_eager_cuda_float32": {
+     "P_bag_sum_equals_embedding_sum": "0/15",
+     "P_padding_row_zero_grad": "0/9",
+     "P_scale_grad_by_freq": "0/3",
+     "P_empty_bag_zero": "0/6"
+    },
+    "nightly_inductor_cuda_float32": {
+     "P_bag_sum_equals_embedding_sum": "0/15",
+     "P_padding_row_zero_grad": "0/9",
+     "P_scale_grad_by_freq": "0/3",
+     "P_empty_bag_zero": "0/6"
+    }
+   },
+   "closure_gradcheck_jvp": {
+    "eager_cpu_float64/gradcheck": {
+     "pass": 9,
+     "fail": 2
+    },
+    "eager_cpu_float64/jvp_vjp": {
+     "pass": 1,
+     "unsupported": 8,
+     "fail": 2
+    },
+    "eager_cuda_float64/gradcheck": {
+     "pass": 9,
+     "fail": 2
+    },
+    "eager_cuda_float64/jvp_vjp": {
+     "pass": 1,
+     "unsupported": 8,
+     "fail": 2
+    },
+    "eager_cpu_float32/jvp_vjp": {
+     "pass": 1,
+     "unsupported": 8,
+     "fail": 2
+    },
+    "eager_cuda_float32/jvp_vjp": {
+     "pass": 1,
+     "unsupported": 8,
+     "fail": 2
+    },
+    "inductor_cuda_float32/jvp_vjp": {
+     "pass": 1,
+     "unsupported": 8,
+     "fail": 2
+    }
+   },
+   "seconds": 2.8
+  },
+  "FR": {
+   "case_status": {
+    "ok": 13
+   },
+   "elements": {
+    "ok_elements": 3960,
+    "e_num_beyond_tau32_finite_K": 0,
+    "K_special_vs_f_finite_column4": 0,
+    "f_undefined_excluded": 0,
+    "ok_elements_pure": 2952,
+    "e_sem_certified_pure": 0,
+    "ok_elements_mixed": 1008,
+    "e_sem_certified_mixed (not a semantic verdict)": 1008
+   },
+   "max_pure_e_sem_gap_relative": 0.0,
+   "cases_not_ok": {},
+   "seconds": 3.1
+  },
+  "columns": {
+   "2": [
+    "EMB-A1: max_norm renormalisation divides by (norm + 1e-7); visible against f at float64 (891/3552 out, 340/960 weight_after beyond τ64), precision invariance 'semantic' (results/closure/f_eval/embedding.json); residual after dividing by (norm + 1e-7): <= 7.3e-17"
+   ],
+   "pending": [
+    "E-D2 (max_norm scope): weight_after not adjudicated (docs/doc_check_seven_items_20261008.md)"
+   ]
+  }
+ },
+ "attention": {
+  "g3": {
+   "factor_levels": {
+    "q_len_k_len": 4,
+    "mask": 5,
+    "gqa": 2,
+    "scale": 2,
+    "head_dim": 3
+   },
+   "full_factorial": 240,
+   "planned": 27,
+   "executed": 24,
+   "uncovered_combinations": 216,
+   "risk_points": [
+    "causal alignment when q_len != k_len",
+    "fully masked rows",
+    "GQA",
+    "softcap",
+    "sliding window",
+    "scale"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "masked keys do not influence the output",
+     "softmax rows sum to 1 (no fully masked row)",
+     "causal: output at position i does not depend on keys > i (+ offset when q_len != k_len)",
+     "GQA == repeated KV heads"
+    ],
+    "FR": "mode A for Inductor / flex (Triton); SDPA backends are CUDA kernels -> black box",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "A": 24,
+   "C": 5,
+   "B": 7
+  },
+  "E": {
+   "flex_attention_float32": {
+    "conditions_compared": 69,
+    "violating_conditions": 0,
+    "status": "judged",
+    "reference": "flex_eager_float32",
+    "by_output": {
+     "out": "0/69",
+     "dq": "0/69",
+     "dk": "0/69",
+     "dv": "0/69"
+    }
+   },
+   "flex_eager_float32": "reference or recorded only (no E)",
+   "hf_eager_attention": {
+    "conditions_compared": 72,
+    "violating_conditions": 0,
+    "status": "judged",
+    "reference": "sdpa_math_float32",
+    "by_output": {
+     "out": "0/72",
+     "dq": "0/72",
+     "dk": "0/72",
+     "dv": "0/72"
+    }
+   },
+   "inductor_attention_float32": {
+    "conditions_compared": 72,
+    "violating_conditions": 0,
+    "status": "judged",
+    "reference": "manual_eager_float32",
+    "by_output": {
+     "out": "0/72",
+     "dq": "0/72",
+     "dk": "0/57",
+     "dv": "0/57"
+    }
+   },
+   "manual_eager_float32": "reference or recorded only (no E)",
+   "sdpa_cudnn_bfloat16": {
+    "conditions_compared": 72,
+    "violating_conditions": 13,
+    "status": "recorded (bf16)",
+    "reference": "sdpa_math_bfloat16",
+    "by_output": {
+     "out": "0/72",
+     "dq": "27/72",
+     "dk": "27/72",
+     "dv": "26/72"
+    }
+   },
+   "sdpa_efficient_bfloat16": {
+    "conditions_compared": 69,
+    "violating_conditions": 17,
+    "status": "recorded (bf16)",
+    "reference": "sdpa_math_bfloat16",
+    "by_output": {
+     "out": "0/69",
+     "dq": "38/69",
+     "dk": "32/69",
+     "dv": "25/69"
+    }
+   },
+   "sdpa_efficient_float32": {
+    "conditions_compared": 69,
+    "violating_conditions": 0,
+    "status": "judged",
+    "reference": "sdpa_math_float32",
+    "by_output": {
+     "out": "0/69",
+     "dq": "0/69",
+     "dk": "0/69",
+     "dv": "0/69"
+    }
+   },
+   "sdpa_flash_bfloat16": {
+    "conditions_compared": 27,
+    "violating_conditions": 5,
+    "status": "recorded (bf16)",
+    "reference": "sdpa_math_bfloat16",
+    "by_output": {
+     "out": "0/27",
+     "dq": "8/27",
+     "dk": "10/27",
+     "dv": "8/27"
+    }
+   },
+   "sdpa_math_bfloat16": "reference or recorded only (no E)",
+   "sdpa_math_cpu_float64": "reference or recorded only (no E)",
+   "sdpa_math_float32": "reference or recorded only (no E)",
+   "xformers_memory_efficient": {
+    "conditions_compared": 69,
+    "violating_conditions": 14,
+    "status": "recorded (bf16)",
+    "reference": "sdpa_math_bfloat16",
+    "by_output": {
+     "out": "0/69",
+     "dq": "31/69",
+     "dk": "30/69",
+     "dv": "25/69"
+    }
+   }
+  },
+  "F": {
+   "spec": "specs/phase2/spec_attention.py v0.1",
+   "beyond_over_elements": {
+    "flex_attention_float32": {
+     "out": "0/259008"
+    },
+    "flex_eager_float32": {
+     "out": "0/322944"
+    },
+    "hf_eager_attention": {
+     "out": "0/322944"
+    },
+    "inductor_attention_float32": {
+     "out": "0/322944"
+    },
+    "manual_eager_float32": {
+     "out": "0/322944"
+    },
+    "manual_eager_float64": {
+     "out": "0/322944"
+    },
+    "sdpa_cudnn_bfloat16": {
+     "out": "474/322944"
+    },
+    "sdpa_efficient_bfloat16": {
+     "out": "468/308736"
+    },
+    "sdpa_efficient_float32": {
+     "out": "0/308736"
+    },
+    "sdpa_flash_bfloat16": {
+     "out": "276/199488"
+    },
+    "sdpa_math_bfloat16": {
+     "out": "411/322944"
+    },
+    "sdpa_math_cpu_float32": {
+     "out": "0/322944"
+    },
+    "sdpa_math_cpu_float64": {
+     "out": "0/322944"
+    },
+    "sdpa_math_cuda_float64": {
+     "out": "0/322944"
+    },
+    "sdpa_math_float32": {
+     "out": "0/322944"
+    },
+    "xformers_memory_efficient": {
+     "out": "468/308736"
+    }
+   },
+   "spec_status": {
+    "ok": 144
+   },
+   "precision_invariance": {
+    "no semantic element": 216
+   },
+   "no_f_outputs": {},
+   "seconds": 36.0
+  },
+  "P": {
+   "preregistered_2b": {
+    "flex_attention_float32": {
+     "P_rows_sum_to_one": "0/69",
+     "P_causal_independence": "0/12",
+     "P_masked_keys_no_influence": "0/24",
+     "P_dead_keys_zero_grad": "0/24",
+     "P_gqa_equals_repeated_kv": "0/3"
+    },
+    "flex_eager_float32": {
+     "P_rows_sum_to_one": "0/72",
+     "P_causal_independence": "0/12",
+     "P_masked_keys_no_influence": "0/24",
+     "P_dead_keys_zero_grad": "0/24",
+     "P_gqa_equals_repeated_kv": "0/3"
+    },
+    "hf_eager_attention": {
+     "P_rows_sum_to_one": "0/72",
+     "P_causal_independence": "0/12",
+     "P_masked_keys_no_influence": "0/24",
+     "P_dead_keys_zero_grad": "0/24",
+     "P_gqa_equals_repeated_kv": "0/3"
+    },
+    "inductor_attention_float32": {
+     "P_rows_sum_to_one": "0/72",
+     "P_causal_independence": "0/12",
+     "P_masked_keys_no_influence": "0/24",
+     "P_dead_keys_zero_grad": "0/24",
+     "P_gqa_equals_repeated_kv": "0/3"
+    },
+    "manual_eager_float32": {
+     "P_rows_sum_to_one": "0/72",
+     "P_causal_independence": "0/12",
+     "P_masked_keys_no_influence": "0/24",
+     "P_dead_keys_zero_grad": "0/24",
+     "P_gqa_equals_repeated_kv": "0/3"
+    },
+    "sdpa_cudnn_bfloat16": {
+     "P_rows_sum_to_one": "0/72",
+     "P_causal_independence": "0/12",
+     "P_masked_keys_no_influence": "0/24",
+     "P_dead_keys_zero_grad": "0/24",
+     "P_gqa_equals_repeated_kv": "0/3"
+    },
+    "sdpa_efficient_bfloat16": {
+     "P_rows_sum_to_one": "0/69",
+     "P_causal_independence": "0/12",
+     "P_masked_keys_no_influence": "0/24",
+     "P_dead_keys_zero_grad": "0/24"
+    },
+    "sdpa_efficient_float32": {
+     "P_rows_sum_to_one": "0/69",
+     "P_causal_independence": "0/12",
+     "P_masked_keys_no_influence": "0/24",
+     "P_dead_keys_zero_grad": "0/24"
+    },
+    "sdpa_flash_bfloat16": {
+     "P_rows_sum_to_one": "0/27",
+     "P_causal_independence": "0/3",
+     "P_gqa_equals_repeated_kv": "0/3"
+    },
+    "sdpa_math_bfloat16": {
+     "P_rows_sum_to_one": "0/72",
+     "P_causal_independence": "0/12",
+     "P_masked_keys_no_influence": "0/24",
+     "P_dead_keys_zero_grad": "0/24",
+     "P_gqa_equals_repeated_kv": "0/3"
+    },
+    "sdpa_math_cpu_float64": {
+     "P_rows_sum_to_one": "0/72",
+     "P_causal_independence": "0/12",
+     "P_masked_keys_no_influence": "0/24",
+     "P_dead_keys_zero_grad": "0/24",
+     "P_gqa_equals_repeated_kv": "0/3"
+    },
+    "sdpa_math_float32": {
+     "P_rows_sum_to_one": "0/72",
+     "P_causal_independence": "0/12",
+     "P_masked_keys_no_influence": "0/24",
+     "P_dead_keys_zero_grad": "0/24",
+     "P_gqa_equals_repeated_kv": "0/3"
+    },
+    "xformers_memory_efficient": {
+     "P_rows_sum_to_one": "0/69",
+     "P_causal_independence": "0/12",
+     "P_masked_keys_no_influence": "0/24",
+     "P_dead_keys_zero_grad": "0/24"
+    }
+   },
+   "closure_gradcheck_jvp": {
+    "sdpa_math_cpu_float64/gradcheck": {
+     "pass": 19
+    },
+    "sdpa_math_cpu_float64/jvp_vjp": {
+     "pass": 19
+    },
+    "sdpa_math_cuda_float64/gradcheck": {
+     "pass": 19
+    },
+    "sdpa_math_cuda_float64/jvp_vjp": {
+     "pass": 19
+    },
+    "manual_eager_float64/gradcheck": {
+     "pass": 19
+    },
+    "manual_eager_float64/jvp_vjp": {
+     "pass": 19
+    },
+    "sdpa_math_float32/jvp_vjp": {
+     "pass": 19
+    },
+    "sdpa_efficient_float32/jvp_vjp": {
+     "unsupported": 19
+    },
+    "manual_eager_float32/jvp_vjp": {
+     "pass": 19
+    },
+    "inductor_attention_float32/jvp_vjp": {
+     "pass": 19
+    },
+    "flex_eager_float32/jvp_vjp": {
+     "unsupported": 18,
+     "not run (flex head_dim 72, #164931)": 1
+    }
+   },
+   "seconds": 2.1
+  },
+  "FR": {
+   "case_status": {
+    "ok": 47,
+    "not run": 1
+   },
+   "elements": {
+    "ok_elements": 259008,
+    "e_num_beyond_tau32_finite_K": 0,
+    "K_special_vs_f_finite_column4": 0,
+    "f_undefined_excluded": 6720,
+    "ok_elements_pure": 259008,
+    "e_sem_certified_pure": 255548
+   },
+   "max_pure_e_sem_gap_relative": 1.634047444537616e-08,
+   "cases_not_ok": {
+    "flex_attention_float32/att_equal_none_mha_sNone_d72": "2.10 does not compile flex decoding for head_dim 72 (#164931)"
+   },
+   "seconds": 501.2
+  },
+  "columns": {
+   "3": [
+    "ATT-A1 rows without an allowed key: zero (SDPA math / efficient, flex, xformers), NaN with non-finite dK/dV (manual eager, Inductor), finite non-zero (HF eager, cuDNN bf16) -- results/essential/phase2b/attention/analysis.json"
+   ]
+  }
+ },
+ "packing": {
+  "g3": {
+   "factor_levels": {
+    "docs": 3,
+    "lengths": 3,
+    "impl": 3
+   },
+   "full_factorial": 27,
+   "planned": 12,
+   "executed": 9,
+   "uncovered_combinations": 18,
+   "risk_points": [
+    "no cross-document leakage",
+    "position ids reset"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "packed output of each document == the document run alone (no leakage)"
+    ],
+    "FR": "mode A (flex)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "B": 9,
+   "A": 9
+  },
+  "E": {
+   "flex_block_mask": {
+    "compared": 27,
+    "violating": 0,
+    "reference": "flex_eager_block_mask"
+   },
+   "flex_eager_block_mask": "reference or recorded only (no E)",
+   "hf_packed": {
+    "compared": 27,
+    "violating": 0,
+    "reference": "hf_packed_eager"
+   },
+   "hf_packed_eager": "reference or recorded only (no E)",
+   "sdpa_block_mask": {
+    "compared": 27,
+    "violating": 0,
+    "reference": "sdpa_math_block_mask"
+   },
+   "sdpa_math_block_mask": "reference or recorded only (no E)"
+  },
+  "F": {
+   "spec": "specs/phase2/spec_attention.py v0.1 (packed_mask)",
+   "beyond_over_elements": {
+    "flex_block_mask": {
+     "out_packed": "0/43200"
+    },
+    "flex_eager_block_mask": {
+     "out_packed": "0/43200"
+    },
+    "flex_eager_block_mask_float64": {
+     "out_packed": "0/43200"
+    },
+    "sdpa_block_mask": {
+     "out_packed": "0/43200"
+    },
+    "sdpa_math_block_mask": {
+     "out_packed": "0/43200"
+    },
+    "sdpa_math_block_mask_float64": {
+     "out_packed": "0/43200"
+    }
+   },
+   "spec_status": {
+    "ok": 27
+   },
+   "precision_invariance": {
+    "no semantic element": 54
+   },
+   "no_f_outputs": {},
+   "seconds": 1.7
+  },
+  "P": {
+   "preregistered_2b": {
+    "flex_block_mask": {
+     "P_no_leakage": {
+      "violating": 0,
+      "checked": 27,
+      "max_ratio": 0.0033194001698749246
+     }
+    },
+    "flex_eager_block_mask": {
+     "P_no_leakage": {
+      "violating": 0,
+      "checked": 27,
+      "max_ratio": 0.003058358561247587
+     }
+    },
+    "hf_packed": {
+     "P_no_leakage": {
+      "violating": 0,
+      "checked": 27,
+      "max_ratio": 0.056381630011846366
+     }
+    },
+    "hf_packed_eager": {
+     "P_no_leakage": {
+      "violating": 0,
+      "checked": 27,
+      "max_ratio": 0.04219041044632166
+     }
+    },
+    "sdpa_block_mask": {
+     "P_no_leakage": {
+      "violating": 0,
+      "checked": 27,
+      "max_ratio": 0.0028489516911314157
+     }
+    },
+    "sdpa_math_block_mask": {
+     "P_no_leakage": {
+      "violating": 0,
+      "checked": 27,
+      "max_ratio": 0.0017812224796017193
+     }
+    }
+   },
+   "closure_gradcheck_jvp": "not run (no differentiable candidate output in this family or covered by the 2b P)",
+   "seconds": null
+  },
+  "FR": {
+   "case_status": {
+    "ok": 9
+   },
+   "elements": {
+    "ok_elements": 43200,
+    "e_num_beyond_tau32_finite_K": 0,
+    "K_special_vs_f_finite_column4": 0,
+    "f_undefined_excluded": 0,
+    "ok_elements_pure": 43200,
+    "e_sem_certified_pure": 38592
+   },
+   "max_pure_e_sem_gap_relative": 1.5022384096552158e-08,
+   "cases_not_ok": {},
+   "seconds": 75.9
+  },
+  "columns": {}
+ },
+ "rope": {
+  "g3": {
+   "factor_levels": {
+    "convention": 2,
+    "offset": 2,
+    "scaling": 2,
+    "head_dim": 2
+   },
+   "full_factorial": 16,
+   "planned": 7,
+   "executed": 6,
+   "uncovered_combinations": 10,
+   "risk_points": [
+    "convention differences separated from real errors",
+    "position offset",
+    "scaling variants (linear, ntk)"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "norm preservation per pair",
+     "relative position: <R(m) q, R(n) k> depends on m - n only",
+     "R(0) = identity"
+    ],
+    "FR": "mode A (Liger, Unsloth)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "B": 6,
+   "A": 6
+  },
+  "E": {
+   "hf_apply_rotary": "0/12",
+   "liger_rope": "0/12",
+   "ref_torch": "reference or recorded only (no E)",
+   "ref_torch_float64": "0/18",
+   "unsloth_rope": "0/12"
+  },
+  "F": {
+   "spec": "specs/phase2/spec_attention.py v0.1 (rope_apply)",
+   "beyond_over_elements": {
+    "hf_apply_rotary": {
+     "q": "0/69696",
+     "k": "0/69696"
+    },
+    "liger_rope": {
+     "q": "0/69696",
+     "k": "0/69696"
+    },
+    "ref_torch": {
+     "q": "0/103488",
+     "k": "0/103488"
+    },
+    "ref_torch_cuda_float64": {
+     "q": "0/103488",
+     "k": "0/103488"
+    },
+    "ref_torch_float64": {
+     "q": "0/103488",
+     "k": "0/103488"
+    },
+    "unsloth_rope": {
+     "q": "0/69696",
+     "k": "0/69696"
+    }
+   },
+   "spec_status": {
+    "ok": 18
+   },
+   "precision_invariance": {
+    "no semantic element": 36
+   },
+   "no_f_outputs": {},
+   "seconds": 3.3
+  },
+  "P": {
+   "preregistered_2b": {
+    "hf_apply_rotary": {
+     "P_pair_norm_preserved": "0/12",
+     "P_relative_position": "0/12",
+     "P_identity_at_zero": "0/12"
+    },
+    "liger_rope": {
+     "P_pair_norm_preserved": "0/12",
+     "P_relative_position": "0/12",
+     "P_identity_at_zero": "0/12"
+    },
+    "ref_torch": {
+     "P_pair_norm_preserved": "0/18",
+     "P_relative_position": "0/18",
+     "P_identity_at_zero": "0/18"
+    },
+    "ref_torch_float64": {
+     "P_pair_norm_preserved": "0/18",
+     "P_relative_position": "0/18",
+     "P_identity_at_zero": "0/18"
+    },
+    "unsloth_rope": {
+     "P_pair_norm_preserved": "0/12",
+     "P_relative_position": "0/12",
+     "P_identity_at_zero": "0/12"
+    }
+   },
+   "closure_gradcheck_jvp": {
+    "ref_torch_float64/gradcheck": {
+     "pass": 6
+    },
+    "ref_torch_float64/jvp_vjp": {
+     "pass": 6
+    },
+    "ref_torch_cuda_float64/gradcheck": {
+     "pass": 6
+    },
+    "ref_torch_cuda_float64/jvp_vjp": {
+     "pass": 6
+    },
+    "ref_torch/jvp_vjp": {
+     "pass": 6
+    },
+    "hf_apply_rotary/jvp_vjp": {
+     "unsupported": 6
+    }
+   },
+   "seconds": 0.3
+  },
+  "FR": {
+   "status": "mode B not run (no Triton candidate with spec f in this family)"
+  },
+  "columns": {}
+ },
+ "normalization": {
+  "g3": {
+   "factor_levels": {
+    "op": 5,
+    "values": 4,
+    "affine": 2,
+    "batch": 3
+   },
+   "full_factorial": 120,
+   "planned": 25,
+   "executed": 23,
+   "uncovered_combinations": 97,
+   "risk_points": [
+    "eps position",
+    "variance definition",
+    "BN running statistics",
+    "BN eval vs train"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "scale invariance (norm(a x) = norm(x) for a > 0, eps -> 0 limit)",
+     "BN running_var uses n / (n - 1)",
+     "BN eval uses running statistics only"
+    ],
+    "FR": "mode A",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "A": 23
+  },
+  "E": {
+   "eager_cpu_float32": "reference or recorded only (no E)",
+   "eager_cpu_float64": "reference or recorded only (no E)",
+   "eager_cuda_bfloat16": "reference or recorded only (no E)",
+   "eager_cuda_float32": "reference or recorded only (no E)",
+   "eager_cuda_float64": {
+    "violating_conditions": [],
+    "reference": "eager_cpu_float64",
+    "by_output": {
+     "y": "0/69",
+     "dx": "0/69",
+     "dw": "0/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    }
+   },
+   "inductor_cuda_bfloat16": {
+    "violating_conditions": [
+     "norm_batch_norm_eval_constant_rows_aff_b1",
+     "norm_batch_norm_eval_gauss_aff_b1",
+     "norm_batch_norm_eval_huge_offset_aff_b1",
+     "norm_batch_norm_eval_tiny_aff_b1",
+     "norm_batch_norm_train_constant_rows_aff_b1",
+     "norm_batch_norm_train_gauss_aff_b1",
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_batch_norm_train_tiny_aff_b1",
+     "norm_group_norm_gauss_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1"
+    ],
+    "reference": "eager_cuda_bfloat16",
+    "by_output": {
+     "y": "5/69",
+     "dx": "11/69",
+     "dw": "14/66",
+     "db": "13/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    }
+   },
+   "inductor_cuda_float32": {
+    "violating_conditions": [
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_group_norm_constant_rows_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1",
+     "norm_layer_norm_huge_offset_aff_b1"
+    ],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "y": "9/69",
+     "dx": "7/69",
+     "dw": "11/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    }
+   },
+   "liger_layernorm": {
+    "violating_conditions": [
+     "norm_layer_norm_huge_offset_aff_b1"
+    ],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "y": "2/18",
+     "dx": "2/18",
+     "dw": "2/18",
+     "db": "0/18"
+    }
+   },
+   "liger_rmsnorm": {
+    "violating_conditions": [],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "y": "0/12",
+     "dx": "0/12",
+     "dw": "0/12"
+    }
+   },
+   "nightly_eager_cuda_float32": {
+    "violating_conditions": [
+     "norm_group_norm_huge_offset_aff_b1"
+    ],
+    "reference": "eager_cuda_float32",
+    "by_output": {
+     "y": "3/69",
+     "dx": "3/69",
+     "dw": "3/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    }
+   },
+   "nightly_inductor_cuda_float32": {
+    "violating_conditions": [
+     "norm_batch_norm_train_huge_offset_aff_b1",
+     "norm_group_norm_huge_offset_aff_b1",
+     "norm_layer_norm_huge_offset_aff_b1"
+    ],
+    "reference": "nightly_eager_cuda_float32",
+    "by_output": {
+     "y": "8/69",
+     "dx": "5/69",
+     "dw": "4/66",
+     "db": "0/54",
+     "rm": "0/24",
+     "rv": "0/24"
+    }
+   }
+  },
+  "F": {
+   "spec": "specs/phase2/spec_normalization.py v0.1",
+   "beyond_over_elements": {
+    "eager_cpu_float32": {
+     "y": "247/5400",
+     "rm": "0/72",
+     "rv": "0/72"
+    },
+    "eager_cpu_float64": {
+     "y": "0/5400",
+     "rm": "0/72",
+     "rv": "0/72"
+    },
+    "eager_cuda_bfloat16": {
+     "y": "615/5400",
+     "rm": "0/72",
+     "rv": "18/72"
+    },
+    "eager_cuda_float32": {
+     "y": "250/5400",
+     "rm": "0/72",
+     "rv": "0/72"
+    },
+    "eager_cuda_float64": {
+     "y": "0/5400",
+     "rm": "0/72",
+     "rv": "0/72"
+    },
+    "inductor_cuda_bfloat16": {
+     "y": "615/5400",
+     "rm": "0/72",
+     "rv": "18/72"
+    },
+    "inductor_cuda_float32": {
+     "y": "266/5400",
+     "rm": "0/72",
+     "rv": "0/72"
+    },
+    "liger_layernorm": {
+     "y": "85/2340"
+    },
+    "nightly_eager_cuda_float32": {
+     "y": "255/5400",
+     "rm": "0/72",
+     "rv": "0/72"
+    },
+    "nightly_inductor_cuda_float32": {
+     "y": "237/5400",
+     "rm": "0/72",
+     "rv": "0/72"
+    },
+    "liger_rmsnorm": {
+     "y": "0/720"
+    }
+   },
+   "spec_status": {},
+   "precision_invariance": {
+    "no semantic element": 138
+   },
+   "no_f_outputs": null,
+   "seconds": 2.2
+  },
+  "P": {
+   "preregistered_2b": {
+    "eager_cpu_float32": {
+     "P_scale_invariance": "6/36",
+     "P_bn_running_var_unbiased": "0/12"
+    },
+    "eager_cpu_float64": {
+     "P_scale_invariance": "0/36",
+     "P_bn_running_var_unbiased": "0/12"
+    },
+    "eager_cuda_float32": {
+     "P_scale_invariance": "6/36",
+     "P_bn_running_var_unbiased": "0/12"
+    },
+    "eager_cuda_float64": {
+     "P_scale_invariance": "0/36",
+     "P_bn_running_var_unbiased": "0/12"
+    },
+    "inductor_cuda_float32": {
+     "P_scale_invariance": "0/36",
+     "P_bn_running_var_unbiased": "0/12"
+    },
+    "liger_layernorm": {
+     "P_scale_invariance": "0/12"
+    },
+    "liger_rmsnorm": {
+     "P_scale_invariance": "0/9"
+    },
+    "nightly_eager_cuda_float32": {
+     "P_scale_invariance": "6/36",
+     "P_bn_running_var_unbiased": "0/12"
+    },
+    "nightly_inductor_cuda_float32": {
+     "P_scale_invariance": "0/36",
+     "P_bn_running_var_unbiased": "0/12"
+    }
+   },
+   "closure_gradcheck_jvp": {
+    "eager_cpu_float64/gradcheck": {
+     "pass": 23
+    },
+    "eager_cpu_float64/jvp_vjp": {
+     "pass": 23
+    },
+    "eager_cuda_float64/gradcheck": {
+     "pass": 23
+    },
+    "eager_cuda_float64/jvp_vjp": {
+     "pass": 23
+    },
+    "eager_cpu_float32/jvp_vjp": {
+     "pass": 23
+    },
+    "eager_cuda_float32/jvp_vjp": {
+     "pass": 23
+    },
+    "inductor_cuda_float32/jvp_vjp": {
+     "pass": 23
+    }
+   },
+   "seconds": 1.0
+  },
+  "FR": {
+   "case_status": {
+    "ok": 23
+   },
+   "elements": {
+    "ok_elements": 5544,
+    "e_num_beyond_tau32_finite_K": 266,
+    "K_special_vs_f_finite_column4": 0,
+    "f_undefined_excluded": 0,
+    "ok_elements_pure": 5544,
+    "e_sem_certified_pure": 3724,
+    "e_sem_certified_after_attribution": 144,
+    "e_sem_certified_where_attribution_ran": 3724
+   },
+   "max_pure_e_sem_gap_relative": 1.9840653022163395e-08,
+   "cases_not_ok": {},
+   "seconds": 29.6
+  },
+  "columns": {
+   "difference": [
+    "float32 huge_offset: F beyond τ32 in 247/5400 y elements of eager CPU float32; precision invariance: no semantic element (numerical); contract states no accuracy requirement -> 契约外，待审阅 (no defect verdict)"
+   ]
+  }
+ },
+ "optimizers": {
+  "g3": {
+   "factor_levels": {
+    "opt": 7,
+    "impl": 3,
+    "maximize": 2,
+    "weight_decay": 2,
+    "state": 6
+   },
+   "full_factorial": 504,
+   "planned": 31,
+   "executed": 23,
+   "uncovered_combinations": 481,
+   "risk_points": [
+    "weight decay position (decoupled vs L2)",
+    "amsgrad max over v (not v_hat)",
+    "maximize",
+    "eps position",
+    "nesterov / dampening",
+    "RMSprop centered",
+    "Adafactor factorisation and clipping threshold",
+    "parameter-group differences"
+   ],
+   "state_sequences": [
+    "init -> normal -> zero-grad -> restore",
+    "init -> steps -> save/restore -> continue",
+    "init -> skipped (non-finite) -> next normal"
+   ],
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "for_loop == foreach == fused (same contract)",
+     "maximize(g) == minimize(-g)",
+     "zero grad vs grad None: documented difference (None skips the parameter)",
+     "save/restore mid-run continues identically",
+     "amsgrad: max_exp_avg_sq non-decreasing"
+    ],
+    "FR": "mode A (compiled step)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "A": 21,
+   "B": 3,
+   "X": 2
+  },
+  "E": {
+   "bnb_adamw32bit_cuda": {
+    "violating_conditions": 0,
+    "compared": 24,
+    "status": "executed",
+    "reference": "torch_for_loop_cuda"
+   },
+   "hf_adafactor_cuda": {
+    "status": "not applicable"
+   },
+   "torch_compiled_step_cuda": {
+    "violating_conditions": 0,
+    "compared": 69,
+    "status": "executed",
+    "reference": "torch_for_loop_cuda"
+   },
+   "torch_for_loop_cpu": {
+    "status": "reference (K_eager)"
+   },
+   "torch_for_loop_cuda": {
+    "status": "reference (K_eager)"
+   },
+   "torch_foreach_cpu": {
+    "violating_conditions": 0,
+    "compared": 69,
+    "status": "executed",
+    "reference": "torch_for_loop_cpu"
+   },
+   "torch_foreach_cuda": {
+    "violating_conditions": 0,
+    "compared": 69,
+    "status": "executed",
+    "reference": "torch_for_loop_cuda"
+   },
+   "torch_fused_cpu": {
+    "violating_conditions": 0,
+    "compared": 57,
+    "status": "executed",
+    "reference": "torch_for_loop_cpu"
+   },
+   "torch_fused_cuda": {
+    "violating_conditions": 0,
+    "compared": 57,
+    "status": "executed",
+    "reference": "torch_for_loop_cuda"
+   },
+   "torchao_adamw_fp32_cuda": {
+    "violating_conditions": 0,
+    "compared": 24,
+    "status": "executed",
+    "reference": "torch_for_loop_cuda"
+   }
+  },
+  "F": {
+   "spec": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "beyond_over_elements": {
+    "bnb_adamw32bit_cuda": {
+     "param": "0/6324"
+    },
+    "torch_compiled_step_cuda": {
+     "param": "0/14688",
+     "state.exp_avg": "0/8874",
+     "state.exp_avg_sq": "0/8874",
+     "state.max_exp_avg_sq": "0/1938",
+     "state.momentum_buffer": "306/3672",
+     "state.square_avg": "0/1122",
+     "state.grad_avg": "0/1122"
+    },
+    "torch_for_loop_cpu": {
+     "param": "0/14688",
+     "state.exp_avg": "0/8874",
+     "state.exp_avg_sq": "0/8874",
+     "state.max_exp_avg_sq": "0/1938",
+     "state.momentum_buffer": "306/3672",
+     "state.square_avg": "0/1122",
+     "state.grad_avg": "0/1122"
+    },
+    "torch_for_loop_cpu_float64": {
+     "param": "0/14688",
+     "state.exp_avg": "0/8874",
+     "state.exp_avg_sq": "0/8874",
+     "state.max_exp_avg_sq": "0/1938",
+     "state.momentum_buffer": "306/3672",
+     "state.square_avg": "0/1122",
+     "state.grad_avg": "0/1122"
+    },
+    "torch_for_loop_cuda": {
+     "param": "0/14688",
+     "state.exp_avg": "0/8874",
+     "state.exp_avg_sq": "0/8874",
+     "state.max_exp_avg_sq": "0/1938",
+     "state.momentum_buffer": "306/3672",
+     "state.square_avg": "0/1122",
+     "state.grad_avg": "0/1122"
+    },
+    "torch_for_loop_cuda_float64": {
+     "param": "0/14688",
+     "state.exp_avg": "0/8874",
+     "state.exp_avg_sq": "0/8874",
+     "state.max_exp_avg_sq": "0/1938",
+     "state.momentum_buffer": "306/3672",
+     "state.square_avg": "0/1122",
+     "state.grad_avg": "0/1122"
+    },
+    "torch_foreach_cpu": {
+     "param": "0/14688",
+     "state.exp_avg": "0/8874",
+     "state.exp_avg_sq": "0/8874",
+     "state.max_exp_avg_sq": "0/1938",
+     "state.momentum_buffer": "306/3672",
+     "state.square_avg": "0/1122",
+     "state.grad_avg": "0/1122"
+    },
+    "torch_foreach_cpu_float64": {
+     "param": "0/14688",
+     "state.exp_avg": "0/8874",
+     "state.exp_avg_sq": "0/8874",
+     "state.max_exp_avg_sq": "0/1938",
+     "state.momentum_buffer": "306/3672",
+     "state.square_avg": "0/1122",
+     "state.grad_avg": "0/1122"
+    },
+    "torch_foreach_cuda": {
+     "param": "0/14688",
+     "state.exp_avg": "0/8874",
+     "state.exp_avg_sq": "0/8874",
+     "state.max_exp_avg_sq": "0/1938",
+     "state.momentum_buffer": "306/3672",
+     "state.square_avg": "0/1122",
+     "state.grad_avg": "0/1122"
+    },
+    "torch_foreach_cuda_float64": {
+     "param": "0/14688",
+     "state.exp_avg": "0/8874",
+     "state.exp_avg_sq": "0/8874",
+     "state.max_exp_avg_sq": "0/1938",
+     "state.momentum_buffer": "306/3672",
+     "state.square_avg": "0/1122",
+     "state.grad_avg": "0/1122"
+    },
+    "torch_fused_cpu": {
+     "param": "0/13362",
+     "state.exp_avg": "0/8874",
+     "state.exp_avg_sq": "0/8874",
+     "state.max_exp_avg_sq": "0/1938",
+     "state.momentum_buffer": "306/2550"
+    },
+    "torch_fused_cuda": {
+     "param": "0/13362",
+     "state.exp_avg": "0/8874",
+     "state.exp_avg_sq": "0/8874",
+     "state.max_exp_avg_sq": "0/1938",
+     "state.momentum_buffer": "306/2550"
+    },
+    "torchao_adamw_fp32_cuda": {
+     "param": "0/6324",
+     "state.exp_avg": "0/5508",
+     "state.exp_avg_sq": "0/5508"
+    }
+   },
+   "spec_status": {
+    "ok": 63,
+    "outside the contract (Adafactor)": 6
+   },
+   "precision_invariance": {
+    "no semantic element": 744,
+    "semantic deviation present": 12
+   },
+   "no_f_outputs": {},
+   "seconds": 1.3
+  },
+  "P": {
+   "preregistered_2b": {
+    "(family)": {
+     "bnb_adamw32bit_cuda": {
+      "P_none": {
+       "checked": 6,
+       "violated": 0
+      },
+      "P_skip_sequence": {
+       "checked": 3,
+       "violated": 0
+      },
+      "P_restore": {
+       "checked": 6,
+       "violated": 0
+      }
+     },
+     "hf_adafactor_cuda": {
+      "P_restore": {
+       "checked": 3,
+       "violated": 0
+      }
+     },
+     "torch_compiled_step_cuda": {
+      "P_mirror": {
+       "checked": 69,
+       "violated": 0
+      },
+      "P_amsgrad": {
+       "checked": 9,
+       "violated": 0
+      },
+      "P_none": {
+       "checked": 6,
+       "violated": 0
+      },
+      "P_skip_sequence": {
+       "checked": 3,
+       "violated": 0
+      },
+      "P_restore": {
+       "checked": 27,
+       "violated": 0
+      }
+     },
+     "torch_for_loop_cpu": {
+      "P_mirror": {
+       "checked": 69,
+       "violated": 0
+      },
+      "P_amsgrad": {
+       "checked": 9,
+       "violated": 0
+      },
+      "P_none": {
+       "checked": 6,
+       "violated": 0
+      },
+      "P_skip_sequence": {
+       "checked": 3,
+       "violated": 0
+      },
+      "P_restore": {
+       "checked": 27,
+       "violated": 0
+      }
+     },
+     "torch_for_loop_cuda": {
+      "P_mirror": {
+       "checked": 69,
+       "violated": 0
+      },
+      "P_amsgrad": {
+       "checked": 9,
+       "violated": 0
+      },
+      "P_none": {
+       "checked": 6,
+       "violated": 0
+      },
+      "P_skip_sequence": {
+       "checked": 3,
+       "violated": 0
+      },
+      "P_restore": {
+       "checked": 27,
+       "violated": 0
+      }
+     },
+     "torch_foreach_cpu": {
+      "P_mirror": {
+       "checked": 69,
+       "violated": 0
+      },
+      "P_amsgrad": {
+       "checked": 9,
+       "violated": 0
+      },
+      "P_none": {
+       "checked": 6,
+       "violated": 0
+      },
+      "P_skip_sequence": {
+       "checked": 3,
+       "violated": 0
+      },
+      "P_restore": {
+       "checked": 27,
+       "violated": 0
+      }
+     },
+     "torch_foreach_cuda": {
+      "P_mirror": {
+       "checked": 69,
+       "violated": 0
+      },
+      "P_amsgrad": {
+       "checked": 9,
+       "violated": 0
+      },
+      "P_none": {
+       "checked": 6,
+       "violated": 0
+      },
+      "P_skip_sequence": {
+       "checked": 3,
+       "violated": 0
+      },
+      "P_restore": {
+       "checked": 27,
+       "violated": 0
+      }
+     },
+     "torch_fused_cpu": {
+      "P_mirror": {
+       "checked": 57,
+       "violated": 0
+      },
+      "P_amsgrad": {
+       "checked": 9,
+       "violated": 0
+      },
+      "P_none": {
+       "checked": 6,
+       "violated": 0
+      },
+      "P_skip_sequence": {
+       "checked": 3,
+       "violated": 0
+      },
+      "P_restore": {
+       "checked": 21,
+       "violated": 0
+      }
+     },
+     "torch_fused_cuda": {
+      "P_mirror": {
+       "checked": 57,
+       "violated": 0
+      },
+      "P_amsgrad": {
+       "checked": 9,
+       "violated": 0
+      },
+      "P_none": {
+       "checked": 6,
+       "violated": 0
+      },
+      "P_skip_sequence": {
+       "checked": 3,
+       "violated": 0
+      },
+      "P_restore": {
+       "checked": 21,
+       "violated": 0
+      }
+     },
+     "torchao_adamw_fp32_cuda": {
+      "P_none": {
+       "checked": 6,
+       "violated": 0
+      },
+      "P_skip_sequence": {
+       "checked": 3,
+       "violated": 0
+      },
+      "P_restore": {
+       "checked": 6,
+       "violated": 0
+      }
+     }
+    }
+   },
+   "closure_gradcheck_jvp": "not run (no differentiable candidate output in this family or covered by the 2b P)",
+   "seconds": null
+  },
+  "FR": {
+   "case_status": {
+    "ok": 8,
+    "no f": 1,
+    "clause pending": 1
+   },
+   "elements": {
+    "ok_elements": 2448,
+    "e_num_beyond_tau32_finite_K": 0,
+    "K_special_vs_f_finite_column4": 0,
+    "f_undefined_excluded": 0,
+    "ok_elements_mixed": 2448,
+    "e_sem_certified_mixed (not a semantic verdict)": 2435,
+    "e_sem_certified_after_attribution": 2027,
+    "e_sem_certified_where_attribution_ran": 2435
+   },
+   "max_pure_e_sem_gap_relative": 0.0,
+   "cases_not_ok": {
+    "torch_compiled_step_cuda/opt_adafactor_cold_min_wd0.0": "contract v2: X 契约外，待审阅",
+    "torch_compiled_step_cuda/opt_sgd_nesterov_cold_max_wd0.0": "O-D2 (SGD maximize placement), docs/spec_issues_phase2.md"
+   },
+   "seconds": 18.7
+  },
+  "columns": {
+   "pending": [
+    "O-D2 SGD maximize placement: momentum buffer = -(spec b) to 1.5e-16, parameters agree (docs/spec_issues_phase2.md SPEC-ISSUE-1)"
+   ]
+  }
+ },
+ "schedulers": {
+  "g3": {
+   "factor_levels": {
+    "sched": 4,
+    "resume": 2,
+    "steps": 3
+   },
+   "full_factorial": 24,
+   "planned": 12,
+   "executed": 10,
+   "uncovered_combinations": 14,
+   "risk_points": [
+    "closed form vs recursion",
+    "last_epoch / resume",
+    "phase boundaries (warmup end, cycle end)"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "recursive (step) == closed form (get_closed_form / documented formula)",
+     "resume at k == continuous run",
+     "values at phase boundaries"
+    ],
+    "FR": "not applicable",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "D": 2,
+   "B": 6,
+   "A": 6,
+   "X": 2
+  },
+  "E": {
+   "hf_schedulers": "reference or recorded only (no E)",
+   "torch_lr_scheduler": "reference or recorded only (no E)",
+   "torch_nightly_lr_scheduler": "0/18"
+  },
+  "F": {
+   "spec": "specs/phase2/spec_training_program.py v0.1",
+   "beyond_over_elements": {
+    "torch_lr_scheduler": {
+     "lr_before_Tmax": "0/36",
+     "lr_from_Tmax_pending": "0/24"
+    },
+    "torch_nightly_lr_scheduler": {
+     "lr_before_Tmax": "0/36",
+     "lr_from_Tmax_pending": "0/24"
+    },
+    "hf_schedulers": {
+     "lr_before_Tmax": "0/6078"
+    }
+   },
+   "spec_status": {
+    "refused / outside the contract: D 不合法（规格拒绝）": 6,
+    "ok": 18,
+    "refused / outside the contract: X 契约外，待审阅": 6
+   },
+   "precision_invariance": {},
+   "no_f_outputs": {},
+   "seconds": 0.8
+  },
+  "P": {
+   "preregistered_2b": {
+    "hf_schedulers": {
+     "P_phase_boundaries": "12/36",
+     "P_resume_equals_continuous": "0/3"
+    },
+    "torch_lr_scheduler": {
+     "P_chained_equals_closed_form": "0/12",
+     "P_phase_boundaries": "6/42",
+     "P_resume_equals_continuous": "0/9"
+    },
+    "torch_nightly_lr_scheduler": {
+     "P_chained_equals_closed_form": "0/12",
+     "P_phase_boundaries": "6/42",
+     "P_resume_equals_continuous": "0/9"
+    }
+   },
+   "closure_gradcheck_jvp": "not run (no differentiable candidate output in this family or covered by the 2b P)",
+   "seconds": null
+  },
+  "FR": {
+   "status": "mode B not run (no Triton candidate with spec f in this family)"
+  },
+  "columns": {
+   "pending": [
+    "SCH-A1 for T_cur >= T_max (0/24 beyond against the closed form, recorded only)",
+    "contract label of HF total > warmup (2 conditions marked D)"
+   ]
+  }
+ },
+ "clip_amp": {
+  "g3": {
+   "factor_levels": {
+    "op": 3,
+    "norm_type": 3,
+    "grads": 4,
+    "foreach": 2,
+    "shards": 2
+   },
+   "full_factorial": 144,
+   "planned": 16,
+   "executed": 13,
+   "uncovered_combinations": 131,
+   "risk_points": [
+    "norm_type (2, inf, 1)",
+    "non-finite handling (error_if_nonfinite)",
+    "unscale before clip",
+    "skipped steps",
+    "merging sharded norms (sum of squares, not sum of norms)"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "clip(c) leaves norms <= c unchanged and scales others to c",
+     "shard merge: sqrt(sum of squares) == global norm",
+     "a non-finite step is skipped and the scale halves (GradScaler)"
+    ],
+    "FR": "not applicable",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "A": 12,
+   "X": 1
+  },
+  "E": {
+   "accelerate_clip": "0/27",
+   "torch_clip_cpu": "reference or recorded only (no E)",
+   "torch_clip_cpu_float64": "reference or recorded only (no E)",
+   "torch_clip_cuda": "reference or recorded only (no E)"
+  },
+  "F": {
+   "spec": "specs/phase2/spec_training_program.py v0.1",
+   "beyond_over_elements": {
+    "accelerate_clip": {
+     "clipped": "0/540",
+     "total_norm": "0/18"
+    },
+    "torch_clip_cpu": {
+     "clipped": "0/630",
+     "total_norm": "0/21",
+     "unscaled": "0/90"
+    },
+    "torch_clip_cpu_float64": {
+     "clipped": "0/630",
+     "total_norm": "0/21",
+     "unscaled": "0/90"
+    },
+    "torch_clip_cuda": {
+     "clipped": "0/630",
+     "total_norm": "0/21",
+     "unscaled": "0/90"
+    }
+   },
+   "spec_status": {
+    "ok": 21,
+    "outside the contract (clip_grad_value_)": 3,
+    "non-finite gradients: documented scaling by the non-finite coefficient": 15
+   },
+   "precision_invariance": {
+    "no semantic element": 45
+   },
+   "no_f_outputs": {},
+   "seconds": 0.0
+  },
+  "P": {
+   "preregistered_2b": {
+    "accelerate_clip": {
+     "P_clip_norm_scales_to_c": "0/18",
+     "P_clip_norm_leaves_small_unchanged": "0/15",
+     "P_shard_merge": "0/3"
+    },
+    "torch_clip_cpu": {
+     "P_clip_norm_scales_to_c": "0/18",
+     "P_clip_norm_leaves_small_unchanged": "0/15",
+     "P_clip_value_clamps": "0/3",
+     "H_scaler_finite_step_unscaled_exactly": "0/3",
+     "P_shard_merge": "0/3",
+     "P_scaler_nonfinite_skipped_scale_halves": "0/6"
+    },
+    "torch_clip_cpu_float64": {
+     "P_clip_norm_scales_to_c": "0/18",
+     "P_clip_norm_leaves_small_unchanged": "0/15",
+     "P_clip_value_clamps": "0/3",
+     "H_scaler_finite_step_unscaled_exactly": "0/3",
+     "P_shard_merge": "0/3",
+     "P_scaler_nonfinite_skipped_scale_halves": "0/6"
+    },
+    "torch_clip_cuda": {
+     "P_clip_norm_scales_to_c": "0/18",
+     "P_clip_norm_leaves_small_unchanged": "0/15",
+     "P_clip_value_clamps": "0/3",
+     "H_scaler_finite_step_unscaled_exactly": "0/3",
+     "P_shard_merge": "0/3",
+     "P_scaler_nonfinite_skipped_scale_halves": "0/6"
+    }
+   },
+   "closure_gradcheck_jvp": "not run (no differentiable candidate output in this family or covered by the 2b P)",
+   "seconds": null
+  },
+  "FR": {
+   "status": "mode B not run (no Triton candidate with spec f in this family)"
+  },
+  "columns": {
+   "4": [
+    "clip_grad_norm_ with non-finite gradients (error_if_nonfinite=False): scaled by the non-finite coefficient (documented) -- 15 condition x seed"
+   ]
+  }
+ },
+ "training_program": {
+  "g3": {
+   "factor_levels": {
+    "impl": 6,
+    "tokens": 3,
+    "ranks": 2
+   },
+   "full_factorial": 36,
+   "planned": 21,
+   "executed": 5,
+   "uncovered_combinations": 31,
+   "risk_points": [
+    "mean over unequal token counts",
+    "label shift",
+    "cross-rank averaging (2 gloo processes on CPU)"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "split invariance",
+     "padding-free == padded (TRL-style invariance)",
+     "rank invariance: 2 ranks == 1 rank on the concatenated batch"
+    ],
+    "FR": "not applicable",
+    "F": "spec_accumulation.py (phase-1 package) covers the accumulation window"
+   }
+  },
+  "contract_classes": {
+   "A": 5
+  },
+  "E": {
+   "accelerate_loop_1.7.0": "reference or recorded only (no E)",
+   "hf_trainer_4.45.2": "reference or recorded only (no E)",
+   "hf_trainer_4.46.0": "reference or recorded only (no E)",
+   "hf_trainer_4.57.3": "reference or recorded only (no E)",
+   "hf_trainer_5.19.0": "reference or recorded only (no E)",
+   "own_loop_torch_2.10.0": "reference or recorded only (no E)"
+  },
+  "F": {
+   "status": null
+  },
+  "P": {
+   "preregistered_2b": {},
+   "closure_gradcheck_jvp": "not run (no differentiable candidate output in this family or covered by the 2b P)",
+   "seconds": null
+  },
+  "FR": {
+   "status": "mode B not run (no Triton candidate with spec f in this family)"
+  },
+  "columns": {}
+ },
+ "moe": {
+  "g3": {
+   "factor_levels": {
+    "topk": 2,
+    "experts": 2,
+    "capacity": 3,
+    "routing": 3
+   },
+   "full_factorial": 36,
+   "planned": 10,
+   "executed": 10,
+   "uncovered_combinations": 26,
+   "risk_points": [
+    "top-k routing ties",
+    "permute / unpermute round trip",
+    "empty expert",
+    "capacity boundary",
+    "weighted combine",
+    "aux-loss counting"
+   ],
+   "state_sequences": null,
+   "methods_planned": {
+    "E": "yes",
+    "P": [
+     "permute -> unpermute is the identity",
+     "combine weights per token sum to 1",
+     "dropped tokens contribute zero",
+     "aux loss equals its documented formula on counts"
+    ],
+    "FR": "mode A (compiled)",
+    "F": "closed until the reviewer's spec is delivered and merged"
+   }
+  },
+  "contract_classes": {
+   "B": 10,
+   "A": 10
+  },
+  "E": {
+   "ref_loop_cpu": "reference or recorded only (no E)",
+   "vectorised_compiled": "0/30",
+   "vectorised_scatter_cuda": "0/30"
+  },
+  "F": {
+   "spec": "specs/phase2/spec_moe.py v0.1 (MOE-C1 renormalised, MOE-C3 drop in order of appearance)",
+   "beyond_over_elements": {
+    "ref_loop_cpu": {
+     "out": "0/2340"
+    },
+    "ref_loop_cpu_float32": {
+     "out": "0/2340"
+    },
+    "vectorised_compiled": {
+     "out": "0/2340"
+    },
+    "vectorised_scatter_cuda": {
+     "out": "0/2340"
+    },
+    "vectorised_scatter_cuda_float64": {
+     "out": "0/2340"
+    }
+   },
+   "spec_status": {
+    "ok": 30
+   },
+   "precision_invariance": {
+    "no semantic element": 60
+   },
+   "no_f_outputs": {},
+   "seconds": 0.3
+  },
+  "P": {
+   "preregistered_2b": {
+    "ref_loop_cpu": {
+     "P_permute_unpermute_identity": "0/30",
+     "P_combine_weights_sum_to_1": "0/30",
+     "P_aux_loss_formula": "0/30",
+     "P_dropped_contribute_zero": "0/8"
+    },
+    "vectorised_compiled": {
+     "P_permute_unpermute_identity": "0/30",
+     "P_combine_weights_sum_to_1": "0/30",
+     "P_aux_loss_formula": "0/30",
+     "P_dropped_contribute_zero": "0/8"
+    },
+    "vectorised_scatter_cuda": {
+     "P_permute_unpermute_identity": "0/30",
+     "P_combine_weights_sum_to_1": "0/30",
+     "P_aux_loss_formula": "0/30",
+     "P_dropped_contribute_zero": "0/8"
+    }
+   },
+   "closure_gradcheck_jvp": {
+    "ref_loop_cpu/gradcheck": {
+     "pass": 10
+    },
+    "ref_loop_cpu/jvp_vjp": {
+     "pass": 10
+    },
+    "ref_loop_cpu_float32/jvp_vjp": {
+     "pass": 10
+    },
+    "vectorised_scatter_cuda_float64/gradcheck": {
+     "pass": 10
+    },
+    "vectorised_scatter_cuda_float64/jvp_vjp": {
+     "pass": 10
+    },
+    "vectorised_scatter_cuda/jvp_vjp": {
+     "pass": 10
+    },
+    "vectorised_compiled/jvp_vjp": {
+     "pass": 10
+    }
+   },
+   "seconds": 1.1
+  },
+  "FR": {
+   "case_status": {
+    "ok": 10
+   },
+   "elements": {
+    "ok_elements": 2340,
+    "e_num_beyond_tau32_finite_K": 0,
+    "K_special_vs_f_finite_column4": 0,
+    "f_undefined_excluded": 0,
+    "ok_elements_mixed": 2340,
+    "e_sem_certified_mixed (not a semantic verdict)": 2022
+   },
+   "max_pure_e_sem_gap_relative": 0.0,
+   "cases_not_ok": {},
+   "seconds": 9.3
+  },
+  "columns": {
+   "2": [
+    "MOE-C4: the candidates' aux loss counts top-1 assignments, the spec counts dispatched experts (declared difference)"
+   ]
+  }
+ }
+}
