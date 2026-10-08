@@ -1,0 +1,453 @@
+{
+ "status": "ok",
+ "declaration_lines": 25,
+ "seconds": 572.6,
+ "levels": [
+  {
+   "level": {},
+   "status": "ok",
+   "structure_covered": true,
+   "complete_rate": 1.0,
+   "decidable_rate": 1.0,
+   "verdicts": {
+    "output": {
+     "fixed_mean": "not confirmed on these projections (not a statement that the vector has no bias)",
+     "aligned": "not confirmed on these projections (not a statement that the vector has no bias)"
+    }
+   },
+   "failure_classes": [],
+   "needs_new_general_rule": false
+  }
+ ],
+ "baseline": {
+  "status": "ok",
+  "levels": {
+   "{}": {
+    "output": {
+     "fixed_mean": {
+      "rules": {
+       "R1": {
+        "judgment": "not confirmed",
+        "basis": "endpoint-conservative t (frozen layer)",
+        "holm_adjusted_p": 1.0,
+        "mean_projection": 5.466687953330565e-07,
+        "n": 64
+       },
+       "R5": {
+        "judgment": "not confirmed",
+        "basis": "endpoint-conservative t (frozen layer)",
+        "holm_adjusted_p": 1.0,
+        "mean_projection": 1.0962556785411432e-07,
+        "n": 64
+       }
+      },
+      "summary": "not confirmed on these projections (not a statement that the vector has no bias)"
+     },
+     "aligned": {
+      "rules": {
+       "R2": {
+        "judgment": "not confirmed",
+        "basis": "endpoint-conservative t (frozen layer)",
+        "holm_adjusted_p": 0.9910138772978683,
+        "mean_projection": 9.271543063675558e-09,
+        "n": 64
+       },
+       "R3": {
+        "judgment": "not confirmed",
+        "basis": "endpoint-conservative t (frozen layer)",
+        "holm_adjusted_p": 0.48353741235865605,
+        "mean_projection": -1.08034255349475e-06,
+        "n": 64
+       }
+      },
+      "summary": "not confirmed on these projections (not a statement that the vector has no bias)"
+     }
+    }
+   }
+  }
+ },
+ "tool_report": {
+  "tool_version": "3.1",
+  "expanded_declaration": {
+   "call": "decl_binding.py:call",
+   "inputs": {
+    "inp": {
+     "state": "decl_binding.py:state",
+     "shape": [
+      1
+     ],
+     "dtype": "float32"
+    }
+   },
+   "compare": {
+    "mode": "B",
+    "measure": [
+     "output"
+    ],
+    "spec": "decl_binding.py:spec"
+   },
+   "budget": {
+    "cpu_seconds": 3600,
+    "gpu_seconds": 3600,
+    "case_timeout": 3600,
+    "max_units": 96
+   },
+   "rule_classes": {
+    "fixed_mean": [
+     "R1",
+     "R5"
+    ],
+    "aligned": [
+     "R2",
+     "R3"
+    ]
+   },
+   "multiplicity": "Holm within each rule class",
+   "units": {
+    "development": 32,
+    "confirmation": 64,
+    "seed_offset": 0
+   },
+   "alpha": 0.05,
+   "reference_classes_allowed": [
+    "complete_composed"
+   ],
+   "resolution": {
+    "ulp_fraction": 0.125
+   },
+   "factors": {},
+   "factor_levels": [
+    {}
+   ],
+   "versions": {
+    "torch": "2.10.0+cu128",
+    "triton": "3.6.0",
+    "device": "NVIDIA RTX A6000",
+    "tool": "3.1",
+    "python": "3.11.16"
+   },
+   "error_budget": null,
+   "bounded_route": "recorded only: the entry does not apply the declared error budget (bounded_mean_test is used by the calibration); approximate route (endpoint-conservative t) for every output",
+   "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
+   "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) + contract_v3 cannot-judge rules (S0 = 2, N0 = 64, n_min = 16)",
+   "reference_scope": "call-level complete only when every non-Triton upstream value is a copy of the declared inputs; otherwise kernel-level (upstream values captured) and not counted as complete for the call",
+   "declaration_sha256": "6890a6e91c808246afb7aefda0d5abd59af35a8ed1b28f56d707f0ab337eeee3"
+  },
+  "levels": [
+   {
+    "level": {},
+    "status": "ok",
+    "units": {
+     "development": 32,
+     "confirmation": 64
+    },
+    "notes": {
+     "outputs_not_written_by_triton": [],
+     "outputs_binding_not_established": [],
+     "outputs_modified_after_last_triton_write": [],
+     "outputs_whose_writing_programs_aborted": {},
+     "outputs_at_address_of_another_recorded_storage": [],
+     "ttir_coverage_complete": [
+      true
+     ]
+    },
+    "outputs": {
+     "output": {
+      "status": "evaluated",
+      "reference": {
+       "elements": 6144,
+       "complete_finite": 6144,
+       "complete_rate": 1.0,
+       "width_over_ulp": {
+        "median": 5.587935447692871e-08,
+        "p90": 3.427267074584961e-07,
+        "max": 9.626895189285278e-05
+       },
+       "resolution_target_ulp_fraction": 0.125,
+       "resolved_fraction": 1.0,
+       "reference_scope": "call-level",
+       "complete_rate_call_level": 1.0
+      },
+      "statistics": {
+       "fixed_mean": {
+        "rules": {
+         "R1": {
+          "judgment": "not confirmed",
+          "basis": "endpoint-conservative t (frozen layer)",
+          "holm_adjusted_p": 1.0,
+          "mean_projection": 5.466687931175165e-07,
+          "n": 64
+         },
+         "R5": {
+          "judgment": "not confirmed",
+          "basis": "endpoint-conservative t (frozen layer)",
+          "holm_adjusted_p": 1.0,
+          "mean_projection": 1.0962556653168517e-07,
+          "n": 64
+         }
+        },
+        "summary": "not confirmed on these projections (not a statement that the vector has no bias)"
+       },
+       "aligned": {
+        "rules": {
+         "R2": {
+          "judgment": "not confirmed",
+          "basis": "endpoint-conservative t (frozen layer)",
+          "holm_adjusted_p": 0.9910146918920273,
+          "mean_projection": 9.271543452931243e-09,
+          "n": 64
+         },
+         "R3": {
+          "judgment": "not confirmed",
+          "basis": "endpoint-conservative t (frozen layer)",
+          "holm_adjusted_p": 0.483538043297758,
+          "mean_projection": -1.0803425530067893e-06,
+          "n": 64
+         }
+        },
+        "summary": "not confirmed on these projections (not a statement that the vector has no bias)"
+       }
+      },
+      "mixed_non_triton_sources": [],
+      "not_established_reasons_seed0": {},
+      "special_values": {
+       "elements_with_special_f": 0,
+       "kr_vs_f_class_mismatch": 0,
+       "k_vs_f_class_mismatch": 0,
+       "examples": []
+      },
+      "failure_classes": [],
+      "semantic": {
+       "ok_elements": 6144,
+       "e_sem_certified": 0,
+       "max_gap_relative": 0.0,
+       "verdict_scope": "pure Triton: K_R vs f_r exact comparison"
+      }
+     }
+    },
+    "timing_seconds": {
+     "setup_compile_warmup": 0.017,
+     "inputs": 0.494,
+     "capture_first_seed": 0.007,
+     "capture": 0.28,
+     "reference": 314.638,
+     "specification": 256.539,
+     "statistics": 0.131
+    },
+    "seconds": 572.6,
+    "failure_classes": [],
+    "over_budget": false
+   }
+  ],
+  "failure_counts": {
+   "semantics missing": 0,
+   "binding": 0,
+   "enclosure too wide": 0,
+   "over budget": 0,
+   "statistics insufficient": 0
+  },
+  "failure_table": [
+   [
+    "call rejected the declared inputs",
+    "binding"
+   ],
+   [
+    "address outside every captured storage",
+    "binding"
+   ],
+   [
+    "invalid address",
+    "binding"
+   ],
+   [
+    "unrecognized",
+    "semantics missing"
+   ],
+   [
+    "no declared semantics",
+    "semantics missing"
+   ],
+   [
+    "unknown callee",
+    "semantics missing"
+   ],
+   [
+    "no reference rule",
+    "semantics missing"
+   ],
+   [
+    "libdevice",
+    "semantics missing"
+   ],
+   [
+    "loop bound",
+    "over budget"
+   ],
+   [
+    "unknown buffer",
+    "semantics missing"
+   ],
+   [
+    "domain of",
+    "enclosure too wide"
+   ],
+   [
+    "non-point",
+    "enclosure too wide"
+   ],
+   [
+    "float-to-int",
+    "enclosure too wide"
+   ],
+   [
+    "reinterpret",
+    "enclosure too wide"
+   ],
+   [
+    "not supported",
+    "semantics missing"
+   ],
+   [
+    "unsupported",
+    "semantics missing"
+   ],
+   [
+    "unknown op",
+    "semantics missing"
+   ],
+   [
+    "no derivative rule",
+    "semantics missing"
+   ],
+   [
+    "store through a not-established address",
+    "semantics missing"
+   ],
+   [
+    "atomic",
+    "semantics missing"
+   ],
+   [
+    "order is not declared",
+    "semantics missing"
+   ],
+   [
+    "cross-program race",
+    "semantics missing"
+   ],
+   [
+    "inline_asm",
+    "semantics missing"
+   ],
+   [
+    "binding",
+    "binding"
+   ],
+   [
+    "not written by triton",
+    "binding"
+   ],
+   [
+    "modified after",
+    "binding"
+   ],
+   [
+    "another recorded storage",
+    "binding"
+   ],
+   [
+    "out-of-bounds",
+    "binding"
+   ],
+   [
+    "outside the captured windows",
+    "binding"
+   ],
+   [
+    "non-triton intermediate",
+    "binding"
+   ],
+   [
+    "shape varies across units",
+    "binding"
+   ],
+   [
+    "pinned_load",
+    "enclosure too wide"
+   ],
+   [
+    "undecided",
+    "enclosure too wide"
+   ],
+   [
+    "overlap",
+    "enclosure too wide"
+   ],
+   [
+    "straddl",
+    "enclosure too wide"
+   ],
+   [
+    "may be zero",
+    "enclosure too wide"
+   ],
+   [
+    "may be negative",
+    "enclosure too wide"
+   ],
+   [
+    "too wide",
+    "enclosure too wide"
+   ],
+   [
+    "interval width",
+    "enclosure too wide"
+   ],
+   [
+    "timeout",
+    "over budget"
+   ],
+   [
+    "budget",
+    "over budget"
+   ],
+   [
+    "cannot judge",
+    "statistics insufficient"
+   ],
+   [
+    "unresolved_sample",
+    "statistics insufficient"
+   ]
+  ],
+  "seconds": 572.6
+ },
+ "frozen": {
+  "frozen_tag": "general-v3.1",
+  "trees": {
+   "src": {
+    "tag": "cd21ef56cf46eb3cff2c00c50b8918b30a604d26",
+    "head": "cd21ef56cf46eb3cff2c00c50b8918b30a604d26"
+   },
+   "scripts/essential/contract_v3.py": {
+    "tag": "ab91daa1c9bbe41ae2f085c69c37e005f25f67b4",
+    "head": "ab91daa1c9bbe41ae2f085c69c37e005f25f67b4"
+   },
+   "scripts/general/acceptance_run.py": {
+    "tag": "d6ff2d8bed6981940ebecdb59ffd6983f75316e7",
+    "head": "d6ff2d8bed6981940ebecdb59ffd6983f75316e7"
+   },
+   "scripts/essential/common.py": {
+    "tag": "a0ced943ee93c87fa17bd38e525f505e39f09dde",
+    "head": "a0ced943ee93c87fa17bd38e525f505e39f09dde"
+   }
+  },
+  "dirty": [],
+  "ok": true
+ },
+ "case_files": {
+  "decl_binding.py": "# Generated for the entry check (adapter), not a detector or a reference.\nimport importlib.util\n_s = importlib.util.spec_from_file_location(\"entry_check_prog_03\", \"/data1/tzh/kernel-analyzer/.cache/acceptance/acceptance_v11_bindings/prog_03_modeB.py\")\n_m = importlib.util.module_from_spec(_s)\n_s.loader.exec_module(_m)\n\ndef state(seed, shape, dtype):\n    return _m.make_inputs(seed)\n\n\ndef call(inputs):\n    return _m.run(inputs[\"inp\"])\n\n\ndef spec(inputs):\n    return _m.spec(inputs[\"inp\"])\n",
+  "declaration.json": "{\n \"call\": \"decl_binding.py:call\",\n \"inputs\": {\n  \"inp\": {\n   \"state\": \"decl_binding.py:state\",\n   \"shape\": [\n    1\n   ],\n   \"dtype\": \"float32\"\n  }\n },\n \"compare\": {\n  \"mode\": \"B\",\n  \"measure\": [\n   \"output\"\n  ],\n  \"spec\": \"decl_binding.py:spec\"\n },\n \"budget\": {\n  \"cpu_seconds\": 3600,\n  \"gpu_seconds\": 3600,\n  \"case_timeout\": 3600,\n  \"max_units\": 96\n }\n}\n",
+  "ordinary_reference.py": "# Generated for the entry check (adapter), not a detector or a reference.\nimport importlib.util\n_s = importlib.util.spec_from_file_location(\"entry_check_prog_03\", \"/data1/tzh/kernel-analyzer/.cache/acceptance/acceptance_v11_bindings/prog_03_modeB.py\")\n_m = importlib.util.module_from_spec(_s)\n_s.loader.exec_module(_m)\n\ndef reference(inputs):\n    return _m.bs.ordinary_reference(\"prog_03\", inputs[\"inp\"])\n"
+ }
+}

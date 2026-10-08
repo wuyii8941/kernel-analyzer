@@ -5,6 +5,7 @@
 
 ## 当前（由 CURRENT.json 指向）
 
+- 验收：[结构验收集 v1.1-rc1 冻结规则测量（未计分）](acceptance/structure_v1_1_rc1_status_20261008.md)。
 - 状态：[通用能力轮](general/status_20261008.md)、[收束轮](closure_status_20261008.md)、[两轮联合审计](audit_two_rounds_20261008.md)
   （C 节是待审阅方决定的事项）、[成绩核账（三种状态）](status_ledger_20261006.md)。
 - 协议：[通用能力轮](protocol_general_capability_v1_20261008.md)、[收束轮 v3](protocol_closure_v3_20261008.md)、
