@@ -6,6 +6,7 @@
 ## 当前（由 CURRENT.json 指向）
 
 - 验收：[结构验收集 v1.1-rc1 冻结规则测量（未计分）](acceptance/structure_v1_1_rc1_status_20261008.md)。
+- 下一轮：[参照 DSL v2 任务书（执行方修订稿，待审阅方核对）](taskbook_dsl_v2_executor_revision_20261009.md)；设计规范 reference_dsl_v2_rc2_20261009（SHA-256 7c7fa0c1…6fb4）。
 - 状态：[通用能力轮](general/status_20261008.md)、[收束轮](closure_status_20261008.md)、[两轮联合审计](audit_two_rounds_20261008.md)
   （C 节是待审阅方决定的事项）、[成绩核账（三种状态）](status_ledger_20261006.md)。
 - 协议：[通用能力轮](protocol_general_capability_v1_20261008.md)、[收束轮 v3](protocol_closure_v3_20261008.md)、
