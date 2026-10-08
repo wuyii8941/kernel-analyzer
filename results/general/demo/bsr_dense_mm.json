@@ -1,0 +1,434 @@
+{
+ "tool_version": "3.0",
+ "expanded_declaration": {
+  "call": "bsr_ops.py:bsr_dense_mm",
+  "inputs": {
+   "x": {
+    "state": "bsr_ops.py:block_sparse",
+    "shape": [
+     64,
+     64
+    ],
+    "dtype": "$dtype"
+   },
+   "d": {
+    "sampler": {
+     "normal": [
+      0,
+      1
+     ]
+    },
+    "shape": [
+     64,
+     32
+    ],
+    "dtype": "$dtype"
+   },
+   "block": {
+    "const": 16
+   }
+  },
+  "compare": {
+   "mode": "A",
+   "measure": [
+    "out"
+   ]
+  },
+  "budget": {
+   "cpu_seconds": 1800,
+   "gpu_seconds": 1800,
+   "case_timeout": 900,
+   "max_units": 96
+  },
+  "rule_classes": {
+   "fixed_mean": [
+    "R1",
+    "R5"
+   ],
+   "aligned": [
+    "R2",
+    "R3"
+   ]
+  },
+  "multiplicity": "Holm within each rule class",
+  "units": {
+   "development": 32,
+   "confirmation": 64,
+   "seed_offset": 0
+  },
+  "alpha": 0.05,
+  "reference_classes_allowed": [
+   "complete_composed"
+  ],
+  "resolution": {
+   "ulp_fraction": 0.125
+  },
+  "factors": {
+   "dtype": [
+    "float32",
+    "bfloat16"
+   ]
+  },
+  "factor_levels": [
+   {
+    "x.dtype": "float32",
+    "d.dtype": "float32"
+   },
+   {
+    "x.dtype": "bfloat16",
+    "d.dtype": "bfloat16"
+   }
+  ],
+  "versions": {
+   "torch": "2.10.0+cu128",
+   "triton": "3.6.0",
+   "device": "NVIDIA RTX A6000",
+   "tool": "3.0",
+   "python": "3.11.16"
+  },
+  "error_budget": null,
+  "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
+  "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) + contract_v3 cannot-judge rules (S0 = 2, N0 = 64, n_min = 16); bounded route when an error budget is declared",
+  "declaration_sha256": "d3bfcb8b4113ffbb1a42844c4f079fa4f3df3d13b20fc53508cffad0265b134c"
+ },
+ "levels": [
+  {
+   "level": {
+    "x.dtype": "float32",
+    "d.dtype": "float32"
+   },
+   "status": "ok",
+   "units": {
+    "development": 32,
+    "confirmation": 64
+   },
+   "notes": {
+    "outputs_not_written_by_triton": [],
+    "outputs_binding_not_established": [],
+    "outputs_modified_after_last_triton_write": [],
+    "outputs_whose_writing_programs_aborted": {},
+    "outputs_at_address_of_another_recorded_storage": [],
+    "ttir_coverage_complete": [
+     true
+    ]
+   },
+   "outputs": {
+    "out": {
+     "status": "evaluated",
+     "reference": {
+      "elements": 196608,
+      "complete_finite": 196608,
+      "complete_rate": 1.0,
+      "width_over_ulp": {
+       "median": 1.1175870895385742e-08,
+       "p90": 5.960464477539063e-08,
+       "max": 0.00244140625
+      },
+      "resolution_target_ulp_fraction": 0.125,
+      "resolved_fraction": 1.0
+     },
+     "statistics": {
+      "fixed_mean": {
+       "rules": {
+        "R1": {
+         "judgment": "not confirmed",
+         "basis": "endpoint-conservative t (frozen layer)",
+         "holm_adjusted_p": 0.9816012837784481,
+         "mean_projection": 4.0052139769059245e-08,
+         "n": 64
+        },
+        "R5": {
+         "judgment": "not confirmed",
+         "basis": "endpoint-conservative t (frozen layer)",
+         "holm_adjusted_p": 0.9816012837784481,
+         "mean_projection": -3.584728774606578e-08,
+         "n": 64
+        }
+       },
+       "summary": "not confirmed on these projections (not a statement that the vector has no bias)"
+      },
+      "aligned": {
+       "rules": {
+        "R2": {
+         "judgment": "not confirmed",
+         "basis": "endpoint-conservative t (frozen layer)",
+         "holm_adjusted_p": 0.9090537608287188,
+         "mean_projection": -7.629270162330605e-09,
+         "n": 64
+        },
+        "R3": {
+         "judgment": "not confirmed",
+         "basis": "endpoint-conservative t (frozen layer)",
+         "holm_adjusted_p": 0.5391710160330849,
+         "mean_projection": -9.507544385127758e-08,
+         "n": 64
+        }
+       },
+       "summary": "not confirmed on these projections (not a statement that the vector has no bias)"
+      }
+     },
+     "mixed_non_triton_sources": [
+      "L0:_bsr_strided_addmm_kernel:values_ptr"
+     ],
+     "not_established_reasons_seed0": {
+      "dot_input_precision:ieee": 8
+     },
+     "special_values": {
+      "elements_with_special_K_R": 0,
+      "k_vs_kr_class_mismatch": 0,
+      "examples": []
+     },
+     "failure_classes": []
+    }
+   },
+   "timing_seconds": {
+    "setup_compile_warmup": 1.606,
+    "inputs": 0.071,
+    "capture_first_seed": 1.148,
+    "capture": 0.191,
+    "reference": 7.088,
+    "specification": 0.0,
+    "statistics": 1.334
+   },
+   "seconds": 11.6,
+   "failure_classes": [],
+   "over_budget": false
+  },
+  {
+   "level": {
+    "x.dtype": "bfloat16",
+    "d.dtype": "bfloat16"
+   },
+   "status": "ok",
+   "units": {
+    "development": 32,
+    "confirmation": 64
+   },
+   "notes": {
+    "outputs_not_written_by_triton": [],
+    "outputs_binding_not_established": [],
+    "outputs_modified_after_last_triton_write": [],
+    "outputs_whose_writing_programs_aborted": {},
+    "outputs_at_address_of_another_recorded_storage": [],
+    "ttir_coverage_complete": [
+     true
+    ]
+   },
+   "outputs": {
+    "out": {
+     "status": "evaluated",
+     "reference": {
+      "elements": 196608,
+      "complete_finite": 196608,
+      "complete_rate": 1.0,
+      "width_over_ulp": {
+       "median": 1.7053025658242404e-13,
+       "p90": 9.094947017729282e-13,
+       "max": 7.450580596923828e-09
+      },
+      "resolution_target_ulp_fraction": 0.125,
+      "resolved_fraction": 1.0
+     },
+     "statistics": {
+      "fixed_mean": {
+       "rules": {
+        "R1": {
+         "judgment": "not confirmed",
+         "basis": "endpoint-conservative t (frozen layer)",
+         "holm_adjusted_p": 1.0,
+         "mean_projection": -0.001065607447395778,
+         "n": 64
+        },
+        "R5": {
+         "judgment": "not confirmed",
+         "basis": "endpoint-conservative t (frozen layer)",
+         "holm_adjusted_p": 1.0,
+         "mean_projection": -0.000465954895137488,
+         "n": 64
+        }
+       },
+       "summary": "not confirmed on these projections (not a statement that the vector has no bias)"
+      },
+      "aligned": {
+       "rules": {
+        "R2": {
+         "judgment": "nonzero (positive)",
+         "basis": "endpoint-conservative t (frozen layer)",
+         "holm_adjusted_p": 0.03817264879705022,
+         "mean_projection": 0.0033844715679650934,
+         "n": 64
+        },
+        "R3": {
+         "judgment": "not confirmed",
+         "basis": "endpoint-conservative t (frozen layer)",
+         "holm_adjusted_p": 0.1539653339409433,
+         "mean_projection": 0.004012164769117342,
+         "n": 64
+        }
+       },
+       "summary": "average effect nonzero: R2 positive"
+      }
+     },
+     "mixed_non_triton_sources": [
+      "L0:_bsr_strided_addmm_kernel:values_ptr"
+     ],
+     "not_established_reasons_seed0": {
+      "dot_input_precision:tf32": 8
+     },
+     "special_values": {
+      "elements_with_special_K_R": 0,
+      "k_vs_kr_class_mismatch": 0,
+      "examples": []
+     },
+     "failure_classes": []
+    }
+   },
+   "timing_seconds": {
+    "setup_compile_warmup": 0.005,
+    "inputs": 0.068,
+    "capture_first_seed": 0.002,
+    "capture": 0.19,
+    "reference": 6.496,
+    "specification": 0.0,
+    "statistics": 0.516
+   },
+   "seconds": 7.4,
+   "failure_classes": [],
+   "over_budget": false
+  }
+ ],
+ "failure_counts": {
+  "semantics missing": 0,
+  "binding": 0,
+  "enclosure too wide": 0,
+  "over budget": 0,
+  "statistics insufficient": 0
+ },
+ "failure_table": [
+  [
+   "unrecognized",
+   "semantics missing"
+  ],
+  [
+   "no declared semantics",
+   "semantics missing"
+  ],
+  [
+   "not supported",
+   "semantics missing"
+  ],
+  [
+   "unsupported",
+   "semantics missing"
+  ],
+  [
+   "unknown op",
+   "semantics missing"
+  ],
+  [
+   "no derivative rule",
+   "semantics missing"
+  ],
+  [
+   "store through a not-established address",
+   "semantics missing"
+  ],
+  [
+   "atomic",
+   "semantics missing"
+  ],
+  [
+   "order is not declared",
+   "semantics missing"
+  ],
+  [
+   "cross-program race",
+   "semantics missing"
+  ],
+  [
+   "inline_asm",
+   "semantics missing"
+  ],
+  [
+   "binding",
+   "binding"
+  ],
+  [
+   "not written by triton",
+   "binding"
+  ],
+  [
+   "modified after",
+   "binding"
+  ],
+  [
+   "another recorded storage",
+   "binding"
+  ],
+  [
+   "out-of-bounds",
+   "binding"
+  ],
+  [
+   "outside the captured windows",
+   "binding"
+  ],
+  [
+   "non-triton intermediate",
+   "binding"
+  ],
+  [
+   "shape varies across units",
+   "binding"
+  ],
+  [
+   "pinned_load",
+   "enclosure too wide"
+  ],
+  [
+   "undecided",
+   "enclosure too wide"
+  ],
+  [
+   "overlap",
+   "enclosure too wide"
+  ],
+  [
+   "straddl",
+   "enclosure too wide"
+  ],
+  [
+   "may be zero",
+   "enclosure too wide"
+  ],
+  [
+   "may be negative",
+   "enclosure too wide"
+  ],
+  [
+   "too wide",
+   "enclosure too wide"
+  ],
+  [
+   "width",
+   "enclosure too wide"
+  ],
+  [
+   "timeout",
+   "over budget"
+  ],
+  [
+   "budget",
+   "over budget"
+  ],
+  [
+   "cannot judge",
+   "statistics insufficient"
+  ],
+  [
+   "unresolved_sample",
+   "statistics insufficient"
+  ]
+ ],
+ "seconds": 19.8
+}

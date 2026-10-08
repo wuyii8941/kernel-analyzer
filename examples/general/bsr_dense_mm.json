@@ -1,0 +1,47 @@
+{
+ "call": "bsr_ops.py:bsr_dense_mm",
+ "factors": {
+  "dtype": [
+   "float32",
+   "bfloat16"
+  ]
+ },
+ "inputs": {
+  "x": {
+   "state": "bsr_ops.py:block_sparse",
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "$dtype"
+  },
+  "d": {
+   "sampler": {
+    "normal": [
+     0,
+     1
+    ]
+   },
+   "shape": [
+    64,
+    32
+   ],
+   "dtype": "$dtype"
+  },
+  "block": {
+   "const": 16
+  }
+ },
+ "compare": {
+  "mode": "A",
+  "measure": [
+   "out"
+  ]
+ },
+ "budget": {
+  "cpu_seconds": 1800,
+  "gpu_seconds": 1800,
+  "case_timeout": 900,
+  "max_units": 96
+ }
+}

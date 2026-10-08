@@ -28,7 +28,8 @@ from .reference_eval.ttir_eval import ST_NINF, ST_OK, evaluate_sequence, ptx_zer
 from .reference_eval.ttir_mapping import kernel_coverage
 from .reference_eval.ttir_parser import parse_ttir
 
-TOOL_VERSION = "2.3"   # 2.3: upstream (non-Triton) sources tracked through the launches' own stores, not byte changes,
+TOOL_VERSION = "3.0"   # 3.0: Welford multi-value reduction; SumK / DotK accumulation; x - x, x / x one variable;
+#                        2.3: upstream (non-Triton) sources tracked through the launches' own stores, not byte changes,
 #                        and case inputs identified by their bytes before the launch (in-place ops inside it);
 #                        2.2: output binding by storage identity (2.1: by address)
 DEV = list(range(0, 32))

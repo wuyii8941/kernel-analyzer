@@ -1,5 +1,17 @@
 # 检测器 / 工具版本变更记录
 
+## 3.0（2026-10-08，标签 `general-v3.0`）——通用能力轮：参照语义与默认统计
+
+- **Welford 多值归约**（`ttir_mapping.match_welford`、`ttir_eval._welford_reduce`）：按数据流结构匹配（不按名字），实数语义取封闭形式，
+  前提权重 ≥ 0 且 W > 0；W = 0 的均值、可能为负的权重 → 未建立。测试 `tests/test_welford_reduction.py` 6 项（含与任意合并树的精确等价、
+  反例与负对照）。以前被拒绝的 bf16 方差现在建立完整参照。
+- **精确累加**（`intervals.sum_k`、`dot_k`）：求和与点积用 SumK / DotK（K = 3）及 Ogita–Rump–Oishi 严格界，与旧 γ 界取交集；
+  `KA_ACCUMULATION=gamma` 只用于前后对照。家族表中宽度约缩小一个数量级。
+- **同一变量**：x − x = 0、x / x = 1（x ≠ 0）。
+- **统一入口** `kernel_analyzer.measure`（不改冻结统计层，类内 Holm 在入口中进行）；**规则注册表** `reference_eval.rule_registry`。
+- **回归**：全部测试 1844 项通过；回归集 15 个用例中判定、参照类别、特殊值计数全部不变，3 个用例的 e_sem 相对 RMS 在 1e-16 量级变化
+  （K_R 中点移动不到一个 float64 ulp），1 个用例只有已容许的 float atomics 差异（`results/regression/v3_0`）。
+
 ## 2.3（2026-10-08）——上游（非 Triton）来源检测（收束轮 F / FR 运行中发现）
 
 - **问题。** `check.torch_intermediates` 决定一个 Triton 输出是否读了 torch / ATen 在捕获窗口内产生的值（这些值以捕获值作为精确输入

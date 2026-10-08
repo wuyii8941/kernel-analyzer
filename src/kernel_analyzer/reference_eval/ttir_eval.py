@@ -35,7 +35,7 @@ from typing import Any, Optional
 import numpy as np
 
 from . import intervals as iv
-from .ttir_mapping import (LIBDEVICE, LIBDEVICE_ROUNDING, inline_asm_internal, inline_asm_rounding,
+from .ttir_mapping import (LIBDEVICE, LIBDEVICE_ROUNDING, inline_asm_internal, inline_asm_rounding, match_welford,
                            recognize_combiner, rule_for)
 from .ttir_parser import PtrType, TFunc, TModule, TOp, TRegion, TType, parse_ttir
 
@@ -1232,6 +1232,8 @@ class KernelReferenceEvaluator:
             raise ProgramAbort(f"{op.node_id}: unrecognized reduction combiner")
         if combiner in ("argmax", "argmin"):
             return self._arg_reduce(op, args, axis, combiner)
+        if combiner == "welford":
+            return self._welford_reduce(op, args, axis, env)
         (x,) = args
         st_red = np.max(np.where(x.st >= ST_UNDEF, x.st, 0), axis=axis).astype(np.int8)
         cond = np.any(x.cond, axis=axis)
@@ -1321,6 +1323,75 @@ class KernelReferenceEvaluator:
             raise ProgramAbort(f"{op.node_id}: integer combiner {combiner}")
         v = fn(vals, axis=axis)
         return TV("i", x.elem, _wrap(v, width), None, None, st_red, cond, reasons)
+
+    def _welford_reduce(self, op, args, axis, env):
+        """Reduction with the Welford merge of (mean, M2, weight) triples (``ttir_mapping.match_welford``).
+
+        Real semantics (rule ``reduce.welford``): for weights w_i >= 0 with W = sum w_i > 0 the merge of any tree
+        equals the closed form  mean = sum w_i m_i / W,  M2 = sum s_i + sum w_i (m_i - mean)^2,  weight = W  (the
+        pairwise merge is the exact parallel-axis identity, and a zero-weight triple only adds its s).  The tree
+        Triton uses is therefore irrelevant.  Rows with W = 0: the merged mean depends on the tree -> not
+        established; M2 = sum s_i.  Rows whose weights may be negative or whose W may be zero -> not established.
+        Enclosure: interval arithmetic on the closed form, M2 in the centred form sum w d^2 - (sum w d)^2 / W with
+        d = m - c around a float estimate c of the mean (an exact identity for every c)."""
+
+        info = match_welford(op)
+        for name in info["zero_constants"]:
+            z = env.get(name)
+            if z is None or z.kind != "f" or not (np.all(z.lo == 0.0) and np.all(z.hi == 0.0)) or (z.st != ST_OK).any():
+                raise ProgramAbort(f"{op.node_id}: Welford guard constant {name} is not exactly 0.0")
+        m, s2, w = args
+        if any(v.d is not None for v in args):
+            raise ProgramAbort(f"{op.node_id}: no derivative rule for the Welford reduction")
+        ok = (m.st == ST_OK) & (s2.st == ST_OK) & (w.st == ST_OK)
+        row_bad = np.any(~ok, axis=axis)
+        z = lambda t: np.where(ok, t, 0.0)  # noqa: E731
+        m_lo, m_hi, s_lo, s_hi, w_lo, w_hi = z(m.lo), z(m.hi), z(s2.lo), z(s2.hi), z(w.lo), z(w.hi)
+        neg_w = np.any(w_lo < 0, axis=axis)
+        W_lo, W_hi = iv.isum(w_lo, w_hi, axis)
+        S_lo, S_hi = iv.isum(s_lo, s_hi, axis)
+        p_lo, p_hi = iv.imul(w_lo, w_hi, m_lo, m_hi)
+        S1_lo, S1_hi = iv.isum(p_lo, p_hi, axis)
+        pos = W_lo > 0
+        safe_W_lo = np.where(pos, W_lo, 1.0)
+        safe_W_hi = np.where(pos, W_hi, 1.0)
+        mean_lo, mean_hi = iv.idiv(S1_lo, S1_hi, safe_W_lo, safe_W_hi)
+        c = np.expand_dims(0.5 * (mean_lo + mean_hi), axis)
+        d_lo, d_hi = iv.isub(m_lo, m_hi, np.broadcast_to(c, m_lo.shape), np.broadcast_to(c, m_lo.shape))
+        d2_lo, d2_hi = iv.isquare(d_lo, d_hi)
+        a_lo, a_hi = iv.imul(w_lo, w_hi, d2_lo, d2_hi)
+        A_lo, A_hi = iv.isum(a_lo, a_hi, axis)
+        b_lo, b_hi = iv.imul(w_lo, w_hi, d_lo, d_hi)
+        B_lo, B_hi = iv.isum(b_lo, b_hi, axis)
+        B2_lo, B2_hi = iv.isquare(B_lo, B_hi)
+        q_lo, q_hi = iv.idiv(B2_lo, B2_hi, safe_W_lo, safe_W_hi)
+        v_lo, v_hi = iv.isub(A_lo, A_hi, q_lo, q_hi)
+        v_lo = np.maximum(v_lo, 0.0)                     # sum w (m - mean)^2 >= 0 for w >= 0
+        M2_lo, M2_hi = iv.iadd(S_lo, S_hi, v_lo, v_hi)
+        all_zero = (W_hi == 0) & (W_lo == 0)
+        undecided = ~pos & ~all_zero
+        bad = row_bad | neg_w
+        st_mean = np.where(bad | undecided | all_zero, ST_NE, ST_OK).astype(np.int8)
+        st_m2 = np.where(bad | undecided, ST_NE, ST_OK).astype(np.int8)
+        M2_lo = np.where(all_zero, S_lo, M2_lo)
+        M2_hi = np.where(all_zero, S_hi, M2_hi)
+        st_w = np.where(row_bad, ST_NE, ST_OK).astype(np.int8)
+        cond = np.any(m.cond | s2.cond | w.cond, axis=axis)
+        reasons = m.reasons | s2.reasons | w.reasons
+        extra = set()
+        if neg_w.any():
+            extra.add(f"not_established:Welford weight may be negative@{op.node_id}")
+        if undecided.any():
+            extra.add(f"not_established:Welford total weight may be zero@{op.node_id}")
+        if all_zero.any():
+            extra.add(f"not_established:Welford mean of zero total weight depends on the merge tree@{op.node_id}")
+        self._rules["reduce.welford"] += int(np.size(W_lo))
+        return [_ftv(m.elem, np.where(st_mean == ST_OK, mean_lo, 0.0), np.where(st_mean == ST_OK, mean_hi, 0.0),
+                     st_mean, cond, reasons | extra),
+                _ftv(s2.elem, np.where(st_m2 == ST_OK, M2_lo, 0.0), np.where(st_m2 == ST_OK, M2_hi, 0.0),
+                     st_m2, cond, reasons | extra),
+                _ftv(w.elem, np.where(st_w == ST_OK, W_lo, 0.0), np.where(st_w == ST_OK, W_hi, 0.0), st_w, cond,
+                     reasons)]
 
     def _arg_reduce(self, op, args, axis, combiner):
         val, idx = args
@@ -1622,6 +1693,8 @@ class KernelReferenceEvaluator:
             fn = {"add": iv.iadd, "sub": iv.isub}.get(name)
             lo, hi = (iv.imul(los[0], his[0], los[1], his[1], same=same) if name == "mul"
                       else fn(los[0], his[0], los[1], his[1]))
+            if name == "sub" and same:                       # one variable: x - x = 0 exactly (tool 3.0)
+                lo, hi = np.zeros(shape), np.zeros(shape)
         elif name in ("div", "rcp"):
             num_lo, num_hi = (los[0], his[0]) if name == "div" else (np.ones(shape), np.ones(shape))
             den_lo, den_hi = (los[1], his[1]) if name == "div" else (los[0], his[0])
@@ -1629,6 +1702,8 @@ class KernelReferenceEvaluator:
             safe_lo = np.where(ok, den_lo, 1.0)
             safe_hi = np.where(ok, den_hi, 1.0)
             lo, hi = iv.idiv(num_lo, num_hi, safe_lo, safe_hi)
+            if name == "div" and same:                       # one variable: x / x = 1 where x != 0 (tool 3.0)
+                lo, hi = np.ones(shape), np.ones(shape)
         elif name == "neg":
             lo, hi = -his[0], -los[0]
         elif name == "abs":

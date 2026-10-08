@@ -35,7 +35,10 @@ import contract_v3 as CV  # noqa: E402
 import f_eval_2b as FE  # noqa: E402
 from f_eval import bounds, norm_spec, spec_arrays  # noqa: E402
 
-OUT = ROOT / "results/closure/fr_modeB"
+# closure records (tool 2.3) stay in results/closure/fr_modeB; tool-3.0 reruns go to results/general/
+OUT = ROOT / ("results/general/fr_modeB_v3" if __import__("os").environ.get("KA_ACCUMULATION", "exact") == "exact"
+              else "results/general/fr_modeB_gamma")
+DTYPES = {}
 TAU32 = 2.0 ** -12
 NOTE_KEYS = ("outputs_not_written_by_triton", "outputs_binding_not_established", "outputs_at_address_of_another_recorded_storage",
              "outputs_modified_after_last_triton_write", "outputs_whose_writing_programs_aborted", "ttir_coverage_complete",
@@ -55,6 +58,7 @@ def filtered(case, keys_of_seed):
         sel = {k: v for k, v in outs.items() if k in keys and v is not None}
         shapes.clear()
         shapes.update({k: tuple(v.shape) for k, v in sel.items()})
+        DTYPES.update({k: str(v.dtype).replace("torch.", "") for k, v in sel.items()})
         return sel
     return setup, inputs, launch2, shapes
 
@@ -118,7 +122,10 @@ def summarise(rep, keep, fas, fas_alt=None):
         sem_rec = out.get("semantic") or {}
         rules = sem_rec.get("rules")
         rules = {r.get("rule", str(i)): r for i, r in enumerate(rules)} if isinstance(rules, list) else (rules or {})
+        from kernel_analyzer.measure import reference_quality
+        quality = reference_quality(rows, DTYPES.get(name, "float32"), 0.125)
         res[name] = {"ok_elements": n_ok, "e_num_beyond_tau32": n_num, "max_e_num_over_tau32": worst_num,
+                     "reference_quality": quality,
                      "k_nonfinite_with_finite_kr_column4": n_knf,
                      "e_sem_certified_elements": n_sem, "max_e_sem_gap_relative": worst_sem, "f_undefined_elements": n_undef,
                      "mixed_non_triton_sources": out.get("depends_on_non_triton_intermediates") or [],

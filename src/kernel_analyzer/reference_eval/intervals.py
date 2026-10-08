@@ -372,8 +372,68 @@ def gamma(n) -> float:
     return n * U / (1 - n * U)
 
 
+def _vecsum_last(p):
+    """One error-free transformation pass along the last axis (Ogita, Rump, Oishi 2005, Algorithm 4.3): afterwards
+    p[..., -1] is the floating sum and the other entries carry the exact errors; the exact sum is unchanged."""
+
+    for i in range(1, p.shape[-1]):
+        s, e = two_sum(p[..., i], p[..., i - 1])
+        p[..., i] = s
+        p[..., i - 1] = e
+    return p
+
+
+def sum_k(x, axis=-1, K=3):
+    """SumK (Ogita, Rump, Oishi 2005, Algorithm 4.8): (res, err) with |sum(x) - res| <= err rigorously
+    (Proposition 4.10: |res - s| <= (u + 3 gamma_{n-1}^2) |s| + gamma_{2n-2}^K S, S = sum |x_i|; valid without
+    overflow and with gradual underflow, 4 n u <= 1).  The final summation is numpy's pairwise sum, whose error is
+    within the gamma_{n-1} bound of recursive summation the proof uses.  Returns (res, err, ok): ok is False where
+    a non-finite value appeared (callers fall back to the gamma bound there)."""
+
+    x = np.moveaxis(np.asarray(x, dtype=np.float64), axis, -1)
+    n = x.shape[-1]
+    if n == 0:
+        z = np.zeros(x.shape[:-1])
+        return z, z, np.ones(x.shape[:-1], dtype=bool)
+    with np.errstate(all="ignore"):
+        S = up(np.sum(np.abs(x), axis=-1) * (1 + gamma(n) * (1 + 4 * U)))
+        p = x.copy()
+        for _ in range(K - 1):
+            _vecsum_last(p)
+        res = np.sum(p, axis=-1)
+        g1 = gamma(max(n - 1, 1))
+        gk = gamma(max(2 * n - 2, 1)) ** K
+        c1 = U + 3 * g1 * g1
+        tail = gk * S
+        abs_s = (np.abs(res) + tail) / (1 - c1)
+        err = up((c1 * abs_s + tail) * (1 + 8 * U))
+        ok = np.isfinite(res) & np.isfinite(err) & np.all(np.isfinite(p), axis=-1)
+    return res, err, ok
+
+
+def _accumulation_mode():
+    """KA_ACCUMULATION=gamma restores the tool-2.3 gamma_n bounds (for the before / after width comparison only)."""
+    import os
+    return os.environ.get("KA_ACCUMULATION", "exact")
+
+
 def isum(lo, hi, axis):
-    """Enclosure of the exact sum along ``axis``."""
+    """Enclosure of the exact sum along ``axis``: SumK on each endpoint array (accumulation adds only the last-bit
+    rounding of the result; tool 3.0); the gamma_n bound where SumK met a non-finite value."""
+
+    if _accumulation_mode() == "gamma":
+        return isum_gamma(lo, hi, axis)
+    r_lo, e_lo, ok_lo = sum_k(lo, axis)
+    r_hi, e_hi, ok_hi = sum_k(hi, axis)
+    g_lo, g_hi = isum_gamma(lo, hi, axis)
+    with np.errstate(all="ignore"):
+        out_lo = np.where(ok_lo, down(r_lo - e_lo), g_lo)
+        out_hi = np.where(ok_hi, up(r_hi + e_hi), g_hi)
+    return np.maximum(out_lo, g_lo), np.minimum(out_hi, g_hi)
+
+
+def isum_gamma(lo, hi, axis):
+    """Enclosure of the exact sum along ``axis`` by the gamma_n bound (tool <= 2.3)."""
 
     n = lo.shape[axis]
     g = gamma(n) * (1 + 4 * U)
@@ -425,8 +485,57 @@ def icumsum(lo, hi, axis, reverse=False):
     return out
 
 
+def dot_k(a, b, K=3, max_elems=1 << 24):
+    """DotK: (res, err, ok) for the exact A @ B of float64 matrices (..., m, k) @ (..., k, n): every product split
+    exactly by two_prod, the 2k terms summed by SumK.  Underflowing products are not error-free in two_prod; the
+    caller adds k * 2^-1070 (as the gamma version does).  ok False where a non-finite value appeared."""
+
+    a = np.asarray(a, dtype=np.float64)
+    b = np.asarray(b, dtype=np.float64)
+    m, k = a.shape[-2], a.shape[-1]
+    n = b.shape[-1]
+    if a.ndim != 2 or b.ndim != 2 or m * k * n > max_elems:
+        return None
+    with np.errstate(all="ignore"):
+        prod = a[:, :, None] * b[None, :, :]
+        _, e = two_prod(a[:, :, None], b[None, :, :])
+        terms = np.concatenate([prod, e], axis=1)            # (m, 2k, n)
+        res, err, ok = sum_k(terms, axis=1, K=K)
+        ok &= np.all(np.isfinite(e), axis=1)
+    return res, err, ok
+
+
 def idot(alo, ahi, blo, bhi):
-    """Enclosure of A @ B over interval matrices (midpoint-radius form)."""
+    """Enclosure of A @ B over interval matrices (midpoint-radius form); the midpoint product by DotK where the
+    shapes allow (tool 3.0), the gamma bound otherwise."""
+
+    out = idot_gamma(alo, ahi, blo, bhi)
+    if np.asarray(alo).ndim != 2 or np.asarray(blo).ndim != 2 or _accumulation_mode() == "gamma":
+        return out
+    k = alo.shape[-1]
+    with np.errstate(all="ignore"):
+        am = (alo + ahi) * 0.5
+        bm = (blo + bhi) * 0.5
+        point = bool(np.all(alo == ahi)) and bool(np.all(blo == bhi)) and bool(np.all(am == alo)) and \
+            bool(np.all(bm == blo))
+        dk = dot_k(am, bm)
+        if dk is None:
+            return out
+        res, err, ok = dk
+        rad = err + 2.0 ** -1070 * k
+        if not point:
+            ar = up(np.maximum(up(ahi - am), up(am - alo)))
+            br = up(np.maximum(up(bhi - bm), up(bm - blo)))
+            g = gamma(k + 2) * (1 + 8 * U)
+            rad = rad + (np.abs(am) @ br + ar @ np.abs(bm) + ar @ br) * (1 + g)
+        rad = up(rad)
+        lo = np.where(ok, down(res - rad), out[0])
+        hi = np.where(ok, up(res + rad), out[1])
+    return np.maximum(lo, out[0]), np.minimum(hi, out[1])
+
+
+def idot_gamma(alo, ahi, blo, bhi):
+    """Enclosure of A @ B over interval matrices (midpoint-radius form; tool <= 2.3)."""
 
     k = alo.shape[-1]
     with np.errstate(all="ignore"):

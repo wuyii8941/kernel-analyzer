@@ -364,7 +364,107 @@ def recognize_combiner(op: TOp) -> Optional[str]:
         kind = _match_arg_minmax(ops, args, ret)
         if kind:
             return kind
+    if k == 3 and match_welford(op) is not None:
+        return "welford"
     return None
+
+
+def _leaves(defs, v, opname, used):
+    """Leaves of the tree of binary ``opname`` ops rooted at ``v`` inside the region; ops visited go to ``used``."""
+
+    o = defs.get(v)
+    if o is not None and o.name == opname and len(o.operands) == 2:
+        used.add(id(o))
+        return _leaves(defs, o.operands[0], opname, used) + _leaves(defs, o.operands[1], opname, used)
+    return [v]
+
+
+def match_welford(op: TOp) -> Optional[dict]:
+    """The Welford merge of (mean, M2, weight) triples, as Inductor's ``welford_combine`` writes it::
+
+        delta = mean_b - mean_a;  W = w_a + w_b;  r = select(W == 0, 0, w_b / W)   (or r = w_b / W)
+        mean = mean_a + delta * r;  M2 = M2_a + M2_b + delta * delta * w_a * r;  weight = W
+
+    Matched on the dataflow (sums and products as multisets, every op of the region accounted for), never on a
+    kernel or function name.  Returns {"zero_constants": [...]} -- outer values that must be exactly 0.0 at
+    evaluation time -- or None."""
+
+    region = op.regions[0]
+    block = region.entry
+    args = [a[0] for a in block.args]
+    if len(args) != 6:
+        return None
+    m_a, s_a, w_a, m_b, s_b, w_b = args
+    ops = [o for o in block.ops if o.name not in ("tt.reduce.return", "tt.scan.return")]
+    ret = block.ops[-1]
+    if len(ret.operands) != 3:
+        return None
+    defs = _defs(ops)
+    used = set()
+    mean_v, m2_v, w_v = ret.operands
+    wd = defs.get(w_v)
+    if wd is None or wd.name != "arith.addf" or sorted(wd.operands) != sorted([w_a, w_b]):
+        return None
+    used.add(id(wd))
+    mean_leaves = _leaves(defs, mean_v, "arith.addf", used)
+    if len(mean_leaves) != 2 or m_a not in mean_leaves:
+        return None
+    prod = [v for v in mean_leaves if v != m_a][0]
+    prod_leaves = _leaves(defs, prod, "arith.mulf", used)
+    if len(prod_leaves) != 2:
+        return None
+    zeros = []
+
+    def is_delta(v):
+        d = defs.get(v)
+        if d is not None and d.name == "arith.subf" and d.operands == [m_b, m_a]:
+            used.add(id(d))
+            return True
+        return False
+
+    def is_ratio(v):
+        d = defs.get(v)
+        if d is None:
+            return False
+        if d.name == "arith.divf" and d.operands == [w_b, w_v]:
+            used.add(id(d))
+            return True
+        if d.name == "arith.select" and len(d.operands) == 3:
+            c, z, q = d.operands
+            cd, qd = defs.get(c), defs.get(q)
+            if cd is None or qd is None or z in defs or z in args:
+                return False
+            if cd.name != "arith.cmpf" or cd.attrs.get("predicate") != "oeq" or w_v not in cd.operands:
+                return False
+            z2 = [x for x in cd.operands if x != w_v]
+            if len(z2) != 1 or z2[0] in defs or z2[0] in args:
+                return False
+            if qd.name != "arith.divf" or qd.operands != [w_b, w_v]:
+                return False
+            used.update({id(d), id(cd), id(qd)})
+            zeros.extend([z, z2[0]])
+            return True
+        return False
+
+    a, b = prod_leaves
+    if is_delta(a) and is_ratio(b):
+        delta, ratio = a, b
+    elif is_delta(b) and is_ratio(a):
+        delta, ratio = b, a
+    else:
+        return None
+    m2_leaves = _leaves(defs, m2_v, "arith.addf", used)
+    if len(m2_leaves) != 3 or sorted(v for v in m2_leaves if v in (s_a, s_b)) != sorted([s_a, s_b]):
+        return None
+    q = [v for v in m2_leaves if v not in (s_a, s_b)]
+    if len(q) != 1:
+        return None
+    q_leaves = _leaves(defs, q[0], "arith.mulf", used)
+    if sorted(q_leaves) != sorted([delta, delta, w_a, ratio]):
+        return None
+    if {id(o) for o in ops} != used:                 # an op the pattern does not account for
+        return None
+    return {"zero_constants": zeros}
 
 
 def _defs(ops):
