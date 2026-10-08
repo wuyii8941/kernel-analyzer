@@ -347,6 +347,15 @@ def classify_condition(family, cond):
     return entry([X], [], f"family {family} not named by contract v2")
 
 
+PENDING = {   # clauses stopped by the seven-item doc check (docs/doc_check_seven_items_20261008.md), for review
+    "schedulers": lambda c: ["SCH-A1 (T_cur >= T_max)"] if c["sched"] == "cosine_annealing" else [],
+    "reductions": lambda c: ["BASE-A1 (var/std, N - correction <= 0)"] if c["op"] in ("var", "std") and
+                  (c["dims"] == "empty-extent" or c["size"] == "1" and c["dims"] == "single") else [],
+    "embedding": lambda c: ["E-D2 (max_norm scope)"] if c.get("max_norm") else [],
+    "matmul_linear": lambda c: ["BASE-A4 label (broadcast: spec scope, not illegal input)"] if c["shape"] == "batch-broadcast" else [],
+}
+
+
 def main():
     out = {"contract": CONTRACT, "families": {}}
     print(f"{'family':26s} {'conds':>5s}  " + "  ".join(f"{k[:1]}" for k in (A, B, C_, D, E, X)))
@@ -355,8 +364,9 @@ def main():
         for cid, c, e in rows:
             for k in set(e["classes"]):
                 tally[k[:1]] += 1
+        pend = PENDING.get(fam, lambda c: [])
         out["families"][fam] = {"conditions": len(rows), "class_counts": dict(tally),
-                                "rows": [{"id": cid, **e} for cid, c, e in rows]}
+                                "rows": [{"id": cid, **e, "pending_clauses": pend(c)} for cid, c, e in rows]}
         print(f"{fam:26s} {len(rows):5d}  " + "  ".join(f"{tally.get(k[:1], 0)}" for k in (A, B, C_, D, E, X)))
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(out, indent=1, ensure_ascii=False, default=str) + "\n")
