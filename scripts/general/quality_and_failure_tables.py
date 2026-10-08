@@ -3,7 +3,7 @@
 fraction resolving the 1/8-ulp target, phase timings) for tool 3.0 against the tool-2.3 accumulation (gamma), and the
 section 6 failure table (every not-established output or failed case in five classes).
 
-Sources: results/general/fr_modeB_v3 and fr_modeB_gamma (tier-1 Triton candidates, mode B), results/general/
+Sources: results/general/fr_modeB_v3_1 and fr_modeB_gamma (tier-1 Triton candidates, mode B), results/general/
 reference_quality_probe_{exact,gamma}.json (numerical-stream programs, G6 compositions, new operators),
 results/general/demo/*.json (unified entry), results/general/calibration_five_distributions.json (statistics).
 Writes results/general/quality_table.json, results/general/failure_table.json and the two markdown tables in
@@ -74,7 +74,7 @@ def phases(t):
 
 def quality_table():
     rows = []
-    for mode, frdir, probe in (("3.0 (SumK / DotK)", "fr_modeB_v3", "reference_quality_probe_exact.json"),
+    for mode, frdir, probe in (("3.1 (SumK / DotK, p_n last)", "fr_modeB_v3_1", "reference_quality_probe_exact.json"),
                                ("2.3 accumulation (gamma)", "fr_modeB_gamma", "reference_quality_probe_gamma.json")):
         for p in sorted(glob.glob(str(G / frdir / "*.json"))):
             qs, tm = fr_family(p)
@@ -88,46 +88,51 @@ def quality_table():
         for lv in d.get("levels", []):
             qs = [o["reference"] for o in (lv.get("outputs") or {}).values() if o.get("reference")]
             if qs:
-                rows.append({"mode": "3.0 (SumK / DotK)", "family": f"unified entry: {Path(p).stem} {lv['level'] or ''}",
+                call = [q.get("complete_rate_call_level") for q in qs]
+                rows.append({"mode": "3.1 (SumK / DotK, p_n last)", "family": f"unified entry: {Path(p).stem} {lv['level'] or ''}",
                              "source": "unified entry (96 units)", **merge_quality(qs),
+                             "complete_rate_call_level": (sum(call) / len(call)) if all(c is not None for c in call) else None,
                              "seconds": phases(lv.get("timing_seconds") or {})})
     return rows
 
 
 def failure_table():
     items = []
-    for p in sorted(glob.glob(str(G / "fr_modeB_v3/*.json"))):
+    for p in sorted(glob.glob(str(G / "fr_modeB_v3_1/*.json"))):
         fam = Path(p).stem
         for key, r in json.loads(Path(p).read_text())["cases"].items():
             if r.get("status") != "ok":
                 why = r.get("reason", r.get("status"))
-                cls = ("semantics missing" if r.get("status") == "error" and "unrecognized" in str(why) else
-                       "binding" if r.get("status") == "error" and ("Dynamo failed" in str(why) or "RuntimeError" in str(why)) else
-                       "not counted (no f / clause pending: outside the measurement)" if r.get("status") in
-                       ("no f", "clause pending", "not run") else classify_failure(why))
-                items.append({"source": f"fr_modeB_v3/{fam}", "case": key, "output": None, "reason": str(why)[:160], "class": cls})
+                cls = ("not counted (no f / clause pending: outside the measurement)" if r.get("status") in
+                       ("no f", "clause pending", "not run") else
+                       classify_failure(("call rejected the declared inputs: " + str(why)) if "Dynamo failed" in str(why)
+                                        else why))
+                items.append({"source": f"fr_modeB_v3_1/{fam}", "case": key, "output": None, "reason": str(why)[:160], "class": cls})
                 continue
             for o in r["notes"].get("outputs_not_written_by_triton") or []:
-                items.append({"source": f"fr_modeB_v3/{fam}", "case": key, "output": o, "reason": "not written by Triton",
+                items.append({"source": f"fr_modeB_v3_1/{fam}", "case": key, "output": o, "reason": "not written by Triton",
                               "class": "binding"})
             for o, rs in (r["notes"].get("outputs_whose_writing_programs_aborted") or {}).items():
-                items.append({"source": f"fr_modeB_v3/{fam}", "case": key, "output": o, "reason": rs[0][:160],
+                items.append({"source": f"fr_modeB_v3_1/{fam}", "case": key, "output": o, "reason": rs[0][:160],
                               "class": classify_failure(rs[0])})
             for o, v in r["outputs"].items():
                 q = v.get("reference_quality") or {}
                 if q.get("complete_rate") is not None and q["complete_rate"] < 1:
                     sv = v.get("special_values") or {}
-                    special = int(sv.get("elements_with_special_f") or 0) > 0 and not int(sv.get("kr_vs_f_class_mismatch") or 0)
-                    items.append({"source": f"fr_modeB_v3/{fam}", "case": key, "output": o,
+                    missing = q["elements"] - q["complete_finite"]
+                    # the missing elements are exactly those where f is special or undefined (NaN rows of the spec)
+                    special = (int(sv.get("elements_with_special_f") or 0) > 0 and not int(sv.get("kr_vs_f_class_mismatch") or 0)) \
+                        or (missing > 0 and missing == int(v.get("f_undefined_elements") or -1))
+                    items.append({"source": f"fr_modeB_v3_1/{fam}", "case": key, "output": o,
                                   "reason": ("missing elements are special values (NaN / inf: target undefined or infinite, "
                                              "contract class C)" if special else "incomplete reference"),
                                   "class": ("not counted (special values: target undefined or infinite)" if special
                                             else "enclosure too wide")})
                 if q.get("resolved_fraction") is not None and q["resolved_fraction"] < 1:
-                    items.append({"source": f"fr_modeB_v3/{fam}", "case": key, "output": o,
+                    items.append({"source": f"fr_modeB_v3_1/{fam}", "case": key, "output": o,
                                   "reason": f"resolved fraction {q['resolved_fraction']:.4f} < 1", "class": "enclosure too wide"})
                 if v.get("mixed_non_triton_sources"):
-                    items.append({"source": f"fr_modeB_v3/{fam}", "case": key, "output": o,
+                    items.append({"source": f"fr_modeB_v3_1/{fam}", "case": key, "output": o,
                                   "reason": "reads a non-Triton intermediate: no semantic verdict (numerical only)",
                                   "class": "binding (semantic verdict only)"})
     for name, r in json.loads((G / "reference_quality_probe_exact.json").read_text())["programs"].items():
@@ -164,16 +169,18 @@ def main():
     (G / "quality_table.json").write_text(json.dumps(rows, indent=1) + "\n")
     items, counts = failure_table()
     (G / "failure_table.json").write_text(json.dumps({"counts": counts, "items": items}, indent=1) + "\n")
-    L = ["# 第 3 项：参照精度与成本的家族表（工具 3.0 对 2.3 累加方式）", "",
+    L = ["# 第 3 项：参照精度与成本的家族表（工具 3.1 对 2.3 累加方式）", "",
          "每行四个数：完整参照率；宽度 / 输出 dtype 在 |G| 处的 ulp（各输出中位数的中位数、各输出 90% 分位的中位数、最大值）；达到分辨"
          "目标（≤ 1/8 ulp）的元素比例；分段耗时（秒：捕获含编译预热 / 参照 / 统计含规格）。「2.3 累加方式」用同一代码、"
          "`KA_ACCUMULATION=gamma` 重跑，只换回 γₙ 求和与点积界。", "",
-         "| 方式 | 家族 | 来源 | 输出 | 完整率 | 宽度/ulp 中位 | 90% | 最大 | 达到 1/8 ulp | 捕获 / 参照 / 统计 s |",
-         "|---|---|---|---|---|---|---|---|---|---|"]
+         "调用级完整率只对统一入口报告：上游非 Triton 值不是声明输入的复制时为 0（kernel 级参照）。", "",
+         "| 方式 | 家族 | 来源 | 输出 | 完整率 | 调用级完整率 | 宽度/ulp 中位 | 90% | 最大 | 达到 1/8 ulp | 捕获 / 参照 / 统计 s |",
+         "|---|---|---|---|---|---|---|---|---|---|---|"]
     fmt = lambda x: "—" if x is None else (f"{x:.3g}" if isinstance(x, float) else str(x))  # noqa: E731
     for r in rows:
         s = r["seconds"]
         L.append(f"| {r['mode']} | {r['family']} | {r['source']} | {r['outputs']} | {fmt(r['complete_rate'])} | "
+                 f"{fmt(r.get('complete_rate_call_level'))} | "
                  f"{fmt(r['width_over_ulp_median_of_outputs'])} | {fmt(r['width_over_ulp_p90_of_outputs'])} | "
                  f"{fmt(r['width_over_ulp_max'])} | {fmt(r['resolved_fraction'])} | {s['capture']} / {s['reference']} / {s['statistics']} |")
     (ROOT / "docs/general/quality_table.md").write_text("\n".join(L) + "\n")

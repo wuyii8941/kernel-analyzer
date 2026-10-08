@@ -136,9 +136,10 @@ COLUMNS = {
               "swiglu / geglu huge: the real product exceeds FLT_MAX, K = ±inf (IEEE overflow) against a finite f "
               "(results/closure/fr_modeB/activations.json special_values; F non-finite counts)"]},
     "embedding": {
-        "2": ["EMB-A1: max_norm renormalisation divides by (norm + 1e-7); visible against f at float64 (891/3552 out, 340/960 "
-              "weight_after beyond τ64), precision invariance 'semantic' (results/closure/f_eval/embedding.json); "
-              "residual after dividing by (norm + 1e-7): <= 7.3e-17"],
+        "2": ["EMB-A1: max_norm renormalisation divides by (norm + 1e-7); visible against f at float64 (891/1008 out and "
+              "340/960 weight_after beyond τ64 in the two max_norm conditions), precision invariance 'semantic' "
+              "(results/closure/f_eval/embedding.json); residual after dividing by (norm + 1e-7): <= 7.3e-17 "
+              "(results/closure/audit_checks.json)"],
         "pending": ["E-D2 (max_norm scope): weight_after not adjudicated (docs/doc_check_seven_items_20261008.md)"]},
     "attention": {
         "3": ["ATT-A1 rows without an allowed key: zero (SDPA math / efficient, flex, xformers), NaN with non-finite dK/dV "
@@ -149,19 +150,22 @@ COLUMNS = {
               "(results/essential/phase2b/reductions/analysis.json conventions)"],
         "pending": ["BASE-A1 var / std with N - correction <= 0 (NaN observed): clause stopped by the doc check"]},
     "optimizers": {"pending": ["O-D2 SGD maximize placement: momentum buffer = -(spec b) to 1.5e-16, parameters agree "
-                               "(docs/spec_issues_phase2.md SPEC-ISSUE-1)"]},
+                               "(docs/spec_issues_phase2.md SPEC-ISSUE-1; results/closure/audit_checks.json)"]},
     "schedulers": {"pending": ["SCH-A1 for T_cur >= T_max (0/24 beyond against the closed form, recorded only)",
                                "contract label of HF total > warmup (2 conditions marked D)"]},
     "matmul_linear": {"pending": ["contract label of batch broadcast (3 conditions marked D; doc says legal, spec scope)"]},
     "clip_amp": {"4": ["clip_grad_norm_ with non-finite gradients (error_if_nonfinite=False): scaled by the non-finite "
                        "coefficient (documented) -- 15 condition x seed"]},
-    "normalization": {"difference": ["float32 huge_offset: F beyond τ32 in 247/5400 y elements of eager CPU float32; "
-                                     "precision invariance: no semantic element (numerical); contract states no accuracy "
-                                     "requirement -> 契约外，待审阅 (no defect verdict)"]},
+    "normalization": {"difference": ["float32 huge_offset: F beyond τ32 in y -- eager CPU 247/5400, eager CUDA 250/5400, "
+                                     "Inductor 266/5400, nightly eager 255/5400, nightly Inductor 237/5400; precision "
+                                     "invariance (eager pairs): no semantic element above the float64 noise floor (5 below "
+                                     "it, cannot judge) -> numerical; Liger LayerNorm 85/2340 has no pair and no mode B -> "
+                                     "not classified; contract states no accuracy requirement -> 契约外，待审阅"]},
 }
-COMMON_PENDING = ("K_R ≠ f_r caused by compile-time float32 constants (Inductor GELU sqrt(2/pi), 0.044715, 1/sqrt(2); flex "
-                  "RCP_LN2 = 1.44269504; BatchNorm 1 - momentum = 0.9 and n/(n-1) = 1.1111111111111112 folded at compile time; "
-                  "hyperparameters held as float32): difference established, contract silent -> 契约外，待审阅")
+COMMON_PENDING = ("K_R ≠ f_r on pure Triton outputs (299,644 elements): 5,360 attributed by recomputation to compile-time float32 "
+                  "constants (Inductor GELU sqrt(2/pi), 0.044715, 1/sqrt(2); normalization eps / momentum held as float32); "
+                  "294,284 attributed by mechanism only, not recomputed (flex RCP_LN2 = 1.44269504; BatchNorm 0.9 and "
+                  "n/(n-1) folded at compile time): difference established, contract silent -> 契约外，待审阅")
 
 
 def main():
@@ -195,7 +199,7 @@ def main():
         f = r["F"]
         if f and f.get("beyond_over_elements") is not None:
             lines.append(f"- F（规格 {f['spec']}）：超出/元素 {json.dumps(f['beyond_over_elements'], ensure_ascii=False)[:1800]}；"
-                         f"规格状态 {json.dumps(f['spec_status'], ensure_ascii=False)[:600]}；精度不变性（按条件计）{f['precision_invariance']}；"
+                         f"规格状态 {json.dumps(f['spec_status'], ensure_ascii=False)[:600]}；精度不变性（按记录计）{f['precision_invariance']}；"
                          f"无 f 的输出 {f['no_f_outputs']}")
         else:
             lines.append(f"- F：{f}")

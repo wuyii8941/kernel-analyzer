@@ -1335,7 +1335,10 @@ class KernelReferenceEvaluator:
         Enclosure: interval arithmetic on the closed form, M2 in the centred form sum w d^2 - (sum w d)^2 / W with
         d = m - c around a float estimate c of the mean (an exact identity for every c)."""
 
+        if self.mode == NumericMode.ROUNDING_CHECK:
+            raise ProgramAbort(f"{op.node_id}: Welford merge order is not declared (rounding-check mode)")
         info = match_welford(op)
+        guarded = bool(info["zero_constants"])
         for name in info["zero_constants"]:
             z = env.get(name)
             if z is None or z.kind != "f" or not (np.all(z.lo == 0.0) and np.all(z.hi == 0.0)) or (z.st != ST_OK).any():
@@ -1348,11 +1351,16 @@ class KernelReferenceEvaluator:
         z = lambda t: np.where(ok, t, 0.0)  # noqa: E731
         m_lo, m_hi, s_lo, s_hi, w_lo, w_hi = z(m.lo), z(m.hi), z(s2.lo), z(s2.hi), z(w.lo), z(w.hi)
         neg_w = np.any(w_lo < 0, axis=axis)
+        # decisions on the exact input weights (the enclosure of an all-zero sum is not the point 0)
+        all_zero_in = np.all(ok & (w_lo == 0) & (w_hi == 0), axis=axis)
+        pos_in = np.any(ok & (w_lo > 0), axis=axis) & ~neg_w
+        # unguarded ratio r = w_b / W: two weights that may be zero can meet in some merge tree -> 0 / 0
+        unguarded_zero = (np.sum(w_lo <= 0, axis=axis) >= 2) if not guarded else np.zeros_like(neg_w)
         W_lo, W_hi = iv.isum(w_lo, w_hi, axis)
         S_lo, S_hi = iv.isum(s_lo, s_hi, axis)
         p_lo, p_hi = iv.imul(w_lo, w_hi, m_lo, m_hi)
         S1_lo, S1_hi = iv.isum(p_lo, p_hi, axis)
-        pos = W_lo > 0
+        pos = pos_in & (W_lo > 0)
         safe_W_lo = np.where(pos, W_lo, 1.0)
         safe_W_hi = np.where(pos, W_hi, 1.0)
         mean_lo, mean_hi = iv.idiv(S1_lo, S1_hi, safe_W_lo, safe_W_hi)
@@ -1368,13 +1376,15 @@ class KernelReferenceEvaluator:
         v_lo, v_hi = iv.isub(A_lo, A_hi, q_lo, q_hi)
         v_lo = np.maximum(v_lo, 0.0)                     # sum w (m - mean)^2 >= 0 for w >= 0
         M2_lo, M2_hi = iv.iadd(S_lo, S_hi, v_lo, v_hi)
-        all_zero = (W_hi == 0) & (W_lo == 0)
+        all_zero = all_zero_in
         undecided = ~pos & ~all_zero
-        bad = row_bad | neg_w
+        bad = row_bad | neg_w | unguarded_zero
         st_mean = np.where(bad | undecided | all_zero, ST_NE, ST_OK).astype(np.int8)
         st_m2 = np.where(bad | undecided, ST_NE, ST_OK).astype(np.int8)
         M2_lo = np.where(all_zero, S_lo, M2_lo)
         M2_hi = np.where(all_zero, S_hi, M2_hi)
+        W_lo = np.where(all_zero, 0.0, W_lo)
+        W_hi = np.where(all_zero, 0.0, W_hi)
         st_w = np.where(row_bad, ST_NE, ST_OK).astype(np.int8)
         cond = np.any(m.cond | s2.cond | w.cond, axis=axis)
         reasons = m.reasons | s2.reasons | w.reasons
@@ -1385,6 +1395,8 @@ class KernelReferenceEvaluator:
             extra.add(f"not_established:Welford total weight may be zero@{op.node_id}")
         if all_zero.any():
             extra.add(f"not_established:Welford mean of zero total weight depends on the merge tree@{op.node_id}")
+        if np.any(unguarded_zero):
+            extra.add(f"not_established:unguarded Welford ratio with zero weights (0 / 0 in some merge tree)@{op.node_id}")
         self._rules["reduce.welford"] += int(np.size(W_lo))
         return [_ftv(m.elem, np.where(st_mean == ST_OK, mean_lo, 0.0), np.where(st_mean == ST_OK, mean_hi, 0.0),
                      st_mean, cond, reasons | extra),

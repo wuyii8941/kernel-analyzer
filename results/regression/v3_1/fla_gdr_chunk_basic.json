@@ -1,0 +1,1096 @@
+{
+ "case": "fla_gdr_chunk_basic",
+ "mode": "B",
+ "implementation": "fla.ops.gated_delta_rule.chunk_gated_delta_rule (main)",
+ "specification": "gated delta rule recurrence (float64): B=2 T=128 H=2 HV=2 K=32 V=32 l2=False beta_sigmoid=False neg_eig=False gate_in_kernel=False h0=False final=False state_v_first=False varlen=None",
+ "spec_bound": "float64 evaluation of the documented formula, declared bound 2^-40 * max|f|",
+ "launches": [
+  {
+   "kernel": "chunk_local_cumsum_scalar_kernel",
+   "grid": [
+    8,
+    1,
+    1
+   ],
+   "triton": "3.6.0",
+   "float_atomics": false
+  },
+  {
+   "kernel": "chunk_gated_delta_rule_fwd_kkt_solve_kernel",
+   "grid": [
+    2,
+    4,
+    1
+   ],
+   "triton": "3.6.0",
+   "float_atomics": false
+  },
+  {
+   "kernel": "recompute_w_u_fwd_kernel",
+   "grid": [
+    2,
+    4,
+    1
+   ],
+   "triton": "3.6.0",
+   "float_atomics": false
+  },
+  {
+   "kernel": "chunk_gated_delta_rule_fwd_kernel_h_blockdim64",
+   "grid": [
+    4,
+    1,
+    1
+   ],
+   "triton": "3.6.0",
+   "float_atomics": false
+  },
+  {
+   "kernel": "chunk_fwd_kernel_o",
+   "grid": [
+    1,
+    2,
+    4
+   ],
+   "triton": "3.6.0",
+   "float_atomics": false
+  }
+ ],
+ "ttir_coverage_complete": [
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "versions": {
+  "liger-kernel": null,
+  "transformers": null,
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0"
+ },
+ "seeds": {
+  "development": [
+   0,
+   1
+  ],
+  "confirmation": [
+   2,
+   5
+  ]
+ },
+ "seconds": 29.3,
+ "outputs": {
+  "o": {
+   "elements_per_seed": 16384,
+   "shape": [
+    2,
+    128,
+    2,
+    32
+   ],
+   "depends_on_non_triton_intermediates": [],
+   "reference_classes": {
+    "complete_fraction": 1.0,
+    "finite_complete_fraction": 1.0,
+    "written_fraction": 1.0
+   },
+   "special_values": {
+    "elements_with_special_f": 0,
+    "kr_vs_f_class_mismatch": 0,
+    "k_vs_f_class_mismatch": 0,
+    "examples": []
+   },
+   "not_established_reasons_seed0": {
+    "dot_input_precision:tf32": 108,
+    "dot_input_precision:ieee": 8
+   },
+   "aborted_programs_seed0": {},
+   "numerical": {
+    "comparison": "o: e_num = K - K_R",
+    "measurement": null,
+    "alpha": 0.05,
+    "units": {
+     "development": [
+      0,
+      1
+     ],
+     "confirmation": [
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    "coordinate_set": "fixed on the development units (reference of a declared class in every one)",
+    "coordinates": {
+     "total": 16384,
+     "used": 16384,
+     "excluded_on_development": 0
+    },
+    "confirmation_units_dropped": [],
+    "residual": {
+     "positive_frac": 0.4986368815104167,
+     "negative_frac": 0.5013631184895834,
+     "contains_zero_frac": 0.0,
+     "mean_midpoint": -1.6242980196216394e-06,
+     "max_width": 4.6560533206729815e-12
+    },
+    "rules": [
+     {
+      "comparison": "o: e_num = K - K_R",
+      "rule": "R1",
+      "n": 4,
+      "mean_projection": 0.00021378962376299797,
+      "sd": 0.0002396442047030424,
+      "t_interval": [
+       -0.00016753778315692691,
+       0.0005951170306829228
+      ],
+      "lower_bound_of_E_l": -0.00016753781089711285,
+      "upper_bound_of_E_h": 0.0005951170644486681,
+      "positive": 3,
+      "negative": 1,
+      "zero_or_ambiguous": 0,
+      "verdict": "NOT_CONFIRMED",
+      "p_value_two_sided_conservative": 0.17238482224800997,
+      "unit_skewness": 0.6957701477633247,
+      "t_approximation": "ok",
+      "per_unit_bounds": [
+       [
+        0.000261063354160441,
+        0.00026106342299938467
+       ],
+       [
+        9.877814264754476e-05,
+        9.877819686792425e-05
+       ],
+       [
+        -3.0308639879771292e-05,
+        -3.030858116667986e-05
+       ],
+       [
+        0.0005256255151119153,
+        0.0005256255793632249
+       ]
+      ],
+      "direction": {
+       "kind": "constant",
+       "value": -0.0078125
+      },
+      "interpretation": null,
+      "coordinates_used": 16384,
+      "question": "fixed_direction_mean",
+      "rule_definition": "w = -1 / sqrt(n)"
+     },
+     {
+      "comparison": "o: e_num = K - K_R",
+      "rule": "R2",
+      "n": 4,
+      "mean_projection": 0.034362034780146544,
+      "sd": 0.00046084805194302364,
+      "t_interval": [
+       0.03362872269004491,
+       0.03509534687024818
+      ],
+      "lower_bound_of_E_l": 0.03362872265664798,
+      "upper_bound_of_E_h": 0.035095346898357194,
+      "positive": 4,
+      "negative": 0,
+      "zero_or_ambiguous": 0,
+      "verdict": "DETECTED_POSITIVE",
+      "p_value_two_sided_conservative": 6.648858851558845e-07,
+      "unit_skewness": -0.41436644271027784,
+      "t_approximation": "ok",
+      "per_unit_bounds": [
+       [
+        0.03377870038423624,
+        0.033778700453075204
+       ],
+       [
+        0.03427067016419689,
+        0.03427067021841728
+       ],
+       [
+        0.03487389350760075,
+        0.03487389356631385
+       ],
+       [
+        0.03452487494154041,
+        0.03452487500579173
+       ]
+      ],
+      "direction": {
+       "kind": "per_unit",
+       "formula": "-sign(reference) * scale",
+       "scale": 0.0078125
+      },
+      "interpretation": "the residual has the opposite sign of the reference: magnitudes pulled toward zero",
+      "coordinates_used": 16384,
+      "question": "reference_alignment",
+      "rule_definition": "w = -sign(reference) / sqrt(n), per unit"
+     },
+     {
+      "comparison": "o: e_num = K - K_R",
+      "rule": "R3",
+      "n": 4,
+      "mean_projection": 0.04569799399970381,
+      "sd": 0.0007349478496159657,
+      "t_interval": [
+       0.04452852796541054,
+       0.04686746003399708
+      ],
+      "lower_bound_of_E_l": 0.04452852793631954,
+      "upper_bound_of_E_h": 0.046867460057809625,
+      "positive": 4,
+      "negative": 0,
+      "zero_or_ambiguous": 0,
+      "verdict": "DETECTED_POSITIVE",
+      "p_value_two_sided_conservative": 1.1464571704644972e-06,
+      "unit_skewness": 0.5356173277432988,
+      "t_approximation": "ok",
+      "per_unit_bounds": [
+       [
+        0.04486978970236117,
+        0.044869789761224264
+       ],
+       [
+        0.04566176021903091,
+        0.04566176026428226
+       ],
+       [
+        0.04665916633128511,
+        0.04665916638183327
+       ],
+       [
+        0.045601259640330974,
+        0.045601259697282535
+       ]
+      ],
+      "direction": {
+       "kind": "per_unit",
+       "formula": "-reference / norm",
+       "norms": [
+        32.00248836865597,
+        32.34666856314416,
+        33.62352771821808,
+        33.20558159044361
+       ]
+      },
+      "interpretation": "the residual is anti-aligned with the reference: the output is scaled down",
+      "coordinates_used": 16384,
+      "question": "reference_alignment",
+      "rule_definition": "w = -reference / |reference|, per unit"
+     },
+     {
+      "comparison": "o: e_num = K - K_R",
+      "rule": "R5",
+      "n": 4,
+      "mean_projection": -0.00018888341874583156,
+      "sd": 0.00030140739051499784,
+      "t_interval": [
+       -0.0006684898369106608,
+       0.0002907229994189977
+      ],
+      "lower_bound_of_E_l": -0.0006684898628336647,
+      "upper_bound_of_E_h": 0.0002907230223330078,
+      "positive": 1,
+      "negative": 3,
+      "zero_or_ambiguous": 0,
+      "verdict": "NOT_CONFIRMED",
+      "p_value_two_sided_conservative": 0.2988689837152259,
+      "unit_skewness": 1.683490249230664,
+      "t_approximation": "suspect: skewed per-unit projections (|skewness| >= 1); the t interval may under-cover",
+      "robust": {
+       "method": "bootstrap-t (1999 resamples, seed 0)",
+       "lower_bound_of_E_l": -0.0005061758406733986,
+       "upper_bound_of_E_h": 0.0009432644177663923,
+       "verdict": "NOT_CONFIRMED"
+      },
+      "per_unit_bounds": [
+       [
+        -0.00031568405192546956,
+        -0.00031568399702503754
+       ],
+       [
+        -0.00026304347058961927,
+        -0.0002630434273823543
+       ],
+       [
+        0.0002512794872178427,
+        0.00025127953390244903
+       ],
+       [
+        -0.00042808573736010795,
+        -0.0004280856868043557
+       ]
+      ],
+      "direction": {
+       "kind": "learned_on_development_units",
+       "saved_as": "R5"
+      },
+      "interpretation": null,
+      "coordinates_used": 16384,
+      "question": "fixed_direction_mean",
+      "rule_definition": "w = normalized mean of the development midpoints (saved)"
+     }
+    ],
+    "default_detector": {
+     "detector_version": "2.1",
+     "seed": 0,
+     "units": 6,
+     "development_units": 2,
+     "coordinates": 16384,
+     "max_interval_width": 4.6560533206729815e-12,
+     "vector_mean": {
+      "question": "fixed-direction mean: E[e] != 0 at the measurement point",
+      "verdict": "NOT_CONFIRMED",
+      "tests": [
+       {
+        "test": "omnibus",
+        "n": 6,
+        "lower_bound_of_statistic": -2.684432718076957e-06,
+        "midpoint_statistic": -2.6844308615477327e-06,
+        "p": 0.731,
+        "flips": 999,
+        "flips_with_upper_bound_at_least_lower_bound": 730,
+        "note": "one-sided, box-conservative sign-flip; exact sign-flip test when the null unit distribution is symmetric and the boxes have zero width; the flips are the first draws of numpy default_rng(seed) (choice of -1 / +1, shape (flips, units))",
+        "holm_reject": false,
+        "verdict": "NOT_CONFIRMED"
+       },
+       {
+        "test": "total",
+        "n": 6,
+        "p": 0.10996860067769351,
+        "estimate_interval": [
+         -0.0004832968615339933,
+         6.747656548020356e-05
+        ],
+        "mean_midpoint_projection": -0.00020791014651156984,
+        "interval_sign": "",
+        "units_with_box_containing_zero": 0,
+        "diagnostics": {
+         "skewness": -0.1375662773109448,
+         "excess_kurtosis": -1.5612794582876206,
+         "largest_unit_share": 0.29317861240407567,
+         "effective_coordinates": 16384.0,
+         "tail_assumption_supported": true
+        },
+        "per_unit_bounds": [
+         [
+          -0.0004890700542290702,
+          -0.0004890699785974193
+         ],
+         [
+          9.676759687569762e-05,
+          9.676766791593784e-05
+         ],
+         [
+          -0.00026106342299938467,
+          -0.000261063354160441
+         ],
+         [
+          -9.877819686792425e-05,
+          -9.877814264754476e-05
+         ],
+         [
+          3.030858116667986e-05,
+          3.0308639879771292e-05
+         ],
+         [
+          -0.0005256255793632249,
+          -0.0005256255151119153
+         ]
+        ],
+        "holm_reject": false,
+        "verdict": "NOT_CONFIRMED"
+       },
+       {
+        "test": "learned",
+        "n": 4,
+        "p": 0.2988689837152259,
+        "estimate_interval": [
+         -0.0006684898628336647,
+         0.0002907230223330078
+        ],
+        "mean_midpoint_projection": -0.00018888341874583156,
+        "interval_sign": "",
+        "units_with_box_containing_zero": 0,
+        "diagnostics": {
+         "skewness": 0.9719635485714341,
+         "excess_kurtosis": -0.7867289466362726,
+         "largest_unit_share": 0.710882589454334,
+         "effective_coordinates": 4363.43510514027,
+         "tail_assumption_supported": true
+        },
+        "per_unit_bounds": [
+         [
+          -0.00031568405192546956,
+          -0.00031568399702503754
+         ],
+         [
+          -0.00026304347058961927,
+          -0.0002630434273823543
+         ],
+         [
+          0.0002512794872178427,
+          0.00025127953390244903
+         ],
+         [
+          -0.00042808573736010795,
+          -0.0004280856868043557
+         ]
+        ],
+        "holm_reject": false,
+        "verdict": "NOT_CONFIRMED"
+       }
+      ]
+     },
+     "alignment": {
+      "question": "reference-dependent alignment: e correlates with the reference (scaling / shrinkage)",
+      "verdict": "DETECTED",
+      "tests": [
+       {
+        "test": "aligned",
+        "n": 6,
+        "p": 1.1451619787324854e-09,
+        "estimate_interval": [
+         -0.047249074002577385,
+         -0.04510289345438089
+        ],
+        "mean_midpoint_projection": -0.04617598372730162,
+        "interval_sign": "-",
+        "units_with_box_containing_zero": 0,
+        "diagnostics": {
+         "skewness": -0.36656913505594346,
+         "excess_kurtosis": -0.8185006684990923,
+         "largest_unit_share": 0.4982423504147948,
+         "effective_coordinates": null,
+         "tail_assumption_supported": true
+        },
+        "per_unit_bounds": [
+         [
+          -0.047789917719466175,
+          -0.04778991765633255
+         ],
+         [
+          -0.046474008707366614,
+          -0.04647400864682365
+         ],
+         [
+          -0.044869789761224264,
+          -0.04486978970236117
+         ],
+         [
+          -0.04566176026428226,
+          -0.04566176021903091
+         ],
+         [
+          -0.04665916638183327,
+          -0.04665916633128511
+         ],
+         [
+          -0.045601259697282535,
+          -0.045601259640330974
+         ]
+        ],
+        "holm_reject": true,
+        "verdict": "DETECTED"
+       },
+       {
+        "test": "relative",
+        "n": 6,
+        "p": 0.002730945826691694,
+        "estimate_interval": [
+         -0.0024852742407178606,
+         -0.0009006596056274419
+        ],
+        "mean_midpoint_projection": -0.001692966918358431,
+        "interval_sign": "-",
+        "units_with_box_containing_zero": 0,
+        "diagnostics": {
+         "skewness": -1.0362247783152683,
+         "excess_kurtosis": 0.1037505598010604,
+         "largest_unit_share": 0.6774095266811486,
+         "effective_coordinates": null,
+         "tail_assumption_supported": true
+        },
+        "per_unit_bounds": [
+         [
+          -0.001739679514686834,
+          -0.0017396794971510172
+         ],
+         [
+          -0.0016756223181904584,
+          -0.0016756223058976962
+         ],
+         [
+          -0.0008986762460235104,
+          -0.0008986762303589018
+         ],
+         [
+          -0.001167415498669128,
+          -0.0011674154836555037
+         ],
+         [
+          -0.0015939731934445133,
+          -0.0015939731802243852
+         ],
+         [
+          -0.003082434796032422,
+          -0.003082434755966802
+         ]
+        ],
+        "holm_reject": true,
+        "verdict": "DETECTED"
+       }
+      ]
+     },
+     "limits": [
+      "rare values that do not appear among the units cannot be diagnosed from the data",
+      "t-type tests assume an approximately normal mean projection; the diagnostics flag concentrated, skewed or heavy-tailed scores but cannot exclude unseen rare values",
+      "NOT_CONFIRMED is not evidence of a zero mean; see the calibrated detection rates"
+     ]
+    },
+    "scale": {
+     "mean_abs_residual": 0.000288762080101204,
+     "max_abs_residual": 0.0029601206141103287,
+     "rms_reference": 0.259388491212443,
+     "relative_rms": 0.0014885144858263599,
+     "max_K_R_width": 4.6560533206729815e-12
+    }
+   },
+   "semantic": {
+    "comparison": "o: e_sem = K_R - f",
+    "measurement": null,
+    "alpha": 0.05,
+    "units": {
+     "development": [
+      0,
+      1
+     ],
+     "confirmation": [
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    "coordinate_set": "fixed on the development units (reference of a declared class in every one)",
+    "coordinates": {
+     "total": 16384,
+     "used": 16384,
+     "excluded_on_development": 0
+    },
+    "confirmation_units_dropped": [],
+    "residual": {
+     "positive_frac": 0.4985249837239583,
+     "negative_frac": 0.5009663899739584,
+     "contains_zero_frac": 0.0005086263020833334,
+     "mean_midpoint": 2.095546573954044e-12,
+     "max_width": 7.171152560658811e-12
+    },
+    "rules": [
+     {
+      "comparison": "o: e_sem = K_R - f",
+      "rule": "R1",
+      "n": 4,
+      "mean_projection": -7.867482039061005e-11,
+      "sd": 2.6097973650173484e-09,
+      "t_interval": [
+       -4.231444811309918e-09,
+       4.074095170528698e-09
+      ],
+      "lower_bound_of_E_l": -4.453673140828051e-09,
+      "upper_bound_of_E_h": 4.291994871034897e-09,
+      "positive": 2,
+      "negative": 2,
+      "zero_or_ambiguous": 0,
+      "verdict": "NOT_CONFIRMED",
+      "p_value_two_sided_conservative": 1.0,
+      "unit_skewness": -0.45289661313099117,
+      "t_approximation": "ok",
+      "per_unit_bounds": [
+       [
+        2.1541136373195735e-09,
+        2.6033035913993315e-09
+       ],
+       [
+        -1.4026195014912403e-09,
+        -9.558269724334381e-10
+       ],
+       [
+        -3.4540998579489797e-09,
+        -3.0123945779680746e-09
+       ],
+       [
+        1.50769195476798e-09,
+        1.9304331632299673e-09
+       ]
+      ],
+      "direction": {
+       "kind": "constant",
+       "value": -0.0078125
+      },
+      "interpretation": null,
+      "coordinates_used": 16384,
+      "question": "fixed_direction_mean",
+      "rule_definition": "w = -1 / sqrt(n)"
+     },
+     {
+      "comparison": "o: e_sem = K_R - f",
+      "rule": "R2",
+      "n": 4,
+      "mean_projection": 2.972072175936951e-07,
+      "sd": 7.30178200383555e-09,
+      "t_interval": [
+       2.8558845301364835e-07,
+       3.0882598217374184e-07
+      ],
+      "lower_bound_of_E_l": 2.8536462454202025e-07,
+      "upper_bound_of_E_h": 3.0904226755362575e-07,
+      "positive": 4,
+      "negative": 0,
+      "zero_or_ambiguous": 0,
+      "verdict": "DETECTED_POSITIVE",
+      "p_value_two_sided_conservative": 4.098653127445481e-06,
+      "unit_skewness": 0.4472761426487429,
+      "t_approximation": "ok",
+      "per_unit_bounds": [
+       [
+        2.8898231304313066e-07,
+        2.894315029972105e-07
+       ],
+       [
+        2.941698656631944e-07,
+        2.9461665819225226e-07
+       ],
+       [
+        3.062373625032622e-07,
+        3.066790677832432e-07
+       ],
+       [
+        2.9855911467940265e-07,
+        2.9898185588786475e-07
+       ]
+      ],
+      "direction": {
+       "kind": "per_unit",
+       "formula": "-sign(reference) * scale",
+       "scale": 0.0078125
+      },
+      "interpretation": "the residual has the opposite sign of the reference: magnitudes pulled toward zero",
+      "coordinates_used": 16384,
+      "question": "reference_alignment",
+      "rule_definition": "w = -sign(reference) / sqrt(n), per unit"
+     },
+     {
+      "comparison": "o: e_sem = K_R - f",
+      "rule": "R3",
+      "n": 4,
+      "mean_projection": 4.0853385586740364e-07,
+      "sd": 9.923500908318697e-09,
+      "t_interval": [
+       3.9274335146682446e-07,
+       4.243243602679828e-07
+      ],
+      "lower_bound_of_E_l": 3.925721729605515e-07,
+      "upper_bound_of_E_h": 4.244913188487152e-07,
+      "positive": 4,
+      "negative": 0,
+      "zero_or_ambiguous": 0,
+      "verdict": "DETECTED_POSITIVE",
+      "p_value_two_sided_conservative": 3.955250366609009e-06,
+      "unit_skewness": 1.0492073737757583,
+      "t_approximation": "suspect: skewed per-unit projections (|skewness| >= 1); the t interval may under-cover",
+      "robust": {
+       "method": "bootstrap-t (1999 resamples, seed 0)",
+       "lower_bound_of_E_l": 3.973189856684292e-07,
+       "upper_bound_of_E_h": 4.269895311928912e-07,
+       "verdict": "DETECTED_POSITIVE"
+      },
+      "per_unit_bounds": [
+       [
+        3.984570243004127e-07,
+        3.988025510266982e-07
+       ],
+       [
+        4.0508864840389856e-07,
+        4.0542998036636635e-07
+       ],
+       [
+        4.220172666289517e-07,
+        4.223553809454429e-07
+       ],
+       [
+        4.0789621411647955e-07,
+        4.082237811509788e-07
+       ]
+      ],
+      "direction": {
+       "kind": "per_unit",
+       "formula": "-reference / norm",
+       "norms": [
+        32.00248836865597,
+        32.34666856314416,
+        33.62352771821808,
+        33.20558159044361
+       ]
+      },
+      "interpretation": "the residual is anti-aligned with the reference: the output is scaled down",
+      "coordinates_used": 16384,
+      "question": "reference_alignment",
+      "rule_definition": "w = -reference / |reference|, per unit"
+     },
+     {
+      "comparison": "o: e_sem = K_R - f",
+      "rule": "R5",
+      "n": 4,
+      "mean_projection": -8.762008269934013e-10,
+      "sd": 2.6386154117892456e-09,
+      "t_interval": [
+       -5.074826761150069e-09,
+       3.322425107163266e-09
+      ],
+      "lower_bound_of_E_l": -5.245452129418561e-09,
+      "upper_bound_of_E_h": 3.4902757704263265e-09,
+      "positive": 1,
+      "negative": 3,
+      "zero_or_ambiguous": 0,
+      "verdict": "NOT_CONFIRMED",
+      "p_value_two_sided_conservative": 0.6291272000286054,
+      "unit_skewness": 1.2206017772395232,
+      "t_approximation": "suspect: skewed per-unit projections (|skewness| >= 1); the t interval may under-cover",
+      "robust": {
+       "method": "bootstrap-t (1999 resamples, seed 0)",
+       "lower_bound_of_E_l": -4.0371849794155636e-09,
+       "upper_bound_of_E_h": 5.797186783226918e-09,
+       "verdict": "NOT_CONFIRMED"
+      },
+      "per_unit_bounds": [
+       [
+        -3.583754597645514e-09,
+        -3.237947550355491e-09
+       ],
+       [
+        -1.874844705849924e-09,
+        -1.53117110629888e-09
+       ],
+       [
+        2.6507622996070416e-09,
+        2.9904427684784612e-09
+       ],
+       [
+        -1.3738919195144818e-09,
+        -1.0492018043684235e-09
+       ]
+      ],
+      "direction": {
+       "kind": "learned_on_development_units",
+       "saved_as": "R5"
+      },
+      "interpretation": null,
+      "coordinates_used": 16384,
+      "question": "fixed_direction_mean",
+      "rule_definition": "w = normalized mean of the development midpoints (saved)"
+     }
+    ],
+    "default_detector": {
+     "detector_version": "2.1",
+     "seed": 0,
+     "units": 6,
+     "development_units": 2,
+     "coordinates": 16384,
+     "max_interval_width": 7.171152560658811e-12,
+     "vector_mean": {
+      "question": "fixed-direction mean: E[e] != 0 at the measurement point",
+      "verdict": "NOT_CONFIRMED",
+      "tests": [
+       {
+        "test": "omnibus",
+        "n": 6,
+        "lower_bound_of_statistic": -7.629463888833689e-17,
+        "midpoint_statistic": 2.826046189971001e-17,
+        "p": 0.732,
+        "flips": 999,
+        "flips_with_upper_bound_at_least_lower_bound": 731,
+        "note": "one-sided, box-conservative sign-flip; exact sign-flip test when the null unit distribution is symmetric and the boxes have zero width; the flips are the first draws of numpy default_rng(seed) (choice of -1 / +1, shape (flips, units))",
+        "holm_reject": false,
+        "verdict": "NOT_CONFIRMED"
+       },
+       {
+        "test": "total",
+        "n": 6,
+        "p": 0.9582971085372515,
+        "estimate_interval": [
+         -2.4035061289917467e-09,
+         2.9454811072721716e-09
+        ],
+        "mean_midpoint_projection": 2.6822996146611766e-10,
+        "interval_sign": "",
+        "units_with_box_containing_zero": 0,
+        "diagnostics": {
+         "skewness": 0.13669024793428702,
+         "excess_kurtosis": -1.6456519530687275,
+         "largest_unit_share": 0.32030585668964046,
+         "effective_coordinates": 16384.0,
+         "tail_assumption_supported": true
+        },
+        "per_unit_bounds": [
+         [
+          -1.3655982079462295e-09,
+          -9.68044237507866e-10
+         ],
+         [
+          2.246189983192808e-09,
+          2.676813436729819e-09
+         ],
+         [
+          -2.6033035913993315e-09,
+          -2.1541136373195735e-09
+         ],
+         [
+          9.558269724334381e-10,
+          1.4026195014912403e-09
+         ],
+         [
+          3.0123945779680746e-09,
+          3.4540998579489797e-09
+         ],
+         [
+          -1.9304331632299673e-09,
+          -1.50769195476798e-09
+         ]
+        ],
+        "holm_reject": false,
+        "verdict": "NOT_CONFIRMED"
+       },
+       {
+        "test": "learned",
+        "n": 4,
+        "p": 0.6291272000286054,
+        "estimate_interval": [
+         -5.245452129418561e-09,
+         3.4902757704263265e-09
+        ],
+        "mean_midpoint_projection": -8.762008269934013e-10,
+        "interval_sign": "",
+        "units_with_box_containing_zero": 0,
+        "diagnostics": {
+         "skewness": 0.7047147646625744,
+         "excess_kurtosis": -0.9047171263324296,
+         "largest_unit_share": 0.6543035196465294,
+         "effective_coordinates": 4058.2119294193767,
+         "tail_assumption_supported": true
+        },
+        "per_unit_bounds": [
+         [
+          -3.583754597645514e-09,
+          -3.237947550355491e-09
+         ],
+         [
+          -1.874844705849924e-09,
+          -1.53117110629888e-09
+         ],
+         [
+          2.6507622996070416e-09,
+          2.9904427684784612e-09
+         ],
+         [
+          -1.3738919195144818e-09,
+          -1.0492018043684235e-09
+         ]
+        ],
+        "holm_reject": false,
+        "verdict": "NOT_CONFIRMED"
+       }
+      ]
+     },
+     "alignment": {
+      "question": "reference-dependent alignment: e correlates with the reference (scaling / shrinkage)",
+      "verdict": "DETECTED",
+      "tests": [
+       {
+        "test": "aligned",
+        "n": 6,
+        "p": 3.17552292005169e-09,
+        "estimate_interval": [
+         -4.257535779831018e-07,
+         -4.018520095073933e-07
+        ],
+        "mean_midpoint_projection": -4.138070918095739e-07,
+        "interval_sign": "-",
+        "units_with_box_containing_zero": 0,
+        "diagnostics": {
+         "skewness": 0.20610632021651246,
+         "excess_kurtosis": -1.6402415856416586,
+         "largest_unit_share": 0.3653462931435472,
+         "effective_coordinates": null,
+         "tail_assumption_supported": true
+        },
+        "per_unit_bounds": [
+         [
+          -4.2534043577458e-07,
+          -4.2503247924689563e-07
+         ],
+         [
+          -4.236878046093401e-07,
+          -4.233535351448417e-07
+         ],
+         [
+          -3.988025510266982e-07,
+          -3.984570243004127e-07
+         ],
+         [
+          -4.0542998036636635e-07,
+          -4.0508864840389856e-07
+         ],
+         [
+          -4.223553809454429e-07,
+          -4.220172666289517e-07
+         ],
+         [
+          -4.082237811509788e-07,
+          -4.0789621411647955e-07
+         ]
+        ],
+        "holm_reject": true,
+        "verdict": "DETECTED"
+       },
+       {
+        "test": "relative",
+        "n": 6,
+        "p": 0.04461592709682019,
+        "estimate_interval": [
+         -4.10752196774862e-08,
+         -7.362139481222887e-10
+        ],
+        "mean_midpoint_projection": -2.08642941552141e-08,
+        "interval_sign": "-",
+        "units_with_box_containing_zero": 0,
+        "diagnostics": {
+         "skewness": -1.557242117403145,
+         "excess_kurtosis": 0.7820506372146516,
+         "largest_unit_share": 0.7837058104003098,
+         "effective_coordinates": null,
+         "tail_assumption_supported": true
+        },
+        "per_unit_bounds": [
+         [
+          -1.8210861291138315e-08,
+          -1.811384053932351e-08
+         ],
+         [
+          -1.0763965979283386e-08,
+          -1.0671698197690149e-08
+         ],
+         [
+          -1.9483359198764475e-08,
+          -1.932065607799771e-08
+         ],
+         [
+          -7.440604397031379e-09,
+          -7.2900724071758234e-09
+         ],
+         [
+          -1.0857979724060286e-08,
+          -1.070835479996222e-08
+         ],
+         [
+          -5.892043885395346e-08,
+          -5.858969839618845e-08
+         ]
+        ],
+        "holm_reject": true,
+        "verdict": "DETECTED"
+       }
+      ]
+     },
+     "limits": [
+      "rare values that do not appear among the units cannot be diagnosed from the data",
+      "t-type tests assume an approximately normal mean projection; the diagnostics flag concentrated, skewed or heavy-tailed scores but cannot exclude unseen rare values",
+      "NOT_CONFIRMED is not evidence of a zero mean; see the calibrated detection rates"
+     ]
+    },
+    "scale": {
+     "mean_abs_residual": 2.588115728995396e-09,
+     "max_abs_residual": 2.5764531619287823e-08,
+     "rms_reference": 0.259388491212443,
+     "relative_rms": 1.3606192823089412e-08,
+     "max_K_R_width": 4.6560533206729815e-12
+    }
+   },
+   "semantic_elementwise": {
+    "elements": 98304,
+    "certified_frac": 0.9994913736979166,
+    "relative_rms": 1.3606192823089412e-08
+   },
+   "total": {
+    "comparison": "K - f = e_num + e_sem (midpoints)",
+    "relative_rms": 0.0014885262685297726,
+    "max_abs": 0.002960144637487172
+   },
+   "sem_profile_last_axis": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  }
+ },
+ "tool_version": "3.1",
+ "outputs_not_written_by_triton": [],
+ "outputs_binding_not_established": [],
+ "outputs_at_address_of_another_recorded_storage": [],
+ "outputs_modified_after_last_triton_write": [],
+ "outputs_whose_writing_programs_aborted": {},
+ "external_reentries_seed0": [],
+ "masked_lane_assumption": {
+  "applied": true,
+  "ptx_zero_fills_per_launch": [
+   true,
+   true,
+   true,
+   true,
+   true
+  ],
+  "meaning": "masked-off lanes of loads without `other` taken as 0 (the lowering zero-initializes them; TTIR leaves them undefined)"
+ },
+ "timing_seconds": {
+  "setup_compile_warmup": 6.84,
+  "inputs": 0.008,
+  "capture_first_seed": 1.295,
+  "capture": 0.054,
+  "reference": 27.252,
+  "specification": 0.505,
+  "statistics": 1.407
+ }
+}

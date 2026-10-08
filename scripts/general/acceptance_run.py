@@ -35,19 +35,31 @@ sys.path.insert(0, str(ROOT / "src"))
 from kernel_analyzer import check, measure  # noqa: E402
 from kernel_analyzer.reference_eval.analysis import assess_units  # noqa: E402
 
-FROZEN_TAG = "general-v3.0"
+FROZEN_TAG = "general-v3.1"
 
 
 def tree_hash():
     return subprocess.run(["git", "rev-parse", "HEAD:src"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
 
 
+FROZEN_PATHS = ["src", "scripts/essential/contract_v3.py", "scripts/general/acceptance_run.py",
+                "scripts/essential/common.py"]
+
+
+def _tree(rev, path):
+    r = subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"{rev}:{path}"], cwd=ROOT, capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
 def frozen_check():
-    r = subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"{FROZEN_TAG}:src"], cwd=ROOT, capture_output=True, text=True)
-    tag = r.stdout.strip() if r.returncode == 0 else ""
-    dirty = subprocess.run(["git", "status", "--porcelain", "src"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
-    return {"frozen_tag": FROZEN_TAG, "tag_src_tree": tag, "head_src_tree": tree_hash(), "src_dirty": bool(dirty),
-            "ok": bool(tag) and tag == tree_hash() and not dirty}
+    """every path the measurement depends on (src, the cannot-judge rules, this harness) must equal the frozen tag,
+    with no modified, untracked or ignored files under them."""
+    rows = {p: {"tag": _tree(FROZEN_TAG, p), "head": _tree("HEAD", p)} for p in FROZEN_PATHS}
+    st = subprocess.run(["git", "status", "--porcelain", "--ignored", "--untracked-files=all", "--"] + FROZEN_PATHS,
+                        cwd=ROOT, capture_output=True, text=True).stdout
+    dirty = [l for l in st.splitlines() if l.strip() and "__pycache__" not in l]
+    ok = all(v["tag"] and v["tag"] == v["head"] for v in rows.values()) and not dirty
+    return {"frozen_tag": FROZEN_TAG, "trees": rows, "dirty": dirty, "ok": ok}
 
 
 def baseline(decl, case_dir):
@@ -114,16 +126,25 @@ def run_case(case_dir: Path):
 
 
 def score(results, answers):
-    """answers: {case: {"output": name, "class": "fixed_mean"|"aligned", "effect": "none"|"positive"|"negative"}}."""
+    """answers: {case: {"output": name, "class": "fixed_mean"|"aligned", "effect": "none"|"positive"|"negative",
+    "rule": optional rule name}}.  A detection counts as a true positive only with the declared sign."""
     rows = []
     for case, ans in answers.items():
-        r = results["cases"].get(case, {})
-        verdicts = [lv["verdicts"].get(ans["output"], {}).get(ans["class"], "") for lv in r.get("levels", [])]
-        detected = any(v.startswith("average effect nonzero") for v in verdicts)
-        rows.append({"case": case, "truth": ans["effect"], "detected": detected,
-                     "outcome": ("true positive" if detected and ans["effect"] != "none" else
-                                 "false positive" if detected else
-                                 "miss" if ans["effect"] != "none" else "true negative")})
+        rep = (results["cases"].get(case) or {}).get("tool_report") or {}
+        rules = []
+        for tl in rep.get("levels", []):
+            o = (tl.get("outputs") or {}).get(ans["output"]) or {}
+            for rn, j in (((o.get("statistics") or {}).get(ans["class"]) or {}).get("rules") or {}).items():
+                if j["judgment"].startswith("nonzero") and (not ans.get("rule") or rn == ans["rule"]):
+                    rules.append((rn, "positive" if "positive" in j["judgment"] else "negative"))
+        signs = {sg for _, sg in rules}
+        if not rules:
+            outcome = "miss" if ans["effect"] != "none" else "true negative"
+        elif ans["effect"] == "none":
+            outcome = "false positive"
+        else:
+            outcome = "true positive" if signs == {ans["effect"]} else "wrong or mixed sign"
+        rows.append({"case": case, "truth": ans["effect"], "detections": rules, "outcome": outcome})
     return rows
 
 
@@ -137,7 +158,12 @@ def main():
     out = Path(a.out)
     if a.score:
         results = json.loads((out / "results.json").read_text())
-        rows = score(results, json.loads(Path(a.score).read_text()))
+        blob = Path(a.score).read_bytes()
+        sealed = results.get("answers_sha256_at_start")
+        got = hashlib.sha256(blob).hexdigest()
+        if sealed and sealed.split()[0] != got:
+            sys.exit(f"answer file does not match the sealed hash: {got} vs {sealed}")
+        rows = score(results, json.loads(blob))
         (out / "score.json").write_text(json.dumps(rows, indent=1) + "\n")
         print(json.dumps(rows, indent=1))
         return

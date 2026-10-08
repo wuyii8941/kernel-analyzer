@@ -760,6 +760,8 @@ class GpuEmulator(KernelReferenceEvaluator):
 
     def _op_reduce(self, op, args, env, state):
         combiner = recognize_combiner(op)
+        if combiner == "welford":  # float Welford depends on the merge tree: not order-free, not emulable here
+            raise ProgramAbort(f"{op.node_id}: Welford merge order is not modelled by the emulator")
         if combiner not in ("sum", "prod") or args[0].kind != "f":
             mode, self.mode = self.mode, NumericMode.NUMERICAL_DIFFERENCE  # max / min / arg: order-free
             try:

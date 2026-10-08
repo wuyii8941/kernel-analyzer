@@ -36,7 +36,7 @@ import f_eval_2b as FE  # noqa: E402
 from f_eval import bounds, norm_spec, spec_arrays  # noqa: E402
 
 # closure records (tool 2.3) stay in results/closure/fr_modeB; tool-3.0 reruns go to results/general/
-OUT = ROOT / ("results/general/fr_modeB_v3" if __import__("os").environ.get("KA_ACCUMULATION", "exact") == "exact"
+OUT = ROOT / ("results/general/fr_modeB_v3_1" if __import__("os").environ.get("KA_ACCUMULATION", "exact") == "exact"
               else "results/general/fr_modeB_gamma")
 DTYPES = {}
 TAU32 = 2.0 ** -12

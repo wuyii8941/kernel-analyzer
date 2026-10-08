@@ -166,9 +166,14 @@ def expand(decl: dict) -> dict:
            "factors": decl.get("factors") or {},
            "factor_levels": _factor_levels(decl["inputs"], decl.get("factors")), "versions": _versions(),
            "error_budget": decl.get("error_budget"),
+           "bounded_route": "recorded only: the entry does not apply the declared error budget (bounded_mean_test is "
+                            "used by the calibration); approximate route (endpoint-conservative t) for every output",
            "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
            "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) + contract_v3 cannot-judge "
-                         "rules (S0 = 2, N0 = 64, n_min = 16); bounded route when an error budget is declared"}
+                         "rules (S0 = 2, N0 = 64, n_min = 16)",
+           "reference_scope": "call-level complete only when every non-Triton upstream value is a copy of the declared "
+                              "inputs; otherwise kernel-level (upstream values captured) and not counted as complete "
+                              "for the call"}
     body = json.dumps({k: decl[k] for k in ("call", "inputs", "compare", "budget")}, sort_keys=True, default=str)
     exp["declaration_sha256"] = hashlib.sha256(body.encode()).hexdigest()
     exp["_base_dir"] = decl.get("_base_dir", ".")
@@ -331,7 +336,13 @@ def bounded_mean_test(a: np.ndarray, M: np.ndarray, alpha: float) -> dict:
 
 FAILURE_CLASSES = ("semantics missing", "binding", "enclosure too wide", "over budget", "statistics insufficient")
 _FAILURE_TABLE = [   # (substring of the tool's reason, class) -- first match wins; printed with every report
+    ("call rejected the declared inputs", "binding"),
+    ("address outside every captured storage", "binding"), ("invalid address", "binding"),
     ("unrecognized", "semantics missing"), ("no declared semantics", "semantics missing"),
+    ("unknown callee", "semantics missing"), ("no reference rule", "semantics missing"),
+    ("libdevice", "semantics missing"), ("loop bound", "over budget"), ("unknown buffer", "semantics missing"),
+    ("domain of", "enclosure too wide"), ("non-point", "enclosure too wide"), ("float-to-int", "enclosure too wide"),
+    ("reinterpret", "enclosure too wide"),
     ("not supported", "semantics missing"), ("unsupported", "semantics missing"), ("unknown op", "semantics missing"),
     ("no derivative rule", "semantics missing"), ("store through a not-established address", "semantics missing"),
     ("atomic", "semantics missing"), ("order is not declared", "semantics missing"),
@@ -341,7 +352,7 @@ _FAILURE_TABLE = [   # (substring of the tool's reason, class) -- first match wi
     ("non-triton intermediate", "binding"), ("shape varies across units", "binding"),
     ("pinned_load", "enclosure too wide"), ("undecided", "enclosure too wide"), ("overlap", "enclosure too wide"),
     ("straddl", "enclosure too wide"), ("may be zero", "enclosure too wide"), ("may be negative", "enclosure too wide"),
-    ("too wide", "enclosure too wide"), ("width", "enclosure too wide"),
+    ("too wide", "enclosure too wide"), ("interval width", "enclosure too wide"),
     ("timeout", "over budget"), ("budget", "over budget"),
     ("cannot judge", "statistics insufficient"), ("unresolved_sample", "statistics insufficient"),
 ]
@@ -352,7 +363,7 @@ def classify_failure(reason: str) -> str:
     for key, cls in _FAILURE_TABLE:
         if key in r:
             return cls
-    return "semantics missing" if "not_established" in r else "unclassified"
+    return "semantics missing" if "not_established" in r else "unclassified (tool error or new reason)"
 
 
 # ------------------------------------------------------------------------------------------------ run
@@ -413,7 +424,11 @@ def run_level(exp: dict, level: dict) -> dict:
             return make_inputs(exp, level, seed)
 
         def launch(self, inp):
-            outs = call({k: v for k, v in inp.items() if k != "_seed"})
+            try:
+                outs = call({k: v for k, v in inp.items() if k != "_seed"})
+            except Exception as exc:  # noqa: BLE001  -- the declared call itself refused the inputs
+                raise RuntimeError(f"the call rejected the declared inputs (legal call / input domain): "
+                                   f"{type(exc).__name__}: {exc}") from exc
             sel = {}
             for k in measure_names:
                 if k not in outs:
@@ -447,9 +462,6 @@ def run_level(exp: dict, level: dict) -> dict:
     except Exception as exc:  # noqa: BLE001
         msg = f"{type(exc).__name__}: {exc}"[:400]
         cls = classify_failure(msg)
-        if cls == "unclassified":
-            cls = "binding"                              # the call rejected the declared inputs (legal-call violation)
-            msg = "the call rejected the declared inputs (legal call / input domain): " + msg
         return {"level": level, "status": "error", "reason": msg, "failure_class": cls,
                 "seconds": round(time.time() - t0, 1)}
     finally:
@@ -472,6 +484,11 @@ def run_level(exp: dict, level: dict) -> dict:
             failures.append(outputs[name]["failure_class"])
             continue
         quality = reference_quality(keep.get(name, []), dtypes.get(name, "float32"), exp["resolution"]["ulp_fraction"])
+        mixed = o.get("depends_on_non_triton_intermediates") or []
+        backfilled = [m for m in mixed if not m.endswith("[copy of inputs]")]
+        quality["reference_scope"] = ("kernel-level: upstream non-Triton values captured (" + ", ".join(backfilled)[:200]
+                                      + ")") if backfilled else "call-level"
+        quality["complete_rate_call_level"] = 0.0 if backfilled else quality["complete_rate"]
         stats = class_statistics(o.get("numerical"), exp["rule_classes"], exp["alpha"])
         entry = {"status": "evaluated", "reference": quality, "statistics": stats,
                  "mixed_non_triton_sources": o.get("depends_on_non_triton_intermediates") or [],

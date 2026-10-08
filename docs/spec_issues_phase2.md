@@ -13,8 +13,8 @@
 - **两者的差别**：
   - weight_decay = 0：参数轨迹在实数上相同；动量缓冲 b 符号相反（文档的 b_t 累积 −∇f）。
   - weight_decay = λ ≠ 0：文档 θ_t = θ − γ(−∇f + λθ)（仍是衰减），规格 θ_t = θ + γ(∇f + λθ)（衰减方向反了），参数轨迹不同。
-- **观测**（2b 条件 `opt_sgd_nesterov_cold_max_wd0.0`，3 个种子，全部 torch 实现与 float64 配对）：参数 0 / 14688 超出；
-  `momentum_buffer` 306 / 3672 超出（float32 实现）；float64 for_loop CPU 的缓冲与「规格 b 取负」相差 ≤ 1.5e-16（相对），
+- **观测**（2b 条件 `opt_sgd_nesterov_cold_max_wd0.0`，3 个种子，全部 torch 实现与 float64 配对）：每个 torch 候选参数 0 / 408 超出；
+  `momentum_buffer` 306 / 306（该条件全部缓冲元素）超出（float32 实现；14688 / 3672 是全家族合计）；float64 for_loop CPU 的缓冲与「规格 b 取负」相差 ≤ 1.5e-16（相对），
   与规格 b 本身相差 1.59（相对）。精度不变性把这些缓冲元素判为语义（102 / 102，每个配对每个种子）。
   `results/closure/f_eval/optimizers.json`。2b 没有 SGD + maximize + λ ≠ 0 的条件，参数轨迹的分歧没有被运行覆盖。
 - **执行方处理**：O-D2 的 maximize 部分停止裁决；该条件的 `momentum_buffer` 比对记「条款待审阅」，不计入第 1 栏。

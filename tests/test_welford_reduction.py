@@ -174,3 +174,30 @@ def test_inductor_bfloat16_variance_encloses_the_exact_variance():
             mean = sum(q) / len(q)
             var = sum((v - mean) ** 2 for v in q) / (len(q) - 1)
             assert F(float(r["r_lo"][i])) <= var <= F(float(r["r_hi"][i]))
+
+
+@triton.jit
+def _unguarded_combine(m1, s1, w1, m2, s2, w2):
+    delta = m2 - m1
+    nw = w1 + w2
+    r = w2 / nw                                                    # no guard: 0 / 0 when two zero weights meet
+    return m1 + delta * r, s1 + s2 + delta * delta * w1 * r, nw
+
+
+_KERNELS["unguarded"] = _make(_unguarded_combine)
+
+
+@pytestmark_cuda
+def test_unguarded_ratio_with_zero_weights_is_not_established():
+    rep = _run("unguarded", lambda s: [0.0] * 32 + [1.0] * 32)
+    o = rep["outputs"]["out"]
+    assert o["reference_classes"]["finite_complete_fraction"] < 1.0
+    assert any("unguarded Welford ratio" in k for k in (o.get("not_established_reasons_seed0") or {}))
+
+
+@pytestmark_cuda
+def test_all_zero_weights_leave_the_mean_open_and_give_m2_as_the_sum_of_s():
+    rep = _run("welford", lambda s: [0.0] * 64)
+    o = rep["outputs"]["out"]
+    assert abs(o["reference_classes"]["finite_complete_fraction"] - 2 / 3) < 1e-9   # mean open; M2 and W established
+    assert any("zero total weight" in k for k in (o.get("not_established_reasons_seed0") or {}))

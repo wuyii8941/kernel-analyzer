@@ -104,8 +104,10 @@ def build() -> dict:
         "tt.reduce", "SUPPORTED", "E", "welford",
         "Welford merge of (mean, M2, weight): for weights >= 0 with W > 0 every merge tree equals the closed form "
         "W = sum w, mean = sum w m / W, M2 = sum s + sum w (m - mean)^2 (pairwise parallel-axis identity; zero-weight "
-        "triples only add s); W = 0 -> mean not established, M2 = sum s; possibly negative weights -> not established. "
-        "Matched on dataflow, never on names.",
+        "triples only add s); W = 0 (all input weights exactly 0) -> mean not established, M2 = sum s; possibly "
+        "negative weights -> not established; unguarded ratio r = w_b / W with two weights that may be 0 -> 0 / 0 in "
+        "some merge tree -> not established; rounding-check mode and the bit-exact emulator reject it (float Welford "
+        "depends on the merge tree).  Matched on dataflow, never on names.",
         f"{T_WF}::test_merge_without_the_weight_factor_is_rejected", f"{T_WF}::test_possibly_negative_weights_are_not_established",
         subregion="welford(mean, M2, weight)"))
     entries.append(_entry("tt.reduce", "REJECTED", "E", reason="unregistered combine region: reduction tree not "

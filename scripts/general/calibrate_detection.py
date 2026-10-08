@@ -61,7 +61,8 @@ def one(args):
     dist, eff, rep = args
     from kernel_analyzer import measure
     from kernel_analyzer.reference_eval.analysis import assess_units
-    rng = np.random.default_rng([hash(dist) % 2 ** 31, int(eff * 1e4), rep])
+    import zlib
+    rng = np.random.default_rng([zlib.crc32(dist.encode()), int(eff * 1e4), rep])     # stable across processes
     e, G = sample(dist, eff, rng)
     lo, hi = e - WIDTH / 2, e + WIDTH / 2
     ok = np.ones_like(e, dtype=bool)

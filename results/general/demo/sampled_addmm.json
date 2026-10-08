@@ -1,5 +1,5 @@
 {
- "tool_version": "3.0",
+ "tool_version": "3.1",
  "expanded_declaration": {
   "call": "bsr_ops.py:sampled_addmm",
   "inputs": {
@@ -84,12 +84,14 @@
    "torch": "2.10.0+cu128",
    "triton": "3.6.0",
    "device": "NVIDIA RTX A6000",
-   "tool": "3.0",
+   "tool": "3.1",
    "python": "3.11.16"
   },
   "error_budget": null,
+  "bounded_route": "recorded only: the entry does not apply the declared error budget (bounded_mean_test is used by the calibration); approximate route (endpoint-conservative t) for every output",
   "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
-  "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) + contract_v3 cannot-judge rules (S0 = 2, N0 = 64, n_min = 16); bounded route when an error budget is declared",
+  "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) + contract_v3 cannot-judge rules (S0 = 2, N0 = 64, n_min = 16)",
+  "reference_scope": "call-level complete only when every non-Triton upstream value is a copy of the declared inputs; otherwise kernel-level (upstream values captured) and not counted as complete for the call",
   "declaration_sha256": "3d096f24bba676cc6b35bd8e9239038c3e732abda7b05efff43c117db8ef95eb"
  },
  "levels": [
@@ -123,7 +125,9 @@
        "max": 0.015625
       },
       "resolution_target_ulp_fraction": 0.125,
-      "resolved_fraction": 1.0
+      "resolved_fraction": 1.0,
+      "reference_scope": "call-level",
+      "complete_rate_call_level": 1.0
      },
      "statistics": {
       "fixed_mean": {
@@ -178,15 +182,15 @@
     }
    },
    "timing_seconds": {
-    "setup_compile_warmup": 1.578,
-    "inputs": 0.09,
-    "capture_first_seed": 1.134,
-    "capture": 0.174,
-    "reference": 10.285,
+    "setup_compile_warmup": 1.678,
+    "inputs": 0.101,
+    "capture_first_seed": 1.201,
+    "capture": 0.19,
+    "reference": 11.77,
     "specification": 0.0,
-    "statistics": 1.503
+    "statistics": 1.668
    },
-   "seconds": 14.9,
+   "seconds": 16.8,
    "failure_classes": [],
    "over_budget": false
   }
@@ -200,12 +204,60 @@
  },
  "failure_table": [
   [
+   "call rejected the declared inputs",
+   "binding"
+  ],
+  [
+   "address outside every captured storage",
+   "binding"
+  ],
+  [
+   "invalid address",
+   "binding"
+  ],
+  [
    "unrecognized",
    "semantics missing"
   ],
   [
    "no declared semantics",
    "semantics missing"
+  ],
+  [
+   "unknown callee",
+   "semantics missing"
+  ],
+  [
+   "no reference rule",
+   "semantics missing"
+  ],
+  [
+   "libdevice",
+   "semantics missing"
+  ],
+  [
+   "loop bound",
+   "over budget"
+  ],
+  [
+   "unknown buffer",
+   "semantics missing"
+  ],
+  [
+   "domain of",
+   "enclosure too wide"
+  ],
+  [
+   "non-point",
+   "enclosure too wide"
+  ],
+  [
+   "float-to-int",
+   "enclosure too wide"
+  ],
+  [
+   "reinterpret",
+   "enclosure too wide"
   ],
   [
    "not supported",
@@ -304,7 +356,7 @@
    "enclosure too wide"
   ],
   [
-   "width",
+   "interval width",
    "enclosure too wide"
   ],
   [
@@ -324,5 +376,5 @@
    "statistics insufficient"
   ]
  ],
- "seconds": 15.7
+ "seconds": 17.7
 }

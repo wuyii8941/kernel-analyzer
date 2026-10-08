@@ -93,3 +93,23 @@ def test_input_modified_in_place_by_aten_inside_the_launch_is_an_intermediate():
 
     rep = check.run(Case(), dev=[0], conf=[1, 2])
     assert rep["outputs"]["y"]["depends_on_non_triton_intermediates"], "the in-place modified input must count as upstream"
+
+
+def test_pure_data_movement_upstream_is_tagged_as_a_copy_of_the_inputs():
+    """an ATen layout change (copy of the declared input) is upstream but its values ARE the inputs: tagged, so the
+    unified entry may still count the reference as complete for the call; a computed upstream value is not tagged."""
+    class Case(check.Case):
+        name = "copy_upstream"
+
+        def inputs(self, seed):
+            return {"w": torch.randn(16, 32, device="cuda")}
+
+        def launch(self, inp):
+            t = inp["w"].t().contiguous().reshape(-1)              # ATen copy with a new layout
+            y = torch.empty(N, device="cuda")
+            _plus_one[(N // 128,)](t, y, N, BLOCK=128)
+            return {"y": y}
+
+    rep = check.run(Case(), dev=[0], conf=[1, 2])
+    deps = rep["outputs"]["y"]["depends_on_non_triton_intermediates"]
+    assert deps and all(d.endswith("[copy of inputs]") for d in deps)

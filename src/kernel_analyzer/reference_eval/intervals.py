@@ -386,9 +386,10 @@ def _vecsum_last(p):
 def sum_k(x, axis=-1, K=3):
     """SumK (Ogita, Rump, Oishi 2005, Algorithm 4.8): (res, err) with |sum(x) - res| <= err rigorously
     (Proposition 4.10: |res - s| <= (u + 3 gamma_{n-1}^2) |s| + gamma_{2n-2}^K S, S = sum |x_i|; valid without
-    overflow and with gradual underflow, 4 n u <= 1).  The final summation is numpy's pairwise sum, whose error is
-    within the gamma_{n-1} bound of recursive summation the proof uses.  Returns (res, err, ok): ok is False where
-    a non-finite value appeared (callers fall back to the gamma bound there)."""
+    overflow and with gradual underflow, 4 n u <= 1).  Final pass: numpy's pairwise sum of the first n - 1 terms
+    (error within the gamma bound of recursive summation), then p_n added last with one rounding, which is the
+    structure the proof uses.  Returns (res, err, ok): ok is False where a non-finite value appeared (callers fall
+    back to the gamma bound there)."""
 
     x = np.moveaxis(np.asarray(x, dtype=np.float64), axis, -1)
     n = x.shape[-1]
@@ -400,7 +401,10 @@ def sum_k(x, axis=-1, K=3):
         p = x.copy()
         for _ in range(K - 1):
             _vecsum_last(p)
-        res = np.sum(p, axis=-1)
+        # the proof needs the dominant term p_n added last, with a single rounding: the first n - 1 terms in any
+        # order (pairwise error <= gamma_{n-2} sum |p_i|), then + p_n.  A pairwise sum over all n terms buries p_n
+        # several roundings deep and breaks the u|s| term (audit 2026-10-08, counterexample in tests).
+        res = np.sum(p[..., :-1], axis=-1) + p[..., -1]
         g1 = gamma(max(n - 1, 1))
         gk = gamma(max(2 * n - 2, 1)) ** K
         c1 = U + 3 * g1 * g1

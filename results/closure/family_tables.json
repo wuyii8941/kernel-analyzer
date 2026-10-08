@@ -1331,7 +1331,7 @@
   },
   "columns": {
    "2": [
-    "EMB-A1: max_norm renormalisation divides by (norm + 1e-7); visible against f at float64 (891/3552 out, 340/960 weight_after beyond τ64), precision invariance 'semantic' (results/closure/f_eval/embedding.json); residual after dividing by (norm + 1e-7): <= 7.3e-17"
+    "EMB-A1: max_norm renormalisation divides by (norm + 1e-7); visible against f at float64 (891/1008 out and 340/960 weight_after beyond τ64 in the two max_norm conditions), precision invariance 'semantic' (results/closure/f_eval/embedding.json); residual after dividing by (norm + 1e-7): <= 7.3e-17 (results/closure/audit_checks.json)"
    ],
    "pending": [
     "E-D2 (max_norm scope): weight_after not adjudicated (docs/doc_check_seven_items_20261008.md)"
@@ -2257,7 +2257,7 @@
   },
   "columns": {
    "difference": [
-    "float32 huge_offset: F beyond τ32 in 247/5400 y elements of eager CPU float32; precision invariance: no semantic element (numerical); contract states no accuracy requirement -> 契约外，待审阅 (no defect verdict)"
+    "float32 huge_offset: F beyond τ32 in y -- eager CPU 247/5400, eager CUDA 250/5400, Inductor 266/5400, nightly eager 255/5400, nightly Inductor 237/5400; precision invariance (eager pairs): no semantic element above the float64 noise floor (5 below it, cannot judge) -> numerical; Liger LayerNorm 85/2340 has no pair and no mode B -> not classified; contract states no accuracy requirement -> 契约外，待审阅"
    ]
   }
  },
@@ -2699,7 +2699,7 @@
   },
   "columns": {
    "pending": [
-    "O-D2 SGD maximize placement: momentum buffer = -(spec b) to 1.5e-16, parameters agree (docs/spec_issues_phase2.md SPEC-ISSUE-1)"
+    "O-D2 SGD maximize placement: momentum buffer = -(spec b) to 1.5e-16, parameters agree (docs/spec_issues_phase2.md SPEC-ISSUE-1; results/closure/audit_checks.json)"
    ]
   }
  },
