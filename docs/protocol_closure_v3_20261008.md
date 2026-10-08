@@ -91,3 +91,43 @@ Inductor（两种精度各自编译，不保证同一算法）——有 TTIR 的
 
 ## 10 偏离记录
 （运行中追加。）
+
+## 附录 A 数值作用流的 20 个程序（2026-10-08 声明，在任何作用测量之前提交）
+
+**选取依据**：语义运行（F、精度不变性、模式 B 的 FR）结束后，从没有第 1–3 栏发现、也没有条款待审阅的实现中选；选择只看能否测量
+（K_R 能否建立、输出是否由 Triton 写出），不看作用结果。排除：嵌入 max_norm（EMB-A1，第 2 栏）、SGD maximize（O-D2 待审阅）。
+2b G7 的 20 个程序中 17 个能建立 K_R，原样保留（含 G7 的 GELU：任务书第 4 节要求它作为真实的数值作用继续研究）；不能测量的 3 个
+（var_bf16：Welford 合并器被拒绝；scatter_add_bf16、embedding_bag_mean_bf16：输出不由 Triton 写出）换成 3 个同样来自无语义问题实现的
+程序。语义运行中 Inductor float32 的 GELU 有「编译期常数舍入」造成的 K_R ≠ f_r（契约外，待审阅）；模式 A 的 e_num 以 kernel 自身的
+TTIR（含这些常数）为参照，不受它影响。
+
+| # | 程序 | dtype | 输入（每个单位） | 来源 |
+| --- | --- | --- | --- | --- |
+| 1 | layer_norm | bf16 | (8, 64) | G7 |
+| 2 | rms_norm (eps 1e-5) | bf16 | (8, 64) | G7 |
+| 3 | group_norm (4 组) | bf16 | (4, 8, 16) | G7 |
+| 4 | batch_norm 训练模式 | bf16 | (8, 6, 12) | G7 |
+| 5 | softmax | bf16 | (8, 257) | G7 |
+| 6 | log_softmax | fp16 | (8, 257) | G7 |
+| 7 | logsumexp | bf16 | (8, 1027) | G7 |
+| 8 | sum（长行） | bf16 | (4, 4099) | G7 |
+| 9 | mean（长行） | fp16 | (4, 4099) | G7 |
+| 10 | cumsum | bf16 | (2, 1027) | G7 |
+| 11 | gelu tanh | bf16 | (8, 257) | G7（GELU 作用） |
+| 12 | silu(a) · b | bf16 | (8, 257) ×2 | G7 |
+| 13 | gelu(a) · b | fp16 | (8, 257) ×2 | G7 |
+| 14 | cross_entropy，label_smoothing 0.1 | bf16 | (16, 101) | G7 |
+| 15 | 带 −1e4 上三角的注意力 softmax | bf16 | (2, 4, 33, 33) | G7 |
+| 16 | AdamW 更新式（逐元素） | bf16 | (64, 16) ×3 | G7 |
+| 17 | rms_norm(x + r) · 1.5 | fp16 | (8, 64) ×2 | G7 |
+| 18 | RoPE rotate-half：x·cos + rot(x)·sin | bf16 | (2, 4, 11, 16)，表 (11, 16) | 新增（替换 var_bf16） |
+| 19 | 梯度裁剪缩放：g · min(1, 1/(‖g‖₂ + 1e-6)) | bf16 | (64, 16) | 新增（替换 scatter_add_bf16） |
+| 20 | layer_norm | fp16 | (8, 64) | 新增（替换 embedding_bag_mean_bf16） |
+
+**输入生成**：与 G7 相同的生成器（`p2b_g6_g7.gen`：标准正态，float64 生成后转目标 dtype）；种子即单位编号。
+**单位**：开发 32 个（seed 2000–2031），确认 64 个（seed 2032–2095）；这些 seed 此前未用于任何运行。
+**量**：模式 A 的 e_num = K − K_R（工具 2.3，检测器阈值冻结），每个程序的输出 `out`，冻结统计层的方向规则（R1、R2、R3、R5）与默认检测器。
+**判定**：`contract_v3.statistical_judgment`（S₀ = 2、N₀ = 64、n_min = 16；偏度 > S₀ 且 n = 64 时用 bootstrap-t 伴随结果）。
+结论只说「平均作用非零（方向）/ 未确认 / 无法判断（原因）/ 未建立」；不由 3 个 seed 下总体结论；作用大小同时报告（相对 RMS）。
+这些是实现的数值作用，不是缺陷判定；重要性另由阶段 B 的尺子回答。
+**脚本**：`scripts/closure/numerical_stream.py`，结果 `results/closure/numerical_stream.json`。
