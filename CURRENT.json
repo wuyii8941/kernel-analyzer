@@ -1,0 +1,72 @@
+{
+  "schema": "kernel-analyzer-current-index-v1",
+  "updated": "2026-10-08",
+  "note": "The single current index. It is mutable; the releases it points to (tags, frozen protocols, results) are not. Current truth comes from the machine results and the scoped ledgers linked here, never from the newest-looking document.",
+  "release": {
+    "tag": "general-v3.1",
+    "commit": "d6e177e2b6a4216035912c1ae86f41a2fba4e69c",
+    "src_tree": "cd21ef56cf46eb3cff2c00c50b8918b30a604d26",
+    "frozen_paths": ["src", "scripts/essential/contract_v3.py", "scripts/essential/common.py", "scripts/general/acceptance_run.py"],
+    "freeze_check": "scripts/general/acceptance_run.py (frozen_check)",
+    "package_version": "3.1.0",
+    "status": "frozen for the unseen-structure acceptance (task book item 5); the acceptance set has not been delivered"
+  },
+  "versions": {
+    "tool": {"value": "3.1", "where": "src/kernel_analyzer/check.py TOOL_VERSION", "changelog": "docs/detector_changelog.md"},
+    "reference_semantics": {"value": "3.1", "meaning": "TTIR real semantics G and its enclosure (Welford merge, SumK / DotK accumulation, upstream-source detection)", "registry": "results/general/rule_registry.json"},
+    "statistics": {"value": "frozen decision layer + numeric contract v3 cannot-judge rules (S0 = 2, N0 = 64, n_min = 16)", "where": ["src/kernel_analyzer/reference_eval/analysis.py", "scripts/essential/contract_v3.py"], "calibration": "docs/general/calibration_table.md"},
+    "detector_history": "docs/detector_changelog.md",
+    "result_schemas": "each report carries tool_version; unified-entry reports carry expanded_declaration and declaration_sha256",
+    "specs": {"phase1": "specs/phase1 (v0.4)", "phase2": "specs/phase2 (package v0.2)"}
+  },
+  "environment": {
+    "python_env": "/data1/tzh/envs/ka_main",
+    "torch": "2.10.0+cu128",
+    "triton": "3.6.0 (TTIR mapping locked to this build)",
+    "gpu": "NVIDIA RTX A6000 (sm_86)",
+    "doc": "docs/environments.md"
+  },
+  "entry_points": {
+    "recommended": {
+      "command": "python scripts/measure.py --declaration DECLARATION.json --out REPORT.json",
+      "module": "kernel_analyzer.measure",
+      "example": "examples/general/bsr_softmax.json",
+      "what_it_does": "declare call + input sources + comparison + budget; the tool expands default rules, builds the reference, runs the statistics and classifies failures"
+    },
+    "python_case": {"module": "kernel_analyzer.check (check.run / BindingCase)", "guide": "docs/binding_guide.md"},
+    "captured_packages": {"command": "scripts/run_reference_analysis.py", "use": "launches captured in another environment, analysed in ka_main (historical declarations under results/reference_eval/declarations)"},
+    "same_statistics": "all three entries use analysis.assess_units; the unified entry adds Holm within each rule class and the contract_v3 cannot-judge rules"
+  },
+  "capability": {
+    "supported": "single Triton kernels whose outputs Triton writes and whose operations are in the rule registry: numerical difference (mode A, e_num = K - G) with mean-effect statistics in two rule classes; mode B (e_sem = G - f) where a spec exists and the output reads no non-Triton intermediate",
+    "not_supported": ["block pointers / TMA descriptors (tt.make_tensor_ptr, tt.advance, descriptors)", "tt.cat, histogram, atomic_cas, bit counting, unregistered libdevice symbols or inline asm", "outputs written by cuBLAS / ATen (no reference)", "saved values, backward and optimizer writes as one automated call graph"],
+    "known_limits": ["adaptive working precision not implemented (cancellation in 1 + erf / tanh leaves about 6% of activation elements above 1/8 ulp)", "program-level batching not implemented", "bounded route only in the calibration, not applied by the entry", "the unified entry imports scripts/essential/contract_v3.py: a non-editable wheel does not ship it (packaging issue, PR-B)"],
+    "common_not_established": {
+      "semantics missing": "an operation or combine region outside the registry (see the rule registry report)",
+      "binding": "the output is written by a non-Triton op, the pairing is not provable, or the call rejected the declared inputs",
+      "enclosure too wide / statistics insufficient": "the reference cannot resolve the effect scale, or the sample cannot support a mean statement (zero variance, n < 16, skewness > 2 with n <= 64)"
+    }
+  },
+  "status": {
+    "general_round": "docs/general/status_20261008.md",
+    "closure_round": "docs/closure_status_20261008.md",
+    "audit": "docs/audit_two_rounds_20261008.md",
+    "results_ledger": "docs/status_ledger_20261006.md",
+    "case_ledger": "docs/root_cause_closure_current.md",
+    "claims": "docs/claims.md",
+    "pending_reviewer_decisions": "docs/audit_two_rounds_20261008.md (section C)",
+    "acceptance": "not run: waiting for the reviewer's sealed set (scripts/general/acceptance_run.py)"
+  },
+  "protocols": {
+    "general_round": "docs/protocol_general_capability_v1_20261008.md",
+    "closure_round": "docs/protocol_closure_v3_20261008.md",
+    "essential_bugs": ["docs/protocol_essential_bugs_20261007.md", "docs/protocol_essential_bugs_phase2_20261007.md"]
+  },
+  "history": {
+    "stage_summary_20261002": "docs/stage_summary_20261002.md (historical baseline; superseded where the documents above say so)",
+    "previous_readme": "docs/history/README_before_20261008.md",
+    "previous_docs_index": "docs/history/docs_README_before_20261008.md",
+    "archive": "archive/"
+  },
+  "test_policy": "tests must not modify or rewrite tracked files (tests/conftest.py guard); outputs go to tmp_path"
+}
