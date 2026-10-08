@@ -1,0 +1,421 @@
+{
+ "version": "v1.1",
+ "arrows": [
+  {
+   "id": 0,
+   "name": "声明与执行绑定",
+   "preconditions": [
+    "输入/初始内存/启动顺序/实例数与捕获一致",
+    "IR 与产物同一次编译",
+    "输出与写入缓冲区的配对按存储实例可证"
+   ],
+   "rules": [
+    "保存 IR/配置/产物哈希",
+    "同一输入重放两次逐位相同",
+    "配对按存储实例追踪"
+   ],
+   "code": [
+    {
+     "function": "class TritonLaunchRecorder",
+     "file": "src/kernel_analyzer/reference_eval/capture.py"
+    },
+    {
+     "function": "def storage_ids",
+     "file": "src/kernel_analyzer/reference_eval/capture.py"
+    },
+    {
+     "function": "def check_replay",
+     "file": "src/kernel_analyzer/reference_eval/capture.py"
+    },
+    {
+     "function": "cubin_sha256",
+     "file": "src/kernel_analyzer/reference_eval/capture.py"
+    },
+    {
+     "function": "binding_unconfirmed",
+     "file": "src/kernel_analyzer/check.py"
+    },
+    {
+     "function": "reused_address",
+     "file": "src/kernel_analyzer/check.py"
+    }
+   ],
+   "tests": [
+    {
+     "name": "test_aten_output_at_freed_triton_address_is_not_bound",
+     "file": "tests/test_output_binding.py"
+    },
+    {
+     "name": "test_triton_written_output_is_still_bound",
+     "file": "tests/test_output_binding.py"
+    },
+    {
+     "name": "test_capture_package_replays_bit_for_bit_from_the_saved_binary",
+     "file": "tests/test_reference_eval_ttir.py"
+    }
+   ],
+   "degrade_paths": [
+    {
+     "condition": "配对不可证",
+     "action": "输出未建立",
+     "triggered_record": "results/closure/degrade/arrow0_binding_not_established.json"
+    }
+   ]
+  },
+  {
+   "id": 1,
+   "name": "组合包含性",
+   "preconditions": [
+    "A1",
+    "A2",
+    "A3",
+    "A4",
+    "A5",
+    "kappa=complete"
+   ],
+   "rules": [
+    "规则表逐节点求值",
+    "kappa 单调传播"
+   ],
+   "code": [
+    {
+     "function": "def evaluate_sequence",
+     "file": "src/kernel_analyzer/reference_eval/ttir_eval.py"
+    },
+    {
+     "function": "def _op_load",
+     "file": "src/kernel_analyzer/reference_eval/ttir_eval.py"
+    },
+    {
+     "function": "def _op_store",
+     "file": "src/kernel_analyzer/reference_eval/ttir_eval.py"
+    },
+    {
+     "function": "def _op_if",
+     "file": "src/kernel_analyzer/reference_eval/ttir_eval.py"
+    },
+    {
+     "function": "def _with_cond",
+     "file": "src/kernel_analyzer/reference_eval/ttir_eval.py"
+    },
+    {
+     "function": "def _op_atomic_rmw",
+     "file": "src/kernel_analyzer/reference_eval/ttir_eval.py"
+    },
+    {
+     "function": "def rule_for",
+     "file": "src/kernel_analyzer/reference_eval/ttir_mapping.py"
+    },
+    {
+     "function": "def kernel_coverage",
+     "file": "src/kernel_analyzer/reference_eval/ttir_mapping.py"
+    },
+    {
+     "function": "def iadd",
+     "file": "src/kernel_analyzer/reference_eval/intervals.py"
+    },
+    {
+     "function": "def imul",
+     "file": "src/kernel_analyzer/reference_eval/intervals.py"
+    }
+   ],
+   "tests": [
+    {
+     "name": "test_store_then_load_keeps_the_reference_value",
+     "file": "tests/test_reference_eval_counterexamples.py"
+    },
+    {
+     "name": "test_undecided_branch_takes_the_union_of_both_branches",
+     "file": "tests/test_reference_eval_counterexamples.py"
+    },
+    {
+     "name": "test_unknown_op_or_attribute_is_rejected_not_skipped",
+     "file": "tests/test_reference_eval_counterexamples.py"
+    },
+    {
+     "name": "test_atomic_return_value_requires_an_order",
+     "file": "tests/test_reference_eval_counterexamples.py"
+    },
+    {
+     "name": "test_control_dependence_on_a_pinned_load_downgrades_writes",
+     "file": "tests/test_reference_eval_ttir.py"
+    },
+    {
+     "name": "test_stores_from_several_instances_to_one_address_are_a_race_unless_equal",
+     "file": "tests/test_reference_eval_ttir.py"
+    },
+    {
+     "name": "test_registry_of_locked_build_is_covered_exhaustively",
+     "file": "tests/test_reference_eval_ttir.py"
+    },
+    {
+     "name": "test_elementary_enclosure_contains_every_sampled_value",
+     "file": "tests/test_reference_eval_enclosure.py"
+    },
+    {
+     "name": "test_composed_chain_contains_the_true_value_and_widens_monotonically",
+     "file": "tests/test_reference_eval_enclosure.py"
+    }
+   ],
+   "degrade_paths": [
+    {
+     "condition": "kappa=conditional",
+     "action": "不进统计，报告比例",
+     "triggered_record": "results/closure/degrade/arrow1_kappa_conditional.json"
+    },
+    {
+     "condition": "kappa=unestablished",
+     "action": "不进统计，报告比例",
+     "triggered_record": "results/closure/degrade/arrow1_kappa_unestablished.json"
+    },
+    {
+     "condition": "未识别语义",
+     "action": "拒绝",
+     "triggered_record": "results/closure/degrade/arrow1_unrecognised_semantics_rejected.json"
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "name": "残差与投影",
+   "preconditions": [
+    "箭头1成立",
+    "有向舍入向外",
+    "方向在确认前确定",
+    "D_m 有区间扩展"
+   ],
+   "rules": [
+    "e_num 区间",
+    "区间点积"
+   ],
+   "code": [
+    {
+     "function": "def residual_interval",
+     "file": "src/kernel_analyzer/reference_eval/analysis.py"
+    },
+    {
+     "function": "def isub",
+     "file": "src/kernel_analyzer/reference_eval/intervals.py"
+    },
+    {
+     "function": "def idot",
+     "file": "src/kernel_analyzer/reference_eval/intervals.py"
+    },
+    {
+     "function": "def project_bounds",
+     "file": "src/kernel_analyzer/reference_eval/intervals.py"
+    },
+    {
+     "function": "def _project",
+     "file": "src/kernel_analyzer/reference_eval/analysis.py"
+    },
+    {
+     "function": "def _direction",
+     "file": "src/kernel_analyzer/reference_eval/analysis.py"
+    },
+    {
+     "function": "def apply_direction_rules",
+     "file": "src/kernel_analyzer/reference_eval/analysis.py"
+    },
+    {
+     "function": "residual_interval(k, r_lo, r_hi)",
+     "file": "src/kernel_analyzer/check.py"
+    }
+   ],
+   "tests": [
+    {
+     "name": "test_residual_interval_encloses_what_plain_subtraction_rounds_away",
+     "file": "tests/test_reference_eval_guards.py"
+    },
+    {
+     "name": "test_grouped_projection_is_in_original_units",
+     "file": "tests/test_reference_eval_rules.py"
+    },
+    {
+     "name": "test_fixed_and_aligned_rules_match_previous_implementation",
+     "file": "tests/test_reference_eval_rules.py"
+    }
+   ],
+   "degrade_paths": [
+    {
+     "condition": "D_m 无区间扩展",
+     "action": "未建立",
+     "triggered_record": "results/reference_eval/blind_test_v2/phase3/phase3_adamw_history_actual_write.csv"
+    },
+    {
+     "condition": "方向来源未登记",
+     "action": "不出正式结论",
+     "triggered_record": "results/closure/degrade/arrow2_direction_not_registered.json"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "name": "均值区间",
+   "preconditions": [
+    "抽样单位独立或按 run 聚类",
+    "端点检验前提",
+    "开发/确认分离",
+    "剔除已声明",
+    "检验族事前固定"
+   ],
+   "rules": [
+    "单侧界并集",
+    "Holm",
+    "TOST",
+    "敏感性曲线"
+   ],
+   "code": [
+    {
+     "function": "def _summarize",
+     "file": "src/kernel_analyzer/reference_eval/analysis.py"
+    },
+    {
+     "function": "def _sample_guard",
+     "file": "src/kernel_analyzer/reference_eval/analysis.py"
+    },
+    {
+     "function": "def apply_holm",
+     "file": "src/kernel_analyzer/reference_eval/analysis.py"
+    },
+    {
+     "function": "def equivalence",
+     "file": "src/kernel_analyzer/reference_eval/analysis.py"
+    },
+    {
+     "function": "def _t_approximation",
+     "file": "src/kernel_analyzer/reference_eval/analysis.py"
+    },
+    {
+     "function": "def _robust_companion",
+     "file": "src/kernel_analyzer/reference_eval/analysis.py"
+    },
+    {
+     "function": "def statistical_judgment",
+     "file": "scripts/essential/contract_v3.py"
+    },
+    {
+     "function": "def main",
+     "file": "scripts/sensitivity_curves.py"
+    }
+   ],
+   "tests": [
+    {
+     "name": "test_summary_cannot_judge_with_one_unit_or_numerical_failure",
+     "file": "tests/test_reference_eval_guards.py"
+    },
+    {
+     "name": "test_rules_with_one_confirmation_unit_stay_out_of_holm",
+     "file": "tests/test_reference_eval_guards.py"
+    },
+    {
+     "name": "test_zero_variance_leaves_both_axes_unresolved",
+     "file": "tests/test_reference_eval_equivalence.py"
+    },
+    {
+     "name": "test_skewed_units_are_flagged_and_get_a_bootstrap_companion",
+     "file": "tests/test_reference_eval_equivalence.py"
+    },
+    {
+     "name": "test_zero_variance_is_degenerate_not_p0",
+     "file": "scripts/essential/tests/test_contract_v3.py"
+    },
+    {
+     "name": "test_strong_skew_small_n_cannot_judge_distribution",
+     "file": "scripts/essential/tests/test_contract_v3.py"
+    },
+    {
+     "name": "test_small_sample_cannot_judge",
+     "file": "scripts/essential/tests/test_contract_v3.py"
+    }
+   ],
+   "degrade_paths": [
+    {
+     "condition": "方差为零",
+     "action": "无法判断（退化）",
+     "triggered_record": "results/closure/degrade/arrow3_zero_variance.json"
+    },
+    {
+     "condition": "分布前提不成立",
+     "action": "无法判断（分布）",
+     "triggered_record": "results/closure/degrade/arrow3_distribution_premise.json"
+    },
+    {
+     "condition": "样本不足",
+     "action": "无法判断（样本）",
+     "triggered_record": "results/closure/degrade/arrow3_sample_size.json"
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "name": "结论分栏",
+   "preconditions": [
+    "箭头3成立",
+    "契约已声明允许的数值行为"
+   ],
+   "rules": [
+    "四栏",
+    "精度不变性分类（黑箱）"
+   ],
+   "code": [
+    {
+     "function": "def combine",
+     "file": "scripts/essential/classify.py"
+    },
+    {
+     "function": "def fr_assess",
+     "file": "scripts/essential/classify.py"
+    },
+    {
+     "function": "def precision_invariance",
+     "file": "scripts/essential/contract_v3.py"
+    },
+    {
+     "function": "def four_column",
+     "file": "scripts/essential/contract_v3.py"
+    },
+    {
+     "function": "def classify_condition",
+     "file": "scripts/closure/contract_v2.py"
+    }
+   ],
+   "tests": [
+    {
+     "name": "test_fr_with_no_usable_element_is_not_established",
+     "file": "scripts/essential/tests/test_classify_guards.py"
+    },
+    {
+     "name": "test_shared_relation_needs_a_comparable_pair",
+     "file": "scripts/essential/tests/test_classify_guards.py"
+    },
+    {
+     "name": "test_precision_invariance_classes",
+     "file": "scripts/essential/tests/test_contract_v3.py"
+    },
+    {
+     "name": "test_precision_invariance_nonfinite_goes_to_column4",
+     "file": "scripts/essential/tests/test_contract_v3.py"
+    }
+   ],
+   "degrade_paths": [
+    {
+     "condition": "ok_elements=0",
+     "action": "未建立",
+     "triggered_record": "results/closure/degrade/arrow4_ok_elements_zero.json"
+    },
+    {
+     "condition": "无可比配对",
+     "action": "共有关系未建立",
+     "triggered_record": "results/closure/degrade/arrow4_no_comparable_pair.json"
+    },
+    {
+     "condition": "契约未声明",
+     "action": "只记录",
+     "triggered_record": "results/closure/degrade/arrow4_contract_not_declared.json"
+    }
+   ]
+  }
+ ],
+ "filled": "2026-10-08, scripts/closure/build_chain_table.py; degrade triggers scripts/closure/trigger_degrades.py"
+}
