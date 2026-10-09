@@ -43,6 +43,10 @@ def _recompile(job):
     import triton
     backend, arch = t.split(":")
     try:
+        if backend == "hip":   # DSL v2 increment 12: the official AMD stages up to TTGIR (scripts/dsl_v2/amd_stages.py)
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            from amd_stages import amd_ttgir
+            return t, tuple(sorted(ops_in(amd_ttgir(path, arch)))), None
         ck = triton.compile(path, target=GPUTarget(backend, int(arch) if arch.isdigit() else arch,
                                                    32 if backend == "cuda" else 64))
     except Exception as exc:  # noqa: BLE001 -- recorded: a kernel that does not compile for that target

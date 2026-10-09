@@ -23,6 +23,8 @@ One JSON line per launch.  Measurement only; the official tests' own assertions 
 | `inc11_cross_level.jsonl` | test_core dot / reduce1d / reduce2d / scan2d / where / cast: each launch's TTIR reference vs the references of the sm_90 and sm_100 TTGIR compiled from it (cross_level_plugin.py) | increment 11 (`a8e2f94`) | `w11_cross_run.sh` |
 | `inc11_cross_level_tf32_after_fix.jsonl` | the tf32 subset after the cvt.rna.tf32.f32 rule | increment 11 | `w11_cross_run.sh` (KSEL) |
 | `inc11_cross_level_combined.jsonl` | inc11_cross_level with the tf32 subset replaced | — | — |
+| `inc12_selection_census.jsonl` | as inc11_cross_level, targets gfx942 / gfx950 (official AMD stages to TTGIR); the selection run before the increment-12 registration (docs/dsl_v2/increment_12.md §2) | increment 11 + uncommitted plugin extension | `w12_cross_run.sh` |
+| `inc12_selection_recheck_after_fix.jsonl` | the selection run's disjoint cases (test_cast_bf16_rounding, cumprod scans, dot add-*) after the aborted-launch fix | increment 12 fix (before registration) | `w12_cross_run.sh` (KSEL) |
 | `inc6_combined_summary.json` | `scripts/dsl_v2/summarize_capture.py inc6_combined.jsonl --baseline inc4_broad.jsonl` | — | — |
 
 Status per launch: `complete` (every written element established), `partial`, `aborted` (a program instance aborted),

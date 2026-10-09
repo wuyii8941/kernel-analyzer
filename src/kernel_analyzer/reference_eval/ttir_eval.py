@@ -347,6 +347,83 @@ def _scoped_used_atomics(module) -> list:
     return out
 
 
+def _ptr_like(t) -> bool:
+    from .ttir_parser import PtrType, TType
+    return isinstance(t, PtrType) or (isinstance(t, TType) and isinstance(t.elem, PtrType))
+
+
+def _may_write_params(func):
+    """Parameters of ``func`` whose memory the kernel may write: an over-approximating address flow (DSL v2
+    increment 12).  A value derived from a parameter by any op except a memory read carries it; a global write op,
+    a call or an inline asm with such an operand may write that parameter's buffer.  Returns (names, any_write);
+    names is None (every parameter) when addresses escape through memory (tt.int_to_ptr, or a read whose result is a
+    pointer)."""
+    from .ttir_parser import _walk_region
+
+    taint = {p[0]: 1 << i for i, p in enumerate(func.params)}
+    written = 0
+    any_write = False
+    ops = list(func.walk())
+    for o in ops:
+        last = o.name.rsplit(".", 1)[-1]
+        if o.name == "tt.int_to_ptr" or (("load" in last or "gather" in last) and any(map(_ptr_like, o.result_types))):
+            return None, True
+    changed = True
+    while changed:
+        changed = False
+
+        def add(name, bits):
+            nonlocal changed
+            if bits and (taint.get(name, 0) | bits) != taint.get(name, 0):
+                taint[name] = taint.get(name, 0) | bits
+                changed = True
+
+        for o in ops:
+            last = o.name.rsplit(".", 1)[-1]
+            bits = 0
+            for v in o.operands:
+                bits |= taint.get(v, 0)
+            for _, vals in o.successors:
+                for v in vals:
+                    bits |= taint.get(v, 0)
+            local = o.name.startswith(("ttg.local_", "ttng.tmem_"))
+            writes = not local and (o.name in ("tt.call", "tt.elementwise_inline_asm", "ttg.inline_asm") or any(
+                k in last for k in ("store", "atomic", "scatter", "local_to_global", "reduce_")) or
+                o.name in ("ttng.async_tma_reduce", "tt.descriptor_reduce"))
+            if writes:
+                any_write = True
+                if bits & ~written:
+                    written |= bits
+                    changed = True
+            reads = "load" in last or last.startswith(("atomic", "buffer_atomic")) or last in ("descriptor_gather",
+                                                                                            "local_gather")
+            # terminators of nested regions carry values to the op's results and block arguments
+            for r in o.regions:
+                for x in _walk_region(r):
+                    if not x.regions and not x.results:
+                        for v in x.operands:
+                            bits |= taint.get(v, 0)
+            if not reads:
+                for name in o.results:
+                    add(name, bits)
+            if bits:
+                for r in o.regions:
+                    for blk in r.blocks:
+                        for name, _ in blk.args:
+                            add(name, bits)
+        # branch operands reach the block arguments of the function body
+        for blk in func.body.blocks:
+            for o in blk.ops:
+                for _, vals in o.successors:
+                    bits = 0
+                    for v in vals:
+                        bits |= taint.get(v, 0)
+                    for b2 in func.body.blocks:
+                        for name, _ in b2.args:
+                            add(name, bits)
+    return {p[0] for i, p in enumerate(func.params) if written >> i & 1}, any_write
+
+
 def _float_bits(elem: str, lo, hi, st):
     """Bit patterns of float reference values and whether they are definite (the tt.bitcast policy): a point exactly
     representable in the format, or an infinity.  NaN payloads and non-points are not definite."""
@@ -832,7 +909,12 @@ class KernelReferenceEvaluator:
             # An aborted program may stop before some of its stores: elements the kernel changed but the reference
             # did not write in this launch keep their earlier reference value, which a later launch would read as
             # established.  They are not established.
-            for arg in launch.args:
+            names, any_write = _may_write_params(self.func)
+            params = list(zip(self.func.params, launch.ttir_params()))
+            may_write = {a.storage_ptr for p, a in params if a.kind == "tensor" and (names is None or p[0] in names)}
+            if any_write:   # buffers reachable through raw addresses only
+                may_write |= {a.storage_ptr for a in getattr(launch, "implicit", []) or []}
+            for arg in list(launch.args) + list(getattr(launch, "implicit", []) or []):
                 if arg.kind != "tensor" or arg.storage_ptr not in memory or arg.before is None:
                     continue
                 buf = memory[arg.storage_ptr]
@@ -849,6 +931,15 @@ class KernelReferenceEvaluator:
                     buf.st = np.where(hit, ST_NE, buf.st).astype(np.int8)
                     reasons["not_established:changed by the kernel, not written by the aborted reference"] += \
                         int(hit.sum())
+                # DSL v2 increment 12 (defect found by the TTIR / TTGIR cross-check): an aborted program may have
+                # rewritten an element with identical bytes; in a buffer the kernel writes, no element the reference
+                # did not write keeps the captured value as an established reference
+                if changed.any() or np.asarray(buf.written).any() or arg.storage_ptr in may_write:
+                    rest = (buf.writer == -1) & ~changed & (buf.st == ST_OK)
+                    if rest.any():
+                        buf.st = np.where(rest, ST_NE, buf.st).astype(np.int8)
+                        reasons["not_established:in a buffer the kernel writes, not written by the aborted reference"] \
+                            += int(rest.sum())
         notes = []
         if self._outside_window:
             notes.append("some accesses fell outside the captured windows; those lanes are not established")

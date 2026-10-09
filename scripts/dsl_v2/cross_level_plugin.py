@@ -23,11 +23,18 @@ import numpy as np
 import pytest
 
 MAX_BYTES = int(os.environ.get("KA_MAIN_CAPTURE_MAX_BYTES", str(16 << 20)))
-TARGETS = (90, 100)
+# NVIDIA targets by compute capability; AMD targets by name (DSL v2 increment 12: TTIR -> TTGIR stages of the official
+# AMD backend; its LLVM code generation needs a newer glibc than this host, and no stage after TTGIR is run)
+TARGETS = tuple(int(t) if t.isdigit() else t for t in os.environ.get("KA_CROSS_TARGETS", "90,100").split(","))
 _COMPILED: dict = {}
 
 
-def _ttgir_for(ttir: str, arch: int):
+def _amd_ttgir(path: str, arch: str) -> str:
+    from amd_stages import amd_ttgir
+    return amd_ttgir(path, arch)
+
+
+def _ttgir_for(ttir: str, arch):
     key = (hashlib.sha256(ttir.encode()).hexdigest(), arch)
     if key in _COMPILED:
         return _COMPILED[key]
@@ -38,8 +45,11 @@ def _ttgir_for(ttir: str, arch: int):
     path = d / f"{key[0][:16]}.ttir"
     path.write_text(ttir)
     try:
-        ck = triton.compile(str(path), target=GPUTarget("cuda", arch, 32))
-        out = ("ok", ck.asm["ttgir"])
+        if isinstance(arch, str):
+            out = ("ok", _amd_ttgir(str(path), arch))
+        else:
+            ck = triton.compile(str(path), target=GPUTarget("cuda", arch, 32))
+            out = ("ok", ck.asm["ttgir"])
     except Exception as exc:  # noqa: BLE001 -- recorded
         out = (f"{type(exc).__name__}: {exc}"[:200], None)
     _COMPILED[key] = out
@@ -82,13 +92,15 @@ def pytest_runtest_call(item):
                           "compile": "n/a", "error": f"{type(exc).__name__}: {exc}"[:200]})
             continue
         for arch in TARGETS:
-            row = {"test": item.nodeid, "kernel": launch.kernel_name, "target": f"sm_{arch}",
+            row = {"test": item.nodeid, "kernel": launch.kernel_name,
+                   "target": arch if isinstance(arch, str) else f"sm_{arch}",
                    "ttir_status": _status(base)}
             status, ttgir = _ttgir_for(launch.asm["ttir"], arch)
             row["compile"] = status
             if ttgir is not None:
                 import re
-                row["target_ops"] = sorted(set(re.findall(r"\b(ttng\.[a-z_0-9]+|ttg\.(?:memdesc_trans|fp4_to_fp|local_[a-z_]+))", ttgir)))
+                row["target_ops"] = sorted(set(re.findall(r"\b(ttng\.[a-z_0-9]+|amdg\.[a-z_0-9]+|rocdl\.[a-z_0-9.]+|"
+                                                          r"ttg\.(?:memdesc_trans|fp4_to_fp|local_[a-z_]+))", ttgir)))
             if ttgir is None:
                 lines.append(row)
                 continue
