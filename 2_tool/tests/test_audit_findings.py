@@ -958,3 +958,37 @@ def test_cas_lock_certificate_for_the_tutorial_layer_norm_shape():
         for j in range(6):
             exact = sum(Fr(float(v)) for v in x[g::2, j])
             assert Fr(float(dw.lo[g * 8 + j])) <= exact <= Fr(float(dw.hi[g * 8 + j]))
+
+
+def test_cas_lock_certificate_with_the_official_main_barrier():
+    """full interpreter: official main lowers tl.debug_barrier to ttg.barrier (3.6.0: gpu.barrier); the same lock kernel
+    with its barrier spelled ttg.barrier is certified too (found by the broad capture on official main)"""
+    triton = pytest.importorskip("triton")
+    pytest.importorskip("z3")
+    from triton.backends.compiler import GPUTarget
+    from triton.compiler import ASTSource
+
+    from kernel_analyzer.reference_eval.capture import CapturedArg, CapturedLaunch
+    from kernel_analyzer.reference_eval.ttir_eval import evaluate_sequence
+    from test_signatures_structural import C, _kernel
+    body = ("    i = tl.arange(0, N)\n    while tl.atomic_cas(lock, 0, 1) == 1:\n        pass\n"
+            "    tl.store(data + i, tl.load(data + i) + 1.0)\n    tl.debug_barrier()\n    tl.atomic_xchg(lock, 0)\n")
+    mod = _kernel("audit_lock_ttgbarrier", body, ["data", "lock"])
+    ck = triton.compile(ASTSource(fn=mod.kernel, signature={"data": "*fp32", "lock": "*i32", "N": "constexpr"},
+                                  constexprs={"N": C}), target=GPUTarget("cuda", 86, 32), options={"num_warps": 1})
+    ttir = ck.asm["ttir"]
+    assert "gpu.barrier" in ttir
+    ttir = ttir.replace("gpu.barrier", "ttg.barrier")
+    raw_d, raw_l = np.zeros(C, np.float32).view(np.uint8), np.zeros(1, np.int32).view(np.uint8)
+    args = [CapturedArg(index=0, name="data", kind="tensor", constexpr=False, signature_type="*fp32", dtype="float32",
+                        shape=(C,), stride=None, element_size=4, data_ptr=1 << 20, storage_ptr=1 << 20,
+                        storage_nbytes=4 * C, storage_id=0, before=raw_d.copy(), after=raw_d.copy()),
+            CapturedArg(index=1, name="lock", kind="tensor", constexpr=False, signature_type="*i32", dtype="int32",
+                        shape=(1,), stride=None, element_size=4, data_ptr=2 << 20, storage_ptr=2 << 20,
+                        storage_nbytes=4, storage_id=1, before=raw_l.copy(), after=raw_l.copy()),
+            CapturedArg(index=2, name="N", kind="int", constexpr=True, signature_type="constexpr", value=C)]
+    launch = CapturedLaunch(index=0, kernel_name="lock_ttg", kernel_hash="", grid=(9, 1, 1), args=args,
+                            asm={"ttir": ttir, "ttgir": ck.asm["ttgir"]}, cubin_sha256=None, metadata={},
+                            libtriton_sha256=None)
+    ref = evaluate_sequence([launch]).launches[0]
+    assert (ref.element_classes(1 << 20) == "complete_composed").all(), sorted(ref.reasons)

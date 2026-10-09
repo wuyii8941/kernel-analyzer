@@ -38,7 +38,8 @@ MAX_PAIR_CHECKS = 400
 MAX_LANES = 1 << 14
 
 _SECTION_OPS = {"arith.constant", "tt.splat", "tt.broadcast", "tt.expand_dims", "tt.make_range", "tt.addptr",
-                "tt.load", "tt.store", "gpu.barrier", "tt.atomic_rmw", "scf.if", "scf.yield"}
+                "tt.load", "tt.store", "gpu.barrier", "ttg.barrier", "tt.atomic_rmw", "scf.if", "scf.yield"}
+_BARRIERS = ("gpu.barrier", "ttg.barrier")   # tl.debug_barrier: gpu.barrier in 3.6.0, ttg.barrier on official main
 
 
 class Unsupported(Exception):
@@ -361,7 +362,7 @@ class _Replay:
                     raise Unsupported("addptr on a symbolic pointer")
                 out[idx] = ("ptr", q[1], q[2] + _numeral(off[idx]) * size)
             return [out]
-        if n == "gpu.barrier":
+        if n in _BARRIERS:   # orders the threads of one program; no effect on the section's memory transformation
             return None
         if n == "tt.load":
             ptr = a[0]
