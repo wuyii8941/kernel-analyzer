@@ -514,13 +514,74 @@ def _atomic_old(kind: str, is_float: bool, width: int, init: tuple, others: list
         return lo, hi, ST_OK, (lo, hi) != (float(i_lo), float(i_hi)), None
     v = int(i_lo)
     mask = (1 << width) - 1
+    if width:   # DSL v2 increment 14: compare in the signed representation (values are kept modulo 2^width)
+        half = 1 << (width - 1)
+        v = ((v + half) & mask) - half
+        los = [((x + half) & mask) - half for x in los]
     point = {"add": all(x == 0 for x in los), "max": all(x <= v for x in los), "min": all(x >= v for x in los),
              "umax": all((x & mask) <= (v & mask) for x in los), "umin": all((x & mask) >= (v & mask) for x in los),
              "and": all((v & x) == v for x in los), "or": all((v | x) == v for x in los),
              "xor": all(x == 0 for x in los), "exch": all(x == v for x in los)}.get(kind, False)
     if point:
         return v, v, ST_OK, False, None
-    return 0, 0, ST_NE, False, "set-valued integer atomic return value (L_E) is not representable as a point"
+    hull = _int_return_hull(kind, width, v, los)
+    if hull is None:
+        return 0, 0, ST_NE, False, "set-valued integer atomic return value (L_E): its hull is not representable"
+    return hull[0], hull[1], ST_OK, hull[0] != hull[1], None
+
+
+INT_SET_REACH_BUDGET = 4096
+
+
+def _int_return_hull(kind: str, width: int, v: int, xs: list):
+    """DSL v2 increment 14 (rc3 02 5.3 / 10): an integer interval (signed representation of the element width) that
+    contains every value an integer atomic can return: init combined with some subset of the other updates.  None when
+    no such interval is available (add wrapping the width, a reachable set above the budget, an unknown kind)."""
+    if not width:
+        return None
+    lo_lim, hi_lim = -(1 << (width - 1)), (1 << (width - 1)) - 1
+
+    def signed(x):   # integer values are kept modulo 2^width in either representation: use the signed one
+        x = int(x) & ((1 << width) - 1)
+        return x - (1 << width) if x > hi_lim else x
+    v, xs = signed(v), [signed(x) for x in xs]
+    if kind == "add":
+        lo, hi = v + sum(x for x in xs if x < 0), v + sum(x for x in xs if x > 0)
+        return (lo, hi) if lo_lim <= lo and hi <= hi_lim else None
+    if kind == "max":
+        return v, max([v] + xs)
+    if kind == "min":
+        return min([v] + xs), v
+    if kind in ("umax", "umin", "exch"):   # the returned value is init or one of the contributions
+        return min([v] + xs), max([v] + xs)
+    fn = {"and": lambda a, b: a & b, "or": lambda a, b: a | b, "xor": lambda a, b: a ^ b}.get(kind)
+    if fn is None:
+        return None
+    reach = {v}
+    for x in xs:
+        reach |= {fn(r, x) for r in reach}
+        if len(reach) > INT_SET_REACH_BUDGET:
+            return None
+    return min(reach), max(reach)
+
+
+# operations that pass an integer set target on unchanged, and the operand positions that may carry one (increment 14)
+_INT_SET_TRANSPARENT = {"store": (1,), "convert_layout": (0,), "in_thread_transpose": (0,), "splat": (0,),
+                        "broadcast": (0,), "expand_dims": (0,), "reshape": (0,), "trans": (0,)}
+
+
+def _is_int_set(v) -> bool:
+    return isinstance(v, TV) and v.kind == "i" and v.hi is not None
+
+
+def _drop_int_set(v: "TV", op) -> "TV":
+    """An integer set target reaching an operation without a set rule: those lanes are not established."""
+    lanes = (np.asarray(v.hi) != np.asarray(v.lo)) & (np.asarray(v.st) == ST_OK)
+    reasons = v.reasons
+    if lanes.any():
+        reasons = reasons | {f"not_established:integer set target (L_E) used by {op.name}, which has no set "
+                             f"rule@{op.node_id}"}
+    return TV("i", v.elem, v.lo, None, v.base, np.where(lanes, ST_NE, v.st).astype(np.int8), v.cond, reasons, v.d)
 
 
 _JOINT_ORDER_LAWS = (  # mixed kinds on one address whose composition is one commutative, associative operation
@@ -554,13 +615,21 @@ class Buffer:
     after_raw: Any = None  # captured bytes after the launch (to detect writes between launches)
     dtype: str = ""  # torch storage dtype; integers are kept in its representation
     d: Optional[tuple] = None  # tangent of the memory contents (dlo, dhi)
+    # DSL v2 increment 14: integer set targets (L_E) established at the end of the launch; inside the evaluator these
+    # elements are not established (st), so no later read, atomic or check uses them as values
+    iset: Optional[np.ndarray] = None
+    iset_lo: Optional[np.ndarray] = None
+    iset_hi: Optional[np.ndarray] = None
 
     def copy(self) -> "Buffer":
         return Buffer(self.ident, self.elem, self.kind, self.lo.copy(),
                       None if self.hi is None else self.hi.copy(), self.st.copy(), self.cond.copy(),
                       self.writer.copy(), self.written.copy(), self.actual_after, self.actual_after_st,
                       self.name, self.index, self.after_raw, self.dtype,
-                      None if self.d is None else (self.d[0].copy(), self.d[1].copy()))
+                      None if self.d is None else (self.d[0].copy(), self.d[1].copy()),
+                      None if self.iset is None else self.iset.copy(),
+                      None if self.iset_lo is None else self.iset_lo.copy(),
+                      None if self.iset_hi is None else self.iset_hi.copy())
 
     def global_indices(self) -> np.ndarray:
         return np.arange(self.st.size) if self.index is None else self.index
@@ -657,13 +726,32 @@ class KernelReference:
     stored: set = field(default_factory=set)  # storages this launch's reference wrote (stores, atomics, poisoned targets)
 
     def element_classes(self, ident: int):
-        """Per element: complete_composed / conditional_local / not_established / not_written."""
+        """Per element: complete_composed / conditional_local / not_established / set_target / not_written."""
 
         buf = self.buffers[ident]
         cls = np.full(buf.st.shape, "complete_composed", dtype=object)
         cls = np.where(buf.cond, "conditional_local", cls)
         cls = np.where(buf.st >= ST_UNDEF, "not_established", cls)
+        if buf.iset is not None:   # DSL v2 increment 14: an integer set target [iset_lo, iset_hi] (L_E)
+            cls = np.where(buf.iset, "set_target", cls)
         return np.where(buf.written, cls, "not_written")
+
+    def established(self, ident: int) -> np.ndarray:
+        """Written elements with an established reference: a point, a special value of its class, or an integer set
+        target (increment 14)."""
+        buf = self.buffers[ident]
+        ok = np.asarray(buf.st) <= ST_NINF
+        if buf.iset is not None:
+            ok = ok | buf.iset
+        return np.asarray(buf.written) & ok
+
+    def int_bounds(self, ident: int):
+        """(lo, hi) of an integer buffer's reference values, the set target's hull where there is one."""
+        buf = self.buffers[ident]
+        lo = np.asarray(buf.lo, dtype=np.int64)
+        if buf.iset is None:
+            return lo, lo
+        return np.where(buf.iset, buf.iset_lo, lo), np.where(buf.iset, buf.iset_hi, lo)
 
     def compare(self) -> dict:
         """Per output buffer: classes, residual ``actual - reference`` and widths."""
@@ -681,7 +769,7 @@ class KernelReference:
             entry = {
                 "name": buf.name, "elem": buf.elem, "written": int(mask.sum()),
                 "classes": {c: int((cls == c).sum()) for c in ("complete_composed", "conditional_local",
-                                                               "not_established")},
+                                                               "not_established", "set_target")},
             }
             if buf.kind == "f" and buf.actual_after is not None:
                 act = buf.actual_after[mask]
@@ -712,6 +800,13 @@ class KernelReference:
                 ok = buf.st[mask] == ST_OK
                 entry["integer_matches"] = int((ok & (buf.lo[mask] == act)).sum())
                 entry["integer_mismatches"] = int((ok & (buf.lo[mask] != act)).sum())
+                if buf.iset is not None and buf.iset[mask].any():
+                    # increment 14: the actual value against the set target, both in the signed representation
+                    width = INT_WIDTH.get(buf.elem, 64)
+                    a = _wrap(np.asarray(act, dtype=np.int64), width)
+                    inside = (buf.iset_lo[mask] <= a) & (a <= buf.iset_hi[mask])
+                    entry["integer_in_set"] = int((buf.iset[mask] & inside).sum())
+                    entry["integer_outside_set"] = int((buf.iset[mask] & ~inside).sum())
             report[buf.name or str(ident)] = entry
         return report
 
@@ -903,9 +998,11 @@ class KernelReferenceEvaluator:
                                                   order if self._atomic_pass == 2 else None)
         if self._atomic_pass == 2:
             self._check_two_pass(table, memory, reasons)
+        iset_valid = True
         if self._cas_serial and self._cas_contended and len(programs) > 1:
             aborted, reasons = self._cas_reverse_order(programs, grid, bindings, memory, cas_snapshot, aborted,
                                                        reasons)
+            iset_valid = False   # two serializations were merged: no integer set target record stands
         if aborted:
             # An aborted program may stop before some of its stores: elements the kernel changed but the reference
             # did not write in this launch keep their earlier reference value, which a later launch would read as
@@ -941,6 +1038,7 @@ class KernelReferenceEvaluator:
                         buf.st = np.where(rest, ST_NE, buf.st).astype(np.int8)
                         reasons["not_established:in a buffer the kernel writes, not written by the aborted reference"] \
                             += int(rest.sum())
+        self._finalize_int_sets(memory, programs, grid, aborted, reasons, iset_valid)
         notes = []
         if self._outside_window:
             notes.append("some accesses fell outside the captured windows; those lanes are not established")
@@ -1029,6 +1127,14 @@ class KernelReferenceEvaluator:
         self._awriter = {}  # ident -> (program, release epoch) of the last atomic write per element
         self._read_chain = {}  # ident -> (last reader, its epoch, every earlier reader happens before it)
         self._cas_contended = False
+        self._two_pass_bad = set()
+        # DSL v2 increment 14: integer set targets stored in this run, ident -> {element: (lo, hi, program)}; set
+        # targets of earlier launches are carried as records of program -1
+        self._iset_records = {}
+        for buf in memory.values():
+            if buf.iset is not None and buf.iset.any():
+                self._iset_records[buf.ident] = {int(e): (int(buf.iset_lo[e]), int(buf.iset_hi[e]), -1)
+                                                 for e in np.flatnonzero(buf.iset)}
         for buf in memory.values():
             buf.writer[:] = -1  # kernel boundaries order all earlier writes
         aborted = {}
@@ -1065,6 +1171,44 @@ class KernelReferenceEvaluator:
         self._atomic_final_laws(memory, reasons)
         self._last_run = (aborted, reasons)
         return aborted, reasons
+
+    def _finalize_int_sets(self, memory, programs, grid, aborted, reasons, valid: bool):
+        """DSL v2 increment 14: the integer set targets that stand at the end of the launch.  A record stands only if
+        the element is still what that store left (value, writer, not-established status), its program did not
+        abort, race or see a two-pass mismatch, and the buffer was not poisoned by a store through an undefined
+        address.  A record carried from an earlier launch (program -1) stands only if this launch did not write the
+        element, no program aborted and every program instance was evaluated."""
+        bad = {i for i, pid in enumerate(programs) if tuple(pid) in aborted} | set(self._race_programs) | \
+            set(getattr(self, "_two_pass_bad", set()))
+        full = len(programs) == grid[0] * grid[1] * grid[2]
+        for buf in memory.values():
+            buf.iset = buf.iset_lo = buf.iset_hi = None
+        kept = dropped = 0
+        for ident, recs in self._iset_records.items():
+            buf = memory.get(ident)
+            if buf is None:
+                continue
+            for e, (lo, hi, pid) in recs.items():
+                ok = valid and ident not in self._poisoned and buf.st[e] == ST_NE and int(buf.lo[e]) == lo
+                if pid == -1:
+                    ok = ok and buf.writer[e] == -1 and not aborted and full
+                else:
+                    ok = ok and buf.writer[e] == pid and pid not in bad
+                if not ok:
+                    dropped += 1
+                    continue
+                if buf.iset is None:
+                    n = buf.st.size
+                    buf.iset, buf.iset_lo, buf.iset_hi = (np.zeros(n, dtype=bool), np.zeros(n, dtype=np.int64),
+                                                          np.zeros(n, dtype=np.int64))
+                buf.iset[e], buf.iset_lo[e], buf.iset_hi[e] = True, lo, hi
+                kept += 1
+        if kept:
+            reasons["set:integer set target stored (L_E)"] += kept
+        if dropped:
+            reasons["not_established:integer set target record invalidated (later write, abort, race, poisoned "
+                    "buffer or order merge)"] += dropped
+        self._rules["atomic.integer_set_elements"] += kept
 
     # -- functions and regions ----------------------------------------------------
 
@@ -1138,6 +1282,12 @@ class KernelReferenceEvaluator:
         if _TRIGGER_PATH:
             _trace(f"{op.name}:{rule.internal}")
         args = [env[v] for v in op.operands] if rule.internal not in ("for", "if", "while") else None
+        if args and any(_is_int_set(a) for a in args):
+            if rule.internal == "buffer_store":
+                keep = (op.attrs["roles"].split(",").index("value"),)
+            else:
+                keep = _INT_SET_TRANSPARENT.get(rule.internal, ())
+            args = [_drop_int_set(a, op) if _is_int_set(a) and k not in keep else a for k, a in enumerate(args)]
         if handler is not None:
             out = handler(op, args, env, state)
         else:
@@ -1606,6 +1756,8 @@ class KernelReferenceEvaluator:
         v_lo = np.broadcast_to(value.lo, shape)
         v_hi = np.broadcast_to(value.hi, shape) if value.kind == "f" else None
         v_st = np.broadcast_to(value.st, shape).copy()
+        # DSL v2 increment 14: lanes holding an integer set target [lo, s_hi]
+        s_hi = np.broadcast_to(value.hi, shape) if _is_int_set(value) else None
         ctrl_flag, ctrl_reasons = state.control()
         v_cond = np.broadcast_to(value.cond, shape) | (False if mask is None else mask.cond) | ctrl_flag
         for r in ctrl_reasons:
@@ -1630,6 +1782,17 @@ class KernelReferenceEvaluator:
         hi_w = v_hi[sel] if v_hi is not None else None
         st_w = v_st[sel]
         cond_w = v_cond[sel]
+        set_w = np.zeros(idx.size, dtype=bool)
+        if s_hi is not None:
+            sh = np.asarray(s_hi[sel], dtype=np.int64)
+            set_w = (sh != np.asarray(v_lo[sel], dtype=np.int64)) & (st_w == ST_OK)
+            if buf.kind != "i" or buf.dtype in ("uint8", "bool"):
+                # the byte representation of a signed interval is not an interval: no set target
+                st_w = np.where(set_w, ST_NE, st_w)
+                if set_w.any():
+                    self._reasons[f"not_established:integer set target stored into a byte or bool storage"
+                                  f"@{op.node_id}"] += 1
+                set_w[:] = False
         # Two lanes writing one address in the same store: order is unspecified.
         if idx.size:
             order = np.argsort(idx, kind="stable")
@@ -1641,6 +1804,9 @@ class KernelReferenceEvaluator:
                                  (hi_w is not None and False) | (st_w[order][1:] != st_w[order][:-1]))
                 if hi_w is not None:
                     differ = differ | (same & (hi_w[order][1:] != hi_w[order][:-1]))
+                if s_hi is not None:
+                    shs = np.where(set_w, sh, np.asarray(lo_w, dtype=np.int64))[order]
+                    differ = differ | (same & ((shs[1:] != shs[:-1]) | (set_w[order][1:] != set_w[order][:-1])))
                 bad_addr = set(sidx[1:][differ].tolist())
                 if bad_addr:
                     dup = np.isin(idx, list(bad_addr))
@@ -1665,6 +1831,15 @@ class KernelReferenceEvaluator:
                 t = value.tangent()
                 buf.d[0][idx] = np.broadcast_to(t[0], shape)[sel]
                 buf.d[1][idx] = np.broadcast_to(t[1], shape)[sel]
+            # integer set targets: not established inside the evaluator; a record, checked at the end of the launch
+            set_w = set_w & (st_w == ST_OK)
+            recs = self._iset_records.setdefault(buf.ident, {})
+            for j, e in enumerate(idx.tolist()):
+                if set_w[j]:
+                    recs[e] = (int(lo_w[j]), int(sh[j]), state.pid_index)
+                else:
+                    recs.pop(e, None)
+            st_w = np.where(set_w, ST_NE, st_w)
             buf.lo[idx] = lo_w
             if hi_w is not None:
                 buf.hi[idx] = hi_w
@@ -1916,7 +2091,8 @@ class KernelReferenceEvaluator:
             return base
         is_float = base.kind == "f"
         lo = np.array(base.lo, dtype=np.float64 if is_float else np.int64, copy=True)
-        hi = np.array(base.hi, dtype=np.float64, copy=True) if is_float else None
+        # DSL v2 increment 14: an integer load gets an upper bound for its set-valued lanes
+        hi = np.array(base.hi, dtype=np.float64, copy=True) if is_float else np.array(lo, copy=True)
         st = np.array(base.st, dtype=np.int8, copy=True)
         reasons = set(base.reasons)
         if self._atomic_pass == 2 and not ((buf.writer[idx] >= 0) & (buf.writer[idx] != state.pid_index)).any():
@@ -1958,6 +2134,10 @@ class KernelReferenceEvaluator:
             lo_f[pos], st_f[pos] = r_lo, r_st
             if hi_f is not None:
                 hi_f[pos] = r_hi
+            if is_set and r_st == ST_OK and base.kind == "b":   # a bool set is not an interval of the format
+                st_f[pos] = ST_NE
+                why["set-valued boolean atomic load"] += 1
+                continue
             n_set += bool(is_set and r_st == ST_OK)
         for r in why:
             reasons.add(f"not_established:{r}@{op.node_id}")
@@ -1966,8 +2146,9 @@ class KernelReferenceEvaluator:
         self._rules["atomic.load_set_lanes"] += n_set
         if is_float:
             return _ftv(base.elem, lo, hi, st, base.cond, frozenset(reasons))
-        return TV(base.kind, base.elem, lo.astype(np.int64) if base.kind == "i" else lo.astype(np.int8), None, None,
-                  st, base.cond, frozenset(reasons))
+        return TV(base.kind, base.elem, lo.astype(np.int64) if base.kind == "i" else lo.astype(np.int8),
+                  hi.astype(np.int64) if (n_set and base.kind == "i") else None, None, st, base.cond,
+                  frozenset(reasons))
 
     def _op_atomic_poll(self, op, args, env, state):
         """tt.atomic_poll (DSL v2 increment 5, rc3 02 6.9): pass 1 records the polled addresses; pass 2 decides each
@@ -2303,7 +2484,9 @@ class KernelReferenceEvaluator:
         is_f = kind_of(rt.elem) == "f"
         width = INT_WIDTH.get(rt.elem, 0)
         n = flat.size
-        old_lo, old_hi, old_st = np.zeros(n), np.zeros(n), np.full(n, ST_NE, dtype=np.int8)
+        odt = np.float64 if is_f else np.int64   # integers keep int64 precision (DSL v2 increment 14)
+        old_lo, old_hi, old_st = np.zeros(n, dtype=odt), np.zeros(n, dtype=odt), np.full(n, ST_NE, dtype=np.int8)
+        n_set = 0
         badf = bad.reshape(-1)
         offf = off.reshape(-1)
         groups = collections.defaultdict(list)
@@ -2322,8 +2505,10 @@ class KernelReferenceEvaluator:
                          (float if is_f else int)((np.asarray(v.hi) if v.hi is not None else np.asarray(v.lo))[j]),
                          int(np.asarray(v.st)[j])) for j in lanes]
             for t, j in enumerate(lanes):
-                r_lo, r_hi, r_st, _, reason = _atomic_old(kind, is_f, width, init, contribs[:t] + contribs[t + 1:])
+                r_lo, r_hi, r_st, is_set, reason = _atomic_old(kind, is_f, width, init,
+                                                                contribs[:t] + contribs[t + 1:])
                 old_lo[j], old_hi[j], old_st[j] = r_lo, r_hi, r_st
+                n_set += bool(is_set and r_st == ST_OK)
                 if reason:
                     why[reason] += 1
             ok = init[2] == ST_OK and all(c[3] == ST_OK for c in contribs)
@@ -2364,11 +2549,14 @@ class KernelReferenceEvaluator:
         reasons |= {f"not_established:{r}@{op.node_id}" for r in why}
         if offf.any():
             reasons.add(f"not_established:masked-off lanes of a local atomic return no value@{op.node_id}")
+        if n_set:
+            reasons.add(f"set:local atomic return value over all interleavings (L_E)@{op.node_id}")
         reasons = frozenset(reasons)
         cond = np.zeros(shape, dtype=bool)
         if is_f:
             return _ftv(rt.elem, old_lo.reshape(shape), old_hi.reshape(shape), old_st.reshape(shape), cond, reasons)
-        return TV("i", rt.elem, old_lo.astype(np.int64).reshape(shape), None, None, old_st.reshape(shape), cond, reasons)
+        return TV("i", rt.elem, old_lo.reshape(shape), old_hi.reshape(shape) if n_set else None, None,
+                  old_st.reshape(shape), cond, reasons)
 
     # ---- TTGIR: asynchronous copies and mbarriers (DSL v2 increment 10) -------------------------------------------
 
@@ -2808,8 +2996,9 @@ class KernelReferenceEvaluator:
         if bitview:
             init_bits, init_def = _float_bits(init_buf.elem, init_buf.lo, init_buf.hi, init_buf.st)
         plain_prev = self._plain_prev.get(buf.ident)
-        lo = np.zeros(idx.size)
-        hi = np.zeros(idx.size)
+        rdt = np.float64 if is_float else np.int64   # integers keep int64 precision (DSL v2 increment 14)
+        lo = np.zeros(idx.size, dtype=rdt)
+        hi = np.zeros(idx.size, dtype=rdt)
         st = np.full(idx.size, ST_NE, dtype=np.int8)
         why = collections.Counter()
         n_set = 0
@@ -2846,14 +3035,14 @@ class KernelReferenceEvaluator:
         self._rules["atomic.return_set_lanes"] += n_set
         self._rules["atomic.return_point_lanes"] += int((st == ST_OK).sum()) - n_set
         self._rules["atomic.return_value_not_established_lanes"] += int((st != ST_OK).sum())
-        out_lo = np.zeros(shape)
-        out_hi = np.zeros(shape)
+        out_lo = np.zeros(shape, dtype=rdt)
+        out_hi = np.zeros(shape, dtype=rdt)
         out_st = np.full(shape, ST_NE, dtype=np.int8)
         out_lo[active], out_hi[active], out_st[active] = lo, hi, st
         cond = np.zeros(shape, dtype=bool)
         if is_float:
             return _ftv(value.elem, out_lo, out_hi, out_st, cond, frozenset(reasons))
-        return TV("i", value.elem, out_lo.astype(np.int64), None, None, out_st, cond, frozenset(reasons))
+        return TV("i", value.elem, out_lo, out_hi if n_set else None, None, out_st, cond, frozenset(reasons))
 
     def _event_table(self) -> dict:
         """(ident, address) -> sorted [(key, kind, lo, hi, st)] of the atomic updates recorded in this run."""
@@ -2877,6 +3066,7 @@ class KernelReferenceEvaluator:
             if table1.get(key) != table2.get(key):
                 bad |= programs
         self._rules["atomic.two_pass_launch"] += 1
+        self._two_pass_bad = set(bad)
         if not bad:
             return
         hits = 0
@@ -2974,6 +3164,8 @@ class KernelReferenceEvaluator:
     def _scalar_int(self, value: TV, op) -> int:
         if value.st.max() >= ST_UNDEF or value.kind not in ("i", "b"):
             raise ProgramAbort(f"{op.node_id}: loop bound not established")
+        if value.hi is not None and np.any(np.asarray(value.hi) != np.asarray(value.lo)):
+            raise ProgramAbort(f"{op.node_id}: loop bound is an integer set target (L_E)")
         return int(value.lo)
 
     def _op_if(self, op, args, env, state):
@@ -2997,10 +3189,13 @@ class KernelReferenceEvaluator:
         # Undecided: run both branches on copies of the memory and take the union.
         self._rules["path.branch_union"] += 1
         saved = {k: b.copy() for k, b in state.memory.items()}
+        saved_recs = {k: dict(v) for k, v in self._iset_records.items()}
         state.ctrl.append((bool(cond.cond.any()), cond.reasons))
         try:
             _, then_out = self._run_region(op.regions[0], env, state, [])
             then_mem = state.memory
+            then_recs = self._iset_records
+            self._iset_records = {k: dict(v) for k, v in saved_recs.items()}
             state.memory = {k: b.copy() for k, b in saved.items()}
             else_out = []
             if len(op.regions) > 1:
@@ -3008,6 +3203,14 @@ class KernelReferenceEvaluator:
             else_mem = state.memory
         finally:
             state.ctrl.pop()
+        # integer set targets (increment 14): a record stands only if both branches leave the same record
+        else_recs = self._iset_records
+        self._iset_records = {}
+        for ident in set(then_recs) | set(else_recs):
+            a, b = then_recs.get(ident, {}), else_recs.get(ident, {})
+            kept = {e: r for e, r in a.items() if b.get(e) == r}
+            if kept:
+                self._iset_records[ident] = kept
         state.memory = then_mem
         for k in state.memory:
             state.memory[k] = _hull_buffers(then_mem[k], else_mem[k])
@@ -4361,8 +4564,14 @@ def _hull_tv(a: TV, b: TV) -> TV:
         v = np.where(a.lo == b.lo, a.lo, MAYBE).astype(np.int8)
         return TV("b", a.elem, v, None, None, st, a.cond | b.cond, a.reasons | b.reasons)
     same = (a.lo == b.lo) & ((a.base == b.base) if a.kind == "p" else True)
+    hi = None
+    if a.kind == "i" and (a.hi is not None or b.hi is not None):   # integer set targets (increment 14)
+        a_hi = a.hi if a.hi is not None else a.lo
+        b_hi = b.hi if b.hi is not None else b.lo
+        same = same & (np.asarray(a_hi) == np.asarray(b_hi))
+        hi = a_hi
     st = np.where(same, st, ST_NE).astype(np.int8)
-    return TV(a.kind, a.elem, a.lo, None, a.base, st, a.cond | b.cond, a.reasons | b.reasons)
+    return TV(a.kind, a.elem, a.lo, hi, a.base, st, a.cond | b.cond, a.reasons | b.reasons)
 
 
 def _hull_buffers(a: Buffer, b: Buffer) -> Buffer:

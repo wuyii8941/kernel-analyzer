@@ -34,7 +34,7 @@ def pytest_runtest_call(item):
     out = os.environ.get("KA_MAIN_CAPTURE_OUT")
     if not out or not rec.launches:
         return
-    from kernel_analyzer.reference_eval.ttir_eval import ST_NINF, evaluate_sequence
+    from kernel_analyzer.reference_eval.ttir_eval import evaluate_sequence
     lines = []
     for launch in rec.launches:
         size = sum((a.storage_nbytes or 0) for a in launch.args if a.kind == "tensor")
@@ -47,10 +47,11 @@ def pytest_runtest_call(item):
         try:
             ref = evaluate_sequence([launch]).launches[0]
             written = complete = 0
-            for buf in ref.buffers.values():
+            for ident, buf in ref.buffers.items():
                 w = np.asarray(buf.written)
                 written += int(w.sum())
-                complete += int((w & (np.asarray(buf.st) <= ST_NINF)).sum())  # special values are established
+                # special values and integer set targets (DSL v2 increment 14) are established
+                complete += int(ref.established(ident).sum())
             row.update(written=written, complete=complete,
                        status="aborted" if ref.aborted else ("complete" if written and complete == written
                                                              else ("partial" if written else "nothing written")),

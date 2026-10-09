@@ -57,12 +57,11 @@ def _ttgir_for(ttir: str, arch):
 
 
 def _status(ref):
-    from kernel_analyzer.reference_eval.ttir_eval import ST_NINF
     written = complete = 0
-    for buf in ref.buffers.values():
+    for ident, buf in ref.buffers.items():
         w = np.asarray(buf.written)
         written += int(w.sum())
-        complete += int((w & (np.asarray(buf.st) <= ST_NINF)).sum())
+        complete += int(ref.established(ident).sum())   # integer set targets count (DSL v2 increment 14)
     return "aborted" if ref.aborted else ("complete" if written and complete == written else
                                           ("partial" if written else "nothing written"))
 
@@ -120,14 +119,21 @@ def pytest_runtest_call(item):
                 w = np.asarray(b1.written) | np.asarray(b2.written)
                 ok1 = w & (np.asarray(b1.st) == ST_OK)
                 ok2 = w & (np.asarray(b2.st) == ST_OK)
+                if b1.kind == "i":   # integer set targets (DSL v2 increment 14) are compared by their hulls
+                    ok1 = ok1 | (w & (b1.iset if b1.iset is not None else False))
+                    ok2 = ok2 | (w & (b2.iset if b2.iset is not None else False))
                 both_ok = ok1 & ok2
                 both += int(both_ok.sum())
                 only_a += int((ok1 & ~ok2).sum())
                 only_b += int((ok2 & ~ok1).sum())
                 if both_ok.any():
-                    lo1, lo2 = np.asarray(b1.lo)[both_ok], np.asarray(b2.lo)[both_ok]
-                    hi1 = np.asarray(b1.hi)[both_ok] if b1.hi is not None else lo1
-                    hi2 = np.asarray(b2.hi)[both_ok] if b2.hi is not None else lo2
+                    if b1.kind == "i":
+                        (l1, h1), (l2, h2) = base.int_bounds(ident), ref.int_bounds(ident)
+                        lo1, hi1, lo2, hi2 = l1[both_ok], h1[both_ok], l2[both_ok], h2[both_ok]
+                    else:
+                        lo1, lo2 = np.asarray(b1.lo)[both_ok], np.asarray(b2.lo)[both_ok]
+                        hi1 = np.asarray(b1.hi)[both_ok] if b1.hi is not None else lo1
+                        hi2 = np.asarray(b2.hi)[both_ok] if b2.hi is not None else lo2
                     disjoint += int(((hi1 < lo2) | (hi2 < lo1)).sum())
             row.update(ttgir_status=_status(ref), both_ok=both, disjoint=disjoint, ttir_only_ok=only_a,
                        ttgir_only_ok=only_b,
