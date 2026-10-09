@@ -27,7 +27,7 @@ class TTIRParseError(ValueError):
 @dataclass(frozen=True)
 class PtrType:
     pointee: "Union[str, PtrType]"
-    address_space: int = 1
+    address_space: "Union[int, str]" = 1
 
 
 @dataclass(frozen=True)
@@ -77,7 +77,8 @@ def _parse_elem(text: str):
         inner = text[len("!tt.ptr<"):-1]
         parts = _split_top(inner, ",")
         pointee = _parse_elem(parts[0])
-        space = int(parts[1]) if len(parts) > 1 else 1
+        space = parts[1].strip() if len(parts) > 1 else "1"
+        space = int(space) if space.lstrip("-").isdigit() else space.strip('"')  # main: "constant" (read-only)
         return PtrType(pointee.elem if isinstance(pointee, TType) else pointee, space)
     if text.startswith("tensor<"):
         return parse_type(text)  # pointer to tensor (block pointers)
@@ -204,7 +205,9 @@ def _walk_region(region: TRegion):
 def strip_locations(text: str) -> str:
     """Remove ``#loc`` definitions and every balanced ``loc(...)`` suffix."""
 
-    lines = [line for line in text.splitlines() if not line.startswith("#loc")]
+    # #loc definitions and other top-level attribute aliases (main: #loop_licm = #llvm.loop_licm<...>)
+    lines = [line for line in text.splitlines() if not line.startswith("#loc")
+             and not re.match(r"^#[\w.$-]+\s*=", line)]
     text = "\n".join(lines)
     out, i = [], 0
     while True:
@@ -496,7 +499,10 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
                 key, value = p.split("=", 1)
                 op.attrs[key.strip()] = value.strip()
         op.operand_types, op.result_types = operand_types, result_types
-    elif name in ("tt.atomic_rmw", "tt.atomic_cas"):
+    elif name in ("tt.atomic_rmw", "tt.atomic_cas", "tt.atomic_load", "tt.atomic_store", "tt.atomic_poll"):
+        if name == "tt.atomic_poll" and re.search(r"\stimeout\s", head):  # DSL v2 increment 5: "%e timeout %t"
+            head = re.sub(r"\s+timeout\s+", ", ", head)
+            op.attrs["timeout"] = "1"
         parts = [p.strip() for p in _split_top(head, ",")]
         words = [p for p in parts if not p.startswith("%")]
         if name == "tt.atomic_rmw":

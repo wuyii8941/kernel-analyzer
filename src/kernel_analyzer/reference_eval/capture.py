@@ -169,6 +169,8 @@ def _unwrap(arg):
     base = getattr(arg, "base", None)
     dt = getattr(arg, "dtype", None)
     if isinstance(base, torch.Tensor) and dt is not None and hasattr(arg, "data_ptr"):
+        if isinstance(dt, torch.dtype):  # triton.reinterpret(t, torch dtype) (official test_conversions)
+            return base, str(dt).replace("torch.", "")
         name = _TL_DTYPE.get(getattr(dt, "name", str(dt)))
         if name is not None:
             return base, name

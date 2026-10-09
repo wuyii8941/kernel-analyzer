@@ -63,6 +63,11 @@ MAPPING: dict[str, Rule] = {
     "tt.assert": S("H", "assert"),
     "tt.atomic_cas": S("H", "atomic_cas"),  # DSL v2 increment 3: deterministic without contention; contention -> race
     "tt.atomic_rmw": S("H", "atomic_rmw"),
+    # DSL v2 increment 5 (official main): atomic load / store (point or set target), poll (termination premise and
+    # happens-before)
+    "tt.atomic_load": S("H", "atomic_load"),
+    "tt.atomic_store": S("H", "atomic_store"),
+    "tt.atomic_poll": S("H", "atomic_poll"),
     "tt.bitcast": S("G", "bitcast"),
     "tt.broadcast": S("A", "broadcast"),
     "tt.call": S("I", "call"),
@@ -83,7 +88,7 @@ MAPPING: dict[str, Rule] = {
     "tt.gather": S("A", "gather"),
     "tt.get_num_programs": S("H", "num_programs"),
     "tt.get_program_id": S("H", "program_id"),
-    "tt.histogram": R("E", "histogram is not supported in this version"),
+    "tt.histogram": S("E", "histogram"),  # DSL v2 increment 5: exact counts; inputs outside [0, bins) not established
     "tt.int_to_ptr": S("H", "int_to_ptr"),
     "tt.join": S("A", "join"),
     "tt.load": S("H", "load"),
@@ -94,6 +99,7 @@ MAPPING: dict[str, Rule] = {
     "tt.map_elementwise.return": R("I", "map_elementwise regions are not supported in this version"),
     "tt.mulhiui": S("A", "mulhiui"),
     "tt.precise_divf": S("B", "div"),
+    "tt.approx_divf": S("B", "approx_div"),  # rc3 02 6.5: promoted to x / y in the numerical-difference mode
     "tt.precise_sqrt": S("D", "sqrt"),
     "tt.print": S("H", "nop"),
     "tt.ptr_to_int": S("H", "ptr_to_int"),
@@ -257,6 +263,7 @@ INLINE_ASM = {
     r"sin\.approx(\.ftz)?\.f32 \$0, \$1;": "sin",
     r"cos\.approx(\.ftz)?\.f32 \$0, \$1;": "cos",
     r"mov\.b32 \$0, \$1;": "identity",
+    r"div\.full(\.ftz)?\.f32 \$0, \$1, \$2;": "approx_div",  # DSL v2 increment 5 (rc3 02 6.5)
 }
 
 
@@ -331,7 +338,8 @@ def registry_coverage(registry: Optional[dict] = None) -> dict:
 
 # Table entries for names that the locked 3.6.0 build does not register but another recorded profile does (DSL v2
 # increment 3; registration evidence: results/dsl_v2/w0/registered_e50b186e8bd2.json, official main e50b186e).
-OTHER_PROFILE_NAMES = {"ttg.barrier": "e50b186e", "llvm.intr.assume": "e50b186e"}
+OTHER_PROFILE_NAMES = {"ttg.barrier": "e50b186e", "llvm.intr.assume": "e50b186e", "tt.atomic_load": "e50b186e",
+                       "tt.atomic_store": "e50b186e", "tt.atomic_poll": "e50b186e", "tt.approx_divf": "e50b186e"}
 
 
 # ---------------------------------------------------------------------------
@@ -601,7 +609,9 @@ def kernel_coverage(module: TModule, func: Optional[TFunc] = None) -> dict:
             combiner = recognize_combiner(op)
             row["combiner"] = combiner
             if combiner is None:
-                reason = "combiner region has no recognized order-independent semantics"
+                # DSL v2 increment 1: evaluated along the TTGIR lowering order (declared premise); without a TTGIR
+                # the evaluator reports it not established
+                row["combiner"] = "generic: TTGIR lowering order (declared premise)"
         elif op.name == "tt.reshape" and "allow_reorder" in op.attrs:
             row["note"] = "allow_reorder: element order is not declared; only order-insensitive uses are valid"
         if op.name in ("tt.bitcast", "arith.bitcast"):

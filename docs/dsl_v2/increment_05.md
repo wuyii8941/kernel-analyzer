@@ -54,3 +54,15 @@ A、B 约 1 天；C、D、E 约半天；捕获复跑约 30 min。
 
 - 解析器：函数头的结果是带括号的列表时，原来的正则会把结果类型吞进参数表，报 `bad parameter 'f32'`。改为按配对括号截取参数表。
   这是在官方主线转储上发现的缺陷，不改变任何语义。
+
+## 6. 偏离（实现后、复跑前记录，2026-10-09）
+
+- **D 的语义改了。** 登记时只读了 TableGen 定义和 Python 文档字符串，以为越界值的处理没有官方说明。捕获复跑时，官方测试
+  `test_histogram_out_of_range` 与 `test_histogram_silent_data_corruption` 报为部分参照，查官方源后发现另有说明：
+  - 官方解释器 `python/triton/runtime/interpreter.py:789-792`：「The GPU drops every out-of-range value, so exclude such elements
+    like masked ones.」
+  - 官方测试 `test_histogram_out_of_range` 断言输入 `[0, 1, 2, 3, 4, 4, 5, -1]`、4 个 bin 的结果是 `[1, 1, 1, 1]`。
+  所以越界值按官方契约是丢弃，不是未定义。规则改为：未被 mask、值已建立且在 [0, bin 数) 内的输入才计数，越界值丢弃；
+  被计数位置上有值未建立的输入（无法判断它落在哪个 bin 或是否越界）时，全部 bin 记未建立。
+  原来的「违反前提」测试改成「输入值未建立」，越界值移到边界测试。
+- 影响：§4 的预期「输入都在范围内时完整」不变；这两个官方测试的结果会从部分参照变为完整。结果文档里两种口径都写。

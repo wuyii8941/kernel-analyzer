@@ -31,7 +31,7 @@ def main():
     ap.add_argument("tutorials", nargs="+", type=Path)
     a = ap.parse_args()
     from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder
-    from kernel_analyzer.reference_eval.ttir_eval import ST_OK, evaluate_sequence
+    from kernel_analyzer.reference_eval.ttir_eval import ST_NINF, evaluate_sequence
     TritonLaunchRecorder.install_hook()
     for tut in a.tutorials:
         seen = collections.Counter()
@@ -68,7 +68,7 @@ def main():
                 for buf in ref.buffers.values():
                     w = np.asarray(buf.written)
                     written += int(w.sum())
-                    complete += int((w & (np.asarray(buf.st) == ST_OK)).sum())
+                    complete += int((w & (np.asarray(buf.st) <= ST_NINF)).sum())  # special values are established
                 row.update(written=written, complete=complete,
                            status="aborted" if ref.aborted else ("complete" if written and complete == written
                                                                  else ("partial" if written else "nothing written")),

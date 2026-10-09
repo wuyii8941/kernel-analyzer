@@ -3,8 +3,8 @@
  "triton": "3.6.0",
  "source": "ttir_mapping (MAPPING, LIBDEVICE, LIBDEVICE_ROUNDING, INLINE_ASM, combiners)",
  "counts": {
-  "SUPPORTED": 399,
-  "REJECTED": 99,
+  "SUPPORTED": 401,
+  "REJECTED": 98,
   "DECLARED_PREMISE": 3,
   "NOT_ESTABLISHED": 1
  },
@@ -391,13 +391,13 @@
     "types": "*",
     "subregion": "*"
    },
-   "status": "REJECTED",
+   "status": "SUPPORTED",
    "category": "E",
-   "internal": null,
-   "containment_argument": "",
-   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_unknown_op_or_attribute_is_rejected_not_skipped",
-   "negative_control": "",
-   "reason": "histogram is not supported in this version"
+   "internal": "histogram",
+   "containment_argument": "Reductions, scans and dot products: sums and dot products by SumK / DotK with the Ogita-Rump-Oishi bound (tool 3.0); registered order-free combiners as fast paths, any other combine region interpreted along the lowering's combination order (sub-entries).",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_exp_then_sum_keeps_a_nonzero_enclosing_width",
+   "negative_control": "tests/test_welford_reduction.py::test_three_independent_sums_get_a_complete_reference",
+   "reason": ""
   },
   {
    "key": {
@@ -7264,6 +7264,21 @@
    "status": "SUPPORTED",
    "category": "D",
    "internal": "cos",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.elementwise_inline_asm",
+    "attrs": "asm~div\\.full(\\.ftz)?\\.f32 \\$0, \\$1, \\$2;",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "approx_div",
    "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
    "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
    "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",

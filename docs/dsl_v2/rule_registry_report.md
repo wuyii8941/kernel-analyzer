@@ -2,15 +2,15 @@
 
 由 `scripts/dsl_v2/build_rule_registry.py` 生成；条目键为（操作、属性、类型、子区域）。general-v3.1 的注册表（results/general/rule_registry.json）冻结不改。这只是旧 profile 的规则账，不是 rc3 官方目标面的覆盖率。
 
-状态计数：{'SUPPORTED': 399, 'REJECTED': 99, 'DECLARED_PREMISE': 3, 'NOT_ESTABLISHED': 1}
+状态计数：{'SUPPORTED': 401, 'REJECTED': 98, 'DECLARED_PREMISE': 3, 'NOT_ESTABLISHED': 1}
 
 | 类别 | 支持 | 声明前提 | 未建立 | 拒绝 |
 |---|---|---|---|---|
 | A | 52 | 0 | 0 | 15 |
 | B | 8 | 0 | 0 | 0 |
 | C | 20 | 0 | 0 | 1 |
-| D | 209 | 0 | 0 | 2 |
-| E | 28 | 3 | 0 | 1 |
+| D | 210 | 0 | 0 | 2 |
+| E | 29 | 3 | 0 | 0 |
 | F | 61 | 0 | 0 | 2 |
 | G | 2 | 0 | 0 | 3 |
 | H | 16 | 0 | 1 | 71 |

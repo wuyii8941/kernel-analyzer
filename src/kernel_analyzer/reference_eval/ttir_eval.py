@@ -471,6 +471,7 @@ class ProgramState:
     memory: dict  # ident -> Buffer
     epoch: int = 0  # barrier phase inside the program (gpu.barrier orders the threads of one program)
     occ: dict = field(default_factory=dict)  # atomic node -> executions so far (keys of atomic events)
+    rel_epoch: int = 0  # release operations performed so far (writes before release e carry epoch <= e)
     # Control dependence: conditions (conditional flag, reasons) that decided the current path.
     ctrl: list = field(default_factory=list)
     sticky_cond: bool = False  # set by unstructured branches / loop exits, kept to the program end
@@ -577,8 +578,9 @@ class KernelReferenceEvaluator:
         self.ttgir = ttgir
         self._layout_cache = None
         self._uses = self._collect_uses()
-        self._returning_atomics = any(op.name == "tt.atomic_rmw" and op.results and op.results[0] in self._uses
-                                      for fn in module.funcs.values() for op in fn.walk())
+        self._returning_atomics = any(
+            (op.name == "tt.atomic_rmw" and op.results and op.results[0] in self._uses)
+            or op.name in ("tt.atomic_load", "tt.atomic_poll") for fn in module.funcs.values() for op in fn.walk())
 
     def _ttgir_layouts(self) -> tuple:
         """(layouts, reduce node -> axis parameters, load/store node -> pointer layout, num_warps); empty without a
@@ -650,7 +652,11 @@ class KernelReferenceEvaluator:
                     bindings[name] = _ftv(ttype.elem, np.array(v), np.array(v), np.array(ST_OK, dtype=np.int8),
                                           np.array(False), frozenset())
                 else:
-                    bindings[name] = TV(kind, ttype.elem, np.array(int(arg.value), dtype=np.int64))
+                    # two's complement of the parameter width (a uint64 2**64 - 1 arrives as a Python int; DSL v2
+                    # increment 5, official test_value_specialization_overflow)
+                    v, w = int(arg.value), INT_WIDTH.get(ttype.elem, 64)
+                    v = ((v + (1 << (w - 1))) % (1 << w)) - (1 << (w - 1)) if ttype.elem != "i1" else v
+                    bindings[name] = TV(kind, ttype.elem, np.array(v, dtype=np.int64))
         for arg in getattr(launch, "implicit", []) or []:  # reachable through raw addresses only
             ident = arg.storage_ptr
             if ident not in memory:
@@ -708,6 +714,7 @@ class KernelReferenceEvaluator:
             programs = [(x, y, z) for z in range(grid[2]) for y in range(grid[1]) for x in range(grid[0])]
         self._pin = set(pin_loads)
         self._atomic_pass, self._atomic_table, self._atomic_init, self._plain_prev = 0, None, None, None
+        self._cyclic = set()
         snapshot = table = None
         if self._returning_atomics:
             # DSL v2 increment 4: returned atomic values need every update of their address in this launch.  Pass 1
@@ -716,9 +723,11 @@ class KernelReferenceEvaluator:
             snapshot = {k: b.copy() for k, b in memory.items()}
             self._atomic_pass = 1
             self._run_programs(programs, grid, bindings, memory)
+            order = None
             if sum(e[1].size for e in self._events) <= ATOMIC_EVENT_BUDGET:
                 table = self._event_table()
                 self._plain_prev = self._plain_stores
+                order, self._cyclic = self._poll_order(len(programs), table, self._polls)
                 for k in list(memory):
                     memory[k] = snapshot[k].copy()
                 self._atomic_pass, self._atomic_table, self._atomic_init = 2, table, snapshot
@@ -727,7 +736,8 @@ class KernelReferenceEvaluator:
             aborted, reasons = self._last_run
             self._rules["atomic.two_pass_skipped_event_budget"] += 1
         else:
-            aborted, reasons = self._run_programs(programs, grid, bindings, memory)
+            aborted, reasons = self._run_programs(programs, grid, bindings, memory,
+                                                  order if self._atomic_pass == 2 else None)
         if self._atomic_pass == 2:
             self._check_two_pass(table, memory, reasons)
         if aborted:
@@ -763,8 +773,10 @@ class KernelReferenceEvaluator:
                                notes, dict(reasons), dict(self._rules), set(self._loaded), set(self._loaded_any),
                                set(self._stored))
 
-    def _run_programs(self, programs, grid, bindings, memory) -> tuple:
-        """Run every program instance of the launch once on ``memory``; launch-level execution checks at the end."""
+    def _run_programs(self, programs, grid, bindings, memory, order=None) -> tuple:
+        """Run every program instance of the launch once on ``memory`` (in ``order``: indices into ``programs``, by
+        default their order; the program index stays its position in ``programs``); launch-level execution checks at
+        the end."""
         self._rules = collections.Counter()
         self._outside_window = False
         self._loaded = set()
@@ -782,11 +794,17 @@ class KernelReferenceEvaluator:
         self._events = []  # atomic updates: (ident, idx, kind, lo, hi, st, pid index, node, occurrence, lanes)
         self._plain_stores = {}  # ident -> bool array: written by a non-atomic store in this launch
         self._consumers = collections.defaultdict(set)  # (ident, address) -> programs that used a returned value
+        # happens-before (DSL v2 increment 5): release epochs of plain writes, releases per address, acquired edges
+        self._wepoch = {}  # ident -> int64 array: writer's release epoch at the write
+        self._releases = collections.defaultdict(list)  # (ident, address) -> [(program, epoch, value)]
+        self._hb = collections.defaultdict(dict)  # program -> {writer program: highest acquired release epoch}
+        self._polls = []  # (program, ident, address, expected) recorded by atomic_poll
         for buf in memory.values():
             buf.writer[:] = -1  # kernel boundaries order all earlier writes
         aborted = {}
         reasons = collections.Counter()
-        for index, pid in enumerate(programs):
+        for index in (order if order is not None else range(len(programs))):
+            pid = programs[index]
             state = ProgramState(tuple(pid), index, grid, memory)
             self._reasons = reasons
             try:
@@ -1225,12 +1243,15 @@ class KernelReferenceEvaluator:
             if pinned:
                 self._rules["observability.pinned_load_lanes"] += int(safe.sum())
             race = safe & (buf.writer[idx] != -1) & (buf.writer[idx] != state.pid_index)
+            if race.any() and self._hb.get(state.pid_index):
+                race = race & ~self._ordered_by_hb(buf, idx, state)
             if race.any():
                 self._rules["memory.cross_program_race_lanes"] += int(race.sum())
                 st = np.where(race, ST_NE, st)
                 reasons.add(f"not_established:cross-program race on load@{op.node_id}")
-            if not pinned and safe.any():
+            if not pinned and safe.any() and not getattr(self, "_atomic_read", False):
                 self._track_read(buf, idx[safe], state)
+            if not pinned and safe.any():
                 bad, why = self._same_program_write_read(op, buf, idx, safe, state)
                 if bad is not None:
                     st = np.where(bad, ST_NE, st)
@@ -1373,27 +1394,39 @@ class KernelReferenceEvaluator:
             buf.writer[idx] = state.pid_index
             buf.written[idx] = True
             self._mark_plain(buf, idx)
+            we = self._wepoch.get(buf.ident)
+            if we is None:
+                we = self._wepoch[buf.ident] = np.full(buf.writer.shape, -1, dtype=np.int64)
+            we[idx] = state.rel_epoch
             self._record_store(op, buf, idx, np.flatnonzero(np.asarray(sel).reshape(-1)), state)
             self._stored.add(buf.ident)
         for r in value.reasons:
             self._reasons[r] += 1
         return None
 
-    def _op_atomic_rmw(self, op, args, env, state):
+    def _op_atomic_store(self, op, args, env, state):
+        """tt.atomic_store (DSL v2 increment 5): an exchange whose returned value is not used."""
+        return self._op_atomic_rmw(op, args, env, state, kind_override="exch")
+
+    def _op_atomic_rmw(self, op, args, env, state, kind_override=None):
         ptr, value = args[0], args[1]
         mask = args[2] if len(args) > 2 else None
-        kind_name = op.attrs["rmw_op"]
+        kind_name = kind_override or op.attrs["rmw_op"]
         shape = ptr.shape
         buf, index, in_range = self._addresses(op, ptr, state, bitview=True)
         m = np.ones(shape, dtype=np.int8) if mask is None else mask.lo.astype(np.int8)
         if mask is not None and ((m == MAYBE) | (mask.st >= ST_UNDEF)).any():
             raise ProgramAbort(f"{op.node_id}: atomic with undecided mask")
+        if buf is None:
+            if (np.broadcast_to(m, shape) == 1).any():  # an active lane updates an address the reference cannot place
+                raise ProgramAbort(f"{op.node_id}: atomic through a not-established address")
+            index, in_range = np.zeros(shape, dtype=np.int64), np.zeros(shape, dtype=bool)
         active = (m == 1) & in_range
         idx = index[active].astype(np.int64)
         result_used = op.results and op.results[0] in self._uses
         occ = state.occ[op.node_id] = state.occ.get(op.node_id, -1) + 1
         if _TRIGGER_PATH:
-            _trace(f"tt.atomic_rmw/return {'used' if result_used else 'unused'}")
+            _trace(f"{op.name}/return {'used' if result_used else 'unused'}")
         # DSL v2 increment 4: an integer pointer onto a float buffer of the same width (the frontend's float max/min)
         # works on the bit patterns of the stored values
         bitview = buf is not None and buf.kind == "f" and kind_of(ptr.elem.pointee) == "i"
@@ -1503,7 +1536,259 @@ class KernelReferenceEvaluator:
         buf.writer[idx] = -2
         buf.written[idx] = True
         self._stored.add(buf.ident)
+        if op.attrs.get("sem") in ("release", "acq_rel"):
+            # a release: the program's earlier writes (epoch <= rel_epoch) happen before an acquire that reads it
+            vals = np.asarray(contrib_lo)
+            for j, a in enumerate(idx.tolist()):
+                self._releases[(buf.ident, a)].append((state.pid_index, state.rel_epoch, vals[j].item()))
+            state.rel_epoch += 1
         return olds if op.results else None
+
+    def _ordered_by_hb(self, buf, idx, state):
+        """Lanes whose last writer's write happens before this program's access through an acquired release."""
+        edges = self._hb.get(state.pid_index, {})
+        we = self._wepoch.get(buf.ident)
+        writers = buf.writer[idx]
+        if we is None or not edges:
+            return np.zeros(writers.shape, dtype=bool)
+        epochs = we[idx]
+        ok = [w >= 0 and edges.get(int(w), -1) >= int(e) for w, e in zip(np.ravel(writers).tolist(),
+                                                                          np.ravel(epochs).tolist())]
+        return np.asarray(ok, dtype=bool).reshape(np.shape(writers))
+
+    def _poll_order(self, n, table, polls):
+        """Pass-2 program order (DSL v2 increment 5): a program that writes the value a poll waits for runs before the
+        polling program; otherwise program order.  Programs on a dependency cycle are returned as cyclic."""
+        import heapq
+        deps = collections.defaultdict(set)
+        for c, ident, a, expected in polls:
+            for e in table.get((ident, a), []):
+                w = e[0][0]
+                if w != c and e[1] == "exch" and e[2] == expected:
+                    deps[c].add(w)
+        if not deps:
+            return None, set()
+        users = collections.defaultdict(set)
+        indeg = [0] * n
+        for c, ws in deps.items():
+            indeg[c] = len(ws)
+            for w in ws:
+                users[w].add(c)
+        ready = [i for i in range(n) if indeg[i] == 0]
+        heapq.heapify(ready)
+        order = []
+        while ready:
+            i = heapq.heappop(ready)
+            order.append(i)
+            for c in users[i]:
+                indeg[c] -= 1
+                if indeg[c] == 0:
+                    heapq.heappush(ready, c)
+        cyclic = {i for i in range(n) if indeg[i] > 0}
+        self._rules["atomic.poll_reordered_launch"] += 1
+        return order + sorted(cyclic), cyclic
+
+    def _op_atomic_load(self, op, args, env, state):
+        """tt.atomic_load (DSL v2 increment 5): a load whose address no atomic update of the launch reaches is an
+        ordinary load (a point).  Otherwise every interleaving reads the value before the launch combined with some
+        subset of those updates: the set target of ``_atomic_old`` (pass 2), not established before.  Atomic reads
+        are not registered as plain reads, so they do not race with atomic writes."""
+        self._atomic_read = True
+        try:
+            base = self._op_load(op, args[:2], env, state)
+        finally:
+            self._atomic_read = False
+        ptr = args[0]
+        mask = args[1] if len(args) > 1 else None
+        shape = ptr.shape
+        buf, index, in_range = self._addresses(op, ptr, state)
+        if buf is None:
+            return base
+        m = np.ones(shape, dtype=np.int8) if mask is None else np.asarray(mask.lo).astype(np.int8)
+        active = (m == 1) & in_range & (np.broadcast_to(ptr.st, shape) == ST_OK)
+        idx = np.asarray(index)[active].astype(np.int64)
+        if not idx.size:
+            return base
+        is_float = base.kind == "f"
+        lo = np.array(base.lo, dtype=np.float64 if is_float else np.int64, copy=True)
+        hi = np.array(base.hi, dtype=np.float64, copy=True) if is_float else None
+        st = np.array(base.st, dtype=np.int8, copy=True)
+        reasons = set(base.reasons)
+        if self._atomic_pass == 2 and not ((buf.writer[idx] >= 0) & (buf.writer[idx] != state.pid_index)).any():
+            # the ordinary load flags addresses an earlier program updated atomically; those lanes get the set below
+            reasons -= {r for r in base.reasons if "cross-program race on load" in r}
+        flat_pos = np.flatnonzero(active.reshape(-1))
+        why = collections.Counter()
+        n_set = 0
+        width = INT_WIDTH.get(base.elem, 0)
+        table = self._atomic_table if self._atomic_pass == 2 else None
+        lo_f, st_f = lo.reshape(-1), st.reshape(-1)
+        hi_f = hi.reshape(-1) if hi is not None else None
+        for pos, a in zip(flat_pos.tolist(), idx.tolist()):
+            if table is None:
+                if self._atomic_pass == 1:  # pass 1: the updates of later programs are not known yet
+                    st_f[pos] = ST_NE
+                    why["atomic load before the second pass"] += 1
+                continue
+            self._consumers[(buf.ident, a)].add(state.pid_index)
+            evs = table.get((buf.ident, a), [])
+            if not evs:
+                continue  # no atomic update of this address in the launch: the ordinary load stands
+            if self._plain_prev is not None and self._plain_prev.get(buf.ident) is not None \
+                    and self._plain_prev[buf.ident][a]:
+                st_f[pos] = ST_NE
+                why["atomic load of an address with non-atomic writes in the same launch"] += 1
+                continue
+            kinds = {e[1] for e in evs}
+            init_buf = self._atomic_init[buf.ident]
+            init = ((float(init_buf.lo[a]), float(init_buf.hi[a]), int(init_buf.st[a])) if is_float else
+                    (int(init_buf.lo[a]), int(init_buf.lo[a]), int(init_buf.st[a])))
+            if len(kinds) != 1:
+                st_f[pos] = ST_NE
+                why["mixed atomic kinds on the address"] += 1
+                continue
+            r_lo, r_hi, r_st, is_set, reason = _atomic_old(kinds.pop(), is_float, width, init, [e[1:] for e in evs])
+            if reason:
+                why[reason] += 1
+            lo_f[pos], st_f[pos] = r_lo, r_st
+            if hi_f is not None:
+                hi_f[pos] = r_hi
+            n_set += bool(is_set and r_st == ST_OK)
+        for r in why:
+            reasons.add(f"not_established:{r}@{op.node_id}")
+        if n_set:
+            reasons.add(f"set:atomic load over all interleavings (L_E)@{op.node_id}")
+        self._rules["atomic.load_set_lanes"] += n_set
+        if is_float:
+            return _ftv(base.elem, lo, hi, st, base.cond, frozenset(reasons))
+        return TV(base.kind, base.elem, lo.astype(np.int64) if base.kind == "i" else lo.astype(np.int8), None, None,
+                  st, base.cond, frozenset(reasons))
+
+    def _op_atomic_poll(self, op, args, env, state):
+        """tt.atomic_poll (DSL v2 increment 5, rc3 02 6.9): pass 1 records the polled addresses; pass 2 decides each
+        element from pass 1's updates of the address.  No other writer: (value before the launch == expected); without
+        a timeout an unequal value never terminates on the reference.  Another program exchanges the expected value
+        in: true without a timeout under the termination premise (fair scheduling), {false, true} (MAYBE) with one.
+        A successful acquire poll whose value comes from one program's release orders that program's earlier writes
+        before this program's later loads (happens-before)."""
+        ptr, expected = args[0], args[1]
+        timeout = op.attrs.get("timeout") == "1"
+        shape = ptr.shape
+        buf, index, in_range = self._addresses(op, ptr, state)
+        if buf is None:
+            raise ProgramAbort(f"{op.node_id}: atomic_poll through an address of unknown buffer")
+        active = in_range & (np.broadcast_to(ptr.st, shape) == ST_OK)
+        idx = np.asarray(index)[active].astype(np.int64)
+        exp_lo = np.broadcast_to(expected.lo, shape)[active]
+        exp_st = np.broadcast_to(expected.st, shape)[active]
+        res = np.zeros(shape, dtype=np.int8)
+        st = np.full(shape, ST_NE, dtype=np.int8)
+        reasons = set()
+        if self._atomic_pass != 2:
+            for a, x in zip(idx.tolist(), exp_lo.tolist()):
+                self._polls.append((state.pid_index, buf.ident, a, int(x)))
+            reasons.add(f"not_established:atomic poll before the second pass@{op.node_id}")
+            return TV("b", "i1", res, None, None, st, np.zeros(shape, dtype=bool), frozenset(reasons))
+        r_out = np.zeros(idx.size, dtype=np.int8)
+        s_out = np.full(idx.size, ST_NE, dtype=np.int8)
+        why = collections.Counter()
+        init_buf = self._atomic_init[buf.ident]
+        plain = self._plain_prev.get(buf.ident) if self._plain_prev is not None else None
+        for j, (a, x) in enumerate(zip(idx.tolist(), exp_lo.tolist())):
+            self._consumers[(buf.ident, a)].add(state.pid_index)
+            if state.pid_index in self._cyclic:
+                why["poll dependency cycle: progress not proven"] += 1
+                continue
+            if exp_st[j] != ST_OK or init_buf.st[a] != ST_OK:
+                why["polled or expected value not established"] += 1
+                continue
+            if plain is not None and plain[a]:
+                why["non-atomic write to the polled address in the same launch"] += 1
+                continue
+            evs = [e for e in self._atomic_table.get((buf.ident, a), []) if e[0][0] != state.pid_index]
+            if any(e[1] != "exch" for e in evs):
+                why["accumulating atomic updates of the polled address"] += 1
+                continue
+            init, x = int(init_buf.lo[a]), int(x)
+            produced = [e for e in evs if e[2] == x and e[4] == ST_OK]
+            if not evs:
+                if init != x and not timeout:
+                    raise ProgramAbort(f"{op.node_id}: not_established: atomic_poll cannot terminate on the reference "
+                                       f"(no update of the address to the expected value)")
+                r_out[j], s_out[j] = int(init == x), ST_OK
+            elif timeout:
+                r_out[j], s_out[j] = (MAYBE if (produced or init == x) else 0), ST_OK
+                if produced or init == x:
+                    reasons.add(f"set:atomic poll with a timeout: {{false, true}}@{op.node_id}")
+            elif produced:
+                r_out[j], s_out[j] = 1, ST_OK
+                reasons.add(f"assumed:atomic_poll terminates (fair scheduling: the writing program makes "
+                            f"progress)@{op.node_id}")
+                writers = {e[0][0] for e in produced}
+                if op.attrs.get("sem") == "acquire" and init != x and len(writers) == 1:
+                    w = writers.pop()
+                    eps = [e for (p, e, v) in self._releases.get((buf.ident, a), []) if p == w and v == x]
+                    if eps:
+                        self._hb[state.pid_index][w] = max(self._hb[state.pid_index].get(w, -1), min(eps))
+                        self._rules["execution.happens_before_edges"] += 1
+            elif init == x:
+                why["the expected value may be overwritten before the first load: progress not proven"] += 1
+            else:
+                raise ProgramAbort(f"{op.node_id}: not_established: atomic_poll cannot terminate on the reference "
+                                   f"(no update of the address to the expected value)")
+        if why and not timeout:
+            # without a timeout an element whose termination is not shown may never let the program continue
+            raise ProgramAbort(f"{op.node_id}: not_established: {sorted(why)[0]}")
+        for r in why:
+            reasons.add(f"not_established:{r}@{op.node_id}")
+        for r in reasons:
+            if r.startswith(("assumed:", "set:")):  # premises and set targets hold for the launch, used or not
+                self._reasons[r] += 1
+        res[active], st[active] = r_out, s_out
+        self._rules["atomic.poll_decided_lanes"] += int((s_out == ST_OK).sum())
+        return TV("b", "i1", res, None, None, st, np.zeros(shape, dtype=bool), frozenset(reasons))
+
+    def _op_histogram(self, op, args, env, state):
+        """tt.histogram (DSL v2 increment 5, rc3 02 6.8): exact counts in bins of width 1 starting at 0.  Inputs
+        outside [0, bins) are dropped (official contract: python/triton/runtime/interpreter.py "The GPU drops every
+        out-of-range value", and test_histogram_out_of_range); masked-off inputs are not counted.  A counted position
+        whose input has no established value (its bin, or whether it is dropped, is unknown) leaves every bin not
+        established."""
+        src = args[0]
+        mask = args[1] if len(args) > 1 else None
+        out = op.result_types[0]
+        nb = int(out.shape[0])
+        vals = np.asarray(src.lo, dtype=np.int64).reshape(-1)
+        s_st = np.broadcast_to(src.st, np.shape(src.lo)).reshape(-1)
+        if mask is not None:
+            m = np.broadcast_to(mask.lo, np.shape(src.lo)).reshape(-1)
+            m_st = np.broadcast_to(mask.st, np.shape(src.lo)).reshape(-1)
+            undecided = ((m == MAYBE) | (m_st != ST_OK)).any()
+        else:
+            m, undecided = np.ones(vals.shape, dtype=np.int8), False
+        bad = (m == 1) & (s_st != ST_OK)
+        counted = (m == 1) & (s_st == ST_OK) & (vals >= 0) & (vals < nb)
+        if ((m == 1) & (s_st == ST_OK) & ~counted).any():
+            self._rules["histogram.dropped_out_of_range_inputs"] += int(((m == 1) & (s_st == ST_OK) & ~counted).sum())
+        reasons = set(src.reasons | (mask.reasons if mask is not None else frozenset()))
+        cond = np.full(nb, bool(np.any(src.cond) or (mask is not None and np.any(mask.cond))))
+        if bad.any() or undecided:
+            reasons.add(f"not_established:histogram input without an established value or undecided mask@{op.node_id}")
+            return TV("i", out.elem, np.zeros(nb, dtype=np.int64), None, None, np.full(nb, ST_NE, dtype=np.int8),
+                      cond, frozenset(reasons))
+        counts = np.bincount(vals[counted], minlength=nb).astype(np.int64)
+        self._rules["histogram.exact_counts"] += 1
+        return TV("i", out.elem, _wrap(counts, INT_WIDTH[out.elem]), None, None, np.zeros(nb, dtype=np.int8), cond,
+                  frozenset(reasons))
+
+    def _op_approx_div(self, op, args, env, state):
+        """tt.approx_divf and inline asm div.full.f32 (DSL v2 increment 5, rc3 02 6.5): an approximate instruction
+        with a documented target function is that function in the numerical-difference mode (x / y, the arith.divf
+        rule); the rounding-check mode needs its error contract, not implemented."""
+        if self.mode == NumericMode.ROUNDING_CHECK:
+            raise ProgramAbort(f"{op.node_id}: approximate division has no implemented error contract (rounding-check "
+                               f"mode)")
+        return self._float_op("div", op, args, op.result_types[0].elem)
 
     def _atomic_returns(self, op, buf, idx, lanes, occ, shape, active, value, bitview, state):
         """Pass 2: the old value each lane of this atomic returns, from pass 1's table of every update of the address
@@ -2315,6 +2600,8 @@ class KernelReferenceEvaluator:
             if self.mode == NumericMode.ROUNDING_CHECK and any(ins[2] in _PTX_APPROX for ins in program):
                 raise ProgramAbort(f"{op.node_id}: approximate PTX instruction in rounding-check mode")
             return self._run_ptx_program(op, program, args)
+        if internal == "approx_div":
+            return self._op_approx_div(op, args, env, None)
         mode = inline_asm_rounding(op.attrs.get("asm", ""))
         if mode is not None:  # used only in rounding-check mode, like a rounding-suffixed libdevice call
             import dataclasses
