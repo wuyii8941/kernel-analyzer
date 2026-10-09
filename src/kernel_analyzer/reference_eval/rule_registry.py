@@ -27,6 +27,7 @@ T_WF = "tests/test_welford_reduction.py"
 T_GR = "tests/test_general_rules.py"
 T_UP = "tests/test_upstream_sources.py"
 T_EV = "tests/test_execution_validity.py"
+T_AT = "tests/test_signatures_atomics.py"
 REGISTRY_OUT = "results/dsl_v2/rule_registry.json"
 
 CATEGORY = {
@@ -161,11 +162,17 @@ def build() -> dict:
                           ce=REJECT_TEST, attrs="asm=other"))
     # ---- attribute / use dependent cases
     entries.append(_entry("tt.atomic_rmw", "SUPPORTED", "H", "atomic_fold",
-                          "Returned value unused: the updates fold into an exact associative combination.",
+                          "Returned value unused: the updates of one address fold into an exact combination when they "
+                          "are one commutative kind or a mixed pair with a checked joint order law (DSL v2 increment 4).",
                           f"{T_CE}::test_unused_atomic_return_folds_into_an_exact_sum",
-                          f"{T_TT}::test_atomic_return_value_is_not_established_when_used", attrs="return unused"))
-    entries.append(_entry("tt.atomic_rmw", "NOT_ESTABLISHED", "H", reason="returned old value depends on the undeclared "
-                          "order of the updates", ce=f"{T_CE}::test_atomic_return_value_requires_an_order",
+                          f"{T_AT}::test_mixed_kinds_without_a_joint_law_are_not_established", attrs="return unused"))
+    entries.append(_entry("tt.atomic_rmw", "SUPPORTED", "H", "atomic_return_set",
+                          "Returned value used (DSL v2 increment 4, rc3 02 5.3 / 10): two passes; without contention "
+                          "the value before the launch (a point), with contention the hull of the value before the "
+                          "launch combined with every subset of the other updates (a set target, L_E); integers only "
+                          "as points.",
+                          f"{T_AT}::test_official_pattern_contended_float_add_returns_a_set",
+                          f"{T_AT}::test_contended_integer_return_is_not_a_point_unless_every_order_agrees",
                           attrs="return used"))
     entries.append(_entry("tt.dot", "SUPPORTED", "E", "dot",
                           "G is the exact product of the operands as given; a reduced input precision (tf32) is part "

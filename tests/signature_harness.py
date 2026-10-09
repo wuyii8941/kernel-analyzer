@@ -29,11 +29,11 @@ mp.mp.prec = 200
 
 ST_OK, ST_NAN, ST_PINF, ST_NINF, ST_UNDEF, ST_NE = 0, 1, 2, 3, 4, 5
 NP = {"fp32": np.float32, "fp64": np.float64, "int32": np.int32, "int64": np.int64, "uint32": np.uint32,
-      "uint64": np.uint64, "fp16": np.float16}
+      "uint64": np.uint64, "fp16": np.float16, "int8": np.int8}
 SIG = {"fp32": "*fp32", "fp64": "*fp64", "int32": "*i32", "int64": "*i64", "uint32": "*u32", "uint64": "*u64",
-       "fp16": "*fp16"}
+       "fp16": "*fp16", "int8": "*i8"}
 TORCH = {"fp32": "float32", "fp64": "float64", "int32": "int32", "int64": "int64", "uint32": "uint32",
-         "uint64": "uint64", "fp16": "float16"}
+         "uint64": "uint64", "fp16": "float16", "int8": "int8"}
 
 
 def libdevice_table() -> dict:

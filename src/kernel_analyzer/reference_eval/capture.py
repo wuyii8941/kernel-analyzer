@@ -155,7 +155,8 @@ def _storage_copy(tensor):
 
 _TL_DTYPE = {"uint8": "uint8", "uint16": "uint16", "uint32": "uint32", "uint64": "uint64", "int8": "int8",
              "int16": "int16", "int32": "int32", "int64": "int64", "fp16": "float16", "bf16": "bfloat16",
-             "fp32": "float32", "fp64": "float64", "fp8e4nv": "float8_e4m3fn", "fp8e5": "float8_e5m2", "int1": "bool"}
+             "fp32": "float32", "fp64": "float64", "fp8e4nv": "float8_e4m3fn", "fp8e5": "float8_e5m2", "int1": "bool",
+             "fp8e4b15": "uint8"}  # fp8e4b15 is an i8 in the IR (python/src/ir.cc get_fp8e4b15_ty)
 
 
 def _unwrap(arg):

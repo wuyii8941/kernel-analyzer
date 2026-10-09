@@ -466,6 +466,11 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                  "special_values": special.get(name),
                  "not_established_reasons_seed0": rows[0]["reasons"],
                  "aborted_programs_seed0": rows[0]["aborted"]}
+        # rc3 02 5.3 / 9: a set target (L_E, e.g. a contended atomic's returned value) encloses every allowed
+        # reference choice; its width does not shrink with precision (DSL v2 increment 4)
+        sets = sorted({str(r).split("@")[0] for p in rows for r in (p["reasons"] or {}) if str(r).startswith("set:")})
+        entry["guarantee"] = {"fragment": "L_E in part (set targets)" if sets else "point (L_Q / L_C)",
+                              "set_targets": sets}
         execution = _execution_status(rows, launch_info, r_exec)
         entry["execution"] = execution
         for key, label in (("n", "e_num = K - K_R"), ("s", "e_sem = K_R - f"))[: 2 if mode == "B" else 1]:

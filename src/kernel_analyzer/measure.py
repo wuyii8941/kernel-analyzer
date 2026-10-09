@@ -339,7 +339,8 @@ def bounded_mean_test(a: np.ndarray, M: np.ndarray, alpha: float) -> dict:
 
 # ------------------------------------------------------------------------------------------------ failure classes
 
-FAILURE_CLASSES = ("semantics missing", "binding", "enclosure too wide", "over budget", "statistics insufficient")
+FAILURE_CLASSES = ("semantics missing", "binding", "enclosure too wide", "over budget", "statistics insufficient",
+                   "set target width (L_E)")
 _FAILURE_TABLE = [   # (substring of the tool's reason, class) -- first match wins; printed with every report
     ("call rejected the declared inputs", "binding"),
     ("address outside every captured storage", "binding"), ("invalid address", "binding"),
@@ -495,7 +496,7 @@ def run_level(exp: dict, level: dict) -> dict:
                                       + ")") if backfilled else "call-level"
         quality["complete_rate_call_level"] = 0.0 if backfilled else quality["complete_rate"]
         stats = class_statistics(o.get("numerical"), exp["rule_classes"], exp["alpha"])
-        entry = {"status": "evaluated", "reference": quality, "statistics": stats,
+        entry = {"status": "evaluated", "reference": quality, "statistics": stats, "guarantee": o.get("guarantee"),
                  "mixed_non_triton_sources": o.get("depends_on_non_triton_intermediates") or [],
                  "not_established_reasons_seed0": o.get("not_established_reasons_seed0"),
                  "special_values": o.get("special_values")}
@@ -505,9 +506,11 @@ def run_level(exp: dict, level: dict) -> dict:
             # only then do the tool's reasons explain missing elements (otherwise they are notes such as the dot
             # input precision or a checked premise)
             entry["failure_classes"] = sorted({classify_failure(r) for r in reasons if not str(r).startswith(
-                ("assumed:", "dot_input_precision:"))}) or ["unclassified"]
+                ("assumed:", "dot_input_precision:", "set:"))}) or ["unclassified"]
         if quality["resolved_fraction"] is not None and quality["resolved_fraction"] < 1.0:
-            entry["failure_classes"] = sorted(set(entry["failure_classes"]) | {"enclosure too wide"})
+            # a set target's width is part of the target, not a numerical enclosure that precision would shrink
+            wide = "set target width (L_E)" if (o.get("guarantee") or {}).get("set_targets") else "enclosure too wide"
+            entry["failure_classes"] = sorted(set(entry["failure_classes"]) | {wide})
         if any(v["summary"].startswith("cannot judge") for v in stats.values()):
             entry["failure_classes"] = sorted(set(entry["failure_classes"]) | {"statistics insufficient"})
         if spec_fn is not None and name in keep:

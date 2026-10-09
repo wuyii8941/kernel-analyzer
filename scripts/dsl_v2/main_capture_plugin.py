@@ -1,7 +1,8 @@
 """pytest plugin (DSL v2 increment 3, W3): capture the launches of official Triton tests run under the official main
 build and evaluate each with the tool-4.0 reference evaluator.  One JSON line per captured launch:
 
-    {"test", "kernel", "grid", "written", "complete", "status": complete|partial|aborted|error, "reasons", "aborted"}
+    {"test", "kernel", "grid", "written", "complete", "status": complete|partial|aborted|error, "reasons", "aborted",
+     "set_reasons" (complete lanes that are set targets, L_E: DSL v2 increment 4)}
 
 Load with ``-p main_capture_plugin`` (scripts/dsl_v2 and src on PYTHONPATH) and KA_MAIN_CAPTURE_OUT=<jsonl>.
 Measurement only: the official tests' own assertions are unaffected (the recorder copies operands around launches).
@@ -55,7 +56,9 @@ def pytest_runtest_call(item):
                                                              else ("partial" if written else "nothing written")),
                        aborted=sorted(set(ref.aborted.values()))[:3],
                        reasons=sorted(k for k in ref.reasons if k.startswith("not_established"))[:5],
-                       execution={k: v for k, v in ref.rules.items() if k.startswith(("execution.", "premise."))})
+                       set_reasons=sorted(k for k in ref.reasons if k.startswith("set:"))[:5],
+                       execution={k: v for k, v in ref.rules.items()
+                                  if k.startswith(("execution.", "premise.", "atomic.", "dot.integer"))})
         except Exception as exc:  # noqa: BLE001 -- recorded: an evaluator crash is a defect, never hidden
             row.update(status="error", reason=f"{type(exc).__name__}: {exc}"[:300],
                        traceback=traceback.format_exc()[-1500:])

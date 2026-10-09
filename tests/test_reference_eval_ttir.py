@@ -315,7 +315,10 @@ def test_store_through_a_not_established_address_invalidates_the_target():
 
 
 @cuda
-def test_atomic_return_value_is_not_established_when_used():
+def test_atomic_return_value_when_used_is_a_set_target():
+    # DSL v2 increment 4 (rc3 02 5.3 / 10): 250 lanes update each of 4 addresses; the old value a lane gets is 0 plus
+    # the sum of some subset of the other lanes of its address.  The reference encloses every such sum (its extremes:
+    # all negative or all positive others), and the final sums stay points of the order-free fold.
     k = _kernels()
     n = 1000
     (x,) = _inputs(n, 1, seed=3)
@@ -323,7 +326,13 @@ def test_atomic_return_value_is_not_established_when_used():
                                                                   torch.empty_like(x), n, BLOCK=256, USE_OLD=True)))
     _, old = _buffer(result, "OLD")
     _, out = _buffer(result, "OUT")
-    assert (old.st[old.written] == ST_NE).all()
+    assert (old.st[old.written] == 0).all()
+    assert any(r.startswith("set:atomic return value") for r in result.reasons)
+    xs = x.cpu().double().numpy()
+    for i in range(n):
+        others = [mpq(v) for j, v in enumerate(xs) if j % 4 == i % 4 and j != i]
+        assert mpq(old.lo[i]) <= sum(v for v in others if v < 0)
+        assert sum(v for v in others if v > 0) <= mpq(old.hi[i])
     assert (out.st[out.written] == 0).all()
     exact = [sum(mpq(v) for v in x.cpu().double().numpy()[j::4]) for j in range(4)]
     for j in range(4):

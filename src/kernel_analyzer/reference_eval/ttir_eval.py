@@ -40,6 +40,8 @@ from .ttir_mapping import (LIBDEVICE, LIBDEVICE_ROUNDING, inline_asm_internal, i
 from .ttir_parser import PtrType, TFunc, TModule, TOp, TRegion, TType, parse_ttir
 
 ST_OK, ST_NAN, ST_PINF, ST_NINF, ST_UNDEF, ST_NE = 0, 1, 2, 3, 4, 5
+ATOMIC_EVENT_BUDGET = 1_000_000  # atomic updates per launch for the two-pass returned-value evaluation
+ATOMIC_ADDRESS_BUDGET = 4096  # updates of one address for the set bound of a returned value
 
 # Trigger evidence (DSL v2 rc3 04 W1): with KA_TRIGGER_TRACE=<path>, every executed (operation, internal rule) and every
 # reduction route is recorded with the running pytest test id and written to <path>.<pid> at exit.  Off by default.
@@ -297,6 +299,100 @@ def _unsigned(x: np.ndarray, width: int) -> np.ndarray:
     return np.asarray(x, dtype=np.int64) & ((1 << width) - 1)
 
 
+# ---- atomics (DSL v2 increment 4, rc3 02 5.3, 6.3, 6.9, 10) -------------------------------------------------------
+
+_BIT_LAYOUT = {"f32": (np.float32, np.int32), "f64": (np.float64, np.int64), "f16": (np.float16, np.int16)}
+
+
+def _float_bits(elem: str, lo, hi, st):
+    """Bit patterns of float reference values and whether they are definite (the tt.bitcast policy): a point exactly
+    representable in the format, or an infinity.  NaN payloads and non-points are not definite."""
+    lo = np.asarray(lo, dtype=np.float64)
+    hi = np.asarray(hi, dtype=np.float64)
+    st = np.asarray(st)
+    point = (lo == hi) & (st == ST_OK)
+    x = np.where(point, lo, 0.0)
+    if elem == "bf16":
+        f = x.astype(np.float32)
+        b32 = f.view(np.int32).astype(np.int64)
+        representable = (f.astype(np.float64) == x) & ((b32 & 0xFFFF) == 0)
+        bits = b32 >> 16
+        pinf, ninf = 0x7F80, 0xFF80 - 0x10000
+    else:
+        fdt, idt = _BIT_LAYOUT[elem]
+        f = x.astype(fdt)
+        representable = f.astype(np.float64) == x
+        bits = f.view(idt).astype(np.int64)
+        pinf = int(np.array([np.inf], fdt).view(idt)[0])
+        ninf = int(np.array([-np.inf], fdt).view(idt)[0])
+    bits = np.where(st == ST_PINF, pinf, np.where(st == ST_NINF, ninf, bits))
+    definite = (point & representable) | (st == ST_PINF) | (st == ST_NINF)
+    return bits.astype(np.int64), definite
+
+
+def _bits_float(elem: str, bits):
+    """Values and status of float bit patterns (signed integer representation of the format's width)."""
+    bits = np.asarray(bits, dtype=np.int64)
+    if elem == "bf16":
+        f = ((bits & 0xFFFF) << 16).astype(np.uint32).view(np.float32).astype(np.float64)
+    else:
+        fdt, idt = _BIT_LAYOUT[elem]
+        f = bits.astype(idt).view(fdt).astype(np.float64)
+    st = np.where(np.isnan(f), ST_NAN, np.where(f == np.inf, ST_PINF, np.where(f == -np.inf, ST_NINF, ST_OK)))
+    return np.where(st == ST_OK, f, 0.0), st.astype(np.int8)
+
+
+def _atomic_old(kind: str, is_float: bool, width: int, init: tuple, others: list):
+    """Old value one atomic update returns.  ``init`` = (lo, hi, st) of the address before the launch, ``others`` the
+    (kind, lo, hi, st) of every other update of the address in the launch.  Without others the update sees init.
+    Otherwise every interleaving returns init combined with some subset of the others (program order only removes
+    subsets), so the hull of those values encloses the returned value of the actual execution: a set target (L_E,
+    rc3 02 5.3 / 10), never refined to a point by precision.  Integers are kept as points only.
+    Returns (lo, hi, st, is_set, reason or None)."""
+    i_lo, i_hi, i_st = init
+    if not others:
+        return i_lo, i_hi, i_st, False, None
+    if any(o[0] != kind for o in others):
+        return 0.0, 0.0, ST_NE, False, "mixed atomic kinds on the address"
+    if i_st != ST_OK or any(o[3] != ST_OK for o in others):
+        return 0.0, 0.0, ST_NE, False, "a value combined into the returned value is not established or not finite"
+    los = [float(o[1]) for o in others] if is_float else [int(o[1]) for o in others]
+    his = [float(o[2]) for o in others] if is_float else los
+    if is_float:
+        if kind == "fadd":
+            neg = np.array([float(i_lo)] + [min(0.0, x) for x in los])
+            pos = np.array([float(i_hi)] + [max(0.0, x) for x in his])
+            lo, hi = float(iv.isum(neg, neg, axis=0)[0]), float(iv.isum(pos, pos, axis=0)[1])
+        elif kind == "max":
+            lo, hi = float(i_lo), max([float(i_hi)] + his)
+        elif kind == "min":
+            lo, hi = min([float(i_lo)] + los), float(i_hi)
+        elif kind == "exch":
+            lo, hi = min([float(i_lo)] + los), max([float(i_hi)] + his)
+        else:
+            return 0.0, 0.0, ST_NE, False, f"no set rule for a returned atomic {kind}"
+        if not (math.isfinite(lo) and math.isfinite(hi)):
+            return 0.0, 0.0, ST_NE, False, "the set of returned values leaves the float64 range"
+        return lo, hi, ST_OK, (lo, hi) != (float(i_lo), float(i_hi)), None
+    v = int(i_lo)
+    mask = (1 << width) - 1
+    point = {"add": all(x == 0 for x in los), "max": all(x <= v for x in los), "min": all(x >= v for x in los),
+             "umax": all((x & mask) <= (v & mask) for x in los), "umin": all((x & mask) >= (v & mask) for x in los),
+             "and": all((v & x) == v for x in los), "or": all((v | x) == v for x in los),
+             "xor": all(x == 0 for x in los), "exch": all(x == v for x in los)}.get(kind, False)
+    if point:
+        return v, v, ST_OK, False, None
+    return 0, 0, ST_NE, False, "set-valued integer atomic return value (L_E) is not representable as a point"
+
+
+_JOINT_ORDER_LAWS = (  # mixed kinds on one address whose composition is one commutative, associative operation
+    # max by the float key of the bit pattern: signed max for non-negative patterns, unsigned min for negative ones
+    ({"max", "umin"}, {"max": 1, "umin": -1}),
+    # min by the float key: signed min for non-negative patterns, unsigned max for negative ones
+    ({"min", "umax"}, {"min": 1, "umax": -1}),
+)
+
+
 # ---------------------------------------------------------------------------
 # Memory
 # ---------------------------------------------------------------------------
@@ -374,6 +470,7 @@ class ProgramState:
     grid: tuple
     memory: dict  # ident -> Buffer
     epoch: int = 0  # barrier phase inside the program (gpu.barrier orders the threads of one program)
+    occ: dict = field(default_factory=dict)  # atomic node -> executions so far (keys of atomic events)
     # Control dependence: conditions (conditional flag, reasons) that decided the current path.
     ctrl: list = field(default_factory=list)
     sticky_cond: bool = False  # set by unstructured branches / loop exits, kept to the program end
@@ -480,6 +577,8 @@ class KernelReferenceEvaluator:
         self.ttgir = ttgir
         self._layout_cache = None
         self._uses = self._collect_uses()
+        self._returning_atomics = any(op.name == "tt.atomic_rmw" and op.results and op.results[0] in self._uses
+                                      for fn in module.funcs.values() for op in fn.walk())
 
     def _ttgir_layouts(self) -> tuple:
         """(layouts, reduce node -> axis parameters, load/store node -> pointer layout, num_warps); empty without a
@@ -608,52 +707,29 @@ class KernelReferenceEvaluator:
         if programs is None:
             programs = [(x, y, z) for z in range(grid[2]) for y in range(grid[1]) for x in range(grid[0])]
         self._pin = set(pin_loads)
-        self._rules = collections.Counter()
-        self._outside_window = False
-        self._loaded = set()
-        self._loaded_any = set()
-        self._stored = set()
-        self._poisoned = set()
-        # execution validity (DSL v2 rc3 02 6.3 / 04 W4): who read each address in this launch, and which store,
-        # lane position and barrier phase wrote it last
-        self._readers = {}  # ident -> int64 array: -1 not read, >= 0 the one program that read it, -3 several
-        self._reader_programs = collections.defaultdict(set)
-        self._race_programs = set()
-        self._wstore = {}  # ident -> (store node index, lane position in the store, barrier epoch) per element
-        self._store_nodes = []
-        self._thread_cache = {}
-        for buf in memory.values():
-            buf.writer[:] = -1  # kernel boundaries order all earlier writes
-        aborted = {}
-        reasons = collections.Counter()
-        for index, pid in enumerate(programs):
-            state = ProgramState(tuple(pid), index, grid, memory)
-            self._reasons = reasons
-            try:
-                env = collections.ChainMap(dict(bindings))
-                self._call(self.func, [bindings[p[0]] for p in self.func.params], state, env_override=env)
-            except ProgramAbort as exc:
-                aborted[tuple(pid)] = str(exc)
-                for buf in memory.values():
-                    hit = buf.writer == index
-                    buf.st = np.where(hit, ST_NE, buf.st).astype(np.int8)
-        if self._race_programs:
-            # a program read an address that another program of the same launch writes: what it read depends on
-            # the schedule, so nothing it wrote keeps an established reference value
-            hits = 0
-            for buf in memory.values():
-                hit = np.isin(buf.writer, sorted(self._race_programs))
-                if hit.any():
-                    buf.st = np.where(hit, ST_NE, buf.st).astype(np.int8)
-                    hits += int(hit.sum())
-            reasons["not_established:execution race: an address one program read is written by another program "
-                    "of the same launch"] += hits
-            self._rules["execution.cross_program_read_write_race_programs"] += len(self._race_programs)
-        for ident in self._poisoned:
-            tb = memory.get(ident)
-            if tb is not None:
-                tb.st = np.full(tb.st.shape, ST_NE, dtype=np.int8)
-                tb.written[:] = True
+        self._atomic_pass, self._atomic_table, self._atomic_init, self._plain_prev = 0, None, None, None
+        snapshot = table = None
+        if self._returning_atomics:
+            # DSL v2 increment 4: returned atomic values need every update of their address in this launch.  Pass 1
+            # records the updates (returned values not established); pass 2 restarts from the memory before the
+            # launch and returns the value (or set) determined by pass 1's table.
+            snapshot = {k: b.copy() for k, b in memory.items()}
+            self._atomic_pass = 1
+            self._run_programs(programs, grid, bindings, memory)
+            if sum(e[1].size for e in self._events) <= ATOMIC_EVENT_BUDGET:
+                table = self._event_table()
+                self._plain_prev = self._plain_stores
+                for k in list(memory):
+                    memory[k] = snapshot[k].copy()
+                self._atomic_pass, self._atomic_table, self._atomic_init = 2, table, snapshot
+        if self._atomic_pass == 1:
+            # over the event budget: pass 1 stands (returned values not established)
+            aborted, reasons = self._last_run
+            self._rules["atomic.two_pass_skipped_event_budget"] += 1
+        else:
+            aborted, reasons = self._run_programs(programs, grid, bindings, memory)
+        if self._atomic_pass == 2:
+            self._check_two_pass(table, memory, reasons)
         if aborted:
             # An aborted program may stop before some of its stores: elements the kernel changed but the reference
             # did not write in this launch keep their earlier reference value, which a later launch would read as
@@ -686,6 +762,61 @@ class KernelReferenceEvaluator:
         return KernelReference(self.func.name, self.mode, memory, [tuple(p) for p in programs], aborted,
                                notes, dict(reasons), dict(self._rules), set(self._loaded), set(self._loaded_any),
                                set(self._stored))
+
+    def _run_programs(self, programs, grid, bindings, memory) -> tuple:
+        """Run every program instance of the launch once on ``memory``; launch-level execution checks at the end."""
+        self._rules = collections.Counter()
+        self._outside_window = False
+        self._loaded = set()
+        self._loaded_any = set()
+        self._stored = set()
+        self._poisoned = set()
+        # execution validity (DSL v2 rc3 02 6.3 / 04 W4): who read each address in this launch, and which store,
+        # lane position and barrier phase wrote it last
+        self._readers = {}  # ident -> int64 array: -1 not read, >= 0 the one program that read it, -3 several
+        self._reader_programs = collections.defaultdict(set)
+        self._race_programs = set()
+        self._wstore = {}  # ident -> (store node index, lane position in the store, barrier epoch) per element
+        self._store_nodes = []
+        self._thread_cache = {}
+        self._events = []  # atomic updates: (ident, idx, kind, lo, hi, st, pid index, node, occurrence, lanes)
+        self._plain_stores = {}  # ident -> bool array: written by a non-atomic store in this launch
+        self._consumers = collections.defaultdict(set)  # (ident, address) -> programs that used a returned value
+        for buf in memory.values():
+            buf.writer[:] = -1  # kernel boundaries order all earlier writes
+        aborted = {}
+        reasons = collections.Counter()
+        for index, pid in enumerate(programs):
+            state = ProgramState(tuple(pid), index, grid, memory)
+            self._reasons = reasons
+            try:
+                env = collections.ChainMap(dict(bindings))
+                self._call(self.func, [bindings[p[0]] for p in self.func.params], state, env_override=env)
+            except ProgramAbort as exc:
+                aborted[tuple(pid)] = str(exc)
+                for buf in memory.values():
+                    hit = buf.writer == index
+                    buf.st = np.where(hit, ST_NE, buf.st).astype(np.int8)
+        if self._race_programs:
+            # a program read an address that another program of the same launch writes: what it read depends on
+            # the schedule, so nothing it wrote keeps an established reference value
+            hits = 0
+            for buf in memory.values():
+                hit = np.isin(buf.writer, sorted(self._race_programs))
+                if hit.any():
+                    buf.st = np.where(hit, ST_NE, buf.st).astype(np.int8)
+                    hits += int(hit.sum())
+            reasons["not_established:execution race: an address one program read is written by another program "
+                    "of the same launch"] += hits
+            self._rules["execution.cross_program_read_write_race_programs"] += len(self._race_programs)
+        for ident in self._poisoned:
+            tb = memory.get(ident)
+            if tb is not None:
+                tb.st = np.full(tb.st.shape, ST_NE, dtype=np.int8)
+                tb.written[:] = True
+        self._atomic_final_laws(memory, reasons)
+        self._last_run = (aborted, reasons)
+        return aborted, reasons
 
     # -- functions and regions ----------------------------------------------------
 
@@ -935,6 +1066,14 @@ class KernelReferenceEvaluator:
             self._race_programs.update(p for p in self._reader_programs[buf.ident] if p != state.pid_index)
         self._rules["execution.cross_program_read_then_write_lanes"] += int(clash.sum())
 
+    def _mark_plain(self, buf, idx):
+        """Addresses written by a non-atomic access in this launch (a returned atomic value after one is not the value
+        before the launch)."""
+        mark = self._plain_stores.get(buf.ident)
+        if mark is None:
+            mark = self._plain_stores[buf.ident] = np.zeros(buf.writer.shape, dtype=bool)
+        mark[idx] = True
+
     def _record_store(self, op, buf, idx, positions, state):
         ws = self._wstore.get(buf.ident)
         if ws is None:
@@ -1010,7 +1149,8 @@ class KernelReferenceEvaluator:
 
     # ---- memory -------------------------------------------------------------------
 
-    def _addresses(self, op, ptr: TV, state: ProgramState):
+    def _addresses(self, op, ptr: TV, state: ProgramState, bitview: bool = False):
+        """``bitview``: an integer pointer may address a float buffer of the same width (atomics on bit patterns)."""
         pointee = ptr.elem.pointee
         size = ELEM_SIZE[pointee]
         idents = np.unique(ptr.base[ptr.st == ST_OK]) if ptr.base is not None else []
@@ -1019,7 +1159,8 @@ class KernelReferenceEvaluator:
         if len(idents) == 0:
             return None, None, None
         buf = state.memory[int(idents[0])]
-        if ELEM_SIZE[buf.elem] != size or (kind_of(pointee) != buf.kind and not
+        view_ok = bitview and kind_of(pointee) == "i" and buf.kind == "f" and buf.elem in ("f16", "bf16", "f32", "f64")
+        if ELEM_SIZE[buf.elem] != size or (kind_of(pointee) != buf.kind and not view_ok and not
                                            ((pointee, buf.elem) in (("i1", "i8"), ("i8", "i1")))):
             raise ProgramAbort(f"{op.node_id}: {pointee} access to a {buf.elem} buffer (reinterpretation)")
         index = ptr.lo // size
@@ -1231,6 +1372,7 @@ class KernelReferenceEvaluator:
             buf.cond[idx] = cond_w
             buf.writer[idx] = state.pid_index
             buf.written[idx] = True
+            self._mark_plain(buf, idx)
             self._record_store(op, buf, idx, np.flatnonzero(np.asarray(sel).reshape(-1)), state)
             self._stored.add(buf.ident)
         for r in value.reasons:
@@ -1242,22 +1384,25 @@ class KernelReferenceEvaluator:
         mask = args[2] if len(args) > 2 else None
         kind_name = op.attrs["rmw_op"]
         shape = ptr.shape
-        buf, index, in_range = self._addresses(op, ptr, state)
+        buf, index, in_range = self._addresses(op, ptr, state, bitview=True)
         m = np.ones(shape, dtype=np.int8) if mask is None else mask.lo.astype(np.int8)
         if mask is not None and ((m == MAYBE) | (mask.st >= ST_UNDEF)).any():
             raise ProgramAbort(f"{op.node_id}: atomic with undecided mask")
         active = (m == 1) & in_range
         idx = index[active].astype(np.int64)
         result_used = op.results and op.results[0] in self._uses
+        occ = state.occ[op.node_id] = state.occ.get(op.node_id, -1) + 1
         if _TRIGGER_PATH:
             _trace(f"tt.atomic_rmw/return {'used' if result_used else 'unused'}")
-        if result_used:
-            self._rules["atomic.return_value_not_established_lanes"] += int(((m == 1) & in_range).sum())
-        else:
-            self._rules["atomic.folded_order_free_lanes"] += int(((m == 1) & in_range).sum())
+        # DSL v2 increment 4: an integer pointer onto a float buffer of the same width (the frontend's float max/min)
+        # works on the bit patterns of the stored values
+        bitview = buf is not None and buf.kind == "f" and kind_of(ptr.elem.pointee) == "i"
+        # masked-off lanes return no value (undefined); active lanes before pass 2: not established
         olds = TV(value.kind, value.elem, np.zeros(shape), np.zeros(shape) if value.kind == "f" else None,
-                  None, np.full(shape, ST_NE, dtype=np.int8), np.zeros(shape, dtype=bool),
-                  frozenset({f"not_established:atomic return value depends on an undeclared order@{op.node_id}"}))
+                  None, np.where(np.broadcast_to(m, shape) == 1, ST_NE, ST_UNDEF).astype(np.int8),
+                  np.zeros(shape, dtype=bool),
+                  frozenset({f"not_established:atomic return value depends on an undeclared order@{op.node_id}"}
+                            if idx.size else ()))
         if idx.size == 0:
             return olds if op.results else None
         self._check_read_then_write(buf, idx, state)
@@ -1265,6 +1410,16 @@ class KernelReferenceEvaluator:
         contrib_lo = np.broadcast_to(value.lo, shape)[active]
         contrib_hi = np.broadcast_to(value.hi, shape)[active] if value.kind == "f" else None
         contrib_st = np.broadcast_to(value.st, shape)[active]
+        lanes = np.flatnonzero(np.asarray(active).reshape(-1))
+        self._events.append((buf.ident, idx, kind_name, contrib_lo, contrib_hi, contrib_st, state.pid_index,
+                             op.node_id, occ, lanes))
+        if result_used and self._atomic_pass == 2:
+            olds = self._atomic_returns(op, buf, idx, lanes, occ, shape, active, value, bitview, state)
+            olds.st = np.where(np.broadcast_to(m, shape) == 1, olds.st, ST_UNDEF).astype(np.int8)
+        elif result_used:
+            self._rules["atomic.return_value_not_established_lanes"] += int(idx.size)
+        else:
+            self._rules["atomic.folded_order_free_lanes"] += int(idx.size)
         uniq, inverse = np.unique(idx, return_inverse=True)
         if kind_name == "fadd" and self.mode == NumericMode.ROUNDING_CHECK:
             raise ProgramAbort(f"{op.node_id}: atomic accumulation order is not declared (rounding-check mode)")
@@ -1282,6 +1437,13 @@ class KernelReferenceEvaluator:
                 buf.d[0][address], buf.d[1][address] = float(n_lo), float(n_hi)
         elif kind_name != "fadd" and value.d is not None:
             raise ProgramAbort(f"{op.node_id}: no derivative rule for atomic {kind_name}")
+        if bitview:
+            width = INT_WIDTH[ptr.elem.pointee]
+            tgt, definite = _float_bits(buf.elem, buf.lo, buf.hi, buf.st)
+            tgt_kind = "i"
+        else:
+            width = INT_WIDTH.get(buf.elem, 0)
+            tgt, definite, tgt_kind = buf.lo, None, buf.kind
         if kind_name == "fadd":
             for j, address in enumerate(uniq):
                 sel = inverse == j
@@ -1293,27 +1455,44 @@ class KernelReferenceEvaluator:
                 buf.lo[address], buf.hi[address] = float(new_lo), float(new_hi)
                 if bad:
                     buf.st[address] = ST_NE
+        elif kind_name == "exch":
+            # the last exchange in evaluation order; contended addresses are widened at the end of the launch
+            if tgt_kind == "f":
+                buf.lo[idx], buf.hi[idx], buf.st[idx] = contrib_lo, contrib_hi, contrib_st
+            else:
+                tgt[idx] = _wrap(np.asarray(contrib_lo, dtype=np.int64), width)
         elif kind_name in ("add",):
-            np.add.at(buf.lo, idx, contrib_lo.astype(np.int64))
-            buf.lo[uniq] = _wrap(buf.lo[uniq], INT_WIDTH[buf.elem])
+            np.add.at(tgt, idx, contrib_lo.astype(np.int64))
+            tgt[uniq] = _wrap(tgt[uniq], width)
         elif kind_name in ("max", "min", "umax", "umin", "and", "or", "xor"):
-            if buf.kind == "f":
+            if tgt_kind == "f":
                 fn = np.maximum if kind_name == "max" else np.minimum
                 fn.at(buf.lo, idx, contrib_lo)
                 fn.at(buf.hi, idx, contrib_hi)
             elif kind_name in ("umax", "umin"):  # DSL v2 increment 3: unsigned comparison, stored back as two's complement
-                width = INT_WIDTH[buf.elem]
-                tmp = _unsigned(buf.lo, width).copy()
+                tmp = _unsigned(tgt, width).copy()
                 (np.maximum if kind_name == "umax" else np.minimum).at(tmp, idx, _unsigned(contrib_lo, width))
-                buf.lo[:] = tmp.view(np.int64) if width >= 64 else _wrap(tmp.astype(np.int64), width)
+                tgt[:] = tmp.view(np.int64) if width >= 64 else _wrap(tmp.astype(np.int64), width)
             else:
                 fn = {"max": np.maximum, "min": np.minimum, "and": np.bitwise_and, "or": np.bitwise_or,
                       "xor": np.bitwise_xor}.get(kind_name)
                 if fn is None:
                     raise ProgramAbort(f"{op.node_id}: atomic {kind_name}")
-                fn.at(buf.lo, idx, contrib_lo.astype(np.int64))
+                fn.at(tgt, idx, contrib_lo.astype(np.int64))
         else:
             raise ProgramAbort(f"{op.node_id}: atomic {kind_name} is order dependent")
+        if bitview:
+            vals, vst = _bits_float(buf.elem, tgt[uniq])
+            buf.lo[uniq], buf.hi[uniq] = vals, vals
+            buf.st[uniq] = np.where(definite[uniq], vst, ST_NE)
+            if not definite[uniq].all():
+                self._reasons[f"not_established:bit-level reinterpretation without definite bits@{op.node_id}"] += 1
+            self._rules["atomic.bitview_lanes"] += int(idx.size)
+        # DSL v2 increment 4 (defect fix): a contribution without an established value leaves the address not
+        # established for every kind (only fadd checked it before)
+        bad_addr = np.unique(idx[np.asarray(contrib_st) != ST_OK])
+        if bad_addr.size:
+            buf.st[bad_addr] = ST_NE
         buf.st[idx] = np.where(plain, ST_NE, buf.st[idx])
         ctrl_flag, _ = state.control()
         if ctrl_flag or value.cond.any() or (mask is not None and mask.cond.any()):
@@ -1325,6 +1504,150 @@ class KernelReferenceEvaluator:
         buf.written[idx] = True
         self._stored.add(buf.ident)
         return olds if op.results else None
+
+    def _atomic_returns(self, op, buf, idx, lanes, occ, shape, active, value, bitview, state):
+        """Pass 2: the old value each lane of this atomic returns, from pass 1's table of every update of the address
+        in the launch and the memory before the launch (``_atomic_old``)."""
+        kind_name = op.attrs["rmw_op"]
+        is_float = value.kind == "f" and not bitview
+        width = INT_WIDTH.get(value.elem, 0)
+        init_buf = self._atomic_init[buf.ident]
+        if bitview:
+            init_bits, init_def = _float_bits(init_buf.elem, init_buf.lo, init_buf.hi, init_buf.st)
+        plain_prev = self._plain_prev.get(buf.ident)
+        lo = np.zeros(idx.size)
+        hi = np.zeros(idx.size)
+        st = np.full(idx.size, ST_NE, dtype=np.int8)
+        why = collections.Counter()
+        n_set = 0
+        for j, (a, lane) in enumerate(zip(idx.tolist(), lanes.tolist())):
+            self._consumers[(buf.ident, a)].add(state.pid_index)
+            evs = self._atomic_table.get((buf.ident, a), [])
+            key = (state.pid_index, op.node_id, occ, lane)
+            if not any(e[0] == key for e in evs):
+                why["the update is missing from the first pass"] += 1
+                continue
+            if plain_prev is not None and plain_prev[a]:
+                why["returned value after a non-atomic write of the same launch"] += 1
+                continue
+            if len(evs) > ATOMIC_ADDRESS_BUDGET:
+                why["too many updates of one address for the set bound (budget)"] += 1
+                continue
+            others = [e[1:] for e in evs if e[0] != key]
+            if bitview:
+                init = (int(init_bits[a]), int(init_bits[a]), ST_OK if init_def[a] else ST_NE)
+            elif is_float:
+                init = (float(init_buf.lo[a]), float(init_buf.hi[a]), int(init_buf.st[a]))
+            else:
+                init = (int(init_buf.lo[a]), int(init_buf.lo[a]), int(init_buf.st[a]))
+            r_lo, r_hi, r_st, is_set, reason = _atomic_old(kind_name, is_float, width, init, others)
+            if reason:
+                why[reason] += 1
+            lo[j], hi[j], st[j] = r_lo, r_hi, r_st
+            n_set += bool(is_set and r_st == ST_OK)
+        reasons = set(value.reasons) - {r for r in value.reasons if "atomic return value" in r}
+        for r in why:
+            reasons.add(f"not_established:{r}@{op.node_id}")
+        if n_set:
+            reasons.add(f"set:atomic return value over all interleavings (L_E)@{op.node_id}")
+        self._rules["atomic.return_set_lanes"] += n_set
+        self._rules["atomic.return_point_lanes"] += int((st == ST_OK).sum()) - n_set
+        self._rules["atomic.return_value_not_established_lanes"] += int((st != ST_OK).sum())
+        out_lo = np.zeros(shape)
+        out_hi = np.zeros(shape)
+        out_st = np.full(shape, ST_NE, dtype=np.int8)
+        out_lo[active], out_hi[active], out_st[active] = lo, hi, st
+        cond = np.zeros(shape, dtype=bool)
+        if is_float:
+            return _ftv(value.elem, out_lo, out_hi, out_st, cond, frozenset(reasons))
+        return TV("i", value.elem, out_lo.astype(np.int64), None, None, out_st, cond, frozenset(reasons))
+
+    def _event_table(self) -> dict:
+        """(ident, address) -> sorted [(key, kind, lo, hi, st)] of the atomic updates recorded in this run."""
+        table = collections.defaultdict(list)
+        for ident, idx, kind, c_lo, c_hi, c_st, pid, node, occ, lanes in self._events:
+            c_lo = np.asarray(c_lo)
+            for j, a in enumerate(idx.tolist()):
+                lo = c_lo[j].item()
+                hi = lo if c_hi is None else np.asarray(c_hi)[j].item()
+                table[(ident, a)].append(((pid, node, occ, int(lanes[j])), kind, lo, hi, int(c_st[j])))
+        for v in table.values():
+            v.sort(key=lambda e: e[0])
+        return dict(table)
+
+    def _check_two_pass(self, table1, memory, reasons):
+        """Returned values are valid only if pass 2 performed exactly the updates of pass 1 on their addresses;
+        otherwise the programs that used them and every atomically written address lose their reference value."""
+        table2 = self._event_table()
+        bad = set()
+        for key, programs in self._consumers.items():
+            if table1.get(key) != table2.get(key):
+                bad |= programs
+        self._rules["atomic.two_pass_launch"] += 1
+        if not bad:
+            return
+        hits = 0
+        for buf in memory.values():
+            hit = np.isin(buf.writer, sorted(bad)) | (buf.writer == -2)
+            if hit.any():
+                buf.st = np.where(hit, ST_NE, buf.st).astype(np.int8)
+                hits += int(hit.sum())
+        reasons["not_established:atomic updates differ between the two evaluation passes"] += hits
+        self._rules["atomic.two_pass_mismatch_programs"] += len(bad)
+
+    def _atomic_final_laws(self, memory, reasons):
+        """rc3 02 6.3: the final value of an address several atomic updates of the launch reach is a fold only under an
+        order law: a single commutative kind, or a mixed pair with a checked joint law (_JOINT_ORDER_LAWS).  Contended
+        exchanges keep the set of candidates (L_E).  Anything else is not established."""
+        by_ident = collections.defaultdict(list)
+        for ev in self._events:
+            by_ident[ev[0]].append(ev)
+        for ident, evs in by_ident.items():
+            if all(e[2] != "exch" for e in evs) and len({e[2] for e in evs}) == 1:
+                continue
+            buf = memory[ident]
+            idx = np.concatenate([e[1] for e in evs])
+            kinds = np.concatenate([np.full(e[1].size, e[2], dtype=object) for e in evs])
+            is_f = [buf.kind == "f" and e[4] is not None for e in evs]
+            c_lo = np.concatenate([np.asarray(e[3], dtype=np.float64 if f else np.int64).reshape(-1)
+                                   for e, f in zip(evs, is_f)])
+            c_hi = np.concatenate([np.asarray(e[4] if f else e[3], dtype=np.float64 if f else np.int64).reshape(-1)
+                                   for e, f in zip(evs, is_f)])
+            float_c = np.concatenate([np.full(e[1].size, f) for e, f in zip(evs, is_f)])
+            c_st = np.concatenate([np.asarray(e[5]).reshape(-1) for e in evs])
+            order = np.argsort(idx, kind="stable")
+            idx, kinds, c_lo, c_hi, float_c, c_st = (x[order] for x in (idx, kinds, c_lo, c_hi, float_c, c_st))
+            starts = np.flatnonzero(np.r_[True, idx[1:] != idx[:-1]])
+            ends = np.r_[starts[1:], idx.size]
+            for a0, a1 in zip(starts.tolist(), ends.tolist()):
+                ks = set(kinds[a0:a1].tolist())
+                if len(ks) == 1 and ("exch" not in ks or a1 - a0 == 1):
+                    continue
+                a = int(idx[a0])
+                if ks == {"exch"}:
+                    if (c_st[a0:a1] != ST_OK).any():
+                        buf.st[a] = ST_NE
+                    elif float_c[a0:a1].all():
+                        lo, hi = float(c_lo[a0:a1].min()), float(c_hi[a0:a1].max())
+                        buf.lo[a], buf.hi[a], buf.st[a] = lo, hi, ST_OK
+                        if lo != hi:
+                            reasons["set:atomic exchange final value over all interleavings (L_E)"] += 1
+                            self._rules["atomic.exchange_set_addresses"] += 1
+                    elif len(set(c_lo[a0:a1].tolist())) > 1:
+                        buf.st[a] = ST_NE
+                        reasons["not_established:contended integer exchange: final value is set-valued (L_E)"] += 1
+                    continue
+                law = next((signs for kset, signs in _JOINT_ORDER_LAWS if ks == kset), None)
+                ok = law is not None and (c_st[a0:a1] == ST_OK).all() and not float_c[a0:a1].any()
+                if ok:
+                    k_seg, c_seg = kinds[a0:a1], c_lo[a0:a1]
+                    ok = all(((c_seg[k_seg == k] >= 0) if sign > 0 else (c_seg[k_seg == k] < 0)).all()
+                             for k, sign in law.items())
+                if ok:
+                    self._rules["atomic.joint_order_law_addresses"] += 1
+                else:
+                    buf.st[a] = ST_NE
+                    reasons["not_established:mixed atomic kinds on one address without a joint order law"] += 1
 
     # ---- control flow -----------------------------------------------------------
 
@@ -1784,6 +2107,8 @@ class KernelReferenceEvaluator:
             st_bad = True
         else:
             st_bad = False
+        if a.kind == "i" or b.kind == "i" or c.kind == "i":
+            return self._int_dot(op, a, b, c)
         if self.mode == NumericMode.ROUNDING_CHECK:
             raise ProgramAbort(f"{op.node_id}: dot accumulation order is not declared (rounding-check mode)")
         lo, hi = iv.idot(np.where(a.st == ST_OK, a.lo, 0.0), np.where(a.st == ST_OK, a.hi, 0.0),
@@ -1806,6 +2131,32 @@ class KernelReferenceEvaluator:
             d = iv.iadd(*iv.iadd(*da, *db), np.broadcast_to(tc[0], shape), np.broadcast_to(tc[1], shape))
             out.d = (np.where(st == ST_OK, d[0], 0.0), np.where(st == ST_OK, d[1], 0.0))
         return out
+
+    def _int_dot(self, op, a, b, c):
+        """Integer tt.dot (DSL v2 increment 4): d = matmul(a, b) + c computed exactly.  The op contract does not fix
+        overflow (the NVIDIA MMA path saturates with .satfinite, the FMA path wraps) or the operand signedness; the
+        operands are read as signed (the official NVIDIA/AMD lowerings use s8), recorded as an assumption, and a result
+        outside the accumulator range is not established."""
+        if not (a.kind == b.kind == c.kind == "i"):
+            raise ProgramAbort(f"{op.node_id}: dot mixing integer and float operands")
+        wa, wb, wc = INT_WIDTH[a.elem], INT_WIDTH[b.elem], INT_WIDTH[c.elem]
+        A = _wrap(np.asarray(a.lo, dtype=np.int64), wa).astype(object)
+        B = _wrap(np.asarray(b.lo, dtype=np.int64), wb).astype(object)
+        exact = np.matmul(A, B) + np.asarray(c.lo, dtype=np.int64).astype(object)
+        limit = 1 << (wc - 1)
+        fits = np.vectorize(lambda x: -limit <= x < limit, otypes=[bool])(exact)
+        v = np.where(fits, exact, 0).astype(np.int64)
+        row_bad = np.any(a.st != ST_OK, axis=-1)[..., :, None]
+        col_bad = np.any(b.st != ST_OK, axis=-2)[..., None, :]
+        st = np.where(row_bad | col_bad | (c.st != ST_OK) | ~fits, ST_NE, ST_OK).astype(np.int8)
+        reasons = set(a.reasons | b.reasons | c.reasons)
+        reasons.add(f"assumed:integer dot operands signed (official NVIDIA/AMD lowerings)@{op.node_id}")
+        if not fits.all():
+            reasons.add(f"not_established:integer dot leaves the accumulator range (saturation or wrap is lowering "
+                        f"dependent)@{op.node_id}")
+        cond = np.any(a.cond, axis=-1)[..., :, None] | np.any(b.cond, axis=-2)[..., None, :] | c.cond
+        self._rules["dot.integer_exact_lanes"] += int((st == ST_OK).sum())
+        return TV("i", c.elem, v, None, None, st, cond, frozenset(reasons))
 
     def _op_atomic_cas(self, op, args, env, state):
         """tt.atomic_cas (DSL v2 increment 3, rc3 02 6.9 partial): with a single program per address in the launch the
@@ -1859,6 +2210,7 @@ class KernelReferenceEvaluator:
                 buf.hi[idx] = np.where(swap, v_hi, buf.hi[idx])
             buf.st[idx] = np.where(decided, buf.st[idx], ST_NE)
             buf.writer[idx] = state.pid_index
+            self._mark_plain(buf, idx)
             buf.written[idx] = True
             self._stored.add(buf.ident)
             if (~decided).any():

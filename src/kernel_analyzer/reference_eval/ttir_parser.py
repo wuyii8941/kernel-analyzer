@@ -594,6 +594,34 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
 
 
 _FUNC = re.compile(r"^tt\.func\s+(public|private)?\s*@([\w$.\-]+)\((.*)\)\s*(?:->\s*(.*?))?\s*(attributes\s*\{.*\})?\s*\{$")
+_FUNC_HEAD = re.compile(r"^tt\.func\s+(public|private)?\s*@([\w$.\-]+)\(")
+
+
+def _match_func(line: str):
+    """(visibility, name, parameter text, result text or None) of a ``tt.func`` header line, the parameter list closed
+    by its balancing parenthesis (a parenthesized result list ``-> (f32, f32)`` defeated the greedy pattern; DSL v2
+    increment 4, found on the official-main dumps)."""
+    m = _FUNC_HEAD.match(line)
+    if not m or not line.endswith("{"):
+        return None
+    depth, j, in_string = 1, m.end(), False
+    while j < len(line) and depth:
+        c = line[j]
+        if in_string:
+            in_string = c != '"' or line[j - 1] == "\\"
+        elif c == '"':
+            in_string = True
+        elif c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        j += 1
+    if depth:
+        return None
+    rest = line[j:-1].strip()
+    rest = re.sub(r"\s*attributes\s*\{.*\}\s*$", "", rest)
+    ret = rest[2:].strip() if rest.startswith("->") else None
+    return m.group(1), m.group(2), line[m.end():j - 1], ret
 
 
 def _parse_params(text: str) -> list:
@@ -662,12 +690,11 @@ def _parse_ttir(text: str) -> TModule:
         if current_func is None:
             if line == "}":
                 continue
-            m = _FUNC.match(line)
+            m = _match_func(line)
             if not m:
                 raise TTIRParseError(f"line {line_no}: expected tt.func, got {line!r}")
-            ret = _type_list(m.group(4)) if m.group(4) else []
-            current_func = TFunc(m.group(2), _parse_params(m.group(3)), ret, TRegion([]),
-                                 m.group(1) or "public")
+            ret = _type_list(m[3]) if m[3] else []
+            current_func = TFunc(m[1], _parse_params(m[2]), ret, TRegion([]), m[0] or "public")
             stack = [("region", current_func.body, None)]
             current_func.body.blocks.append(TBlock(None, [(p[0], p[1]) for p in current_func.params], []))
             continue

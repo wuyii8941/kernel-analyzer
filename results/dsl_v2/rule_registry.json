@@ -3,10 +3,10 @@
  "triton": "3.6.0",
  "source": "ttir_mapping (MAPPING, LIBDEVICE, LIBDEVICE_ROUNDING, INLINE_ASM, combiners)",
  "counts": {
-  "SUPPORTED": 398,
+  "SUPPORTED": 399,
   "REJECTED": 99,
   "DECLARED_PREMISE": 3,
-  "NOT_ESTABLISHED": 2
+  "NOT_ESTABLISHED": 1
  },
  "entries": [
   {
@@ -7444,9 +7444,9 @@
    "status": "SUPPORTED",
    "category": "H",
    "internal": "atomic_fold",
-   "containment_argument": "Returned value unused: the updates fold into an exact associative combination.",
+   "containment_argument": "Returned value unused: the updates of one address fold into an exact combination when they are one commutative kind or a mixed pair with a checked joint order law (DSL v2 increment 4).",
    "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_unused_atomic_return_folds_into_an_exact_sum",
-   "negative_control": "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "negative_control": "tests/test_signatures_atomics.py::test_mixed_kinds_without_a_joint_law_are_not_established",
    "reason": ""
   },
   {
@@ -7456,13 +7456,13 @@
     "types": "*",
     "subregion": "*"
    },
-   "status": "NOT_ESTABLISHED",
+   "status": "SUPPORTED",
    "category": "H",
-   "internal": null,
-   "containment_argument": "",
-   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_atomic_return_value_requires_an_order",
-   "negative_control": "",
-   "reason": "returned old value depends on the undeclared order of the updates"
+   "internal": "atomic_return_set",
+   "containment_argument": "Returned value used (DSL v2 increment 4, rc3 02 5.3 / 10): two passes; without contention the value before the launch (a point), with contention the hull of the value before the launch combined with every subset of the other updates (a set target, L_E); integers only as points.",
+   "counterexample_test": "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set",
+   "negative_control": "tests/test_signatures_atomics.py::test_contended_integer_return_is_not_a_point_unless_every_order_agrees",
+   "reason": ""
   },
   {
    "key": {

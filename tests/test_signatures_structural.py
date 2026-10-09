@@ -340,7 +340,23 @@ def test_atomic_add_signature(category):
             "    tl.store(out + i, old)\n")
     lo, hi, st = _run("atomic_used", body, {"x_ptr": ("fp32", x), "acc": ("fp32", np.zeros(1)),
                                             "out": ("fp32", np.zeros(C))})
-    assert (st != H.ST_OK).all()   # a used return value depends on the undeclared order: never complete
+    # DSL v2 increment 4: a used return value of a contended address is a set target (L_E): the enclosure must hold
+    # the returned value of every interleaving (0 + the sum of any subset of the other lanes); a non-finite
+    # contribution leaves it not established
+    _check_interleavings(category, lo, hi, st, x)
+
+
+def _check_interleavings(category, lo, hi, st, x):
+    finite = bool(np.isfinite(x).all())
+    for i in range(len(x)):
+        if not finite:
+            assert st[i] != H.ST_OK, (i, "complete with a non-finite contribution")
+            continue
+        assert st[i] == H.ST_OK, (i, category, "finite contributions: the set bound is established")
+        others = [Fr(float(v)) for j, v in enumerate(x) if j != i]
+        for mask in range(1 << len(others)):
+            total = sum((o for k, o in enumerate(others) if mask >> k & 1), Fr(0))
+            assert Fr(float(lo[i])) <= total <= Fr(float(hi[i])), (i, mask, float(total), lo[i], hi[i])
 
 
 @pytest.mark.parametrize("category", CATS)
