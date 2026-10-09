@@ -42,6 +42,17 @@ def _canon(x):
     return json.dumps(x, sort_keys=True, default=str)
 
 
+def _v31_fields(new, old):
+    """A 4.0 record restricted, recursively, to the fields v3.1 wrote: fields added later (the design sensitivity of
+    increment 2, the proof status, resolution_met and the explicit no-delta note of the audit fix) are additions, not
+    differences; a field v3.1 wrote that 4.0 lacks stays a difference."""
+    if isinstance(new, dict) and isinstance(old, dict):
+        return {k: _v31_fields(new[k], old[k]) for k in old if k in new}
+    if isinstance(new, list) and isinstance(old, list) and len(new) == len(old):
+        return [_v31_fields(a, b) for a, b in zip(new, old)]
+    return new
+
+
 def compare_v31(pid, outputs):
     p = V31 / f"main_B_{pid}.json"
     if not p.exists():
@@ -52,10 +63,10 @@ def compare_v31(pid, outputs):
         oo = old.get("outputs", {}).get(name, {})
         r = {"v31_status": oo.get("status"), "v40_status": o["status"]}
         if oo.get("status") == "evaluated" and o["status"] == "evaluated":
-            r["reference_equal"] = _canon(oo["reference"]) == _canon(o["reference"])
+            r["reference_equal"] = _canon(oo["reference"]) == _canon(_v31_fields(o["reference"], oo["reference"]))
             r["k_first_launch_equal"] = oo.get("k_sha256_per_unit") == o.get("k_sha256_per_unit")
-            new_rec = {k: v for k, v in (o.get("numerical") or {}).items() if k != "scale"}
             old_rec = {k: v for k, v in (oo["comparisons"]["FR_e_num"]["record"] or {}).items() if k != "scale"}
+            new_rec = _v31_fields(o.get("numerical") or {}, old_rec)
             r["e_num_record_equal"] = _canon(new_rec) == _canon(old_rec)
             r["e_num_summary_equal"] = all(
                 oo["comparisons"]["FR_e_num"]["class_statistics_protocol"][c]["summary"] == o["e_num_classes"][c]["summary"]

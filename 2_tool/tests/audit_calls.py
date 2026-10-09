@@ -79,3 +79,16 @@ def honest_copy(inp):
     """An ATen layout change: a true copy of the input, but no producer record proves it."""
     x = inp["x"]
     return {"y": _affine_of(x.reshape(32, -1).t().contiguous().reshape(-1))}
+
+
+def slow(inp):
+    """Exceeds a one-second case budget (structured 'over budget' result)."""
+    import time
+    time.sleep(3)
+    return {"y": _affine_of(inp["x"])}
+
+
+def aten_output(inp):
+    """An output written by ATen, not by Triton: no reference (structured 'not established' result)."""
+    _affine_of(inp["x"])
+    return {"y": inp["x"] * 2.0}

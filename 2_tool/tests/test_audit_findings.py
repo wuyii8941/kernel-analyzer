@@ -637,3 +637,50 @@ def test_float_atomic_mark_is_kept_until_a_plain_store():
     ref, ident = _run("audit_atomic_then_store", body, {"x": ("fp32", np.arange(8.0)), "out": ("fp32", np.zeros(8))},
                       full=True)
     assert not np.asarray(ref.buffers[ident["out"]].float_atomic).any()
+
+
+@CUDA
+def test_budget_exhaustion_gives_a_structured_result(tmp_path):
+    rep, lv = _e2e(tmp_path, "slow", X1D, budget={"cpu_seconds": 60, "gpu_seconds": 60, "case_timeout": 1,
+                                                  "max_units": 6})
+    assert lv["status"] == "over budget" and lv["failure_class"] == "over budget", lv
+    assert rep["failure_counts"]["over budget"] == 1
+
+
+@CUDA
+def test_output_without_a_reference_gives_a_structured_result(tmp_path):
+    rep, lv = _e2e(tmp_path, "aten_output", X1D)
+    assert lv["status"] == "ok", lv
+    y = lv["outputs"]["y"]
+    assert y["status"] == "not established" and y["reason"] == "not written by Triton" and y["failure_class"] == "binding"
+
+
+@CUDA
+def test_heavy_imports_happen_before_the_case_timeout_is_armed(tmp_path):
+    """found while fixing (F05 / F06 entry checks): the case timeout (SIGALRM) was armed before the case setup, whose
+    first ``torch._dynamo`` import takes about a second here; a one-second budget interrupted that import and left a
+    partially initialised module that broke every later level of the process.  In a fresh interpreter the imports
+    must already be done when the alarm is armed."""
+    import subprocess
+    import sys
+    import textwrap
+    script = tmp_path / "probe.py"
+    script.write_text(textwrap.dedent(f"""
+        import json, sys
+        sys.path[:0] = [{str(HERE.parent / "src")!r}]
+        from kernel_analyzer import measure
+        seen = []
+        orig = measure._alarm
+        def spy(seconds):
+            seen.append(all(m in sys.modules for m in ("torch._dynamo", "torch._inductor.config")))
+            return orig(seconds)
+        measure._alarm = spy
+        d = {{"call": "audit_calls.py:classic", "inputs": {{"x": {X1D!r}}}, "compare": {{"mode": "A", "measure": ["y"]}},
+              "budget": {{"cpu_seconds": 600, "gpu_seconds": 600, "case_timeout": 300, "max_units": 3}},
+              "units": {{"development": 1, "confirmation": 2}}, "_base_dir": {str(HERE)!r}}}
+        rep = measure.run(d)
+        print(json.dumps({{"armed_after_imports": seen, "status": rep["levels"][0]["status"]}}))
+    """))
+    out = subprocess.run([sys.executable, str(script)], capture_output=True, text=True, timeout=900)
+    res = json.loads(out.stdout.strip().splitlines()[-1])
+    assert res == {"armed_after_imports": [True], "status": "ok"}, (res, out.stderr[-2000:])

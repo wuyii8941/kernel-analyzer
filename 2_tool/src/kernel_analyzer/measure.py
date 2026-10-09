@@ -455,8 +455,9 @@ def classify_failure(reason: str) -> str:
 
 # ------------------------------------------------------------------------------------------------ run
 
-class _Timeout(Exception):
-    pass
+class _Timeout(BaseException):
+    """The case budget ran out.  A BaseException, so that no ``except Exception`` on the way (the call wrapper that
+    reports a rejected input, a tool path that records an error) turns an exhausted budget into another failure class."""
 
 
 def _alarm(seconds):
@@ -539,6 +540,10 @@ def run_level(exp: dict, level: dict) -> dict:
 
     case = Case()
     keep = {}
+    # import what the case setup imports before the case timeout is armed: SIGALRM inside an import (torch._dynamo
+    # takes about a second) leaves a partially initialised module that breaks every later level of the process
+    import torch._dynamo  # noqa: F401
+    import torch._inductor.config  # noqa: F401
     t0 = time.time()
     old = _alarm(budget["case_timeout"])
     try:
