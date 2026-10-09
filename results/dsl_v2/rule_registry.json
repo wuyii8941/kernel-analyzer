@@ -3,7 +3,7 @@
  "triton": "3.6.0",
  "source": "ttir_mapping (MAPPING, LIBDEVICE, LIBDEVICE_ROUNDING, INLINE_ASM, combiners)",
  "counts": {
-  "SUPPORTED": 415,
+  "SUPPORTED": 416,
   "REJECTED": 96,
   "DECLARED_PREMISE": 4,
   "NOT_ESTABLISHED": 1
@@ -5134,6 +5134,21 @@
    "status": "SUPPORTED",
    "category": "D",
    "internal": "abs",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_fast_fdividef",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "div",
    "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
    "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
    "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",

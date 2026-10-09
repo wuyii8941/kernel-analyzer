@@ -23,13 +23,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dump", type=Path, required=True)
     ap.add_argument("--before", default=None, help="only files modified before this local time (reproduces a stage)")
+    ap.add_argument("--glob", default="*/*.ttir", help="files under --dump (Gluon kernels: */*.ttgir)")
     ap.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
     from kernel_analyzer.reference_eval.ttir_mapping import kernel_coverage
     from kernel_analyzer.reference_eval.ttir_parser import parse_ttir
     limit = dt.datetime.fromisoformat(a.before).timestamp() if a.before else None
     texts = {}
-    for path in sorted(a.dump.glob("*/*.ttir")):
+    for path in sorted(a.dump.glob(a.glob)):
         if limit is not None and path.stat().st_mtime >= limit:
             continue
         text = path.read_text(errors="replace")

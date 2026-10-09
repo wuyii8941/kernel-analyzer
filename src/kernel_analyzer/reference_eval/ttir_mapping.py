@@ -209,6 +209,30 @@ MAPPING: dict[str, Rule] = {
     "gpu.barrier": S("H", "barrier"),  # orders the threads of one program (block): starts a new access epoch
     "ttg.barrier": S("H", "barrier"),  # official main emits this for tl.debug_barrier (DSL v2 increment 3)
     "llvm.intr.assume": S("A", "assume"),  # rc3 02 12: a per-sample premise checked on the reference path
+    # DSL v2 increment 10: TTGIR (Gluon kernels have no TTIR): layouts, shared memory, async copies, mbarriers
+    "ttg.convert_layout": S("A", "convert_layout"),
+    "ttg.local_alloc": S("H", "local_alloc"),
+    "ttg.local_store": S("H", "local_store"),
+    "ttg.local_load": S("H", "local_load"),
+    "ttg.local_dealloc": S("H", "nop"),
+    "ttg.memdesc_subslice": S("H", "memdesc_subslice"),
+    "ttg.memdesc_index": S("H", "memdesc_index"),
+    "ttg.memdesc_reshape": S("H", "memdesc_reshape"),
+    "ttg.memdesc_reinterpret": S("H", "memdesc_reinterpret"),
+    "ttg.local_gather": S("H", "local_gather"),
+    "ttg.local_scatter": S("H", "local_scatter"),
+    "ttg.local_atomic_scatter_rmw": S("H", "local_atomic_scatter_rmw"),
+    "ttg.async_copy_global_to_local": S("H", "async_copy_global_to_local"),
+    "ttg.async_commit_group": S("H", "async_commit_group"),
+    "ttg.async_wait": S("H", "async_wait"),
+    "ttng.init_barrier": S("H", "mbar_init"),
+    "ttng.arrive_barrier": S("H", "mbar_arrive"),
+    "ttng.wait_barrier": S("H", "mbar_wait"),
+    "ttng.async_copy_mbarrier_arrive": S("H", "mbar_async_arrive"),
+    "ttg.inline_asm": R("I", "thread-wise inline asm (ttg.inline_asm) is not modelled"),
+    "ttg.warp_specialize": R("H", "warp specialization (concurrent partitions) is not modelled"),
+    "ttg.warp_yield": R("H", "warp specialization (concurrent partitions) is not modelled"),
+    "ttg.warp_return": R("H", "warp specialization (concurrent partitions) is not modelled"),
 }
 for _name in _ELEMENTARY:
     MAPPING[f"math.{_name}"] = S("D", _name)
@@ -229,7 +253,7 @@ for _fn in _ELEMENTARY | {"floor", "ceil", "trunc", "round", "abs", "fabs"}:
 LIBDEVICE.update({
     "__nv_powf": "pow", "__nv_fast_powf": "pow", "__nv_pow": "pow",
     "__nv_fmaxf": "maxnum", "__nv_fminf": "minnum", "__nv_fmax": "maxnum", "__nv_fmin": "minnum",
-    "__nv_fmaf": "fma", "__nv_fma": "fma", "__nv_fdividef": "div", "__nv_fdiv_rn": "div",
+    "__nv_fmaf": "fma", "__nv_fma": "fma", "__nv_fdividef": "div", "__nv_fast_fdividef": "div", "__nv_fdiv_rn": "div",
     "__nv_div_rn": "div", "__nv_frcp_rn": "rcp", "__nv_rcp64h": "rcp", "__nv_fsqrt_rn": "sqrt",
     "__nv_dsqrt_rn": "sqrt", "__nv_isnanf": "isnan", "__nv_isnand": "isnan", "__nv_isinff": "isinf",
     "__nv_isinfd": "isinf", "__nv_finitef": "isfinite", "__nv_isfinited": "isfinite",
@@ -345,6 +369,13 @@ def registry_coverage(registry: Optional[dict] = None) -> dict:
 # increment 3; registration evidence: results/dsl_v2/w0/registered_e50b186e8bd2.json, official main e50b186e).
 OTHER_PROFILE_NAMES = {"ttg.barrier": "e50b186e", "llvm.intr.assume": "e50b186e", "tt.atomic_load": "e50b186e",
                        "tt.atomic_store": "e50b186e", "tt.atomic_poll": "e50b186e", "tt.approx_divf": "e50b186e"}
+# TTGIR operations (Gluon importer, DSL v2 increment 10): not in the TTIR registry of the 3.6.0 regression profile
+OTHER_PROFILE_NAMES.update({n: "e50b186e (TTGIR)" for n in (
+    "ttg.convert_layout", "ttg.local_alloc", "ttg.local_store", "ttg.local_load", "ttg.local_dealloc",
+    "ttg.memdesc_subslice", "ttg.memdesc_index", "ttg.memdesc_reshape", "ttg.memdesc_reinterpret", "ttg.local_gather",
+    "ttg.local_scatter", "ttg.local_atomic_scatter_rmw", "ttg.async_copy_global_to_local", "ttg.async_commit_group",
+    "ttg.async_wait", "ttng.init_barrier", "ttng.arrive_barrier", "ttng.wait_barrier",
+    "ttng.async_copy_mbarrier_arrive", "ttg.inline_asm", "ttg.warp_specialize", "ttg.warp_yield", "ttg.warp_return")})
 
 
 # ---------------------------------------------------------------------------

@@ -524,6 +524,21 @@ def decode_storage(raw: np.ndarray, dtype: str):
 
 
 @dataclass
+class SharedBuf:
+    """Shared memory of one program (DSL v2 increment 10): values, status, written, and the async copy (pending >= 0)
+    that has not been observed complete."""
+    elem: str
+    kind: str
+    lo: np.ndarray
+    hi: np.ndarray
+    st: np.ndarray
+    cond: np.ndarray
+    written: np.ndarray
+    pending: np.ndarray
+    base: Optional[np.ndarray] = None  # pointer elements: the buffer each points into
+
+
+@dataclass
 class ProgramState:
     pid: tuple
     pid_index: int
@@ -532,6 +547,11 @@ class ProgramState:
     epoch: int = 0  # barrier phase inside the program (gpu.barrier orders the threads of one program)
     occ: dict = field(default_factory=dict)  # atomic node -> executions so far (keys of atomic events)
     rel_epoch: int = 0  # release operations performed so far (writes before release e carry epoch <= e)
+    # DSL v2 increment 10 (TTGIR): the program's shared memory, its outstanding async copies and mbarriers
+    shared: dict = field(default_factory=dict)  # id -> SharedBuf
+    async_open: list = field(default_factory=list)  # (shared id, element indices) issued, not yet attached / committed
+    async_groups: list = field(default_factory=list)  # committed groups (cp.async)
+    mbars: dict = field(default_factory=dict)  # (shared id, element) -> barrier state
     # Control dependence: conditions (conditional flag, reasons) that decided the current path.
     ctrl: list = field(default_factory=list)
     sticky_cond: bool = False  # set by unstructured branches / loop exits, kept to the program end
@@ -2007,6 +2027,352 @@ class KernelReferenceEvaluator:
             else:
                 raise ProgramAbort("map_elementwise region ended without a return")
         raise ProgramAbort("map_elementwise region did not terminate")
+
+    # ---- TTGIR: layouts and shared memory (DSL v2 increment 10) -----------------------------------------------
+
+    def _op_convert_layout(self, op, args, env, state):
+        """ttg.convert_layout changes only the distribution of a tensor over threads: the values are unchanged."""
+        return args[0]
+
+    def _shared_note(self):
+        self._reasons["assumed:shared memory accesses of one program are ordered by the compiler's barrier insertion "
+                      "(Membar, triton/backends/nvidia/compiler.py make_llir)"] += 1
+
+    def _memdesc(self, buf_id: int, index: np.ndarray, elem) -> TV:
+        index = np.asarray(index, dtype=np.int64)
+        return TV("m", elem, index, None, np.full(index.shape, buf_id, dtype=np.int64))
+
+    def _op_local_alloc(self, op, args, env, state):
+        rt = op.result_types[0]
+        n = int(np.prod(rt.shape)) if rt.shape else 1
+        kind = kind_of(rt.elem)
+        sid = len(state.shared)
+        state.shared[sid] = SharedBuf(rt.elem, kind, np.zeros(n), np.zeros(n), np.full(n, ST_UNDEF, dtype=np.int8),
+                                      np.zeros(n, dtype=bool), np.zeros(n, dtype=bool), np.full(n, -1, dtype=np.int64),
+                                      np.full(n, -1, dtype=np.int64))
+        view = self._memdesc(sid, np.arange(n).reshape(rt.shape), rt.elem)
+        self._shared_note()
+        if args:
+            self._shared_write(state, view, args[0])
+        return view
+
+    def _shared_write(self, state, view: TV, val: TV, pending: int = -1, idx_override=None):
+        buf = state.shared[int(np.asarray(view.base).reshape(-1)[0])]
+        idx = (np.asarray(view.lo) if idx_override is None else idx_override).reshape(-1)
+        shape = np.asarray(view.lo).shape if idx_override is None else idx_override.shape
+        v = val.map(lambda a, s=shape: np.broadcast_to(np.asarray(a), s).reshape(-1))
+        buf.lo[idx] = v.lo
+        buf.hi[idx] = v.hi if v.hi is not None else v.lo
+        if v.base is not None:
+            buf.base[idx] = v.base
+        buf.st[idx] = v.st
+        buf.cond[idx] = v.cond
+        buf.written[idx] = True
+        buf.pending[idx] = pending
+        return buf, idx
+
+    def _shared_read(self, op, state, view: TV, rtype, idx_override=None) -> TV:
+        buf = state.shared[int(np.asarray(view.base).reshape(-1)[0])]
+        idx = np.asarray(view.lo) if idx_override is None else idx_override
+        lo, hi, st = buf.lo[idx], buf.hi[idx], buf.st[idx].copy()
+        reasons = set()
+        pending = buf.pending[idx] >= 0
+        if pending.any():
+            st = np.where(pending, ST_NE, st).astype(np.int8)
+            reasons.add(f"not_established:shared memory read before its asynchronous copy is observed complete@"
+                        f"{op.node_id}")
+            self._rules["shared.read_pending_async_lanes"] += int(pending.sum())
+        cond = buf.cond[idx]
+        if isinstance(rtype.elem, PtrType):
+            return TV("p", rtype.elem, lo.astype(np.int64), None, buf.base[idx], st, cond, frozenset(reasons))
+        if kind_of(rtype.elem) == "f":
+            ok = st == ST_OK
+            return _ftv(rtype.elem, np.where(ok, lo, 0.0), np.where(ok, hi, 0.0), st, cond, frozenset(reasons))
+        k = "b" if rtype.elem == "i1" else "i"
+        return TV(k, rtype.elem, lo.astype(np.int64) if k == "i" else lo.astype(np.int8), None, None, st, cond,
+                  frozenset(reasons))
+
+    def _op_local_store(self, op, args, env, state):
+        val, view = args[0], args[1]
+        self._shared_write(state, view, val)
+        return None
+
+    def _op_local_load(self, op, args, env, state):
+        return self._shared_read(op, state, args[0], op.result_types[0])
+
+    def _op_memdesc_subslice(self, op, args, env, state):
+        view = args[0]
+        rt = op.result_types[0]
+        offs = op.attrs.get("offsets")
+        if offs is None:
+            raise ProgramAbort(f"{op.node_id}: memdesc_subslice with dynamic offsets is not modelled")
+        sl = tuple(slice(o, o + d) for o, d in zip(offs, rt.shape))
+        return self._memdesc(int(np.asarray(view.base).reshape(-1)[0]), np.asarray(view.lo)[sl], rt.elem)
+
+    def _op_memdesc_index(self, op, args, env, state):
+        view, i = args[0], args[1]
+        if np.asarray(i.st).max() != ST_OK:
+            raise ProgramAbort(f"{op.node_id}: memdesc index not established")
+        k = int(np.asarray(i.lo))
+        lo = np.asarray(view.lo)
+        if not 0 <= k < lo.shape[0]:
+            raise ProgramAbort(f"{op.node_id}: memdesc index {k} out of range")
+        return self._memdesc(int(np.asarray(view.base).reshape(-1)[0]), lo[k], op.result_types[0].elem)
+
+    def _op_memdesc_reshape(self, op, args, env, state):
+        view = args[0]
+        rt = op.result_types[0]
+        return self._memdesc(int(np.asarray(view.base).reshape(-1)[0]), np.asarray(view.lo).reshape(rt.shape), rt.elem)
+
+    def _op_memdesc_reinterpret(self, op, args, env, state):
+        view = args[0]
+        rt = op.result_types[0]
+        if rt.elem != view.elem or int(np.prod(rt.shape)) != np.asarray(view.lo).size:
+            raise ProgramAbort(f"{op.node_id}: memdesc_reinterpret to another element type (a bit-level view) is not "
+                               f"modelled")
+        return self._memdesc(int(np.asarray(view.base).reshape(-1)[0]), np.asarray(view.lo).reshape(rt.shape), rt.elem)
+
+    def _gather_index(self, op, view: TV, idx: TV, axis: int):
+        """Storage indices of a gather / scatter along ``axis`` and the lanes whose index is outside the view."""
+        lo = np.asarray(view.lo)
+        k = np.asarray(idx.lo, dtype=np.int64)
+        bad = (k < 0) | (k >= lo.shape[axis]) | (np.asarray(idx.st) != ST_OK)
+        storage = np.take_along_axis(lo, np.clip(k, 0, lo.shape[axis] - 1), axis=axis)
+        return storage, bad
+
+    def _op_local_gather(self, op, args, env, state):
+        view, idx = args[0], args[1]
+        axis = int(str(op.attrs.get("axis", "0")).split(":")[0])
+        storage, bad = self._gather_index(op, view, idx, axis)
+        out = self._shared_read(op, state, view, op.result_types[0], idx_override=storage)
+        if bad.any():
+            out = TV(out.kind, out.elem, out.lo, out.hi, out.base, np.where(bad, ST_NE, out.st).astype(np.int8),
+                     out.cond, out.reasons | {f"not_established:local_gather index out of range@{op.node_id}"})
+        return out
+
+    def _op_local_scatter(self, op, args, env, state):
+        view, idx, val = args[0], args[1], args[2]
+        axis = int(str(op.attrs.get("axis", "0")).split(":")[0])
+        storage, bad = self._gather_index(op, view, idx, axis)
+        flat = storage.reshape(-1)
+        v = val.map(lambda a, s=storage.shape: np.broadcast_to(np.asarray(a), s))
+        st = np.asarray(v.st).copy()
+        uniq, counts = np.unique(flat[~bad.reshape(-1)], return_counts=True)
+        dup = np.isin(storage, uniq[counts > 1])
+        if dup.any():   # two lanes write one element in one scatter: unspecified which wins
+            st = np.where(dup, ST_NE, st)
+            self._reasons[f"not_established:local_scatter writes one element from several lanes@{op.node_id}"] += 1
+        keep = ~bad
+        buf = state.shared[int(np.asarray(view.base).reshape(-1)[0])]
+        sel = keep.reshape(-1)
+        buf.lo[flat[sel]] = np.asarray(v.lo).reshape(-1)[sel]
+        buf.hi[flat[sel]] = (np.asarray(v.hi) if v.hi is not None else np.asarray(v.lo)).reshape(-1)[sel]
+        if v.base is not None:
+            buf.base[flat[sel]] = np.asarray(v.base).reshape(-1)[sel]
+        buf.st[flat[sel]] = st.reshape(-1)[sel]
+        buf.written[flat[sel]] = True
+        buf.pending[flat[sel]] = -1
+        if bad.any():
+            self._reasons[f"not_established:local_scatter index out of range@{op.node_id}"] += 1
+        return None
+
+    def _op_local_atomic_scatter_rmw(self, op, args, env, state):
+        """Atomic read-modify-write into shared memory along an axis (official Gluon): each lane returns the element's
+        value before the update; lanes of one operation that share an element see an unspecified order (their returned
+        values not established unless every order agrees, increment 4's rule); the update folds with the kind's law."""
+        view, idx, val = args[0], args[1], args[2]
+        kind = op.attrs.get("rmw_op", "")
+        axis = int(str(op.attrs.get("axis", "0")).split(":")[0])
+        storage, bad = self._gather_index(op, view, idx, axis)
+        off = np.zeros(storage.shape, dtype=bool)
+        if len(args) > 3:   # optional mask: masked-off lanes neither update nor return a value
+            mk = np.broadcast_to(np.asarray(args[3].lo), storage.shape)
+            if ((mk == MAYBE) | (np.broadcast_to(args[3].st, storage.shape) != ST_OK)).any():
+                raise ProgramAbort(f"{op.node_id}: local atomic with an undecided mask")
+            off = mk == 0
+            bad = bad & ~off
+        buf = state.shared[int(np.asarray(view.base).reshape(-1)[0])]
+        rt = op.result_types[0]
+        flat = storage.reshape(-1)
+        v = val.map(lambda a, s=storage.shape: np.broadcast_to(np.asarray(a), s).reshape(-1))
+        is_f = kind_of(rt.elem) == "f"
+        width = INT_WIDTH.get(rt.elem, 0)
+        n = flat.size
+        old_lo, old_hi, old_st = np.zeros(n), np.zeros(n), np.full(n, ST_NE, dtype=np.int8)
+        badf = bad.reshape(-1)
+        offf = off.reshape(-1)
+        groups = collections.defaultdict(list)
+        for j in range(n):
+            if not badf[j] and not offf[j]:
+                groups[int(flat[j])].append(j)
+        laws = {"add": lambda a, b: a + b, "max": max, "min": min, "and": lambda a, b: a & b,
+                "or": lambda a, b: a | b, "xor": lambda a, b: a ^ b}
+        if kind not in laws and kind != "exch" and not (kind in ("fadd",) and is_f):
+            raise ProgramAbort(f"{op.node_id}: local atomic {kind} is not modelled")
+        why = collections.Counter()
+        for a, lanes in groups.items():
+            init = (float(buf.lo[a]), float(buf.hi[a]), int(buf.st[a])) if is_f else \
+                (int(buf.lo[a]), int(buf.lo[a]), int(buf.st[a]))
+            contribs = [(kind, (float if is_f else int)(np.asarray(v.lo)[j]),
+                         (float if is_f else int)((np.asarray(v.hi) if v.hi is not None else np.asarray(v.lo))[j]),
+                         int(np.asarray(v.st)[j])) for j in lanes]
+            for t, j in enumerate(lanes):
+                r_lo, r_hi, r_st, _, reason = _atomic_old(kind, is_f, width, init, contribs[:t] + contribs[t + 1:])
+                old_lo[j], old_hi[j], old_st[j] = r_lo, r_hi, r_st
+                if reason:
+                    why[reason] += 1
+            ok = init[2] == ST_OK and all(c[3] == ST_OK for c in contribs)
+            if kind == "exch":
+                # the last exchange of the element wins: a set over the candidates when several lanes share it
+                lo_c, hi_c = [c[1] for c in contribs], [c[2] for c in contribs]
+                if is_f:
+                    buf.lo[a], buf.hi[a] = min(lo_c), max(hi_c)
+                else:
+                    buf.lo[a] = buf.hi[a] = lo_c[0]
+                    ok = ok and len(set(lo_c)) == 1
+                    if len(set(lo_c)) > 1:
+                        why["contended integer exchange: final value is set-valued (L_E)"] += 1
+                buf.st[a] = ST_OK if ok else ST_NE
+                buf.written[a] = True
+                continue
+            if is_f:
+                total_lo = [init[0]] + [c[1] for c in contribs]
+                total_hi = [init[1]] + [c[2] for c in contribs]
+                if kind == "fadd":
+                    buf.lo[a] = float(iv.isum(np.array(total_lo), np.array(total_lo), axis=0)[0])
+                    buf.hi[a] = float(iv.isum(np.array(total_hi), np.array(total_hi), axis=0)[1])
+                else:
+                    f = max if kind == "max" else min
+                    buf.lo[a], buf.hi[a] = f(total_lo), f(total_hi)
+            else:
+                acc = init[0]
+                for c in contribs:
+                    acc = laws[kind](acc, c[1])
+                buf.lo[a] = _wrap(np.array(acc, dtype=object).astype(np.int64) if abs(acc) < 2 ** 63 else
+                                  np.array(acc % (1 << 64), dtype=np.uint64).view(np.int64), width) if width else acc
+                buf.hi[a] = buf.lo[a]
+            buf.st[a] = ST_OK if ok else ST_NE
+            buf.written[a] = True
+        shape = storage.shape
+        old_st = np.where(offf, ST_UNDEF, old_st).astype(np.int8)
+        reasons = {f"not_established:local atomic index out of range@{op.node_id}"} if bad.any() else set()
+        reasons |= {f"not_established:{r}@{op.node_id}" for r in why}
+        if offf.any():
+            reasons.add(f"not_established:masked-off lanes of a local atomic return no value@{op.node_id}")
+        reasons = frozenset(reasons)
+        cond = np.zeros(shape, dtype=bool)
+        if is_f:
+            return _ftv(rt.elem, old_lo.reshape(shape), old_hi.reshape(shape), old_st.reshape(shape), cond, reasons)
+        return TV("i", rt.elem, old_lo.astype(np.int64).reshape(shape), None, None, old_st.reshape(shape), cond, reasons)
+
+    # ---- TTGIR: asynchronous copies and mbarriers (DSL v2 increment 10) -------------------------------------------
+
+    def _op_async_copy_global_to_local(self, op, args, env, state):
+        """cp.async into shared memory: the values are those of tt.load with the same operands (masked-off lanes take
+        ``other``, or zero as the official test asserts), but the elements stay pending until a completion is
+        observed (async_wait or an mbarrier wait), and a read before that is not established."""
+        ptrs, view = args[0], args[1]
+        k = 2
+        mask = other = None
+        if op.attrs.get("has_mask"):
+            mask, k = args[k], k + 1
+        if op.attrs.get("has_other"):
+            other = args[k]
+        # the operands are those of tt.load (official TritonGPUOps.td); a masked-off lane without other is zero-filled:
+        # the official test_async_copy_mbarrier (python/test/gluon/test_core.py) asserts zeros there over a shared
+        # buffer initialized to 7 (the cp.async src-size-0 lowering)
+        if mask is not None and other is None:
+            elem = ptrs.elem.pointee
+            other = (_ftv(elem, np.zeros(ptrs.shape), np.zeros(ptrs.shape), np.zeros(ptrs.shape, dtype=np.int8),
+                          np.zeros(ptrs.shape, dtype=bool), frozenset()) if kind_of(elem) == "f" else
+                     TV("i", elem, np.zeros(ptrs.shape, dtype=np.int64)))
+            self._reasons["assumed:masked-off lanes of an async copy are zero-filled (official test_async_copy_mbarrier)"] += 1
+        load_args = [ptrs] + ([mask] if mask is not None else []) + ([other] if other is not None else [])
+        val = self._op_load(op, load_args, env, state)
+        tag = len(state.async_open) + 1000 * len(state.async_groups) + 1
+        buf, idx = self._shared_write(state, view, val, pending=tag)
+        state.async_open.append((int(np.asarray(view.base).reshape(-1)[0]), idx))
+        self._rules["shared.async_copies"] += 1
+        return TV("i", "i32", np.array(0, dtype=np.int64))
+
+    def _retire(self, state, entries):
+        for sid, idx in entries:
+            state.shared[sid].pending[idx] = -1
+
+    def _op_async_commit_group(self, op, args, env, state):
+        state.async_groups.append(list(state.async_open))
+        state.async_open.clear()
+        return TV("i", "i32", np.array(0, dtype=np.int64))
+
+    def _op_async_wait(self, op, args, env, state):
+        num = int(str(op.attrs.get("num", "0")).split(":")[0])
+        keep = len(state.async_groups) - num
+        for g in state.async_groups[:max(0, keep)]:
+            self._retire(state, g)
+        state.async_groups = state.async_groups[max(0, keep):]
+        return TV("i", "i32", np.array(0, dtype=np.int64))
+
+    def _mbar(self, op, state, bar: TV):
+        key = (int(np.asarray(bar.base).reshape(-1)[0]), int(np.asarray(bar.lo).reshape(-1)[0]))
+        if key not in state.mbars:
+            raise ProgramAbort(f"{op.node_id}: mbarrier used before init_barrier")
+        return state.mbars[key]
+
+    def _op_mbar_init(self, op, args, env, state):
+        bar = args[0]
+        key = (int(np.asarray(bar.base).reshape(-1)[0]), int(np.asarray(bar.lo).reshape(-1)[0]))
+        count = int(op.attrs.get("count", 1))
+        state.mbars[key] = {"count": count, "pending": count, "completed": 0, "attached": [], "phase_copies": []}
+        return None
+
+    def _arrive(self, m, n):
+        """n arrivals on the current phase; the phase completes when its pending count reaches 0 (PTX mbarrier)."""
+        m["pending"] -= n
+        while m["pending"] <= 0:
+            m["phase_copies"].append(list(m["attached"]))  # the copies tracked by the phase complete with it
+            m["attached"] = []
+            m["completed"] += 1
+            m["pending"] += m["count"]
+
+    def _op_mbar_arrive(self, op, args, env, state):
+        pred = args[1] if len(args) > 1 else None
+        if pred is not None and (np.asarray(pred.st).max() != ST_OK or int(np.asarray(pred.lo)) == MAYBE):
+            raise ProgramAbort(f"{op.node_id}: mbarrier arrive with an undecided predicate")
+        if pred is None or int(np.asarray(pred.lo)) == 1:
+            self._arrive(self._mbar(op, state, args[0]), int(op.attrs.get("count", 1)))
+        return None
+
+    def _op_mbar_async_arrive(self, op, args, env, state):
+        """cp.async.mbarrier.arrive (official TritonNvidiaGPUOps.td): the barrier tracks the program's earlier async
+        copies.  Without noIncrement the pending count is raised by one before the asynchronous arrival (net zero), so
+        the copies only gate the completion of the current phase; with noIncrement the arrival also counts."""
+        m = self._mbar(op, state, args[0])
+        m["attached"].extend(state.async_open)
+        state.async_open.clear()
+        if "noIncrement" in op.attrs:
+            self._arrive(m, 1)
+        return None
+
+    def _op_mbar_wait(self, op, args, env, state):
+        """mbarrier.try_wait.parity: passes when the phase of the given parity has completed, i.e. the current
+        phase's parity differs from it (the operand names the current or the immediately preceding phase).  Passing
+        retires the copies of every completed phase.  When the current phase has that parity, the wait needs arrivals
+        that come later in program order or from other warps: not established (progress not proven)."""
+        m = self._mbar(op, state, args[0])
+        par = args[1]
+        pred = args[2] if len(args) > 2 else None
+        if pred is not None and int(np.asarray(pred.lo)) == 0:
+            return None
+        if np.asarray(par.st).max() != ST_OK:
+            raise ProgramAbort(f"{op.node_id}: mbarrier wait parity not established")
+        p = int(np.asarray(par.lo)) & 1
+        if m["completed"] % 2 == p:
+            raise ProgramAbort(f"{op.node_id}: not_established: mbarrier phase of parity {p} does not complete within "
+                               f"the program (progress not proven)")
+        for copies in m["phase_copies"]:
+            self._retire(state, copies)
+        m["phase_copies"] = [[] for _ in m["phase_copies"]]
+        return None
 
     def _op_histogram(self, op, args, env, state):
         """tt.histogram (DSL v2 increment 5, rc3 02 6.8): exact counts in bins of width 1 starting at 0.  Inputs
@@ -3982,7 +4348,7 @@ def evaluate_sequence(launches: list, mode: str = NumericMode.NUMERICAL_DIFFEREN
     results = []
     modules: dict = {}
     for position, launch in enumerate(launches):
-        ttir = launch.asm["ttir"]
+        ttir = launch.asm.get("ttir") or launch.asm.get("ttgir")  # Gluon kernels have no TTIR (increment 10)
         module = modules.get(ttir)
         if module is None:
             module = modules[ttir] = parse_ttir(ttir)

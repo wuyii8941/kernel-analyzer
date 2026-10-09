@@ -19,6 +19,7 @@ One JSON line per launch.  Measurement only; the official tests' own assertions 
 | `inc7_atomic_cas_rmw.jsonl` | test_atomic_cas, test_atomic_rmw | increment 7 (`954e9af`) | `w7_capture_run.sh` |
 | `inc7_tutorial05.jsonl` | official tutorial 05 (layer norm, CAS spin lock in the backward pass) | increments 7-8 | `w7_tutorials_run.sh` |
 | `inc9_inline_asm.jsonl` | test_inline_asm*, test_dot_max_num_imprecise_acc, test_typeconvert_upcast | increment 9 (`53d754b`) | `w9_capture_run.sh` |
+| `inc10_gluon_test_core.jsonl` | official Gluon unit tests (python/test/gluon/test_core.py), evaluated from TTGIR | increment 10 | `w10_gluon_run.sh` |
 | `inc6_combined_summary.json` | `scripts/dsl_v2/summarize_capture.py inc6_combined.jsonl --baseline inc4_broad.jsonl` | — | — |
 
 Status per launch: `complete` (every written element established), `partial`, `aborted` (a program instance aborted),

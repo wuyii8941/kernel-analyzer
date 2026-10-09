@@ -36,6 +36,8 @@ class TType:
 
     shape: tuple
     elem: Union[str, PtrType]
+    encoding: Optional[str] = None  # TTGIR layout / shared encoding (DSL v2 increment 10)
+    memdesc: bool = False  # !ttg.memdesc<...>: a shared-memory descriptor, not a value
 
     @property
     def is_tensor(self) -> bool:
@@ -57,8 +59,9 @@ class TType:
 
 def parse_type(text: str) -> TType:
     text = text.strip()
-    if text.startswith("tensor<") and text.endswith(">"):
-        inner = text[len("tensor<"):-1]
+    memdesc = text.startswith("!ttg.memdesc<") or (text.startswith("<") and not text.startswith("<{"))
+    if (text.startswith("tensor<") or memdesc) and text.endswith(">"):
+        inner = text[text.index("<") + 1:-1]
         dims = []
         rest = inner
         while True:
@@ -67,7 +70,9 @@ def parse_type(text: str) -> TType:
                 break
             dims.append(int(m.group(1)))
             rest = rest[m.end():]
-        return TType(tuple(dims), _parse_elem(rest))
+        parts = _split_top(rest, ",")
+        enc = parts[1].strip() if len(parts) > 1 else None
+        return TType(tuple(dims), _parse_elem(parts[0]), enc, memdesc)
     return TType((), _parse_elem(text))
 
 
@@ -529,6 +534,25 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
         mm = re.search(r"lhs\s*=\s*(\w+)\s+rhs\s*=\s*(\w+)", rest)
         if mm:
             op.attrs["lhs"], op.attrs["rhs"] = mm.group(1), mm.group(2)
+        op.operands = _values(head)
+        op.operand_types, op.result_types = operand_types, result_types
+    elif name == "ttg.memdesc_subslice":  # DSL v2 increment 10: "%m[0, 32] : T -> T"
+        mm = re.search(r"\[([^\]]*)\]", head)
+        op.attrs["offsets"] = [int(x) for x in mm.group(1).split(",")] if mm and "%" not in mm.group(1) else None
+        op.operands = _values(head)
+        op.operand_types, op.result_types = operand_types, result_types
+    elif name == "ttg.local_atomic_scatter_rmw":  # "and, %m[%i], %v {axis} : (...) -> T"
+        op.attrs["rmw_op"] = head.split(",")[0].strip()
+        op.operands = _values(head)
+        op.operand_types, op.result_types = operand_types, result_types
+    elif name == "ttg.async_copy_global_to_local":  # "%p, %m mask %k other %o : T -> <memdesc>"
+        op.attrs["has_mask"] = "1" if re.search(r"\bmask\s+%", head) else ""
+        op.attrs["has_other"] = "1" if re.search(r"\bother\s+%", head) else ""
+        op.operands = _values(head)
+        op.operand_types, op.result_types = operand_types, result_types
+    elif name in ("ttng.init_barrier", "ttng.arrive_barrier"):  # "%bar, 1[, %pred] : T"
+        nums = [p.strip() for p in head.split(",")[1:] if re.fullmatch(r"\s*-?\d+\s*", p)]
+        op.attrs["count"] = int(nums[0]) if nums else 1
         op.operands = _values(head)
         op.operand_types, op.result_types = operand_types, result_types
     elif name == "math.clampf":  # DSL v2 increment 8: "%v to [%min, %max] : T"
