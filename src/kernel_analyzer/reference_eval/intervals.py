@@ -382,6 +382,35 @@ def pow_bounds(xlo, xhi, ylo, yhi):
                           for v in (xlo, xhi, ylo, yhi))
     rlo, rhi, rok = out_lo.reshape(-1), out_hi.reshape(-1), ok.reshape(-1)
     for i in range(xlo.size):
+        if xlo[i] <= 0 and ylo[i] == yhi[i] and float(ylo[i]).is_integer() and abs(ylo[i]) <= 2.0 ** 53:
+            # DSL v2 increment 8: an integer exponent n defines x**n for x <= 0 (x != 0 when n < 0); x**n is monotone on
+            # each side of 0, so the endpoints (and 0 for an even n over an interval containing 0) enclose it
+            n = int(ylo[i])
+            if n == 0:
+                rlo[i] = rhi[i] = 1.0
+                continue
+            if n < 0 and xlo[i] <= 0 <= xhi[i]:
+                rok[i] = False
+                continue
+            cands_lo, cands_hi = [], []
+            try:
+                for x in (float(xlo[i]), float(xhi[i])):
+                    with _CTX_DOWN:
+                        a = gmpy2.mpfr(x) ** n
+                    with _CTX_UP:
+                        b = gmpy2.mpfr(x) ** n
+                    if gmpy2.is_infinite(a) or gmpy2.is_infinite(b):
+                        raise DomainError("pow overflow")
+                    cands_lo.append(float(a))
+                    cands_hi.append(float(b))
+            except (DomainError, ZeroDivisionError):
+                rok[i] = False
+                continue
+            if n > 0 and n % 2 == 0 and xlo[i] <= 0 <= xhi[i]:
+                cands_lo.append(0.0)
+            rlo[i] = math.nextafter(min(cands_lo), -math.inf) if 0 < abs(min(cands_lo)) < _SUBNORMAL else min(cands_lo)
+            rhi[i] = math.nextafter(max(cands_hi), math.inf) if 0 < abs(max(cands_hi)) < _SUBNORMAL else max(cands_hi)
+            continue
         if xlo[i] <= 0:
             if xlo[i] == xhi[i] == 0 and ylo[i] == yhi[i] and ylo[i] > 0:
                 rlo[i] = rhi[i] = 0.0

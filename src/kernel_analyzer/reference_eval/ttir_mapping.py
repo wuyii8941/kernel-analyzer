@@ -171,7 +171,7 @@ MAPPING: dict[str, Rule] = {
     "math.absi": S("A", "absi"),
     "math.atan2": R("D", "atan2 is not supported in this version"),
     "math.ceil": S("C", "ceil"),
-    "math.clampf": S("C", "clamp"),
+    "math.clampf": S("C", "math_clampf"),  # DSL v2 increment 8: NaN or min > max (poison) not established
     "math.copysign": S("C", "copysign"),
     "math.ctlz": R("G", "bit counting is not supported in this version"),
     "math.ctpop": R("G", "bit counting is not supported in this version"),

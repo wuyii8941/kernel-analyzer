@@ -428,6 +428,8 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
     if not m:
         raise TTIRParseError(f"line {line_no}: cannot parse {raw!r}")
     name, rest = m.group(1), m.group(2)
+    if rest.startswith(":"):  # no operands (ub.poison : T): the type section starts the rest (DSL v2 increment 8)
+        rest = " " + rest
     # Strings are kept intact by the attribute extractor; keep the raw text.
     rest_no_attrs, attrs = _extract_attr_dicts(rest)
     op = TOp(name, results, [], [], attrs, [], line_no, raw)
@@ -525,6 +527,10 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
             op.attrs["lhs"], op.attrs["rhs"] = mm.group(1), mm.group(2)
         op.operands = _values(head)
         op.operand_types, op.result_types = operand_types, result_types
+    elif name == "math.clampf":  # DSL v2 increment 8: "%v to [%min, %max] : T"
+        op.operands = _values(head.replace(" to ", ", ").replace("[", "").replace("]", ""))
+        op.operand_types = operand_types * 3
+        op.result_types = operand_types[:1]
     elif name == "tt.clampf":
         mm = re.search(r"propagateNan\s*=\s*([A-Za-z0-9_]+)", head)
         op.attrs["propagateNan"] = mm.group(1) if mm else "none"

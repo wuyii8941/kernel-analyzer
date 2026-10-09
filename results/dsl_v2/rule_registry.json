@@ -5,7 +5,7 @@
  "counts": {
   "SUPPORTED": 415,
   "REJECTED": 96,
-  "DECLARED_PREMISE": 3,
+  "DECLARED_PREMISE": 4,
   "NOT_ESTABLISHED": 1
  },
  "entries": [
@@ -3757,6 +3757,21 @@
    "containment_argument": "Any other combine region is interpreted step by step with interval semantics along the combination order of the locked lowering, read from the captured TTGIR layout (sequential within a thread in register order, butterfly over lanes, then over warps; a warp-synchronous result is the hull over its lanes).  The target is order-specific (DSL v2 rc3 02 6.2).  Premise for the reviewer: the order model (checked bit-exactly against the device for float sums by the emulator; the operand order inside a combine follows the lowering source).  No TTGIR layout -> not established, never guessed.",
    "counterexample_test": "tests/test_welford_reduction.py::test_merge_without_the_weight_factor_gets_an_order_specific_reference",
    "negative_control": "tests/test_welford_reduction.py::test_unguarded_ratio_with_zero_weights_is_not_established",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.atomic_cas",
+    "attrs": "contended",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "DECLARED_PREMISE",
+   "category": "H",
+   "internal": "cas_serialization",
+   "containment_argument": "Contended compare-and-swap (DSL v2 increment 7, rc3 02 6.9 declared order + evidence): the launch is evaluated as one serialization (program order) and again in reverse program order from the memory before the launch; only elements both orders establish and agree on keep a value (hull).  Happens-before through release / acquire with vector clocks; relaxed locks keep racing.  Premise for the reviewer: agreement of the two orders stands for every serialization (evidence, not a proof).",
+   "counterexample_test": "tests/test_signatures_locks.py::test_lock_protected_accumulation_is_established_under_the_order_premise",
+   "negative_control": "tests/test_signatures_locks.py::test_first_writer_inside_a_lock_depends_on_the_order",
    "reason": ""
   },
   {

@@ -27,6 +27,7 @@ Rules that keep the reference honest (stage summary section 4):
 from __future__ import annotations
 
 import collections
+import dataclasses
 import math
 import struct
 from dataclasses import dataclass, field
@@ -950,6 +951,8 @@ class KernelReferenceEvaluator:
     # -- functions and regions ----------------------------------------------------
 
     def _call(self, func: TFunc, args: list, state: ProgramState, env_override=None) -> list:
+        if _TRIGGER_PATH:
+            _trace("tt.func:func")
         env = env_override if env_override is not None else collections.ChainMap({})
         entry = func.body.blocks[0]
         for (name, _), value in zip(entry.args, args):
@@ -965,6 +968,8 @@ class KernelReferenceEvaluator:
             if steps > 100000:
                 raise ProgramAbort("control-flow graph did not terminate")
             for op in block.ops:
+                if op.name in ("tt.return", "cf.br", "cf.cond_br") and _TRIGGER_PATH:
+                    _trace(f"{op.name}:{rule_for(op.name).internal}")  # DSL v2 increment 8: terminators traced
                 if op.name == "tt.return":
                     return [env[v] for v in op.operands]
                 if op.name in ("cf.br", "cf.cond_br"):
@@ -998,6 +1003,8 @@ class KernelReferenceEvaluator:
             scope[name] = value
         for op in block.ops:
             if op.name in ("scf.yield", "tt.reduce.return", "tt.scan.return", "scf.condition"):
+                if _TRIGGER_PATH:
+                    _trace(f"{op.name}:{rule_for(op.name).internal}")
                 return op, [scope[v] for v in op.operands]
             self._exec(op, scope, state)
         return None, []
@@ -1099,9 +1106,13 @@ class KernelReferenceEvaluator:
         if idx.st.max() >= ST_UNDEF:
             raise ProgramAbort(f"{op.node_id}: gather index not established")
         index = idx.lo.astype(np.int64)
-        if index.min() < 0 or index.max() >= src.shape[axis]:
-            raise ProgramAbort(f"{op.node_id}: gather index out of range")
-        return src.map(lambda a: np.take_along_axis(a, index, axis=axis))
+        oob = (index < 0) | (index >= src.shape[axis])
+        out = src.map(lambda a: np.take_along_axis(a, np.clip(index, 0, src.shape[axis] - 1), axis=axis))
+        if oob.any():
+            # DSL v2 increment 8 (rc3 02 6.6, per-sample index check): an index outside the source has no value
+            out = TV(out.kind, out.elem, out.lo, out.hi, out.base, np.where(oob, ST_NE, out.st).astype(np.int8),
+                     out.cond, out.reasons | {f"not_established:gather index out of range@{op.node_id}"}, out.d)
+        return out
 
     def _op_addptr(self, op, args, env, state):
         ptr, off = args
@@ -1971,6 +1982,8 @@ class KernelReferenceEvaluator:
             scope[name] = value
         for _ in range(100000):
             for op in block.ops:
+                if op.name in ("tt.map_elementwise.return", "cf.br", "cf.cond_br") and _TRIGGER_PATH:
+                    _trace(f"{op.name}:{rule_for(op.name).internal}")
                 if op.name == "tt.map_elementwise.return":
                     return [scope[v] for v in op.operands]
                 if op.name in ("cf.br", "cf.cond_br"):
@@ -2023,6 +2036,21 @@ class KernelReferenceEvaluator:
         self._rules["histogram.exact_counts"] += 1
         return TV("i", out.elem, _wrap(counts, INT_WIDTH[out.elem]), None, None, np.zeros(nb, dtype=np.int8), cond,
                   frozenset(reasons))
+
+    def _op_math_clampf(self, op, args, env, state):
+        """math.clampf (DSL v2 increment 8): clampf(v, min, max) = maxf(minf(v, max), min), poison when min > max
+        (MLIR MathOps.td).  The NaN behaviour of its maxf / minf is not verified here, so a NaN operand is not
+        established; min > max (poison) is not established; otherwise the clamp is unambiguous."""
+        x, lo_b, hi_b = args
+        out = _clamp(dataclasses.replace(op, attrs={**op.attrs, "propagateNan": "none"}), args)
+        nan = (x.st == ST_NAN) | (lo_b.st == ST_NAN) | (hi_b.st == ST_NAN)
+        poison = (lo_b.st == ST_OK) & (hi_b.st == ST_OK) & (np.asarray(lo_b.lo) > np.asarray(hi_b.hi))
+        undecided = (lo_b.st == ST_OK) & (hi_b.st == ST_OK) & ~poison & (np.asarray(lo_b.hi) > np.asarray(hi_b.lo))
+        bad = np.broadcast_to(nan | poison | undecided, out.shape)
+        if bad.any():
+            out = TV(out.kind, out.elem, out.lo, out.hi, out.base, np.where(bad, ST_NE, out.st).astype(np.int8),
+                     out.cond, out.reasons | {f"not_established:math.clampf with NaN or min > max (poison)@{op.node_id}"})
+        return out
 
     def _op_approx_div(self, op, args, env, state):
         """tt.approx_divf and inline asm div.full.f32 (DSL v2 increment 5, rc3 02 6.5): an approximate instruction
@@ -2640,7 +2668,59 @@ class KernelReferenceEvaluator:
                              None if parts[0].base is None else st(lambda p: p.base),
                              st(lambda p: np.broadcast_to(p.st, p.shape)), st(lambda p: np.broadcast_to(p.cond, p.shape)),
                              frozenset().union(*(p.reasons for p in parts)), d))
+        if n > 1 and not any(r.d is not None for r in result):
+            result = self._check_scan_bracketing(op, args, axis, reverse, env, state, result)
         return result if len(result) > 1 else result[0]
+
+    def _check_scan_bracketing(self, op, args, axis, reverse, env, state, seq):
+        """DSL v2 increment 8: a Triton scan requires an associative combine (the tl.associative_scan precondition)
+        and the hardware brackets it as a tree.  The sequential fold is checked on these inputs against a second
+        bracketing (Hillis-Steele doubling: prefix_i <- combine(prefix_{i - 2^k}, prefix_i)); prefixes the two agree
+        on keep a value (the hull of both enclosures), the others are not established.  Agreement is evidence on these
+        inputs, recorded as the premise "combine associative"."""
+        flip = (lambda t: t.map(lambda a: np.flip(a, axis))) if reverse else (lambda t: t)
+        cur = [flip(x) for x in args]
+        n = args[0].shape[axis]
+        take = lambda t, sl: t.map(lambda a: np.take(a, sl, axis=axis))  # noqa: E731
+        shift = 1
+        while shift < n:
+            left = [take(t, np.arange(0, n - shift)) for t in cur]
+            right = [take(t, np.arange(shift, n)) for t in cur]
+            _, comb = self._run_region(op.regions[0], env, state, left + right)
+            new = []
+            for t, c in zip(cur, comb):
+                head = take(t, np.arange(0, shift))
+                cat = lambda f, h=head, c=c: np.concatenate([np.broadcast_to(f(h), h.shape),  # noqa: E731
+                                                             np.broadcast_to(f(c), c.shape)], axis=axis)
+                new.append(TV(t.kind, t.elem, cat(lambda v: v.lo), None if t.hi is None else cat(lambda v: v.hi),
+                              None if t.base is None else cat(lambda v: v.base), cat(lambda v: v.st),
+                              cat(lambda v: v.cond), t.reasons | c.reasons))
+            cur = new
+            shift *= 2
+        alt = [flip(x) for x in cur]
+        out = []
+        disagree_any = False
+        for a, b in zip(seq, alt):
+            both = (a.st == ST_OK) & (b.st == ST_OK)
+            if a.kind == "f":
+                agree = both & (a.lo <= b.hi) & (b.lo <= a.hi)
+                lo, hi = np.where(agree, np.minimum(a.lo, b.lo), a.lo), np.where(agree, np.maximum(a.hi, b.hi), a.hi)
+            else:
+                agree = both & (a.lo == b.lo)
+                lo, hi = a.lo, a.hi
+            same_special = (a.st == b.st) & (a.st != ST_OK)
+            bad = ~(agree | same_special)
+            disagree_any |= bool(bad.any())
+            reasons = a.reasons | {f"assumed:scan combine associative (the tl.associative_scan precondition; two "
+                                   f"bracketings agree on these inputs)@{op.node_id}"}
+            if bad.any():
+                reasons = reasons | {f"not_established:scan combine not associative on these inputs (two bracketings "
+                                     f"differ)@{op.node_id}"}
+            out.append(TV(a.kind, a.elem, lo, hi, a.base, np.where(bad, ST_NE, a.st).astype(np.int8), a.cond, reasons))
+        self._rules["scan.bracketing_checked"] += 1
+        if disagree_any:
+            self._rules["scan.bracketing_disagreement"] += 1
+        return out
 
     def _op_dot(self, op, args, env, state):
         a, b, c = args
@@ -2722,6 +2802,8 @@ class KernelReferenceEvaluator:
             if clash.any() and self._cas_serial:
                 # DSL v2 increment 7: one serialization of the contended CAS (program order); evaluate() checks the
                 # reverse order and keeps only what both orders agree on
+                if _TRIGGER_PATH:
+                    _trace("tt.atomic_cas:cas_serialization")
                 self._cas_contended = True
                 self._rules["execution.atomic_cas_serialized_lanes"] += int(clash.sum())
                 clash = np.zeros(clash.shape, dtype=bool)

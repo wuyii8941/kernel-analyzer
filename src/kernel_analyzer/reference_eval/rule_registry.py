@@ -28,6 +28,7 @@ T_GR = "tests/test_general_rules.py"
 T_UP = "tests/test_upstream_sources.py"
 T_EV = "tests/test_execution_validity.py"
 T_AT = "tests/test_signatures_atomics.py"
+T_LK = "tests/test_signatures_locks.py"
 REGISTRY_OUT = "results/dsl_v2/rule_registry.json"
 
 CATEGORY = {
@@ -132,6 +133,15 @@ def build() -> dict:
         "No TTGIR layout -> not established, never guessed.",
         f"{T_WF}::test_merge_without_the_weight_factor_gets_an_order_specific_reference",
         f"{T_WF}::test_unguarded_ratio_with_zero_weights_is_not_established", subregion="other"))
+    entries.append(_entry(
+        "tt.atomic_cas", "DECLARED_PREMISE", "H", "cas_serialization",
+        "Contended compare-and-swap (DSL v2 increment 7, rc3 02 6.9 declared order + evidence): the launch is "
+        "evaluated as one serialization (program order) and again in reverse program order from the memory before "
+        "the launch; only elements both orders establish and agree on keep a value (hull).  Happens-before through "
+        "release / acquire with vector clocks; relaxed locks keep racing.  Premise for the reviewer: agreement of the "
+        "two orders stands for every serialization (evidence, not a proof).",
+        f"{T_LK}::test_lock_protected_accumulation_is_established_under_the_order_premise",
+        f"{T_LK}::test_first_writer_inside_a_lock_depends_on_the_order", attrs="contended"))
     # ---- sub-regions of tt.scan
     entries.append(_entry("tt.scan", "SUPPORTED", "E", "sum", "Prefix sums enclosed with the gamma bound per prefix.",
                           f"{T_TT}::test_scan_with_a_custom_combine_region_encloses_the_exact_prefix",
