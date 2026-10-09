@@ -16,6 +16,8 @@ One JSON line per launch.  Measurement only; the official tests' own assertions 
 | `inc6_broad.jsonl` | as inc4_broad | increment 6 (`00fd9db`) | `w6_broad_run.sh` |
 | `inc6_rerun_after_capture_fixes.jsonl` | test_standard, test_tensor_descriptor, test_core -k "test_cat_nd or test_reshape or test_const" | increment 6 + capture fixes (`2e30681`) | `w6c_rerun.sh` |
 | `inc6_combined.jsonl` | inc6_broad with the rerun's files / families replaced by their rerun rows | — | — |
+| `inc7_atomic_cas_rmw.jsonl` | test_atomic_cas, test_atomic_rmw | increment 7 (`954e9af`) | `w7_capture_run.sh` |
+| `inc7_tutorial05.jsonl` | official tutorial 05 (layer norm, CAS spin lock in the backward pass) | increments 7-8 | `w7_tutorials_run.sh` |
 | `inc6_combined_summary.json` | `scripts/dsl_v2/summarize_capture.py inc6_combined.jsonl --baseline inc4_broad.jsonl` | — | — |
 
 Status per launch: `complete` (every written element established), `partial`, `aborted` (a program instance aborted),

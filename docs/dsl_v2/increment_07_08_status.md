@@ -12,7 +12,7 @@
 | serialized_add：sem 为默认（acq_rel）或 acquire 时 data 完整，记声明前提 | int32、int64 各 3 种 sem（默认、acquire、acq_rel）共 6 次启动完整，每次 2000 个 program；记了声明前提；happens-before 边各 3998 条 | 成立 |
 | serialized_add：sem 为 relaxed 或 release 时报竞争、参照未建立 | 4 次启动部分参照，原因「load 上的跨 program 竞争」 | 成立 |
 | change_value（单 program）完整 | 10/10 完整 | 成立 |
-| 教程 05 `_layer_norm_bwd_dx_fused`：DX、DW、DB、Lock、Count 完整，记声明前提 | 正在复跑（两种次序、1151 个 program，求值约 30 min） | 无法判断（未跑完） |
+| 教程 05 `_layer_norm_bwd_dx_fused`：DX、DW、DB、Lock、Count 完整，记声明前提 | 完整：1151 个 program、11,002,048 个写入元素全部建立，记了声明前提（两种次序合计求值 795 s）。同一教程的前向与 `_layer_norm_bwd_dwdb` 也完整 | 成立 |
 | 逐签名测试：锁内累加完整；先到者写入未建立；relaxed 报竞争；不释放的锁不挂起 | `test_signatures_locks.py` 8 条通过 | 成立 |
 | 回归不变 | 全套通过（合并后在主检出跑） | 成立 |
 
@@ -30,4 +30,4 @@
 ## 3. 结果文件
 
 - W1：`results/dsl_v2/contracts/coverage.json`（`.cache/dsl_v2/w1_final/` 的带追踪全套测试）。
-- CAS 捕获：`.cache/dsl_v2/w7_capture.jsonl`；教程 05 跑完后与之一起归档到 `results/dsl_v2/main_capture/`。
+- CAS 捕获：`results/dsl_v2/main_capture/inc7_atomic_cas_rmw.jsonl`；教程 05：`results/dsl_v2/main_capture/inc7_tutorial05.jsonl`。
