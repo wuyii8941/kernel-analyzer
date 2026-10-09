@@ -17,7 +17,8 @@
 | 入口 | `2_tool/src/kernel_analyzer/measure.py`（统一入口）、`check.py`（绑定入口） | 声明调用、输入来源、比较方式与预算，工具展开其余部分 |
 
 DSL v2 的实现进度、每个增量的预期与结果见 [1_experiments/dsl_v2/README.md](../1_experiments/dsl_v2/README.md)；
-外部审计的未关闭发现（F01–F07）见 [3_audits/README.md](../3_audits/README.md)，这些发现在修复前仍限制工具结论的可信范围。
+外部审计（基线 1aee15e）的七项发现 F01–F07 已按任务书修复（[3_audits/fix_1aee15e](../3_audits/fix_1aee15e/README.md)，等审阅方复核）；
+其中 F03、F04 是保守的条件性诊断，仍开放的工作包差距见该页第 4、5 节。
 
 ## 用法
 
@@ -40,7 +41,9 @@ $PY -m pytest -q 2_tool/tests                          # 测试：不得改写�
   有规格时模式 B 另报 e_sem。NVIDIA sm_90 / sm_100 与 AMD gfx942 / gfx950 的 TTGIR 操作有 CPU 语义（设备验证 0）。
 - **不能**：注册表外的操作与未登记的 libdevice / inline asm（明确拒绝）；cuBLAS / ATen 写出的输出（没有参照）；warp specialization、
   asm 内访存；保存值、反向与优化器写入作为一个自动调用图。
-- **已知局限**：自适应工作精度未实现；按 program 批处理未实现；有界路线只在校准中使用；外部审计 F01–F07 未全部关闭。
+- **已知局限**：自适应工作精度未实现（未达到请求分辨率时报告 `resolution_met = false`）；按 program 批处理未实现；声明 M 时报告逐规则
+  有界路线，没有族级控制；只在证据上核对过的前提（CAS 串行化、scan 结合性）下成立的参照单列为「complete_under_premise」，不进完整率与统计；
+  非 Triton 上游（包括值与输入相同的缓冲）一律只给 kernel 级参照。
 
 ## 目录
 
@@ -48,7 +51,7 @@ $PY -m pytest -q 2_tool/tests                          # 测试：不得改写�
 | --- | --- |
 | `2_tool/src/kernel_analyzer` | `measure.py`、`check.py` 与 `reference_eval/`（共 20 个模块） |
 | `scripts/` | `measure.py`、`run_reference_analysis.py`、`enumerate_ttir_registry.py`；`dsl_v2/`（W0 清单、捕获插件、注册表与契约生成、两层对照、AMD 阶段）；`acceptance/`（结构验收 v1.1 适配器）；`essential/contract_v3.py`、`common.py`；`general/acceptance_run.py`（冻结检查）；`reference_eval_kernels.py`、`mutation_kernels.py`（测试用 kernel） |
-| `tests/` | 46 个测试文件与 `data/`（官方 TTGIR fixture、TTIR 语料、反例） |
+| `tests/` | 46 个测试文件与 `data/`（官方 TTGIR fixture、TTIR 语料、反例）；`test_audit_findings.py` 是外部审计 F01–F07 的回归 |
 | `data/rule_registry.json` | 规则注册表（3.6.0 回归 profile；冻结的 general-v3.1 注册表在 1_experiments/general_round_v3_1） |
 | `examples/` | 统一入口声明与绑定文件示例 |
 | `docs/` | [binding_guide.md](docs/binding_guide.md)、[environments.md](docs/environments.md)、[resource_policy.md](docs/resource_policy.md)、[changelog.md](docs/changelog.md)（工具版本变更）、[rule_registry_report.md](docs/rule_registry_report.md) |

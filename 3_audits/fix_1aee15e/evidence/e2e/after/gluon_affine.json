@@ -1,0 +1,418 @@
+{
+ "tool_version": "4.0",
+ "expanded_declaration": {
+  "call": "audit_calls.py:gluon_affine",
+  "inputs": {
+   "x": {
+    "sampler": {
+     "uniform": [
+      1,
+      2
+     ]
+    },
+    "shape": [
+     1024
+    ],
+    "dtype": "float32"
+   }
+  },
+  "compare": {
+   "mode": "A",
+   "measure": [
+    "y"
+   ]
+  },
+  "budget": {
+   "cpu_seconds": 600,
+   "gpu_seconds": 600,
+   "case_timeout": 300,
+   "max_units": 6
+  },
+  "rule_classes": {
+   "fixed_mean": [
+    "R1",
+    "R5"
+   ],
+   "aligned": [
+    "R2",
+    "R3"
+   ]
+  },
+  "multiplicity": "Holm within each rule class",
+  "units": {
+   "development": 2,
+   "confirmation": 4,
+   "seed_offset": 0
+  },
+  "alpha": 0.05,
+  "reference_classes_allowed": [
+   "complete_composed"
+  ],
+  "resolution": {
+   "ulp_fraction": 0.125
+  },
+  "factors": {},
+  "factor_levels": [
+   {}
+  ],
+  "versions": {
+   "torch": "2.10.0+cu128",
+   "triton": "3.6.0",
+   "device": "NVIDIA RTX A6000",
+   "tool": "4.0",
+   "python": "3.11.16"
+  },
+  "error_budget": null,
+  "magnitude_bound": null,
+  "equivalence": null,
+  "repeats": null,
+  "repeats_policy": "launches per input: the declared repeats, else 2, or 8 when a launch has float atomics",
+  "bounded_route": "magnitude_bound (a declared population bound M on |K - G| per element, not proven by the tool) is passed to check.run: every rule reports the bounded route (Hoeffding on the per-unit projections, per rule at alpha) next to the approximate route (endpoint-conservative t); without M no distribution-free statement.  error_budget is recorded only (not applied)",
+  "equivalence_policy": "equivalence.rel (delta relative to the reference scale q_R) is passed to check.run: every fixed-direction rule reports the equivalence axis (TOST); without delta no equivalence statement",
+  "resolution_policy": "resolved_fraction is measured against resolution.ulp_fraction; no recomputation at higher precision (adaptive refinement not implemented, rc3 W2 / W6): an unmet target is reported as 'enclosure too wide' and resolution_met = false, never as met",
+  "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
+  "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) at alpha + contract_v3 cannot-judge rules (S0 = 2, N0 = 64, n_min = 16)",
+  "reference_scope": "call-level complete only when every float buffer the kernels read is a declared input's own storage (unchanged) or written by a recorded launch; otherwise kernel-level (upstream values captured) and not counted as complete for the call.  Equal values (every element found among the inputs, an all-zero buffer) are not provenance",
+  "proof_status": "complete_rate counts proved references only; elements that hold only under an unproven premise (CAS serializations, scan bracketings) are reported as complete_under_premise_rate and are not used by the statistics",
+  "source_hashes": {
+   "call": {
+    "ref": "audit_calls.py:gluon_affine",
+    "sha256": "8b8575dc5788768138cd1900dc8355d72e34ab3423278571ca9c80a0163175be"
+   }
+  },
+  "sampling_seed_sha256": "e3c2b89f3112a825876c641b747888200e96588e4f23a49ea555a9319b68b590",
+  "digest_scope": "declaration_sha256: SHA-256 of the canonical JSON of every other field of this expanded declaration",
+  "declaration_sha256": "6be738b5e1857628e9d915f12840726e8f051b229c8b5bfd63c2a49a440ee280"
+ },
+ "levels": [
+  {
+   "level": {},
+   "status": "ok",
+   "units": {
+    "development": 2,
+    "confirmation": 4
+   },
+   "notes": {
+    "outputs_not_written_by_triton": [],
+    "outputs_binding_not_established": [],
+    "outputs_modified_after_last_triton_write": [],
+    "outputs_whose_writing_programs_aborted": {},
+    "outputs_at_address_of_another_recorded_storage": [],
+    "ttir_coverage_complete": [
+     null
+    ],
+    "ir_coverage_complete": [
+     true
+    ],
+    "ir_kinds": [
+     "ttgir"
+    ]
+   },
+   "outputs": {
+    "y": {
+     "status": "evaluated",
+     "reference": {
+      "elements": 6144,
+      "complete_finite": 6144,
+      "complete_rate": 1.0,
+      "complete_under_premise": 0,
+      "complete_under_premise_rate": 0.0,
+      "width_over_ulp": {
+       "median": 0.0,
+       "p90": 0.0,
+       "max": 0.0
+      },
+      "resolution_target_ulp_fraction": 0.125,
+      "resolved_fraction": 1.0,
+      "resolution_met": true,
+      "refinement": "not implemented (rc3 W2 / W6): no recomputation at higher precision",
+      "reference_scope": "call-level",
+      "complete_rate_call_level": 1.0
+     },
+     "statistics": {
+      "fixed_mean": {
+       "rules": {
+        "R1": {
+         "judgment": "cannot judge (sample)",
+         "basis": "n = 4 < n_min = 16",
+         "holm_adjusted_p": 0.9516651683478015,
+         "alpha": 0.05,
+         "equivalence": "no equivalence bound declared: no equivalence statement",
+         "mean_projection": -7.35744833946228e-08,
+         "n": 4,
+         "mde_approximate": 3.766352681473716e-07
+        },
+        "R5": {
+         "judgment": "cannot judge (sample)",
+         "basis": "n = 4 < n_min = 16",
+         "holm_adjusted_p": 0.9597935518335075,
+         "alpha": 0.05,
+         "equivalence": "no equivalence bound declared: no equivalence statement",
+         "mean_projection": -4.298098333976364e-09,
+         "n": 4,
+         "mde_approximate": 3.267611518824137e-07
+        }
+       },
+       "summary": "cannot judge / not established (no statement about bias)"
+      },
+      "aligned": {
+       "rules": {
+        "R2": {
+         "judgment": "cannot judge (sample)",
+         "basis": "n = 4 < n_min = 16",
+         "holm_adjusted_p": 0.9516651683478015,
+         "alpha": 0.05,
+         "equivalence": "no equivalence bound declared: no equivalence statement",
+         "mean_projection": -7.35744833946228e-08,
+         "n": 4,
+         "mde_approximate": 3.766352681473716e-07
+        },
+        "R3": {
+         "judgment": "cannot judge (sample)",
+         "basis": "n = 4 < n_min = 16",
+         "holm_adjusted_p": 0.9516651683478015,
+         "alpha": 0.05,
+         "equivalence": "no equivalence bound declared: no equivalence statement",
+         "mean_projection": -5.130047933843529e-08,
+         "n": 4,
+         "mde_approximate": 3.5046559601747715e-07
+        }
+       },
+       "summary": "cannot judge / not established (no statement about bias)"
+      }
+     },
+     "guarantee": {
+      "fragment": "point (L_Q / L_C)",
+      "set_targets": []
+     },
+     "proof_status": {
+      "unproven_premises": [],
+      "meaning": "complete_fraction counts proved references only; elements that hold only under an unproven premise are counted apart and are not used by the statistics"
+     },
+     "execution": {
+      "launches_per_input": 2,
+      "units_with_different_repeats": 0,
+      "units": 6,
+      "repeat_inputs_not_reproducible": false,
+      "race_findings": [],
+      "unknown_validity_findings": [],
+      "float_atomics": false,
+      "differences_outside_float_atomic_elements": false,
+      "validity": "no finding",
+      "status": "repeated launches bitwise identical",
+      "statistics": "per launch"
+     },
+     "mixed_non_triton_sources": [],
+     "not_established_reasons_seed0": {},
+     "special_values": {
+      "elements_with_special_K_R": 0,
+      "k_vs_kr_class_mismatch": 0,
+      "examples": []
+     },
+     "failure_classes": [
+      "statistics insufficient"
+     ]
+    }
+   },
+   "timing_seconds": {
+    "setup_compile_warmup": 0.004,
+    "inputs": 0.001,
+    "capture_first_seed": 0.001,
+    "capture": 0.005,
+    "reference": 0.083,
+    "specification": 0.0,
+    "statistics": 0.028,
+    "repeat_launches": 0.004
+   },
+   "seconds": 0.1,
+   "failure_classes": [
+    "statistics insufficient"
+   ],
+   "over_budget": false
+  }
+ ],
+ "failure_counts": {
+  "semantics missing": 0,
+  "binding": 0,
+  "enclosure too wide": 0,
+  "over budget": 0,
+  "statistics insufficient": 1,
+  "set target width (L_E)": 0,
+  "unproven premise (conditional diagnosis)": 0
+ },
+ "failure_table": [
+  [
+   "call rejected the declared inputs",
+   "binding"
+  ],
+  [
+   "address outside every captured storage",
+   "binding"
+  ],
+  [
+   "invalid address",
+   "binding"
+  ],
+  [
+   "unrecognized",
+   "semantics missing"
+  ],
+  [
+   "no declared semantics",
+   "semantics missing"
+  ],
+  [
+   "unknown callee",
+   "semantics missing"
+  ],
+  [
+   "no reference rule",
+   "semantics missing"
+  ],
+  [
+   "libdevice",
+   "semantics missing"
+  ],
+  [
+   "loop bound",
+   "over budget"
+  ],
+  [
+   "unknown buffer",
+   "semantics missing"
+  ],
+  [
+   "domain of",
+   "enclosure too wide"
+  ],
+  [
+   "non-point",
+   "enclosure too wide"
+  ],
+  [
+   "float-to-int",
+   "enclosure too wide"
+  ],
+  [
+   "reinterpret",
+   "enclosure too wide"
+  ],
+  [
+   "not supported",
+   "semantics missing"
+  ],
+  [
+   "unsupported",
+   "semantics missing"
+  ],
+  [
+   "unknown op",
+   "semantics missing"
+  ],
+  [
+   "no derivative rule",
+   "semantics missing"
+  ],
+  [
+   "store through a not-established address",
+   "semantics missing"
+  ],
+  [
+   "atomic",
+   "semantics missing"
+  ],
+  [
+   "order is not declared",
+   "semantics missing"
+  ],
+  [
+   "cross-program race",
+   "semantics missing"
+  ],
+  [
+   "inline_asm",
+   "semantics missing"
+  ],
+  [
+   "binding",
+   "binding"
+  ],
+  [
+   "not written by triton",
+   "binding"
+  ],
+  [
+   "modified after",
+   "binding"
+  ],
+  [
+   "another recorded storage",
+   "binding"
+  ],
+  [
+   "out-of-bounds",
+   "binding"
+  ],
+  [
+   "outside the captured windows",
+   "binding"
+  ],
+  [
+   "non-triton intermediate",
+   "binding"
+  ],
+  [
+   "shape varies across units",
+   "binding"
+  ],
+  [
+   "pinned_load",
+   "enclosure too wide"
+  ],
+  [
+   "undecided",
+   "enclosure too wide"
+  ],
+  [
+   "overlap",
+   "enclosure too wide"
+  ],
+  [
+   "straddl",
+   "enclosure too wide"
+  ],
+  [
+   "may be zero",
+   "enclosure too wide"
+  ],
+  [
+   "may be negative",
+   "enclosure too wide"
+  ],
+  [
+   "too wide",
+   "enclosure too wide"
+  ],
+  [
+   "interval width",
+   "enclosure too wide"
+  ],
+  [
+   "timeout",
+   "over budget"
+  ],
+  [
+   "budget",
+   "over budget"
+  ],
+  [
+   "cannot judge",
+   "statistics insufficient"
+  ],
+  [
+   "unresolved_sample",
+   "statistics insufficient"
+  ]
+ ],
+ "seconds": 0.1
+}

@@ -1,0 +1,266 @@
+{
+ "tool_version": "4.0",
+ "expanded_declaration": {
+  "call": "audit_calls.py:gluon_affine",
+  "inputs": {
+   "x": {
+    "sampler": {
+     "uniform": [
+      1,
+      2
+     ]
+    },
+    "shape": [
+     1024
+    ],
+    "dtype": "float32"
+   }
+  },
+  "compare": {
+   "mode": "A",
+   "measure": [
+    "y"
+   ]
+  },
+  "budget": {
+   "cpu_seconds": 600,
+   "gpu_seconds": 600,
+   "case_timeout": 300,
+   "max_units": 6
+  },
+  "rule_classes": {
+   "fixed_mean": [
+    "R1",
+    "R5"
+   ],
+   "aligned": [
+    "R2",
+    "R3"
+   ]
+  },
+  "multiplicity": "Holm within each rule class",
+  "units": {
+   "development": 2,
+   "confirmation": 4,
+   "seed_offset": 0
+  },
+  "alpha": 0.05,
+  "reference_classes_allowed": [
+   "complete_composed"
+  ],
+  "resolution": {
+   "ulp_fraction": 0.125
+  },
+  "factors": {},
+  "factor_levels": [
+   {}
+  ],
+  "versions": {
+   "torch": "2.10.0+cu128",
+   "triton": "3.6.0",
+   "device": "NVIDIA RTX A6000",
+   "tool": "4.0",
+   "python": "3.11.16"
+  },
+  "error_budget": null,
+  "magnitude_bound": null,
+  "bounded_route": "recorded only: the entry does not apply the declared error budget (bounded_mean_test is used by the calibration); approximate route (endpoint-conservative t) for every output",
+  "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
+  "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) + contract_v3 cannot-judge rules (S0 = 2, N0 = 64, n_min = 16)",
+  "reference_scope": "call-level complete only when every non-Triton upstream value is a copy of the declared inputs; otherwise kernel-level (upstream values captured) and not counted as complete for the call",
+  "declaration_sha256": "e3c2b89f3112a825876c641b747888200e96588e4f23a49ea555a9319b68b590"
+ },
+ "levels": [
+  {
+   "level": {},
+   "status": "error",
+   "reason": "KeyError: 'ttir'",
+   "failure_class": "unclassified (tool error or new reason)",
+   "seconds": 0.0
+  }
+ ],
+ "failure_counts": {
+  "semantics missing": 0,
+  "binding": 0,
+  "enclosure too wide": 0,
+  "over budget": 0,
+  "statistics insufficient": 0,
+  "set target width (L_E)": 0,
+  "unclassified (tool error or new reason)": 1
+ },
+ "failure_table": [
+  [
+   "call rejected the declared inputs",
+   "binding"
+  ],
+  [
+   "address outside every captured storage",
+   "binding"
+  ],
+  [
+   "invalid address",
+   "binding"
+  ],
+  [
+   "unrecognized",
+   "semantics missing"
+  ],
+  [
+   "no declared semantics",
+   "semantics missing"
+  ],
+  [
+   "unknown callee",
+   "semantics missing"
+  ],
+  [
+   "no reference rule",
+   "semantics missing"
+  ],
+  [
+   "libdevice",
+   "semantics missing"
+  ],
+  [
+   "loop bound",
+   "over budget"
+  ],
+  [
+   "unknown buffer",
+   "semantics missing"
+  ],
+  [
+   "domain of",
+   "enclosure too wide"
+  ],
+  [
+   "non-point",
+   "enclosure too wide"
+  ],
+  [
+   "float-to-int",
+   "enclosure too wide"
+  ],
+  [
+   "reinterpret",
+   "enclosure too wide"
+  ],
+  [
+   "not supported",
+   "semantics missing"
+  ],
+  [
+   "unsupported",
+   "semantics missing"
+  ],
+  [
+   "unknown op",
+   "semantics missing"
+  ],
+  [
+   "no derivative rule",
+   "semantics missing"
+  ],
+  [
+   "store through a not-established address",
+   "semantics missing"
+  ],
+  [
+   "atomic",
+   "semantics missing"
+  ],
+  [
+   "order is not declared",
+   "semantics missing"
+  ],
+  [
+   "cross-program race",
+   "semantics missing"
+  ],
+  [
+   "inline_asm",
+   "semantics missing"
+  ],
+  [
+   "binding",
+   "binding"
+  ],
+  [
+   "not written by triton",
+   "binding"
+  ],
+  [
+   "modified after",
+   "binding"
+  ],
+  [
+   "another recorded storage",
+   "binding"
+  ],
+  [
+   "out-of-bounds",
+   "binding"
+  ],
+  [
+   "outside the captured windows",
+   "binding"
+  ],
+  [
+   "non-triton intermediate",
+   "binding"
+  ],
+  [
+   "shape varies across units",
+   "binding"
+  ],
+  [
+   "pinned_load",
+   "enclosure too wide"
+  ],
+  [
+   "undecided",
+   "enclosure too wide"
+  ],
+  [
+   "overlap",
+   "enclosure too wide"
+  ],
+  [
+   "straddl",
+   "enclosure too wide"
+  ],
+  [
+   "may be zero",
+   "enclosure too wide"
+  ],
+  [
+   "may be negative",
+   "enclosure too wide"
+  ],
+  [
+   "too wide",
+   "enclosure too wide"
+  ],
+  [
+   "interval width",
+   "enclosure too wide"
+  ],
+  [
+   "timeout",
+   "over budget"
+  ],
+  [
+   "budget",
+   "over budget"
+  ],
+  [
+   "cannot judge",
+   "statistics insufficient"
+  ],
+  [
+   "unresolved_sample",
+   "statistics insufficient"
+  ]
+ ],
+ "seconds": 0.0
+}

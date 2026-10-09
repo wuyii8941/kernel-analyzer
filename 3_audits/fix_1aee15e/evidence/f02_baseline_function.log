@@ -1,0 +1,100 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+__________ test_scaled_dot_keeps_the_upper_end_of_an_interval_operand __________
+
+    def test_scaled_dot_keeps_the_upper_end_of_an_interval_operand():
+        """rule level (audit probe): a = [1, 2] per element, 1 x 32, times ones, scale 2^0: every real result in [32, 64]
+        must be enclosed"""
+        a = _ftv(np.ones((1, 32)), np.full((1, 32), 2.0))
+        b = _ftv(np.ones((32, 1)))
+        c = _ftv([[0.0]], elem="f32")
+        s = _scale(127, (1, 1))
+        out = E.KernelReferenceEvaluator._scaled_dot(_evaluator(), NS(node_id="audit"), a, s, b, s, c, "bf16", "bf16")
+        assert out.st[0, 0] == ST_OK
+>       assert out.lo[0, 0] <= 32.0 and out.hi[0, 0] >= 64.0
+E       assert (np.float64(31.999999999999993) <= 32.0 and np.float64(32.000000000000014) >= 64.0)
+
+2_tool/tests/test_audit_findings.py:214: AssertionError
+________ test_scaled_dot_of_a_computed_operand_through_the_interpreter _________
+
+    def test_scaled_dot_of_a_computed_operand_through_the_interpreter():
+        """full interpreter: a = where(x / 3 * 3 == x, 2, 1).to(bf16) is 2 in real arithmetic, but the reference cannot
+        decide the comparison where x / 3 is not a float: there a is the path union [1, 2].  dot_scaled(a, bf16; b, e4m3
+        with scales) must enclose the exact rational result (independent Fraction computation, not a TTIR / TTGIR
+        cross-check)"""
+        triton = pytest.importorskip("triton")
+        import hashlib
+        import importlib.util
+    
+        import signature_harness as H
+        from triton.backends.compiler import GPUTarget
+        from triton.compiler import ASTSource
+    
+        from kernel_analyzer.reference_eval.capture import CapturedArg, CapturedLaunch
+        from kernel_analyzer.reference_eval.ttir_eval import evaluate_sequence
+    
+        src = '''import triton
+    import triton.language as tl
+    
+    
+    @triton.jit
+    def kernel(a_ptr, b_ptr, bs_ptr, out, N: tl.constexpr):
+        rm = tl.arange(0, 32)
+        rk = tl.arange(0, 64)
+        rs = tl.arange(0, 2)
+        x = tl.load(a_ptr + rm[:, None] * 64 + rk[None, :])
+        a = tl.where(x / 3.0 * 3.0 == x, 2.0, 1.0).to(tl.bfloat16)
+        b = tl.load(b_ptr + rk[:, None] * 32 + rm[None, :])
+        bsc = tl.load(bs_ptr + rm[:, None] * 2 + rs[None, :])
+        c = tl.dot_scaled(a, None, "bf16", b, bsc, "e4m3")
+        tl.store(out + rm[:, None] * 32 + rm[None, :], c)
+    '''
+        H.KDIR.mkdir(parents=True, exist_ok=True)
+        path = H.KDIR / f"audit_dscaled_{hashlib.sha256(src.encode()).hexdigest()[:10]}.py"
+        if not path.exists():
+            path.write_text(src)
+        spec = importlib.util.spec_from_file_location(path.stem, path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        sig = {"a_ptr": "*fp32", "b_ptr": "*fp8e4nv", "bs_ptr": "*u8", "out": "*fp32", "N": "constexpr"}
+        # fp8e4nv is not a 3.6.0 type on sm_86: compiled (not run) for sm_90; the reference uses the TTIR only
+        ck = triton.compile(ASTSource(fn=mod.kernel, signature=sig, constexprs={"N": 32}),
+                            target=GPUTarget("cuda", 90, 32), options={"num_warps": 4})
+        rng = np.random.default_rng(7)
+        xa = rng.integers(1, 64, (32, 64)).astype(np.float32)
+        bt = torch.tensor(np.abs(rng.standard_normal((64, 32))) * 4 + 0.5).to(torch.float8_e4m3fn)
+        b_raw, b_dec = bt.view(torch.uint8).numpy(), bt.float().numpy().astype(np.float64)
+        b_s = rng.integers(124, 131, (32, 2)).astype(np.uint8)
+        bufs = [("a_ptr", "float32", xa), ("b_ptr", "float8_e4m3fn", b_raw), ("bs_ptr", "uint8", b_s),
+                ("out", "float32", np.zeros((32, 32), np.float32))]
+        args, base = [], 1 << 20
+        for i, (name, dt, arr) in enumerate(bufs):
+            raw = np.ascontiguousarray(arr).reshape(-1).view(np.uint8).copy()
+            args.append(CapturedArg(index=i, name=name, kind="tensor", constexpr=False, signature_type=None, dtype=dt,
+                                    shape=arr.shape, stride=None, element_size=arr.itemsize, data_ptr=base * (i + 1),
+                                    storage_ptr=base * (i + 1), storage_nbytes=raw.size, storage_id=i, before=raw,
+                                    after=raw.copy()))
+        args.append(CapturedArg(index=4, name="N", kind="int", constexpr=True, signature_type="constexpr", value=32))
+        launch = CapturedLaunch(index=0, kernel_name="audit_dot_scaled", kernel_hash="", grid=(1, 1, 1), args=args,
+                                asm={k: ck.asm[k] for k in ("ttir", "ttgir", "ptx")}, cubin_sha256=None, metadata={},
+                                libtriton_sha256=None)
+        ref = evaluate_sequence([launch]).launches[0]
+        out = ref.buffers[base * 4]
+        lo, hi, st = out.lo.reshape(32, 32), out.hi.reshape(32, 32), out.st.reshape(32, 32)
+        bad = []
+        for i in range(0, 32, 5):
+            for j in range(0, 32, 5):
+                exact = sum(2 * Fr(float(b_dec[k, j])) * Fr(2) ** (int(b_s[j, k // 32]) - 127)
+                            for k in range(64))
+                if st[i, j] != ST_OK or not (Fr(float(lo[i, j])) <= exact <= Fr(float(hi[i, j]))):
+                    bad.append((i, j, float(exact), float(lo[i, j]), float(hi[i, j]), int(st[i, j])))
+>       assert not bad, bad[:4]
+E       AssertionError: [(0, 0, 1927.5625, 1191.5312499999995, 1191.5312500000005, 0), (0, 5, 641.28125, 484.9218749999999, 484.9218750000001,..., 1972.40625, 1243.7499999999995, 1243.7500000000005, 0), (0, 15, 59.03125, 41.703124999999986, 41.703125000000014, 0)]
+E       assert not [(0, 0, 1927.5625, 1191.5312499999995, 1191.5312500000005, 0), (0, 5, 641.28125, 484.9218749999999, 484.9218750000001,... 20, 620.0, 412.7499999999999, 412.7500000000001, 0), (0, 25, 155.625, 109.14062499999997, 109.14062500000003, 0), ...]
+
+2_tool/tests/test_audit_findings.py:315: AssertionError
+=========================== short test summary info ============================
+FAILED 2_tool/tests/test_audit_findings.py::test_scaled_dot_keeps_the_upper_end_of_an_interval_operand
+FAILED 2_tool/tests/test_audit_findings.py::test_scaled_dot_of_a_computed_operand_through_the_interpreter
+2 failed, 93 deselected in 3.60s
+EXIT 1

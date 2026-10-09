@@ -1,0 +1,128 @@
+{
+  "schema": "audit-recheck-v2",
+  "baseline_commit": "1aee15e9df7a45f434699b7016056e6650fdae99",
+  "scope": "isolated source functions, no GPU or full interpreter run",
+  "python": "3.11.16",
+  "numpy": "2.4.6",
+  "source": {
+    "native": true,
+    "source_ast_check": {},
+    "checkout_commit": "bb0a61065186bb4e2328811295edf681ce19602f",
+    "fixture_dependencies": []
+  },
+  "integer_case_count": 1748,
+  "integer_failures": 0,
+  "integer_failures_by_op": {},
+  "declaration_checks": [
+    {
+      "field_changed": "alpha",
+      "expanded_field_changed": true,
+      "original_digest": "fd6f22513700e770abdb14b19b2e88d4e0ac7bc4262e5a361148fe57ad6b0a20",
+      "changed_digest": "f865baf8262f3a091382be8fb4874763fe8604e18873955eff98bfb861b75b0c",
+      "digest_binds_change": true
+    },
+    {
+      "field_changed": "units",
+      "expanded_field_changed": true,
+      "original_digest": "fd6f22513700e770abdb14b19b2e88d4e0ac7bc4262e5a361148fe57ad6b0a20",
+      "changed_digest": "6f9a303669da672a92b52ad4437639fb69ae9dc5c8b96e7e61d694af10ccdb5d",
+      "digest_binds_change": true
+    },
+    {
+      "field_changed": "resolution",
+      "expanded_field_changed": true,
+      "original_digest": "fd6f22513700e770abdb14b19b2e88d4e0ac7bc4262e5a361148fe57ad6b0a20",
+      "changed_digest": "1d7d541cd7b7db1fa639953869d9e260c520a618a71a79e412fb6a2b7f4bdc31",
+      "digest_binds_change": true
+    },
+    {
+      "field_changed": "magnitude_bound",
+      "expanded_field_changed": true,
+      "original_digest": "fd6f22513700e770abdb14b19b2e88d4e0ac7bc4262e5a361148fe57ad6b0a20",
+      "changed_digest": "e7b2dfe175513ccad10b2278b9c52574cdabd43dcaebc17db4d5d220c75fbb5b",
+      "digest_binds_change": true
+    }
+  ],
+  "execution_checks": [
+    {
+      "case": "unknown_same",
+      "expected_statistics": "withheld",
+      "observed": {
+        "launches_per_input": 2,
+        "units_with_different_repeats": 0,
+        "units": 1,
+        "repeat_inputs_not_reproducible": false,
+        "race_findings": [],
+        "unknown_validity_findings": [
+          "not_established:execution validity not established"
+        ],
+        "float_atomics": false,
+        "differences_outside_float_atomic_elements": false,
+        "validity": "not established",
+        "status": "execution validity not established by the reference: statistics withheld",
+        "statistics": "withheld"
+      },
+      "matches": true
+    },
+    {
+      "case": "unknown_differ_with_atomic",
+      "expected_statistics": "withheld",
+      "observed": {
+        "launches_per_input": 2,
+        "units_with_different_repeats": 1,
+        "units": 1,
+        "repeat_inputs_not_reproducible": false,
+        "race_findings": [],
+        "unknown_validity_findings": [
+          "not_established:execution validity not established"
+        ],
+        "float_atomics": true,
+        "differences_outside_float_atomic_elements": true,
+        "validity": "not established",
+        "status": "execution validity not established by the reference: statistics withheld",
+        "statistics": "withheld"
+      },
+      "matches": true
+    },
+    {
+      "case": "known_race",
+      "expected_statistics": "withheld",
+      "observed": {
+        "launches_per_input": 2,
+        "units_with_different_repeats": 0,
+        "units": 1,
+        "repeat_inputs_not_reproducible": false,
+        "race_findings": [
+          "not_established:execution race"
+        ],
+        "unknown_validity_findings": [],
+        "float_atomics": false,
+        "differences_outside_float_atomic_elements": false,
+        "validity": "race",
+        "status": "execution race found by the reference: statistics withheld",
+        "statistics": "withheld"
+      },
+      "matches": true
+    },
+    {
+      "case": "ordinary_stable",
+      "expected_statistics": "per launch",
+      "observed": {
+        "launches_per_input": 2,
+        "units_with_different_repeats": 0,
+        "units": 1,
+        "repeat_inputs_not_reproducible": false,
+        "race_findings": [],
+        "unknown_validity_findings": [],
+        "float_atomics": false,
+        "differences_outside_float_atomic_elements": false,
+        "validity": "no finding",
+        "status": "repeated launches bitwise identical",
+        "statistics": "per launch"
+      },
+      "matches": true
+    }
+  ]
+}
+This small rule-level regression passes; other findings/E2E are not certified.
+EXIT 0

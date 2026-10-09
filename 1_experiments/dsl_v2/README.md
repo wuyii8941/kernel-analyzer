@@ -10,14 +10,14 @@
 
 | 项 | 结果 | 数据 |
 | --- | --- | --- |
-| 官方测试广泛捕获（官方主线 e50b186e，sm_86，6 个官方测试文件） | 12,766 次启动：完整 12,257、完整（集合目标）260，合计 98.05%；部分 118、中止 2、求值器错误 0 | [captures/inc15_broad.jsonl](captures/inc15_broad.jsonl.gz) |
+| 官方测试广泛捕获（官方主线 e50b186e，sm_86，6 个官方测试文件；外部审计修复版之后重跑） | 12,766 次启动：完整 11,548、完整（集合目标）260，合计 92.50%；完整（未证明前提下）709（通用 scan 703、CAS 竞争 6），与前者合计 98.05%；部分 118、中止 2、求值器错误 0 | [captures/auditfix_broad.jsonl](captures/auditfix_broad.jsonl.gz) |
 | TTIR 与 NVIDIA sm_90 / sm_100 TTGIR 两层对照 | 每个目标 7,344,666 个元素都建立，不相交 0 | [captures/inc11_cross_level_combined.jsonl](captures/inc11_cross_level_combined.jsonl.gz) |
 | TTIR 与 AMD gfx942 / gfx950 TTGIR 两层对照 | 每个目标 7,344,666 个元素都建立，不相交 0 | [captures/inc12_cross_level_amd.jsonl](captures/inc12_cross_level_amd.jsonl.gz) |
 | 官方 TTGIR 名字覆盖 | sm_90 / sm_100 观察到的 129 个操作 129/129；gfx942 / gfx950 的 5952 个 kernel 5949/5952 | [w0/](w0/) |
 | W1 规则契约（3.6.0 回归 profile） | 430/430 个支持条目三类测试齐全并有触发证据 | [w1_contracts/coverage.json](w1_contracts/coverage.json) |
 | v1.1 程序回归（非盲测） | 见增量 1 | [regression_v11/](regression_v11/) |
 | 设备验证（sm_90 / sm_100 / gfx942 / gfx950） | 0（本机只有 sm_86；这些路径只编译、在 CPU 上求值） | — |
-| 外部审计（基线 1aee15e）发现的 F01–F07 | 见 [3_audits](../../3_audits/README.md) | — |
+| 外部审计（基线 1aee15e）发现的 F01–F07 | 已修复（提交 5fe8e56），受影响的开发结果按影响表重算 | [3_audits/fix_1aee15e](../../3_audits/fix_1aee15e/README.md) |
 
 ## 增量一览
 
@@ -44,7 +44,7 @@
 ## 数据目录
 
 - [captures/](captures/)：官方测试捕获与两层对照（每行一次启动），运行脚本在 [captures/run/](captures/run/)。只保留最新版本：
-  广泛捕获 `inc15_broad`（增量 15），原子测试 `inc14_*`，两层对照 `inc11_cross_level_combined`、`inc12_cross_level_amd*`，合成捕获
+  广泛捕获 `auditfix_broad`（审计修复版后重跑；增量 15 的 `inc15_broad` 被它替换，逐启动对照 `auditfix_compare_broad_vs_inc15.json`），原子测试 `inc14_*`，两层对照 `inc11_cross_level_combined`、`inc12_cross_level_amd*`，合成捕获
   `inc13_scaled_mma_synthetic`，Gluon `inc10_gluon_test_core`，教程 `inc4_tutorials`、`inc7_tutorial05`；`inc1x_compare_*` 是逐启动比较。
 - [w0/](w0/)：W0 官方清单（源码、注册表枚举、观察到的操作，NVIDIA 与 AMD）与覆盖结果。
 - [w1_contracts/](w1_contracts/)：W1 规则契约与完成度。
@@ -70,7 +70,7 @@ general-v3.1 和结构验收 v1.1 的结果都没有改；v1.1 的计分仍只�
 
 ### 2. 回归结果（v1.1 的 32 个常规程序，主轮种子，模式 B）
 
-运行 `reg20261009T1051`，结果在 `1_experiments/dsl_v2/regression_v11/reg20261009T1051`（`SUMMARY.md`、逐程序作业）。
+运行 `reg20261009T1051`（增量 1）。外部审计修复版之后重跑为 `reg20261009T2319`，结果在 `1_experiments/dsl_v2/regression_v11/reg20261009T2319`（`SUMMARY.md`、逐程序作业）：28 个常规程序的观察、命中、K−G 判定与执行状态与 reg20261009T1051 逐程序相同；4 个竞争程序没有在 GPU 上重跑，它们在 reg20261009T1051 的作业文件放在该目录的 `carried_from_reg20261009T1051/`。下面的数字是 reg20261009T1051 的。
 
 - **预计命中 31/32。** 唯一未命中的是 prog_29：我预计它的均值与方差因 0/0 未建立，实际参照完整。实际布局下，每个线程先合并 4 个有效元素，
   再合并 4 个被 mask 的元素，不会出现两个零权重相遇。这也解释了上一轮设备输出没有 NaN。
@@ -627,7 +627,7 @@ atomic max / min 下降为整数位型上的 max / umin 原子操作，再用 `a
 
 ### 1. 评价运行
 
-增量 6 的全部官方测试文件在增量 15 的求值器下复跑（`1_experiments/dsl_v2/captures/inc15_broad.jsonl`），逐启动与增量 14 之后的状态运行
+增量 6 的全部官方测试文件在增量 15 的求值器下复跑（`inc15_broad.jsonl`；审计修复版之后被 `auditfix_broad.jsonl` 替换，原文件在提交 5fe8e56 的 `1_experiments/dsl_v2/captures/`），逐启动与增量 14 之后的状态运行
 （`inc14_broad.jsonl`）比较（`inc15_compare_broad_vs_inc14.json`）。
 
 | | 状态运行（增量 14 后） | 增量 15 |

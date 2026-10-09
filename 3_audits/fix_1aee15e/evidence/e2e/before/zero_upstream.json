@@ -1,0 +1,368 @@
+{
+ "tool_version": "4.0",
+ "expanded_declaration": {
+  "call": "audit_calls.py:zero_upstream",
+  "inputs": {
+   "x": {
+    "sampler": {
+     "uniform": [
+      1,
+      2
+     ]
+    },
+    "shape": [
+     1024
+    ],
+    "dtype": "float32"
+   }
+  },
+  "compare": {
+   "mode": "A",
+   "measure": [
+    "y"
+   ]
+  },
+  "budget": {
+   "cpu_seconds": 600,
+   "gpu_seconds": 600,
+   "case_timeout": 300,
+   "max_units": 6
+  },
+  "rule_classes": {
+   "fixed_mean": [
+    "R1",
+    "R5"
+   ],
+   "aligned": [
+    "R2",
+    "R3"
+   ]
+  },
+  "multiplicity": "Holm within each rule class",
+  "units": {
+   "development": 2,
+   "confirmation": 4,
+   "seed_offset": 0
+  },
+  "alpha": 0.05,
+  "reference_classes_allowed": [
+   "complete_composed"
+  ],
+  "resolution": {
+   "ulp_fraction": 0.125
+  },
+  "factors": {},
+  "factor_levels": [
+   {}
+  ],
+  "versions": {
+   "torch": "2.10.0+cu128",
+   "triton": "3.6.0",
+   "device": "NVIDIA RTX A6000",
+   "tool": "4.0",
+   "python": "3.11.16"
+  },
+  "error_budget": null,
+  "magnitude_bound": null,
+  "bounded_route": "recorded only: the entry does not apply the declared error budget (bounded_mean_test is used by the calibration); approximate route (endpoint-conservative t) for every output",
+  "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
+  "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) + contract_v3 cannot-judge rules (S0 = 2, N0 = 64, n_min = 16)",
+  "reference_scope": "call-level complete only when every non-Triton upstream value is a copy of the declared inputs; otherwise kernel-level (upstream values captured) and not counted as complete for the call",
+  "declaration_sha256": "dbadeb41bea517a5f463ec6f83ed527948dd3da2758b901b591bece5141edf93"
+ },
+ "levels": [
+  {
+   "level": {},
+   "status": "ok",
+   "units": {
+    "development": 2,
+    "confirmation": 4
+   },
+   "notes": {
+    "outputs_not_written_by_triton": [],
+    "outputs_binding_not_established": [],
+    "outputs_modified_after_last_triton_write": [],
+    "outputs_whose_writing_programs_aborted": {},
+    "outputs_at_address_of_another_recorded_storage": [],
+    "ttir_coverage_complete": [
+     true
+    ]
+   },
+   "outputs": {
+    "y": {
+     "status": "evaluated",
+     "reference": {
+      "elements": 6144,
+      "complete_finite": 6144,
+      "complete_rate": 1.0,
+      "width_over_ulp": {
+       "median": 0.0,
+       "p90": 0.0,
+       "max": 0.0
+      },
+      "resolution_target_ulp_fraction": 0.125,
+      "resolved_fraction": 1.0,
+      "reference_scope": "call-level",
+      "complete_rate_call_level": 1.0
+     },
+     "statistics": {
+      "fixed_mean": {
+       "rules": {
+        "R1": {
+         "judgment": "cannot judge (degenerate)",
+         "basis": "all per-unit interval endpoints are identical",
+         "holm_adjusted_p": 1.0,
+         "mean_projection": 0.0,
+         "n": 4,
+         "mde_approximate": 1e-323
+        },
+        "R5": {
+         "judgment": "not established",
+         "basis": "UNRESOLVED_MEASUREMENT: calibration direction is zero",
+         "holm_adjusted_p": null,
+         "mean_projection": null,
+         "n": null,
+         "mde_approximate": null
+        }
+       },
+       "summary": "cannot judge / not established (no statement about bias)"
+      },
+      "aligned": {
+       "rules": {
+        "R2": {
+         "judgment": "cannot judge (degenerate)",
+         "basis": "all per-unit interval endpoints are identical",
+         "holm_adjusted_p": 1.0,
+         "mean_projection": 0.0,
+         "n": 4,
+         "mde_approximate": 1e-323
+        },
+        "R3": {
+         "judgment": "cannot judge (degenerate)",
+         "basis": "all per-unit interval endpoints are identical",
+         "holm_adjusted_p": 1.0,
+         "mean_projection": 0.0,
+         "n": 4,
+         "mde_approximate": 1e-323
+        }
+       },
+       "summary": "cannot judge / not established (no statement about bias)"
+      }
+     },
+     "guarantee": {
+      "fragment": "point (L_Q / L_C)",
+      "set_targets": []
+     },
+     "mixed_non_triton_sources": [],
+     "not_established_reasons_seed0": {},
+     "special_values": {
+      "elements_with_special_K_R": 0,
+      "k_vs_kr_class_mismatch": 0,
+      "examples": []
+     },
+     "failure_classes": [
+      "statistics insufficient"
+     ]
+    }
+   },
+   "timing_seconds": {
+    "setup_compile_warmup": 0.016,
+    "inputs": 0.001,
+    "capture_first_seed": 0.001,
+    "capture": 0.005,
+    "reference": 0.081,
+    "specification": 0.0,
+    "statistics": 0.016,
+    "repeat_launches": 0.004
+   },
+   "seconds": 0.1,
+   "failure_classes": [
+    "statistics insufficient"
+   ],
+   "over_budget": false
+  }
+ ],
+ "failure_counts": {
+  "semantics missing": 0,
+  "binding": 0,
+  "enclosure too wide": 0,
+  "over budget": 0,
+  "statistics insufficient": 1,
+  "set target width (L_E)": 0
+ },
+ "failure_table": [
+  [
+   "call rejected the declared inputs",
+   "binding"
+  ],
+  [
+   "address outside every captured storage",
+   "binding"
+  ],
+  [
+   "invalid address",
+   "binding"
+  ],
+  [
+   "unrecognized",
+   "semantics missing"
+  ],
+  [
+   "no declared semantics",
+   "semantics missing"
+  ],
+  [
+   "unknown callee",
+   "semantics missing"
+  ],
+  [
+   "no reference rule",
+   "semantics missing"
+  ],
+  [
+   "libdevice",
+   "semantics missing"
+  ],
+  [
+   "loop bound",
+   "over budget"
+  ],
+  [
+   "unknown buffer",
+   "semantics missing"
+  ],
+  [
+   "domain of",
+   "enclosure too wide"
+  ],
+  [
+   "non-point",
+   "enclosure too wide"
+  ],
+  [
+   "float-to-int",
+   "enclosure too wide"
+  ],
+  [
+   "reinterpret",
+   "enclosure too wide"
+  ],
+  [
+   "not supported",
+   "semantics missing"
+  ],
+  [
+   "unsupported",
+   "semantics missing"
+  ],
+  [
+   "unknown op",
+   "semantics missing"
+  ],
+  [
+   "no derivative rule",
+   "semantics missing"
+  ],
+  [
+   "store through a not-established address",
+   "semantics missing"
+  ],
+  [
+   "atomic",
+   "semantics missing"
+  ],
+  [
+   "order is not declared",
+   "semantics missing"
+  ],
+  [
+   "cross-program race",
+   "semantics missing"
+  ],
+  [
+   "inline_asm",
+   "semantics missing"
+  ],
+  [
+   "binding",
+   "binding"
+  ],
+  [
+   "not written by triton",
+   "binding"
+  ],
+  [
+   "modified after",
+   "binding"
+  ],
+  [
+   "another recorded storage",
+   "binding"
+  ],
+  [
+   "out-of-bounds",
+   "binding"
+  ],
+  [
+   "outside the captured windows",
+   "binding"
+  ],
+  [
+   "non-triton intermediate",
+   "binding"
+  ],
+  [
+   "shape varies across units",
+   "binding"
+  ],
+  [
+   "pinned_load",
+   "enclosure too wide"
+  ],
+  [
+   "undecided",
+   "enclosure too wide"
+  ],
+  [
+   "overlap",
+   "enclosure too wide"
+  ],
+  [
+   "straddl",
+   "enclosure too wide"
+  ],
+  [
+   "may be zero",
+   "enclosure too wide"
+  ],
+  [
+   "may be negative",
+   "enclosure too wide"
+  ],
+  [
+   "too wide",
+   "enclosure too wide"
+  ],
+  [
+   "interval width",
+   "enclosure too wide"
+  ],
+  [
+   "timeout",
+   "over budget"
+  ],
+  [
+   "budget",
+   "over budget"
+  ],
+  [
+   "cannot judge",
+   "statistics insufficient"
+  ],
+  [
+   "unresolved_sample",
+   "statistics insufficient"
+  ]
+ ],
+ "seconds": 0.1
+}
