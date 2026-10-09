@@ -179,6 +179,76 @@ def ops(src: Path, llvm: Path) -> dict:
             "records": sorted(uniq.values(), key=lambda r: r["id"])}
 
 
+UPSTREAM_TD = ["mlir/Dialect/Arith/IR/ArithOps.td", "mlir/Dialect/Math/IR/MathOps.td", "mlir/Dialect/SCF/IR/SCFOps.td",
+               "mlir/Dialect/ControlFlow/IR/ControlFlowOps.td", "mlir/Dialect/GPU/IR/GPUOps.td",
+               "mlir/Dialect/LLVMIR/LLVMOps.td", "mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td", "mlir/Dialect/LLVMIR/NVVMOps.td",
+               "mlir/Dialect/LLVMIR/ROCDLOps.td", "mlir/Dialect/UB/IR/UBOps.td", "mlir/IR/BuiltinOps.td"]
+
+
+def upstream_ops(llvm: Path, triton_src: Path) -> dict:
+    """Operations of the upstream MLIR dialects the official triton-opt loads, from the pinned LLVM's TableGen files."""
+    tblgen = llvm / "bin" / "mlir-tblgen"
+    files, commands, failures, uniq = {}, [], [], {}
+    for rel in UPSTREAM_TD:
+        td = llvm / "include" / rel
+        files[rel] = sha(td.read_bytes())
+        cmd = [str(tblgen), "--print-records", str(td), f"-I{llvm / 'include'}", f"-I{td.parent}"]
+        commands.append(" ".join(cmd))
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode != 0:
+            failures.append({"file": rel, "stderr": r.stderr[-2000:]})
+            continue
+        recs = _records(r.stdout)
+        for name, rec in recs.items():
+            if "Op" not in rec["classes"] or "opName" not in rec or name.startswith("anonymous_"):
+                continue
+            dialect = recs.get(rec.get("opDialect", ""), {}).get("name", "?").strip('"')
+            ident = f"{dialect}.{rec['opName'].strip(chr(34))}" if dialect else rec["opName"].strip('"')
+            norm = {k: _resolve(rec.get(k), recs) for k in ("arguments", "results", "regions", "successors", "traits",
+                                                            "assemblyFormat", "hasCustomAssemblyFormat")}
+            uniq.setdefault(ident, {"id": ident, "defined_by": rel, "record": name, "contract": norm,
+                                    "contract_hash": sha(json.dumps(norm, sort_keys=True).encode())})
+    return {"kind": "source", "profile_id": f"official-ir-{git_head(triton_src)[:12]}",
+            "source_commit": git_head(triton_src),
+            "producer": "scripts/dsl_v2/w0_inventory.py upstream-ops (mlir-tblgen --print-records of the pinned LLVM)",
+            "receipt": {"llvm_files_sha256": files, "commands": commands, "failures": failures,
+                        "mlir_tblgen_sha256": sha(tblgen.read_bytes())},
+            "complete_for_profile": not failures,
+            "completeness_note": "ops of the upstream dialects triton-opt loads (arith, math, scf, cf, gpu, llvm incl. "
+                                 "intrinsics, nvvm, rocdl, ub, builtin); dialects not loaded are excluded",
+            "records": sorted(uniq.values(), key=lambda r: r["id"])}
+
+
+def registered(candidates: list, triton_opt: Path, ld_path: str, triton_src: Path, show: str) -> dict:
+    """Runtime registration of each candidate in the built official triton-opt: a generic-form op either parses /
+    fails verification (registered) or fails with 'unregistered operation' (not registered).  It confirms presence
+    in the build, not the contract: the contract hash is carried from the source record."""
+    import os
+    import tempfile
+    env = dict(os.environ, LD_LIBRARY_PATH=ld_path)
+    out, unreg = [], []
+    tmp = Path(tempfile.mkdtemp(dir=str(Path(__file__).resolve().parents[2] / ".cache" / "tmp")))
+    for rec in candidates:
+        f = tmp / "probe.mlir"
+        f.write_text(f'"{rec["id"]}"() : () -> ()\n')
+        r = subprocess.run([str(triton_opt), str(f)], capture_output=True, text=True, env=env)
+        if "unregistered operation" in r.stderr:
+            unreg.append(rec["id"])
+            continue
+        out.append({"id": rec["id"], "contract_hash": rec["contract_hash"],
+                    "probe": "parsed" if r.returncode == 0 else r.stderr.strip().splitlines()[0][:160]})
+    return {"kind": "registered", "profile_id": f"official-ir-{git_head(triton_src)[:12]}",
+            "source_commit": git_head(triton_src),
+            "producer": "scripts/dsl_v2/w0_inventory.py registered (generic-op probe of the built triton-opt)",
+            "receipt": {"triton_opt_sha256": sha(triton_opt.read_bytes()), "show_dialects": show,
+                        "candidates": len(candidates), "not_registered": unreg},
+            "complete_for_profile": True,
+            "completeness_note": "registration probed for every candidate of the source inventories; operations "
+                                 "registered by the build but absent from every candidate list would be missed "
+                                 "(no op enumeration API in the build)",
+            "records": out}
+
+
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -189,10 +259,31 @@ def main():
     o.add_argument("--src", type=Path, required=True)
     o.add_argument("--llvm", type=Path, required=True)
     o.add_argument("--out", type=Path, required=True)
+    u = sub.add_parser("upstream-ops")
+    u.add_argument("--src", type=Path, required=True)
+    u.add_argument("--llvm", type=Path, required=True)
+    u.add_argument("--out", type=Path, required=True)
+    g = sub.add_parser("registered")
+    g.add_argument("--src", type=Path, required=True)
+    g.add_argument("--sources", type=Path, nargs="+", required=True)
+    g.add_argument("--triton-opt", type=Path, required=True)
+    g.add_argument("--ld-path", required=True)
+    g.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     if args.out.exists():
         sys.exit(f"refusing to overwrite {args.out}")
-    out = api(args.src) if args.cmd == "api" else ops(args.src, args.llvm)
+    if args.cmd == "api":
+        out = api(args.src)
+    elif args.cmd == "ops":
+        out = ops(args.src, args.llvm)
+    elif args.cmd == "upstream-ops":
+        out = upstream_ops(args.llvm, args.src)
+    else:
+        import os
+        cands = [r for f in args.sources for r in json.loads(f.read_text())["records"]]
+        show = subprocess.run([str(args.triton_opt), "--show-dialects"], capture_output=True, text=True,
+                              env=dict(os.environ, LD_LIBRARY_PATH=args.ld_path)).stdout.strip()
+        out = registered(cands, args.triton_opt, args.ld_path, args.src, show)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(out, indent=1) + "\n")
     print(args.cmd, len(out["records"]), "records", "complete" if out["complete_for_profile"] else "not attested complete")

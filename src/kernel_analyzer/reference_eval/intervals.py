@@ -257,7 +257,7 @@ def elementary_bounds(name: str, lo: np.ndarray, hi: np.ndarray):
                 else:
                     rlo[i] = _mpfr_scalar(fn, b, _CTX_DOWN, -1)
                     rhi[i] = _mpfr_scalar(fn, a, _CTX_UP, +1)
-            except DomainError:
+            except (DomainError, OverflowError):  # 4.0: a result beyond the float64 range is not established
                 rok[i] = False
         return out_lo, out_hi, ok
     if name in ("sin", "cos", "tan", "cosh"):
@@ -274,7 +274,7 @@ def elementary_bounds(name: str, lo: np.ndarray, hi: np.ndarray):
                     r = exact(ExactInterval(float(flat_lo[i]), float(flat_hi[i])))
                 rlo[i] = rational_down(r.lo)
                 rhi[i] = rational_up(r.hi)
-            except DomainError:
+            except (DomainError, OverflowError):  # 4.0: a result beyond the float64 range is not established
                 rok[i] = False
         return out_lo, out_hi, ok
     raise KeyError(name)

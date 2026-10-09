@@ -209,8 +209,15 @@ def _classify_floats(a: np.ndarray, b: np.ndarray):
 
 
 def _ftv(elem, lo, hi, st, cond, reasons) -> TV:
-    return TV("f", elem, np.asarray(lo, dtype=np.float64), np.asarray(hi, dtype=np.float64), None,
-              np.asarray(st, dtype=np.int8), np.asarray(cond, dtype=bool), reasons)
+    lo, hi = np.asarray(lo, dtype=np.float64), np.asarray(hi, dtype=np.float64)
+    st = np.asarray(st, dtype=np.int8)
+    # A finite real value whose enclosure leaves the float64 range (e.g. exp of a huge argument) is not enclosed by
+    # [inf, inf]: such a lane is not established, never complete (found by the per-signature boundary tests, 4.0).
+    overflow = (st == ST_OK) & ~(np.isfinite(lo) & np.isfinite(hi))
+    if overflow.any():
+        st = np.where(overflow, ST_NE, st).astype(np.int8)
+        reasons = reasons | {"not_established:enclosure leaves the float64 range"}
+    return TV("f", elem, lo, hi, None, st, np.asarray(cond, dtype=bool), reasons)
 
 
 # ---------------------------------------------------------------------------
@@ -889,6 +896,19 @@ class KernelReferenceEvaluator:
     def _op_barrier(self, op, args, env, state):
         state.epoch += 1
         return None
+
+    def _op_assume(self, op, args, env, state):
+        """llvm.intr.assume (DSL v2 rc3 02 12): a compilation assumption is a premise of the program, checked on the
+        reference path of this sample.  True: no effect.  False or undecided: the reference of this program is not
+        established (an assumption the reference path violates leaves the program's meaning undefined)."""
+        cond = args[0]
+        v = np.asarray(cond.lo)
+        if (v == 1).all() and (np.asarray(cond.st) == ST_OK).all():
+            self._rules["premise.assume_held"] += 1
+            return None
+        why = "violated" if ((v == 0) & (np.asarray(cond.st) == ST_OK)).any() else "undecided"
+        self._rules[f"premise.assume_{why}"] += 1
+        raise ProgramAbort(f"{op.node_id}: not_established: compilation assumption {why} on the reference path")
 
     # ---- execution validity: conflicting accesses ----------------------------------
 
@@ -1791,6 +1811,12 @@ class KernelReferenceEvaluator:
         internal = LIBDEVICE.get(symbol)
         if internal is None:
             raise ProgramAbort(f"{op.node_id}: libdevice {symbol} has no declared semantics")
+        if any(a.kind != "f" for a in args) and internal not in ("isnan", "isinf", "isfinite", "signbit"):
+            # integer operands (e.g. __nv_abs on int32): the integer rule, never the float one (4.0: the float rule
+            # returned 0 for every lane, found by the per-signature tests)
+            if internal == "abs" and all(a.kind == "i" for a in args):
+                return _int_op("absi", op, args)
+            raise ProgramAbort(f"{op.node_id}: libdevice {symbol} with integer operands has no declared semantics")
         mode = LIBDEVICE_ROUNDING.get(symbol)
         if mode is not None:
             # A rounding-suffixed libdevice call declares the real operation; the suffix is used
@@ -2034,9 +2060,14 @@ class KernelReferenceEvaluator:
             f_lo = _ieee_eval(name, reps_lo)
             f_hi = _ieee_eval(name, reps_hi)
             s_st, s_val = _classify_floats(f_lo, f_hi)
+            # a finite limit is a point only when it is exactly representable (0, +-1, 2, ...): otherwise (atan(inf) =
+            # pi / 2) the float64 result is the rounded limit, enclosed one ulp outward (4.0, per-signature tests)
+            exact_limit = np.isin(s_val, (0.0, 1.0, -1.0, 2.0)) | (s_st != ST_OK)
+            s_lo = np.where(exact_limit, s_val, np.nextafter(s_val, -np.inf))
+            s_hi = np.where(exact_limit, s_val, np.nextafter(s_val, np.inf))
             st = np.where(special, s_st, st)
-            lo = np.where(special, s_val, lo)
-            hi = np.where(special, s_val, hi)
+            lo = np.where(special, s_lo, lo)
+            hi = np.where(special, s_hi, hi)
         if name == "copysign":
             # The sign of a NaN is not tracked, so copysign(x, NaN) is not established.
             st = np.where(np.broadcast_to(args[1].st, st.shape) == ST_NAN, ST_NE, st).astype(np.int8)
@@ -2189,8 +2220,23 @@ def _ieee_eval(name, reps):
             return 1.0 / np.sqrt(a)
         if name == "erf":
             return np.where(np.isnan(a), np.nan, np.sign(a))
+        if name == "erfc":   # erfc(+inf) = 0, erfc(-inf) = 2
+            return np.where(np.isnan(a), np.nan, 1.0 - np.sign(a))
         if name == "pow":
             return np.power(a, reps[1])
+        # limits at +-inf (C99 Annex F); 4.0, found by the per-signature boundary tests
+        if name == "asinh":
+            return np.arcsinh(a)
+        if name == "acosh":
+            return np.arccosh(a)
+        if name == "cbrt":
+            return np.cbrt(a)
+        if name == "exp10":
+            return np.power(10.0, a)
+        if name == "saturate":
+            return np.where(np.isnan(a), np.nan, np.clip(a, 0.0, 1.0))
+        if name == "tan":
+            return np.tan(a)
         if fn is None:
             return np.full(a.shape, np.nan) * np.where(np.isnan(a), 1, np.nan)
         return fn(a)

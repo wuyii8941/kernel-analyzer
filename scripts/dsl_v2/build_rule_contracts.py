@@ -105,11 +105,16 @@ def main():
                 trig |= hits.get(sig, set())
         rule_id = op + "".join(f"|{k}={e['key'][k]}" for k in ("attrs", "subregion") if e["key"][k] != "*")
         supported = status in ("SUPPORTED", "DECLARED_PREMISE")
-        tests = {"positive": sorted(t for t in trig)[:20],
-                 "boundary": [],
+        # per-signature tests carry their category in the test id (tests/test_signatures_*.py); any other test that
+        # executed the rule counts as a positive case
+        by_cat = {"boundary": sorted(t for t in trig if "-boundary]" in t),
+                  "premise": sorted(t for t in trig if "-premise_violation]" in t)}
+        tests = {"positive": sorted(t for t in trig if not ("-boundary]" in t or "-premise_violation]" in t))[:20],
+                 "boundary": by_cat["boundary"][:20],
                  # a registry counterexample test counts for this rule only if it actually executed the rule
-                 "premise_violation": [e["counterexample_test"]] if e.get("counterexample_test") and supported
-                 and e["counterexample_test"] in trig else []}
+                 "premise_violation": (by_cat["premise"] + ([e["counterexample_test"]] if e.get("counterexample_test")
+                                                            and supported and e["counterexample_test"] in trig
+                                                            else []))[:20]}
         rec = {
             "schema": "reference-dsl-v2-rule-rc3", "rule_id": rule_id,
             "language_status": "specified" if supported else "needs-specification",

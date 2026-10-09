@@ -201,6 +201,8 @@ MAPPING: dict[str, Rule] = {
     "cf.switch": R("A", "cf.switch is not supported in this version"),
     "ub.poison": S("A", "poison"),
     "gpu.barrier": S("H", "barrier"),  # orders the threads of one program (block): starts a new access epoch
+    "ttg.barrier": S("H", "barrier"),  # official main emits this for tl.debug_barrier (DSL v2 increment 3)
+    "llvm.intr.assume": S("A", "assume"),  # rc3 02 12: a per-sample premise checked on the reference path
 }
 for _name in _ELEMENTARY:
     MAPPING[f"math.{_name}"] = S("D", _name)

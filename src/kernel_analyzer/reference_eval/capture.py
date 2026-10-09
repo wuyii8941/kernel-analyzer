@@ -153,6 +153,27 @@ def _storage_copy(tensor):
     return flat.cpu()
 
 
+_TL_DTYPE = {"uint8": "uint8", "uint16": "uint16", "uint32": "uint32", "uint64": "uint64", "int8": "int8",
+             "int16": "int16", "int32": "int32", "int64": "int64", "fp16": "float16", "bf16": "bfloat16",
+             "fp32": "float32", "fp64": "float64", "fp8e4nv": "float8_e4m3fn", "fp8e5": "float8_e5m2", "int1": "bool"}
+
+
+def _unwrap(arg):
+    """A torch tensor as is; a reinterpreting wrapper (triton.runtime.jit.TensorWrapper: ``.base`` torch tensor +
+    triton ``.dtype``) as (its base tensor, the reinterpreted dtype name); otherwise (None, None).  DSL v2 increment 3:
+    the official tests pass unsigned and fp8 operands this way."""
+    import torch
+    if isinstance(arg, torch.Tensor):
+        return arg, str(arg.dtype).replace("torch.", "")
+    base = getattr(arg, "base", None)
+    dt = getattr(arg, "dtype", None)
+    if isinstance(base, torch.Tensor) and dt is not None and hasattr(arg, "data_ptr"):
+        name = _TL_DTYPE.get(getattr(dt, "name", str(dt)))
+        if name is not None:
+            return base, name
+    return None, None
+
+
 class TritonLaunchRecorder(contextlib.AbstractContextManager):
     """Record selected Triton launches while active.
 
@@ -281,10 +302,12 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
             name = names[i] if i < len(names) else f"arg{i}"
             sig = signature.get(name)
             constexpr = sig == "constexpr"
-            if isinstance(arg, torch.Tensor):
+            tensor, dtype_name = _unwrap(arg)
+            if tensor is not None:
+                arg = tensor
                 storage = arg.untyped_storage()
                 item = CapturedArg(
-                    i, name, "tensor", constexpr, sig, dtype=str(arg.dtype).replace("torch.", ""),
+                    i, name, "tensor", constexpr, sig, dtype=dtype_name,
                     shape=tuple(arg.shape), stride=tuple(arg.stride()), element_size=arg.element_size(),
                     data_ptr=arg.data_ptr(), storage_ptr=storage.data_ptr(),
                     storage_nbytes=storage.nbytes(), storage_id=storage._cdata)
@@ -350,6 +373,7 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
         torch.cuda.synchronize()
         for item, arg in zip(record.args, args):
             if item.kind == "tensor":
+                arg = _unwrap(arg)[0]
                 if item.window is None:
                     item.after = _storage_copy(arg)
                 else:

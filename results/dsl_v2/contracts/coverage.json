@@ -2,42 +2,25 @@
  "note": "W1 completion measure (rc3 04): a supported signature is complete when it has the three test categories and trigger evidence.  Boundary tests are not yet classified per rule, so that column is empty everywhere; this is the honest starting point, not a result.",
  "entries": 502,
  "supported_or_premise": 399,
- "supported_with_trigger": 61,
- "supported_with_positive": 61,
- "supported_with_premise_violation_test": 10,
- "supported_with_all_three_and_trigger": 0,
+ "supported_with_trigger": 324,
+ "supported_with_positive": 324,
+ "supported_with_premise_violation_test": 291,
+ "supported_with_all_three_and_trigger": 287,
  "rejected_or_not_established": 103,
  "gpu_dialect_entries": 66,
  "untriggered_supported": [
   "arith.bitcast",
   "arith.ceildivsi",
   "arith.ceildivui",
-  "arith.divui",
   "arith.floordivsi",
-  "arith.fptosi",
   "arith.fptoui",
   "arith.index_cast",
   "arith.index_castui",
-  "arith.maximumf",
-  "arith.maxsi",
-  "arith.maxui",
-  "arith.minimumf",
-  "arith.minsi",
-  "arith.minui",
   "arith.negf",
-  "arith.remf",
-  "arith.remui",
-  "arith.shli",
-  "arith.shrsi",
-  "arith.shrui",
-  "arith.trunci",
-  "arith.xori",
   "cf.assert",
   "cf.br",
   "cf.cond_br",
   "launch sequence (cross-launch state)",
-  "math.absf",
-  "math.absi",
   "math.acos",
   "math.acosh",
   "math.asin",
@@ -45,27 +28,19 @@
   "math.atan",
   "math.atanh",
   "math.cbrt",
-  "math.ceil",
   "math.clampf",
   "math.copysign",
-  "math.cos",
   "math.cosh",
-  "math.erf",
   "math.erfc",
-  "math.exp2",
   "math.expm1",
-  "math.floor",
-  "math.fma",
   "math.isfinite",
   "math.isinf",
   "math.isnan",
   "math.log10",
   "math.log1p",
-  "math.log2",
   "math.powf",
   "math.round",
   "math.roundeven",
-  "math.sin",
   "math.sinh",
   "math.tan",
   "math.tanh",
@@ -74,9 +49,7 @@
   "scf.for/scf.if (nested)|subregion=nested",
   "scf.yield",
   "tt.assert",
-  "tt.atomic_rmw|attrs=return unused",
   "tt.call",
-  "tt.clampf",
   "tt.elementwise_inline_asm|attrs=asm~cos\\.approx(\\.ftz)?\\.f32 \\$0, \\$1;",
   "tt.elementwise_inline_asm|attrs=asm~ex2\\.approx(\\.ftz)?\\.f32 \\$0, \\$1;",
   "tt.elementwise_inline_asm|attrs=asm~lg2\\.approx(\\.ftz)?\\.f32 \\$0, \\$1;",
@@ -88,241 +61,12 @@
   "tt.elementwise_inline_asm|attrs=asm~sqrt\\.approx(\\.ftz)?\\.f32 \\$0, \\$1;",
   "tt.elementwise_inline_asm|attrs=asm~sqrt\\.rn(\\.ftz)?\\.f32 \\$0, \\$1;",
   "tt.elementwise_inline_asm|attrs=asm~tanh\\.approx\\.f32 \\$0, \\$1;",
-  "tt.extern_elementwise|attrs=symbol=__nv_abs",
-  "tt.extern_elementwise|attrs=symbol=__nv_absf",
-  "tt.extern_elementwise|attrs=symbol=__nv_acos",
-  "tt.extern_elementwise|attrs=symbol=__nv_acosf",
-  "tt.extern_elementwise|attrs=symbol=__nv_acosh",
-  "tt.extern_elementwise|attrs=symbol=__nv_acoshf",
-  "tt.extern_elementwise|attrs=symbol=__nv_asin",
-  "tt.extern_elementwise|attrs=symbol=__nv_asinf",
-  "tt.extern_elementwise|attrs=symbol=__nv_asinh",
-  "tt.extern_elementwise|attrs=symbol=__nv_asinhf",
-  "tt.extern_elementwise|attrs=symbol=__nv_atan",
-  "tt.extern_elementwise|attrs=symbol=__nv_atanf",
-  "tt.extern_elementwise|attrs=symbol=__nv_atanh",
-  "tt.extern_elementwise|attrs=symbol=__nv_atanhf",
-  "tt.extern_elementwise|attrs=symbol=__nv_cbrt",
-  "tt.extern_elementwise|attrs=symbol=__nv_cbrtf",
-  "tt.extern_elementwise|attrs=symbol=__nv_ceil",
-  "tt.extern_elementwise|attrs=symbol=__nv_ceilf",
-  "tt.extern_elementwise|attrs=symbol=__nv_cos",
-  "tt.extern_elementwise|attrs=symbol=__nv_cosf",
-  "tt.extern_elementwise|attrs=symbol=__nv_cosh",
-  "tt.extern_elementwise|attrs=symbol=__nv_coshf",
-  "tt.extern_elementwise|attrs=symbol=__nv_dadd_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_dadd_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_dadd_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_dadd_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_dadd_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_dadd_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_dadd_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_dadd_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_ddiv_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_ddiv_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_ddiv_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_ddiv_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_ddiv_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_ddiv_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_ddiv_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_ddiv_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_div_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_dmul_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_dmul_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_dmul_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_dmul_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_dmul_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_dmul_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_dmul_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_dmul_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_drcp_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_drcp_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_drcp_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_drcp_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_drcp_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_drcp_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_drcp_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_drcp_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsub_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsub_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsub_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsub_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsub_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsub_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsub_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_dsub_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_erf",
-  "tt.extern_elementwise|attrs=symbol=__nv_erfc",
-  "tt.extern_elementwise|attrs=symbol=__nv_erfcf",
-  "tt.extern_elementwise|attrs=symbol=__nv_erff",
-  "tt.extern_elementwise|attrs=symbol=__nv_exp",
-  "tt.extern_elementwise|attrs=symbol=__nv_exp10f",
-  "tt.extern_elementwise|attrs=symbol=__nv_exp2",
-  "tt.extern_elementwise|attrs=symbol=__nv_exp2f",
-  "tt.extern_elementwise|attrs=symbol=__nv_expf",
-  "tt.extern_elementwise|attrs=symbol=__nv_expm1",
-  "tt.extern_elementwise|attrs=symbol=__nv_expm1f",
-  "tt.extern_elementwise|attrs=symbol=__nv_fabs",
-  "tt.extern_elementwise|attrs=symbol=__nv_fabsf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fadd_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_fadd_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_fadd_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fadd_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fadd_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_fadd_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_fadd_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fadd_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_absf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_acosf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_acoshf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_asinf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_asinhf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_atanf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_atanhf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_cbrtf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_ceilf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_cosf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_coshf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_erfcf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_erff",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_exp10f",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_exp2f",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_expf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_expm1f",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_fabsf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_floorf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_log10f",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_log1pf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_log2f",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_logf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_powf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_roundf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_rsqrtf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_sinf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_sinhf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_sqrtf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_tanf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_tanhf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fast_truncf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fdiv_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_fdiv_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_fdiv_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fdiv_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fdiv_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_fdiv_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_fdiv_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fdiv_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fdividef",
-  "tt.extern_elementwise|attrs=symbol=__nv_finitef",
-  "tt.extern_elementwise|attrs=symbol=__nv_floor",
-  "tt.extern_elementwise|attrs=symbol=__nv_floorf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fma",
-  "tt.extern_elementwise|attrs=symbol=__nv_fma_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_fma_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_fma_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fma_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fma_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_fma_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_fma_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fma_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmaf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmaf_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmaf_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmaf_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmaf_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmaf_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmaf_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmaf_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmaf_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmax",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmaxf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmin",
-  "tt.extern_elementwise|attrs=symbol=__nv_fminf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmodf",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmul_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmul_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmul_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fmul_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_frcp_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_frcp_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_frcp_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_frcp_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_frcp_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_frcp_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_frcp_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_frcp_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsub_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsub_rd",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsub_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsub_rn",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsub_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsub_ru",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsub_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_fsub_rz",
-  "tt.extern_elementwise|attrs=symbol=__nv_isfinited",
-  "tt.extern_elementwise|attrs=symbol=__nv_isinfd",
-  "tt.extern_elementwise|attrs=symbol=__nv_isinff",
-  "tt.extern_elementwise|attrs=symbol=__nv_isnand",
-  "tt.extern_elementwise|attrs=symbol=__nv_isnanf",
-  "tt.extern_elementwise|attrs=symbol=__nv_log",
-  "tt.extern_elementwise|attrs=symbol=__nv_log10",
-  "tt.extern_elementwise|attrs=symbol=__nv_log10f",
-  "tt.extern_elementwise|attrs=symbol=__nv_log1p",
-  "tt.extern_elementwise|attrs=symbol=__nv_log1pf",
-  "tt.extern_elementwise|attrs=symbol=__nv_log2",
-  "tt.extern_elementwise|attrs=symbol=__nv_log2f",
-  "tt.extern_elementwise|attrs=symbol=__nv_logf",
-  "tt.extern_elementwise|attrs=symbol=__nv_nearbyintf",
-  "tt.extern_elementwise|attrs=symbol=__nv_pow",
-  "tt.extern_elementwise|attrs=symbol=__nv_powf",
-  "tt.extern_elementwise|attrs=symbol=__nv_rcp64h",
-  "tt.extern_elementwise|attrs=symbol=__nv_rintf",
-  "tt.extern_elementwise|attrs=symbol=__nv_round",
-  "tt.extern_elementwise|attrs=symbol=__nv_roundf",
-  "tt.extern_elementwise|attrs=symbol=__nv_rsqrt",
-  "tt.extern_elementwise|attrs=symbol=__nv_rsqrtf",
-  "tt.extern_elementwise|attrs=symbol=__nv_saturatef",
-  "tt.extern_elementwise|attrs=symbol=__nv_sin",
-  "tt.extern_elementwise|attrs=symbol=__nv_sinf",
-  "tt.extern_elementwise|attrs=symbol=__nv_sinh",
-  "tt.extern_elementwise|attrs=symbol=__nv_sinhf",
-  "tt.extern_elementwise|attrs=symbol=__nv_sqrt",
-  "tt.extern_elementwise|attrs=symbol=__nv_sqrtf",
-  "tt.extern_elementwise|attrs=symbol=__nv_tan",
-  "tt.extern_elementwise|attrs=symbol=__nv_tanf",
-  "tt.extern_elementwise|attrs=symbol=__nv_tanh",
-  "tt.extern_elementwise|attrs=symbol=__nv_tanhf",
-  "tt.extern_elementwise|attrs=symbol=__nv_trunc",
-  "tt.extern_elementwise|attrs=symbol=__nv_truncf",
   "tt.func",
   "tt.gather",
-  "tt.get_num_programs",
-  "tt.int_to_ptr",
-  "tt.join",
   "tt.load/tt.store (alias)|attrs=alias",
-  "tt.precise_divf",
-  "tt.precise_sqrt",
   "tt.print",
-  "tt.ptr_to_int",
   "tt.reduce.return",
   "tt.reduce|subregion=and",
-  "tt.reduce|subregion=argmax",
   "tt.reduce|subregion=argmin",
   "tt.reduce|subregion=max_int",
   "tt.reduce|subregion=max_nan",
@@ -330,21 +74,14 @@
   "tt.reduce|subregion=max_uint",
   "tt.reduce|subregion=min_int",
   "tt.reduce|subregion=min_nan",
-  "tt.reduce|subregion=min_num",
   "tt.reduce|subregion=min_select",
   "tt.reduce|subregion=min_uint",
   "tt.reduce|subregion=or",
   "tt.reduce|subregion=prod",
   "tt.reduce|subregion=prod_int",
-  "tt.reduce|subregion=sum_int",
-  "tt.reduce|subregion=xor",
   "tt.return",
   "tt.scan.return",
   "tt.scan|subregion=generic fold (several operands)",
-  "tt.scan|subregion=sum",
-  "tt.scan|subregion=sum_int",
-  "tt.split",
-  "tt.trans",
   "tt.unsplat",
   "ub.poison"
  ],
@@ -355,8 +92,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -405,7 +142,7 @@
    "category": "G",
    "supported": true,
    "positive": true,
-   "boundary": false,
+   "boundary": true,
    "premise_violation": true,
    "triggered": true
   },
@@ -444,10 +181,10 @@
    "status": "SUPPORTED",
    "category": "C",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.descriptor_gather",
@@ -545,8 +282,8 @@
    "category": "I",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -584,10 +321,10 @@
    "status": "SUPPORTED",
    "category": "H",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.get_program_id",
@@ -614,20 +351,20 @@
    "status": "SUPPORTED",
    "category": "H",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.join",
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.load",
@@ -635,7 +372,7 @@
    "category": "H",
    "supported": true,
    "positive": true,
-   "boundary": false,
+   "boundary": true,
    "premise_violation": true,
    "triggered": true
   },
@@ -645,8 +382,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -704,20 +441,20 @@
    "status": "SUPPORTED",
    "category": "B",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.precise_sqrt",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.print",
@@ -734,10 +471,10 @@
    "status": "SUPPORTED",
    "category": "H",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.reduce",
@@ -745,8 +482,8 @@
    "category": "E",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -805,8 +542,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -814,10 +551,10 @@
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.store",
@@ -825,7 +562,7 @@
    "category": "H",
    "supported": true,
    "positive": true,
-   "boundary": false,
+   "boundary": true,
    "premise_violation": true,
    "triggered": true
   },
@@ -834,10 +571,10 @@
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.unsplat",
@@ -855,8 +592,8 @@
    "category": "B",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -865,8 +602,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -885,8 +622,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -925,7 +662,7 @@
    "category": "C",
    "supported": true,
    "positive": true,
-   "boundary": false,
+   "boundary": true,
    "premise_violation": true,
    "triggered": true
   },
@@ -935,8 +672,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -945,8 +682,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -955,8 +692,8 @@
    "category": "B",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -965,8 +702,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -974,10 +711,10 @@
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "arith.extf",
@@ -985,8 +722,8 @@
    "category": "F",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -995,8 +732,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1005,8 +742,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1024,10 +761,10 @@
    "status": "SUPPORTED",
    "category": "C",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "arith.fptoui",
@@ -1064,10 +801,10 @@
    "status": "SUPPORTED",
    "category": "C",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "arith.maxnumf",
@@ -1075,8 +812,8 @@
    "category": "C",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1084,35 +821,15 @@
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "arith.maxui",
    "status": "SUPPORTED",
    "category": "A",
-   "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
-  },
-  {
-   "rule_id": "arith.minimumf",
-   "status": "SUPPORTED",
-   "category": "C",
-   "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
-  },
-  {
-   "rule_id": "arith.minnumf",
-   "status": "SUPPORTED",
-   "category": "C",
    "supported": true,
    "positive": true,
    "boundary": false,
@@ -1120,24 +837,44 @@
    "triggered": true
   },
   {
+   "rule_id": "arith.minimumf",
+   "status": "SUPPORTED",
+   "category": "C",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
+   "rule_id": "arith.minnumf",
+   "status": "SUPPORTED",
+   "category": "C",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
    "rule_id": "arith.minsi",
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "arith.minui",
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "arith.mulf",
@@ -1145,8 +882,8 @@
    "category": "B",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1155,8 +892,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1195,8 +932,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1204,10 +941,10 @@
    "status": "SUPPORTED",
    "category": "C",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "arith.remsi",
@@ -1215,8 +952,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1224,10 +961,10 @@
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "arith.scaling_extf",
@@ -1255,7 +992,7 @@
    "category": "C",
    "supported": true,
    "positive": true,
-   "boundary": false,
+   "boundary": true,
    "premise_violation": true,
    "triggered": true
   },
@@ -1264,30 +1001,30 @@
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "arith.shrsi",
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "arith.shrui",
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "arith.sitofp",
@@ -1295,7 +1032,7 @@
    "category": "F",
    "supported": true,
    "positive": true,
-   "boundary": false,
+   "boundary": true,
    "premise_violation": true,
    "triggered": true
   },
@@ -1305,8 +1042,8 @@
    "category": "B",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1315,8 +1052,8 @@
    "category": "A",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1325,8 +1062,8 @@
    "category": "F",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1334,10 +1071,10 @@
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "arith.uitofp",
@@ -1354,30 +1091,30 @@
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "math.absf",
    "status": "SUPPORTED",
    "category": "B",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "math.absi",
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "math.acos",
@@ -1464,10 +1201,10 @@
    "status": "SUPPORTED",
    "category": "C",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "math.clampf",
@@ -1494,10 +1231,10 @@
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "math.cosh",
@@ -1544,10 +1281,10 @@
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "math.erfc",
@@ -1565,8 +1302,8 @@
    "category": "D",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1574,10 +1311,10 @@
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "math.expm1",
@@ -1594,20 +1331,20 @@
    "status": "SUPPORTED",
    "category": "C",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "math.fma",
    "status": "SUPPORTED",
    "category": "B",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "math.fpowi",
@@ -1675,8 +1412,8 @@
    "category": "D",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1704,10 +1441,10 @@
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "math.powf",
@@ -1745,8 +1482,8 @@
    "category": "D",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -1754,10 +1491,10 @@
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "math.sinh",
@@ -1775,8 +1512,8 @@
    "category": "D",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -2675,8 +2412,8 @@
    "category": "E",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -2714,10 +2451,10 @@
    "status": "SUPPORTED",
    "category": "E",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.reduce|subregion=min_uint",
@@ -2765,8 +2502,8 @@
    "category": "E",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -2774,20 +2511,20 @@
    "status": "SUPPORTED",
    "category": "E",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.reduce|subregion=xor",
    "status": "SUPPORTED",
    "category": "E",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.reduce|subregion=max_select",
@@ -2814,10 +2551,10 @@
    "status": "SUPPORTED",
    "category": "E",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.reduce|subregion=argmin",
@@ -2854,20 +2591,20 @@
    "status": "SUPPORTED",
    "category": "E",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.scan|subregion=sum_int",
    "status": "SUPPORTED",
    "category": "A",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.scan|subregion=generic fold (one operand)",
@@ -2894,180 +2631,180 @@
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_absf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_acos",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_acosf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_acosh",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_acoshf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_asin",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_asinf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_asinh",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_asinhf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_atan",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_atanf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_atanh",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_atanhf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_cbrt",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_cbrtf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_ceil",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_ceilf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_copysignf",
@@ -3075,8 +2812,8 @@
    "category": "D",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -3084,1010 +2821,1010 @@
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_cosf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_cosh",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_coshf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dadd_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dadd_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dadd_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dadd_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_ddiv_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_ddiv_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_ddiv_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_ddiv_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_div_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dmul_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dmul_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dmul_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dmul_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_drcp_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_drcp_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_drcp_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_drcp_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsub_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsub_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsub_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsub_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_erf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_erfc",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_erfcf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_erff",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_exp",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_exp10f",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_exp2",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_exp2f",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_expf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_expm1",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_expm1f",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fabs",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fabsf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fadd_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fadd_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fadd_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fadd_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_absf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_acosf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_acoshf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_asinf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_asinhf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_atanf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_atanhf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_cbrtf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_ceilf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_cosf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_coshf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_erfcf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_erff",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_exp10f",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_exp2f",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_expf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_expm1f",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_fabsf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_floorf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_log10f",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_log1pf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_log2f",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_logf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_powf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_roundf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_rsqrtf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_sinf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_sinhf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_sqrtf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_tanf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_tanhf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_truncf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fdiv_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fdiv_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fdiv_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fdiv_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fdividef",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_finitef",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_floor",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_floorf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fma",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fma_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fma_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fma_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fma_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmaf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmaf_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmaf_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmaf_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmaf_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmax",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmaxf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmin",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fminf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmodf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmul_rd",
@@ -4095,8 +3832,8 @@
    "category": "D",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -4104,10 +3841,10 @@
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmul_ru",
@@ -4115,8 +3852,8 @@
    "category": "D",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -4124,360 +3861,360 @@
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_frcp_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_frcp_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_frcp_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_frcp_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsub_rd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsub_rn",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsub_ru",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsub_rz",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_isfinited",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_isinfd",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_isinff",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_isnand",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_isnanf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_log",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_log10",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_log10f",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_log1p",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_log1pf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_log2",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_log2f",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_logf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_nearbyintf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_pow",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_powf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_rcp64h",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_rintf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_round",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_roundf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_rsqrt",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_rsqrtf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_saturatef",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_signbitf",
@@ -4485,8 +4222,8 @@
    "category": "D",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -4494,520 +4231,520 @@
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_sinf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_sinh",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_sinhf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_sqrt",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_sqrtf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_tan",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_tanf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_tanh",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_tanhf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_trunc",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_truncf",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dadd_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dadd_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dadd_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dadd_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_ddiv_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_ddiv_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_ddiv_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_ddiv_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dmul_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dmul_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dmul_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dmul_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_drcp_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_drcp_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_drcp_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_drcp_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsqrt_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsub_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsub_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsub_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_dsub_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fadd_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fadd_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fadd_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fadd_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fdiv_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fdiv_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fdiv_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fdiv_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fma_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fma_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fma_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fma_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmaf_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmaf_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmaf_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmaf_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmul_rd",
@@ -5015,8 +4752,8 @@
    "category": "F",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -5024,10 +4761,10 @@
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fmul_ru",
@@ -5035,8 +4772,8 @@
    "category": "F",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -5044,130 +4781,130 @@
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_frcp_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_frcp_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_frcp_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_frcp_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsqrt_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsub_rd",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsub_rn",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsub_ru",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fsub_rz",
    "status": "SUPPORTED",
    "category": "F",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=other",
@@ -5304,10 +5041,10 @@
    "status": "SUPPORTED",
    "category": "H",
    "supported": true,
-   "positive": false,
+   "positive": true,
    "boundary": false,
    "premise_violation": false,
-   "triggered": false
+   "triggered": true
   },
   {
    "rule_id": "tt.atomic_rmw|attrs=return used",
