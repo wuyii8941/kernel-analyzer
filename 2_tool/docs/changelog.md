@@ -19,6 +19,27 @@ v1.1 的计分只绑定运行 r20261008T2030。
   - 新测试只在 CPU 上求值编译产物（`triton.compile`，不启动），有竞争的 kernel 从不运行。
 - 注册表写到 `2_tool/data/rule_registry.json`（`2_tool/scripts/dsl_v2/build_rule_registry.py`）；`pre-reorg-20261009:results/general/` 下的 v3.1 注册表冻结不改。
 
+### 外部审计（基线 1aee15e）修复版，2026-10-09
+
+逐项处理、修复前后测试与证据见 [3_audits/fix_1aee15e](../../3_audits/fix_1aee15e/README.md)。
+
+- **F01 整数精确域**：无符号除法 / 余数 / 向上取整除 / 逻辑右移 / 最值与无符号比较在 uint64 上计算（64 位的最高位不再当符号）；
+  有符号除法族按 uint64 绝对值计算（INT64_MIN 的绝对值和取负不再在宿主上溢出）。值、下标、地址、条件都走 `_int_op` / `_cmpi`。
+- **F02 scaled dot**：非 e2m1 操作数传完整上下界（原来只取下端）；scale 的条件标记进入输出；`amdg.scaled_upcast_fp8` 同样保留上端；
+  只有一侧 scale 的 `tt.dot_scaled`（如 bf16 × e4m3）按自定义语法区分操作数（原来中止）。
+- **F03 证明状态轴**：只在证据上核对过的前提（CAS 的串行化一致、scan 的两种括号一致）下成立的元素记「complete_under_premise」，
+  不进无条件完整率，也不进统计；前提随读写传到后续启动。CAS 在不超过 4 个 program 时求值全部 program 顺序（审计的三 program 非交换锁
+  反例因此记未建立），否则仍是正序与逆序。其余 `assumed:` 记为 lowering 事实 / 可信顺序目标（清单交审阅方）。
+- **F04 调用级来源**：删除「每个元素的位模式都在输入中」与「全零」作为复制证明；只有声明输入本身的存储（未被就地改写）算输入，
+  其余非 Triton 上游一律保持 kernel 级；每个 seed 都检查；原子更新 / CAS / poll 读取目标时记为读取（原来 ATen 填充的累加器不被记为上游）。
+- **F05 Gluon 统一入口**：`check.run` 的覆盖检查、原子识别与求值用同一 IR 选择（`launch_ir`：TTIR，Gluon 为 TTGIR），报告 `ir_kind`。
+- **F06 声明摘要**：`declaration_sha256` 覆盖整个展开声明（采样划分与 seed、alpha、因素、分辨率、M、δ、重复次数、统计族、策略、版本与
+  call / 输入生成器 / 规格源码的内容哈希）；输入采样改用 `sampling_seed_sha256`（与旧摘要同式，样本不变）。alpha、δ（新字段
+  `equivalence.rel`）、重复次数（新字段 `repeats`）与 M 传入 `check.run` 并出现在结果中；没有 δ 时写明不作等价陈述；分辨率报告
+  `resolution_met`，自适应提高精度未实现（W2 / W6）。
+- **F07 统计准入**：执行有效性未建立（线程映射不可得、进展未证明）时停止统计；重复启动的差异只有全部落在浮点原子写入的元素上才按输入内
+  平均；竞争原因码按生产者列表结构化（补上原来漏掉的「cross-program write race」「cross-program race on load」「conflicting lanes」）。
+
 ## 3.1（2026-10-08，标签 `general-v3.1`）——审计修正（替代 general-v3.0 作为第 5 项的冻结版本）
 
 冻结：提交 d6e177e，src 树 `cd21ef56cf46eb3cff2c00c50b8918b30a604d26`。

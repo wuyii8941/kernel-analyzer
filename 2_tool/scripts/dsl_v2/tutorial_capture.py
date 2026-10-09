@@ -31,7 +31,7 @@ def main():
     ap.add_argument("tutorials", nargs="+", type=Path)
     a = ap.parse_args()
     from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder
-    from kernel_analyzer.reference_eval.ttir_eval import ST_NINF, evaluate_sequence
+    from kernel_analyzer.reference_eval.ttir_eval import evaluate_sequence
     TritonLaunchRecorder.install_hook()
     for tut in a.tutorials:
         seen = collections.Counter()
@@ -64,14 +64,18 @@ def main():
             t1 = time.time()
             try:
                 ref = evaluate_sequence([launch]).launches[0]
-                written = complete = 0
-                for buf in ref.buffers.values():
+                written = complete = premised = 0
+                for ident, buf in ref.buffers.items():
                     w = np.asarray(buf.written)
                     written += int(w.sum())
-                    complete += int((w & (np.asarray(buf.st) <= ST_NINF)).sum())  # special values are established
-                row.update(written=written, complete=complete,
+                    complete += int(ref.complete(ident).sum())  # special values are established
+                    premised += int(ref.under_premise(ident).sum())  # apart: unproven premise (audit F03)
+                row.update(written=written, complete=complete, complete_under_premise=premised,
                            status="aborted" if ref.aborted else ("complete" if written and complete == written
-                                                                 else ("partial" if written else "nothing written")),
+                                                                 else ("complete under premise" if written and
+                                                                       complete + premised == written
+                                                                       else ("partial" if written
+                                                                             else "nothing written"))),
                            aborted=sorted(set(ref.aborted.values()))[:3],
                            reasons=sorted(k for k in ref.reasons if k.startswith("not_established"))[:5],
                            set_reasons=sorted(k for k in ref.reasons if k.startswith("set:"))[:5],

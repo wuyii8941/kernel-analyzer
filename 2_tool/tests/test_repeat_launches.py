@@ -10,10 +10,11 @@ import numpy as np
 from kernel_analyzer.check import _execution_status, _within_input_mean_residual
 
 
-def _row(seed, k, reps, r_lo, r_hi, reasons=None):
+def _row(seed, k, reps, r_lo, r_hi, reasons=None, atomic=False):
     n = k.size
     return {"seed": seed, "k": k, "k_reps": reps, "r_lo": r_lo, "r_hi": r_hi, "ok": np.ones(n, bool),
-            "written": np.ones(n, bool), "repeat_inputs_differ": False, "reasons": reasons or {}}
+            "written": np.ones(n, bool), "repeat_inputs_differ": False, "reasons": reasons or {},
+            "atomic_written": np.full(n, atomic, bool)}
 
 
 def test_bitwise_identical_repeats_keep_per_launch_statistics():
@@ -23,13 +24,14 @@ def test_bitwise_identical_repeats_keep_per_launch_statistics():
 
 
 def test_atomic_programs_with_different_repeats_are_averaged_within_the_input():
+    # the differing elements are written by float atomics (element-level evidence since the audit F07 fix)
     rng = np.random.default_rng(0)
     rows = []
     for s in range(3):
         r_lo = rng.standard_normal(4)
         r_hi = r_lo + 1e-9
         ks = [r_lo + rng.standard_normal(4) * 1e-6 for _ in range(8)]
-        rows.append(_row(s, ks[0], ks[1:], r_lo, r_hi))
+        rows.append(_row(s, ks[0], ks[1:], r_lo, r_hi, atomic=True))
     st = _execution_status(rows, [{"float_atomics": True}], 8)
     assert st["statistics"] == "within-input mean" and st["launches_per_input"] == 8
     lo, hi = _within_input_mean_residual(rows)

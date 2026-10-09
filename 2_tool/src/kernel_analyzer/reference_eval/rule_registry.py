@@ -136,10 +136,12 @@ def build() -> dict:
     entries.append(_entry(
         "tt.atomic_cas", "DECLARED_PREMISE", "H", "cas_serialization",
         "Contended compare-and-swap (DSL v2 increment 7, rc3 02 6.9 declared order + evidence): the launch is "
-        "evaluated as one serialization (program order) and again in reverse program order from the memory before "
-        "the launch; only elements both orders establish and agree on keep a value (hull).  Happens-before through "
-        "release / acquire with vector clocks; relaxed locks keep racing.  Premise for the reviewer: agreement of the "
-        "two orders stands for every serialization (evidence, not a proof).",
+        "evaluated in every program order when it has at most 4 program instances, otherwise in program order and "
+        "reverse program order, each from the memory before the launch; only elements every evaluated order "
+        "establishes and agrees on keep a value (hull), reported as complete under the premise (proof status axis, "
+        "audit F03), never in the unconditional complete class.  Happens-before through release / acquire with vector "
+        "clocks; relaxed locks keep racing.  Premise for the reviewer: agreement of the evaluated orders stands for "
+        "every serialization (evidence, not a proof: a program may enter several critical sections).",
         f"{T_LK}::test_lock_protected_accumulation_is_established_under_the_order_premise",
         f"{T_LK}::test_first_writer_inside_a_lock_depends_on_the_order", attrs="contended"))
     # ---- sub-regions of tt.scan
@@ -151,9 +153,11 @@ def build() -> dict:
     for sub in ("generic fold (one operand)", "generic fold (several operands)"):
         entries.append(_entry(
             "tt.scan", "DECLARED_PREMISE", "E", "generic_fold",
-            "The combine region is folded in scan order with interval semantics; exact in the reals only if the "
-            "combiner is associative, which Triton's associative_scan requires but this code does not check "
-            "(premise for the reviewer).",
+            "The combine region is folded in scan order with interval semantics and checked against a second "
+            "bracketing (Hillis-Steele doubling) on the same inputs; prefixes the two disagree on are not "
+            "established.  Exact in the reals only if the combiner is associative (the tl.associative_scan "
+            "precondition): agreement on these inputs is evidence, not a proof, so the results are reported as "
+            "complete under the premise (proof status axis, audit F03; premise for the reviewer).",
             f"{T_TT}::test_scan_with_a_custom_combine_region_encloses_the_exact_prefix",
             f"{T_TT}::test_product_scan_encloses_the_exact_prefix_products", subregion=sub))
     # ---- extern libdevice and inline asm

@@ -33,8 +33,9 @@ def _kernel(name, body, params):
     return mod
 
 
-def _run(name, body, bufs, out_name="out", grid=(1, 1, 1), scalars=None, drop_ttgir=False):
-    """bufs: ordered {name: (dtype, array)}; returns the reference (lo, hi, st) of ``out_name``."""
+def _run(name, body, bufs, out_name="out", grid=(1, 1, 1), scalars=None, drop_ttgir=False, full=False):
+    """bufs: ordered {name: (dtype, array)}; returns the reference (lo, hi, st) of ``out_name`` (``full``: the
+    launch's KernelReference and the storage identity of every buffer instead)."""
     from triton.backends.compiler import GPUTarget
     from triton.compiler import ASTSource
 
@@ -69,6 +70,8 @@ def _run(name, body, bufs, out_name="out", grid=(1, 1, 1), scalars=None, drop_tt
     launch = CapturedLaunch(index=0, kernel_name=name, kernel_hash="", grid=grid, args=args, asm=asm, cubin_sha256=None,
                             metadata={}, libtriton_sha256=None)
     ref = evaluate_sequence([launch]).launches[0]
+    if full:
+        return ref, ident
     out = ref.buffers[ident[out_name]]
     # unwritten elements (e.g. a program that aborted before its store) keep the captured value: not a reference
     st = np.where(np.asarray(out.written), np.asarray(out.st), H.ST_NE)

@@ -24,7 +24,7 @@ import torch
 from .reference_eval import intervals as iv
 from .reference_eval.analysis import assess_units, residual_interval
 from .reference_eval.capture import TritonLaunchRecorder
-from .reference_eval.ttir_eval import ST_NINF, ST_OK, evaluate_sequence, ptx_zero_fills
+from .reference_eval.ttir_eval import ST_NINF, ST_OK, evaluate_sequence, launch_ir, ptx_zero_fills, unproven_premise
 from .reference_eval.ttir_mapping import kernel_coverage
 from .reference_eval.ttir_parser import parse_ttir
 
@@ -141,11 +141,36 @@ def input_digests(inp):
             for v in tensors(inp) if v.is_floating_point()}
 
 
-def torch_intermediates(launches, seq, inp, digests_before=None):
+def input_storages(inp):
+    """Storage addresses of the case's floating input tensors, taken before the launch (audit F04: a buffer counts as
+    a declared input only if it IS an input's storage, unchanged; equal bytes elsewhere prove nothing)."""
+    out = set()
+
+    def walk(obj):
+        if torch.is_tensor(obj):
+            if obj.is_floating_point():
+                out.add(obj.untyped_storage().data_ptr())
+        elif isinstance(obj, dict):
+            for v in obj.values():
+                walk(v)
+        elif isinstance(obj, (list, tuple)):
+            for v in obj:
+                walk(v)
+    walk(inp)
+    return out
+
+
+def torch_intermediates(launches, seq, inp, digests_before=None, input_ptrs=None):
     """Per written storage: the float buffers upstream of it (through the recorded launches) that the reference
     loaded but that are neither inputs of the case nor written by an earlier recorded launch, i.e. produced by a
     torch / ATen op in between.  K_R treats their captured values as exact inputs, so an output depending on them
-    carries K's upstream numerical error in K_R, and its e_sem is mixed rather than purely semantic."""
+    carries K's upstream numerical error in K_R, and its e_sem is mixed rather than purely semantic.
+
+    A loaded buffer is a declared input only when it is the storage of a floating input tensor of the case and its
+    bytes are that input's bytes before the launch (not modified in place).  Equal values elsewhere -- every element
+    bit pattern found among the inputs, or an all-zero buffer -- are not provenance (audit F04: ATen arithmetic can
+    round back to the input bits, an underflow can give zeros whose real value is not zero); without a producer
+    record and an element mapping such a buffer stays upstream and the reference kernel-level."""
     import hashlib
 
     def digest(a):
@@ -165,26 +190,7 @@ def torch_intermediates(launches, seq, inp, digests_before=None):
     inputs = digests_before if digests_before is not None else \
         {digest(v.detach().contiguous().cpu().reshape(-1).view(torch.uint8).numpy()) for v in tensors(inp)
          if v.is_floating_point()}
-    # element bit patterns of the floating inputs, per element size: an upstream buffer whose every element is one of
-    # them is pure data movement (copy / gather / layout change) and its captured values are the declared inputs
-    patterns = {}
-    for v in tensors(inp):
-        if v.is_floating_point():
-            n = v.element_size()
-            u = v.detach().contiguous().cpu().reshape(-1).view({2: torch.int16, 4: torch.int32, 8: torch.int64}[n]).numpy()
-            patterns.setdefault(n, []).append(np.unique(u))
-    patterns = {n: np.unique(np.concatenate(p)) for n, p in patterns.items()}
-    sizes = {"float16": 2, "bfloat16": 2, "float32": 4, "fp32": 4, "float64": 8, "fp64": 8, "fp16": 2, "bf16": 2}
-
-    def data_movement(raw, dtype):
-        n = sizes.get(str(dtype).replace("torch.", ""))
-        if n is None or n not in patterns:
-            return False
-        b = np.ascontiguousarray(np.asarray(raw)).view(np.uint8)
-        if b.size % n:
-            return False
-        el = b.view({2: np.int16, 4: np.int32, 8: np.int64}[n])
-        return bool(el.size) and bool(np.isin(el, patterns[n]).all())
+    ptrs = input_ptrs if input_ptrs is not None else input_storages(inp)
     deps = {}  # storage -> set of foreign buffer labels it depends on
     last_after = {}  # storage -> digest of its bytes after the last recorded launch that wrote it
     for i, (l, ref) in enumerate(zip(launches, seq.launches)):
@@ -197,9 +203,8 @@ def torch_intermediates(launches, seq, inp, digests_before=None):
             if a.storage_ptr in deps and last_after.get(a.storage_ptr) == digest(raw):
                 upstream |= deps[a.storage_ptr]  # unchanged since a recorded launch wrote it
             elif a.storage_ptr in ref.loaded and str(a.dtype).startswith(("float", "bfloat")):
-                if digest(raw) not in inputs and np.asarray(raw).view(np.uint8).any():  # all-zero = exact constant
-                    tag = " [copy of inputs]" if data_movement(raw, a.dtype) else ""
-                    upstream.add(f"L{i}:{l.kernel_name[:40]}:{a.name}{tag}")
+                if not (a.storage_ptr in ptrs and digest(raw) in inputs):
+                    upstream.add(f"L{i}:{l.kernel_name[:40]}:{a.name}")
         stored = getattr(ref, "stored", set())
         for a in tensors:
             before = np.asarray(a.before.numpy() if hasattr(a.before, "numpy") else a.before)
@@ -215,7 +220,7 @@ def torch_intermediates(launches, seq, inp, digests_before=None):
 
 
 def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_rel=None, repeats=None,
-        magnitude_bound=None):
+        magnitude_bound=None, alpha=0.05):
     """One case through mode A or B.  ``keep``: a dict that receives, per output and seed, the reference interval
     and K in the output's logical element order (for independent recomputation of K_R); ``equivalence_rel``: passed
     to the decision layer (the equivalence axis next to each nonzero verdict).
@@ -229,7 +234,13 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
 
     ``magnitude_bound``: {"elementwise": M, "basis": text}, a bound on |K - G| per element over the declared population
     (from a derivation such as a per-input error budget, never from the sample); e_num rules then also report the
-    bounded route (Hoeffding on truncated endpoints).  Every rule reports the approximate route's sensitivity."""
+    bounded route (Hoeffding on truncated endpoints).  Every rule reports the approximate route's sensitivity.
+    ``alpha``: the level of every rule test (the declared significance level of the unified entry).
+
+    Proof status (audit F03): elements whose reference holds only under an unproven premise are reported apart
+    (``complete_under_premise_fraction``) and are not ok for the statistics.  IR (audit F05): each launch is analysed
+    on the IR it was captured with (TTIR, or TTGIR for Gluon kernels), the same choice for coverage, atomic
+    detection and evaluation, and its kind is reported."""
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.set_float32_matmul_precision("highest")
     import torch._inductor.config as inductor_config
@@ -249,7 +260,6 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     not_triton, modified_after, aborted_outputs, mixed_by_output = set(), set(), {}, {}
     binding_unconfirmed, reused_address = set(), set()  # detector 2.2: output-to-producer binding by storage identity
     external = None
-    mixed_sources = None
     special = {}
     mode = None
     t0 = time.time()
@@ -259,7 +269,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         timing["inputs"] += time.time() - t_phase
         t_phase = time.time()
         digest0 = input_digests(inp)
-        before = digest0 if mixed_sources is None else None
+        ptrs0 = input_storages(inp)
         rec = TritonLaunchRecorder()
         with rec:
             outs = case.launch(inp)
@@ -267,18 +277,20 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         # the first seed's capture also pays any JIT compilation the case's setup did not warm up
         timing["capture_first_seed" if seed == list(dev)[0] else "capture"] += time.time() - t_phase
         if coverage is None:
-            coverage = [kernel_coverage(parse_ttir(l.asm["ttir"]))["complete"] for l in rec.launches]
+            irs = [launch_ir(l) for l in rec.launches]   # one IR choice for coverage, atomics and evaluation
+            coverage = [kernel_coverage(parse_ttir(text))["complete"] for _, text in irs]
             # float atomics make K depend on the run-time order of the atomic updates: e_num (and verdicts that
             # hinge on it) can differ between two runs of the same code; K_R and e_sem cannot
             launch_info = [{"kernel": l.kernel_name, "grid": list(l.grid), "triton": l.environment.get("triton"),
-                            "float_atomics": _float_atomics(l.asm["ttir"])} for l in rec.launches]
+                            "ir_kind": kind, "float_atomics": _float_atomics(text)}
+                           for l, (kind, text) in zip(rec.launches, irs)]
             zero_fill = [ptx_zero_fills(l.asm.get("ptx", "")) for l in rec.launches]
             fill = zero_fill_mode == "auto" and all(zero_fill)
         t_phase = time.time()
         seq = evaluate_sequence(rec.launches, masked_fill_zero=fill)
         timing["reference"] += time.time() - t_phase
-        if mixed_sources is None:
-            mixed_sources = torch_intermediates(rec.launches, seq, inp, before)
+        # every seed (audit F04): the upstream sources of a storage can change with the data and the allocator
+        mixed_sources = torch_intermediates(rec.launches, seq, inp, digest0, ptrs0)
         if external is None:
             # a buffer changed between recorded launches (a torch op in between): from there on its captured value
             # re-enters as an exact input, so K_R downstream carries the upstream numerical error of K
@@ -342,8 +354,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                 f_lo = f_hi = np.zeros(idx.size)
             k, r_lo = buf.actual_after[m], buf.lo[m].astype(np.float64)
             r_hi = buf.hi[m] if buf.hi is not None else r_lo  # integer buffers are exact
-            if name not in mixed_by_output:
-                mixed_by_output[name] = mixed_sources.get(out.untyped_storage().data_ptr(), [])
+            mixed_by_output.setdefault(name, set()).update(mixed_sources.get(out.untyped_storage().data_ptr(), []))
             n_lo, n_hi = residual_interval(k, r_lo, r_hi)
             s_lo, s_hi = iv.isub(r_lo, r_hi, f_lo, f_hi) if has_f else (None, None)
             # special values (NaN / +-inf) are excluded from the residuals; compare their classes separately
@@ -393,15 +404,22 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                 o[w[sel]] = a[sel]
                 return o
 
-            ok_e = (buf.st[m] == ST_OK) & ~buf.cond[m] & np.isfinite(f_lo)
+            # proof status (audit F03): an element that holds only under an unproven premise is not ok
+            prem = np.asarray(buf.premise[m], dtype=bool) if buf.premise is not None else np.zeros(idx.size, bool)
+            ok_e = (buf.st[m] == ST_OK) & ~buf.cond[m] & np.isfinite(f_lo) & ~prem
             if has_f:
-                special_agree = decided & (f_cls > 0) & (kr_cls == f_cls)
+                special_agree = decided & (f_cls > 0) & (kr_cls == f_cls) & ~prem
             else:
-                special_agree = decided & (kr_cls > 0) & (k_cls == kr_cls)
+                special_agree = decided & (kr_cls > 0) & (k_cls == kr_cls) & ~prem
+            under_premise = prem & (buf.st[m] <= ST_NINF) & ~buf.cond[m]
+            # elements whose last write is a float atomic update: only there may repeated launches differ by the
+            # order of the updates (audit F07)
+            atomic_w = np.asarray(buf.float_atomic[m], dtype=bool) if buf.float_atomic is not None else \
+                np.zeros(idx.size, bool)
             if keep is not None:
                 keep.setdefault(name, []).append({"seed": seed, "r_lo": frame(r_lo), "r_hi": frame(r_hi),
                                                   "k": frame(np.asarray(k, dtype=np.float64)), "ok": frame(ok_e, False),
-                                                  "shape": tuple(out.shape)})
+                                                  "premise": frame(under_premise, False), "shape": tuple(out.shape)})
             per.setdefault(name, []).append({
                 "seed": seed, "r_lo": frame(r_lo), "r_hi": frame(r_hi), "k_reps": [], "repeat_inputs_differ": False,
                 "n": (frame(n_lo), frame(n_hi)), "s": (frame(s_lo), frame(s_hi)) if has_f else None,
@@ -409,7 +427,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                 "ok": frame(ok_e, False), "written": frame(np.ones(idx.size, dtype=bool), False),
                 "resolved": frame(ok_e | special_agree, False), "inside": np.ones(nv, dtype=bool), "idx": pos,
                 "pos": pos, "shape": tuple(out.shape), "width": frame(r_hi - r_lo), "reasons": reasons,
-                "aborted": aborted})
+                "aborted": aborted, "premise": frame(under_premise, False), "atomic_written": frame(atomic_w, False)})
         # repeated launches of the same input, outside the recorder: K only
         if r_exec is None:
             r_exec = int(repeats) if repeats is not None else (
@@ -438,7 +456,11 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     report = {"case": case.name, "mode": mode, "implementation": case.implementation,
               "specification": case.specification if mode == "B" else
               "none: task semantics not checked (mode A, e_num = K - K_R only)",
-              "spec_bound": case.spec_bound, "launches": launch_info, "ttir_coverage_complete": coverage,
+              "spec_bound": case.spec_bound, "launches": launch_info, "ir_coverage_complete": coverage,
+              "ir_kinds": [li["ir_kind"] for li in (launch_info or [])],
+              # kept for the TTIR-only scripts: the coverage of TTIR launches, None for a launch analysed on TTGIR
+              "ttir_coverage_complete": [c if li["ir_kind"] == "ttir" else None
+                                         for c, li in zip(coverage or [], launch_info or [])],
               "versions": {k: _version(k) for k in ("liger-kernel", "transformers", "torch", "triton")},
               "seeds": {"development": [list(dev)[0], list(dev)[-1]], "confirmation": [list(conf)[0], list(conf)[-1]]},
               "seconds": round(seconds, 1), "outputs": {},
@@ -457,12 +479,21 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         kr = np.stack([p["kr"] for p in rows])
         written = np.stack([p["written"] for p in rows])
         resolved = np.stack([p["resolved"] for p in rows])
+        premised = np.stack([p["premise"] for p in rows])
+        premises = sorted({str(r).split("@")[0] for p in rows for r in (p["reasons"] or {}) if unproven_premise(r)})
         entry = {"elements_per_seed": int(written[0].sum()), "shape": list(rows[0]["shape"]),
-                 "depends_on_non_triton_intermediates": mixed_by_output.get(name, []),
+                 "depends_on_non_triton_intermediates": sorted(mixed_by_output.get(name, ())),
                  # written elements whose reference is complete and finite, or a special value of f's class
                  "reference_classes": {"complete_fraction": float(resolved[written].mean()) if written.any() else 0.0,
                                        "finite_complete_fraction": float(ok[written].mean()) if written.any() else 0.0,
+                                       "complete_under_premise_fraction":
+                                           float(premised[written].mean()) if written.any() else 0.0,
                                        "written_fraction": float(written.mean())},
+                 # proof status (audit F03): proved / holds only under an unproven premise / not established
+                 "proof_status": {"unproven_premises": premises,
+                                  "meaning": "complete_fraction counts proved references only; elements that hold "
+                                             "only under an unproven premise are counted apart and are not used by "
+                                             "the statistics"},
                  "special_values": special.get(name),
                  "not_established_reasons_seed0": rows[0]["reasons"],
                  "aborted_programs_seed0": rows[0]["aborted"]}
@@ -482,9 +513,13 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             if execution["statistics"] == "withheld":
                 rec = {"comparison": f"{name}: {label}", "verdict": "NOT_ESTABLISHED", "reason": execution["status"]}
             else:
-                rec, _ = assess_units(f"{name}: {label}", lo, hi, kr, ok, n_dev, RULES, alignment_reference=kr,
-                                      unit_ids=list(dev) + list(conf), equivalence_rel=equivalence_rel,
+                rec, _ = assess_units(f"{name}: {label}", lo, hi, kr, ok, n_dev, RULES, alpha=alpha,
+                                      alignment_reference=kr, unit_ids=list(dev) + list(conf),
+                                      equivalence_rel=equivalence_rel,
                                       magnitude_bound=magnitude_bound if key == "n" else None)
+                if equivalence_rel is None:
+                    rec["equivalence_scale"] = {"delta_rel": None, "meaning": "no equivalence bound declared: no "
+                                                "equivalence statement"}
             timing["statistics"] += time.time() - t_phase
             mid = 0.5 * (lo + hi)
             if ok.any():
@@ -536,30 +571,68 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     return report
 
 
+# Execution validity findings of the reference (audit F07), by producer (ttir_eval): a race found by the reference;
+# validity not established (the reference could not decide whether the accesses are ordered).  Both stop every
+# statistic that depends on the execution being valid.
+RACE_MARKERS = ("execution race",                     # _run_programs, _same_program_write_read, _op_atomic_cas
+                "cross-program write race",           # _op_store
+                "cross-program race on load",         # _op_load
+                "conflicting lanes in one store")     # _op_store: one store writes an address from several lanes
+UNKNOWN_VALIDITY_MARKERS = ("execution validity",     # _same_program_write_read: thread mapping not available
+                            "progress not proven")     # atomic_poll / spin loops: termination not shown
+
+
+def execution_findings(reasons) -> dict:
+    """{"race": [...], "unknown_validity": [...]}: the execution-validity findings among the reference's reasons."""
+    keys = sorted({str(r).split("@")[0] for r in (reasons or {})})
+    return {"race": [r for r in keys if any(m in r for m in RACE_MARKERS)],
+            "unknown_validity": [r for r in keys if any(m in r for m in UNKNOWN_VALIDITY_MARKERS)]}
+
+
 def _execution_status(rows, launch_info, r_exec) -> dict:
-    """Execution validity of one output over the units (DSL v2 rc3 02 8.7): repeated launches and race findings."""
-    race = sorted({r.split("@")[0] for p in rows for r in (p["reasons"] or {}) if "execution race" in r})
-    unknown = sorted({r.split("@")[0] for p in rows for r in (p["reasons"] or {}) if "execution validity" in r})
-    differ, reps_done, inputs_differ = [], 0, False
+    """Execution validity of one output over the units (DSL v2 rc3 02 8.7): race and validity findings of the
+    reference, and repeated launches.  Statistics run per launch only when no finding questions the execution and the
+    repeats are bitwise identical; repeats that differ only on elements written by float atomics are averaged within
+    the input (order of the updates); anything else withholds them (audit F07)."""
+    race, unknown = set(), set()
+    for p in rows:
+        f = execution_findings(p["reasons"])
+        race.update(f["race"])
+        unknown.update(f["unknown_validity"])
+    race, unknown = sorted(race), sorted(unknown)
+    differ, reps_done, inputs_differ, outside_atomics = [], 0, False, False
     for p in rows:
         w = p["written"]
         reps_done = max(reps_done, len(p["k_reps"]))
         inputs_differ |= p["repeat_inputs_differ"]
-        if any(not np.array_equal(k[w], p["k"][w], equal_nan=True) for k in p["k_reps"] if k.shape == p["k"].shape):
+        diff = np.zeros(np.shape(p["k"]), dtype=bool)
+        for k in p["k_reps"]:
+            if k.shape == p["k"].shape:
+                diff |= w & ~((k == p["k"]) | (np.isnan(k) & np.isnan(p["k"])))
+        if diff.any():
             differ.append(p["seed"])
+            atomic = p.get("atomic_written")   # element-level evidence: written by float atomics
+            if atomic is None or (diff & ~np.asarray(atomic, dtype=bool)).any():
+                outside_atomics = True
     atomics = any(li.get("float_atomics") for li in (launch_info or []))
     out = {"launches_per_input": 1 + reps_done, "units_with_different_repeats": len(differ),
            "units": len(rows), "repeat_inputs_not_reproducible": inputs_differ, "race_findings": race,
-           "unknown_validity_findings": unknown, "float_atomics": atomics}
+           "unknown_validity_findings": unknown, "float_atomics": atomics,
+           "differences_outside_float_atomic_elements": outside_atomics,
+           "validity": "race" if race else ("not established" if unknown else "no finding")}
     if race:
         out.update(status="execution race found by the reference: statistics withheld", statistics="withheld")
-    elif differ and atomics and not inputs_differ:
+    elif unknown:
+        out.update(status="execution validity not established by the reference: statistics withheld",
+                   statistics="withheld")
+    elif differ and atomics and not inputs_differ and not outside_atomics:
         out.update(status=f"atomic execution randomness: residuals averaged within the input over {1 + reps_done} "
                           "launches", statistics="within-input mean")
     elif differ:
+        why = ("; the regenerated inputs differ" if inputs_differ else
+               "; they differ on elements not written by float atomics" if atomics and outside_atomics else "")
         out.update(status="repeated launches differ without an identified cause: execution validity not established "
-                          "(diagnosis needed)" + ("; the regenerated inputs differ" if inputs_differ else ""),
-                   statistics="withheld")
+                          "(diagnosis needed)" + why, statistics="withheld")
     elif reps_done == 0:
         out.update(status="not repeated", statistics="per launch")
     else:

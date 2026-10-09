@@ -46,15 +46,19 @@ def pytest_runtest_call(item):
             continue
         try:
             ref = evaluate_sequence([launch]).launches[0]
-            written = complete = 0
+            written = complete = premised = 0
             for ident, buf in ref.buffers.items():
                 w = np.asarray(buf.written)
                 written += int(w.sum())
-                # special values and integer set targets (DSL v2 increment 14) are established
-                complete += int(ref.established(ident).sum())
-            row.update(written=written, complete=complete,
+                # special values and integer set targets (DSL v2 increment 14) are established; an element that
+                # holds only under an unproven premise is counted apart (audit F03)
+                complete += int(ref.complete(ident).sum())
+                premised += int(ref.under_premise(ident).sum())
+            row.update(written=written, complete=complete, complete_under_premise=premised,
                        status="aborted" if ref.aborted else ("complete" if written and complete == written
-                                                             else ("partial" if written else "nothing written")),
+                                                             else ("complete under premise" if written and
+                                                                   complete + premised == written
+                                                                   else ("partial" if written else "nothing written"))),
                        aborted=sorted(set(ref.aborted.values()))[:3],
                        reasons=sorted(k for k in ref.reasons if k.startswith("not_established"))[:5],
                        set_reasons=sorted(k for k in ref.reasons if k.startswith("set:"))[:5],

@@ -57,13 +57,15 @@ def _ttgir_for(ttir: str, arch):
 
 
 def _status(ref):
-    written = complete = 0
+    written = complete = premised = 0
     for ident, buf in ref.buffers.items():
         w = np.asarray(buf.written)
         written += int(w.sum())
-        complete += int(ref.established(ident).sum())   # integer set targets count (DSL v2 increment 14)
+        complete += int(ref.complete(ident).sum())   # integer set targets count (DSL v2 increment 14)
+        premised += int(ref.under_premise(ident).sum())   # apart: holds only under an unproven premise (audit F03)
     return "aborted" if ref.aborted else ("complete" if written and complete == written else
-                                          ("partial" if written else "nothing written"))
+                                          ("complete under premise" if written and complete + premised == written
+                                           else ("partial" if written else "nothing written")))
 
 
 @pytest.hookimpl(hookwrapper=True)

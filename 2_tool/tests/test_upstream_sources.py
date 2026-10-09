@@ -95,9 +95,11 @@ def test_input_modified_in_place_by_aten_inside_the_launch_is_an_intermediate():
     assert rep["outputs"]["y"]["depends_on_non_triton_intermediates"], "the in-place modified input must count as upstream"
 
 
-def test_pure_data_movement_upstream_is_tagged_as_a_copy_of_the_inputs():
-    """an ATen layout change (copy of the declared input) is upstream but its values ARE the inputs: tagged, so the
-    unified entry may still count the reference as complete for the call; a computed upstream value is not tagged."""
+def test_unrecorded_copy_upstream_is_not_promoted_to_a_declared_input():
+    """an ATen layout change (a true copy of the declared input) is upstream.  Its values are the input values, but
+    equal values are not provenance (audit F04: ATen arithmetic can round back to the input bits): without a producer
+    record it stays an upstream intermediate and the unified entry keeps the reference kernel-level.  (Until the
+    audit fix it was tagged "[copy of inputs]" from the element bit patterns and counted as call-level.)"""
     class Case(check.Case):
         name = "copy_upstream"
 
@@ -112,4 +114,4 @@ def test_pure_data_movement_upstream_is_tagged_as_a_copy_of_the_inputs():
 
     rep = check.run(Case(), dev=[0], conf=[1, 2])
     deps = rep["outputs"]["y"]["depends_on_non_triton_intermediates"]
-    assert deps and all(d.endswith("[copy of inputs]") for d in deps)
+    assert deps and not any("copy of inputs" in d for d in deps)

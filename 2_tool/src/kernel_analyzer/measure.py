@@ -18,7 +18,14 @@ Declaration::
      "compare": {"mode": "A" | "B", "measure": ["out"], "spec": "file.py:spec"},        # spec only in mode B
      "budget": {"cpu_seconds": 600, "gpu_seconds": 600, "case_timeout": 300, "max_units": 96},
      # optional: "units": {"development": 32, "confirmation": 64, "seed_offset": 0}, "alpha": 0.05,
-     #           "resolution": {"ulp_fraction": 0.125}, "error_budget": "file.py:bound"  (bounded route)}
+     #           "resolution": {"ulp_fraction": 0.125}, "magnitude_bound": {"elementwise": M, "basis": "..."},
+     #           "equivalence": {"rel": delta, "basis": "..."}, "repeats": 2, "error_budget": "file.py:bound"}
+
+``declaration_sha256`` binds the whole expanded declaration -- every setting that affects a conclusion (units and
+seeds, alpha, factors, resolution, M, delta, repeats, the statistics family and the policies), the versions and the
+content hashes of the call / input generator / specification sources (audit F06).  The input samples are drawn from
+``sampling_seed_sha256`` (call, inputs, compare, budget only), so changing a statistics setting does not change the
+sampled inputs.
 
 A factor is declared by giving a list where one value is expected ("dtype": ["float32", "bfloat16"]); every level is a
 separate comparison.  Missing items raise ``MissingDeclaration`` with the list -- the entry never guesses an input
@@ -110,6 +117,12 @@ def missing_items(decl: dict) -> list:
             out.append("compare.measure (output names)")
         if cmp_.get("mode") == "B" and not cmp_.get("spec"):
             out.append("compare.spec (mode B needs f)")
+    eq = decl.get("equivalence")
+    if eq is not None and not (isinstance(eq, dict) and isinstance(eq.get("rel"), (int, float)) and eq["rel"] > 0):
+        out.append("equivalence.rel (a positive relative bound delta)")
+    rep = decl.get("repeats")
+    if rep is not None and not (isinstance(rep, int) and rep >= 1):
+        out.append("repeats (launches per input, an integer >= 1)")
     bud = decl.get("budget")
     if not isinstance(bud, dict):
         out.append("budget (cpu_seconds, gpu_seconds, case_timeout, max_units)")
@@ -151,6 +164,44 @@ def _factor_levels(inputs: dict, factors: Optional[dict] = None) -> list:
     return combos
 
 
+def _ref_file(ref: str, base_dir: str) -> Optional[Path]:
+    """The source file of a "file.py:function" or "package.module:function" reference, or None."""
+    mod_part = str(ref).rsplit(":", 1)[0]
+    if mod_part.endswith(".py"):
+        p = Path(mod_part)
+        if not p.is_absolute():
+            p = Path(base_dir) / p
+            if not p.exists():
+                p = Path(mod_part)
+        return p if p.is_file() else None
+    try:
+        spec = importlib.util.find_spec(mod_part)
+    except (ImportError, ValueError):
+        return None
+    return Path(spec.origin) if spec is not None and spec.origin and Path(spec.origin).is_file() else None
+
+
+def source_hashes(decl: dict, base_dir: str) -> dict:
+    """Content hashes of the sources a declaration names (call, input generators, specification, error budget)."""
+    refs = {"call": decl.get("call")}
+    for name, src in (decl.get("inputs") or {}).items():
+        if isinstance(src, dict) and src.get("state"):
+            refs[f"inputs.{name}.state"] = src["state"]
+    if (decl.get("compare") or {}).get("spec"):
+        refs["compare.spec"] = decl["compare"]["spec"]
+    if isinstance(decl.get("error_budget"), str):
+        refs["error_budget"] = decl["error_budget"]
+    out = {}
+    for key, ref in refs.items():
+        if not ref:
+            continue
+        f = _ref_file(ref, base_dir)
+        out[key] = {"ref": ref, "sha256": hashlib.sha256(f.read_bytes()).hexdigest() if f else None}
+        if f is None:
+            out[key]["note"] = "source file not found: the content is not bound"
+    return out
+
+
 def expand(decl: dict) -> dict:
     """The full comparison declaration (written into the report; never changed during confirmation)."""
 
@@ -158,6 +209,7 @@ def expand(decl: dict) -> dict:
     if miss:
         raise MissingDeclaration(miss)
     units = dict(DEFAULT_UNITS, **(decl.get("units") or {}))
+    base_dir = decl.get("_base_dir", ".")
     exp = {"call": decl["call"], "inputs": decl["inputs"], "compare": decl["compare"], "budget": decl["budget"],
            "rule_classes": copy.deepcopy(DEFAULT_RULE_CLASSES), "multiplicity": "Holm within each rule class",
            "units": units, "alpha": decl.get("alpha", 0.05),
@@ -167,17 +219,39 @@ def expand(decl: dict) -> dict:
            "factor_levels": _factor_levels(decl["inputs"], decl.get("factors")), "versions": _versions(),
            "error_budget": decl.get("error_budget"),
            "magnitude_bound": decl.get("magnitude_bound"),
-           "bounded_route": "recorded only: the entry does not apply the declared error budget (bounded_mean_test is "
-                            "used by the calibration); approximate route (endpoint-conservative t) for every output",
+           "equivalence": decl.get("equivalence"),
+           "repeats": decl.get("repeats"),
+           "repeats_policy": "launches per input: the declared repeats, else 2, or 8 when a launch has float atomics",
+           "bounded_route": "magnitude_bound (a declared population bound M on |K - G| per element, not proven by the "
+                            "tool) is passed to check.run: every rule reports the bounded route (Hoeffding on the "
+                            "per-unit projections, per rule at alpha) next to the approximate route (endpoint-"
+                            "conservative t); without M no distribution-free statement.  error_budget is recorded "
+                            "only (not applied)",
+           "equivalence_policy": "equivalence.rel (delta relative to the reference scale q_R) is passed to check.run: "
+                                 "every fixed-direction rule reports the equivalence axis (TOST); without delta no "
+                                 "equivalence statement",
+           "resolution_policy": "resolved_fraction is measured against resolution.ulp_fraction; no recomputation at "
+                                "higher precision (adaptive refinement not implemented, rc3 W2 / W6): an unmet target "
+                                "is reported as 'enclosure too wide' and resolution_met = false, never as met",
            "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
-           "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) + contract_v3 cannot-judge "
-                         "rules (S0 = 2, N0 = 64, n_min = 16)",
-           "reference_scope": "call-level complete only when every non-Triton upstream value is a copy of the declared "
-                              "inputs; otherwise kernel-level (upstream values captured) and not counted as complete "
-                              "for the call"}
+           "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) at alpha + contract_v3 "
+                         "cannot-judge rules (S0 = 2, N0 = 64, n_min = 16)",
+           "reference_scope": "call-level complete only when every float buffer the kernels read is a declared input's "
+                              "own storage (unchanged) or written by a recorded launch; otherwise kernel-level "
+                              "(upstream values captured) and not counted as complete for the call.  Equal values "
+                              "(every element found among the inputs, an all-zero buffer) are not provenance",
+           "proof_status": "complete_rate counts proved references only; elements that hold only under an unproven "
+                           "premise (CAS serializations, scan bracketings) are reported as complete_under_premise_rate "
+                           "and are not used by the statistics",
+           "source_hashes": source_hashes(decl, base_dir)}
+    # the input sample stream: call, inputs, compare and budget only (the digest of earlier versions, kept so that the
+    # same declaration draws the same inputs, and a statistics setting does not change them)
     body = json.dumps({k: decl[k] for k in ("call", "inputs", "compare", "budget")}, sort_keys=True, default=str)
-    exp["declaration_sha256"] = hashlib.sha256(body.encode()).hexdigest()
-    exp["_base_dir"] = decl.get("_base_dir", ".")
+    exp["sampling_seed_sha256"] = hashlib.sha256(body.encode()).hexdigest()
+    exp["digest_scope"] = ("declaration_sha256: SHA-256 of the canonical JSON of every other field of this expanded "
+                           "declaration")
+    exp["declaration_sha256"] = hashlib.sha256(json.dumps(exp, sort_keys=True, default=str).encode()).hexdigest()
+    exp["_base_dir"] = base_dir
     return exp
 
 
@@ -224,7 +298,7 @@ def _sample(smp: dict, shape, rng: np.random.Generator) -> np.ndarray:
 
 
 def make_inputs(exp: dict, level: dict, seed: int, device="cuda") -> dict:
-    rng = np.random.default_rng(np.random.SeedSequence([seed, int(exp["declaration_sha256"][:8], 16)]))
+    rng = np.random.default_rng(np.random.SeedSequence([seed, int(exp["sampling_seed_sha256"][:8], 16)]))
     out = {}
     for name, src in exp["inputs"].items():
         if "const" in src:
@@ -253,12 +327,13 @@ def ulp_of(x: np.ndarray, dtype: str) -> np.ndarray:
 
 
 def reference_quality(keep_rows: list, dtype: str, ulp_fraction: float) -> dict:
-    widths, resolved, n_ok, n_all = [], 0, 0, 0
+    widths, resolved, n_ok, n_all, n_premise = [], 0, 0, 0, 0
     for r in keep_rows:
         ok = np.asarray(r["ok"], bool)
         lo, hi = np.asarray(r["r_lo"], np.float64), np.asarray(r["r_hi"], np.float64)
         n_all += ok.size
         n_ok += int(ok.sum())
+        n_premise += int(np.asarray(r.get("premise", np.zeros(ok.size, bool)), bool).sum())
         if ok.any():
             mid = 0.5 * (lo[ok] + hi[ok])
             w = (hi[ok] - lo[ok]) / ulp_of(mid, dtype)
@@ -267,9 +342,13 @@ def reference_quality(keep_rows: list, dtype: str, ulp_fraction: float) -> dict:
     w = np.concatenate(widths) if widths else np.zeros(0)
     q = (lambda p: float(np.quantile(w, p)) if w.size else None)
     return {"elements": n_all, "complete_finite": n_ok, "complete_rate": n_ok / n_all if n_all else None,
+            "complete_under_premise": n_premise,
+            "complete_under_premise_rate": n_premise / n_all if n_all else None,
             "width_over_ulp": {"median": q(0.5), "p90": q(0.9), "max": float(w.max()) if w.size else None},
             "resolution_target_ulp_fraction": ulp_fraction,
-            "resolved_fraction": resolved / n_ok if n_ok else None}
+            "resolved_fraction": resolved / n_ok if n_ok else None,
+            "resolution_met": (resolved == n_ok) if n_ok else None,
+            "refinement": "not implemented (rc3 W2 / W6): no recomputation at higher precision"}
 
 
 def _holm(ps):
@@ -302,6 +381,8 @@ def class_statistics(num_rec: dict, rule_classes: dict, alpha: float) -> dict:
             if j["judgment"].startswith("nonzero") and n in adj and adj[n] > alpha:
                 j = {"judgment": "not confirmed", "basis": f"Holm in class '{cls}': adjusted p = {adj[n]:.3g} > {alpha}"}
             j["holm_adjusted_p"] = adj.get(n)
+            j["alpha"] = alpha
+            j["equivalence"] = r.get("equivalence") or "no equivalence bound declared: no equivalence statement"
             j["mean_projection"] = r.get("mean_projection")
             j["n"] = r.get("n")
             j["mde_approximate"] = (r.get("mde_approximate") or {}).get("mde")
@@ -340,7 +421,7 @@ def bounded_mean_test(a: np.ndarray, M: np.ndarray, alpha: float) -> dict:
 # ------------------------------------------------------------------------------------------------ failure classes
 
 FAILURE_CLASSES = ("semantics missing", "binding", "enclosure too wide", "over budget", "statistics insufficient",
-                   "set target width (L_E)")
+                   "set target width (L_E)", "unproven premise (conditional diagnosis)")
 _FAILURE_TABLE = [   # (substring of the tool's reason, class) -- first match wins; printed with every report
     ("call rejected the declared inputs", "binding"),
     ("address outside every captured storage", "binding"), ("invalid address", "binding"),
@@ -461,7 +542,9 @@ def run_level(exp: dict, level: dict) -> dict:
     t0 = time.time()
     old = _alarm(budget["case_timeout"])
     try:
-        rep = check.run(case, dev=dev, conf=conf, keep=keep, magnitude_bound=exp.get("magnitude_bound"))
+        rep = check.run(case, dev=dev, conf=conf, keep=keep, magnitude_bound=exp.get("magnitude_bound"),
+                        alpha=exp["alpha"], equivalence_rel=(exp.get("equivalence") or {}).get("rel"),
+                        repeats=exp.get("repeats"))
     except _Timeout as exc:
         return {"level": level, "status": "over budget", "reason": str(exc), "failure_class": "over budget",
                 "seconds": round(time.time() - t0, 1)}
@@ -479,7 +562,8 @@ def run_level(exp: dict, level: dict) -> dict:
     failures = []
     notes = {k: rep.get(k) for k in ("outputs_not_written_by_triton", "outputs_binding_not_established",
                                       "outputs_modified_after_last_triton_write", "outputs_whose_writing_programs_aborted",
-                                      "outputs_at_address_of_another_recorded_storage", "ttir_coverage_complete")}
+                                      "outputs_at_address_of_another_recorded_storage", "ttir_coverage_complete",
+                                      "ir_coverage_complete", "ir_kinds")}
     for name in measure_names:
         o = rep.get("outputs", {}).get(name)
         if o is None:
@@ -490,13 +574,14 @@ def run_level(exp: dict, level: dict) -> dict:
             failures.append(outputs[name]["failure_class"])
             continue
         quality = reference_quality(keep.get(name, []), dtypes.get(name, "float32"), exp["resolution"]["ulp_fraction"])
-        mixed = o.get("depends_on_non_triton_intermediates") or []
-        backfilled = [m for m in mixed if not m.endswith("[copy of inputs]")]
+        # audit F04: every non-Triton upstream buffer keeps the reference kernel-level (equal values prove nothing)
+        backfilled = list(o.get("depends_on_non_triton_intermediates") or [])
         quality["reference_scope"] = ("kernel-level: upstream non-Triton values captured (" + ", ".join(backfilled)[:200]
                                       + ")") if backfilled else "call-level"
         quality["complete_rate_call_level"] = 0.0 if backfilled else quality["complete_rate"]
         stats = class_statistics(o.get("numerical"), exp["rule_classes"], exp["alpha"])
         entry = {"status": "evaluated", "reference": quality, "statistics": stats, "guarantee": o.get("guarantee"),
+                 "proof_status": o.get("proof_status"), "execution": o.get("execution"),
                  "mixed_non_triton_sources": o.get("depends_on_non_triton_intermediates") or [],
                  "not_established_reasons_seed0": o.get("not_established_reasons_seed0"),
                  "special_values": o.get("special_values")}
@@ -506,7 +591,10 @@ def run_level(exp: dict, level: dict) -> dict:
             # only then do the tool's reasons explain missing elements (otherwise they are notes such as the dot
             # input precision or a checked premise)
             entry["failure_classes"] = sorted({classify_failure(r) for r in reasons if not str(r).startswith(
-                ("assumed:", "dot_input_precision:", "set:"))}) or ["unclassified"]
+                ("assumed:", "dot_input_precision:", "set:"))})
+            if quality["complete_under_premise"]:   # audit F03: a conditional diagnosis, not a complete reference
+                entry["failure_classes"].append("unproven premise (conditional diagnosis)")
+            entry["failure_classes"] = sorted(set(entry["failure_classes"])) or ["unclassified"]
         if quality["resolved_fraction"] is not None and quality["resolved_fraction"] < 1.0:
             # a set target's width is part of the target, not a numerical enclosure that precision would shrink
             wide = "set target width (L_E)" if (o.get("guarantee") or {}).get("set_targets") else "enclosure too wide"

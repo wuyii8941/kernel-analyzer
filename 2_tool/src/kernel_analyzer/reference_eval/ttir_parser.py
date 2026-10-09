@@ -603,6 +603,11 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
         mm = re.search(r"lhs\s*=\s*(\w+)\s+rhs\s*=\s*(\w+)", rest)
         if mm:
             op.attrs["lhs"], op.attrs["rhs"] = mm.group(1), mm.group(2)
+        # "%a scale %as, %b scale %bs, %c": either scale may be absent (audit F02 follow-up: one-sided scales)
+        parts = [p.strip() for p in head.split(",")]
+        if len(parts) >= 3:
+            op.attrs["lhs_scale"] = "1" if re.search(r"\bscale\s+%", parts[0]) else ""
+            op.attrs["rhs_scale"] = "1" if re.search(r"\bscale\s+%", parts[1]) else ""
         op.operands = _values(head)
         op.operand_types, op.result_types = operand_types, result_types
     elif name == "ttg.memdesc_subslice":  # DSL v2 increment 10: "%m[0, 32] : T -> T"

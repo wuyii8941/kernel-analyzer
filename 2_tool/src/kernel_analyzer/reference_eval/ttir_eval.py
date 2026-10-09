@@ -43,6 +43,23 @@ from .ttir_parser import PtrType, TFunc, TModule, TOp, TRegion, TType, parse_tti
 
 ST_OK, ST_NAN, ST_PINF, ST_NINF, ST_UNDEF, ST_NE = 0, 1, 2, 3, 4, 5
 ATOMIC_EVENT_BUDGET = 1_000_000  # atomic updates per launch for the two-pass returned-value evaluation
+CAS_ALL_ORDERS_MAX = 4  # contended CAS launches with at most this many programs: every program order is evaluated
+
+# Proof status (audit F03).  A premise the reference checked only on evidence (two serializations or two bracketings
+# agree on these inputs) is not a proof over every allowed execution: elements that depend on one are reported as
+# complete under a premise, apart from the unconditional complete class.  The other "assumed:" notes are lowering
+# facts or trusted order targets (the masked-lane zero fill checked on the PTX, the reduce tree of the locked
+# lowering, signed integer dot operands of the official lowerings, compiler barrier insertion, poll progress of a
+# launch that returned); they stay notes.
+UNPROVEN_PREMISE_MARKERS = ("order of its contended compare-and-swap", "scan combine associative",
+                            "established under an unproven premise")
+PREMISE_CARRIED = ("assumed:read or updated an element established under an unproven premise of an earlier launch "
+                   "(the premise is carried)")
+
+
+def unproven_premise(reason: str) -> bool:
+    """A reason key that names a premise checked on evidence only (audit F03)."""
+    return str(reason).startswith("assumed:") and any(m in str(reason) for m in UNPROVEN_PREMISE_MARKERS)
 ATOMIC_ADDRESS_BUDGET = 4096  # updates of one address for the set bound of a returned value
 
 # Trigger evidence (DSL v2 rc3 04 W1): with KA_TRIGGER_TRACE=<path>, every executed (operation, internal rule) and every
@@ -303,6 +320,31 @@ def _unsigned(x: np.ndarray, width: int) -> np.ndarray:
     if width >= 64:
         return np.asarray(x, dtype=np.int64).view(np.uint64)
     return np.asarray(x, dtype=np.int64) & ((1 << width) - 1)
+
+
+def _u64(x: np.ndarray, width: int) -> np.ndarray:
+    """The unsigned value of the width-bit representation as uint64: exact for every width up to 64 (audit F01: the
+    unsigned value of a 64-bit pattern does not fit int64, so it is never converted back before the operation)."""
+    return np.asarray(_unsigned(x, width)).astype(np.uint64)
+
+
+def _from_u64(x: np.ndarray, width: int) -> np.ndarray:
+    """A uint64 result back to the signed width-bit representation (two's complement)."""
+    return _wrap(np.asarray(x, dtype=np.uint64).view(np.int64), width)
+
+
+def _magnitude(x: np.ndarray) -> np.ndarray:
+    """|x| of signed int64 values as uint64 (|INT64_MIN| = 2^63 has no int64 representation)."""
+    x = np.asarray(x, dtype=np.int64)
+    with np.errstate(over="ignore"):
+        return np.where(x < 0, np.uint64(0) - x.view(np.uint64), x.view(np.uint64))
+
+
+def _negate_u64(m: np.ndarray, neg: np.ndarray) -> np.ndarray:
+    """Signed int64 values from magnitudes m (uint64) and signs (two's complement negation, no host overflow)."""
+    m = np.asarray(m, dtype=np.uint64)
+    with np.errstate(over="ignore"):
+        return np.asarray(np.where(neg, np.uint64(0) - m, m), dtype=np.uint64).view(np.int64)
 
 
 # ---- atomics (DSL v2 increment 4, rc3 02 5.3, 6.3, 6.9, 10) -------------------------------------------------------
@@ -620,6 +662,11 @@ class Buffer:
     iset: Optional[np.ndarray] = None
     iset_lo: Optional[np.ndarray] = None
     iset_hi: Optional[np.ndarray] = None
+    # audit F03: elements whose reference holds only under an unproven premise (proof status axis)
+    premise: Optional[np.ndarray] = None
+    # audit F07: elements whose last write is a float atomic update (across launches; a plain store clears it): only
+    # there may repeated launches differ by the order of the updates
+    float_atomic: Optional[np.ndarray] = None
 
     def copy(self) -> "Buffer":
         return Buffer(self.ident, self.elem, self.kind, self.lo.copy(),
@@ -629,7 +676,9 @@ class Buffer:
                       None if self.d is None else (self.d[0].copy(), self.d[1].copy()),
                       None if self.iset is None else self.iset.copy(),
                       None if self.iset_lo is None else self.iset_lo.copy(),
-                      None if self.iset_hi is None else self.iset_hi.copy())
+                      None if self.iset_hi is None else self.iset_hi.copy(),
+                      None if self.premise is None else self.premise.copy(),
+                      None if self.float_atomic is None else self.float_atomic.copy())
 
     def global_indices(self) -> np.ndarray:
         return np.arange(self.st.size) if self.index is None else self.index
@@ -726,7 +775,8 @@ class KernelReference:
     stored: set = field(default_factory=set)  # storages this launch's reference wrote (stores, atomics, poisoned targets)
 
     def element_classes(self, ident: int):
-        """Per element: complete_composed / conditional_local / not_established / set_target / not_written."""
+        """Per element: complete_composed / conditional_local / not_established / set_target / complete_under_premise
+        (an established reference that holds only under an unproven premise, audit F03) / not_written."""
 
         buf = self.buffers[ident]
         cls = np.full(buf.st.shape, "complete_composed", dtype=object)
@@ -734,16 +784,28 @@ class KernelReference:
         cls = np.where(buf.st >= ST_UNDEF, "not_established", cls)
         if buf.iset is not None:   # DSL v2 increment 14: an integer set target [iset_lo, iset_hi] (L_E)
             cls = np.where(buf.iset, "set_target", cls)
+        cls = np.where(self.under_premise(ident), "complete_under_premise", cls)
         return np.where(buf.written, cls, "not_written")
 
     def established(self, ident: int) -> np.ndarray:
         """Written elements with an established reference: a point, a special value of its class, or an integer set
-        target (increment 14)."""
+        target (increment 14); including those that hold only under an unproven premise (see ``complete``)."""
         buf = self.buffers[ident]
         ok = np.asarray(buf.st) <= ST_NINF
         if buf.iset is not None:
             ok = ok | buf.iset
         return np.asarray(buf.written) & ok
+
+    def under_premise(self, ident: int) -> np.ndarray:
+        """Established elements whose reference holds only under an unproven premise (audit F03)."""
+        buf = self.buffers[ident]
+        if buf.premise is None:
+            return np.zeros(np.shape(buf.st), dtype=bool)
+        return self.established(ident) & np.asarray(buf.premise, dtype=bool)
+
+    def complete(self, ident: int) -> np.ndarray:
+        """Established elements with an unconditional proof status (no unproven premise): the complete count."""
+        return self.established(ident) & ~self.under_premise(ident)
 
     def int_bounds(self, ident: int):
         """(lo, hi) of an integer buffer's reference values, the set target's hull where there is one."""
@@ -769,7 +831,8 @@ class KernelReference:
             entry = {
                 "name": buf.name, "elem": buf.elem, "written": int(mask.sum()),
                 "classes": {c: int((cls == c).sum()) for c in ("complete_composed", "conditional_local",
-                                                               "not_established", "set_target")},
+                                                               "not_established", "set_target",
+                                                               "complete_under_premise")},
             }
             if buf.kind == "f" and buf.actual_after is not None:
                 act = buf.actual_after[mask]
@@ -973,6 +1036,8 @@ class KernelReferenceEvaluator:
         self._cyclic = set()
         self._cas_serial = self._has_cas and not self._returning_atomics
         cas_snapshot = {k: b.copy() for k, b in memory.items()} if self._cas_serial else None
+        # audit F03: storages holding elements established under an unproven premise of an earlier launch
+        premise_before = {k for k, b in memory.items() if b.premise is not None and np.asarray(b.premise).any()}
         snapshot = table = None
         if self._returning_atomics:
             # DSL v2 increment 4: returned atomic values need every update of their address in this launch.  Pass 1
@@ -1002,7 +1067,8 @@ class KernelReferenceEvaluator:
         if self._cas_serial and self._cas_contended and len(programs) > 1:
             aborted, reasons = self._cas_reverse_order(programs, grid, bindings, memory, cas_snapshot, aborted,
                                                        reasons)
-            iset_valid = False   # two serializations were merged: no integer set target record stands
+            iset_valid = False   # several serializations were merged: no integer set target record stands
+        self._mark_premises(memory, reasons, premise_before)
         if aborted:
             # An aborted program may stop before some of its stores: elements the kernel changed but the reference
             # did not write in this launch keep their earlier reference value, which a later launch would read as
@@ -1053,50 +1119,84 @@ class KernelReferenceEvaluator:
 
     def _cas_reverse_order(self, programs, grid, bindings, memory, snapshot, aborted, reasons):
         """DSL v2 increment 7 (rc3 02 6.9, declared order + evidence): the launch was evaluated as one serialization of
-        its contended compare-and-swap operations (program order).  Re-evaluate it in reverse program order from the
-        memory before the launch and keep, per element, only what both orders establish and agree on (the hull when
-        the enclosures overlap); elements the two orders disagree on are not established.  Agreement of two orders is
-        evidence, not a proof over every serialization: recorded as a declared premise."""
-        first = {k: b.copy() for k, b in memory.items()}
-        first_rules = collections.Counter(self._rules)
-        for k in list(memory):
-            memory[k] = snapshot[k].copy()
-        aborted2, reasons2 = self._run_programs(programs, grid, bindings, memory,
-                                                list(range(len(programs)))[::-1])
+        its contended compare-and-swap operations (program order).  Re-evaluate it from the memory before the launch
+        in further program orders -- every order when the launch has at most ``CAS_ALL_ORDERS_MAX`` program instances
+        (audit F03: three non-commuting critical sections can agree in program and reverse order), the reverse order
+        otherwise -- and keep, per element, only what every order establishes and agrees on (the hull when the
+        enclosures share a point); elements the orders disagree on are not established.  Agreement of program orders
+        is evidence, not a proof over every serialization (a program may enter several critical sections): the
+        elements are marked as holding under a premise (``_mark_premises``)."""
+        n = len(programs)
+        exhaustive = n <= CAS_ALL_ORDERS_MAX
+        import itertools
+        orders = [list(p) for p in itertools.permutations(range(n))][1:] if exhaustive else [list(range(n))[::-1]]
+        runs = [{k: b.copy() for k, b in memory.items()}]
+        all_rules = collections.Counter(self._rules)
+        merged = collections.Counter(reasons)
+        all_aborted = dict(aborted)
+        for j, order in enumerate(orders):
+            for k in list(memory):
+                memory[k] = snapshot[k].copy()
+            aborted_j, reasons_j = self._run_programs(programs, grid, bindings, memory, order)
+            if j < len(orders) - 1:
+                runs.append({k: b.copy() for k, b in memory.items()})
+            merged |= collections.Counter(reasons_j)        # per key the count of one evaluation, not the sum
+            all_rules |= collections.Counter(self._rules)
+            all_aborted.update(aborted_j)
         differ = 0
-        for k, b2 in memory.items():
-            b1 = first[k]
-            w = np.asarray(b1.written) | np.asarray(b2.written)
+        for k, out in memory.items():
+            bufs = [r[k] for r in runs if k in r] + [out]
+            w = np.logical_or.reduce([np.asarray(b.written) for b in bufs])
             if not w.any():
                 continue
-            both_ok = (b1.st == ST_OK) & (b2.st == ST_OK)
-            if b1.kind == "f":
-                overlap = both_ok & (b1.lo <= b2.hi) & (b2.lo <= b1.hi)
-                b2.lo = np.where(overlap, np.minimum(b1.lo, b2.lo), b2.lo)
-                b2.hi = np.where(overlap, np.maximum(b1.hi, b2.hi), b2.hi)
+            sts = np.stack([np.asarray(b.st) for b in bufs])
+            all_ok = (sts == ST_OK).all(axis=0)
+            if out.kind == "f":
+                los = np.stack([np.asarray(b.lo) for b in bufs])
+                his = np.stack([np.asarray(b.hi) for b in bufs])
+                value_agree = all_ok & (los.max(axis=0) <= his.min(axis=0))
+                out.lo = np.where(value_agree, los.min(axis=0), out.lo)
+                out.hi = np.where(value_agree, his.max(axis=0), out.hi)
             else:
-                overlap = both_ok & (b1.lo == b2.lo)
-            same_special = (b1.st == b2.st) & (b1.st != ST_OK) & (b1.st < ST_UNDEF) & \
-                ((b1.kind != "f") | True)
-            agree = overlap | same_special
-            bad = w & ~agree & ((b1.st == ST_OK) | (b2.st == ST_OK) | (b1.st != b2.st))
+                los = np.stack([np.asarray(b.lo) for b in bufs])
+                value_agree = all_ok & (los == los[0]).all(axis=0)
+            same_special = (sts == sts[0]).all(axis=0) & (sts[0] != ST_OK) & (sts[0] < ST_UNDEF)
+            agree = value_agree | same_special
+            bad = w & ~agree & ((sts == ST_OK).any(axis=0) | (sts != sts[0]).any(axis=0))
             if bad.any():
                 differ += int(bad.sum())
-                b2.st = np.where(bad, ST_NE, b2.st).astype(np.int8)
-            b2.written = w
-        merged = collections.Counter(reasons)
-        merged.update(reasons2)
-        self._rules.update(first_rules)
+                out.st = np.where(bad, ST_NE, out.st).astype(np.int8)
+            out.cond = np.logical_or.reduce([np.asarray(b.cond) for b in bufs])
+            out.written = w
+        self._rules = all_rules
         self._rules["execution.cas_two_order_launches"] += 1
+        if exhaustive:
+            self._rules["execution.cas_all_program_orders_launches"] += 1
+        which = (f"all {len(orders) + 1} program orders" if exhaustive else "program order and reverse order")
         if differ:
-            merged["not_established:the launch result depends on the order of its contended compare-and-swap "
-                   "operations (program order and reverse order differ)"] += differ
+            merged[f"not_established:the launch result depends on the order of its contended compare-and-swap "
+                   f"operations ({which} differ)"] += differ
             self._rules["execution.cas_order_dependent_elements"] += differ
-        merged["assumed:the launch result does not depend on the order of its contended compare-and-swap operations "
-               "(program order and reverse order agree; a declared premise, not a proof over every order)"] += 1
-        all_aborted = dict(aborted)
-        all_aborted.update(aborted2)
+        merged[f"assumed:the launch result does not depend on the order of its contended compare-and-swap operations "
+               f"({which} agree; a declared premise, not a proof over every serialization)"] += 1
         return all_aborted, merged
+
+    def _mark_premises(self, memory, reasons, premise_before):
+        """Proof status of the elements this launch wrote (audit F03): under a premise when the launch relied on an
+        unproven premise (CAS serializations, scan bracketings) or read / updated an element that holds only under
+        one; otherwise unconditional.  Launch-level, so conservative: every element the launch wrote is marked."""
+        if premise_before & (set(self._loaded_any) | set(self._stored)):
+            reasons[PREMISE_CARRIED] += 1
+        flag = any(unproven_premise(r) for r in reasons)
+        if flag:
+            self._rules["premise.launches_under_unproven_premise"] += 1
+        for buf in memory.values():
+            this = np.asarray(buf.writer) != -1        # written in this launch (kernel boundaries reset the writer)
+            if not this.any() and buf.premise is None:
+                continue
+            if buf.premise is None:
+                buf.premise = np.zeros(np.shape(buf.st), dtype=bool)
+            buf.premise = np.where(this, flag, buf.premise)
 
     def _run_programs(self, programs, grid, bindings, memory, order=None) -> tuple:
         """Run every program instance of the launch once on ``memory`` (in ``order``: indices into ``programs``, by
@@ -1450,6 +1550,16 @@ class KernelReferenceEvaluator:
         raise ProgramAbort(f"{op.node_id}: not_established: compilation assumption {why} on the reference path")
 
     # ---- execution validity: conflicting accesses ----------------------------------
+
+    def _note_read(self, buf, idx):
+        """An atomic that reads its target (an update, a compare, a returned value, a poll): the storage was read, and
+        where the reference has not written the element its captured value before the launch entered the reference
+        (audit F04 follow-up: an accumulator made by an ATen op must count as an upstream source)."""
+        idx = np.asarray(idx, dtype=np.int64)
+        if idx.size:
+            self._loaded_any.add(buf.ident)
+            if (~np.asarray(buf.written)[idx]).any():
+                self._loaded.add(buf.ident)
 
     def _track_read(self, buf, idx, state):
         r = self._readers.get(buf.ident)
@@ -1847,6 +1957,8 @@ class KernelReferenceEvaluator:
             buf.cond[idx] = cond_w
             buf.writer[idx] = state.pid_index
             buf.written[idx] = True
+            if buf.float_atomic is not None:
+                buf.float_atomic[idx] = False
             self._mark_plain(buf, idx)
             we = self._wepoch.get(buf.ident)
             if we is None:
@@ -1892,6 +2004,8 @@ class KernelReferenceEvaluator:
                             if idx.size else ()))
         if idx.size == 0:
             return olds if op.results else None
+        if kind_name != "exch" or result_used:   # an exchange whose result is unused does not read the old value
+            self._note_read(buf, idx)
         self._check_read_then_write(buf, idx, state)
         plain = (buf.writer[idx] >= 0) & (buf.writer[idx] != state.pid_index)
         contrib_lo = np.broadcast_to(value.lo, shape)[active]
@@ -1989,6 +2103,10 @@ class KernelReferenceEvaluator:
             buf.cond[idx] = buf.cond[idx] | extra
         buf.writer[idx] = -2
         buf.written[idx] = True
+        if buf.kind == "f":
+            if buf.float_atomic is None:
+                buf.float_atomic = np.zeros(buf.st.shape, dtype=bool)
+            buf.float_atomic[idx] = True
         self._stored.add(buf.ident)
         aw = self._awriter.get(buf.ident)
         if aw is None:
@@ -2165,6 +2283,7 @@ class KernelReferenceEvaluator:
             raise ProgramAbort(f"{op.node_id}: atomic_poll through an address of unknown buffer")
         active = in_range & (np.broadcast_to(ptr.st, shape) == ST_OK)
         idx = np.asarray(index)[active].astype(np.int64)
+        self._note_read(buf, idx)
         exp_lo = np.broadcast_to(expected.lo, shape)[active]
         exp_st = np.broadcast_to(expected.st, shape)[active]
         res = np.zeros(shape, dtype=np.int8)
@@ -2658,7 +2777,7 @@ class KernelReferenceEvaluator:
             return e, np.asarray(definite, dtype=bool)
         return np.asarray(scale.lo, dtype=np.int64) & 0xFF, np.asarray(scale.st) == ST_OK
 
-    def _scaled_upcast(self, op, vals, x_st, x_cond, x_reasons, scale):
+    def _scaled_upcast(self, op, vals, x_st, x_cond, x_reasons, scale, vals_hi=None):
         rt = op.result_types[0]
         e, ok = self._e8m0_exponent(op, scale)
         e, ok = np.broadcast_to(e, rt.shape), np.broadcast_to(ok, rt.shape)
@@ -2668,13 +2787,15 @@ class KernelReferenceEvaluator:
         x_st = np.broadcast_to(x_st, rt.shape)
         st = np.where(good, x_st, ST_NE).astype(np.int8)
         prod = np.where(st == ST_OK, vals * factor, 0.0)
+        # audit F02: an interval operand keeps its upper end (a positive power of two scales both ends exactly)
+        prod_hi = prod.copy() if vals_hi is None else np.where(st == ST_OK, vals_hi * factor, 0.0)
         reasons = set(x_reasons | scale.reasons)
         if nan_scale.any():
             reasons.add(f"not_established:E8M0 scale 0xFF (NaN marker, replaced by the compiler's maskNan)@{op.node_id}")
         if (~ok).any():
             reasons.add(f"not_established:scale without definite bits@{op.node_id}")
         self._rules[f"amd.{op.name.split('.')[-1]}"] += 1
-        out = _ftv(rt.elem, prod, prod.copy(), st, np.broadcast_to(x_cond, rt.shape) | np.broadcast_to(scale.cond, rt.shape),
+        out = _ftv(rt.elem, prod, prod_hi, st, np.broadcast_to(x_cond, rt.shape) | np.broadcast_to(scale.cond, rt.shape),
                    frozenset(reasons))
         return self._maybe_round(out, op, rt.elem, False)
 
@@ -2693,7 +2814,8 @@ class KernelReferenceEvaluator:
     def _op_scaled_upcast_fp8(self, op, args, env, state):
         """amdg.scaled_upcast_fp8: an fp8 (e4m3fn / e5m2) value times 2^(e - 127) of the E8M0 scale."""
         x, scale = args
-        return self._scaled_upcast(op, np.asarray(x.lo, dtype=np.float64), x.st, x.cond, x.reasons, scale)
+        return self._scaled_upcast(op, np.asarray(x.lo, dtype=np.float64), x.st, x.cond, x.reasons, scale,
+                                   np.asarray(x.hi if x.hi is not None else x.lo, dtype=np.float64))
 
     def _retire(self, state, entries):
         for sid, idx in entries:
@@ -3656,8 +3778,11 @@ class KernelReferenceEvaluator:
             same_special = (a.st == b.st) & (a.st != ST_OK)
             bad = ~(agree | same_special)
             disagree_any |= bool(bad.any())
-            reasons = a.reasons | {f"assumed:scan combine associative (the tl.associative_scan precondition; two "
-                                   f"bracketings agree on these inputs)@{op.node_id}"}
+            premise = (f"assumed:scan combine associative (the tl.associative_scan precondition; two bracketings agree "
+                       f"on these inputs)@{op.node_id}")
+            reasons = a.reasons | {premise}
+            # audit F03: recorded for the launch at once, whatever path (store, atomic, shared memory) the result takes
+            self._reasons[premise] += 1
             if bad.any():
                 reasons = reasons | {f"not_established:scan combine not associative on these inputs (two bracketings "
                                      f"differ)@{op.node_id}"}
@@ -3763,6 +3888,7 @@ class KernelReferenceEvaluator:
                 reasons.add(f"not_established:execution race: compare-and-swap on one address by several programs "
                             f"(interleaving relation not modelled yet)@{op.node_id}")
             owner[idx] = state.pid_index
+            self._note_read(buf, idx)
             self._check_read_then_write(buf, idx, state)
             if not self._cas_serial:
                 self._track_read(buf, idx, state)  # the CAS reads the old value (an atomic read in serialization)
@@ -3799,6 +3925,8 @@ class KernelReferenceEvaluator:
                     if ok and rel:
                         self._acquire(state, rel[-1])
             buf.writer[idx] = state.pid_index
+            if buf.float_atomic is not None:
+                buf.float_atomic[idx] = False
             self._mark_plain(buf, idx)
             we = self._wepoch.get(buf.ident)
             if we is None:
@@ -3834,6 +3962,12 @@ class KernelReferenceEvaluator:
             a, sa, b, sb, c = args
         elif len(args) == 3:
             (a, b, c), sa, sb = args, None, None
+        elif len(args) == 4 and op.attrs.get("lhs_scale") != op.attrs.get("rhs_scale"):
+            # one scale (e.g. bf16 x e4m3 with the rhs scale only), as the custom syntax marks it
+            if op.attrs.get("lhs_scale"):
+                (a, sa, b, c), sb = args, None
+            else:
+                (a, b, sb, c), sa = args, None
         else:
             raise ProgramAbort(f"{op.node_id}: dot_scaled with {len(args)} operands")
         return self._scaled_dot(op, a, sa, b, sb, c, fmt_a, fmt_b)
@@ -3846,10 +3980,14 @@ class KernelReferenceEvaluator:
             raise ProgramAbort(f"{op.node_id}: dot_scaled format {fmt_a} / {fmt_b} has no declared semantics")
 
         def values(x, fmt, k_axis):
+            """(lo, hi) of the decoded operand: the full enclosure of a float operand (audit F02: the upper end was
+            dropped), the exact nibble values of e2m1 bytes."""
             if fmt != "e2m1":
                 if x.kind != "f":
                     raise ProgramAbort(f"{op.node_id}: dot_scaled {fmt} operand is not a float tensor")
-                return np.where(x.st == ST_OK, x.lo, np.nan).astype(np.float64)
+                ok = x.st == ST_OK
+                hi = x.hi if x.hi is not None else x.lo
+                return (np.where(ok, x.lo, np.nan).astype(np.float64), np.where(ok, hi, np.nan).astype(np.float64))
             byte = np.asarray(x.lo).astype(np.int64) & 0xFF
             lut = np.array([0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0, -0.0, -0.5, -1.0, -1.5, -2.0, -3.0, -4.0, -6.0])
             lo_n, hi_n = lut[byte & 0xF], lut[(byte >> 4) & 0xF]
@@ -3858,27 +3996,38 @@ class KernelReferenceEvaluator:
             shape[k_axis] *= 2
             v = stacked.reshape(shape)
             bad = np.repeat(np.asarray(x.st) != ST_OK, 2, axis=k_axis)
-            return np.where(bad, np.nan, v)
+            v = np.where(bad, np.nan, v)
+            return v, v
 
         def scaled(v, s, k_axis):
+            """Both ends times the positive power of two 2^(e - 127) (exact in float64)."""
             if s is None:
                 return v
             e = np.asarray(s.lo).astype(np.int64) & 0xFF
             f = np.where(e == 255, np.nan, np.ldexp(1.0, (e - 127).astype(np.int32)))
             f = np.where(np.asarray(s.st) == ST_OK, f, np.nan)
-            reps = v.shape[k_axis] // f.shape[-1]
+            reps = v[0].shape[k_axis] // f.shape[-1]
             f = np.repeat(f, reps, axis=-1)
-            return v * (f if k_axis == v.ndim - 1 else np.swapaxes(f, -1, -2))
-        av = scaled(values(a, fmt_a, a.lo.ndim - 1), sa, a.lo.ndim - 1)
-        bv = scaled(values(b, fmt_b, b.lo.ndim - 2), sb, b.lo.ndim - 2)
-        bad_a, bad_b = np.isnan(av), np.isnan(bv)
-        lo, hi = iv.idot(np.where(bad_a, 0.0, av), np.where(bad_a, 0.0, av), np.where(bad_b, 0.0, bv),
-                         np.where(bad_b, 0.0, bv))
+            f = f if k_axis == v[0].ndim - 1 else np.swapaxes(f, -1, -2)
+            return v[0] * f, v[1] * f
+
+        def scale_cond(s, axis):
+            """Rows (a) / columns (b) whose scale carries a conditional flag (audit F02: it did not reach the output)."""
+            if s is None:
+                return False
+            any_k = np.any(np.broadcast_to(np.asarray(s.cond), np.shape(s.lo)), axis=-1)
+            return any_k[..., :, None] if axis == "row" else any_k[..., None, :]
+        a_lo, a_hi = scaled(values(a, fmt_a, a.lo.ndim - 1), sa, a.lo.ndim - 1)
+        b_lo, b_hi = scaled(values(b, fmt_b, b.lo.ndim - 2), sb, b.lo.ndim - 2)
+        bad_a, bad_b = np.isnan(a_lo) | np.isnan(a_hi), np.isnan(b_lo) | np.isnan(b_hi)
+        lo, hi = iv.idot(np.where(bad_a, 0.0, a_lo), np.where(bad_a, 0.0, a_hi), np.where(bad_b, 0.0, b_lo),
+                         np.where(bad_b, 0.0, b_hi))
         lo, hi = iv.iadd(lo, hi, np.where(c.st == ST_OK, c.lo, 0.0), np.where(c.st == ST_OK, c.hi, 0.0))
         row_bad = np.any(bad_a, axis=-1)[..., :, None]
         col_bad = np.any(bad_b, axis=-2)[..., None, :]
         st = np.where(row_bad | col_bad | (c.st != ST_OK), ST_NE, ST_OK).astype(np.int8)
-        cond = np.any(a.cond, axis=-1)[..., :, None] | np.any(b.cond, axis=-2)[..., None, :] | c.cond
+        cond = np.any(a.cond, axis=-1)[..., :, None] | np.any(b.cond, axis=-2)[..., None, :] | c.cond | \
+            scale_cond(sa, "row") | scale_cond(sb, "col")
         self._rules["dot_scaled.exact_decode"] += int(st.size)
         reasons = a.reasons | b.reasons | c.reasons | {f"dot_scaled:{fmt_a}x{fmt_b}"}
         for s_ in (sa, sb):
@@ -4607,6 +4756,13 @@ def _hull_buffers(a: Buffer, b: Buffer) -> Buffer:
         out.d = (np.minimum(ta[0], tb[0]), np.maximum(ta[1], tb[1]))
     out.written = a.written | b.written
     out.writer = np.where(a.writer == b.writer, a.writer, np.maximum(a.writer, b.writer))
+    if a.float_atomic is not None or b.float_atomic is not None:   # admission evidence only where both branches agree
+        z = np.zeros(a.st.shape, dtype=bool)
+        out.float_atomic = (a.float_atomic if a.float_atomic is not None else z) & \
+            (b.float_atomic if b.float_atomic is not None else z)
+    if a.premise is not None or b.premise is not None:
+        z = np.zeros(a.st.shape, dtype=bool)
+        out.premise = (a.premise if a.premise is not None else z) | (b.premise if b.premise is not None else z)
     return out
 
 
@@ -4700,23 +4856,31 @@ def _int_op(name, op, args) -> TV:
                 reasons = reasons | {f"not_established:integer division by zero or INT_MIN / -1 (undefined behavior)"
                                      f"@{op.node_id}"}
             bb = np.where(zero, 1, b)
-            q = np.abs(a) // np.abs(bb) * np.where((a >= 0) == (bb >= 0), 1, -1)
+            # audit F01: on magnitudes in uint64 (np.abs / negation of INT64_MIN overflow on the host)
+            ma, mb = _magnitude(a), _magnitude(bb)
+            qm, rm = ma // mb, ma % mb
+            neg_q = (a < 0) != (bb < 0)
+            q = _negate_u64(qm, neg_q)                       # truncated toward zero
+            inexact = rm != 0
             if name == "divsi":
                 v = q
             elif name == "remsi":
-                v = a - q * bb
+                v = _negate_u64(rm, a < 0)                   # the sign of the dividend
             elif name == "ceildivsi":
-                v = -((-a) // bb)
+                v = q + (inexact & ~neg_q)
             else:
-                v = a // bb
+                v = q - (inexact & neg_q)
         elif name in ("divui", "remui", "ceildivui"):
-            a, b = (_unsigned(x, width).astype(np.int64) for x in vals)
+            # audit F01: unsigned values in uint64 (the top bit of a 64-bit operand is not a sign)
+            a, b = (_u64(x, width) for x in vals)
             zero = b == 0
             st = np.where(zero, ST_NE, st).astype(np.int8)
             if zero.any():
                 reasons = reasons | {f"not_established:integer division by zero (undefined behavior)@{op.node_id}"}
-            bb = np.where(zero, 1, b)
-            v = a // bb if name == "divui" else (a % bb if name == "remui" else -((-a) // bb))
+            bb = np.where(zero, np.uint64(1), b)
+            q, r = a // bb, a % bb
+            u = q if name == "divui" else (r if name == "remui" else q + (r != 0).astype(np.uint64))
+            v = _from_u64(u, width)
         elif name == "andi":
             v = vals[0] & vals[1]
         elif name == "ori":
@@ -4734,13 +4898,13 @@ def _int_op(name, op, args) -> TV:
                 v = a << s
             elif name == "shrsi":
                 v = a >> s
-            else:
-                v = (_unsigned(a, width).astype(np.int64) if width < 64 else a) >> s
+            else:   # audit F01: a logical shift of the unsigned value (64 bits: not the arithmetic shift)
+                v = _from_u64(_u64(a, width) >> np.asarray(s).astype(np.uint64), width)
         elif name in ("maxsi", "minsi"):
             v = (np.maximum if name == "maxsi" else np.minimum)(vals[0], vals[1])
         elif name in ("maxui", "minui"):
-            ua, ub = (_unsigned(x, width).astype(np.int64) for x in vals)
-            v = (np.maximum if name == "maxui" else np.minimum)(ua, ub)
+            ua, ub = (_u64(x, width) for x in vals)   # audit F01: compared as unsigned values in uint64
+            v = _from_u64((np.maximum if name == "maxui" else np.minimum)(ua, ub), width)
         elif name == "mulhiui":
             if width == 32:
                 ua, ub = (_unsigned(x, 32).astype(np.uint64) for x in vals)
@@ -4790,8 +4954,8 @@ def _cmpi(op, args) -> TV:
     else:
         av, bv = a.lo.astype(np.int64), b.lo.astype(np.int64)
         maybe = np.zeros(np.broadcast_shapes(av.shape, bv.shape), dtype=bool)
-    if pred.startswith("u"):
-        av, bv = _unsigned(av, width).astype(np.int64), _unsigned(bv, width).astype(np.int64)
+    if pred.startswith("u"):   # audit F01: unsigned values compared in uint64 (2^63 is not negative)
+        av, bv = _u64(av, width), _u64(bv, width)
     elif a.kind == "i":   # DSL v2 increment 15: values are kept modulo 2^width; compare the signed representation
         av, bv = _wrap(av, width), _wrap(bv, width)
     fn = {"eq": np.equal, "ne": np.not_equal, "slt": np.less, "sle": np.less_equal, "sgt": np.greater,
@@ -4966,6 +5130,17 @@ def ptx_zero_fills(ptx: str) -> bool:
     return True
 
 
+def launch_ir(launch) -> tuple:
+    """(kind, text) of the IR a captured launch is analysed on: its TTIR, or the TTGIR of a Gluon kernel, which has no
+    TTIR (increment 10).  One choice for coverage, atomic detection, evaluation and the report (audit F05)."""
+    asm = getattr(launch, "asm", None) or {}
+    if asm.get("ttir"):
+        return "ttir", asm["ttir"]
+    if asm.get("ttgir"):
+        return "ttgir", asm["ttgir"]
+    raise ValueError(f"launch {getattr(launch, 'kernel_name', '?')}: neither TTIR nor TTGIR was captured")
+
+
 def evaluate_sequence(launches: list, mode: str = NumericMode.NUMERICAL_DIFFERENCE,
                       programs_for=None, pin_loads: tuple = (), masked_fill_zero: bool = False) -> SequenceReference:
     """Chain launches through one reference memory (composed reference).
@@ -4982,7 +5157,7 @@ def evaluate_sequence(launches: list, mode: str = NumericMode.NUMERICAL_DIFFEREN
     results = []
     modules: dict = {}
     for position, launch in enumerate(launches):
-        ttir = launch.asm.get("ttir") or launch.asm.get("ttgir")  # Gluon kernels have no TTIR (increment 10)
+        _, ttir = launch_ir(launch)  # Gluon kernels have no TTIR (increment 10)
         module = modules.get(ttir)
         if module is None:
             module = modules[ttir] = parse_ttir(ttir)
