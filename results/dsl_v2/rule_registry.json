@@ -3,8 +3,8 @@
  "triton": "3.6.0",
  "source": "ttir_mapping (MAPPING, LIBDEVICE, LIBDEVICE_ROUNDING, INLINE_ASM, combiners)",
  "counts": {
-  "SUPPORTED": 396,
-  "REJECTED": 101,
+  "SUPPORTED": 398,
+  "REJECTED": 99,
   "DECLARED_PREMISE": 3,
   "NOT_ESTABLISHED": 2
  },
@@ -61,13 +61,13 @@
     "types": "*",
     "subregion": "*"
    },
-   "status": "REJECTED",
+   "status": "SUPPORTED",
    "category": "H",
-   "internal": null,
-   "containment_argument": "",
-   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_unknown_op_or_attribute_is_rejected_not_skipped",
-   "negative_control": "",
-   "reason": "compare-and-swap results depend on an undeclared interleaving"
+   "internal": "atomic_cas",
+   "containment_argument": "Memory, atomics, program ids: a load reads the reference value of the last store (composed across launches and aliases); races and stores through addresses that are not established invalidate the target; values made by non-Triton ops inside the capture enter as exact inputs and mark the output mixed.  Execution validity (DSL v2): an address one program reads and another program of the launch writes is an execution race in either order; a value stored and loaded back in one program without a barrier is ordered only when the same single thread holds it in both accesses (TTGIR layouts), an execution race when another thread reads it, not established when the thread mapping is unknown; gpu.barrier starts a new phase.",
+   "counterexample_test": "tests/test_execution_validity.py::test_scalar_roundtrip_without_barrier_is_an_execution_race",
+   "negative_control": "tests/test_execution_validity.py::test_tensor_roundtrip_in_one_layout_is_ordered",
+   "reason": ""
   },
   {
    "key": {
@@ -256,13 +256,13 @@
     "types": "*",
     "subregion": "*"
    },
-   "status": "REJECTED",
+   "status": "SUPPORTED",
    "category": "E",
-   "internal": null,
-   "containment_argument": "",
-   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_unknown_op_or_attribute_is_rejected_not_skipped",
-   "negative_control": "",
-   "reason": "scaled (microscaling) dot is not supported"
+   "internal": "dot_scaled",
+   "containment_argument": "Reductions, scans and dot products: sums and dot products by SumK / DotK with the Ogita-Rump-Oishi bound (tool 3.0); registered order-free combiners as fast paths, any other combine region interpreted along the lowering's combination order (sub-entries).",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_exp_then_sum_keeps_a_nonzero_enclosing_width",
+   "negative_control": "tests/test_welford_reduction.py::test_three_independent_sums_get_a_complete_reference",
+   "reason": ""
   },
   {
    "key": {

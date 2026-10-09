@@ -369,3 +369,45 @@ def test_num_programs_and_pointer_casts_signature():
             "bitcast=True)\n    x = tl.load(p + i)\n    n = tl.num_programs(0)\n    tl.store(out + i, x * n)\n")
     lo, hi, st = _run("nprog", body, {"x_ptr": ("fp32", x), "out": ("fp32", np.zeros(C))})
     _check("positive", lo, hi, st, [mp.mpf(float(v)) for v in x])
+
+
+@pytest.mark.parametrize("category", CATS)
+def test_unsigned_atomics_and_wide_mulhi_signature(category):
+    # atomic umax / umin on uint32 (unsigned comparison), and the high half of a 64 x 64 bit product
+    v = np.asarray(_vals(category, [7, 100, 12, 3000000000, 5, 9, 1, 2], [0, U32 - 1, 2 ** 31, 1, 0, 0, 0, 0],
+                         [2 ** 31, 2 ** 31 - 1, 0, 0, 0, 0, 0, 0]), np.uint32)
+    for fn, red in (("tl.atomic_max", max), ("tl.atomic_min", min)):
+        body = f"    i = tl.arange(0, N)\n    x = tl.load(x_ptr + i)\n    {fn}(out + i * 0, x)\n"
+        init = np.asarray([5], np.uint32)
+        lo, hi, st = _run("uatomic_" + fn[-3:], body, {"x_ptr": ("uint32", v), "out": ("uint32", init)})
+        exact = red([5] + [int(t) for t in v])
+        lo_u = np.asarray(lo, np.int64) % U32
+        bad = H.check_lanes("boundary", lo_u, lo_u, st, [exact], is_int=True)
+        assert not bad, (fn, bad)
+    a = np.asarray(_vals(category, [3, 2 ** 63 + 5, 2 ** 40, 7, 1, 2, 3, 4], [2 ** 64 - 1, 2 ** 64 - 1, 0, 1, 1, 1, 1, 1],
+                         [2 ** 63, 2 ** 63, 1, 1, 1, 1, 1, 1]), np.uint64)
+    b = np.asarray(_vals(category, [5, 3, 2 ** 30, 2 ** 62, 1, 2, 3, 4], [2 ** 64 - 1, 2, 5, 1, 1, 1, 1, 1],
+                         [2, 2 ** 63, 1, 1, 1, 1, 1, 1]), np.uint64)
+    body = ("    i = tl.arange(0, N)\n    a = tl.load(a_ptr + i)\n    b = tl.load(b_ptr + i)\n"
+            "    tl.store(out + i, tl.umulhi(a, b))\n")
+    lo, hi, st = _run("umulhi64", body, {"a_ptr": ("uint64", a), "b_ptr": ("uint64", b), "out": ("uint64", np.zeros(C))})
+    exact = [(int(x) * int(y)) >> 64 for x, y in zip(a, b)]
+    lo_u = [int(t) % (1 << 64) for t in np.asarray(lo, np.int64)]
+    bad = H.check_lanes("boundary", lo_u, lo_u, st, exact, is_int=True)
+    assert not bad, bad[:3]
+
+
+def test_atomic_cas_without_contention_is_determined_and_with_contention_is_a_race():
+    body = ("    pid = tl.program_id(0)\n    old = tl.atomic_cas(lock + pid, 0, pid + 1)\n"
+            "    tl.store(out + pid, old)\n")
+    init = np.asarray([0, 7, 0, 0], np.int32)
+    lo, hi, st = _run("cas_own", body, {"lock": ("int32", init), "out": ("int32", np.zeros(4))}, grid=(4, 1, 1))
+    _check("positive", lo, hi, st, [0, 7, 0, 0], is_int=True)               # the old values
+    lo, hi, st = _run("cas_own", body, {"lock": ("int32", init), "out": ("int32", np.zeros(4))}, out_name="lock",
+                      grid=(4, 1, 1))
+    _check("positive", lo, hi, st, [1, 7, 3, 4], is_int=True)               # swapped where old == 0
+    body = ("    pid = tl.program_id(0)\n    old = tl.atomic_cas(lock, 0, pid + 1)\n"
+            "    tl.store(out + pid, old)\n")
+    lo, hi, st = _run("cas_shared", body, {"lock": ("int32", np.zeros(1)), "out": ("int32", np.zeros(4))},
+                      grid=(4, 1, 1))
+    assert (st != H.ST_OK).all()                                            # interleaving-dependent: a race

@@ -513,6 +513,12 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
         op.attrs["asm"] = sm.group(1) if sm else ""
         op.operands = _values(head)
         op.operand_types, op.result_types = operand_types, result_types
+    elif name == "tt.dot_scaled":  # DSL v2 increment 3: the operand formats live in the custom syntax
+        mm = re.search(r"lhs\s*=\s*(\w+)\s+rhs\s*=\s*(\w+)", rest)
+        if mm:
+            op.attrs["lhs"], op.attrs["rhs"] = mm.group(1), mm.group(2)
+        op.operands = _values(head)
+        op.operand_types, op.result_types = operand_types, result_types
     elif name == "tt.clampf":
         mm = re.search(r"propagateNan\s*=\s*([A-Za-z0-9_]+)", head)
         op.attrs["propagateNan"] = mm.group(1) if mm else "none"

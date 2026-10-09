@@ -107,9 +107,12 @@ def main():
         supported = status in ("SUPPORTED", "DECLARED_PREMISE")
         # per-signature tests carry their category in the test id (tests/test_signatures_*.py); any other test that
         # executed the rule counts as a positive case
-        by_cat = {"boundary": sorted(t for t in trig if "-boundary]" in t),
-                  "premise": sorted(t for t in trig if "-premise_violation]" in t)}
-        tests = {"positive": sorted(t for t in trig if not ("-boundary]" in t or "-premise_violation]" in t))[:20],
+        def tokens(t):
+            m = re.search(r"\[(.*)\]$", t)
+            return set(m.group(1).split("-")) if m else set()
+        by_cat = {"boundary": sorted(t for t in trig if "boundary" in tokens(t)),
+                  "premise": sorted(t for t in trig if "premise_violation" in tokens(t))}
+        tests = {"positive": sorted(t for t in trig if not ({"boundary", "premise_violation"} & tokens(t)))[:20],
                  "boundary": by_cat["boundary"][:20],
                  # a registry counterexample test counts for this rule only if it actually executed the rule
                  "premise_violation": (by_cat["premise"] + ([e["counterexample_test"]] if e.get("counterexample_test")

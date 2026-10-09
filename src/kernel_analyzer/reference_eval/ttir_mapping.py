@@ -61,7 +61,7 @@ MAPPING: dict[str, Rule] = {
     "tt.addptr": S("A", "addptr"),
     "tt.advance": R("A", "block pointers are not supported in this version"),
     "tt.assert": S("H", "assert"),
-    "tt.atomic_cas": R("H", "compare-and-swap results depend on an undeclared interleaving"),
+    "tt.atomic_cas": S("H", "atomic_cas"),  # DSL v2 increment 3: deterministic without contention; contention -> race
     "tt.atomic_rmw": S("H", "atomic_rmw"),
     "tt.bitcast": S("G", "bitcast"),
     "tt.broadcast": S("A", "broadcast"),
@@ -74,7 +74,7 @@ MAPPING: dict[str, Rule] = {
     "tt.descriptor_scatter": R("H", "tensor descriptors (TMA) are not supported"),
     "tt.descriptor_store": R("H", "tensor descriptors (TMA) are not supported"),
     "tt.dot": S("E", "dot"),
-    "tt.dot_scaled": R("E", "scaled (microscaling) dot is not supported"),
+    "tt.dot_scaled": S("E", "dot_scaled"),  # DSL v2 increment 3: exact MX decoding, exact real dot (rc3 02 6.5)
     "tt.elementwise_inline_asm": S("I", "inline_asm"),
     "tt.expand_dims": S("A", "expand_dims"),
     "tt.extern_elementwise": S("I", "extern"),
@@ -321,9 +321,17 @@ def registry_coverage(registry: Optional[dict] = None) -> dict:
                 supported.append(name)
             else:
                 rejected.append(name)
-    stale = sorted(n for n in MAPPING if n not in {x for v in registry["operations"].values() for x in v})
+    known = {x for v in registry["operations"].values() for x in v}
+    other = sorted(n for n in MAPPING if n not in known and n in OTHER_PROFILE_NAMES)
+    stale = sorted(n for n in MAPPING if n not in known and n not in OTHER_PROFILE_NAMES)
     return {"triton": registry["triton"], "missing": sorted(missing), "supported": len(supported),
-            "rejected": len(rejected), "stale_table_entries": stale, "complete": not missing}
+            "rejected": len(rejected), "stale_table_entries": stale, "other_profile_entries": other,
+            "complete": not missing}
+
+
+# Table entries for names that the locked 3.6.0 build does not register but another recorded profile does (DSL v2
+# increment 3; registration evidence: results/dsl_v2/w0/registered_e50b186e8bd2.json, official main e50b186e).
+OTHER_PROFILE_NAMES = {"ttg.barrier": "e50b186e", "llvm.intr.assume": "e50b186e"}
 
 
 # ---------------------------------------------------------------------------

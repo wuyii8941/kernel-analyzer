@@ -1301,6 +1301,11 @@ class KernelReferenceEvaluator:
                 fn = np.maximum if kind_name == "max" else np.minimum
                 fn.at(buf.lo, idx, contrib_lo)
                 fn.at(buf.hi, idx, contrib_hi)
+            elif kind_name in ("umax", "umin"):  # DSL v2 increment 3: unsigned comparison, stored back as two's complement
+                width = INT_WIDTH[buf.elem]
+                tmp = _unsigned(buf.lo, width).copy()
+                (np.maximum if kind_name == "umax" else np.minimum).at(tmp, idx, _unsigned(contrib_lo, width))
+                buf.lo[:] = tmp.view(np.int64) if width >= 64 else _wrap(tmp.astype(np.int64), width)
             else:
                 fn = {"max": np.maximum, "min": np.minimum, "and": np.bitwise_and, "or": np.bitwise_or,
                       "xor": np.bitwise_xor}.get(kind_name)
@@ -1801,6 +1806,125 @@ class KernelReferenceEvaluator:
             d = iv.iadd(*iv.iadd(*da, *db), np.broadcast_to(tc[0], shape), np.broadcast_to(tc[1], shape))
             out.d = (np.where(st == ST_OK, d[0], 0.0), np.where(st == ST_OK, d[1], 0.0))
         return out
+
+    def _op_atomic_cas(self, op, args, env, state):
+        """tt.atomic_cas (DSL v2 increment 3, rc3 02 6.9 partial): with a single program per address in the launch the
+        result is determined: old = mem; mem = val where old == cmp; returns old.  Several programs on one address make
+        the outcome depend on the interleaving: an execution race (every program involved is not established) --
+        the finite-interleaving relation is a later increment.  Duplicate addresses inside one CAS, a non-point
+        reference value (equality not decidable) or a non-point operand: not established."""
+        ptr, cmp, val = args[0], args[1], args[2]
+        shape = ptr.shape
+        buf, index, in_range = self._addresses(op, ptr, state)
+        if buf is None:
+            raise ProgramAbort(f"{op.node_id}: atomic_cas through an address of unknown buffer")
+        active = in_range & (np.broadcast_to(ptr.st, shape) == ST_OK)
+        idx = np.asarray(index)[active].astype(np.int64)
+        old_lo = np.zeros(shape)
+        old_st = np.full(shape, ST_NE, dtype=np.int8)
+        reasons = set(ptr.reasons | cmp.reasons | val.reasons)
+        if idx.size:
+            owner = self._readers.setdefault(("cas", buf.ident), np.full(buf.writer.shape, -1, dtype=np.int64))
+            others = owner[idx]
+            clash = (others >= 0) & (others != state.pid_index)
+            if clash.any():
+                self._race_programs.update(int(p) for p in np.unique(others[clash]))
+                self._race_programs.add(state.pid_index)
+                self._rules["execution.atomic_cas_contention_lanes"] += int(clash.sum())
+                reasons.add(f"not_established:execution race: compare-and-swap on one address by several programs "
+                            f"(interleaving relation not modelled yet)@{op.node_id}")
+            owner[idx] = state.pid_index
+            self._check_read_then_write(buf, idx, state)
+            self._track_read(buf, idx, state)  # the CAS reads the old value
+            uniq, counts = np.unique(idx, return_counts=True)
+            dup = np.isin(idx, uniq[counts > 1])
+            lo_m = buf.lo[idx].astype(np.float64)
+            hi_m = (buf.hi[idx] if buf.hi is not None else buf.lo[idx]).astype(np.float64)
+            c_lo = np.broadcast_to(cmp.lo, shape)[active].astype(np.float64)
+            c_hi = np.broadcast_to(cmp.hi if cmp.hi is not None else cmp.lo, shape)[active].astype(np.float64)
+            v_lo = np.broadcast_to(val.lo, shape)[active]
+            v_hi = np.broadcast_to(val.hi if val.hi is not None else val.lo, shape)[active]
+            point = (lo_m == hi_m) & (c_lo == c_hi) & (buf.st[idx] == ST_OK) & \
+                (np.broadcast_to(cmp.st, shape)[active] == ST_OK) & (np.broadcast_to(val.st, shape)[active] == ST_OK)
+            decided = point & ~dup & ~clash
+            swap = decided & (lo_m == c_lo)
+            res_lo = old_lo[active]
+            res_lo[:] = lo_m
+            old_lo[active] = res_lo
+            st_a = np.where(decided, ST_OK, ST_NE).astype(np.int8)
+            old_st[active] = st_a
+            new_lo = np.where(swap, v_lo, buf.lo[idx])
+            buf.lo[idx] = new_lo
+            if buf.hi is not None:
+                buf.hi[idx] = np.where(swap, v_hi, buf.hi[idx])
+            buf.st[idx] = np.where(decided, buf.st[idx], ST_NE)
+            buf.writer[idx] = state.pid_index
+            buf.written[idx] = True
+            self._stored.add(buf.ident)
+            if (~decided).any():
+                reasons.add(f"not_established:compare-and-swap not decidable (duplicate address, non-point value or "
+                            f"contention)@{op.node_id}")
+            self._rules["atomic.cas_decided_lanes"] += int(decided.sum())
+        kind = "f" if ptr.elem.pointee in FLOAT_ELEMS else "i"
+        if kind == "f":
+            return _ftv(ptr.elem.pointee, old_lo, old_lo.copy(), old_st, np.zeros(shape, dtype=bool), frozenset(reasons))
+        return TV("i", ptr.elem.pointee, old_lo.astype(np.int64), None, None, old_st, np.zeros(shape, dtype=bool),
+                  frozenset(reasons))
+
+    def _op_dot_scaled(self, op, args, env, state):
+        """tt.dot_scaled (DSL v2 rc3 02 6.5, format bridge): the operands are decoded exactly (fp8 e4m3 / e5m2 as
+        loaded, fp4 e2m1 packed two per byte along K, low nibble first), each block of 32 along K multiplied by its
+        e8m0 scale 2^(e - 127) (e = 255: NaN), and the real dot product is enclosed by DotK.  The products are exact in
+        float64 (|fp8| <= 57344, 2^(+-127)), so the only rounding is in the enclosed sum."""
+        if self.mode == NumericMode.ROUNDING_CHECK:
+            raise ProgramAbort(f"{op.node_id}: scaled dot accumulation order is not declared (rounding-check mode)")
+        fmt_a, fmt_b = op.attrs.get("lhs"), op.attrs.get("rhs")
+        if len(args) == 5:
+            a, sa, b, sb, c = args
+        elif len(args) == 3:
+            (a, b, c), sa, sb = args, None, None
+        else:
+            raise ProgramAbort(f"{op.node_id}: dot_scaled with {len(args)} operands")
+        ok_fmt = {"e4m3", "e5m2", "e2m1", "bf16", "fp16"}
+        if fmt_a not in ok_fmt or fmt_b not in ok_fmt:
+            raise ProgramAbort(f"{op.node_id}: dot_scaled format {fmt_a} / {fmt_b} has no declared semantics")
+
+        def values(x, fmt, k_axis):
+            if fmt != "e2m1":
+                if x.kind != "f":
+                    raise ProgramAbort(f"{op.node_id}: dot_scaled {fmt} operand is not a float tensor")
+                return np.where(x.st == ST_OK, x.lo, np.nan).astype(np.float64)
+            byte = np.asarray(x.lo).astype(np.int64) & 0xFF
+            lut = np.array([0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0, -0.0, -0.5, -1.0, -1.5, -2.0, -3.0, -4.0, -6.0])
+            lo_n, hi_n = lut[byte & 0xF], lut[(byte >> 4) & 0xF]
+            stacked = np.stack([lo_n, hi_n], axis=k_axis + 1 if k_axis >= 0 else k_axis)
+            shape = list(byte.shape)
+            shape[k_axis] *= 2
+            v = stacked.reshape(shape)
+            bad = np.repeat(np.asarray(x.st) != ST_OK, 2, axis=k_axis)
+            return np.where(bad, np.nan, v)
+
+        def scaled(v, s, k_axis):
+            if s is None:
+                return v
+            e = np.asarray(s.lo).astype(np.int64) & 0xFF
+            f = np.where(e == 255, np.nan, np.ldexp(1.0, (e - 127).astype(np.int32)))
+            f = np.where(np.asarray(s.st) == ST_OK, f, np.nan)
+            reps = v.shape[k_axis] // f.shape[-1]
+            f = np.repeat(f, reps, axis=-1)
+            return v * (f if k_axis == v.ndim - 1 else np.swapaxes(f, -1, -2))
+        av = scaled(values(a, fmt_a, a.lo.ndim - 1), sa, a.lo.ndim - 1)
+        bv = scaled(values(b, fmt_b, b.lo.ndim - 2), sb, b.lo.ndim - 2)
+        bad_a, bad_b = np.isnan(av), np.isnan(bv)
+        lo, hi = iv.idot(np.where(bad_a, 0.0, av), np.where(bad_a, 0.0, av), np.where(bad_b, 0.0, bv),
+                         np.where(bad_b, 0.0, bv))
+        lo, hi = iv.iadd(lo, hi, np.where(c.st == ST_OK, c.lo, 0.0), np.where(c.st == ST_OK, c.hi, 0.0))
+        row_bad = np.any(bad_a, axis=-1)[..., :, None]
+        col_bad = np.any(bad_b, axis=-2)[..., None, :]
+        st = np.where(row_bad | col_bad | (c.st != ST_OK), ST_NE, ST_OK).astype(np.int8)
+        cond = np.any(a.cond, axis=-1)[..., :, None] | np.any(b.cond, axis=-2)[..., None, :] | c.cond
+        self._rules["dot_scaled.exact_decode"] += int(st.size)
+        return _ftv(c.elem, lo, hi, st, cond, a.reasons | b.reasons | c.reasons | {f"dot_scaled:{fmt_a}x{fmt_b}"})
 
     # ---- elementwise --------------------------------------------------------------
 
@@ -2539,10 +2663,16 @@ def _int_op(name, op, args) -> TV:
             ua, ub = (_unsigned(x, width).astype(np.int64) for x in vals)
             v = (np.maximum if name == "maxui" else np.minimum)(ua, ub)
         elif name == "mulhiui":
-            if width != 32:
+            if width == 32:
+                ua, ub = (_unsigned(x, 32).astype(np.uint64) for x in vals)
+                v = ((ua * ub) >> np.uint64(32)).astype(np.int64)
+            elif width == 64:  # DSL v2 increment 3: the high 64 bits of the exact 128-bit product (Python integers)
+                ua, ub = (_unsigned(x, 64) for x in vals)
+                ua, ub = np.broadcast_arrays(ua, ub)
+                hi = [(int(p) * int(q)) >> 64 for p, q in zip(ua.reshape(-1).tolist(), ub.reshape(-1).tolist())]
+                v = np.array(hi, dtype=np.uint64).reshape(ua.shape).view(np.int64)
+            else:
                 raise ProgramAbort(f"{op.node_id}: mulhiui width {width}")
-            ua, ub = (_unsigned(x, 32).astype(np.uint64) for x in vals)
-            v = ((ua * ub) >> np.uint64(32)).astype(np.int64)
         elif name == "absi":
             v = np.abs(vals[0])
         else:
