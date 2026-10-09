@@ -305,6 +305,9 @@ INLINE_ASM = {
     r"cos\.approx(\.ftz)?\.f32 \$0, \$1;": "cos",
     r"mov\.b32 \$0, \$1;": "identity",
     r"div\.full(\.ftz)?\.f32 \$0, \$1, \$2;": "approx_div",  # DSL v2 increment 5 (rc3 02 6.5)
+    # DSL v2 increment 11: the TF32 rounding the lowering inserts before a tf32 dot (found by the TTIR / TTGIR
+    # cross-check): the same target as the TTIR level, where tf32 is a recorded property of the dot
+    r"cvt\.rna\.tf32\.f32 \$0, \$1;": "tf32_round",
 }
 
 

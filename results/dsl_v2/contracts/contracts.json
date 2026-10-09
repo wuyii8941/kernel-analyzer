@@ -1608,13 +1608,13 @@
     "tests/test_signatures_ptx_bits.py::test_packed_multiple_outputs_signature[positive]",
     "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-positive]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cos.approx.f32 $0, $1;-positive]",
+    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-positive]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[ex2.approx.f32 $0, $1;-positive]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[lg2.approx.f32 $0, $1;-positive]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[mov.b32 $0, $1;-positive]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[rcp.approx.f32 $0, $1;-positive]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[rcp.rn.f32 $0, $1;-positive]",
-    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[rsqrt.approx.f32 $0, $1;-positive]",
-    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sin.approx.f32 $0, $1;-positive]"
+    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[rsqrt.approx.f32 $0, $1;-positive]"
    ],
    "boundary": [
     "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[boundary]",
@@ -1624,6 +1624,7 @@
     "tests/test_signatures_ptx_bits.py::test_packed_multiple_outputs_signature[boundary]",
     "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-boundary]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cos.approx.f32 $0, $1;-boundary]",
+    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-boundary]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[ex2.approx.f32 $0, $1;-boundary]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[lg2.approx.f32 $0, $1;-boundary]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[mov.b32 $0, $1;-boundary]",
@@ -1643,6 +1644,7 @@
     "tests/test_signatures_ptx_bits.py::test_packed_multiple_outputs_signature[premise_violation]",
     "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-premise_violation]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cos.approx.f32 $0, $1;-premise_violation]",
+    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-premise_violation]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[ex2.approx.f32 $0, $1;-premise_violation]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[lg2.approx.f32 $0, $1;-premise_violation]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[mov.b32 $0, $1;-premise_violation]",
@@ -1683,6 +1685,9 @@
    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cos.approx.f32 $0, $1;-boundary]",
    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cos.approx.f32 $0, $1;-positive]",
    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cos.approx.f32 $0, $1;-premise_violation]",
+   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-boundary]",
+   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-positive]",
+   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-premise_violation]",
    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[ex2.approx.f32 $0, $1;-boundary]",
    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[ex2.approx.f32 $0, $1;-positive]",
    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[ex2.approx.f32 $0, $1;-premise_violation]",
@@ -1702,10 +1707,7 @@
    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[rsqrt.approx.f32 $0, $1;-positive]",
    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[rsqrt.approx.f32 $0, $1;-premise_violation]",
    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sin.approx.f32 $0, $1;-boundary]",
-   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sin.approx.f32 $0, $1;-positive]",
-   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sin.approx.f32 $0, $1;-premise_violation]",
-   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sqrt.approx.f32 $0, $1;-boundary]",
-   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sqrt.approx.f32 $0, $1;-positive]"
+   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sin.approx.f32 $0, $1;-positive]"
   ],
   "device_validation": [
    {
@@ -39554,6 +39556,82 @@
      "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cos.approx.f32 $0, $1;-boundary]",
      "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cos.approx.f32 $0, $1;-positive]",
      "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cos.approx.f32 $0, $1;-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.elementwise_inline_asm|attrs=asm~cvt\\.rna\\.tf32\\.f32 \\$0, \\$1;",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.elementwise_inline_asm",
+   "official_source_ids": [
+    "e50b186e:tt.elementwise_inline_asm"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "asm~cvt\\.rna\\.tf32\\.f32 \\$0, \\$1;"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-boundary]",
+   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-positive]",
+   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-boundary]",
+     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-positive]",
+     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cvt.rna.tf32.f32 $0, $1;-premise_violation]"
     ]
    }
   ],

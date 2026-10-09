@@ -325,7 +325,9 @@ ASM = {"ex2.approx.f32 $0, $1;": lambda x: mp.power(2, x), "lg2.approx.f32 $0, $
        "rsqrt.approx.f32 $0, $1;": lambda x: None if x <= 0 else 1 / mp.sqrt(x),
        "sqrt.approx.f32 $0, $1;": lambda x: None if x < 0 else mp.sqrt(x), "sqrt.rn.f32 $0, $1;": lambda x: None if x < 0 else mp.sqrt(x),
        "sin.approx.f32 $0, $1;": mp.sin, "cos.approx.f32 $0, $1;": mp.cos, "tanh.approx.f32 $0, $1;": mp.tanh,
-       "mov.b32 $0, $1;": lambda x: x}
+       "mov.b32 $0, $1;": lambda x: x,
+       # increment 11: the tf32 rounding is a recorded precision property in the numerical-difference mode
+       "cvt.rna.tf32.f32 $0, $1;": lambda x: x}
 
 
 @pytest.mark.parametrize("category", CATS)

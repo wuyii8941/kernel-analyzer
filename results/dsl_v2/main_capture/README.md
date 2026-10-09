@@ -20,6 +20,9 @@ One JSON line per launch.  Measurement only; the official tests' own assertions 
 | `inc7_tutorial05.jsonl` | official tutorial 05 (layer norm, CAS spin lock in the backward pass) | increments 7-8 | `w7_tutorials_run.sh` |
 | `inc9_inline_asm.jsonl` | test_inline_asm*, test_dot_max_num_imprecise_acc, test_typeconvert_upcast | increment 9 (`53d754b`) | `w9_capture_run.sh` |
 | `inc10_gluon_test_core.jsonl` | official Gluon unit tests (python/test/gluon/test_core.py), evaluated from TTGIR | increment 10 | `w10_gluon_run.sh` |
+| `inc11_cross_level.jsonl` | test_core dot / reduce1d / reduce2d / scan2d / where / cast: each launch's TTIR reference vs the references of the sm_90 and sm_100 TTGIR compiled from it (cross_level_plugin.py) | increment 11 (`a8e2f94`) | `w11_cross_run.sh` |
+| `inc11_cross_level_tf32_after_fix.jsonl` | the tf32 subset after the cvt.rna.tf32.f32 rule | increment 11 | `w11_cross_run.sh` (KSEL) |
+| `inc11_cross_level_combined.jsonl` | inc11_cross_level with the tf32 subset replaced | — | — |
 | `inc6_combined_summary.json` | `scripts/dsl_v2/summarize_capture.py inc6_combined.jsonl --baseline inc4_broad.jsonl` | — | — |
 
 Status per launch: `complete` (every written element established), `partial`, `aborted` (a program instance aborted),

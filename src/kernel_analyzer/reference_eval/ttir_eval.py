@@ -3464,6 +3464,12 @@ class KernelReferenceEvaluator:
             return self._run_ptx_program(op, program, args)
         if internal == "approx_div":
             return self._op_approx_div(op, args, env, None)
+        if internal == "tf32_round":
+            # DSL v2 increment 11: numerical-difference mode keeps a tf32 dot's operand rounding as a recorded precision
+            # property (the TTIR level's dot_input_precision); rounding-check mode would need the exact rna rounding
+            if self.mode == NumericMode.ROUNDING_CHECK:
+                raise ProgramAbort(f"{op.node_id}: tf32 rounding (cvt.rna.tf32.f32) is not modelled in rounding-check mode")
+            return args[0].with_reason("dot_input_precision:tf32 (cvt.rna.tf32.f32 inserted by the lowering)")
         mode = inline_asm_rounding(op.attrs.get("asm", ""))
         if mode is not None:  # used only in rounding-check mode, like a rounding-suffixed libdevice call
             import dataclasses
