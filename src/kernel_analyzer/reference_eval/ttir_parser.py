@@ -521,6 +521,10 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
         op.attrs["asm"] = sm.group(1) if sm else ""
         op.operands = _values(head)
         op.operand_types, op.result_types = operand_types, result_types
+        if not result_types:  # no operands: "... {attrs} -> T" (DSL v2 increment 9)
+            mm = re.search(r"->\s*(.+)$", rest_no_attrs)
+            if mm:
+                op.result_types = _type_list(mm.group(1))
     elif name == "tt.dot_scaled":  # DSL v2 increment 3: the operand formats live in the custom syntax
         mm = re.search(r"lhs\s*=\s*(\w+)\s+rhs\s*=\s*(\w+)", rest)
         if mm:

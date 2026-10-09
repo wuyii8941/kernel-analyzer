@@ -601,12 +601,17 @@ def kernel_coverage(module: TModule, func: Optional[TFunc] = None) -> dict:
             internal = inline_asm_internal(op.attrs.get("asm", ""))
             packed = op.attrs.get("packed_element", "1 : i32").split(":")[0].strip()
             if internal is None:
+                from .ptx_bits import classify
                 from .ttir_eval import parse_ptx_program  # straight-line PTX snippets have lane-wise semantics
 
-                if parse_ptx_program(op.attrs.get("asm", "")) is not None:
+                if parse_ptx_program(op.attrs.get("asm", "")) is not None and packed == "1" and len(op.results) == 1:
                     internal = "ptx_program"
                 else:
-                    reason = f"inline asm {op.attrs.get('asm')!r} has no declared semantics"
+                    why = classify(op.attrs.get("asm", ""))   # DSL v2 increment 9: bit-level PTX interpreter
+                    if why is None:
+                        internal = "ptx_bits"
+                    else:
+                        reason = f"inline asm {op.attrs.get('asm')!r}: {why}"
             elif packed != "1" or len(op.results) != 1:
                 reason = "packed or multi-result inline asm is not supported"
             row["internal"] = internal

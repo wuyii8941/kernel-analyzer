@@ -2961,7 +2961,7 @@ class KernelReferenceEvaluator:
             program = parse_ptx_program(op.attrs.get("asm", ""))
             if program is None or len(op.results) != 1 or \
                     op.attrs.get("packed_element", "1 : i32").split(":")[0].strip() != "1":
-                raise ProgramAbort(f"{op.node_id}: inline asm has no declared semantics")
+                return self._run_bit_ptx(op, args)
             if self.mode == NumericMode.ROUNDING_CHECK and any(ins[2] in _PTX_APPROX for ins in program):
                 raise ProgramAbort(f"{op.node_id}: approximate PTX instruction in rounding-check mode")
             return self._run_ptx_program(op, program, args)
@@ -2973,6 +2973,85 @@ class KernelReferenceEvaluator:
 
             op = dataclasses.replace(op, attrs={**op.attrs, "rounding": mode})
         return self._elementwise(internal, op, args)
+
+    def _run_bit_ptx(self, op, args):
+        """Inline asm interpreted instruction by instruction on bit patterns and real values (ptx_bits, DSL v2
+        increment 9, rc3 02 6.10).  An environment read (clock, SM id) leaves the results without a reference value;
+        an instruction outside the subset or a memory effect inside the asm aborts the program."""
+        from . import ptx_bits
+        asm = op.attrs.get("asm", "")
+        cons = op.attrs.get("constraints", "").strip().strip('"')
+        pack = int(str(op.attrs.get("packed_element", "1 : i32")).split(":")[0].strip())
+        shape = np.broadcast_shapes(*[a.shape for a in args]) if args else op.result_types[0].shape
+        widths = {"i1": 8, "i8": 8, "i16": 16, "i32": 32, "i64": 64, "f16": 16, "f32": 32, "bf16": 16, "f64": 64}
+        inputs = []
+        for a in args:
+            if a.kind == "p":
+                raise ProgramAbort(f"{op.node_id}: inline asm with pointer operands (memory effects) is not modelled")
+            w = widths.get(a.elem)
+            if w is None:
+                raise ProgramAbort(f"{op.node_id}: inline asm operand type {a.elem} is not modelled")
+            flat = a.map(lambda x, s=shape: np.broadcast_to(np.asarray(x), s).reshape(-1))
+            ok = np.asarray(flat.st) == ST_OK
+            if a.kind == "f" and a.elem in ("f16", "f32"):
+                inputs.append(("real", w, None, None, np.where(ok, flat.lo, 0.0), np.where(ok, flat.hi, 0.0)))
+                if not ok.all():
+                    raise ProgramAbort(f"{op.node_id}: inline asm operand without a finite established value")
+            elif a.kind == "f":
+                bits, definite = (_float_bits(a.elem, flat.lo, flat.hi, flat.st) if a.elem in _BIT_LAYOUT or
+                                  a.elem == "bf16" else (None, None))
+                if bits is None:
+                    raise ProgramAbort(f"{op.node_id}: inline asm operand type {a.elem} is not modelled")
+                inputs.append(("bits", w, bits.astype(np.uint64) & np.uint64((1 << w) - 1), definite, None, None))
+            else:
+                v = np.asarray(flat.lo, dtype=np.int64)
+                inputs.append(("bits", w, (v.astype(np.uint64) & np.uint64((1 << w) - 1 if w < 64 else -1 & (2**64 - 1))),
+                               ok, None, None))
+        outs = []
+        for rt in op.result_types:
+            w = widths.get(rt.elem)
+            if w is None or rt.elem in ("bf16", "f64"):
+                raise ProgramAbort(f"{op.node_id}: inline asm result type {rt.elem} is not modelled")
+            outs.append(("real" if rt.elem in ("f16", "f32") else "bits", w))
+        try:
+            res = ptx_bits.run(asm, cons, pack, inputs, outs, total=int(np.prod(op.result_types[0].shape)))
+        except ptx_bits.EnvironmentRead as exc:
+            why = frozenset({f"not_established:inline asm {exc}@{op.node_id}"})
+            out = []
+            for rt in op.result_types:
+                z = np.zeros(rt.shape)
+                st = np.full(rt.shape, ST_NE, dtype=np.int8)
+                out.append(_ftv(rt.elem, z, z.copy(), st, np.zeros(rt.shape, dtype=bool), why) if kind_of(rt.elem) == "f"
+                           else TV("i", rt.elem, z.astype(np.int64), None, None, st, np.zeros(rt.shape, dtype=bool), why))
+            self._rules["inline_asm.environment_reads"] += 1
+            return out if len(out) > 1 else out[0]
+        except ptx_bits.Unsupported as exc:
+            raise ProgramAbort(f"{op.node_id}: inline asm not modelled ({exc})")
+        cond = np.zeros(shape, dtype=bool)
+        for a in args:
+            cond = cond | np.broadcast_to(a.cond, shape)
+        reasons = frozenset().union(*(a.reasons for a in args)) if args else frozenset()
+        out = []
+        for rt, r in zip(op.result_types, res):
+            if kind_of(rt.elem) == "f":
+                lo, hi, ok = r
+                st = np.where(ok, ST_OK, np.where(np.isnan(lo), ST_NAN, np.where(lo == np.inf, ST_PINF,
+                                                                                np.where(lo == -np.inf, ST_NINF, ST_NE))))
+                lo = np.where(ok, lo, 0.0)
+                hi = np.where(ok, hi, 0.0)
+                out.append(_ftv(rt.elem, lo.reshape(rt.shape), hi.reshape(rt.shape), st.reshape(rt.shape).astype(np.int8),
+                                cond.reshape(rt.shape), reasons))
+            else:
+                bits, definite = r
+                w = widths[rt.elem]
+                v = _wrap(np.asarray(bits, dtype=np.uint64).astype(np.int64), w) if w < 64 else \
+                    np.asarray(bits, dtype=np.uint64).view(np.int64)
+                st = np.where(definite, ST_OK, ST_NE).astype(np.int8)
+                out.append(TV("i", rt.elem, v.reshape(rt.shape), None, None, st.reshape(rt.shape), cond.reshape(rt.shape),
+                              reasons | (frozenset({f"not_established:inline asm on operands without definite bits@"
+                                                    f"{op.node_id}"}) if not definite.all() else frozenset())))
+        self._rules["inline_asm.bit_level_programs"] += 1
+        return out if len(out) > 1 else out[0]
 
     def _run_ptx_program(self, op, program, args):
         """Lane-wise reference of a straight-line PTX snippet (see parse_ptx_program).  Arithmetic is exact real
