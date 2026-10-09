@@ -90,7 +90,7 @@ def main():
                          "reason": "matched by the observation parser but not an operation of the source candidates "
                                    "(attribute, type or symbol text, or an op of a dialect outside the candidate lists)",
                          "evidence": f"observations {r['observations']}; not in the {len(src_ids)} source ids"})
-    (a.outdir / "explanations.json").write_text(json.dumps(expl, indent=1) + "\n")
+    (a.outdir / "explanations.json").write_text(json.dumps({"records": expl}, indent=1) + "\n")
     print({"source": len(src_ids), "registered": len(reg_ids), "observed": len(obs["records"]),
            "routes_implemented": sum(r["implementation_status"] != "planned" for r in routes),
            "explanations": len(expl)})

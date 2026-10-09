@@ -177,6 +177,25 @@ def _unwrap(arg):
     return None, None
 
 
+def _flatten_args(args, names, signature):
+    """(name, value, signature type) per TTIR-level argument: tuple arguments are flattened the way the frontend
+    flattens them (``shape`` -> ``shape.0``, ``shape.1``; nested tuples recursively), each element with its own
+    signature entry, so an element specialized to a constexpr (an int equal to 1) is marked as such.  DSL v2
+    increment 6: the official main build passes shapes and strides of tensor descriptors and lists of tensors as
+    tuples (test_tensor_descriptor, test_cat_nd)."""
+    def walk(name, value, sig):
+        if isinstance(value, (tuple, list)):  # includes torch.Size
+            sigs = sig if isinstance(sig, (tuple, list)) else [None] * len(value)
+            for k, v in enumerate(value):
+                yield from walk(f"{name}.{k}", v, sigs[k] if k < len(sigs) else None)
+        else:
+            yield name, value, sig
+
+    for i, arg in enumerate(args):
+        name = names[i] if i < len(names) else f"arg{i}"
+        yield from walk(name, arg, signature.get(name))
+
+
 class TritonLaunchRecorder(contextlib.AbstractContextManager):
     """Record selected Triton launches while active.
 
@@ -301,9 +320,7 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
         captured = []
         if self.copy_tensors:
             torch.cuda.synchronize()
-        for i, arg in enumerate(args):
-            name = names[i] if i < len(names) else f"arg{i}"
-            sig = signature.get(name)
+        for i, (name, arg, sig) in enumerate(_flatten_args(args, names, signature)):
             constexpr = sig == "constexpr"
             tensor, dtype_name = _unwrap(arg)
             if tensor is not None:
@@ -345,6 +362,7 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
             metadata=metadata, libtriton_sha256=self._libtriton,
             environment={"triton": triton.__version__, "torch": torch.__version__,
                          "device": torch.cuda.get_device_name(torch.cuda.current_device())})
+        record._src = (names, signature)  # for _after: the same flattening of the arguments
         for j, t in enumerate(self.implicit_tensors):
             item = CapturedArg(-1 - j, f"implicit{j}", "tensor", False, None, dtype=str(t.dtype).replace("torch.", ""),
                                shape=tuple(t.shape), stride=tuple(t.stride()), element_size=t.element_size(),
@@ -374,7 +392,9 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
         if not self.copy_tensors:
             return
         torch.cuda.synchronize()
-        for item, arg in zip(record.args, args):
+        src = getattr(record, "_src", None)
+        flat = [a for _, a, _ in _flatten_args(args, *(src or ([], {})))]
+        for item, arg in zip(record.args, flat):
             if item.kind == "tensor":
                 arg = _unwrap(arg)[0]
                 if item.window is None:

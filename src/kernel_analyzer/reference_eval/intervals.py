@@ -227,6 +227,52 @@ def _mpfr_point(fn, x: float):
 _CTX_POINT = gmpy2.context(precision=53, round=gmpy2.RoundDown)
 
 
+BESSEL = {"bessel_j0": ("j", 0), "bessel_j1": ("j", 1), "bessel_y0": ("y", 0), "bessel_y1": ("y", 1),
+          "bessel_i0": ("i", 0), "bessel_i1": ("i", 1)}
+
+
+def bessel_bounds(name: str, lo: np.ndarray, hi: np.ndarray):
+    """Rigorous enclosure of a Bessel function over [lo, hi] (DSL v2 increment 6, libdevice j0/j1/y0/y1/
+    cyl_bessel_i0/i1): Arb ball arithmetic (python-flint, 200-bit working precision) on a ball containing the
+    interval, endpoints moved one ulp outward after conversion to float64 (rc3 02 5.2: a rigorous method, not a
+    high-precision point plus a margin).  y0 / y1 need x > 0.  Returns (lo, hi, ok_mask)."""
+    import math
+
+    import flint
+    kind, order = BESSEL[name]
+    lo = np.asarray(lo, dtype=np.float64)
+    hi = np.asarray(hi, dtype=np.float64)
+    out_lo, out_hi = np.zeros_like(lo), np.zeros_like(hi)
+    ok = np.ones(lo.shape, dtype=bool)
+    flat_lo, flat_hi = lo.reshape(-1), hi.reshape(-1)
+    rlo, rhi, rok = out_lo.reshape(-1), out_hi.reshape(-1), ok.reshape(-1)
+    old_prec = flint.ctx.prec
+    flint.ctx.prec = 200
+    try:
+        for i in range(flat_lo.size):
+            a, b = float(flat_lo[i]), float(flat_hi[i])
+            if kind == "y" and a <= 0.0:
+                rok[i] = False
+                continue
+            if a == b:
+                x = flint.arb(a)
+            else:
+                mid = a / 2 + b / 2
+                rad = math.nextafter(max(b - mid, mid - a), math.inf)  # rounded up: the ball contains [a, b]
+                x = flint.arb(mid, rad)
+            r = getattr(x, f"bessel_{kind}")(order)
+            if not r.is_finite():
+                rok[i] = False
+                continue
+            rlo[i] = math.nextafter(float(r.lower()), -math.inf)
+            rhi[i] = math.nextafter(float(r.upper()), math.inf)
+            if not (math.isfinite(rlo[i]) and math.isfinite(rhi[i])):
+                rok[i] = False
+    finally:
+        flint.ctx.prec = old_prec
+    return out_lo, out_hi, ok
+
+
 def elementary_bounds(name: str, lo: np.ndarray, hi: np.ndarray):
     """Rigorous enclosure of ``name`` over [lo, hi]; returns (lo, hi, ok_mask)."""
 

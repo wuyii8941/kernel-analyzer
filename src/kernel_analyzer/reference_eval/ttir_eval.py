@@ -330,6 +330,24 @@ def _float_bits(elem: str, lo, hi, st):
     return bits.astype(np.int64), definite
 
 
+def _f8_bits(elem: str, lo, hi, st):
+    """Bit patterns of fp8 reference values (definite: a point exactly representable, or an infinity of e5m2)."""
+    import torch
+
+    lo = np.asarray(lo, dtype=np.float64)
+    point = (lo == np.asarray(hi, dtype=np.float64)) & (np.asarray(st) == ST_OK)
+    x = np.where(point, lo, 0.0)
+    tdtype = torch.float8_e5m2 if elem == "f8E5M2" else torch.float8_e4m3fn
+    t = torch.from_numpy(x.reshape(-1).copy()).to(tdtype)
+    back = t.to(torch.float64).numpy().reshape(x.shape)
+    bits = t.view(torch.uint8).numpy().astype(np.int64).reshape(x.shape)
+    definite = point & (back == x)
+    if elem == "f8E5M2":
+        bits = np.where(np.asarray(st) == ST_PINF, 0x7C, np.where(np.asarray(st) == ST_NINF, 0xFC, bits))
+        definite = definite | (np.asarray(st) == ST_PINF) | (np.asarray(st) == ST_NINF)
+    return bits, definite
+
+
 def _bits_float(elem: str, bits):
     """Values and status of float bit patterns (signed integer representation of the format's width)."""
     bits = np.asarray(bits, dtype=np.int64)
@@ -1748,6 +1766,85 @@ class KernelReferenceEvaluator:
         self._rules["atomic.poll_decided_lanes"] += int((s_out == ST_OK).sum())
         return TV("b", "i1", res, None, None, st, np.zeros(shape, dtype=bool), frozenset(reasons))
 
+    def _op_map_elementwise(self, op, args, env, state):
+        """tt.map_elementwise (DSL v2 increment 6, official main): the region is a pure scalar function applied to
+        each group of ``pack`` consecutive elements; its arguments are, per input, the group's elements in order, its
+        results, per output, the group's elements.  The region (which may branch: cf.br / cf.cond_br) is interpreted
+        group by group.  A group whose branch the reference cannot decide is not established (the region has no
+        memory effects, so the program continues)."""
+        if any(a.d is not None for a in args):
+            raise ProgramAbort(f"{op.node_id}: no derivative rule for map_elementwise")
+        pack = int(str(op.attrs.get("pack", "1")).split(":")[0].strip())
+        region = op.regions[0]
+        shape = np.broadcast_shapes(*[a.shape for a in args])
+        flat = [a.map(lambda x, s=shape: np.broadcast_to(np.asarray(x), s).reshape(-1)) for a in args]
+        n = int(np.prod(shape)) if shape else 1
+        if n % pack:
+            raise ProgramAbort(f"{op.node_id}: map_elementwise pack does not divide the tensor")
+        n_out = len(op.result_types)
+        outs = [[None] * n for _ in range(n_out)]
+        failed = collections.Counter()
+        for g in range(n // pack):
+            region_args = [t.map(lambda x, e=g * pack + k: x[e]) for t in flat for k in range(pack)]
+            try:
+                vals = self._run_map_region(region, env, state, region_args)
+            except ProgramAbort as exc:
+                failed[str(exc).split("@")[0][:80]] += 1
+                continue
+            for j in range(n_out):
+                for k in range(pack):
+                    outs[j][g * pack + k] = vals[j * pack + k]
+        results = []
+        for j, rtype in enumerate(op.result_types):
+            elems = outs[j]
+            proto = next((v for v in elems if v is not None), None)
+            kind = proto.kind if proto is not None else kind_of(rtype.elem)
+            lo = np.array([0 if v is None else np.asarray(v.lo).item() for v in elems])
+            hi = np.array([0.0 if v is None or v.hi is None else np.asarray(v.hi).item() for v in elems])
+            st = np.array([ST_NE if v is None else int(np.asarray(v.st).item()) for v in elems], dtype=np.int8)
+            cond = np.array([False if v is None else bool(np.asarray(v.cond).item()) for v in elems])
+            reasons = frozenset().union(*(v.reasons for v in elems if v is not None)) if proto is not None \
+                else frozenset()
+            reasons = reasons | {f"not_established:map_elementwise region not decided ({r})@{op.node_id}"
+                                 for r in failed}
+            lo, hi, st, cond = (x.reshape(shape) for x in (lo, hi, st, cond))
+            if kind == "f":
+                results.append(_ftv(rtype.elem, lo.astype(np.float64), hi, st, cond, reasons))
+            else:
+                results.append(TV(kind, rtype.elem, lo.astype(np.int64) if kind == "i" else lo.astype(np.int8),
+                                  None, None, st, cond, reasons))
+        self._rules["map_elementwise.groups"] += n // pack
+        return results
+
+    def _run_map_region(self, region, env, state, args):
+        """The CFG of a map_elementwise region from its entry block to tt.map_elementwise.return."""
+        scope = env.new_child()
+        blocks = {b.label: b for b in region.blocks}
+        block = region.blocks[0]
+        for (name, _), value in zip(block.args, args):
+            scope[name] = value
+        for _ in range(100000):
+            for op in block.ops:
+                if op.name == "tt.map_elementwise.return":
+                    return [scope[v] for v in op.operands]
+                if op.name in ("cf.br", "cf.cond_br"):
+                    if op.name == "cf.br":
+                        label, vals = op.successors[0]
+                    else:
+                        c = scope[op.operands[0]]
+                        if np.asarray(c.st).max() >= ST_UNDEF or int(np.asarray(c.lo)) == MAYBE:
+                            raise ProgramAbort(f"undecided branch condition@{op.node_id}")
+                        label, vals = op.successors[0] if int(np.asarray(c.lo)) == 1 else op.successors[1]
+                    values = [scope[v] for v in vals]
+                    block = blocks[label]
+                    for (name, _), value in zip(block.args, values):
+                        scope[name] = value
+                    break
+                self._exec(op, scope, state)
+            else:
+                raise ProgramAbort("map_elementwise region ended without a return")
+        raise ProgramAbort("map_elementwise region did not terminate")
+
     def _op_histogram(self, op, args, env, state):
         """tt.histogram (DSL v2 increment 5, rc3 02 6.8): exact counts in bins of width 1 starting at 0.  Inputs
         outside [0, bins) are dropped (official contract: python/triton/runtime/interpreter.py "The GPU drops every
@@ -2052,6 +2149,12 @@ class KernelReferenceEvaluator:
         if combiner is None:  # any combine region: interpret it along the lowering's combination order
             return self._tree_reduce(op, args, axis, env, state, "no order-free fast path matches the region")
         if combiner in ("argmax", "argmin"):
+            # DSL v2 increment 6: with NaN (or another non-finite value) the official combine (v1 > v2, a where) is
+            # not order free -- NaN on the left is dropped, on the right it propagates; the lowering tree decides
+            nonfinite = any((np.asarray(a.st) != ST_OK).any() for a in args)
+            if nonfinite and op.node_id in self._ttgir_layouts()[1]:
+                return self._tree_reduce(op, args, axis, env, state,
+                                         "argmax / argmin over non-finite values: the combine is order dependent")
             return self._arg_reduce(op, args, axis, combiner)
         if combiner == "welford":
             out = self._welford_reduce(op, args, axis, env)
@@ -2809,6 +2912,8 @@ class KernelReferenceEvaluator:
             lo, hi, ok = iv.elementary_bounds("exp10", los[0], his[0])
         elif name in iv._MONOTONE or name in ("sin", "cos", "tan", "cosh"):
             lo, hi, ok = iv.elementary_bounds(name, los[0], his[0])
+        elif name in iv.BESSEL:  # DSL v2 increment 6
+            lo, hi, ok = iv.bessel_bounds(name, los[0], his[0])
         else:
             raise ProgramAbort(f"{op.node_id}: no reference rule for {name}")
         st = np.where(finite & ~ok, ST_NE, ST_OK).astype(np.int8)
@@ -2981,6 +3086,14 @@ def _ieee_eval(name, reps):
               "expm1": np.expm1, "log10": np.log10, "atan": np.arctan, "sinh": np.sinh, "cosh": np.cosh}.get(name)
         if name == "rsqrt":
             return 1.0 / np.sqrt(a)
+        if name in ("bessel_j0", "bessel_j1"):  # -> 0 at +-inf
+            return np.where(np.isnan(a), np.nan, 0.0)
+        if name in ("bessel_y0", "bessel_y1"):  # -> 0 at +inf; undefined for x < 0
+            return np.where(a == np.inf, 0.0, np.nan)
+        if name == "bessel_i0":  # even, -> +inf at +-inf
+            return np.where(np.isnan(a), np.nan, np.inf)
+        if name == "bessel_i1":  # odd, -> +-inf
+            return np.where(np.isnan(a), np.nan, np.sign(a) * np.inf)
         if name == "erf":
             return np.where(np.isnan(a), np.nan, np.sign(a))
         if name == "erfc":   # erfc(+inf) = 0, erfc(-inf) = 2
@@ -3372,6 +3485,18 @@ def _bitcast(op, x: TV, out_type: TType) -> TV:
         raise ProgramAbort(f"{op.node_id}: pointer/integer bitcast")
     src, dst = x.elem, out_elem
     layouts = {"f32": (np.float32, np.int32), "f64": (np.float64, np.int64), "f16": (np.float16, np.int16)}
+    if x.kind == "f" and dst in INT_WIDTH and src in ("bf16", "f8E5M2", "f8E4M3FN"):
+        # DSL v2 increment 6: narrow formats, the same definite-bits policy (a point exactly representable)
+        if src == "bf16":
+            bits, definite = _float_bits("bf16", x.lo, x.hi, x.st)
+        else:
+            bits, definite = _f8_bits(src, x.lo, x.hi, x.st)
+        st = np.where(definite, ST_OK, ST_NE).astype(np.int8)
+        st = np.where(x.st >= ST_UNDEF, x.st, st).astype(np.int8)
+        reasons = x.reasons
+        if not definite.all():
+            reasons = reasons | {f"not_established:bit-level reinterpretation without definite bits@{op.node_id}"}
+        return TV("i", dst, _wrap(bits, INT_WIDTH[dst]), None, None, st, x.cond, reasons)
     if x.kind == "f" and dst in INT_WIDTH:
         if src not in layouts:
             raise ProgramAbort(f"{op.node_id}: bitcast from {src}")
@@ -3390,6 +3515,17 @@ def _bitcast(op, x: TV, out_type: TType) -> TV:
         if not definite.all():
             reasons = reasons | {f"not_established:bit-level reinterpretation without definite bits@{op.node_id}"}
         return TV("i", dst, bits, None, None, st, x.cond, reasons)
+    if x.kind == "i" and dst in ("bf16", "f8E5M2", "f8E4M3FN"):
+        raw = np.asarray(x.lo, dtype=np.int64)
+        if dst == "bf16":
+            vals, st = _bits_float("bf16", raw)
+        else:
+            from_bytes = (raw & 0xFF).astype(np.uint8)
+            vals, st = decode_storage(from_bytes.reshape(-1), "float8_e5m2" if dst == "f8E5M2" else "float8_e4m3fn")
+            vals, st = vals.reshape(raw.shape), st.reshape(raw.shape)
+        st = np.where(x.st >= ST_UNDEF, x.st, st).astype(np.int8)
+        vals = np.where(st == ST_OK, vals, 0.0)
+        return _ftv(dst, vals, vals, st, x.cond, x.reasons | {f"bit_level:{op.node_id}"})
     if x.kind == "i" and dst in layouts:
         fdt, idt = layouts[dst]
         vals = x.lo.astype(idt).view(fdt).astype(np.float64)

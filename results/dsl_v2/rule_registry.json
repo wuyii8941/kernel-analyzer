@@ -3,8 +3,8 @@
  "triton": "3.6.0",
  "source": "ttir_mapping (MAPPING, LIBDEVICE, LIBDEVICE_ROUNDING, INLINE_ASM, combiners)",
  "counts": {
-  "SUPPORTED": 401,
-  "REJECTED": 98,
+  "SUPPORTED": 415,
+  "REJECTED": 96,
   "DECLARED_PREMISE": 3,
   "NOT_ESTABLISHED": 1
  },
@@ -496,13 +496,13 @@
     "types": "*",
     "subregion": "*"
    },
-   "status": "REJECTED",
-   "category": "I",
-   "internal": null,
-   "containment_argument": "",
-   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_unknown_op_or_attribute_is_rejected_not_skipped",
-   "negative_control": "",
-   "reason": "map_elementwise regions are not supported in this version"
+   "status": "SUPPORTED",
+   "category": "A",
+   "internal": "map_elementwise",
+   "containment_argument": "Integer, boolean, address and layout operations are exact in two's-complement width; control flow follows the reference value of its predicate, and an undecided predicate joins the effects of both branches (an enclosure of the true branch, possibly wide); nested loops are unrolled in program order.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_branch_is_decided_by_reference_value_not_actual_path",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_undecided_branch_takes_the_union_of_both_branches",
+   "reason": ""
   },
   {
    "key": {
@@ -511,13 +511,13 @@
     "types": "*",
     "subregion": "*"
    },
-   "status": "REJECTED",
-   "category": "I",
-   "internal": null,
-   "containment_argument": "",
-   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_unknown_op_or_attribute_is_rejected_not_skipped",
-   "negative_control": "",
-   "reason": "map_elementwise regions are not supported in this version"
+   "status": "SUPPORTED",
+   "category": "A",
+   "internal": "map_elementwise_return",
+   "containment_argument": "Integer, boolean, address and layout operations are exact in two's-complement width; control flow follows the reference value of its predicate, and an undecided predicate joins the effects of both branches (an enclosure of the true branch, possibly wide); nested loops are unrolled in program order.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_branch_is_decided_by_reference_value_not_actual_path",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_undecided_branch_takes_the_union_of_both_branches",
+   "reason": ""
   },
   {
    "key": {
@@ -4167,6 +4167,66 @@
   {
    "key": {
     "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_cyl_bessel_i0",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "bessel_i0",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_cyl_bessel_i0f",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "bessel_i0",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_cyl_bessel_i1",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "bessel_i1",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_cyl_bessel_i1f",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "bessel_i1",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
     "attrs": "symbol=__nv_dadd_rd",
     "types": "*",
     "subregion": "*"
@@ -5937,6 +5997,66 @@
   {
    "key": {
     "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_j0",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "bessel_j0",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_j0f",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "bessel_j0",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_j1",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "bessel_j1",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_j1f",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "bessel_j1",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
     "attrs": "symbol=__nv_log",
     "types": "*",
     "subregion": "*"
@@ -6394,6 +6514,66 @@
    "status": "SUPPORTED",
    "category": "D",
    "internal": "trunc",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_y0",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "bessel_y0",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_y0f",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "bessel_y0",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_y1",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "bessel_y1",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_y1f",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "bessel_y1",
    "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
    "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
    "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",

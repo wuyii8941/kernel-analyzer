@@ -95,8 +95,8 @@ MAPPING: dict[str, Rule] = {
     "tt.make_range": S("A", "make_range"),
     "tt.make_tensor_descriptor": R("H", "tensor descriptors (TMA) are not supported"),
     "tt.make_tensor_ptr": R("A", "block pointers are not supported in this version"),
-    "tt.map_elementwise": R("I", "map_elementwise regions are not supported in this version"),
-    "tt.map_elementwise.return": R("I", "map_elementwise regions are not supported in this version"),
+    "tt.map_elementwise": S("A", "map_elementwise"),  # DSL v2 increment 6: the region per pack group
+    "tt.map_elementwise.return": S("A", "map_elementwise_return"),  # terminator, read by _run_map_region
     "tt.mulhiui": S("A", "mulhiui"),
     "tt.precise_divf": S("B", "div"),
     "tt.approx_divf": S("B", "approx_div"),  # rc3 02 6.5: promoted to x / y in the numerical-difference mode
@@ -237,6 +237,11 @@ LIBDEVICE.update({
     "__nv_nearbyintf": "roundeven", "__nv_exp10f": "exp10", "__nv_fast_exp10f": "exp10",
     "__nv_fmodf": "remf", "__nv_saturatef": "saturate", "__nv_fadd_rn": "add", "__nv_fmul_rn": "mul",
     "__nv_fsub_rn": "sub", "__nv_dadd_rn": "add", "__nv_dmul_rn": "mul", "__nv_fmaf_rn": "fma",
+    # DSL v2 increment 6: Bessel functions, enclosed by Arb ball arithmetic (intervals.bessel_bounds)
+    "__nv_j0f": "bessel_j0", "__nv_j0": "bessel_j0", "__nv_j1f": "bessel_j1", "__nv_j1": "bessel_j1",
+    "__nv_y0f": "bessel_y0", "__nv_y0": "bessel_y0", "__nv_y1f": "bessel_y1", "__nv_y1": "bessel_y1",
+    "__nv_cyl_bessel_i0f": "bessel_i0", "__nv_cyl_bessel_i0": "bessel_i0",
+    "__nv_cyl_bessel_i1f": "bessel_i1", "__nv_cyl_bessel_i1": "bessel_i1",
 })
 
 # Rounding-suffixed libdevice operations: the declared semantics is the real operation (the

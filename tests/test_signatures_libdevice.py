@@ -81,6 +81,15 @@ REF = {
     "copysign": _real(lambda x, y: abs(x) * (1 if mp.sign(y) >= 0 else -1)),
     "remf": _real(lambda x, y: None if y == 0 else x - y * (mp.floor(x / y) if x / y >= 0 else mp.ceil(x / y))),
     "saturate": _real(lambda x: min(max(x, mp.mpf(0)), mp.mpf(1))),
+    # DSL v2 increment 6
+    "bessel_j0": _real(lambda x: mp.mpf(0) if mp.isinf(x) else mp.besselj(0, x)),
+    "bessel_j1": _real(lambda x: mp.mpf(0) if mp.isinf(x) else mp.besselj(1, x)),
+    "bessel_y0": _real(lambda x: None if x < 0 else (-mp.inf if x == 0 else (mp.mpf(0) if mp.isinf(x)
+                                                                              else mp.bessely(0, x)))),
+    "bessel_y1": _real(lambda x: None if x < 0 else (-mp.inf if x == 0 else (mp.mpf(0) if mp.isinf(x)
+                                                                              else mp.bessely(1, x)))),
+    "bessel_i0": _real(lambda x: mp.inf if mp.isinf(x) else mp.besseli(0, x)),
+    "bessel_i1": _real(lambda x: (mp.inf if x > 0 else -mp.inf) if mp.isinf(x) else mp.besseli(1, x)),
 }
 # predicates and integer abs (int32 results)
 IREF = {
@@ -104,7 +113,7 @@ DOMAIN = {
 }
 UNARY_DOMAIN = {"log": "pos", "log2": "pos", "log10": "pos", "log1p": "gt_m1", "sqrt": "nonneg", "rsqrt": "pos_r",
                 "asin": "unit", "acos": "unit", "acosh": "ge1", "atanh": "open_unit", "sin": "trig", "cos": "trig",
-                "tan": "trig", "rcp": "pos_r"}
+                "tan": "trig", "rcp": "pos_r", "bessel_y0": "pos", "bessel_y1": "pos"}
 BINARY = {  # positive pairs, boundary pairs, premise pairs
     "pow": ([(0.5, 2.0), (2.0, -1.5), (3.0, 0.5)], [(0.0, 2.0), (2.0, 0.0), (1.0, 7.0)], [(-2.0, 0.5), (-1.0, 0.25)]),
     "div": ([(1.0, 3.0), (-2.5, 0.75), (7.0, -2.0)], [(0.0, 3.0), ("X", 0.5), ("S", 4.0)], [(1.0, 0.0), (0.0, 0.0)]),

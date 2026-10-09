@@ -29,14 +29,29 @@ def ops_in(text: str) -> set:
         line = line.split("loc(")[0]
         for m in OP.finditer(line):
             name = m.group(1)
+            if re.match(r"\s*=", line[m.end():]):  # an attribute key (tt.divisibility = 16, ttg.target = ...)
+                continue
             if name.split(".")[0] in DIALECTS and not name.endswith((".h", ".py")):
                 out.add(name)
     return out
 
 
-def collect(dump: Path, targets: list, out: Path, source_files: list):
-    import triton
+def _recompile(job):
+    """(target, TTIR path) -> (target, ops of the TTGIR, error class or None); runs in a worker process."""
+    t, path = job
     from triton.backends.compiler import GPUTarget
+    import triton
+    backend, arch = t.split(":")
+    try:
+        ck = triton.compile(path, target=GPUTarget(backend, int(arch) if arch.isdigit() else arch,
+                                                   32 if backend == "cuda" else 64))
+    except Exception as exc:  # noqa: BLE001 -- recorded: a kernel that does not compile for that target
+        return t, (), type(exc).__name__
+    return t, tuple(sorted(ops_in(ck.asm.get("ttgir", "")))), None
+
+
+def collect(dump: Path, targets: list, out: Path, source_files: list, workers: int = 16):
+    import triton
     src = {}
     for f in source_files:
         d = json.loads(Path(f).read_text())
@@ -53,26 +68,25 @@ def collect(dump: Path, targets: list, out: Path, source_files: list):
             if p.suffix == ".ttir":
                 ttirs.setdefault(hashlib.sha256(text.encode()).hexdigest(), p)
     failures = collections.Counter()
-    for t in targets:
-        backend, arch = t.split(":")
-        for h, p in ttirs.items():
-            try:
-                ck = triton.compile(str(p), target=GPUTarget(backend, int(arch) if arch.isdigit() else arch,
-                                                             32 if backend == "cuda" else 64))
-            except Exception as exc:  # noqa: BLE001 -- recorded: a kernel that does not compile for that target
-                failures[f"{t}:{type(exc).__name__}"] += 1
+    jobs = [(t, str(p)) for t in targets for p in ttirs.values()]
+    from concurrent.futures import ProcessPoolExecutor
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        for t, ops, err in pool.map(_recompile, jobs, chunksize=4):
+            if err:
+                failures[f"{t}:{err}"] += 1
                 continue
-            for o in ops_in(ck.asm.get("ttgir", "")):
+            for o in ops:
                 seen[o][f"{t}:ttgir"] += 1
     records = [{"id": o, "contract_hash": src.get(o, "not-in-source"), "observations": dict(c)}
                for o, c in sorted(seen.items())]
     doc = {"kind": "observed", "profile_id": profile, "source_commit": commit,
-           "producer": "scripts/dsl_v2/w0_observed.py (dumps of official tutorials / unit tests on sm_86, recompiled for "
+           "producer": "scripts/dsl_v2/w0_observed.py (dumps of official tutorials and unit tests on sm_86, recompiled for "
                        + ", ".join(targets) + ")",
            "receipt": {"dump_dir": str(dump), "unique_ttir": len(ttirs), "recompile_failures": dict(failures),
                        "triton": triton.__version__},
            "complete_for_profile": False,
-           "completeness_note": "observation of official tutorials and a subset of official unit tests; not corpus B",
+           "completeness_note": "observation of official tutorials and official unit tests (compile_only, core, "
+                                "tensor_descriptor, conversions, random, standard, libdevice); not corpus B",
            "records": records}
     out.write_text(json.dumps(doc, indent=1) + "\n")
     print(len(ttirs), "unique TTIR;", len(records), "observed ops;", dict(failures))
@@ -84,10 +98,11 @@ def main():
     ap.add_argument("--targets", nargs="*", default=["cuda:90", "cuda:100"])
     ap.add_argument("--sources", nargs="+", required=True)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--workers", type=int, default=16)
     a = ap.parse_args()
     if a.out.exists():
         sys.exit(f"refusing to overwrite {a.out}")
-    collect(a.dump, a.targets, a.out, a.sources)
+    collect(a.dump, a.targets, a.out, a.sources, a.workers)
 
 
 if __name__ == "__main__":
