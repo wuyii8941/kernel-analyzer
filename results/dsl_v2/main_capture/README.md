@@ -25,6 +25,9 @@ One JSON line per launch.  Measurement only; the official tests' own assertions 
 | `inc11_cross_level_combined.jsonl` | inc11_cross_level with the tf32 subset replaced | — | — |
 | `inc12_selection_census.jsonl` | as inc11_cross_level, targets gfx942 / gfx950 (official AMD stages to TTGIR); the selection run before the increment-12 registration (docs/dsl_v2/increment_12.md §2) | increment 11 + uncommitted plugin extension | `w12_cross_run.sh` |
 | `inc12_selection_recheck_after_fix.jsonl` | the selection run's disjoint cases (test_cast_bf16_rounding, cumprod scans, dot add-*) after the aborted-launch fix | increment 12 fix (before registration) | `w12_cross_run.sh` (KSEL) |
+| `inc12_cross_level_amd.jsonl` | as inc11_cross_level, targets gfx942 / gfx950 (official AMD stages to TTGIR); the registered increment-12 evaluation | increment 12 (`681beda`) | `w12_cross_run.sh` |
+| `inc12_cross_level_amd_supplementary_core.jsonl` | test_core atomic_rmw, tensor_atomic_rmw, atomic_cas, scaled_dot (skipped: capability >= 9), argmax; not registered | increment 12 (`681beda`) | `w12_supplementary_run.sh` |
+| `inc12_cross_level_amd_supplementary_tensor_descriptor.jsonl` | test_tensor_descriptor test_tma_gather_dot_pipeline (buffer_load_to_local on gfx950); not registered | increment 12 (`681beda`) | `w12_supplementary_run.sh` |
 | `inc6_combined_summary.json` | `scripts/dsl_v2/summarize_capture.py inc6_combined.jsonl --baseline inc4_broad.jsonl` | — | — |
 
 Status per launch: `complete` (every written element established), `partial`, `aborted` (a program instance aborted),

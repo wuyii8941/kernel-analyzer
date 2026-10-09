@@ -10,9 +10,9 @@
 - DSL v2（dsl-v2 分支，工具 4.0，未发布）：依据 rc3 正式版（SHA-256 8050903f…6faf）。增量登记
   [1](dsl_v2/increment_01.md)、[2](dsl_v2/increment_02.md)、[3](dsl_v2/increment_03.md)、[4](dsl_v2/increment_04.md)、
   [5](dsl_v2/increment_05.md)、[6](dsl_v2/increment_06.md)、[7](dsl_v2/increment_07.md)、[8](dsl_v2/increment_08.md)、
-  [9](dsl_v2/increment_09.md)、[10](dsl_v2/increment_10.md)、[11](dsl_v2/increment_11.md)；
+  [9](dsl_v2/increment_09.md)、[10](dsl_v2/increment_10.md)、[11](dsl_v2/increment_11.md)、[12](dsl_v2/increment_12.md)；
   结果 [1](dsl_v2/increment_01_status.md)、[2–3](dsl_v2/increment_02_03_status.md)、[4–5](dsl_v2/increment_04_05_status.md)、
-  [6](dsl_v2/increment_06_status.md)、[7–8](dsl_v2/increment_07_08_status.md)、[9](dsl_v2/increment_09_status.md)、[10](dsl_v2/increment_10_status.md)、[11](dsl_v2/increment_11_status.md)；[规则注册表（3.6.0 回归 profile）](dsl_v2/rule_registry_report.md)。
+  [6](dsl_v2/increment_06_status.md)、[7–8](dsl_v2/increment_07_08_status.md)、[9](dsl_v2/increment_09_status.md)、[10](dsl_v2/increment_10_status.md)、[11](dsl_v2/increment_11_status.md)、[12](dsl_v2/increment_12_status.md)；[规则注册表（3.6.0 回归 profile）](dsl_v2/rule_registry_report.md)。
   都是开发证据，不是盲测成绩。
 - 状态：[通用能力轮](general/status_20261008.md)、[收束轮](closure_status_20261008.md)、[两轮联合审计](audit_two_rounds_20261008.md)
   （C 节是待审阅方决定的事项）、[成绩核账（三种状态）](status_ledger_20261006.md)。
