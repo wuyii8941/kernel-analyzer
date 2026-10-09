@@ -39,3 +39,12 @@
   - 用到 F 项操作的启动报告为未建立并写明原因。
 - 按名字覆盖：427 个唯一 Gluon TTGIR 中完整覆盖的从 222 升到至少 400。
 - 逐签名测试三类齐全，违反 0；classic 回归不变。
+
+## 5. 偏离（实现前记录，2026-10-09）
+
+- **C 改了。** 登记时打算对共享存储做与全局内存相同的线程级冲突检查。实现前查官方编译流水线：TTGIR 之后的 `make_llir` 先分配共享存储，
+  再跑 Membar 分析插入 barrier（`triton/backends/nvidia/compiler.py:437-442`，`add_allocate_shared_memory_nv`、`add_membar`），
+  classic 与 Gluon 都走这一步。也就是说，转储的 TTGIR 本来就不含这些 barrier；官方契约是同一个 program 的共享存储访问按程序序生效，
+  由编译器保证。照登记做会把官方保证有序的访问误报为竞争。
+- 改为：一个 program 的共享存储访问按程序序求值，记前提「同一 program 的共享存储访问由编译器的 Membar 分析排序」。
+  这个前提来自官方源，不是对 PTX 的逐条核对。Membar 不等待异步拷贝，所以 E（异步拷贝未完成时读取记未建立）照原计划做。
