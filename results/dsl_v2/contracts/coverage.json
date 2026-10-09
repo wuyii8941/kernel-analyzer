@@ -1,12 +1,12 @@
 {
  "note": "W1 completion measure (rc3 04): a supported signature is complete when it has the three test categories and trigger evidence.  Boundary tests are not yet classified per rule, so that column is empty everywhere; this is the honest starting point, not a result.",
- "entries": 502,
- "supported_or_premise": 401,
- "supported_with_trigger": 326,
- "supported_with_positive": 326,
- "supported_with_premise_violation_test": 320,
- "supported_with_all_three_and_trigger": 317,
- "rejected_or_not_established": 101,
+ "entries": 515,
+ "supported_or_premise": 418,
+ "supported_with_trigger": 343,
+ "supported_with_positive": 343,
+ "supported_with_premise_violation_test": 338,
+ "supported_with_all_three_and_trigger": 335,
+ "rejected_or_not_established": 97,
  "gpu_dialect_entries": 66,
  "untriggered_supported": [
   "arith.bitcast",
@@ -64,10 +64,10 @@
   "tt.func",
   "tt.gather",
   "tt.load/tt.store (alias)|attrs=alias",
+  "tt.map_elementwise.return",
   "tt.print",
   "tt.reduce.return",
   "tt.reduce|subregion=and",
-  "tt.reduce|subregion=argmin",
   "tt.reduce|subregion=max_int",
   "tt.reduce|subregion=max_nan",
   "tt.reduce|subregion=max_select",
@@ -262,8 +262,8 @@
    "category": "I",
    "supported": true,
    "positive": true,
-   "boundary": false,
-   "premise_violation": false,
+   "boundary": true,
+   "premise_violation": true,
    "triggered": true
   },
   {
@@ -338,13 +338,13 @@
   },
   {
    "rule_id": "tt.histogram",
-   "status": "REJECTED",
+   "status": "SUPPORTED",
    "category": "E",
-   "supported": false,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.int_to_ptr",
@@ -408,19 +408,19 @@
   },
   {
    "rule_id": "tt.map_elementwise",
-   "status": "REJECTED",
-   "category": "I",
-   "supported": false,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "status": "SUPPORTED",
+   "category": "A",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.map_elementwise.return",
-   "status": "REJECTED",
-   "category": "I",
-   "supported": false,
+   "status": "SUPPORTED",
+   "category": "A",
+   "supported": true,
    "positive": false,
    "boundary": false,
    "premise_violation": false,
@@ -2561,10 +2561,10 @@
    "status": "SUPPORTED",
    "category": "E",
    "supported": true,
-   "positive": false,
-   "boundary": false,
-   "premise_violation": false,
-   "triggered": false
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
   },
   {
    "rule_id": "tt.reduce|subregion=welford(mean, M2, weight)",
@@ -2848,6 +2848,46 @@
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_coshf",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
+   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_cyl_bessel_i0",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
+   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_cyl_bessel_i0f",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
+   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_cyl_bessel_i1",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
+   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_cyl_bessel_i1f",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
@@ -4037,6 +4077,46 @@
    "triggered": true
   },
   {
+   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_j0",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
+   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_j0f",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
+   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_j1",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
+   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_j1f",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_log",
    "status": "SUPPORTED",
    "category": "D",
@@ -4338,6 +4418,46 @@
   },
   {
    "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_truncf",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
+   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_y0",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
+   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_y0f",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
+   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_y1",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
+   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_y1f",
    "status": "SUPPORTED",
    "category": "D",
    "supported": true,
@@ -4927,6 +5047,16 @@
    "triggered": false
   },
   {
+   "rule_id": "tt.elementwise_inline_asm|attrs=asm~div\\.full(\\.ftz)?\\.f32 \\$0, \\$1, \\$2;",
+   "status": "SUPPORTED",
+   "category": "D",
+   "supported": true,
+   "positive": true,
+   "boundary": true,
+   "premise_violation": true,
+   "triggered": true
+  },
+  {
    "rule_id": "tt.elementwise_inline_asm|attrs=asm~ex2\\.approx(\\.ftz)?\\.f32 \\$0, \\$1;",
    "status": "SUPPORTED",
    "category": "D",
@@ -5048,9 +5178,9 @@
   },
   {
    "rule_id": "tt.atomic_rmw|attrs=return used",
-   "status": "NOT_ESTABLISHED",
+   "status": "SUPPORTED",
    "category": "H",
-   "supported": false,
+   "supported": true,
    "positive": true,
    "boundary": true,
    "premise_violation": true,

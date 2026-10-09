@@ -138,7 +138,7 @@
    "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
    "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
    "tests/test_reference_eval_ttir.py::test_aborted_programs_are_reported_and_unwritten_outputs_are_not_clean",
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
    "tests/test_reference_eval_ttir.py::test_branch_is_decided_by_the_reference_value",
    "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
@@ -439,9 +439,22 @@
   "tests": {
    "positive": [
     "tests/test_reference_eval_emulate.py::test_atomic_kernel_is_not_established",
-    "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+    "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
+    "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+    "tests/test_signatures_atomics.py::test_contended_integer_return_is_not_a_point_unless_every_order_agrees",
+    "tests/test_signatures_atomics.py::test_exchange_final_value_and_returns",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
+    "tests/test_signatures_atomics.py::test_mixed_kinds_without_a_joint_law_are_not_established",
+    "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp16]",
+    "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp32]",
+    "tests/test_signatures_atomics.py::test_returned_value_used_as_an_address_does_not_crash_and_is_not_established",
+    "tests/test_signatures_atomics.py::test_returned_value_without_contention_is_the_value_before_the_launch",
+    "tests/test_signatures_atomics.py::test_undefined_integer_contribution_leaves_the_fold_not_established",
     "tests/test_signatures_structural.py::test_atomic_add_signature[positive]",
-    "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[positive]"
+    "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[positive]",
+    "tests/test_signatures_sync.py::test_message_passing_through_a_poll_orders_the_payload"
    ],
    "boundary": [
     "tests/test_signatures_structural.py::test_atomic_add_signature[boundary]",
@@ -454,13 +467,26 @@
   },
   "trigger_evidence": [
    "tests/test_reference_eval_emulate.py::test_atomic_kernel_is_not_established",
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
+   "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+   "tests/test_signatures_atomics.py::test_contended_integer_return_is_not_a_point_unless_every_order_agrees",
+   "tests/test_signatures_atomics.py::test_exchange_final_value_and_returns",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
+   "tests/test_signatures_atomics.py::test_mixed_kinds_without_a_joint_law_are_not_established",
+   "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp16]",
+   "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp32]",
+   "tests/test_signatures_atomics.py::test_returned_value_used_as_an_address_does_not_crash_and_is_not_established",
+   "tests/test_signatures_atomics.py::test_returned_value_without_contention_is_the_value_before_the_launch",
+   "tests/test_signatures_atomics.py::test_undefined_integer_contribution_leaves_the_fold_not_established",
    "tests/test_signatures_structural.py::test_atomic_add_signature[boundary]",
    "tests/test_signatures_structural.py::test_atomic_add_signature[positive]",
    "tests/test_signatures_structural.py::test_atomic_add_signature[premise_violation]",
    "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[boundary]",
    "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[positive]",
-   "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[premise_violation]"
+   "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[premise_violation]",
+   "tests/test_signatures_sync.py::test_message_passing_through_a_poll_orders_the_payload"
   ],
   "device_validation": [
    {
@@ -468,10 +494,10 @@
     "status": "device-tested",
     "evidence": [
      "tests/test_reference_eval_emulate.py::test_atomic_kernel_is_not_established",
-     "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
-     "tests/test_signatures_structural.py::test_atomic_add_signature[boundary]",
-     "tests/test_signatures_structural.py::test_atomic_add_signature[positive]",
-     "tests/test_signatures_structural.py::test_atomic_add_signature[premise_violation]"
+     "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
+     "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+     "tests/test_signatures_atomics.py::test_contended_integer_return_is_not_a_point_unless_every_order_agrees",
+     "tests/test_signatures_atomics.py::test_exchange_final_value_and_returns"
     ]
    }
   ],
@@ -527,13 +553,20 @@
     "tests/test_general_rules.py::test_bitcast_round_trip_of_point_values_is_exact",
     "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[4]",
     "tests/test_reference_eval_ttir.py::test_unsigned_storage_and_signed_registers_round_trip",
-    "tests/test_signatures_core.py::test_core_signature[arith.bitcast-positive]"
+    "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
+    "tests/test_signatures_core.py::test_core_signature[arith.bitcast-positive]",
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]"
    ],
    "boundary": [
-    "tests/test_signatures_core.py::test_core_signature[arith.bitcast-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.bitcast-boundary]",
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.bitcast-premise_violation]",
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]",
     "tests/test_general_rules.py::test_bitcast_round_trip_of_point_values_is_exact"
    ]
   },
@@ -541,9 +574,16 @@
    "tests/test_general_rules.py::test_bitcast_round_trip_of_point_values_is_exact",
    "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[4]",
    "tests/test_reference_eval_ttir.py::test_unsigned_storage_and_signed_registers_round_trip",
+   "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
    "tests/test_signatures_core.py::test_core_signature[arith.bitcast-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.bitcast-positive]",
-   "tests/test_signatures_core.py::test_core_signature[arith.bitcast-premise_violation]"
+   "tests/test_signatures_core.py::test_core_signature[arith.bitcast-premise_violation]",
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]",
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]",
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]"
   ],
   "device_validation": [
    {
@@ -553,8 +593,8 @@
      "tests/test_general_rules.py::test_bitcast_round_trip_of_point_values_is_exact",
      "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[4]",
      "tests/test_reference_eval_ttir.py::test_unsigned_storage_and_signed_registers_round_trip",
-     "tests/test_signatures_core.py::test_core_signature[arith.bitcast-boundary]",
-     "tests/test_signatures_core.py::test_core_signature[arith.bitcast-positive]"
+     "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]"
     ]
    }
   ],
@@ -613,6 +653,7 @@
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]",
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[positive]",
     "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
@@ -620,12 +661,14 @@
    "boundary": [
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e4m3]",
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[premise_violation]"
    ]
@@ -639,6 +682,9 @@
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
@@ -1240,18 +1286,24 @@
    "positive": [
     "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]"
    ],
    "boundary": [
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]"
    ],
    "premise_violation": [
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
    "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
    "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]"
@@ -1263,9 +1315,9 @@
     "evidence": [
      "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
      "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
-     "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
-     "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
-     "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]"
+     "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
+     "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
+     "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]"
     ]
    }
   ],
@@ -1403,16 +1455,24 @@
     "tests/test_reference_eval_ttir.py::test_aborted_programs_are_reported_and_unwritten_outputs_are_not_clean",
     "tests/test_reference_eval_ttir.py::test_store_through_a_not_established_address_invalidates_the_target",
     "tests/test_reference_eval_ttir.py::test_straight_line_ptx_snippet_has_exact_lanewise_semantics",
-    "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream"
+    "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
+    "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-positive]"
    ],
-   "boundary": [],
-   "premise_violation": []
+   "boundary": [
+    "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-premise_violation]"
+   ]
   },
   "trigger_evidence": [
    "tests/test_reference_eval_ttir.py::test_aborted_programs_are_reported_and_unwritten_outputs_are_not_clean",
    "tests/test_reference_eval_ttir.py::test_store_through_a_not_established_address_invalidates_the_target",
    "tests/test_reference_eval_ttir.py::test_straight_line_ptx_snippet_has_exact_lanewise_semantics",
-   "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream"
+   "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
+   "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-boundary]",
+   "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-positive]",
+   "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-premise_violation]"
   ],
   "device_validation": [
    {
@@ -1422,7 +1482,8 @@
      "tests/test_reference_eval_ttir.py::test_aborted_programs_are_reported_and_unwritten_outputs_are_not_clean",
      "tests/test_reference_eval_ttir.py::test_store_through_a_not_established_address_invalidates_the_target",
      "tests/test_reference_eval_ttir.py::test_straight_line_ptx_snippet_has_exact_lanewise_semantics",
-     "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream"
+     "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
+     "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-boundary]"
     ]
    }
   ],
@@ -1481,6 +1542,7 @@
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]",
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[positive]",
     "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
@@ -1488,12 +1550,14 @@
    "boundary": [
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e4m3]",
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[premise_violation]"
    ]
@@ -1507,6 +1571,9 @@
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
@@ -1760,12 +1827,15 @@
     "tests/test_reference_eval_ttir.py::test_aborted_programs_are_reported_and_unwritten_outputs_are_not_clean",
     "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[2]",
     "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]",
     "tests/test_signatures_structural.py::test_clamp_and_fp8_signature[positive]"
    ],
    "boundary": [
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]",
     "tests/test_signatures_structural.py::test_clamp_and_fp8_signature[boundary]"
    ],
    "premise_violation": [
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_clamp_and_fp8_signature[premise_violation]"
    ]
   },
@@ -1773,6 +1843,9 @@
    "tests/test_reference_eval_ttir.py::test_aborted_programs_are_reported_and_unwritten_outputs_are_not_clean",
    "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[2]",
    "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]",
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]",
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]",
    "tests/test_signatures_structural.py::test_clamp_and_fp8_signature[boundary]",
    "tests/test_signatures_structural.py::test_clamp_and_fp8_signature[positive]",
    "tests/test_signatures_structural.py::test_clamp_and_fp8_signature[premise_violation]"
@@ -1785,8 +1858,8 @@
      "tests/test_reference_eval_ttir.py::test_aborted_programs_are_reported_and_unwritten_outputs_are_not_clean",
      "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[2]",
      "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
-     "tests/test_signatures_structural.py::test_clamp_and_fp8_signature[boundary]",
-     "tests/test_signatures_structural.py::test_clamp_and_fp8_signature[positive]"
+     "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]",
+     "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]"
     ]
    }
   ],
@@ -2066,10 +2139,11 @@
     "tests/test_reference_eval_emulate.py::test_rounded_substitution_predicts_the_div_rn_kernel",
     "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
     "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
-    "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used"
+    "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target"
    ],
    "boundary": [],
    "premise_violation": [
+    "tests/test_signatures_sync.py::test_atomic_load_store_signature[premise_violation]",
     "tests/test_execution_validity.py::test_scalar_roundtrip_without_barrier_is_an_execution_race"
    ]
   },
@@ -2093,7 +2167,7 @@
    "tests/test_reference_eval_emulate.py::test_rounded_substitution_predicts_the_div_rn_kernel",
    "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
    "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
    "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
    "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[0]",
@@ -2110,13 +2184,20 @@
    "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[5]",
    "tests/test_reference_eval_ttir.py::test_scan_with_a_custom_combine_region_encloses_the_exact_prefix",
    "tests/test_reference_eval_ttir.py::test_stores_from_several_instances_to_one_address_are_a_race_unless_equal[False]",
+   "tests/test_signatures_atomics.py::test_contended_integer_return_is_not_a_point_unless_every_order_agrees",
+   "tests/test_signatures_atomics.py::test_exchange_final_value_and_returns",
+   "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp16]",
+   "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp32]",
+   "tests/test_signatures_atomics.py::test_returned_value_used_as_an_address_does_not_crash_and_is_not_established",
+   "tests/test_signatures_atomics.py::test_returned_value_without_contention_is_the_value_before_the_launch",
    "tests/test_signatures_structural.py::test_atomic_cas_without_contention_is_determined_and_with_contention_is_a_race",
+   "tests/test_signatures_sync.py::test_atomic_load_of_a_concurrently_stored_address_is_a_set",
+   "tests/test_signatures_sync.py::test_atomic_load_store_signature[premise_violation]",
+   "tests/test_signatures_sync.py::test_message_passing_through_a_poll_orders_the_payload",
+   "tests/test_signatures_sync.py::test_poll_dependency_cycle_is_not_established_and_does_not_hang",
    "tests/test_upstream_sources.py::test_input_modified_in_place_by_aten_inside_the_launch_is_an_intermediate",
    "tests/test_upstream_sources.py::test_kernel_reference_records_the_storages_it_stored",
-   "tests/test_upstream_sources.py::test_output_reading_only_case_inputs_has_no_upstream_intermediate",
-   "tests/test_upstream_sources.py::test_output_with_identical_stale_bytes_still_depends_on_the_aten_intermediate",
-   "tests/test_upstream_sources.py::test_pure_data_movement_upstream_is_tagged_as_a_copy_of_the_inputs",
-   "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
+   "tests/test_upstream_sources.py::test_output_reading_only_case_inputs_has_no_upstream_intermediate"
   ],
   "device_validation": [
    {
@@ -2139,8 +2220,8 @@
  {
   "schema": "reference-dsl-v2-rule-rc3",
   "rule_id": "tt.histogram",
-  "language_status": "needs-specification",
-  "implementation_status": "planned",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
   "source": {
    "op_pattern": "tt.histogram",
    "official_source_ids": [
@@ -2153,16 +2234,16 @@
    "region_signature": "none",
    "effects": []
   },
-  "semantics": "histogram is not supported in this version",
+  "semantics": "Reductions, scans and dot products: sums and dot products by SumK / DotK with the Ogita-Rump-Oishi bound (tool 3.0); registered order-free combiners as fast paths, any other combine region interpreted along the lowering's combination order (sub-entries).",
   "policy_contracts": [
    {
     "mode": "numerical_difference",
     "when": "as admitted (see admission obligations)",
     "target_kind": "single",
-    "precision": "not-established",
+    "precision": "enclosure-only",
     "preserved_rounding": [],
     "intrinsic_width": "none",
-    "evaluator_obligation": "not implemented"
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
    }
   ],
   "admission_obligations": [
@@ -2173,20 +2254,36 @@
     "checker": "ttir_eval _op_reduce / _tree_reduce"
    }
   ],
-  "output_guarantee": "none: rejected or not established",
-  "proof_status": "none",
-  "proof_evidence": [],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
   "tests": {
-   "positive": [],
-   "boundary": [],
-   "premise_violation": []
+   "positive": [
+    "tests/test_signatures_sync.py::test_histogram_signature[positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_sync.py::test_histogram_signature[boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_sync.py::test_histogram_signature[premise_violation]"
+   ]
   },
-  "trigger_evidence": [],
+  "trigger_evidence": [
+   "tests/test_signatures_sync.py::test_histogram_signature[boundary]",
+   "tests/test_signatures_sync.py::test_histogram_signature[positive]",
+   "tests/test_signatures_sync.py::test_histogram_signature[premise_violation]"
+  ],
   "device_validation": [
    {
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
-    "status": "not-run",
-    "evidence": []
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_sync.py::test_histogram_signature[boundary]",
+     "tests/test_signatures_sync.py::test_histogram_signature[positive]",
+     "tests/test_signatures_sync.py::test_histogram_signature[premise_violation]"
+    ]
    }
   ],
   "forbidden_fallback": [
@@ -2491,7 +2588,7 @@
    "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
    "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
    "tests/test_reference_eval_ttir.py::test_aborted_programs_are_reported_and_unwritten_outputs_are_not_clean",
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
    "tests/test_reference_eval_ttir.py::test_branch_is_decided_by_the_reference_value",
    "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
@@ -2673,7 +2770,7 @@
    "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
    "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
    "tests/test_reference_eval_ttir.py::test_aborted_programs_are_reported_and_unwritten_outputs_are_not_clean",
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
    "tests/test_reference_eval_ttir.py::test_branch_is_decided_by_the_reference_value",
    "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
@@ -2846,8 +2943,8 @@
  {
   "schema": "reference-dsl-v2-rule-rc3",
   "rule_id": "tt.map_elementwise",
-  "language_status": "needs-specification",
-  "implementation_status": "planned",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
   "source": {
    "op_pattern": "tt.map_elementwise",
    "official_source_ids": [
@@ -2858,42 +2955,60 @@
    "type_guard": "as admitted by the 3.6.0 verifier",
    "attrs_guard": [],
    "region_signature": "none",
-   "effects": []
+   "effects": [
+    "control flow follows the reference predicate"
+   ]
   },
-  "semantics": "map_elementwise regions are not supported in this version",
+  "semantics": "Integer, boolean, address and layout operations are exact in two's-complement width; control flow follows the reference value of its predicate, and an undecided predicate joins the effects of both branches (an enclosure of the true branch, possibly wide); nested loops are unrolled in program order.",
   "policy_contracts": [
    {
     "mode": "numerical_difference",
     "when": "as admitted (see admission obligations)",
     "target_kind": "single",
-    "precision": "not-established",
+    "precision": "enclosure-only",
     "preserved_rounding": [],
     "intrinsic_width": "none",
-    "evaluator_obligation": "not implemented"
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
    }
   ],
   "admission_obligations": [
    {
-    "obligation": "the symbol or assembly text has a registered declaration",
+    "obligation": "integer widths, overflow flags and division by zero handled per the source op",
     "evidence_kind": "static",
     "covers": "source-domain",
-    "checker": "ttir_mapping LIBDEVICE / INLINE_ASM tables"
+    "checker": "ttir_eval integer ops"
    }
   ],
-  "output_guarantee": "none: rejected or not established",
-  "proof_status": "none",
-  "proof_evidence": [],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
   "tests": {
-   "positive": [],
-   "boundary": [],
-   "premise_violation": []
+   "positive": [
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]"
+   ]
   },
-  "trigger_evidence": [],
+  "trigger_evidence": [
+   "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
+   "tests/test_signatures_inc6.py::test_map_elementwise_signature[positive]",
+   "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]"
+  ],
   "device_validation": [
    {
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
-    "status": "not-run",
-    "evidence": []
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
+     "tests/test_signatures_inc6.py::test_map_elementwise_signature[positive]",
+     "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]"
+    ]
    }
   ],
   "forbidden_fallback": [
@@ -2904,8 +3019,8 @@
  {
   "schema": "reference-dsl-v2-rule-rc3",
   "rule_id": "tt.map_elementwise.return",
-  "language_status": "needs-specification",
-  "implementation_status": "planned",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
   "source": {
    "op_pattern": "tt.map_elementwise.return",
    "official_source_ids": [
@@ -2916,31 +3031,35 @@
    "type_guard": "as admitted by the 3.6.0 verifier",
    "attrs_guard": [],
    "region_signature": "none",
-   "effects": []
+   "effects": [
+    "control flow follows the reference predicate"
+   ]
   },
-  "semantics": "map_elementwise regions are not supported in this version",
+  "semantics": "Integer, boolean, address and layout operations are exact in two's-complement width; control flow follows the reference value of its predicate, and an undecided predicate joins the effects of both branches (an enclosure of the true branch, possibly wide); nested loops are unrolled in program order.",
   "policy_contracts": [
    {
     "mode": "numerical_difference",
     "when": "as admitted (see admission obligations)",
     "target_kind": "single",
-    "precision": "not-established",
+    "precision": "enclosure-only",
     "preserved_rounding": [],
     "intrinsic_width": "none",
-    "evaluator_obligation": "not implemented"
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
    }
   ],
   "admission_obligations": [
    {
-    "obligation": "the symbol or assembly text has a registered declaration",
+    "obligation": "integer widths, overflow flags and division by zero handled per the source op",
     "evidence_kind": "static",
     "covers": "source-domain",
-    "checker": "ttir_mapping LIBDEVICE / INLINE_ASM tables"
+    "checker": "ttir_eval integer ops"
    }
   ],
-  "output_guarantee": "none: rejected or not established",
-  "proof_status": "none",
-  "proof_evidence": [],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
   "tests": {
    "positive": [],
    "boundary": [],
@@ -3392,17 +3511,19 @@
     "tests/test_reference_eval_ttir.py::test_branch_is_decided_by_the_reference_value",
     "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
     "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
     "tests/test_signatures_structural.py::test_generic_reduce_without_ttgir_is_not_established_premise_violation",
     "tests/test_signatures_structural.py::test_reduce_int_signature[positive]",
     "tests/test_signatures_structural.py::test_reduce_signature[max-positive]",
     "tests/test_signatures_structural.py::test_reduce_signature[min-positive]",
     "tests/test_signatures_structural.py::test_reduce_signature[sum-positive]",
-    "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[positive]",
-    "tests/test_welford_reduction.py::test_all_zero_weights_follow_the_actual_merge_tree",
-    "tests/test_welford_reduction.py::test_handwritten_welford_merge_has_a_complete_reference"
+    "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[positive]"
    ],
    "boundary": [
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
     "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
     "tests/test_signatures_structural.py::test_reduce_int_signature[boundary]",
     "tests/test_signatures_structural.py::test_reduce_signature[max-boundary]",
@@ -3411,6 +3532,8 @@
     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[boundary]"
    ],
    "premise_violation": [
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
     "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_reduce_int_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_reduce_signature[max-premise_violation]",
@@ -3431,6 +3554,12 @@
    "tests/test_reference_eval_ttir.py::test_branch_is_decided_by_the_reference_value",
    "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
    "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
@@ -3962,7 +4091,7 @@
    "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
    "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
    "tests/test_reference_eval_ttir.py::test_aborted_programs_are_reported_and_unwritten_outputs_are_not_clean",
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
    "tests/test_reference_eval_ttir.py::test_branch_is_decided_by_the_reference_value",
    "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
@@ -4225,7 +4354,7 @@
    "tests/test_reference_eval_emulate.py::test_rounded_substitution_predicts_the_div_rn_kernel",
    "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
    "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
    "tests/test_reference_eval_ttir.py::test_branch_is_decided_by_the_reference_value",
    "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
@@ -4615,7 +4744,7 @@
     "tests/test_reference_eval_emulate.py::test_atomic_kernel_is_not_established",
     "tests/test_reference_eval_emulate.py::test_directed_rounding_node_is_localized",
     "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
-    "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+    "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
     "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
     "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[0]",
     "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[1]",
@@ -4625,11 +4754,13 @@
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.addi-boundary]",
-    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]"
+    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
+    "tests/test_signatures_sync.py::test_atomic_poll_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.addi-premise_violation]",
-    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]"
+    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
+    "tests/test_signatures_sync.py::test_atomic_poll_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -4646,7 +4777,7 @@
    "tests/test_reference_eval_emulate.py::test_atomic_kernel_is_not_established",
    "tests/test_reference_eval_emulate.py::test_directed_rounding_node_is_localized",
    "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
    "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[0]",
    "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[1]",
@@ -4666,10 +4797,14 @@
    "tests/test_signatures_core.py::test_core_signature[arith.addi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.addi-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.addi-premise_violation]",
+   "tests/test_signatures_inc6.py::test_tuple_arguments_are_flattened_like_the_frontend",
    "tests/test_signatures_structural.py::test_atomic_cas_without_contention_is_determined_and_with_contention_is_a_race",
    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
+   "tests/test_signatures_sync.py::test_atomic_poll_signature[boundary]",
+   "tests/test_signatures_sync.py::test_atomic_poll_signature[positive]",
+   "tests/test_signatures_sync.py::test_atomic_poll_signature[premise_violation]",
    "tests/test_upstream_sources.py::test_input_modified_in_place_by_aten_inside_the_launch_is_an_intermediate",
    "tests/test_upstream_sources.py::test_kernel_reference_records_the_storages_it_stored",
    "tests/test_upstream_sources.py::test_output_reading_only_case_inputs_has_no_upstream_intermediate",
@@ -4805,13 +4940,20 @@
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
     "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[4]",
     "tests/test_signatures_core.py::test_core_signature[arith.andi-positive]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
     "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
    ],
    "boundary": [
-    "tests/test_signatures_core.py::test_core_signature[arith.andi-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.andi-boundary]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]"
    ],
    "premise_violation": [
-    "tests/test_signatures_core.py::test_core_signature[arith.andi-premise_violation]"
+    "tests/test_signatures_core.py::test_core_signature[arith.andi-premise_violation]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
+    "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -4821,6 +4963,13 @@
    "tests/test_signatures_core.py::test_core_signature[arith.andi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.andi-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.andi-premise_violation]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
+   "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]",
    "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
   ],
   "device_validation": [
@@ -5077,17 +5226,24 @@
     "tests/test_reference_eval_ttir.py::test_control_dependence_on_a_pinned_load_downgrades_writes[branch_on_loaded-%c]",
     "tests/test_reference_eval_ttir.py::test_control_dependence_on_a_pinned_load_downgrades_writes[early_return_on_loaded-%c]",
     "tests/test_signatures_core.py::test_core_signature[arith.cmpf+select-positive]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
     "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
     "tests/test_welford_reduction.py::test_all_zero_weights_follow_the_actual_merge_tree",
     "tests/test_welford_reduction.py::test_merge_without_the_weight_factor_gets_an_order_specific_reference"
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.cmpf+select-boundary]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
     "tests/test_signatures_structural.py::test_control_flow_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.cmpf+select-premise_violation]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
     "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
+    "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]",
     "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone"
    ]
   },
@@ -5102,9 +5258,16 @@
    "tests/test_signatures_core.py::test_core_signature[arith.cmpf+select-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.cmpf+select-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.cmpf+select-premise_violation]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
+   "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]",
    "tests/test_welford_reduction.py::test_all_zero_weights_follow_the_actual_merge_tree",
    "tests/test_welford_reduction.py::test_merge_without_the_weight_factor_gets_an_order_specific_reference"
   ],
@@ -5188,30 +5351,40 @@
     "tests/test_reference_eval_emulate.py::test_rounded_substitution_predicts_the_div_rn_kernel",
     "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
     "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
-    "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+    "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
     "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
     "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
     "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[0]"
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-boundary]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isfinited-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-boundary]",
-    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]"
+    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
+    "tests/test_signatures_sync.py::test_atomic_load_store_signature[boundary]",
+    "tests/test_signatures_sync.py::test_histogram_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-premise_violation]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isfinited-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-premise_violation]",
-    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]"
+    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
+    "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]",
+    "tests/test_signatures_sync.py::test_histogram_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -5231,7 +5404,7 @@
    "tests/test_reference_eval_emulate.py::test_rounded_substitution_predicts_the_div_rn_kernel",
    "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
    "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
    "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
    "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[0]",
@@ -5251,20 +5424,20 @@
    "tests/test_reference_eval_ttir.py::test_unsigned_storage_and_signed_registers_round_trip",
    "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
    "tests/test_reference_eval_ttir.py::test_zero_fill_assumption_is_checked_on_ptx_and_defines_masked_lanes",
+   "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
+   "tests/test_signatures_atomics.py::test_undefined_integer_contribution_leaves_the_fold_not_established",
    "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-premise_violation]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-boundary]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-positive]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-premise_violation]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isfinited-boundary]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isfinited-positive]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isfinited-premise_violation]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-boundary]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-positive]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-premise_violation]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-boundary]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-positive]"
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]"
   ],
   "device_validation": [
    {
@@ -5355,6 +5528,8 @@
     "tests/test_signatures_core.py::test_core_signature[arith.negf-boundary]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e4m3]",
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isfinited-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-boundary]",
@@ -5375,6 +5550,8 @@
     "tests/test_signatures_core.py::test_core_signature[arith.negf-premise_violation]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]",
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isfinited-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-premise_violation]",
@@ -5418,7 +5595,7 @@
    "tests/test_reference_eval_emulate.py::test_rounded_substitution_predicts_the_div_rn_kernel",
    "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
    "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
    "tests/test_reference_eval_ttir.py::test_branch_is_decided_by_the_reference_value",
    "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
@@ -5514,6 +5691,7 @@
     "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
     "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
+    "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
     "tests/test_signatures_core.py::test_core_signature[arith.divf-positive]",
     "tests/test_welford_reduction.py::test_all_zero_weights_follow_the_actual_merge_tree",
     "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance",
@@ -5536,6 +5714,7 @@
    "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
    "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
    "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
+   "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
    "tests/test_signatures_core.py::test_core_signature[arith.divf-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.divf-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.divf-premise_violation]",
@@ -5692,16 +5871,22 @@
   ],
   "tests": {
    "positive": [
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[positive]",
     "tests/test_signatures_structural.py::test_unsigned_ops_signature[positive]"
    ],
    "boundary": [
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
     "tests/test_signatures_structural.py::test_unsigned_ops_signature[boundary]"
    ],
    "premise_violation": [
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_unsigned_ops_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
+   "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
+   "tests/test_signatures_inc6.py::test_map_elementwise_signature[positive]",
+   "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]",
    "tests/test_signatures_structural.py::test_unsigned_ops_signature[boundary]",
    "tests/test_signatures_structural.py::test_unsigned_ops_signature[positive]",
    "tests/test_signatures_structural.py::test_unsigned_ops_signature[premise_violation]"
@@ -5711,9 +5896,11 @@
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
     "status": "device-tested",
     "evidence": [
+     "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
+     "tests/test_signatures_inc6.py::test_map_elementwise_signature[positive]",
+     "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]",
      "tests/test_signatures_structural.py::test_unsigned_ops_signature[boundary]",
-     "tests/test_signatures_structural.py::test_unsigned_ops_signature[positive]",
-     "tests/test_signatures_structural.py::test_unsigned_ops_signature[premise_violation]"
+     "tests/test_signatures_structural.py::test_unsigned_ops_signature[positive]"
     ]
    }
   ],
@@ -5769,13 +5956,16 @@
     "tests/test_reference_eval_ttir.py::test_fp8_e4m3fn_rounding_model_and_implementation_defined_overflow",
     "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[2]",
     "tests/test_signatures_core.py::test_core_signature[arith.extf-positive]",
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]",
     "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
    ],
    "boundary": [
-    "tests/test_signatures_core.py::test_core_signature[arith.extf-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.extf-boundary]",
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]"
    ],
    "premise_violation": [
-    "tests/test_signatures_core.py::test_core_signature[arith.extf-premise_violation]"
+    "tests/test_signatures_core.py::test_core_signature[arith.extf-premise_violation]",
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -5784,6 +5974,9 @@
    "tests/test_signatures_core.py::test_core_signature[arith.extf-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.extf-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.extf-premise_violation]",
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]",
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]",
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]",
    "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
   ],
   "device_validation": [
@@ -5935,7 +6128,8 @@
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-positive]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-positive]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-positive]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-positive]"
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-positive]",
+    "tests/test_signatures_sync.py::test_atomic_poll_signature[positive]"
    ],
    "boundary": [
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-boundary]",
@@ -5943,7 +6137,8 @@
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-boundary]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-boundary]"
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-boundary]",
+    "tests/test_signatures_sync.py::test_atomic_poll_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-premise_violation]",
@@ -5951,7 +6146,8 @@
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-premise_violation]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-premise_violation]"
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-premise_violation]",
+    "tests/test_signatures_sync.py::test_atomic_poll_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -5973,7 +6169,10 @@
    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-premise_violation]",
    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-boundary]",
    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-positive]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-premise_violation]"
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-premise_violation]",
+   "tests/test_signatures_sync.py::test_atomic_poll_signature[boundary]",
+   "tests/test_signatures_sync.py::test_atomic_poll_signature[positive]",
+   "tests/test_signatures_sync.py::test_atomic_poll_signature[premise_violation]"
   ],
   "device_validation": [
    {
@@ -7113,18 +7312,20 @@
     "tests/test_reference_eval_emulate.py::test_rounded_substitution_predicts_the_div_rn_kernel",
     "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
     "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
-    "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used"
+    "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target"
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.muli-boundary]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e4m3]",
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.muli-premise_violation]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]"
    ]
   },
@@ -7148,7 +7349,7 @@
    "tests/test_reference_eval_emulate.py::test_rounded_substitution_predicts_the_div_rn_kernel",
    "tests/test_reference_eval_emulate.py::test_softmax_and_layernorm_reproduce_bitwise",
    "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
    "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
    "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[0]",
@@ -7174,11 +7375,11 @@
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
-   "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
-   "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
-   "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
-   "tests/test_upstream_sources.py::test_input_modified_in_place_by_aten_inside_the_launch_is_an_intermediate",
-   "tests/test_upstream_sources.py::test_kernel_reference_records_the_storages_it_stored"
+   "tests/test_signatures_inc6.py::test_tuple_arguments_are_flattened_like_the_frontend",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
+   "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]"
   ],
   "device_validation": [
    {
@@ -7425,20 +7626,34 @@
   "tests": {
    "positive": [
     "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
-    "tests/test_signatures_core.py::test_core_signature[arith.ori-positive]"
+    "tests/test_signatures_core.py::test_core_signature[arith.ori-positive]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]"
    ],
    "boundary": [
-    "tests/test_signatures_core.py::test_core_signature[arith.ori-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.ori-boundary]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]"
    ],
    "premise_violation": [
-    "tests/test_signatures_core.py::test_core_signature[arith.ori-premise_violation]"
+    "tests/test_signatures_core.py::test_core_signature[arith.ori-premise_violation]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
+    "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
    "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
    "tests/test_signatures_core.py::test_core_signature[arith.ori-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.ori-positive]",
-   "tests/test_signatures_core.py::test_core_signature[arith.ori-premise_violation]"
+   "tests/test_signatures_core.py::test_core_signature[arith.ori-premise_violation]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
+   "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]"
   ],
   "device_validation": [
    {
@@ -7448,7 +7663,8 @@
      "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
      "tests/test_signatures_core.py::test_core_signature[arith.ori-boundary]",
      "tests/test_signatures_core.py::test_core_signature[arith.ori-positive]",
-     "tests/test_signatures_core.py::test_core_signature[arith.ori-premise_violation]"
+     "tests/test_signatures_core.py::test_core_signature[arith.ori-premise_violation]",
+     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]"
     ]
    }
   ],
@@ -7580,12 +7796,14 @@
     "tests/test_execution_validity.py::test_reading_the_slot_another_program_writes_is_an_execution_race",
     "tests/test_general_rules.py::test_nested_loops_and_data_branch_are_exact_where_decided",
     "tests/test_reference_eval_emulate.py::test_atomic_kernel_is_not_established",
-    "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+    "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
     "tests/test_reference_eval_ttir.py::test_undefined_integer_times_established_zero_is_determined",
-    "tests/test_signatures_core.py::test_core_signature[arith.remsi-positive]"
+    "tests/test_signatures_core.py::test_core_signature[arith.remsi-positive]",
+    "tests/test_signatures_sync.py::test_atomic_load_store_signature[positive]"
    ],
    "boundary": [
-    "tests/test_signatures_core.py::test_core_signature[arith.remsi-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.remsi-boundary]",
+    "tests/test_signatures_sync.py::test_atomic_load_store_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.remsi-premise_violation]"
@@ -7595,11 +7813,13 @@
    "tests/test_execution_validity.py::test_reading_the_slot_another_program_writes_is_an_execution_race",
    "tests/test_general_rules.py::test_nested_loops_and_data_branch_are_exact_where_decided",
    "tests/test_reference_eval_emulate.py::test_atomic_kernel_is_not_established",
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
    "tests/test_reference_eval_ttir.py::test_undefined_integer_times_established_zero_is_determined",
    "tests/test_signatures_core.py::test_core_signature[arith.remsi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.remsi-positive]",
-   "tests/test_signatures_core.py::test_core_signature[arith.remsi-premise_violation]"
+   "tests/test_signatures_core.py::test_core_signature[arith.remsi-premise_violation]",
+   "tests/test_signatures_sync.py::test_atomic_load_store_signature[boundary]",
+   "tests/test_signatures_sync.py::test_atomic_load_store_signature[positive]"
   ],
   "device_validation": [
    {
@@ -7609,7 +7829,7 @@
      "tests/test_execution_validity.py::test_reading_the_slot_another_program_writes_is_an_execution_race",
      "tests/test_general_rules.py::test_nested_loops_and_data_branch_are_exact_where_decided",
      "tests/test_reference_eval_emulate.py::test_atomic_kernel_is_not_established",
-     "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+     "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
      "tests/test_reference_eval_ttir.py::test_undefined_integer_times_established_zero_is_determined"
     ]
    }
@@ -7665,16 +7885,22 @@
   ],
   "tests": {
    "positive": [
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[positive]",
     "tests/test_signatures_structural.py::test_unsigned_ops_signature[positive]"
    ],
    "boundary": [
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
     "tests/test_signatures_structural.py::test_unsigned_ops_signature[boundary]"
    ],
    "premise_violation": [
+    "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_unsigned_ops_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
+   "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
+   "tests/test_signatures_inc6.py::test_map_elementwise_signature[positive]",
+   "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]",
    "tests/test_signatures_structural.py::test_unsigned_ops_signature[boundary]",
    "tests/test_signatures_structural.py::test_unsigned_ops_signature[positive]",
    "tests/test_signatures_structural.py::test_unsigned_ops_signature[premise_violation]"
@@ -7684,9 +7910,11 @@
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
     "status": "device-tested",
     "evidence": [
+     "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
+     "tests/test_signatures_inc6.py::test_map_elementwise_signature[positive]",
+     "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]",
      "tests/test_signatures_structural.py::test_unsigned_ops_signature[boundary]",
-     "tests/test_signatures_structural.py::test_unsigned_ops_signature[positive]",
-     "tests/test_signatures_structural.py::test_unsigned_ops_signature[premise_violation]"
+     "tests/test_signatures_structural.py::test_unsigned_ops_signature[positive]"
     ]
    }
   ],
@@ -7862,17 +8090,24 @@
     "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
     "tests/test_signatures_core.py::test_core_signature[arith.cmpf+select-positive]",
     "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-positive]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
     "tests/test_welford_reduction.py::test_all_zero_weights_follow_the_actual_merge_tree",
     "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance",
     "tests/test_welford_reduction.py::test_merge_without_the_weight_factor_gets_an_order_specific_reference"
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.cmpf+select-boundary]",
-    "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-boundary]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.cmpf+select-premise_violation]",
     "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-premise_violation]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
+    "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]",
     "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone"
    ]
   },
@@ -7888,6 +8123,13 @@
    "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-premise_violation]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
+   "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]",
    "tests/test_welford_reduction.py::test_all_zero_weights_follow_the_actual_merge_tree",
    "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance",
    "tests/test_welford_reduction.py::test_merge_without_the_weight_factor_gets_an_order_specific_reference"
@@ -8108,6 +8350,10 @@
   ],
   "tests": {
    "positive": [
+    "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
     "tests/test_signatures_structural.py::test_unsigned_ops_signature[positive]"
    ],
    "boundary": [
@@ -8118,6 +8364,10 @@
    ]
   },
   "trigger_evidence": [
+   "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
    "tests/test_signatures_structural.py::test_unsigned_ops_signature[boundary]",
    "tests/test_signatures_structural.py::test_unsigned_ops_signature[positive]",
    "tests/test_signatures_structural.py::test_unsigned_ops_signature[premise_violation]"
@@ -8127,9 +8377,11 @@
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
     "status": "device-tested",
     "evidence": [
-     "tests/test_signatures_structural.py::test_unsigned_ops_signature[boundary]",
-     "tests/test_signatures_structural.py::test_unsigned_ops_signature[positive]",
-     "tests/test_signatures_structural.py::test_unsigned_ops_signature[premise_violation]"
+     "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
+     "tests/test_signatures_structural.py::test_unsigned_ops_signature[boundary]"
     ]
    }
   ],
@@ -8473,13 +8725,16 @@
     "tests/test_reference_eval_ttir.py::test_fp8_e4m3fn_rounding_model_and_implementation_defined_overflow",
     "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[2]",
     "tests/test_signatures_core.py::test_core_signature[arith.truncf-positive]",
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]",
     "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
    ],
    "boundary": [
-    "tests/test_signatures_core.py::test_core_signature[arith.truncf-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.truncf-boundary]",
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]"
    ],
    "premise_violation": [
-    "tests/test_signatures_core.py::test_core_signature[arith.truncf-premise_violation]"
+    "tests/test_signatures_core.py::test_core_signature[arith.truncf-premise_violation]",
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -8488,6 +8743,9 @@
    "tests/test_signatures_core.py::test_core_signature[arith.truncf-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.truncf-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.truncf-premise_violation]",
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]",
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]",
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]",
    "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
   ],
   "device_validation": [
@@ -8707,6 +8965,10 @@
   ],
   "tests": {
    "positive": [
+    "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
     "tests/test_signatures_core.py::test_core_signature[arith.xori-positive]"
    ],
    "boundary": [
@@ -8717,6 +8979,10 @@
    ]
   },
   "trigger_evidence": [
+   "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
    "tests/test_signatures_core.py::test_core_signature[arith.xori-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.xori-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.xori-premise_violation]"
@@ -8726,9 +8992,11 @@
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
     "status": "device-tested",
     "evidence": [
-     "tests/test_signatures_core.py::test_core_signature[arith.xori-boundary]",
-     "tests/test_signatures_core.py::test_core_signature[arith.xori-positive]",
-     "tests/test_signatures_core.py::test_core_signature[arith.xori-premise_violation]"
+     "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
+     "tests/test_signatures_core.py::test_core_signature[arith.xori-boundary]"
     ]
    }
   ],
@@ -12032,7 +12300,10 @@
     "tests/test_general_rules.py::test_nested_loops_and_data_branch_are_exact_where_decided",
     "tests/test_general_rules.py::test_undecided_control_flow_takes_the_union_of_both_branches",
     "tests/test_reference_eval_ttir.py::test_control_dependence_on_a_pinned_load_downgrades_writes[branch_on_loaded-%c]",
-    "tests/test_signatures_structural.py::test_control_flow_signature[positive]"
+    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
+    "tests/test_signatures_sync.py::test_atomic_load_of_a_concurrently_stored_address_is_a_set",
+    "tests/test_signatures_sync.py::test_message_passing_through_a_poll_orders_the_payload",
+    "tests/test_signatures_sync.py::test_poll_dependency_cycle_is_not_established_and_does_not_hang"
    ],
    "boundary": [
     "tests/test_signatures_structural.py::test_control_flow_signature[boundary]"
@@ -12047,7 +12318,10 @@
    "tests/test_reference_eval_ttir.py::test_control_dependence_on_a_pinned_load_downgrades_writes[branch_on_loaded-%c]",
    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
-   "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]"
+   "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
+   "tests/test_signatures_sync.py::test_atomic_load_of_a_concurrently_stored_address_is_a_set",
+   "tests/test_signatures_sync.py::test_message_passing_through_a_poll_orders_the_payload",
+   "tests/test_signatures_sync.py::test_poll_dependency_cycle_is_not_established_and_does_not_hang"
   ],
   "device_validation": [
    {
@@ -12891,7 +13165,8 @@
     "tests/test_execution_validity.py::test_barrier_orders_the_scalar_roundtrip",
     "tests/test_general_rules.py::test_store_then_load_through_an_alias_carries_the_reference_value",
     "tests/test_reference_eval_ttir.py::test_pinning_a_load_to_its_captured_value_downgrades_the_output",
-    "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[3]"
+    "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[3]",
+    "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits"
    ],
    "boundary": [],
    "premise_violation": []
@@ -12900,7 +13175,8 @@
    "tests/test_execution_validity.py::test_barrier_orders_the_scalar_roundtrip",
    "tests/test_general_rules.py::test_store_then_load_through_an_alias_carries_the_reference_value",
    "tests/test_reference_eval_ttir.py::test_pinning_a_load_to_its_captured_value_downgrades_the_output",
-   "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[3]"
+   "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[3]",
+   "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits"
   ],
   "device_validation": [
    {
@@ -12910,7 +13186,8 @@
      "tests/test_execution_validity.py::test_barrier_orders_the_scalar_roundtrip",
      "tests/test_general_rules.py::test_store_then_load_through_an_alias_carries_the_reference_value",
      "tests/test_reference_eval_ttir.py::test_pinning_a_load_to_its_captured_value_downgrades_the_output",
-     "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[3]"
+     "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[3]",
+     "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits"
     ]
    }
   ],
@@ -18370,16 +18647,22 @@
   ],
   "tests": {
    "positive": [
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[positive]"
    ],
    "boundary": [
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[boundary]"
    ],
    "premise_violation": [
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
    "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[boundary]",
    "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[positive]",
    "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]"
@@ -18389,9 +18672,11 @@
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
     "status": "device-tested",
     "evidence": [
+     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
+     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
+     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
      "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[boundary]",
-     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[positive]",
-     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]"
+     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[positive]"
     ]
    }
   ],
@@ -18443,16 +18728,30 @@
    "results/dsl_v2/rule_registry.json"
   ],
   "tests": {
-   "positive": [],
-   "boundary": [],
-   "premise_violation": []
+   "positive": [
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]"
+   ]
   },
-  "trigger_evidence": [],
+  "trigger_evidence": [
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
+   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]"
+  ],
   "device_validation": [
    {
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
-    "status": "not-run",
-    "evidence": []
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
+     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
+     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]"
+    ]
    }
   ],
   "forbidden_fallback": [
@@ -20648,6 +20947,310 @@
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_coshf-boundary]",
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_coshf-positive]",
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_coshf-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_cyl_bessel_i0",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_cyl_bessel_i0"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_cyl_bessel_i0f",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_cyl_bessel_i0f"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0f-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0f-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0f-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0f-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0f-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0f-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0f-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0f-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i0f-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_cyl_bessel_i1",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_cyl_bessel_i1"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_cyl_bessel_i1f",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_cyl_bessel_i1f"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1f-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1f-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1f-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1f-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1f-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1f-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1f-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1f-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cyl_bessel_i1f-premise_violation]"
     ]
    }
   ],
@@ -29635,6 +30238,310 @@
  },
  {
   "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_j0",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_j0"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_j0f",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_j0f"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0f-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0f-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0f-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0f-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0f-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0f-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0f-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0f-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j0f-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_j1",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_j1"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_j1f",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_j1f"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1f-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1f-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1f-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1f-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1f-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1f-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1f-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1f-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_j1f-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_log",
   "language_status": "specified",
   "implementation_status": "implemented-unvalidated",
@@ -31984,6 +32891,310 @@
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_truncf-boundary]",
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_truncf-positive]",
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_truncf-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_y0",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_y0"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_y0f",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_y0f"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0f-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0f-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0f-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0f-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0f-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0f-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0f-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0f-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y0f-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_y1",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_y1"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_y1f",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_y1f"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1f-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1f-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1f-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1f-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1f-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1f-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1f-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1f-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_y1f-premise_violation]"
     ]
    }
   ],
@@ -36381,6 +37592,82 @@
  },
  {
   "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.elementwise_inline_asm|attrs=asm~div\\.full(\\.ftz)?\\.f32 \\$0, \\$1, \\$2;",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.elementwise_inline_asm",
+   "official_source_ids": [
+    "e50b186e:tt.elementwise_inline_asm"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "asm~div\\.full(\\.ftz)?\\.f32 \\$0, \\$1, \\$2;"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-boundary]",
+   "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-positive]",
+   "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-boundary]",
+     "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-positive]",
+     "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
   "rule_id": "tt.elementwise_inline_asm|attrs=asm~ex2\\.approx(\\.ftz)?\\.f32 \\$0, \\$1;",
   "language_status": "specified",
   "implementation_status": "implemented-unvalidated",
@@ -37081,7 +38368,7 @@
     "program id / grid"
    ]
   },
-  "semantics": "Returned value unused: the updates fold into an exact associative combination.",
+  "semantics": "Returned value unused: the updates of one address fold into an exact combination when they are one commutative kind or a mixed pair with a checked joint order law (DSL v2 increment 4).",
   "policy_contracts": [
    {
     "mode": "numerical_difference",
@@ -37114,8 +38401,15 @@
   ],
   "tests": {
    "positive": [
+    "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+    "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
+    "tests/test_signatures_atomics.py::test_mixed_kinds_without_a_joint_law_are_not_established",
+    "tests/test_signatures_atomics.py::test_undefined_integer_contribution_leaves_the_fold_not_established",
     "tests/test_signatures_structural.py::test_atomic_add_signature[positive]",
-    "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[positive]"
+    "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[positive]",
+    "tests/test_signatures_sync.py::test_message_passing_through_a_poll_orders_the_payload"
    ],
    "boundary": [
     "tests/test_signatures_structural.py::test_atomic_add_signature[boundary]",
@@ -37127,23 +38421,30 @@
    ]
   },
   "trigger_evidence": [
+   "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+   "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
+   "tests/test_signatures_atomics.py::test_mixed_kinds_without_a_joint_law_are_not_established",
+   "tests/test_signatures_atomics.py::test_undefined_integer_contribution_leaves_the_fold_not_established",
    "tests/test_signatures_structural.py::test_atomic_add_signature[boundary]",
    "tests/test_signatures_structural.py::test_atomic_add_signature[positive]",
    "tests/test_signatures_structural.py::test_atomic_add_signature[premise_violation]",
    "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[boundary]",
    "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[positive]",
-   "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[premise_violation]"
+   "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[premise_violation]",
+   "tests/test_signatures_sync.py::test_message_passing_through_a_poll_orders_the_payload"
   ],
   "device_validation": [
    {
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
     "status": "device-tested",
     "evidence": [
-     "tests/test_signatures_structural.py::test_atomic_add_signature[boundary]",
-     "tests/test_signatures_structural.py::test_atomic_add_signature[positive]",
-     "tests/test_signatures_structural.py::test_atomic_add_signature[premise_violation]",
-     "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[boundary]",
-     "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[positive]"
+     "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
+     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-100.0]",
+     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
+     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
+     "tests/test_signatures_atomics.py::test_mixed_kinds_without_a_joint_law_are_not_established"
     ]
    }
   ],
@@ -37155,8 +38456,8 @@
  {
   "schema": "reference-dsl-v2-rule-rc3",
   "rule_id": "tt.atomic_rmw|attrs=return used",
-  "language_status": "needs-specification",
-  "implementation_status": "planned",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
   "source": {
    "op_pattern": "tt.atomic_rmw",
    "official_source_ids": [
@@ -37174,16 +38475,16 @@
     "program id / grid"
    ]
   },
-  "semantics": "returned old value depends on the undeclared order of the updates",
+  "semantics": "Returned value used (DSL v2 increment 4, rc3 02 5.3 / 10): two passes; without contention the value before the launch (a point), with contention the hull of the value before the launch combined with every subset of the other updates (a set target, L_E); integers only as points.",
   "policy_contracts": [
    {
     "mode": "numerical_difference",
     "when": "as admitted (see admission obligations)",
     "target_kind": "single",
-    "precision": "not-established",
+    "precision": "enclosure-only",
     "preserved_rounding": [],
     "intrinsic_width": "none",
-    "evaluator_obligation": "not implemented"
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
    }
   ],
   "admission_obligations": [
@@ -37200,12 +38501,20 @@
     "checker": "ttir_eval _addresses"
    }
   ],
-  "output_guarantee": "none: rejected or not established",
-  "proof_status": "none",
-  "proof_evidence": [],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
   "tests": {
    "positive": [
-    "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+    "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
+    "tests/test_signatures_atomics.py::test_contended_integer_return_is_not_a_point_unless_every_order_agrees",
+    "tests/test_signatures_atomics.py::test_exchange_final_value_and_returns",
+    "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp16]",
+    "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp32]",
+    "tests/test_signatures_atomics.py::test_returned_value_used_as_an_address_does_not_crash_and_is_not_established",
+    "tests/test_signatures_atomics.py::test_returned_value_without_contention_is_the_value_before_the_launch",
     "tests/test_signatures_structural.py::test_atomic_add_signature[positive]"
    ],
    "boundary": [
@@ -37216,7 +38525,13 @@
    ]
   },
   "trigger_evidence": [
-   "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
+   "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
+   "tests/test_signatures_atomics.py::test_contended_integer_return_is_not_a_point_unless_every_order_agrees",
+   "tests/test_signatures_atomics.py::test_exchange_final_value_and_returns",
+   "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp16]",
+   "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp32]",
+   "tests/test_signatures_atomics.py::test_returned_value_used_as_an_address_does_not_crash_and_is_not_established",
+   "tests/test_signatures_atomics.py::test_returned_value_without_contention_is_the_value_before_the_launch",
    "tests/test_signatures_structural.py::test_atomic_add_signature[boundary]",
    "tests/test_signatures_structural.py::test_atomic_add_signature[positive]",
    "tests/test_signatures_structural.py::test_atomic_add_signature[premise_violation]"
@@ -37226,10 +38541,11 @@
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
     "status": "device-tested",
     "evidence": [
-     "tests/test_reference_eval_ttir.py::test_atomic_return_value_is_not_established_when_used",
-     "tests/test_signatures_structural.py::test_atomic_add_signature[boundary]",
-     "tests/test_signatures_structural.py::test_atomic_add_signature[positive]",
-     "tests/test_signatures_structural.py::test_atomic_add_signature[premise_violation]"
+     "tests/test_reference_eval_ttir.py::test_atomic_return_value_when_used_is_a_set_target",
+     "tests/test_signatures_atomics.py::test_contended_integer_return_is_not_a_point_unless_every_order_agrees",
+     "tests/test_signatures_atomics.py::test_exchange_final_value_and_returns",
+     "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp16]",
+     "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp32]"
     ]
    }
   ],
@@ -37286,18 +38602,24 @@
    "positive": [
     "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]"
    ],
    "boundary": [
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]"
    ],
    "premise_violation": [
+    "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
    "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
    "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
+   "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]"
@@ -37309,9 +38631,9 @@
     "evidence": [
      "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
      "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
-     "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
-     "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
-     "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]"
+     "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
+     "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
+     "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]"
     ]
    }
   ],
