@@ -80,10 +80,16 @@ def _defs(func):
 
 
 def _const_int(name, defs):
+    """The integer value of a scalar constant: an arith.constant, or a one-element splat constant read back with
+    tt.unsplat / tt.splat / tt.reshape (``tl.full((1,), v).item()`` in the official tests)."""
     op = defs.get(name)
-    if op is None or op.name != "arith.constant" or op.result_types[0].shape:
+    while op is not None and op.name in ("tt.unsplat", "tt.splat", "tt.reshape") and op.operands:
+        op = defs.get(op.operands[0])
+    if op is None or op.name != "arith.constant" or int(np.prod(op.result_types[0].shape or [1])) != 1:
         return None
     text = op.attrs.get("value", "").split(":")[0].strip()
+    if text.startswith("dense<") and text.endswith(">"):
+        text = text[len("dense<"):-1].strip()
     if text in ("true", "false"):
         return int(text == "true")
     try:
@@ -134,7 +140,14 @@ def find_sections(module, func) -> tuple:
             cas = cas[0]
             lock, c_ssa, v_ssa = cas.operands[:3]
             cmp_value, val_value = _const_int(c_ssa, defs), _const_int(v_ssa, defs)
-            if cmp_value is None or val_value is None or cmp_value == val_value or uses.get(lock, 0) != 2:
+            if cmp_value is None or val_value is None or cmp_value == val_value:
+                continue
+            # the lock pointer: used by the acquire, the release and only as the base of other addresses (the words
+            # themselves are checked at run time: no writer but the acquire and the release)
+            others = [o for fn in module.funcs.values() for b in fn.body.blocks for o in _walk(b.ops)
+                      if lock in o.operands and o.node_id != cas.node_id]
+            if uses.get(lock, 0) < 2 or any(not (o.name == "tt.addptr" and o.operands[0] == lock) and
+                                            not (o.name == "tt.atomic_rmw" and o.operands[0] == lock) for o in others):
                 continue
             cond = before[-1]
             cmpi = [o for o in before if o.name == "arith.cmpi"]
@@ -243,6 +256,13 @@ def _concrete_bool(t):
 class _Replay:
     def __init__(self, elems, elem_size, ptr_elem_size, constant):
         self.elems, self.elem_size, self.ptr_elem_size, self.constant = elems, elem_size, ptr_elem_size, constant
+        self.prefix = "P"
+
+    def undefined(self, op, idx, elem):
+        """A masked-off lane of a load without ``other``: undefined, so a fresh value the proof covers for every
+        choice (per instance)."""
+        name = f"{self.prefix}_undef_{op.node_id.replace('@', '_').replace('%', '')}_{'_'.join(map(str, idx))}"
+        return C._var(name, elem)
 
     def outer_value(self, name, tv, prefix):
         """A TV of the evaluated program as a symbolic value: pointers and integers concrete, floats quantified."""
@@ -350,16 +370,14 @@ class _Replay:
             out = np.empty(ptr.shape, dtype=object)
             for idx in np.ndindex(*ptr.shape) if ptr.shape else [()]:
                 m = True if mask is None else _concrete_bool(mask[idx])
+                elem = rt.elem
                 if m is True:
                     out[idx] = state.read(self.loc(ptr[idx]))
                 elif m is False:
-                    if other is None:
-                        raise Unsupported("masked load without other")
-                    out[idx] = other[idx]
+                    out[idx] = other[idx] if other is not None else self.undefined(op, idx, elem)
                 else:
-                    if other is None:
-                        raise Unsupported("masked load without other")
-                    out[idx] = C.z3.If(mask[idx], state.read(self.loc(ptr[idx])), other[idx])
+                    alt = other[idx] if other is not None else self.undefined(op, idx, elem)
+                    out[idx] = C.z3.If(mask[idx], state.read(self.loc(ptr[idx])), alt)
             return [out]
         if n == "tt.store":
             ptr, val = a[0], a[1]
@@ -485,6 +503,7 @@ def prove(evaluator, section: LockSection, records: dict, memory) -> LockCertifi
 
         def transform(cls_pids, prefix, start=None):
             snap = records[cls_pids[0]]
+            replay.prefix = prefix
             env = {name: replay.outer_value(name, snap[name], prefix) for name in section.outer}
             st = _State(elems, start)
             replay.run(section.ops, env, st)

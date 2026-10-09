@@ -913,3 +913,48 @@ def test_cas_lock_certificate_refuses_an_aliased_lock_word():
     ref = evaluate_sequence([launch]).launches[0]
     assert not any(r.startswith("proved:the launch result") for r in ref.reasons), sorted(ref.reasons)
     assert not (ref.element_classes(1 << 20) == "complete_composed").any()
+
+
+def test_cas_lock_certificate_with_the_official_lock_values():
+    """full interpreter: the official test_atomic_cas builds its lock values with tl.full((1,), v).item() (a one-element
+    dense constant and tt.unsplat); the pattern recognizes them and the 128-lane serialized add is certified"""
+    pytest.importorskip("triton")
+    pytest.importorskip("z3")
+    from test_signatures_structural import _run
+
+    body = ("    num0 = tl.full((1, ), 0, dtype=tl.int32).item()\n    num1 = tl.full((1, ), 1, dtype=tl.int32).item()\n"
+            "    i = tl.arange(0, N)\n    while tl.atomic_cas(lock, num0, num1) == 1:\n        pass\n"
+            "    tl.store(data + i, tl.load(data + i) + 1.0)\n    tl.debug_barrier()\n    tl.atomic_xchg(lock, num0)\n")
+    ref, ident = _run("audit_lock_item", body, {"data": ("fp32", np.zeros(8)), "lock": ("int32", [0])},
+                      grid=(12, 1, 1), full=True)
+    assert (np.asarray(ref.buffers[ident["data"]].lo) == 12).all()
+    assert (ref.element_classes(ident["data"]) == "complete_composed").all(), sorted(ref.reasons)
+
+
+def test_cas_lock_certificate_for_the_tutorial_layer_norm_shape():
+    """full interpreter: tutorial 05's backward pass -- lock words and counters in one tensor (Count = Lock + G, derived
+    from the lock pointer), a masked load without other, first holder stores, later holders add: certified"""
+    pytest.importorskip("triton")
+    pytest.importorskip("z3")
+    from test_signatures_structural import _run
+
+    body = ("    pid = tl.program_id(0)\n    i = tl.arange(0, N)\n    m = i < 6\n"
+            "    part = tl.load(x + pid * N + i, mask=m, other=0.0)\n"
+            "    lk = locks + pid % 2\n    cnt = lk + 2\n"
+            "    while tl.atomic_cas(lk, 0, 1) == 1:\n        pass\n"
+            "    count = tl.load(cnt)\n"
+            "    if count == 0:\n        tl.atomic_xchg(cnt, 1)\n"
+            "    else:\n        part += tl.load(dw + (pid % 2) * N + i, mask=m)\n"
+            "    tl.store(dw + (pid % 2) * N + i, part, mask=m)\n"
+            "    tl.debug_barrier()\n    tl.atomic_xchg(lk, 0)\n")
+    x = np.random.default_rng(5).standard_normal((10, 8)).astype(np.float32)
+    ref, ident = _run("audit_lock_tut05", body, {"x": ("fp32", x.reshape(-1)), "dw": ("fp32", np.zeros(16)),
+                                                 "locks": ("int32", np.zeros(4))}, out_name="dw", grid=(10, 1, 1),
+                      full=True)
+    cls = ref.element_classes(ident["dw"]).reshape(2, 8)
+    assert (cls[:, :6] == "complete_composed").all(), (cls, sorted(ref.reasons))
+    dw = ref.buffers[ident["dw"]]
+    for g in range(2):
+        for j in range(6):
+            exact = sum(Fr(float(v)) for v in x[g::2, j])
+            assert Fr(float(dw.lo[g * 8 + j])) <= exact <= Fr(float(dw.hi[g * 8 + j]))
