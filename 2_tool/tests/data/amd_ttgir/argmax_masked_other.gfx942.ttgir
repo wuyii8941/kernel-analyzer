@@ -1,0 +1,25 @@
+#blocked = #ttg.blocked<{sizePerThread = [1], threadsPerWarp = [64], warpsPerCTA = [4], order = [0]}>
+module attributes {"ttg.num-ctas" = 1 : i32, "ttg.num-warps" = 4 : i32, ttg.target = "hip:gfx942", "ttg.threads-per-warp" = 64 : i32} {
+  tt.func public @argmax_fast_kernel(%x_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32}, %val_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32}, %idx_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32}) attributes {noinline = false} {
+    %x = arith.constant dense<0xFF800000> : tensor<4xf32, #blocked>
+    %mask = arith.constant dense<3> : tensor<4xi32, #blocked>
+    %offsets = tt.make_range {end = 4 : i32, start = 0 : i32} : tensor<4xi32, #blocked>
+    %mask_0 = arith.cmpi slt, %offsets, %mask : tensor<4xi32, #blocked>
+    %x_1 = amdg.buffer_load %x_ptr[%offsets], %mask_0, %x : !tt.ptr<f32> -> tensor<4xf32, #blocked>
+    %val = "tt.reduce"(%x_1) <{axis = 0 : i32}> ({
+    ^bb0(%val_2: f32, %val_3: f32):
+      %val_4 = arith.maxnumf %val_2, %val_3 : f32
+      tt.reduce.return %val_4 : f32
+    }) : (tensor<4xf32, #blocked>) -> f32
+    %idx:2 = "tt.reduce"(%x_1, %offsets) <{axis = 0 : i32}> ({
+    ^bb0(%idx_2: f32, %idx_3: i32, %idx_4: f32, %idx_5: i32):
+      %gt = arith.cmpf ogt, %idx_2, %idx_4 : f32
+      %v_ret = arith.select %gt, %idx_2, %idx_4 : f32
+      %i_ret = arith.select %gt, %idx_3, %idx_5 : i32
+      tt.reduce.return %v_ret, %i_ret : f32, i32
+    }) : (tensor<4xf32, #blocked>, tensor<4xi32, #blocked>) -> (f32, i32)
+    tt.store %val_ptr, %val : !tt.ptr<f32>
+    tt.store %idx_ptr, %idx#1 : !tt.ptr<i32>
+    tt.return
+  }
+}

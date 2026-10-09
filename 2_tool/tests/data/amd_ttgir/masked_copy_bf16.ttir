@@ -1,0 +1,19 @@
+module {
+  tt.func public @kernel(%out_ptr: !tt.ptr<bf16> {tt.divisibility = 16 : i32}, %a_ptr: !tt.ptr<bf16> {tt.divisibility = 16 : i32}, %shape.0: i32 {tt.divisibility = 16 : i32}) attributes {noinline = false} {
+    %cst = arith.constant dense<0> : tensor<64xi64>
+    %shape.0_0 = arith.extsi %shape.0 : i32 to i64
+    %arange = tt.make_range {end = 64 : i32, start = 0 : i32} : tensor<64xi32>
+    %block = tt.splat %a_ptr : !tt.ptr<bf16> -> tensor<64x!tt.ptr<bf16>>
+    %block_1 = tt.addptr %block, %arange : tensor<64x!tt.ptr<bf16>>, tensor<64xi32>
+    %block_2 = tt.load %block_1 : tensor<64x!tt.ptr<bf16>>
+    %0 = arith.extsi %arange : tensor<64xi32> to tensor<64xi64>
+    %1 = arith.cmpi sge, %0, %cst : tensor<64xi64>
+    %2 = tt.splat %shape.0_0 : i64 -> tensor<64xi64>
+    %3 = arith.cmpi slt, %0, %2 : tensor<64xi64>
+    %4 = arith.andi %1, %3 : tensor<64xi1>
+    %5 = tt.splat %out_ptr : !tt.ptr<bf16> -> tensor<64x!tt.ptr<bf16>>
+    %6 = tt.addptr %5, %0 : tensor<64x!tt.ptr<bf16>>, tensor<64xi64>
+    tt.store %6, %block_2, %4 : tensor<64x!tt.ptr<bf16>>
+    tt.return
+  }
+}

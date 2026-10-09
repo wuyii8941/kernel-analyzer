@@ -1,0 +1,22 @@
+module {
+  tt.func public @kernel(%index_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32}, %out_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32}) attributes {noinline = false} {
+    %cst = arith.constant dense<5> : tensor<16x16xi32>
+    %cst_0 = arith.constant dense<16> : tensor<16x1xi32>
+    %write_index = arith.constant dense<0> : tensor<16x1xi32>
+    %write_index_1 = tt.make_range {end = 16 : i32, start = 0 : i32} : tensor<16xi32>
+    %write_index_2 = tt.expand_dims %write_index_1 {axis = 1 : i32} : tensor<16xi32> -> tensor<16x1xi32>
+    %write_index_3 = tt.splat %index_ptr : !tt.ptr<i32> -> tensor<16x1x!tt.ptr<i32>>
+    %write_index_4 = tt.addptr %write_index_3, %write_index_2 : tensor<16x1x!tt.ptr<i32>>, tensor<16x1xi32>
+    %write_index_5 = tt.atomic_cas relaxed, gpu, %write_index_4, %write_index, %write_index_2 : (tensor<16x1x!tt.ptr<i32>>, tensor<16x1xi32>, tensor<16x1xi32>) -> tensor<16x1xi32>
+    %0 = arith.muli %write_index_5, %cst_0 : tensor<16x1xi32>
+    %1 = tt.splat %out_ptr : !tt.ptr<i32> -> tensor<16x1x!tt.ptr<i32>>
+    %2 = arith.extui %0 : tensor<16x1xi32> to tensor<16x1xi64>
+    %3 = tt.addptr %1, %2 : tensor<16x1x!tt.ptr<i32>>, tensor<16x1xi64>
+    %4 = tt.expand_dims %write_index_1 {axis = 0 : i32} : tensor<16xi32> -> tensor<1x16xi32>
+    %5 = tt.broadcast %3 : tensor<16x1x!tt.ptr<i32>> -> tensor<16x16x!tt.ptr<i32>>
+    %6 = tt.broadcast %4 : tensor<1x16xi32> -> tensor<16x16xi32>
+    %7 = tt.addptr %5, %6 : tensor<16x16x!tt.ptr<i32>>, tensor<16x16xi32>
+    tt.store %7, %cst : tensor<16x16x!tt.ptr<i32>>
+    tt.return
+  }
+}

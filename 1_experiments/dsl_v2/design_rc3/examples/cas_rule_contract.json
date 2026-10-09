@@ -1,0 +1,80 @@
+{
+  "schema": "reference-dsl-v2-rule-rc3",
+  "language_status": "specified",
+  "implementation_status": "planned",
+  "proof_status": "argument",
+  "proof_evidence": [
+    "design/02_language_and_guarantees.md"
+  ],
+  "tests": {
+    "positive": [],
+    "boundary": [],
+    "premise_violation": []
+  },
+  "trigger_evidence": [],
+  "device_validation": [],
+  "forbidden_fallback": [
+    "不得用捕获的中间值补成完整参照",
+    "不得未声明改变目标或删除官方签名"
+  ],
+  "rule_id": "atomic-cas",
+  "source": {
+    "op_pattern": "tt.atomic_cas/amdg.buffer_atomic_cas",
+    "official_source_ids": [
+      "S06",
+      "S09"
+    ],
+    "source_profile": "Triton official, lock required at implementation",
+    "target_guard": "官方声明的目标与版本",
+    "type_guard": "按锁定的官方verifier",
+    "attrs_guard": [
+      "逐项核对官方属性；未识别属性不得忽略"
+    ],
+    "region_signature": "none",
+    "effects": [
+      "atomic read-modify-write",
+      "returned old value",
+      "order/scope"
+    ]
+  },
+  "semantics": "事件原子读取旧值并条件写入，返回旧值；每个允许交错按内存模型解释。CAS仍在语言内。",
+  "policy_contracts": [
+    {
+      "mode": "numerical_difference",
+      "when": "有限有效交错，未证明观察与次序无关",
+      "target_kind": "set",
+      "precision": "enclosure-only",
+      "preserved_rounding": [
+        "CAS的位宽和比较格式"
+      ],
+      "intrinsic_width": "schedule-dependent",
+      "evaluator_obligation": "有限事件搜索/可靠协议摘要"
+    },
+    {
+      "mode": "numerical_difference",
+      "when": "已声明可验证的具体交错",
+      "target_kind": "environment",
+      "precision": "exact",
+      "preserved_rounding": [
+        "CAS位级语义"
+      ],
+      "intrinsic_width": "none conditional on schedule",
+      "evaluator_obligation": "对声明交错用BV/存储语义求值"
+    }
+  ],
+  "admission_obligations": [
+    {
+      "obligation": "原子order/scope、地址、其它访问与进展条件合法",
+      "evidence_kind": "static",
+      "covers": "both-executions",
+      "checker": "待实现的规则证书检查器"
+    },
+    {
+      "obligation": "没有把实际某次交错当全域唯一交错",
+      "evidence_kind": "static",
+      "covers": "environment",
+      "checker": "待实现的规则证书检查器"
+    }
+  ],
+  "output_guarantee": "次序相关不是非法；缺少协议/范围证据不得伪称安全或无bias。"
+}

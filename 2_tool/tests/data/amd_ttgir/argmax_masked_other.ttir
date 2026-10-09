@@ -1,0 +1,26 @@
+module {
+  tt.func public @argmax_fast_kernel(%x_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32}, %val_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32}, %idx_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32}) attributes {noinline = false} {
+    %x = arith.constant dense<0xFF800000> : tensor<4xf32>
+    %mask = arith.constant dense<3> : tensor<4xi32>
+    %offsets = tt.make_range {end = 4 : i32, start = 0 : i32} : tensor<4xi32>
+    %mask_0 = arith.cmpi slt, %offsets, %mask : tensor<4xi32>
+    %x_1 = tt.splat %x_ptr : !tt.ptr<f32> -> tensor<4x!tt.ptr<f32>>
+    %x_2 = tt.addptr %x_1, %offsets : tensor<4x!tt.ptr<f32>>, tensor<4xi32>
+    %x_3 = tt.load %x_2, %mask_0, %x : tensor<4x!tt.ptr<f32>>
+    %val = "tt.reduce"(%x_3) <{axis = 0 : i32}> ({
+    ^bb0(%val_4: f32, %val_5: f32):
+      %val_6 = arith.maxnumf %val_4, %val_5 : f32
+      tt.reduce.return %val_6 : f32
+    }) : (tensor<4xf32>) -> f32
+    %idx:2 = "tt.reduce"(%x_3, %offsets) <{axis = 0 : i32}> ({
+    ^bb0(%idx_4: f32, %idx_5: i32, %idx_6: f32, %idx_7: i32):
+      %gt = arith.cmpf ogt, %idx_4, %idx_6 : f32
+      %v_ret = arith.select %gt, %idx_4, %idx_6 : f32
+      %i_ret = arith.select %gt, %idx_5, %idx_7 : i32
+      tt.reduce.return %v_ret, %i_ret : f32, i32
+    }) : (tensor<4xf32>, tensor<4xi32>) -> (f32, i32)
+    tt.store %val_ptr, %val : !tt.ptr<f32>
+    tt.store %idx_ptr, %idx#1 : !tt.ptr<i32>
+    tt.return
+  }
+}

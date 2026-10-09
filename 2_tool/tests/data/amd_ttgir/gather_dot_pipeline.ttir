@@ -1,0 +1,75 @@
+module {
+  tt.func public @tma_gather_dot_pipeline(%a_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32}, %b_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32}, %output_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32}, %stride_am: i32 {tt.divisibility = 16 : i32}, %stride_bk: i32 {tt.divisibility = 16 : i32}, %stride_cm: i32 {tt.divisibility = 16 : i32}) attributes {noinline = false} {
+    %cst = arith.constant dense<16> : tensor<1x16xi64>
+    %cst_0 = arith.constant dense<128> : tensor<1x16xi64>
+    %cst_1 = arith.constant dense<0> : tensor<1x16xi64>
+    %cst_2 = arith.constant dense<16> : tensor<16x1xi64>
+    %cst_3 = arith.constant dense<0> : tensor<16x1xi64>
+    %cst_4 = arith.constant dense<128> : tensor<16x1xi64>
+    %cst_5 = arith.constant dense<0.000000e+00> : tensor<16x16xf32>
+    %c0_i32 = arith.constant 0 : i32
+    %c16_i32 = arith.constant 16 : i32
+    %c128_i32 = arith.constant 128 : i32
+    %accumulator = scf.for %k = %c0_i32 to %c128_i32 step %c16_i32 iter_args(%accumulator_14 = %cst_5) -> (tensor<16x16xf32>)  : i32 {
+      %a = tt.make_range {end = 16 : i32, start = 0 : i32} : tensor<16xi32>
+      %a_15 = tt.reshape %a : tensor<16xi32> -> tensor<16x1xi32>
+      %k_16 = arith.extsi %k : i32 to i64
+      %a_17 = arith.extsi %a_15 : tensor<16x1xi32> to tensor<16x1xi64>
+      %a_18 = tt.splat %k_16 : i64 -> tensor<16xi64>
+      %a_19 = arith.extsi %a : tensor<16xi32> to tensor<16xi64>
+      %a_20 = arith.addi %a_18, %a_19 : tensor<16xi64>
+      %a_21 = tt.reshape %a_20 : tensor<16xi64> -> tensor<1x16xi64>
+      %a_22 = tt.splat %a_ptr : !tt.ptr<f32> -> tensor<16x16x!tt.ptr<f32>>
+      %a_23 = arith.muli %a_17, %cst_4 : tensor<16x1xi64>
+      %a_24 = tt.broadcast %a_23 : tensor<16x1xi64> -> tensor<16x16xi64>
+      %a_25 = tt.broadcast %a_21 : tensor<1x16xi64> -> tensor<16x16xi64>
+      %a_26 = arith.addi %a_24, %a_25 : tensor<16x16xi64>
+      %a_27 = tt.addptr %a_22, %a_26 : tensor<16x16x!tt.ptr<f32>>, tensor<16x16xi64>
+      %a_28 = arith.cmpi sge, %a_17, %cst_3 : tensor<16x1xi64>
+      %a_29 = arith.cmpi slt, %a_17, %cst_2 : tensor<16x1xi64>
+      %a_30 = arith.andi %a_28, %a_29 : tensor<16x1xi1>
+      %a_31 = tt.broadcast %a_30 : tensor<16x1xi1> -> tensor<16x16xi1>
+      %a_32 = arith.cmpi sge, %a_21, %cst_1 : tensor<1x16xi64>
+      %a_33 = arith.cmpi slt, %a_21, %cst_0 : tensor<1x16xi64>
+      %a_34 = arith.andi %a_32, %a_33 : tensor<1x16xi1>
+      %a_35 = tt.broadcast %a_34 : tensor<1x16xi1> -> tensor<16x16xi1>
+      %a_36 = arith.andi %a_31, %a_35 : tensor<16x16xi1>
+      %a_37 = tt.load %a_27, %a_36, %cst_5 : tensor<16x16x!tt.ptr<f32>>
+      %b = tt.splat %k : i32 -> tensor<16xi32>
+      %b_38 = arith.addi %a, %b : tensor<16xi32>
+      %b_39 = tt.reshape %b_38 : tensor<16xi32> -> tensor<16x1xi32>
+      %b_40 = arith.extsi %b_39 : tensor<16x1xi32> to tensor<16x1xi64>
+      %b_41 = tt.reshape %a_19 : tensor<16xi64> -> tensor<1x16xi64>
+      %b_42 = tt.splat %b_ptr : !tt.ptr<f32> -> tensor<16x16x!tt.ptr<f32>>
+      %b_43 = arith.muli %b_40, %cst_2 : tensor<16x1xi64>
+      %b_44 = tt.broadcast %b_43 : tensor<16x1xi64> -> tensor<16x16xi64>
+      %b_45 = tt.broadcast %b_41 : tensor<1x16xi64> -> tensor<16x16xi64>
+      %b_46 = arith.addi %b_44, %b_45 : tensor<16x16xi64>
+      %b_47 = tt.addptr %b_42, %b_46 : tensor<16x16x!tt.ptr<f32>>, tensor<16x16xi64>
+      %b_48 = arith.cmpi sge, %b_40, %cst_3 : tensor<16x1xi64>
+      %b_49 = arith.cmpi slt, %b_40, %cst_4 : tensor<16x1xi64>
+      %b_50 = arith.andi %b_48, %b_49 : tensor<16x1xi1>
+      %b_51 = tt.broadcast %b_50 : tensor<16x1xi1> -> tensor<16x16xi1>
+      %b_52 = arith.cmpi sge, %b_41, %cst_1 : tensor<1x16xi64>
+      %b_53 = arith.cmpi slt, %b_41, %cst : tensor<1x16xi64>
+      %b_54 = arith.andi %b_52, %b_53 : tensor<1x16xi1>
+      %b_55 = tt.broadcast %b_54 : tensor<1x16xi1> -> tensor<16x16xi1>
+      %b_56 = arith.andi %b_51, %b_55 : tensor<16x16xi1>
+      %b_57 = tt.load %b_47, %b_56, %cst_5 : tensor<16x16x!tt.ptr<f32>>
+      %accumulator_58 = tt.dot %a_37, %b_57, %accumulator_14, inputPrecision = tf32 : tensor<16x16xf32> * tensor<16x16xf32> -> tensor<16x16xf32>
+      scf.yield %accumulator_58 : tensor<16x16xf32>
+    }
+    %offs_cm = tt.make_range {end = 16 : i32, start = 0 : i32} : tensor<16xi32>
+    %output_ptrs = tt.expand_dims %offs_cm {axis = 1 : i32} : tensor<16xi32> -> tensor<16x1xi32>
+    %output_ptrs_6 = tt.splat %stride_cm : i32 -> tensor<16x1xi32>
+    %output_ptrs_7 = arith.muli %output_ptrs_6, %output_ptrs : tensor<16x1xi32>
+    %output_ptrs_8 = tt.splat %output_ptr : !tt.ptr<f32> -> tensor<16x1x!tt.ptr<f32>>
+    %output_ptrs_9 = tt.addptr %output_ptrs_8, %output_ptrs_7 : tensor<16x1x!tt.ptr<f32>>, tensor<16x1xi32>
+    %output_ptrs_10 = tt.expand_dims %offs_cm {axis = 0 : i32} : tensor<16xi32> -> tensor<1x16xi32>
+    %output_ptrs_11 = tt.broadcast %output_ptrs_9 : tensor<16x1x!tt.ptr<f32>> -> tensor<16x16x!tt.ptr<f32>>
+    %output_ptrs_12 = tt.broadcast %output_ptrs_10 : tensor<1x16xi32> -> tensor<16x16xi32>
+    %output_ptrs_13 = tt.addptr %output_ptrs_11, %output_ptrs_12 : tensor<16x16x!tt.ptr<f32>>, tensor<16x16xi32>
+    tt.store %output_ptrs_13, %accumulator : tensor<16x16x!tt.ptr<f32>>
+    tt.return
+  }
+}

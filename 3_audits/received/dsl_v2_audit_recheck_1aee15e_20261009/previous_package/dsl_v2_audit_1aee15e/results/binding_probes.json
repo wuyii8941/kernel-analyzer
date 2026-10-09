@@ -1,0 +1,50 @@
+{
+  "scope": "CPU excerpt + simulated metadata; not GPU launch",
+  "source_ast_matches": null,
+  "torch": "2.10.0+cpu",
+  "provenance": [
+    {
+      "case": "rounded_compute",
+      "z": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "upstream_tags": [
+        "L0:identity_kernel:upstream [copy of inputs]"
+      ],
+      "classification_from_current_measure_rule": "call-level",
+      "true_upstream_is_arithmetic": true
+    },
+    {
+      "case": "honest_copy",
+      "z": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "upstream_tags": [
+        "L0:identity_kernel:upstream [copy of inputs]"
+      ],
+      "classification_from_current_measure_rule": "call-level",
+      "true_upstream_is_arithmetic": false
+    },
+    {
+      "case": "ordinary_compute",
+      "z": [
+        1.125,
+        1.125,
+        1.125,
+        1.125
+      ],
+      "upstream_tags": [
+        "L0:identity_kernel:upstream"
+      ],
+      "classification_from_current_measure_rule": "kernel-level",
+      "true_upstream_is_arithmetic": true
+    }
+  ],
+  "gluon_header_lookup": "KeyError: 'ttir'"
+}

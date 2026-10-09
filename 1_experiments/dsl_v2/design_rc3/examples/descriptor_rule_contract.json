@@ -1,0 +1,77 @@
+{
+  "schema": "reference-dsl-v2-rule-rc3",
+  "language_status": "specified",
+  "implementation_status": "planned",
+  "proof_status": "argument",
+  "proof_evidence": [
+    "design/02_language_and_guarantees.md"
+  ],
+  "tests": {
+    "positive": [],
+    "boundary": [],
+    "premise_violation": []
+  },
+  "trigger_evidence": [],
+  "device_validation": [],
+  "forbidden_fallback": [
+    "不得用捕获的中间值补成完整参照",
+    "不得未声明改变目标或删除官方签名"
+  ],
+  "rule_id": "descriptor-layered",
+  "source": {
+    "op_pattern": "tt.descriptor_load/ttng.async_tma*/amdg.async_tdm*",
+    "official_source_ids": [
+      "S06",
+      "S08",
+      "S09"
+    ],
+    "source_profile": "Triton official, lock required at implementation",
+    "target_guard": "官方声明的目标与版本",
+    "type_guard": "按锁定的官方verifier",
+    "attrs_guard": [
+      "逐项核对官方属性；未识别属性不得忽略"
+    ],
+    "region_signature": "none",
+    "effects": [
+      "descriptor state",
+      "memory transfer",
+      "async events at low layer"
+    ]
+  },
+  "semantics": "高层load返回逻辑tensor；低层拷贝通过对应token/phase/wait变为可见。两层效果保持。",
+  "policy_contracts": [
+    {
+      "mode": "numerical_difference",
+      "when": "描述符与可见输入唯一，输入有限有理",
+      "target_kind": "single",
+      "precision": "exact",
+      "preserved_rounding": [],
+      "intrinsic_width": "none",
+      "evaluator_obligation": "精确地址/边界/布局映射，不在未出现的高层要求用户wait"
+    },
+    {
+      "mode": "numerical_difference",
+      "when": "上游值为区间",
+      "target_kind": "single",
+      "precision": "refinable",
+      "preserved_rounding": [],
+      "intrinsic_width": "none",
+      "evaluator_obligation": "传递原值包围；宽度取决于上游"
+    }
+  ],
+  "admission_obligations": [
+    {
+      "obligation": "描述符shape/stride/swizzle/pack/im2col与target合法",
+      "evidence_kind": "static",
+      "covers": "reference-reachable",
+      "checker": "待实现的规则证书检查器"
+    },
+    {
+      "obligation": "底层每个读取点有已完成传输和未复用证据",
+      "evidence_kind": "static",
+      "covers": "both-executions",
+      "checker": "待实现的规则证书检查器"
+    }
+  ],
+  "output_guarantee": "地址映射正确不是异步正确性的充分条件；硬件未测试仍必须单列。"
+}

@@ -1,0 +1,45 @@
+#blocked = #ttg.blocked<{sizePerThread = [1, 1], threadsPerWarp = [8, 4], warpsPerCTA = [4, 1], order = [1, 0]}>
+#shared = #ttg.swizzled_shared<{vec = 1, perPhase = 1, maxPhase = 1, order = [1, 0]}>
+#smem = #ttg.shared_memory
+module attributes {"ttg.num-ctas" = 1 : i32, "ttg.num-warps" = 4 : i32, ttg.target = "cuda:86", "ttg.threads-per-warp" = 32 : i32, "ttng.two-ctas" = false} {
+  tt.func public @shared_atomic_scatter_rmw_kernel(%values_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32}, %indices_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32}, %mask_ptr: !tt.ptr<i1> {tt.divisibility = 16 : i32}, %old_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32}, %final_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32}) attributes {noinline = false} {
+    %cst = arith.constant dense<16> : tensor<32x1xi32, #blocked>
+    %cst_0 = arith.constant dense<16> : tensor<2x1xi32, #blocked>
+    %cst_1 = arith.constant dense<0> : tensor<32x16xi32, #blocked>
+    %cst_2 = arith.constant dense<1> : tensor<2x16xi32, #blocked>
+    %cst_3 = arith.constant dense<0> : tensor<2x16xi8, #blocked>
+    %indices_x = tt.make_range {end = 32 : i32, start = 0 : i32} : tensor<32xi32, #ttg.slice<{dim = 1, parent = #blocked}>>
+    %indices_y = tt.make_range {end = 16 : i32, start = 0 : i32} : tensor<16xi32, #ttg.slice<{dim = 0, parent = #blocked}>>
+    %offsets_2d = tt.expand_dims %indices_x {axis = 1 : i32} : tensor<32xi32, #ttg.slice<{dim = 1, parent = #blocked}>> -> tensor<32x1xi32, #blocked>
+    %offsets_2d_4 = arith.muli %offsets_2d, %cst : tensor<32x1xi32, #blocked>
+    %offsets_2d_5 = tt.expand_dims %indices_y {axis = 0 : i32} : tensor<16xi32, #ttg.slice<{dim = 0, parent = #blocked}>> -> tensor<1x16xi32, #blocked>
+    %offsets_2d_6 = tt.broadcast %offsets_2d_4 : tensor<32x1xi32, #blocked> -> tensor<32x16xi32, #blocked>
+    %offsets_2d_7 = tt.broadcast %offsets_2d_5 : tensor<1x16xi32, #blocked> -> tensor<32x16xi32, #blocked>
+    %offsets_2d_8 = arith.addi %offsets_2d_6, %offsets_2d_7 : tensor<32x16xi32, #blocked>
+    %rhs_x = tt.make_range {end = 2 : i32, start = 0 : i32} : tensor<2xi32, #ttg.slice<{dim = 1, parent = #blocked}>>
+    %offsets_rhs = tt.expand_dims %rhs_x {axis = 1 : i32} : tensor<2xi32, #ttg.slice<{dim = 1, parent = #blocked}>> -> tensor<2x1xi32, #blocked>
+    %offsets_rhs_9 = arith.muli %offsets_rhs, %cst_0 : tensor<2x1xi32, #blocked>
+    %offsets_rhs_10 = tt.broadcast %offsets_rhs_9 : tensor<2x1xi32, #blocked> -> tensor<2x16xi32, #blocked>
+    %offsets_rhs_11 = tt.broadcast %offsets_2d_5 : tensor<1x16xi32, #blocked> -> tensor<2x16xi32, #blocked>
+    %offsets_rhs_12 = arith.addi %offsets_rhs_10, %offsets_rhs_11 : tensor<2x16xi32, #blocked>
+    %smem = ttg.local_alloc : () -> !ttg.memdesc<32x16xi32, #shared, #smem, mutable>
+    ttg.local_store %cst_1, %smem : tensor<32x16xi32, #blocked> -> !ttg.memdesc<32x16xi32, #shared, #smem, mutable>
+    %indices = tt.splat %indices_ptr : !tt.ptr<i32> -> tensor<2x16x!tt.ptr<i32>, #blocked>
+    %indices_13 = tt.addptr %indices, %offsets_rhs_12 : tensor<2x16x!tt.ptr<i32>, #blocked>, tensor<2x16xi32, #blocked>
+    %indices_14 = tt.load %indices_13 : tensor<2x16x!tt.ptr<i32>, #blocked>
+    %mask = tt.splat %mask_ptr : !tt.ptr<i1> -> tensor<2x16x!tt.ptr<i1>, #blocked>
+    %mask_15 = tt.addptr %mask, %offsets_rhs_12 : tensor<2x16x!tt.ptr<i1>, #blocked>, tensor<2x16xi32, #blocked>
+    %mask_16 = tt.bitcast %mask_15 : tensor<2x16x!tt.ptr<i1>, #blocked> -> tensor<2x16x!tt.ptr<i8>, #blocked>
+    %mask_17 = tt.load %mask_16 : tensor<2x16x!tt.ptr<i8>, #blocked>
+    %mask_18 = arith.cmpi ne, %mask_17, %cst_3 : tensor<2x16xi8, #blocked>
+    %old = ttg.local_atomic_scatter_rmw add, %smem[%indices_14], %cst_2, %mask_18 {axis = 0 : i32} : (!ttg.memdesc<32x16xi32, #shared, #smem, mutable>, tensor<2x16xi32, #blocked>, tensor<2x16xi32, #blocked>, tensor<2x16xi1, #blocked>) -> tensor<2x16xi32, #blocked>
+    %0 = tt.splat %old_ptr : !tt.ptr<i32> -> tensor<2x16x!tt.ptr<i32>, #blocked>
+    %1 = tt.addptr %0, %offsets_rhs_12 : tensor<2x16x!tt.ptr<i32>, #blocked>, tensor<2x16xi32, #blocked>
+    tt.store %1, %old : tensor<2x16x!tt.ptr<i32>, #blocked>
+    %final = ttg.local_load %smem : !ttg.memdesc<32x16xi32, #shared, #smem, mutable> -> tensor<32x16xi32, #blocked>
+    %2 = tt.splat %final_ptr : !tt.ptr<i32> -> tensor<32x16x!tt.ptr<i32>, #blocked>
+    %3 = tt.addptr %2, %offsets_2d_8 : tensor<32x16x!tt.ptr<i32>, #blocked>, tensor<32x16xi32, #blocked>
+    tt.store %3, %final : tensor<32x16x!tt.ptr<i32>, #blocked>
+    tt.return
+  }
+}

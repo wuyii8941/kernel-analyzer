@@ -1,0 +1,1323 @@
+{
+  "schema": "reference-dsl-official-surface-v1",
+  "date": "2026-10-09",
+  "n_requirement_families": 61,
+  "note": "设计需求族清单，不是完整IR操作/属性枚举，不是实现支持清单。",
+  "entries": [
+    {
+      "id": "F01",
+      "layer": "frontend",
+      "feature": "经典Triton语言",
+      "official_examples": [
+        "triton.language",
+        "@triton.jit"
+      ],
+      "source_ids": [
+        "S02",
+        "S20"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "公共API及tensor方法、类型、参数和合法组合全纳入；不由229项反向限定",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "F02",
+      "layer": "frontend",
+      "feature": "Gluon语言",
+      "official_examples": [
+        "triton.experimental.gluon",
+        "gluon"
+      ],
+      "source_ids": [
+        "S03",
+        "S19",
+        "S21"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "独立导入入口；与经典前端汇合到同一参照核心",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "F03",
+      "layer": "frontend",
+      "feature": "NVIDIA子目标",
+      "official_examples": [
+        "ampere",
+        "hopper",
+        "blackwell",
+        "rubin"
+      ],
+      "source_ids": [
+        "S04",
+        "S10",
+        "S11"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "各提交存在的子模块逐一登记target guards；不能只测sm_86而称全后端",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "F04",
+      "layer": "frontend",
+      "feature": "AMD子目标",
+      "official_examples": [
+        "cdna3",
+        "cdna4",
+        "cdna5",
+        "rdna3",
+        "rdna4",
+        "gfx1250"
+      ],
+      "source_ids": [
+        "S05",
+        "S09",
+        "S12"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "HIP、wave/LDS、MFMA/WMMA/TDM规则；设备测试单列",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "F05",
+      "layer": "frontend",
+      "feature": "参数与元编程",
+      "official_examples": [
+        "constexpr",
+        "tuple",
+        "aggregate_replace",
+        "target_info"
+      ],
+      "source_ids": [
+        "S02",
+        "S03"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "复合参数树、编译期常数、专门化结果和真实物理参数绑定",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "binding",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "F06",
+      "layer": "frontend",
+      "feature": "编译提示与假设",
+      "official_examples": [
+        "assume",
+        "multiple_of",
+        "max_contiguous",
+        "max_constancy",
+        "expect_zero"
+      ],
+      "source_ids": [
+        "S02",
+        "S20"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "记录提示前提，违反时不能沿用保证；不能仅当性能注释",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "F07",
+      "layer": "frontend",
+      "feature": "配置与运行期",
+      "official_examples": [
+        "autotune",
+        "num_warps",
+        "num_ctas",
+        "range"
+      ],
+      "source_ids": [
+        "S02",
+        "S03"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "具体配置、网格、调优预运行造成的写入和重置策略均绑定到测量对象",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "binding",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "F08",
+      "layer": "frontend",
+      "feature": "官方新操作自动增量",
+      "official_examples": [
+        "atomic_poll",
+        "atomic_load",
+        "atomic_store"
+      ],
+      "source_ids": [
+        "S02",
+        "S03",
+        "S06"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "从官方版本差集接入，而非等待现实样本碰到才登记",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "missing",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N01",
+      "layer": "numeric",
+      "feature": "实数基本运算",
+      "official_examples": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "fma"
+      ],
+      "source_ids": [
+        "S06",
+        "S15"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "完整定义域和特殊值；参照算术与执行近似严格分开",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N02",
+      "layer": "numeric",
+      "feature": "有限位整数",
+      "official_examples": [
+        "BV",
+        "mulhi",
+        "addui_extended",
+        "ctpop"
+      ],
+      "source_ids": [
+        "S02",
+        "S03"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "signed/unsigned、wrap、nsw/nuw、移位越界和poison分别处理",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N03",
+      "layer": "numeric",
+      "feature": "初等与特殊函数",
+      "official_examples": [
+        "exp",
+        "log",
+        "sqrt",
+        "erf",
+        "atan2",
+        "pow"
+      ],
+      "source_ids": [
+        "S15",
+        "S20"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "版本化严格包围与定义域；不能统一相对误差；atan2的分支切线单列",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N04",
+      "layer": "numeric",
+      "feature": "libdevice与OCML",
+      "official_examples": [
+        "extern_elementwise",
+        "extra.libdevice"
+      ],
+      "source_ids": [
+        "S06",
+        "S02",
+        "S05"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "按实际符号、类型、属性和目标库逐项登记；不能从后缀猜同义",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N05",
+      "layer": "numeric",
+      "feature": "所有导出的格式",
+      "official_examples": [
+        "float16",
+        "bfloat16",
+        "float32",
+        "float64",
+        "float8e4nv",
+        "float8e5b16"
+      ],
+      "source_ids": [
+        "S02",
+        "S03",
+        "S15"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "原始位、signed zero、NaN类别/载荷可观察性；对未规定载荷返回允许集合",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N06",
+      "layer": "numeric",
+      "feature": "低比特块缩放",
+      "official_examples": [
+        "dot_scaled",
+        "fp4_to_fp",
+        "scaled_upcast",
+        "scaled_downcast"
+      ],
+      "source_ids": [
+        "S06",
+        "S12",
+        "S09"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "打包轴、E8M0缩放、bias、饱和和编码特殊值；FP4等packed格式不能只按float8表",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N07",
+      "layer": "numeric",
+      "feature": "显式格式桥",
+      "official_examples": [
+        "cast",
+        "bitcast",
+        "encode",
+        "decode"
+      ],
+      "source_ids": [
+        "S06",
+        "S15"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "Real/Format/BV转换显式；保留舍入必须公开目标变化",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N08",
+      "layer": "numeric",
+      "feature": "打包算术",
+      "official_examples": [
+        "add2",
+        "fma2",
+        "max2",
+        "min2"
+      ],
+      "source_ids": [
+        "S11"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "分lane及打包对应，不等同一次标量函数；舍入和特殊值独立处理",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "missing",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N09",
+      "layer": "numeric",
+      "feature": "一般dot",
+      "official_examples": [
+        "dot",
+        "dot_fma",
+        "inputPrecision"
+      ],
+      "source_ids": [
+        "S06",
+        "S03"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "逐签名处理所有输入精度、类型和累加属性；精确点积不需要知道TC内部树",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N10",
+      "layer": "numeric",
+      "feature": "NVIDIA矩阵与tensor memory",
+      "official_examples": [
+        "mma_v2",
+        "warpgroup_mma",
+        "allocate_tensor_memory"
+      ],
+      "source_ids": [
+        "S08",
+        "S10",
+        "S11"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "矩阵贡献、布局、异步完成和TMEM生命周期不能相互代替",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N11",
+      "layer": "numeric",
+      "feature": "AMD矩阵指令",
+      "official_examples": [
+        "mfma",
+        "mfma_scaled",
+        "AMDMFMALayout",
+        "AMDWMMALayout"
+      ],
+      "source_ids": [
+        "S05",
+        "S09",
+        "S12"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "有限位整数、浮点和块缩放三种语义分开；引入LDS与wave布局",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N12",
+      "layer": "numeric",
+      "feature": "稀疏矩阵与结构元数据",
+      "official_examples": [
+        "sparse MMA",
+        "metadata decode"
+      ],
+      "source_ids": [
+        "S08",
+        "S15"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "官方源中存在的稀疏操作按实际稀疏掩码/编码展开，不能只把输入当稠密矩阵",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "missing",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N13",
+      "layer": "numeric",
+      "feature": "近似与硬件核验",
+      "official_examples": [
+        "div.full",
+        "ex2.approx",
+        "rsqrt.approx",
+        "cos.approx"
+      ],
+      "source_ids": [
+        "S15"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "保留误差度量、domain、ulp锚点、特殊值和target；无界区不虚构包围",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N14",
+      "layer": "numeric",
+      "feature": "随机数和随机舍入",
+      "official_examples": [
+        "philox",
+        "randint4x",
+        "randn4x",
+        "stochastic rounding"
+      ],
+      "source_ids": [
+        "S02",
+        "S15"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "随机位由seed/counter精确生成；随机变量与数学正态/均匀理想分布区分；显式随机位输入",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "N15",
+      "layer": "numeric",
+      "feature": "位级与重解释算法",
+      "official_examples": [
+        "inline asm bit operations",
+        "bitcast"
+      ],
+      "source_ids": [
+        "S13",
+        "S15"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "不要在bitcast处直接回填实际输出；格式岛与数学区域组合，报告被保留的舍入",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "R01",
+      "layer": "region",
+      "feature": "逐元素子区域",
+      "official_examples": [
+        "map_elementwise",
+        "call"
+      ],
+      "source_ids": [
+        "S06",
+        "S03"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "递归解释任意受支持区域和tuple返回；无按kernel名分派",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "R02",
+      "layer": "region",
+      "feature": "任意合并区域",
+      "official_examples": [
+        "reduce",
+        "Welford merge"
+      ],
+      "source_ids": [
+        "S06",
+        "S20"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "固定树证据或适用代数证书；没有单值依据时允许有限树集合分析",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "R03",
+      "layer": "region",
+      "feature": "一般扫描",
+      "official_examples": [
+        "associative_scan",
+        "cumsum",
+        "cumprod"
+      ],
+      "source_ids": [
+        "S02",
+        "S20"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "结合性与prefix顺序、reverse、分段标志；未知不等于不结合",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "R04",
+      "layer": "region",
+      "feature": "全部结构化控制",
+      "official_examples": [
+        "if",
+        "for",
+        "while",
+        "index_switch",
+        "execute_region"
+      ],
+      "source_ids": [
+        "S06",
+        "S02"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "参照条件与状态联合传播，终止/预算单列，不限已观察的实际分支",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "R05",
+      "layer": "region",
+      "feature": "CFG与并行区域",
+      "official_examples": [
+        "cf.br",
+        "cf.switch",
+        "scf.parallel",
+        "warp_specialize"
+      ],
+      "source_ids": [
+        "S07"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "前端是否常见只影响优先级；CFG回边需终止证据；并行区域用事件语义",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "R06",
+      "layer": "region",
+      "feature": "排序与选择",
+      "official_examples": [
+        "sort",
+        "topk",
+        "argmax",
+        "argmin"
+      ],
+      "source_ids": [
+        "S02",
+        "S20"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "tie-break若官方指定就执行；否则结果关系；值、索引、payload分开观察",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "R07",
+      "layer": "region",
+      "feature": "整数分布与分段",
+      "official_examples": [
+        "histogram",
+        "gather",
+        "scatter"
+      ],
+      "source_ids": [
+        "S02",
+        "S06"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "合法索引域、重复项和分段边界；不能认为整数意味着不影响数值",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "L01",
+      "layer": "layout",
+      "feature": "张量形状与映射",
+      "official_examples": [
+        "reshape",
+        "cat",
+        "join",
+        "trans",
+        "split",
+        "broadcast"
+      ],
+      "source_ids": [
+        "S14",
+        "S06"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "重排许可、dim、axis、可观察顺序；不能把cat全部当固定concat",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "L02",
+      "layer": "layout",
+      "feature": "分布式显式布局",
+      "official_examples": [
+        "BlockedLayout",
+        "SliceLayout",
+        "DistributedLinearLayout",
+        "convert_layout"
+      ],
+      "source_ids": [
+        "S03",
+        "S07"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "逻辑坐标到register/lane/warp/CTA对应与复制一致性",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "L03",
+      "layer": "layout",
+      "feature": "共享内存布局",
+      "official_examples": [
+        "SwizzledSharedLayout",
+        "PaddedSharedLayout",
+        "SharedLinearLayout"
+      ],
+      "source_ids": [
+        "S03",
+        "S07"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "swizzle/padding映射和别名范围，不能仅看逻辑shape",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "L04",
+      "layer": "layout",
+      "feature": "目标矩阵布局",
+      "official_examples": [
+        "NVMMADistributedLayout",
+        "DotOperandLayout",
+        "AMDMFMALayout"
+      ],
+      "source_ids": [
+        "S03",
+        "S05",
+        "S12"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "fragment/scale布局和实际读写地址，target guards",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "L05",
+      "layer": "layout",
+      "feature": "layout推导与编译事实",
+      "official_examples": [
+        "AutoLayout",
+        "set_auto_layout",
+        "to_linear_layout"
+      ],
+      "source_ids": [
+        "S03"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "区分声明布局、编译所选布局和运行证据；布局不是自动的归约树证据",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "missing",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "M01",
+      "layer": "memory",
+      "feature": "同步指针访问",
+      "official_examples": [
+        "load",
+        "store",
+        "mask",
+        "other"
+      ],
+      "source_ids": [
+        "S06",
+        "S20"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "逻辑/物理地址、字节宽度、masked lanes、未初始化读取和毒值使用",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "M02",
+      "layer": "memory",
+      "feature": "block pointer",
+      "official_examples": [
+        "make_block_ptr",
+        "make_tensor_ptr",
+        "advance"
+      ],
+      "source_ids": [
+        "S02"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "边界、padding、order与地址算术；版本存在性单列",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "M03",
+      "layer": "memory",
+      "feature": "高层tensor descriptor",
+      "official_examples": [
+        "tensor_descriptor",
+        "descriptor_load",
+        "descriptor_store"
+      ],
+      "source_ids": [
+        "S06"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "高层返回值按已完成访问语义；需要时另从低层核验异步实现，不要求源码虚构token",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "M04",
+      "layer": "memory",
+      "feature": "descriptor高级寻址",
+      "official_examples": [
+        "descriptor_gather",
+        "descriptor_scatter",
+        "descriptor_reduce",
+        "im2col"
+      ],
+      "source_ids": [
+        "S06",
+        "S02",
+        "S10"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "块形状、索引/卷积映射、范围与存储；im2col按锁定版本的实际参数",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "M05",
+      "layer": "memory",
+      "feature": "共享存储生命周期",
+      "official_examples": [
+        "allocate_shared_memory",
+        "local_load",
+        "local_store"
+      ],
+      "source_ids": [
+        "S03",
+        "S07"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "创建、视图、dealloc/复用、可变性和完成事件",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "M06",
+      "layer": "memory",
+      "feature": "异步拷贝",
+      "official_examples": [
+        "async_copy_global_to_local",
+        "async_commit_group",
+        "async_wait"
+      ],
+      "source_ids": [
+        "S07"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "发起/提交/可见/完成分开；部分等待与group编号",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "M07",
+      "layer": "memory",
+      "feature": "TMA与mbarrier",
+      "official_examples": [
+        "tma",
+        "mbarrier",
+        "fence_async_shared"
+      ],
+      "source_ids": [
+        "S10",
+        "S08"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "phase、arrival、transaction bytes、generic/async proxy与多播范围",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "M08",
+      "layer": "memory",
+      "feature": "AMD buffer/TDM",
+      "official_examples": [
+        "buffer_load",
+        "buffer_store",
+        "async_tdm_copy",
+        "async_tdm_wait"
+      ],
+      "source_ids": [
+        "S09",
+        "S12"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "base+offset、有界访问、LDS、TDM完成计数与descriptor更新",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "M09",
+      "layer": "memory",
+      "feature": "存储来源与别名",
+      "official_examples": [
+        "storage identity",
+        "view",
+        "copy",
+        "launch_sequence"
+      ],
+      "source_ids": [
+        "S07",
+        "S06"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "真实生产者与生命周期；内容一样不是复制证明；两套执行内存分别有效",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "M10",
+      "layer": "memory",
+      "feature": "prefetch与cache",
+      "official_examples": [
+        "cachePolicy",
+        "evictionPolicy",
+        "prefetch",
+        "volatile"
+      ],
+      "source_ids": [
+        "S06",
+        "S07",
+        "S09"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "可证明不影响观察才擦除；volatile与访问必须保留，alias假设需验证",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "C01",
+      "layer": "concurrency",
+      "feature": "原子全族",
+      "official_examples": [
+        "atomic_add",
+        "atomic_cas",
+        "atomic_xchg",
+        "atomic_load",
+        "atomic_store",
+        "atomic_poll"
+      ],
+      "source_ids": [
+        "S02",
+        "S03",
+        "S06"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "返回旧值、read-from、memory order、scope、poll进展；CAS不得整个排除语言",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "C02",
+      "layer": "concurrency",
+      "feature": "可交换折叠",
+      "official_examples": [
+        "atomic_add",
+        "descriptor_reduce"
+      ],
+      "source_ids": [
+        "S06"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "封闭贡献、无调度反馈、观察不读中途值；有证书才替换成无序和",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "C03",
+      "layer": "concurrency",
+      "feature": "合法顺序相关程序",
+      "official_examples": [
+        "CAS lock",
+        "returned old value"
+      ],
+      "source_ids": [
+        "S06",
+        "S15"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "保持允许事件/调度关系；绑定已证明顺序或对允许结果包围；不叫非法",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "C04",
+      "layer": "concurrency",
+      "feature": "warp与CTA屏障",
+      "official_examples": [
+        "barrier",
+        "debug_barrier",
+        "warp shuffle"
+      ],
+      "source_ids": [
+        "S07",
+        "S20"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "参与掩码、线程所有权、地址空间和作用域；同线程写后读不强加屏障",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "C05",
+      "layer": "concurrency",
+      "feature": "warp specialization",
+      "official_examples": [
+        "warp_specialize",
+        "nvws",
+        "warp_pipeline_stage"
+      ],
+      "source_ids": [
+        "S03",
+        "S05",
+        "S07"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "并行partition生命周期、通信、join和跨layout域，不作为串行call",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "C06",
+      "layer": "concurrency",
+      "feature": "cluster与动态持久化",
+      "official_examples": [
+        "cluster",
+        "clc",
+        "grid_dependency"
+      ],
+      "source_ids": [
+        "S10",
+        "S11"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "CTA集群、动态任务分配、取消/完成与进展；调度可成为显式环境变量",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "missing",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "C07",
+      "layer": "concurrency",
+      "feature": "跨启动与stream",
+      "official_examples": [
+        "launch_sequence",
+        "event",
+        "stream"
+      ],
+      "source_ids": [
+        "S16",
+        "S15"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "启动先后/事件完成与共享存储证据；同一stream顺序不能外推多stream",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "C08",
+      "layer": "concurrency",
+      "feature": "多设备/系统范围",
+      "official_examples": [
+        "scope=sys",
+        "peer buffer",
+        "multimem"
+      ],
+      "source_ids": [
+        "S15"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "环境及地址空间模型拓展；有声明契约才可测，不等于需实现全部分布式训练",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "missing",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "X01",
+      "layer": "external",
+      "feature": "PTX/AMD汇编",
+      "official_examples": [
+        "inline_asm_elementwise",
+        "ttg.inline_asm"
+      ],
+      "source_ids": [
+        "S13",
+        "S07",
+        "S15"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "按ISA语法组合解析，不只单行正则；格式、谓词、约束、pack与副作用",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "X02",
+      "layer": "external",
+      "feature": "外部未知函数",
+      "official_examples": [
+        "extern_elementwise",
+        "external device call"
+      ],
+      "source_ids": [
+        "S06"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "保留契约插槽；可由独立实现/验证摘要接入，没摘要属于实现/证据缺口",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "X03",
+      "layer": "external",
+      "feature": "非确定环境读取",
+      "official_examples": [
+        "clock",
+        "timer",
+        "smid",
+        "read_counter"
+      ],
+      "source_ids": [
+        "S15",
+        "S17"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "环境值显式建模；不能默认捕获值就是调用总体内的精确数学常量",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "missing",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "X04",
+      "layer": "external",
+      "feature": "调试、断言与Poison",
+      "official_examples": [
+        "device_assert",
+        "device_print",
+        "ub.poison"
+      ],
+      "source_ids": [
+        "S06",
+        "S20"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "输出/终止效果保留；未观察调试输出的擦除需noninterference依据",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "partial",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "X05",
+      "layer": "instrumentation",
+      "feature": "GSan/ConSan/FpSan",
+      "official_examples": [
+        "tti",
+        "fpsan"
+      ],
+      "source_ids": [
+        "S16",
+        "S03"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "插桩版本、覆盖范围、观测扰动；载荷一致不是浮点等价证明",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "missing",
+      "implementation_status": "not_reaudited",
+      "role": "validation",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "X06",
+      "layer": "instrumentation",
+      "feature": "Proton与分析辅助",
+      "official_examples": [
+        "proton",
+        "proton_gpu"
+      ],
+      "source_ids": [
+        "S17"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "计数器与日志存储是效果；对数值无关需切片/擦除证明",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "missing",
+      "implementation_status": "not_reaudited",
+      "role": "instrumentation",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "X07",
+      "layer": "backend",
+      "feature": "低层与shared dialect",
+      "official_examples": [
+        "nvg",
+        "nvws",
+        "LLVM",
+        "NVVM",
+        "ROCDL"
+      ],
+      "source_ids": [
+        "S18",
+        "S01"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "实际导入路径使用的低层语义和版本须追踪；无需把全LLVM生态当训练算子",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "lowering",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    },
+    {
+      "id": "X08",
+      "layer": "backend",
+      "feature": "硬件能力与语义差异",
+      "official_examples": [
+        "CUDA",
+        "HIP",
+        "target ISA version"
+      ],
+      "source_ids": [
+        "S04",
+        "S05",
+        "S15"
+      ],
+      "target_scope": "included",
+      "reference_requirement": "一个语法跨GPU可能有不同支持前提；无设备仅未实测，不删除目标项",
+      "target_profile": "point_or_set",
+      "rc2_assessment": "excluded",
+      "implementation_status": "not_reaudited",
+      "role": "computational",
+      "evidence_status": "official_surface_reviewed_not_signature_complete"
+    }
+  ]
+}

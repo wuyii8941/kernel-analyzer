@@ -1,0 +1,24 @@
+#blocked = #ttg.blocked<{sizePerThread = [1, 1], threadsPerWarp = [16, 4], warpsPerCTA = [1, 4], order = [0, 1]}>
+#blocked1 = #ttg.blocked<{sizePerThread = [1, 1], threadsPerWarp = [4, 16], warpsPerCTA = [4, 1], order = [1, 0]}>
+module attributes {"ttg.num-ctas" = 1 : i32, "ttg.num-warps" = 4 : i32, ttg.target = "hip:gfx942", "ttg.threads-per-warp" = 64 : i32} {
+  tt.func public @kernel(%index_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32}, %out_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32}) attributes {noinline = false} {
+    %write_index = arith.constant dense<0> : tensor<16x1xi32, #blocked>
+    %cst = arith.constant dense<5> : tensor<16x16xi32, #blocked1>
+    %cst_0 = arith.constant dense<16> : tensor<16x1xi32, #blocked>
+    %write_index_1 = tt.make_range {end = 16 : i32, start = 0 : i32} : tensor<16xi32, #ttg.slice<{dim = 1, parent = #blocked}>>
+    %write_index_2 = tt.expand_dims %write_index_1 {axis = 1 : i32} : tensor<16xi32, #ttg.slice<{dim = 1, parent = #blocked}>> -> tensor<16x1xi32, #blocked>
+    %write_index_3 = amdg.buffer_atomic_cas relaxed, gpu, %write_index, %write_index_2, %index_ptr[%write_index_2] : !tt.ptr<i32> -> tensor<16x1xi32, #blocked>
+    %0 = arith.muli %write_index_3, %cst_0 : tensor<16x1xi32, #blocked>
+    %1 = tt.splat %out_ptr : !tt.ptr<i32> -> tensor<16x1x!tt.ptr<i32>, #blocked>
+    %2 = arith.extui %0 : tensor<16x1xi32, #blocked> to tensor<16x1xi64, #blocked>
+    %3 = tt.addptr %1, %2 : tensor<16x1x!tt.ptr<i32>, #blocked>, tensor<16x1xi64, #blocked>
+    %4 = tt.make_range {end = 16 : i32, start = 0 : i32} : tensor<16xi32, #ttg.slice<{dim = 0, parent = #blocked1}>>
+    %5 = tt.expand_dims %4 {axis = 0 : i32} : tensor<16xi32, #ttg.slice<{dim = 0, parent = #blocked1}>> -> tensor<1x16xi32, #blocked1>
+    %6 = ttg.convert_layout %3 : tensor<16x1x!tt.ptr<i32>, #blocked> -> tensor<16x1x!tt.ptr<i32>, #blocked1>
+    %7 = tt.broadcast %6 : tensor<16x1x!tt.ptr<i32>, #blocked1> -> tensor<16x16x!tt.ptr<i32>, #blocked1>
+    %8 = tt.broadcast %5 : tensor<1x16xi32, #blocked1> -> tensor<16x16xi32, #blocked1>
+    %9 = tt.addptr %7, %8 : tensor<16x16x!tt.ptr<i32>, #blocked1>, tensor<16x16xi32, #blocked1>
+    tt.store %9, %cst : tensor<16x16x!tt.ptr<i32>, #blocked1>
+    tt.return
+  }
+}

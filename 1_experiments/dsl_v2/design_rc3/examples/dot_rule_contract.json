@@ -1,0 +1,87 @@
+{
+  "schema": "reference-dsl-v2-rule-rc3",
+  "language_status": "specified",
+  "implementation_status": "planned",
+  "proof_status": "argument",
+  "proof_evidence": [
+    "design/02_language_and_guarantees.md"
+  ],
+  "tests": {
+    "positive": [],
+    "boundary": [],
+    "premise_violation": []
+  },
+  "trigger_evidence": [],
+  "device_validation": [],
+  "forbidden_fallback": [
+    "不得用捕获的中间值补成完整参照",
+    "不得未声明改变目标或删除官方签名"
+  ],
+  "rule_id": "dot-and-scaled",
+  "source": {
+    "op_pattern": "tt.dot/tt.dot_scaled/target matrix ops",
+    "official_source_ids": [
+      "S06",
+      "S08",
+      "S09",
+      "S12"
+    ],
+    "source_profile": "Triton official, lock required at implementation",
+    "target_guard": "官方声明的目标与版本",
+    "type_guard": "官方的输入/累加类型与scale布局约束",
+    "attrs_guard": [
+      "逐项核对官方属性；未识别属性不得忽略"
+    ],
+    "region_signature": "none",
+    "effects": [
+      "同步/异步matrix effects按操作层级"
+    ]
+  },
+  "semantics": "数值目标为按实际payload及π解码的精确收缩；实际tensor-core舍入与近似不进入未声明的G。",
+  "policy_contracts": [
+    {
+      "mode": "numerical_difference",
+      "when": "有限有理操作数及scale",
+      "target_kind": "single",
+      "precision": "exact",
+      "preserved_rounding": [],
+      "intrinsic_width": "none",
+      "evaluator_obligation": "有理或可靠长累加器；返回表示能精确时单点"
+    },
+    {
+      "mode": "numerical_difference",
+      "when": "上游为可收紧初等值",
+      "target_kind": "single",
+      "precision": "refinable",
+      "preserved_rounding": [],
+      "intrinsic_width": "none",
+      "evaluator_obligation": "可靠乘积与求和区间"
+    },
+    {
+      "mode": "rounding_verification",
+      "when": "只知硬件允许的累加误差集合",
+      "target_kind": "set",
+      "precision": "enclosure-only",
+      "preserved_rounding": [
+        "源/ISA要求保留的格式操作"
+      ],
+      "intrinsic_width": "hardware-contract",
+      "evaluator_obligation": "逐target的合法误差契约"
+    }
+  ],
+  "admission_obligations": [
+    {
+      "obligation": "输入precision/scale/packed解码按版本而非通用TF32截断假定",
+      "evidence_kind": "static",
+      "covers": "reference-reachable",
+      "checker": "待实现的规则证书检查器"
+    },
+    {
+      "obligation": "异步操作的可见性与缓冲生命周期满足契约",
+      "evidence_kind": "static",
+      "covers": "both-executions",
+      "checker": "待实现的规则证书检查器"
+    }
+  ],
+  "output_guarantee": "数学收缩参照不等于逐位硬件模拟；两者分开验证。"
+}

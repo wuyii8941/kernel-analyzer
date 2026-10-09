@@ -1,0 +1,54 @@
+module {
+  tt.func public @simple_dot_mxfp(%a_base: !tt.ptr<i8>, %b_base: !tt.ptr<i8>, %a_scale: !tt.ptr<i8>, %b_scale: !tt.ptr<i8>, %out: !tt.ptr<f32>) attributes {noinline = false} {
+    %out_ptr = arith.constant dense<128> : tensor<128x1xi32>
+    %c = arith.constant dense<0.000000e+00> : tensor<128x128xf32>
+    %cst = arith.constant dense<2> : tensor<128x1xi32>
+    %b_ptr = arith.constant dense<128> : tensor<64x1xi32>
+    %a_ptr = arith.constant dense<64> : tensor<128x1xi32>
+    %a_ptr_0 = tt.make_range {end = 128 : i32, start = 0 : i32} : tensor<128xi32>
+    %a_ptr_1 = tt.expand_dims %a_ptr_0 {axis = 1 : i32} : tensor<128xi32> -> tensor<128x1xi32>
+    %a_ptr_2 = arith.muli %a_ptr_1, %a_ptr : tensor<128x1xi32>
+    %a_ptr_3 = tt.splat %a_base : !tt.ptr<i8> -> tensor<128x1x!tt.ptr<i8>>
+    %a_ptr_4 = tt.addptr %a_ptr_3, %a_ptr_2 : tensor<128x1x!tt.ptr<i8>>, tensor<128x1xi32>
+    %a_ptr_5 = tt.make_range {end = 64 : i32, start = 0 : i32} : tensor<64xi32>
+    %a_ptr_6 = tt.expand_dims %a_ptr_5 {axis = 0 : i32} : tensor<64xi32> -> tensor<1x64xi32>
+    %a_ptr_7 = tt.broadcast %a_ptr_4 : tensor<128x1x!tt.ptr<i8>> -> tensor<128x64x!tt.ptr<i8>>
+    %a_ptr_8 = tt.broadcast %a_ptr_6 : tensor<1x64xi32> -> tensor<128x64xi32>
+    %a_ptr_9 = tt.addptr %a_ptr_7, %a_ptr_8 : tensor<128x64x!tt.ptr<i8>>, tensor<128x64xi32>
+    %b_ptr_10 = tt.expand_dims %a_ptr_5 {axis = 1 : i32} : tensor<64xi32> -> tensor<64x1xi32>
+    %b_ptr_11 = arith.muli %b_ptr_10, %b_ptr : tensor<64x1xi32>
+    %b_ptr_12 = tt.splat %b_base : !tt.ptr<i8> -> tensor<64x1x!tt.ptr<i8>>
+    %b_ptr_13 = tt.addptr %b_ptr_12, %b_ptr_11 : tensor<64x1x!tt.ptr<i8>>, tensor<64x1xi32>
+    %b_ptr_14 = tt.expand_dims %a_ptr_0 {axis = 0 : i32} : tensor<128xi32> -> tensor<1x128xi32>
+    %b_ptr_15 = tt.broadcast %b_ptr_13 : tensor<64x1x!tt.ptr<i8>> -> tensor<64x128x!tt.ptr<i8>>
+    %b_ptr_16 = tt.broadcast %b_ptr_14 : tensor<1x128xi32> -> tensor<64x128xi32>
+    %b_ptr_17 = tt.addptr %b_ptr_15, %b_ptr_16 : tensor<64x128x!tt.ptr<i8>>, tensor<64x128xi32>
+    %scale_a_ptr = arith.muli %a_ptr_1, %cst : tensor<128x1xi32>
+    %scale_a_ptr_18 = tt.splat %a_scale : !tt.ptr<i8> -> tensor<128x1x!tt.ptr<i8>>
+    %scale_a_ptr_19 = tt.addptr %scale_a_ptr_18, %scale_a_ptr : tensor<128x1x!tt.ptr<i8>>, tensor<128x1xi32>
+    %scale_a_ptr_20 = tt.make_range {end = 2 : i32, start = 0 : i32} : tensor<2xi32>
+    %scale_a_ptr_21 = tt.expand_dims %scale_a_ptr_20 {axis = 0 : i32} : tensor<2xi32> -> tensor<1x2xi32>
+    %scale_a_ptr_22 = tt.broadcast %scale_a_ptr_19 : tensor<128x1x!tt.ptr<i8>> -> tensor<128x2x!tt.ptr<i8>>
+    %scale_a_ptr_23 = tt.broadcast %scale_a_ptr_21 : tensor<1x2xi32> -> tensor<128x2xi32>
+    %scale_a_ptr_24 = tt.addptr %scale_a_ptr_22, %scale_a_ptr_23 : tensor<128x2x!tt.ptr<i8>>, tensor<128x2xi32>
+    %scale_b_ptr = tt.splat %b_scale : !tt.ptr<i8> -> tensor<128x1x!tt.ptr<i8>>
+    %scale_b_ptr_25 = tt.addptr %scale_b_ptr, %scale_a_ptr : tensor<128x1x!tt.ptr<i8>>, tensor<128x1xi32>
+    %scale_b_ptr_26 = tt.broadcast %scale_b_ptr_25 : tensor<128x1x!tt.ptr<i8>> -> tensor<128x2x!tt.ptr<i8>>
+    %scale_b_ptr_27 = tt.addptr %scale_b_ptr_26, %scale_a_ptr_23 : tensor<128x2x!tt.ptr<i8>>, tensor<128x2xi32>
+    %a = tt.load %a_ptr_9 : tensor<128x64x!tt.ptr<i8>>
+    %b = tt.load %b_ptr_17 : tensor<64x128x!tt.ptr<i8>>
+    %a_scale_28 = tt.load %scale_a_ptr_24 : tensor<128x2x!tt.ptr<i8>>
+    %b_scale_29 = tt.load %scale_b_ptr_27 : tensor<128x2x!tt.ptr<i8>>
+    %c_30 = tt.bitcast %a : tensor<128x64xi8> -> tensor<128x64xf8E4M3FN>
+    %c_31 = tt.bitcast %b : tensor<64x128xi8> -> tensor<64x128xf8E4M3FN>
+    %c_32 = tt.dot_scaled %c_30 scale %a_scale_28, %c_31 scale %b_scale_29, %c lhs = e4m3 rhs = e4m3 {fastMath = false} : tensor<128x64xf8E4M3FN>, tensor<128x2xi8> * tensor<64x128xf8E4M3FN>, tensor<128x2xi8> -> tensor<128x128xf32>
+    %out_ptr_33 = arith.muli %a_ptr_1, %out_ptr : tensor<128x1xi32>
+    %out_ptr_34 = tt.splat %out : !tt.ptr<f32> -> tensor<128x1x!tt.ptr<f32>>
+    %out_ptr_35 = tt.addptr %out_ptr_34, %out_ptr_33 : tensor<128x1x!tt.ptr<f32>>, tensor<128x1xi32>
+    %out_ptr_36 = tt.broadcast %out_ptr_35 : tensor<128x1x!tt.ptr<f32>> -> tensor<128x128x!tt.ptr<f32>>
+    %out_ptr_37 = tt.broadcast %b_ptr_14 : tensor<1x128xi32> -> tensor<128x128xi32>
+    %out_ptr_38 = tt.addptr %out_ptr_36, %out_ptr_37 : tensor<128x128x!tt.ptr<f32>>, tensor<128x128xi32>
+    tt.store %out_ptr_38, %c_32 : tensor<128x128x!tt.ptr<f32>>
+    tt.return
+  }
+}

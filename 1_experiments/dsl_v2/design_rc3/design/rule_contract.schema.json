@@ -1,0 +1,315 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:kernel-analyzer:rule-contract:v2:rc3",
+  "title": "Official-scope reference rule: per-mode guarantees and independent progress axes",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "reference-dsl-v2-rule-rc3"
+    },
+    "rule_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "language_status": {
+      "enum": [
+        "specified",
+        "relation-skeleton",
+        "needs-specification"
+      ]
+    },
+    "implementation_status": {
+      "enum": [
+        "planned",
+        "implemented-unvalidated",
+        "validated-scope"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "op_pattern": {
+          "type": "string",
+          "minLength": 1
+        },
+        "official_source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "source_profile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_guard": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type_guard": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attrs_guard": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "region_signature": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "op_pattern",
+        "official_source_ids",
+        "source_profile",
+        "target_guard",
+        "type_guard",
+        "attrs_guard",
+        "region_signature",
+        "effects"
+      ],
+      "additionalProperties": false
+    },
+    "semantics": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy_contracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "when": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target_kind": {
+            "enum": [
+              "single",
+              "set",
+              "environment"
+            ]
+          },
+          "precision": {
+            "enum": [
+              "exact",
+              "refinable",
+              "enclosure-only",
+              "not-established"
+            ]
+          },
+          "preserved_rounding": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          },
+          "intrinsic_width": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evaluator_obligation": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "mode",
+          "when",
+          "target_kind",
+          "precision",
+          "preserved_rounding",
+          "intrinsic_width",
+          "evaluator_obligation"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "admission_obligations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "obligation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_kind": {
+            "enum": [
+              "static",
+              "per_sample",
+              "declared"
+            ]
+          },
+          "covers": {
+            "enum": [
+              "source-domain",
+              "actual-events",
+              "reference-reachable",
+              "both-executions",
+              "environment"
+            ]
+          },
+          "checker": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "obligation",
+          "evidence_kind",
+          "covers",
+          "checker"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "output_guarantee": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proof_status": {
+      "enum": [
+        "none",
+        "argument",
+        "reviewed-argument",
+        "machine-checked"
+      ]
+    },
+    "proof_evidence": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "tests": {
+      "type": "object",
+      "properties": {
+        "positive": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "boundary": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "premise_violation": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "positive",
+        "boundary",
+        "premise_violation"
+      ],
+      "additionalProperties": false
+    },
+    "trigger_evidence": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "device_validation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "target_profile": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "not-run",
+              "model-only",
+              "device-tested"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          }
+        },
+        "required": [
+          "target_profile",
+          "status",
+          "evidence"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "forbidden_fallback": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schema",
+    "rule_id",
+    "language_status",
+    "implementation_status",
+    "source",
+    "semantics",
+    "policy_contracts",
+    "admission_obligations",
+    "output_guarantee",
+    "proof_status",
+    "proof_evidence",
+    "tests",
+    "trigger_evidence",
+    "device_validation",
+    "forbidden_fallback"
+  ],
+  "additionalProperties": false,
+  "$comment": "Structural validation is NOT proof checking. tools/validate_contracts.py also checks validated-scope evidence fields; executable proofs and signatures require separate verifiers."
+}

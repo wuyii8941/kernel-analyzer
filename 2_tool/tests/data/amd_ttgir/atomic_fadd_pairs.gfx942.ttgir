@@ -1,0 +1,19 @@
+#blocked = #ttg.blocked<{sizePerThread = [1, 1], threadsPerWarp = [16, 4], warpsPerCTA = [4, 1], order = [1, 0]}>
+module attributes {"ttg.num-ctas" = 1 : i32, "ttg.num-warps" = 4 : i32, ttg.target = "hip:gfx942", "ttg.threads-per-warp" = 64 : i32} {
+  tt.func public @kernel(%X: !tt.ptr<f32> {tt.divisibility = 16 : i32}, %val: !tt.ptr<f32> {tt.divisibility = 16 : i32}) attributes {noinline = false} {
+    %cst = arith.constant dense<2> : tensor<4x4xi32, #blocked>
+    %offset = arith.constant dense<4> : tensor<4x1xi32, #blocked>
+    %offset_0 = tt.make_range {end = 4 : i32, start = 0 : i32} : tensor<4xi32, #ttg.slice<{dim = 1, parent = #blocked}>>
+    %offset_1 = tt.expand_dims %offset_0 {axis = 1 : i32} : tensor<4xi32, #ttg.slice<{dim = 1, parent = #blocked}>> -> tensor<4x1xi32, #blocked>
+    %offset_2 = arith.muli %offset_1, %offset : tensor<4x1xi32, #blocked>
+    %offset_3 = tt.make_range {end = 4 : i32, start = 0 : i32} : tensor<4xi32, #ttg.slice<{dim = 0, parent = #blocked}>>
+    %offset_4 = tt.expand_dims %offset_3 {axis = 0 : i32} : tensor<4xi32, #ttg.slice<{dim = 0, parent = #blocked}>> -> tensor<1x4xi32, #blocked>
+    %offset_5 = tt.broadcast %offset_2 : tensor<4x1xi32, #blocked> -> tensor<4x4xi32, #blocked>
+    %offset_6 = tt.broadcast %offset_4 : tensor<1x4xi32, #blocked> -> tensor<4x4xi32, #blocked>
+    %offset_7 = arith.addi %offset_5, %offset_6 : tensor<4x4xi32, #blocked>
+    %val_8 = amdg.buffer_load %val[%offset_7] : !tt.ptr<f32> -> tensor<4x4xf32, #blocked>
+    %0 = arith.divsi %offset_7, %cst : tensor<4x4xi32, #blocked>
+    %1 = amdg.buffer_atomic_rmw fadd, acq_rel, gpu, %val_8, %X[%0] : !tt.ptr<f32> -> tensor<4x4xf32, #blocked>
+    tt.return
+  }
+}

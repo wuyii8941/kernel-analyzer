@@ -1,0 +1,83 @@
+{
+  "commit": "1aee15e9df7a45f434699b7016056e6650fdae99",
+  "scope": "targeted audit, not full certification",
+  "findings": [
+    {
+      "id": "F01",
+      "title": "整数精确域错误",
+      "priority": "P0",
+      "evidence_level": "RULE_EXCERPT_REPRODUCED",
+      "code": "_cmpi/_op_atomic_cas/_int_op",
+      "status": "OPEN_PENDING_NATIVE_CONFIRMATION_AND_FIX",
+      "native_reproduction_run_here": false,
+      "closure_requirement": "整数独立oracle、完整解释器地址/条件回归",
+      "evidence": "recheck/results/additional_checks.json"
+    },
+    {
+      "id": "F02",
+      "title": "scaled dot区间和条件传播",
+      "priority": "P0",
+      "evidence_level": "RULE_EXCERPT_REPRODUCED",
+      "code": "_scaled_dot",
+      "status": "OPEN_PENDING_NATIVE_CONFIRMATION_AND_FIX",
+      "native_reproduction_run_here": false,
+      "closure_requirement": "非点上游及scale条件的独立包围和完整解释器回归",
+      "evidence": "rerun/results/cpu_probes_excerpts.json"
+    },
+    {
+      "id": "F03",
+      "title": "CAS两序不足以认证全序",
+      "priority": "P0 for unconditional claims",
+      "evidence_level": "MATHEMATICAL_COUNTEREXAMPLE_AND_RULE_FIXTURE",
+      "code": "_cas_reverse_order/guarantee summary",
+      "status": "OPEN_PENDING_NATIVE_CONFIRMATION_AND_FIX",
+      "native_reproduction_run_here": false,
+      "closure_requirement": "证明/声明/未建立分轴；顺序或集合保证实际覆盖允许执行",
+      "evidence": "rerun/results/cpu_probes_excerpts.json"
+    },
+    {
+      "id": "F04",
+      "title": "值相同不证明来源",
+      "priority": "P0 for call-level claims",
+      "evidence_level": "EXCERPT_WITH_SYNTHETIC_CAPTURE_METADATA",
+      "code": "torch_intermediates/measure scope",
+      "status": "OPEN_PENDING_NATIVE_CONFIRMATION_AND_FIX",
+      "native_reproduction_run_here": false,
+      "closure_requirement": "真实生产者、映射与逐seed跨启动验证；无证据仅kernel级",
+      "evidence": "rerun/results/binding_probes.json"
+    },
+    {
+      "id": "F05",
+      "title": "Gluon统一入口查键",
+      "priority": "P1",
+      "evidence_level": "STATIC_AND_LOOKUP_FIXTURE_NOT_E2E",
+      "code": "check.run asm[ttir]",
+      "status": "OPEN_PENDING_NATIVE_CONFIRMATION_AND_FIX",
+      "native_reproduction_run_here": false,
+      "closure_requirement": "真实sm86 Gluon从measure.run到最终报告",
+      "evidence": "rerun/results/binding_probes.json"
+    },
+    {
+      "id": "F06",
+      "title": "声明摘要遗漏有效设置",
+      "priority": "P1",
+      "evidence_level": "RULE_EXCERPT_REPRODUCED",
+      "code": "measure.expand",
+      "status": "OPEN_PENDING_NATIVE_CONFIRMATION_AND_FIX",
+      "native_reproduction_run_here": false,
+      "closure_requirement": "完整声明哈希+外部源码版本；不同设置摘要不同",
+      "evidence": "recheck/results/additional_checks.json"
+    },
+    {
+      "id": "F07",
+      "title": "执行未知仍放行统计",
+      "priority": "P0 for affected statistical claims",
+      "evidence_level": "RULE_EXCERPT_WITH_SYNTHETIC_ROWS",
+      "code": "_execution_status",
+      "status": "OPEN_PENDING_NATIVE_CONFIRMATION_AND_FIX",
+      "native_reproduction_run_here": false,
+      "closure_requirement": "unknown有效性阻断相关统计；合法稳定对照不误拒",
+      "evidence": "recheck/results/additional_checks.json"
+    }
+  ]
+}

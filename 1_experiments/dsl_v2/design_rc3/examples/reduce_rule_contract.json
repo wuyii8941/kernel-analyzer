@@ -1,0 +1,97 @@
+{
+  "schema": "reference-dsl-v2-rule-rc3",
+  "language_status": "specified",
+  "implementation_status": "planned",
+  "proof_status": "argument",
+  "proof_evidence": [
+    "design/02_language_and_guarantees.md"
+  ],
+  "tests": {
+    "positive": [],
+    "boundary": [],
+    "premise_violation": []
+  },
+  "trigger_evidence": [],
+  "device_validation": [],
+  "forbidden_fallback": [
+    "不得用捕获的中间值补成完整参照",
+    "不得未声明改变目标或删除官方签名"
+  ],
+  "rule_id": "reduce-generic",
+  "source": {
+    "op_pattern": "tt.reduce/tt.scan",
+    "official_source_ids": [
+      "S06"
+    ],
+    "source_profile": "Triton official, lock required at implementation",
+    "target_guard": "官方声明的目标与版本",
+    "type_guard": "按锁定的官方verifier",
+    "attrs_guard": [
+      "逐项核对官方属性；未识别属性不得忽略"
+    ],
+    "region_signature": "任意有类型的combine区域",
+    "effects": []
+  },
+  "semantics": "reduce按已证代数律或绑定树解释；scan保持前缀顺序。无单值证书但源契约有定义时保留允许折叠集合。",
+  "policy_contracts": [
+    {
+      "mode": "numerical_difference",
+      "when": "有理输入；确定树或有效结合证书",
+      "target_kind": "single",
+      "precision": "exact",
+      "preserved_rounding": [],
+      "intrinsic_width": "none",
+      "evaluator_obligation": "精确区域fold"
+    },
+    {
+      "mode": "numerical_difference",
+      "when": "初等函数且有效收敛条件成立",
+      "target_kind": "single",
+      "precision": "refinable",
+      "preserved_rounding": [],
+      "intrinsic_width": "none",
+      "evaluator_obligation": "区域区间求值及精度传播"
+    },
+    {
+      "mode": "numerical_difference",
+      "when": "允许的多树结果不同",
+      "target_kind": "set",
+      "precision": "enclosure-only",
+      "preserved_rounding": [],
+      "intrinsic_width": "tree-dependent",
+      "evaluator_obligation": "包围全部允许树，不能选任意一棵当唯一目标"
+    },
+    {
+      "mode": "rounding_verification",
+      "when": "具体树、格式和舍入契约可确定",
+      "target_kind": "single",
+      "precision": "refinable",
+      "preserved_rounding": [
+        "区域内声明的每次舍入"
+      ],
+      "intrinsic_width": "none",
+      "evaluator_obligation": "按格式规则及离散判定求值"
+    }
+  ],
+  "admission_obligations": [
+    {
+      "obligation": "每个实际使用分母有定义；空摘要分支真正执行",
+      "evidence_kind": "static",
+      "covers": "reference-reachable",
+      "checker": "待实现的规则证书检查器"
+    },
+    {
+      "obligation": "树/叶排列证据或带闭包条件的结合律证据",
+      "evidence_kind": "static",
+      "covers": "reference-reachable",
+      "checker": "待实现的规则证书检查器"
+    },
+    {
+      "obligation": "源操作对非关联combine的前提必须满足",
+      "evidence_kind": "static",
+      "covers": "reference-reachable",
+      "checker": "待实现的规则证书检查器"
+    }
+  ],
+  "output_guarantee": "仅在对应when及全部义务成立时兑现该mode的保证；同一规则不能统一称exact。"
+}

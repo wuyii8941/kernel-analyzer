@@ -1,0 +1,194 @@
+{
+  "commit": "1aee15e9df7a45f434699b7016056e6650fdae99",
+  "execution_scope": "CPU isolated functions; no GPU, no whole interpreter/run",
+  "native_production_import": false,
+  "source_ast_comparison": "not run: remote file not mounted",
+  "numpy_version": "2.3.5",
+  "unsigned_compare": [
+    {
+      "bits": 64,
+      "a": "9223372036854775808",
+      "b": "0",
+      "predicate": "ugt",
+      "expected": 1,
+      "observed": 0,
+      "status": 0,
+      "matches": false
+    },
+    {
+      "bits": 64,
+      "a": "18446744073709551615",
+      "b": "1",
+      "predicate": "ult",
+      "expected": 0,
+      "observed": 1,
+      "status": 0,
+      "matches": false
+    },
+    {
+      "bits": 64,
+      "a": "9223372036854775807",
+      "b": "0",
+      "predicate": "ugt",
+      "expected": 1,
+      "observed": 1,
+      "status": 0,
+      "matches": true
+    },
+    {
+      "bits": 32,
+      "a": "2147483648",
+      "b": "0",
+      "predicate": "ugt",
+      "expected": 1,
+      "observed": 1,
+      "status": 0,
+      "matches": true
+    }
+  ],
+  "integer_cas": [
+    {
+      "initial": "9007199254740992",
+      "compare": "9007199254740993",
+      "replacement": 7,
+      "expected_new": "9007199254740992",
+      "actual_new": "7",
+      "expected_return": "9007199254740992",
+      "actual_return": "9007199254740992",
+      "result_status": 0,
+      "memory_status": 0,
+      "matches": false
+    },
+    {
+      "initial": "9007199254740993",
+      "compare": "0",
+      "replacement": 7,
+      "expected_new": "9007199254740993",
+      "actual_new": "9007199254740993",
+      "expected_return": "9007199254740993",
+      "actual_return": "9007199254740992",
+      "result_status": 0,
+      "memory_status": 0,
+      "matches": false
+    },
+    {
+      "initial": "15",
+      "compare": "16",
+      "replacement": 7,
+      "expected_new": "15",
+      "actual_new": "15",
+      "expected_return": "15",
+      "actual_return": "15",
+      "result_status": 0,
+      "memory_status": 0,
+      "matches": true
+    },
+    {
+      "initial": "15",
+      "compare": "15",
+      "replacement": 7,
+      "expected_new": "7",
+      "actual_new": "7",
+      "expected_return": "15",
+      "actual_return": "15",
+      "result_status": 0,
+      "memory_status": 0,
+      "matches": true
+    }
+  ],
+  "scaled_dot": {
+    "interval_propagation": {
+      "target_set_lower": 32.0,
+      "target_set_upper": 64.0,
+      "observed_lower": 32.0,
+      "observed_upper": 32.0,
+      "status": 0,
+      "covers_target_upper": false,
+      "backend": "independent exact fixture backend; not production intervals",
+      "high_endpoint_received_by_dot": 1.0,
+      "true_input_high": 2.0
+    },
+    "scale_dependency": {
+      "scale_conditional": true,
+      "output_conditional": false,
+      "status": 0
+    }
+  },
+  "two_order_assumption": {
+    "all_serializations": [
+      {
+        "order": [
+          0,
+          1,
+          2
+        ],
+        "value": 3
+      },
+      {
+        "order": [
+          0,
+          2,
+          1
+        ],
+        "value": 4
+      },
+      {
+        "order": [
+          1,
+          0,
+          2
+        ],
+        "value": 2
+      },
+      {
+        "order": [
+          1,
+          2,
+          0
+        ],
+        "value": 2
+      },
+      {
+        "order": [
+          2,
+          0,
+          1
+        ],
+        "value": 4
+      },
+      {
+        "order": [
+          2,
+          1,
+          0
+        ],
+        "value": 3
+      }
+    ],
+    "all_results": [
+      2,
+      3,
+      4
+    ],
+    "checked_orders": [
+      [
+        0,
+        1,
+        2
+      ],
+      [
+        2,
+        1,
+        0
+      ]
+    ],
+    "observed_result": 3,
+    "observed_status": 0,
+    "observed_conditional": false,
+    "reasons": {
+      "assumed:the launch result does not depend on the order of its contended compare-and-swap operations (program order and reverse order agree; a declared premise, not a proof over every order)": 1
+    },
+    "scope": "production agreement function with exact serial execution fixture; not GPU lock kernel"
+  }
+}
+Audit counterexamples reproduced; no production correctness certification.

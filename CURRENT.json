@@ -1,87 +1,49 @@
 {
-  "schema": "kernel-analyzer-current-index-v1",
-  "updated": "2026-10-08",
-  "note": "The single current index. It is mutable; the releases it points to (tags, frozen protocols, results) are not. Current truth comes from the machine results and the scoped ledgers linked here, never from the newest-looking document.",
+  "schema": "kernel-analyzer-current-index-v2",
+  "updated": "2026-10-09",
+  "note": "The single current index. The repository has four parts; each keeps only the latest, most complete version. Everything removed in the 2026-10-09 reorganization is recoverable from tag pre-reorg-20261009 (git show pre-reorg-20261009:<old path>).",
+  "parts": {
+    "experiments": "1_experiments/README.md",
+    "tool": "2_tool/README.md",
+    "audits": "3_audits/README.md",
+    "bugs_cases": "4_bugs_cases/README.md"
+  },
+  "history_tag": "pre-reorg-20261009",
   "release": {
     "tag": "general-v3.1",
     "commit": "d6e177e2b6a4216035912c1ae86f41a2fba4e69c",
     "src_tree": "cd21ef56cf46eb3cff2c00c50b8918b30a604d26",
-    "frozen_paths": ["src", "scripts/essential/contract_v3.py", "scripts/essential/common.py", "scripts/general/acceptance_run.py"],
-    "freeze_check": "scripts/general/acceptance_run.py (frozen_check)",
     "package_version": "3.1.0",
-    "status": "frozen; measured on the structure acceptance set v1.1-rc1 (run r20261008T2030); official scoring waits for the issuer's reseal"
+    "status": "frozen; measured on the structure acceptance set v1.1-rc1 (run r20261008T2030, 1_experiments/structure_acceptance_v1_1/README.md); scoring waits for the original issuer's direct delivery of the answer files (3_audits/README.md, material M10)"
   },
   "development": {
     "branch": "dsl-v2",
     "tool_version": "4.0",
     "package_version": "4.0.0.dev1",
-    "status": "unreleased and not frozen: implementation of reference DSL v2 rc3 official, increments 1-15 (development evidence, not blind results)",
-    "design": "reference_dsl_v2_rc3_official_20261009.zip (sha256 8050903ff9fbc4c9922813d6789a08437a40c92db963872aaa8704253cd76faf)",
-    "plan": "docs/dsl_v2/increment_01.md ... increment_15.md (each registered before implementation or stating otherwise)",
-    "status_doc": "docs/dsl_v2/increment_01_status.md, increment_02_03_status.md, increment_04_05_status.md, increment_06_status.md, increment_07_08_status.md, increment_09_status.md, increment_10_status.md, increment_11_status.md, increment_12_status.md, increment_13_status.md, increment_14_status.md, increment_15_status.md",
-    "regression": "results/dsl_v2/regression_v11/reg20261009T1051 (v1.1 programs as a regression set; not blind results)",
-    "w0_inventories": "results/dsl_v2/w0 (official commit e50b186e): source 1281 = enumerated registry 1281, observed 130; rc3 reconcile READY_FOR_MANUAL_REVIEW with 0 validated-route claims (results/dsl_v2/w0/reconcile_enum_20261009)",
-    "w1_contracts": "results/dsl_v2/contracts (430/430 supported entries with three test categories and trigger evidence)",
-    "main_captures": "results/dsl_v2/main_capture (official classic and Gluon unit tests and tutorials under the official main build, sm_86; TTIR vs NVIDIA sm_90 / sm_100 and AMD gfx942 / gfx950 TTGIR cross-checks, compile only)",
-    "changelog": "docs/detector_changelog.md (4.0)",
-    "registry": "results/dsl_v2/rule_registry.json (Triton 3.6.0 regression profile only)"
+    "status": "unreleased and not frozen: reference DSL v2 rc3 official, increments 1-15 (development evidence, not blind results)",
+    "record": "1_experiments/dsl_v2/README.md",
+    "design": "1_experiments/dsl_v2/design_rc3/README.md (rc3 official, sha256 8050903ff9fbc4c9922813d6789a08437a40c92db963872aaa8704253cd76faf)",
+    "open_audit_findings": "3_audits/README.md (external audit at 1aee15e: F01 partly handled, F02-F07 open)"
   },
   "versions": {
-    "tool": {"value": "4.0", "where": "src/kernel_analyzer/check.py TOOL_VERSION", "changelog": "docs/detector_changelog.md", "note": "dsl-v2 development branch, unreleased and not frozen; the frozen release stays general-v3.1 (tool 3.1), which binds the structure acceptance v1.1 scoring"},
-    "reference_semantics": {"value": "3.1", "meaning": "TTIR real semantics G and its enclosure (Welford merge, SumK / DotK accumulation, upstream-source detection)", "registry": "results/general/rule_registry.json"},
-    "statistics": {"value": "frozen decision layer + numeric contract v3 cannot-judge rules (S0 = 2, N0 = 64, n_min = 16)", "where": ["src/kernel_analyzer/reference_eval/analysis.py", "scripts/essential/contract_v3.py"], "calibration": "docs/general/calibration_table.md"},
-    "detector_history": "docs/detector_changelog.md",
-    "result_schemas": "each report carries tool_version; unified-entry reports carry expanded_declaration and declaration_sha256",
-    "specs": {"phase1": "specs/phase1 (v0.4)", "phase2": "specs/phase2 (package v0.2)"}
+    "tool": {"value": "4.0", "where": "2_tool/src/kernel_analyzer/check.py TOOL_VERSION", "changelog": "2_tool/docs/changelog.md"},
+    "rule_registry": "2_tool/data/rule_registry.json (Triton 3.6.0 regression profile); frozen general-v3.1 registry: 1_experiments/general_round_v3_1/results/rule_registry.json",
+    "op_registry": "2_tool/src/kernel_analyzer/reference_eval/data/ttir_op_registry.json (Triton 3.6.0)"
   },
   "environment": {
     "python_env": "/data1/tzh/envs/ka_main",
     "torch": "2.10.0+cu128",
     "triton": "3.6.0 (TTIR mapping locked to this build)",
+    "official_main_env": "/data1/tzh/envs/triton_main (official Triton e50b186e, DSL v2 captures and W0 inventories)",
     "gpu": "NVIDIA RTX A6000 (sm_86)",
-    "doc": "docs/environments.md"
+    "doc": "2_tool/docs/environments.md"
   },
   "entry_points": {
-    "recommended": {
-      "command": "python scripts/measure.py --declaration DECLARATION.json --out REPORT.json",
-      "module": "kernel_analyzer.measure",
-      "example": "examples/general/bsr_softmax.json",
-      "what_it_does": "declare call + input sources + comparison + budget; the tool expands default rules, builds the reference, runs the statistics and classifies failures"
-    },
-    "python_case": {"module": "kernel_analyzer.check (check.run / BindingCase)", "guide": "docs/binding_guide.md"},
-    "captured_packages": {"command": "scripts/run_reference_analysis.py", "use": "launches captured in another environment, analysed in ka_main (historical declarations under results/reference_eval/declarations)"},
-    "same_statistics": "all three entries use analysis.assess_units; the unified entry adds Holm within each rule class and the contract_v3 cannot-judge rules"
+    "unified": "PYTHONPATH=2_tool/src python 2_tool/scripts/measure.py --declaration DECLARATION.json --out REPORT.json",
+    "binding": "kernel_analyzer.check (2_tool/docs/binding_guide.md)",
+    "captured_packages": "2_tool/scripts/run_reference_analysis.py",
+    "tests": "python -m pytest -q 2_tool/tests"
   },
-  "capability": {
-    "supported": "single Triton kernels whose outputs Triton writes and whose operations are in the rule registry: numerical difference (mode A, e_num = K - G) with mean-effect statistics in two rule classes; mode B (e_sem = G - f) where a spec exists and the output reads no non-Triton intermediate",
-    "not_supported": ["block pointers / TMA descriptors (tt.make_tensor_ptr, tt.advance, descriptors)", "tt.cat, histogram, atomic_cas, bit counting, unregistered libdevice symbols or inline asm", "outputs written by cuBLAS / ATen (no reference)", "saved values, backward and optimizer writes as one automated call graph"],
-    "known_limits": ["adaptive working precision not implemented (cancellation in 1 + erf / tanh leaves about 6% of activation elements above 1/8 ulp)", "program-level batching not implemented", "bounded route only in the calibration, not applied by the entry", "the unified entry imports scripts/essential/contract_v3.py: a non-editable wheel does not ship it (packaging issue, PR-B)"],
-    "common_not_established": {
-      "semantics missing": "an operation or combine region outside the registry (see the rule registry report)",
-      "binding": "the output is written by a non-Triton op, the pairing is not provable, or the call rejected the declared inputs",
-      "enclosure too wide / statistics insufficient": "the reference cannot resolve the effect scale, or the sample cannot support a mean statement (zero variance, n < 16, skewness > 2 with n <= 64)"
-    }
-  },
-  "status": {
-    "general_round": "docs/general/status_20261008.md",
-    "closure_round": "docs/closure_status_20261008.md",
-    "audit": "docs/audit_two_rounds_20261008.md",
-    "results_ledger": "docs/status_ledger_20261006.md",
-    "case_ledger": "docs/root_cause_closure_current.md",
-    "claims": "docs/claims.md",
-    "pending_reviewer_decisions": "docs/audit_two_rounds_20261008.md (section C)",
-    "acceptance": {"structure_v1_1_rc1": "docs/acceptance/structure_v1_1_rc1_status_20261008.md", "run": "results/acceptance/structure_v1_1_rc1/r20261008T2030 (RUN_FREEZE, DEVIATIONS, jobs, summary.json, REPORT.md)", "state": "measured under frozen rules, not scored: package ISSUER_RESEAL_REQUIRED", "adapter": "scripts/acceptance/structure_v11.py (+ _queue, _blackbox, _entry_check, _report)"}
-  },
-  "protocols": {
-    "general_round": "docs/protocol_general_capability_v1_20261008.md",
-    "closure_round": "docs/protocol_closure_v3_20261008.md",
-    "essential_bugs": ["docs/protocol_essential_bugs_20261007.md", "docs/protocol_essential_bugs_phase2_20261007.md"]
-  },
-  "history": {
-    "stage_summary_20261002": "docs/stage_summary_20261002.md (historical baseline; superseded where the documents above say so)",
-    "previous_readme": "docs/history/README_before_20261008.md",
-    "previous_docs_index": "docs/history/docs_README_before_20261008.md",
-    "archive": "archive/"
-  },
-  "test_policy": "tests must not modify or rewrite tracked files (tests/conftest.py guard); outputs go to tmp_path"
+  "external_materials_pending": "3_audits/README.md section 3 (M01-M12)",
+  "test_policy": "tests must not modify or rewrite tracked files (2_tool/tests/conftest.py guard); outputs go to tmp_path"
 }

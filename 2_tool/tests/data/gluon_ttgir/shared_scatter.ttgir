@@ -1,0 +1,30 @@
+#blocked = #ttg.blocked<{sizePerThread = [1, 1], threadsPerWarp = [8, 4], warpsPerCTA = [1, 1], order = [1, 0]}>
+#shared = #ttg.swizzled_shared<{vec = 1, perPhase = 1, maxPhase = 1, order = [1, 0]}>
+#smem = #ttg.shared_memory
+module attributes {"ttg.num-ctas" = 1 : i32, "ttg.num-warps" = 1 : i32, ttg.target = "cuda:86", "ttg.threads-per-warp" = 32 : i32, "ttng.two-ctas" = false} {
+  tt.func public @shared_scatter_kernel(%indices_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32}, %values_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32}, %output_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32}) attributes {noinline = false} {
+    %cst = arith.constant dense<64> : tensor<64x1xi32, #blocked>
+    %cst_0 = arith.constant dense<0.000000e+00> : tensor<64x64xf32, #blocked>
+    %smem = ttg.local_alloc : () -> !ttg.memdesc<64x64xf32, #shared, #smem, mutable>
+    %indices_x = tt.make_range {end = 64 : i32, start = 0 : i32} : tensor<64xi32, #ttg.slice<{dim = 1, parent = #blocked}>>
+    %indices_y = tt.make_range {end = 64 : i32, start = 0 : i32} : tensor<64xi32, #ttg.slice<{dim = 0, parent = #blocked}>>
+    %offsets_2d = tt.expand_dims %indices_x {axis = 1 : i32} : tensor<64xi32, #ttg.slice<{dim = 1, parent = #blocked}>> -> tensor<64x1xi32, #blocked>
+    %offsets_2d_1 = arith.muli %offsets_2d, %cst : tensor<64x1xi32, #blocked>
+    %offsets_2d_2 = tt.expand_dims %indices_y {axis = 0 : i32} : tensor<64xi32, #ttg.slice<{dim = 0, parent = #blocked}>> -> tensor<1x64xi32, #blocked>
+    %offsets_2d_3 = tt.broadcast %offsets_2d_1 : tensor<64x1xi32, #blocked> -> tensor<64x64xi32, #blocked>
+    %offsets_2d_4 = tt.broadcast %offsets_2d_2 : tensor<1x64xi32, #blocked> -> tensor<64x64xi32, #blocked>
+    %offsets_2d_5 = arith.addi %offsets_2d_3, %offsets_2d_4 : tensor<64x64xi32, #blocked>
+    ttg.local_store %cst_0, %smem : tensor<64x64xf32, #blocked> -> !ttg.memdesc<64x64xf32, #shared, #smem, mutable>
+    %values = tt.splat %values_ptr : !tt.ptr<f32> -> tensor<64x!tt.ptr<f32>, #ttg.slice<{dim = 1, parent = #blocked}>>
+    %values_6 = tt.addptr %values, %indices_x : tensor<64x!tt.ptr<f32>, #ttg.slice<{dim = 1, parent = #blocked}>>, tensor<64xi32, #ttg.slice<{dim = 1, parent = #blocked}>>
+    %values_7 = tt.load %values_6 : tensor<64x!tt.ptr<f32>, #ttg.slice<{dim = 1, parent = #blocked}>>
+    %values_8 = tt.expand_dims %values_7 {axis = 1 : i32} : tensor<64xf32, #ttg.slice<{dim = 1, parent = #blocked}>> -> tensor<64x1xf32, #blocked>
+    %0 = tt.broadcast %values_8 : tensor<64x1xf32, #blocked> -> tensor<64x64xf32, #blocked>
+    ttg.local_scatter %smem[%offsets_2d_4], %0 {axis = 1 : i32} : !ttg.memdesc<64x64xf32, #shared, #smem, mutable>, tensor<64x64xi32, #blocked>, tensor<64x64xf32, #blocked>
+    %matrix_data = ttg.local_load %smem : !ttg.memdesc<64x64xf32, #shared, #smem, mutable> -> tensor<64x64xf32, #blocked>
+    %1 = tt.splat %output_ptr : !tt.ptr<f32> -> tensor<64x64x!tt.ptr<f32>, #blocked>
+    %2 = tt.addptr %1, %offsets_2d_5 : tensor<64x64x!tt.ptr<f32>, #blocked>, tensor<64x64xi32, #blocked>
+    tt.store %2, %matrix_data : tensor<64x64x!tt.ptr<f32>, #blocked>
+    tt.return
+  }
+}

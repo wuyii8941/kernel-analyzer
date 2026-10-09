@@ -1,0 +1,29 @@
+module {
+  tt.func public @simple_dot(%a_base: !tt.ptr<f16>, %b_base: !tt.ptr<f16>, %out: !tt.ptr<f16>) attributes {noinline = false} {
+    %c = arith.constant dense<0.000000e+00> : tensor<64x64xf32>
+    %cst = arith.constant dense<64> : tensor<64x1xi32>
+    %a_ptr = tt.make_range {end = 64 : i32, start = 0 : i32} : tensor<64xi32>
+    %a_ptr_0 = tt.expand_dims %a_ptr {axis = 1 : i32} : tensor<64xi32> -> tensor<64x1xi32>
+    %a_ptr_1 = arith.muli %a_ptr_0, %cst : tensor<64x1xi32>
+    %a_ptr_2 = tt.splat %a_base : !tt.ptr<f16> -> tensor<64x1x!tt.ptr<f16>>
+    %a_ptr_3 = tt.addptr %a_ptr_2, %a_ptr_1 : tensor<64x1x!tt.ptr<f16>>, tensor<64x1xi32>
+    %a_ptr_4 = tt.expand_dims %a_ptr {axis = 0 : i32} : tensor<64xi32> -> tensor<1x64xi32>
+    %a_ptr_5 = tt.broadcast %a_ptr_3 : tensor<64x1x!tt.ptr<f16>> -> tensor<64x64x!tt.ptr<f16>>
+    %a_ptr_6 = tt.broadcast %a_ptr_4 : tensor<1x64xi32> -> tensor<64x64xi32>
+    %a_ptr_7 = tt.addptr %a_ptr_5, %a_ptr_6 : tensor<64x64x!tt.ptr<f16>>, tensor<64x64xi32>
+    %b_ptr = tt.splat %b_base : !tt.ptr<f16> -> tensor<64x1x!tt.ptr<f16>>
+    %b_ptr_8 = tt.addptr %b_ptr, %a_ptr_1 : tensor<64x1x!tt.ptr<f16>>, tensor<64x1xi32>
+    %b_ptr_9 = tt.broadcast %b_ptr_8 : tensor<64x1x!tt.ptr<f16>> -> tensor<64x64x!tt.ptr<f16>>
+    %b_ptr_10 = tt.addptr %b_ptr_9, %a_ptr_6 : tensor<64x64x!tt.ptr<f16>>, tensor<64x64xi32>
+    %a = tt.load %a_ptr_7 : tensor<64x64x!tt.ptr<f16>>
+    %b = tt.load %b_ptr_10 : tensor<64x64x!tt.ptr<f16>>
+    %c_11 = tt.dot %a, %b, %c, inputPrecision = tf32 : tensor<64x64xf16> * tensor<64x64xf16> -> tensor<64x64xf32>
+    %out_ptr = tt.splat %out : !tt.ptr<f16> -> tensor<64x1x!tt.ptr<f16>>
+    %out_ptr_12 = tt.addptr %out_ptr, %a_ptr_1 : tensor<64x1x!tt.ptr<f16>>, tensor<64x1xi32>
+    %out_ptr_13 = tt.broadcast %out_ptr_12 : tensor<64x1x!tt.ptr<f16>> -> tensor<64x64x!tt.ptr<f16>>
+    %out_ptr_14 = tt.addptr %out_ptr_13, %a_ptr_6 : tensor<64x64x!tt.ptr<f16>>, tensor<64x64xi32>
+    %0 = arith.truncf %c_11 : tensor<64x64xf32> to tensor<64x64xf16>
+    tt.store %out_ptr_14, %0 : tensor<64x64x!tt.ptr<f16>>
+    tt.return
+  }
+}

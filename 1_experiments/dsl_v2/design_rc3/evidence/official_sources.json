@@ -1,0 +1,133 @@
+{
+  "date": "2026-10-09",
+  "upstream_commit": "e50b186e8bd2d16ae3f564311ef868aa3bd45a2d",
+  "source_pages_are_moving": true,
+  "sources": [
+    {
+      "id": "S01",
+      "title": "官方方言索引",
+      "url": "https://triton-lang.org/main/dialects/dialects.html",
+      "use": "官方页面列出的十个方言；不是安装注册全集的独立证明。"
+    },
+    {
+      "id": "S02",
+      "title": "triton.language 公共导出",
+      "url": "https://github.com/triton-lang/triton/blob/e50b186e8bd2d16ae3f564311ef868aa3bd45a2d/python/triton/language/__init__.py",
+      "use": "本次读取固定提交的公共导出列表与入口类型处理。"
+    },
+    {
+      "id": "S03",
+      "title": "Gluon 公共导出",
+      "url": "https://github.com/triton-lang/triton/blob/e50b186e8bd2d16ae3f564311ef868aa3bd45a2d/python/triton/experimental/gluon/language/__init__.py",
+      "use": "本次读取固定提交；包括布局、共享存储、原子、区域及后端命名空间。"
+    },
+    {
+      "id": "S04",
+      "title": "NVIDIA Gluon 子模块",
+      "url": "https://github.com/triton-lang/triton/blob/e50b186e8bd2d16ae3f564311ef868aa3bd45a2d/python/triton/experimental/gluon/language/nvidia/__init__.py",
+      "use": "导出 ampere/hopper/blackwell/rubin；不表示每个硬件版本已实测。"
+    },
+    {
+      "id": "S05",
+      "title": "AMD Gluon 子模块",
+      "url": "https://github.com/triton-lang/triton/blob/e50b186e8bd2d16ae3f564311ef868aa3bd45a2d/python/triton/experimental/gluon/language/amd/__init__.py",
+      "use": "导出 CDNA、RDNA、gfx1250 等子模块；不表示设备可用或完整实现已认证。"
+    },
+    {
+      "id": "S06",
+      "title": "TritonOps",
+      "url": "https://triton-lang.org/main/dialects/TritonOps.html",
+      "use": "tt 的数据、区域、原子和descriptor契约。"
+    },
+    {
+      "id": "S07",
+      "title": "TritonGPUOps",
+      "url": "https://triton-lang.org/main/dialects/TritonGPUOps.html",
+      "use": "布局、共享内存、async、warp specialization与逐线程inline asm。"
+    },
+    {
+      "id": "S08",
+      "title": "TritonNvidiaGPUOps",
+      "url": "https://triton-lang.org/main/dialects/TritonNvidiaGPUOps.html",
+      "use": "NVIDIA特有矩阵、tensor memory及同步操作的目标面。"
+    },
+    {
+      "id": "S09",
+      "title": "TritonAMDGPUOps",
+      "url": "https://triton-lang.org/main/dialects/TritonAMDGPUOps.html",
+      "use": "AMD buffer/LDS、异步、TDM、MFMA与缩放转换的目标面。"
+    },
+    {
+      "id": "S10",
+      "title": "Hopper APIs",
+      "url": "https://triton-lang.org/main/gluon/api/nvidia.hopper.html",
+      "use": "cluster、mbarrier、TMA、warpgroup MMA及等待。"
+    },
+    {
+      "id": "S11",
+      "title": "Blackwell APIs",
+      "url": "https://triton-lang.org/main/gluon/api/nvidia.blackwell.html",
+      "use": "CLC、tensor memory、packed算术等。"
+    },
+    {
+      "id": "S12",
+      "title": "CDNA4 APIs",
+      "url": "https://triton-lang.org/main/gluon/api/amd.cdna4.html",
+      "use": "buffer、MFMA、块缩放和格式转换。"
+    },
+    {
+      "id": "S13",
+      "title": "elementwise inline asm",
+      "url": "https://triton-lang.org/main/python-api/generated/triton.language.inline_asm_elementwise.html",
+      "use": "pack、constraints、side effects与元素分组约束。"
+    },
+    {
+      "id": "S14",
+      "title": "cat",
+      "url": "https://triton-lang.org/main/python-api/generated/triton.language.cat.html",
+      "use": "can_reorder会改变可保证的元素对应，不能一律按固定concat解释。"
+    },
+    {
+      "id": "S15",
+      "title": "PTX ISA",
+      "url": "https://docs.nvidia.com/cuda/parallel-thread-execution/index.html",
+      "use": "误差可按ulp、绝对值、相对值或分段给出；特殊值、内存序及target qualifiers须逐条匹配。"
+    },
+    {
+      "id": "S16",
+      "title": "TritonInstrumentOps",
+      "url": "https://triton-lang.org/main/dialects/TritonInstrumentOps.html",
+      "use": "GSan/ConSan/FpSan等插桩相关操作；不能默认全是nop。"
+    },
+    {
+      "id": "S17",
+      "title": "ProtonGPUOps",
+      "url": "https://triton-lang.org/main/dialects/ProtonGPUOps.html",
+      "use": "计数器读取与日志写入等具有状态效应。"
+    },
+    {
+      "id": "S18",
+      "title": "NVGPUOps",
+      "url": "https://triton-lang.org/main/dialects/NVGPUOps.html",
+      "use": "acquire加载、低层矩阵指令与tensor memory地址。"
+    },
+    {
+      "id": "S19",
+      "title": "Gluon overview",
+      "url": "https://triton-lang.org/main/gluon/index.html",
+      "use": "官方将Gluon定位为直接暴露布局、共享内存和目标特征的低层模型。"
+    },
+    {
+      "id": "S20",
+      "title": "triton.language 文档",
+      "url": "https://triton-lang.org/main/python-api/triton.language.html",
+      "use": "高层tensor API、随机数、编译提示、调试与控制相关入口。"
+    },
+    {
+      "id": "S21",
+      "title": "GluonOps",
+      "url": "https://triton-lang.org/main/dialects/GluonOps.html",
+      "use": "Gluon导入层。"
+    }
+  ]
+}
