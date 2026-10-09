@@ -637,14 +637,19 @@
     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
     "tests/test_signatures_core.py::test_core_signature[arith.bitcast-positive]",
     "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[positive]",
-    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]"
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_cta_pair_mma_is_not_evaluated_as_one_cta[multicast]",
+    "tests/test_signatures_nvidia_scaled.py::test_cta_pair_mma_is_not_evaluated_as_one_cta[two_ctas]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp8_signature[positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_result_needs_the_barrier_wait"
    ],
    "boundary": [
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[boundary]",
     "tests/test_signatures_core.py::test_core_signature[arith.bitcast-boundary]",
     "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
-    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]"
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp8_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
@@ -652,6 +657,7 @@
     "tests/test_signatures_core.py::test_core_signature[arith.bitcast-premise_violation]",
     "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
     "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp8_signature[premise_violation]",
     "tests/test_general_rules.py::test_bitcast_round_trip_of_point_values_is_exact"
    ]
   },
@@ -677,7 +683,13 @@
    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]",
    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]",
-   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]"
+   "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_cta_pair_mma_is_not_evaluated_as_one_cta[multicast]",
+   "tests/test_signatures_nvidia_scaled.py::test_cta_pair_mma_is_not_evaluated_as_one_cta[two_ctas]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp8_signature[boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp8_signature[positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp8_signature[premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_result_needs_the_barrier_wait"
   ],
   "device_validation": [
    {
@@ -782,8 +794,9 @@
     "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
     "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
     "tests/test_signatures_nvidia.py::test_transposed_operand_signature[boundary]",
-    "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
-    "tests/test_signatures_structural.py::test_shape_ops_signature[boundary]"
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[premise_violation]",
@@ -803,8 +816,9 @@
     "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
     "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
     "tests/test_signatures_nvidia.py::test_transposed_operand_signature[premise_violation]",
-    "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
-    "tests/test_signatures_structural.py::test_shape_ops_signature[premise_violation]"
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -1595,19 +1609,34 @@
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[positive]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[positive]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e2m1]",
-    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]"
+    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp8_signature[positive]"
    ],
    "boundary": [
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[boundary]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e2m1]",
-    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e4m3]"
+    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e4m3]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp8_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[premise_violation]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
-    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]"
+    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp8_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -1622,7 +1651,22 @@
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e2m1]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
-   "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]"
+   "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp8_signature[boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp8_signature[positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp8_signature[premise_violation]"
   ],
   "device_validation": [
    {
@@ -1903,8 +1947,9 @@
     "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
     "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
     "tests/test_signatures_nvidia.py::test_transposed_operand_signature[boundary]",
-    "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
-    "tests/test_signatures_structural.py::test_shape_ops_signature[boundary]"
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[premise_violation]",
@@ -1924,8 +1969,9 @@
     "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
     "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
     "tests/test_signatures_nvidia.py::test_transposed_operand_signature[premise_violation]",
-    "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
-    "tests/test_signatures_structural.py::test_shape_ops_signature[premise_violation]"
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -2687,11 +2733,19 @@
    "boundary": [
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
     "tests/test_signatures_w1.py::test_program_ids_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
     "tests/test_signatures_sync.py::test_atomic_load_store_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]",
     "tests/test_signatures_w1.py::test_program_ids_signature[premise_violation]",
@@ -4393,18 +4447,30 @@
     "tests/test_signatures_amd.py::test_buffer_load_to_local_signature[positive]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[positive]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[positive]"
    ],
    "boundary": [
     "tests/test_signatures_amd.py::test_buffer_load_to_local_signature[boundary]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_buffer_load_to_local_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[premise_violation]"
    ]
   },
@@ -4419,6 +4485,18 @@
    "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[boundary]",
    "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[positive]",
    "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
    "tests/test_signatures_structural.py::test_shape_ops_signature[boundary]",
    "tests/test_signatures_structural.py::test_shape_ops_signature[positive]",
    "tests/test_signatures_structural.py::test_shape_ops_signature[premise_violation]"
@@ -5296,16 +5374,28 @@
    "positive": [
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[positive]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[positive]"
    ],
    "boundary": [
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[premise_violation]"
    ]
   },
@@ -5316,6 +5406,18 @@
    "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[boundary]",
    "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[positive]",
    "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
    "tests/test_signatures_structural.py::test_shape_ops_signature[boundary]",
    "tests/test_signatures_structural.py::test_shape_ops_signature[positive]",
    "tests/test_signatures_structural.py::test_shape_ops_signature[premise_violation]"
@@ -5661,6 +5763,10 @@
     "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
     "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[boundary]",
     "tests/test_signatures_gluon.py::test_shared_scatter_signature[boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
     "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
     "tests/test_signatures_sync.py::test_atomic_poll_signature[boundary]",
     "tests/test_signatures_w1.py::test_barrier_signature[boundary]",
@@ -5678,6 +5784,10 @@
     "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
     "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[premise_violation]",
     "tests/test_signatures_gluon.py::test_shared_scatter_signature[premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
     "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
     "tests/test_signatures_sync.py::test_atomic_poll_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_barrier_signature[premise_violation]",
@@ -5871,6 +5981,10 @@
     "tests/test_signatures_core.py::test_core_signature[arith.andi-positive]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
     "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
    ],
    "boundary": [
@@ -5879,7 +5993,11 @@
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_core.py::test_core_signature[arith.andi-boundary]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
-    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]"
+    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_buffer_store_mask_signature[premise_violation]",
@@ -5887,6 +6005,10 @@
     "tests/test_signatures_core.py::test_core_signature[arith.andi-premise_violation]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]"
    ]
   },
@@ -5911,6 +6033,18 @@
    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
    "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]",
    "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
   ],
@@ -6379,8 +6513,8 @@
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-boundary]",
-    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
-    "tests/test_signatures_sync.py::test_atomic_load_store_signature[boundary]"
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_buffer_load_mask_other_signature[premise_violation]",
@@ -6401,8 +6535,8 @@
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-premise_violation]",
-    "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[premise_violation]",
-    "tests/test_signatures_ptx_bits.py::test_multiple_outputs_signature[premise_violation]"
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -6829,19 +6963,31 @@
     "tests/test_signatures_amd.py::test_buffer_atomic_rmw_signature[positive]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[positive]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[positive]",
-    "tests/test_signatures_core.py::test_core_signature[arith.divsi-positive]"
+    "tests/test_signatures_core.py::test_core_signature[arith.divsi-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]"
    ],
    "boundary": [
     "tests/test_signatures_amd.py::test_buffer_atomic_rmw_signature[boundary]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[boundary]",
-    "tests/test_signatures_core.py::test_core_signature[arith.divsi-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.divsi-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_buffer_atomic_rmw_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[premise_violation]",
-    "tests/test_signatures_core.py::test_core_signature[arith.divsi-premise_violation]"
+    "tests/test_signatures_core.py::test_core_signature[arith.divsi-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -6859,7 +7005,19 @@
    "tests/test_signatures_amd.py::test_scheduling_hints_signature[premise_violation]",
    "tests/test_signatures_core.py::test_core_signature[arith.divsi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.divsi-positive]",
-   "tests/test_signatures_core.py::test_core_signature[arith.divsi-premise_violation]"
+   "tests/test_signatures_core.py::test_core_signature[arith.divsi-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]"
   ],
   "device_validation": [
    {
@@ -7108,19 +7266,31 @@
     "tests/test_signatures_amd.py::test_buffer_load_to_local_signature[positive]",
     "tests/test_signatures_amd.py::test_buffer_store_mask_signature[positive]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[positive]",
-    "tests/test_signatures_core.py::test_core_signature[arith.extsi-positive]"
+    "tests/test_signatures_core.py::test_core_signature[arith.extsi-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]"
    ],
    "boundary": [
     "tests/test_signatures_amd.py::test_buffer_load_to_local_signature[boundary]",
     "tests/test_signatures_amd.py::test_buffer_store_mask_signature[boundary]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
-    "tests/test_signatures_core.py::test_core_signature[arith.extsi-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.extsi-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_buffer_load_to_local_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_buffer_store_mask_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
-    "tests/test_signatures_core.py::test_core_signature[arith.extsi-premise_violation]"
+    "tests/test_signatures_core.py::test_core_signature[arith.extsi-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -7137,7 +7307,19 @@
    "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
    "tests/test_signatures_core.py::test_core_signature[arith.extsi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.extsi-positive]",
-   "tests/test_signatures_core.py::test_core_signature[arith.extsi-premise_violation]"
+   "tests/test_signatures_core.py::test_core_signature[arith.extsi-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]"
   ],
   "device_validation": [
    {
@@ -8540,8 +8722,8 @@
     "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
     "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
     "tests/test_signatures_nvidia.py::test_transposed_operand_signature[boundary]",
-    "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
-    "tests/test_signatures_w1.py::test_generic_combine_categories[boundary]"
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[premise_violation]",
@@ -8562,8 +8744,8 @@
     "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
     "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
     "tests/test_signatures_nvidia.py::test_transposed_operand_signature[premise_violation]",
-    "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
-    "tests/test_signatures_w1.py::test_multi_operand_scan_signature[premise_violation]"
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -9052,6 +9234,10 @@
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[positive]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[positive]",
     "tests/test_signatures_core.py::test_core_signature[arith.remsi-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
     "tests/test_signatures_sync.py::test_atomic_load_store_signature[positive]",
     "tests/test_signatures_w1.py::test_barrier_signature[positive]",
     "tests/test_signatures_w1.py::test_store_then_load_alias_signature[positive]"
@@ -9060,6 +9246,10 @@
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[boundary]",
     "tests/test_signatures_core.py::test_core_signature[arith.remsi-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
     "tests/test_signatures_sync.py::test_atomic_load_store_signature[boundary]",
     "tests/test_signatures_w1.py::test_barrier_signature[boundary]",
     "tests/test_signatures_w1.py::test_store_then_load_alias_signature[boundary]"
@@ -9068,6 +9258,10 @@
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[premise_violation]",
     "tests/test_signatures_core.py::test_core_signature[arith.remsi-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
     "tests/test_signatures_w1.py::test_barrier_signature[premise_violation]"
    ]
   },
@@ -9086,6 +9280,18 @@
    "tests/test_signatures_core.py::test_core_signature[arith.remsi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.remsi-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.remsi-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
    "tests/test_signatures_sync.py::test_atomic_load_store_signature[boundary]",
    "tests/test_signatures_sync.py::test_atomic_load_store_signature[positive]",
    "tests/test_signatures_w1.py::test_barrier_signature[boundary]",
@@ -9370,11 +9576,12 @@
     "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-positive]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
     "tests/test_signatures_w1.py::test_multi_operand_scan_signature[positive]",
     "tests/test_signatures_w1.py::test_poison_signature[positive]",
     "tests/test_welford_reduction.py::test_all_zero_weights_follow_the_actual_merge_tree",
-    "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance",
-    "tests/test_welford_reduction.py::test_merge_without_the_weight_factor_gets_an_order_specific_reference"
+    "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
    ],
    "boundary": [
     "tests/test_signatures_amd.py::test_buffer_load_mask_other_signature[boundary]",
@@ -9386,6 +9593,8 @@
     "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-boundary]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
     "tests/test_signatures_w1.py::test_multi_operand_scan_signature[boundary]",
     "tests/test_signatures_w1.py::test_poison_signature[boundary]"
    ],
@@ -9399,6 +9608,8 @@
     "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-premise_violation]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_poison_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_welford_categories[premise_violation]",
@@ -9438,6 +9649,12 @@
    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
    "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]",
    "tests/test_signatures_w1.py::test_multi_operand_scan_signature[boundary]",
    "tests/test_signatures_w1.py::test_multi_operand_scan_signature[positive]",
@@ -9983,16 +10200,22 @@
     "tests/test_reference_eval_ttir.py::test_undefined_integer_times_established_zero_is_determined",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[positive]",
     "tests/test_signatures_core.py::test_core_signature[arith.subi-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
     "tests/test_signatures_w1.py::test_unconditional_branch_signature[positive]"
    ],
    "boundary": [
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[boundary]",
     "tests/test_signatures_core.py::test_core_signature[arith.subi-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
     "tests/test_signatures_w1.py::test_unconditional_branch_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[premise_violation]",
     "tests/test_signatures_core.py::test_core_signature[arith.subi-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
     "tests/test_signatures_w1.py::test_unconditional_branch_signature[premise_violation]"
    ]
   },
@@ -10004,6 +10227,12 @@
    "tests/test_signatures_core.py::test_core_signature[arith.subi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.subi-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.subi-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
    "tests/test_signatures_w1.py::test_unconditional_branch_signature[boundary]",
    "tests/test_signatures_w1.py::test_unconditional_branch_signature[positive]",
    "tests/test_signatures_w1.py::test_unconditional_branch_signature[premise_violation]"
@@ -13837,6 +14066,10 @@
     "tests/test_signatures_amd.py::test_buffer_load_to_local_signature[positive]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[positive]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
     "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
     "tests/test_signatures_w1.py::test_nested_control_signature[positive]"
    ],
@@ -13844,6 +14077,10 @@
     "tests/test_signatures_amd.py::test_buffer_load_to_local_signature[boundary]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
     "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
     "tests/test_signatures_w1.py::test_nested_control_signature[boundary]"
    ],
@@ -13851,6 +14088,10 @@
     "tests/test_signatures_amd.py::test_buffer_load_to_local_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
     "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]"
    ]
@@ -13870,6 +14111,18 @@
    "tests/test_signatures_amd.py::test_scheduling_hints_signature[boundary]",
    "tests/test_signatures_amd.py::test_scheduling_hints_signature[positive]",
    "tests/test_signatures_amd.py::test_scheduling_hints_signature[premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
@@ -14524,6 +14777,10 @@
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[positive]",
     "tests/test_signatures_locks.py::test_a_lock_never_released_is_not_established_and_does_not_hang",
     "tests/test_signatures_locks.py::test_layer_norm_style_first_store_then_accumulate",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
     "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
     "tests/test_signatures_w1.py::test_nested_control_signature[positive]"
    ],
@@ -14531,6 +14788,10 @@
     "tests/test_signatures_amd.py::test_buffer_load_to_local_signature[boundary]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
     "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
     "tests/test_signatures_w1.py::test_nested_control_signature[boundary]"
    ],
@@ -14538,6 +14799,10 @@
     "tests/test_signatures_amd.py::test_buffer_load_to_local_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
     "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]"
    ]
@@ -14560,6 +14825,18 @@
    "tests/test_signatures_amd.py::test_scheduling_hints_signature[premise_violation]",
    "tests/test_signatures_locks.py::test_a_lock_never_released_is_not_established_and_does_not_hang",
    "tests/test_signatures_locks.py::test_layer_norm_style_first_store_then_accumulate",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-positive]",
+   "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]",
    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
