@@ -184,62 +184,7 @@ class HardwareOracle:
 # TTGIR reduction layouts and the contraction plan
 # ---------------------------------------------------------------------------
 
-_LIST = r"\[([\d,\s]*)\]"
-
-
-def parse_layouts(ttgir: str) -> dict:
-    layouts = {}
-    for m in re.finditer(r"^(#[\w]+)\s*=\s*#ttg\.blocked<\{([^}]*)\}>", ttgir, re.M):
-        body = m.group(2)
-        vals = {k: [int(v) for v in re.search(k + r"\s*=\s*" + _LIST, body).group(1).split(",") if v.strip()]
-                for k in ("sizePerThread", "threadsPerWarp", "warpsPerCTA", "order")}
-        layouts[m.group(1)] = {"kind": "blocked", **vals}
-    for m in re.finditer(r"^(#[\w]+)\s*=\s*#ttg\.slice<\{dim\s*=\s*(\d+)\s*:\s*i32,\s*parent\s*=\s*(#[\w]+)\}>", ttgir,
-                         re.M):
-        layouts[m.group(1)] = {"kind": "slice", "dim": int(m.group(2)), "parent": m.group(3)}
-    return layouts
-
-
-def _axis_params(layouts: dict, name: str, axis: int) -> dict:
-    """spt / tpw / wpc of the reduced axis (a slice layout reduces along its parent's remaining dims)."""
-
-    lay = layouts[name]
-    if lay["kind"] == "slice":
-        parent = lay["parent"]
-        dims = [d for d in range(len(layouts[parent]["sizePerThread"])) if d != lay["dim"]]
-        return _axis_params(layouts, parent, dims[axis])
-    return {"spt": lay["sizePerThread"][axis], "tpw": lay["threadsPerWarp"][axis], "wpc": lay["warpsPerCTA"][axis]}
-
-
-def reduce_layouts(module: TModule, ttgir: str) -> dict:
-    """node_id of each TTIR tt.reduce -> layout parameters of its reduced axis (matched in program order)."""
-
-    layouts = parse_layouts(ttgir)
-    found = []
-    for m in re.finditer(r'"tt\.reduce"\(([^)]*)\)\s*<\{axis = (\d+) : i32\}>', ttgir):
-        tail = ttgir[m.end():]
-        sig = re.search(r"\}\)\s*:\s*\(tensor<([\dx]+)x\w+,\s*(#[\w]+)>", tail)
-        shape = tuple(int(s) for s in sig.group(1).split("x") if s)
-        layout = sig.group(2)
-        # A reshape with allow_reorder keeps every value in its register: the combination order is
-        # the register order of the source layout.
-        src = m.group(1).strip()
-        while True:
-            rs = re.search(r"^\s*" + re.escape(src) + r"\s*=\s*tt\.reshape\s+(%[\w#]+)\s+allow_reorder[^:]*:\s*"
-                           r"tensor<([\dx]+)x\w+,\s*(#[\w]+)>", ttgir, re.M)
-            if rs is None or len(rs.group(2).split("x")) != len(shape):
-                break
-            src, layout = rs.group(1), rs.group(3)
-        found.append((int(m.group(2)), shape, layout))
-    reduces = [op for fn in module.funcs.values() for op in fn.walk() if op.name == "tt.reduce"]
-    if len(reduces) != len(found):
-        return {}
-    out = {}
-    for op, (axis, shape, layout) in zip(reduces, found):
-        if layout in layouts:
-            out[op.node_id] = {"axis": axis, "shape": shape, "layout": layout,
-                               **_axis_params(layouts, layout, axis)}
-    return out
+from .layouts import _axis_params, parse_layouts, reduce_layouts  # noqa: E402,F401  (moved; names kept)
 
 
 def contraction_plan(module: TModule) -> dict:
@@ -485,7 +430,7 @@ class GpuEmulator(KernelReferenceEvaluator):
     def __init__(self, module: TModule, ttgir: str, enable_fp_fusion: bool = True, exact_nodes=(),
                  oracle: Optional[HardwareOracle] = None, func_name: Optional[str] = None, ungrouped=(),
                  swapped=(), substitution: str = "mid", ptx: Optional[str] = None, sass: Optional[str] = None):
-        super().__init__(module, mode=NumericMode.ROUNDING_CHECK, func_name=func_name)
+        super().__init__(module, mode=NumericMode.ROUNDING_CHECK, func_name=func_name, ttgir=ttgir)
         if substitution not in SUBSTITUTIONS:
             raise ValueError(f"substitution must be one of {SUBSTITUTIONS}")
         self.exact_nodes = set(exact_nodes)
@@ -762,6 +707,8 @@ class GpuEmulator(KernelReferenceEvaluator):
         combiner = recognize_combiner(op)
         if combiner == "welford":  # float Welford depends on the merge tree: not order-free, not emulable here
             raise ProgramAbort(f"{op.node_id}: Welford merge order is not modelled by the emulator")
+        if combiner is None:  # the reference interprets the region in real arithmetic; that is not the device's bits
+            raise ProgramAbort(f"{op.node_id}: a generic combine region is not emulated bitwise")
         if combiner not in ("sum", "prod") or args[0].kind != "f":
             mode, self.mode = self.mode, NumericMode.NUMERICAL_DIFFERENCE  # max / min / arg: order-free
             try:

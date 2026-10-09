@@ -42,7 +42,9 @@ def test_versions_agree():
     tool = re.search(r'TOOL_VERSION = "([0-9.]+)"', (ROOT / "src/kernel_analyzer/check.py").read_text()).group(1)
     pkg = re.search(r'^version = "([0-9.a-z]+)"', (ROOT / "pyproject.toml").read_text(), re.M).group(1)
     assert CUR["versions"]["tool"]["value"] == tool
-    assert CUR["release"]["package_version"] == pkg
+    # a development branch declares its own unreleased package version; the release block keeps the frozen release
+    dev = CUR.get("development")
+    assert (dev["package_version"] if dev else CUR["release"]["package_version"]) == pkg
     assert pkg.startswith(tool + ".")
 
 

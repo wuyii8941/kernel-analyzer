@@ -122,6 +122,22 @@ class TV:
         return self.d
 
 
+def _lane_hull(t: TV) -> TV:
+    """The results the lanes of one warp hold after a butterfly (each lane may be the consumer): the hull of their
+    enclosures; not established where their status or integer value differ."""
+    st0 = t.st[..., 0]
+    same_st = np.all(t.st == st0[..., None], axis=-1)
+    cond = np.any(t.cond, axis=-1)
+    if t.kind == "f":
+        d = None if t.d is None else (np.min(t.d[0], axis=-1), np.max(t.d[1], axis=-1))
+        return TV("f", t.elem, np.min(t.lo, axis=-1), np.max(t.hi, axis=-1), None,
+                  np.where(same_st, st0, ST_NE).astype(np.int8), cond, t.reasons, d)
+    v0 = t.lo[..., 0]
+    same = same_st & np.all(t.lo == v0[..., None], axis=-1)
+    return TV(t.kind, t.elem, v0, None, None if t.base is None else t.base[..., 0],
+              np.where(same, st0, ST_NE).astype(np.int8), cond, t.reasons)
+
+
 def _merge_status(*vals: TV) -> np.ndarray:
     st = np.zeros(vals[0].shape, dtype=np.int8)
     for v in vals:
@@ -326,6 +342,7 @@ class ProgramState:
     pid_index: int
     grid: tuple
     memory: dict  # ident -> Buffer
+    epoch: int = 0  # barrier phase inside the program (gpu.barrier orders the threads of one program)
     # Control dependence: conditions (conditional flag, reasons) that decided the current path.
     ctrl: list = field(default_factory=list)
     sticky_cond: bool = False  # set by unstructured branches / loop exits, kept to the program end
@@ -420,14 +437,33 @@ class KernelReference:
 
 class KernelReferenceEvaluator:
     def __init__(self, module: TModule, mode: str = NumericMode.NUMERICAL_DIFFERENCE,
-                 func_name: Optional[str] = None, masked_fill_zero: bool = False):
+                 func_name: Optional[str] = None, masked_fill_zero: bool = False, ttgir: Optional[str] = None):
         """``masked_fill_zero``: treat masked-off lanes of loads without ``other`` as 0 instead of undefined.  TTIR
-        leaves them undefined; use only with a lowering checked to zero-fill them (see ``ptx_zero_fills``)."""
+        leaves them undefined; use only with a lowering checked to zero-fill them (see ``ptx_zero_fills``).
+        ``ttgir``: the captured TTGIR of the same compilation; its layouts give the combination order of reductions
+        whose combine region has no order-free fast path, and the threads of loads and stores (``layouts.py``)."""
         self.module = module
         self.func = module.entry(func_name)
         self.mode = mode
         self.masked_fill_zero = masked_fill_zero
+        self.ttgir = ttgir
+        self._layout_cache = None
         self._uses = self._collect_uses()
+
+    def _ttgir_layouts(self) -> tuple:
+        """(layouts, reduce node -> axis parameters, load/store node -> pointer layout, num_warps); empty without a
+        TTGIR."""
+        if self._layout_cache is None:
+            if not self.ttgir:
+                self._layout_cache = ({}, {}, {}, None)
+            else:
+                import re
+
+                from . import layouts as lay
+                m = re.search(r'"ttg\.num-warps"\s*=\s*(\d+)', self.ttgir)
+                self._layout_cache = (lay.parse_layouts(self.ttgir), lay.reduce_layouts(self.module, self.ttgir),
+                                      lay.access_layouts(self.module, self.ttgir), int(m.group(1)) if m else None)
+        return self._layout_cache
 
     @classmethod
     def from_text(cls, ttir: str, **kwargs) -> "KernelReferenceEvaluator":
@@ -547,6 +583,14 @@ class KernelReferenceEvaluator:
         self._loaded_any = set()
         self._stored = set()
         self._poisoned = set()
+        # execution validity (DSL v2 rc3 02 6.3 / 04 W4): who read each address in this launch, and which store,
+        # lane position and barrier phase wrote it last
+        self._readers = {}  # ident -> int64 array: -1 not read, >= 0 the one program that read it, -3 several
+        self._reader_programs = collections.defaultdict(set)
+        self._race_programs = set()
+        self._wstore = {}  # ident -> (store node index, lane position in the store, barrier epoch) per element
+        self._store_nodes = []
+        self._thread_cache = {}
         for buf in memory.values():
             buf.writer[:] = -1  # kernel boundaries order all earlier writes
         aborted = {}
@@ -562,6 +606,18 @@ class KernelReferenceEvaluator:
                 for buf in memory.values():
                     hit = buf.writer == index
                     buf.st = np.where(hit, ST_NE, buf.st).astype(np.int8)
+        if self._race_programs:
+            # a program read an address that another program of the same launch writes: what it read depends on
+            # the schedule, so nothing it wrote keeps an established reference value
+            hits = 0
+            for buf in memory.values():
+                hit = np.isin(buf.writer, sorted(self._race_programs))
+                if hit.any():
+                    buf.st = np.where(hit, ST_NE, buf.st).astype(np.int8)
+                    hits += int(hit.sum())
+            reasons["not_established:execution race: an address one program read is written by another program "
+                    "of the same launch"] += hits
+            self._rules["execution.cross_program_read_write_race_programs"] += len(self._race_programs)
         for ident in self._poisoned:
             tb = memory.get(ident)
             if tb is not None:
@@ -804,6 +860,99 @@ class KernelReferenceEvaluator:
     def _op_nop(self, op, args, env, state):
         return None
 
+    def _op_barrier(self, op, args, env, state):
+        state.epoch += 1
+        return None
+
+    # ---- execution validity: conflicting accesses ----------------------------------
+
+    def _track_read(self, buf, idx, state):
+        r = self._readers.get(buf.ident)
+        if r is None:
+            r = self._readers[buf.ident] = np.full(buf.writer.shape, -1, dtype=np.int64)
+        cur = r[idx]
+        r[idx] = np.where((cur == -1) | (cur == state.pid_index), state.pid_index, -3)
+        self._reader_programs[buf.ident].add(state.pid_index)
+
+    def _check_read_then_write(self, buf, idx, state):
+        """A write (store or atomic) to addresses another program of this launch already read: that program's reads
+        depend on the schedule (no happens-before between programs of one launch)."""
+        r = self._readers.get(buf.ident)
+        if r is None or not idx.size:
+            return
+        others = r[idx]
+        clash = (others != -1) & (others != state.pid_index)
+        if not clash.any():
+            return
+        self._race_programs.update(int(p) for p in np.unique(others[clash & (others >= 0)]))
+        if (others[clash] == -3).any():
+            self._race_programs.update(p for p in self._reader_programs[buf.ident] if p != state.pid_index)
+        self._rules["execution.cross_program_read_then_write_lanes"] += int(clash.sum())
+
+    def _record_store(self, op, buf, idx, positions, state):
+        ws = self._wstore.get(buf.ident)
+        if ws is None:
+            n = buf.writer.shape[0]
+            ws = self._wstore[buf.ident] = tuple(np.full(n, -1, dtype=np.int64) for _ in range(3))
+        if op.node_id not in self._store_nodes:
+            self._store_nodes.append(op.node_id)
+        ws[0][idx] = self._store_nodes.index(op.node_id)
+        ws[1][idx] = positions
+        ws[2][idx] = state.epoch
+
+    def _threads(self, info):
+        """Threads holding each element of an access (layouts.element_threads), cached; None if unknown."""
+        layouts, _, _, nw = self._ttgir_layouts()
+        if info is None or nw is None:
+            return None
+        key = (info["layout"], info["shape"])
+        if key not in self._thread_cache:
+            from .layouts import element_threads
+            self._thread_cache[key] = element_threads(layouts, info["layout"], tuple(info["shape"]), nw)
+        return self._thread_cache[key]
+
+    def _same_program_write_read(self, op, buf, idx, safe, state):
+        """Lanes of a load that read a value this program stored in the same barrier phase.  Same thread (the load
+        and the store hold the element in the same single thread): ordered, allowed.  Another thread: an execution
+        race (no happens-before without a barrier).  Thread mapping unknown: execution validity not established.
+        A replicated stored element is written by its lowest thread id (Triton 3.6.0 redundant-thread predicate)."""
+        ws = self._wstore.get(buf.ident)
+        if ws is None:
+            return None, ()
+        flat = np.asarray(safe).reshape(-1)
+        lanes = np.flatnonzero(flat)
+        addr = np.asarray(idx).reshape(-1)[lanes]
+        own = (buf.writer[addr] == state.pid_index) & (ws[2][addr] == state.epoch) & (ws[0][addr] >= 0)
+        if not own.any():
+            return None, ()
+        access = self._ttgir_layouts()[2]
+        th_load = self._threads(access.get(op.node_id))
+        verdict = np.zeros(lanes.size, dtype=np.int8)  # 1 same thread, 2 another thread, 3 unknown
+        for node in np.unique(ws[0][addr[own]]):
+            sel = own & (ws[0][addr] == node)
+            th_store = self._threads(access.get(self._store_nodes[int(node)]))
+            if th_store is None or th_load is None:
+                verdict[sel] = 3
+                continue
+            writer = th_store[ws[1][addr[sel]]].min(axis=1)
+            readers = th_load[lanes[sel]]
+            verdict[sel] = np.where(np.all(readers == writer[:, None], axis=1), 1, 2)
+        self._rules["execution.same_program_write_read_same_thread_lanes"] += int((verdict == 1).sum())
+        why = []
+        if (verdict == 2).any():
+            self._rules["execution.intra_program_cross_thread_race_lanes"] += int((verdict == 2).sum())
+            why.append(f"not_established:execution race: read by another thread of the same program after a store "
+                       f"without a barrier@{op.node_id}")
+        if (verdict == 3).any():
+            self._rules["execution.same_program_write_read_unknown_threads_lanes"] += int((verdict == 3).sum())
+            why.append(f"not_established:execution validity: same-program store then load without a barrier, thread "
+                       f"mapping not available@{op.node_id}")
+        if not why:
+            return None, ()
+        bad = np.zeros(flat.size, dtype=bool)
+        bad[lanes[verdict >= 2]] = True
+        return bad.reshape(np.asarray(safe).shape), why
+
     def _op_assert(self, op, args, env, state):
         cond = args[0]
         if (cond.lo == 0).any() and (cond.st == ST_OK).any():
@@ -893,6 +1042,12 @@ class KernelReferenceEvaluator:
                 self._rules["memory.cross_program_race_lanes"] += int(race.sum())
                 st = np.where(race, ST_NE, st)
                 reasons.add(f"not_established:cross-program race on load@{op.node_id}")
+            if not pinned and safe.any():
+                self._track_read(buf, idx[safe], state)
+                bad, why = self._same_program_write_read(op, buf, idx, safe, state)
+                if bad is not None:
+                    st = np.where(bad, ST_NE, st)
+                    reasons.update(why)
             oob = active & ~in_range & (ptr.st == ST_OK)
             if oob.any():
                 st = np.where(oob, ST_NE, st)
@@ -1006,6 +1161,7 @@ class KernelReferenceEvaluator:
                     dup = np.isin(idx, list(bad_addr))
                     self._reasons[f"conflicting lanes in one store at {op.node_id}"] += 1
             st_w = np.where(dup, ST_NE, st_w)
+            self._check_read_then_write(buf, idx, state)
             other_writer = (buf.writer[idx] != -1) & (buf.writer[idx] != state.pid_index)
             if other_writer.any():
                 old_differs = (buf.lo[idx] != lo_w) | (buf.st[idx] != st_w)
@@ -1029,6 +1185,7 @@ class KernelReferenceEvaluator:
             buf.cond[idx] = cond_w
             buf.writer[idx] = state.pid_index
             buf.written[idx] = True
+            self._record_store(op, buf, idx, np.flatnonzero(np.asarray(sel).reshape(-1)), state)
             self._stored.add(buf.ident)
         for r in value.reasons:
             self._reasons[r] += 1
@@ -1055,6 +1212,7 @@ class KernelReferenceEvaluator:
                   frozenset({f"not_established:atomic return value depends on an undeclared order@{op.node_id}"}))
         if idx.size == 0:
             return olds if op.results else None
+        self._check_read_then_write(buf, idx, state)
         plain = (buf.writer[idx] >= 0) & (buf.writer[idx] != state.pid_index)
         contrib_lo = np.broadcast_to(value.lo, shape)[active]
         contrib_hi = np.broadcast_to(value.hi, shape)[active] if value.kind == "f" else None
@@ -1228,12 +1386,19 @@ class KernelReferenceEvaluator:
     def _op_reduce(self, op, args, env, state):
         axis = int(op.attrs["axis"].split(":")[0])
         combiner = recognize_combiner(op)
-        if combiner is None:
-            raise ProgramAbort(f"{op.node_id}: unrecognized reduction combiner")
+        if combiner is None:  # any combine region: interpret it along the lowering's combination order
+            return self._tree_reduce(op, args, axis, env, state, "no order-free fast path matches the region")
         if combiner in ("argmax", "argmin"):
             return self._arg_reduce(op, args, axis, combiner)
         if combiner == "welford":
-            return self._welford_reduce(op, args, axis, env)
+            out = self._welford_reduce(op, args, axis, env)
+            # the closed form (Phi certificate) is the fast path; rows it leaves open because the result depends on
+            # the merge tree (zero weights) are defined by the actual tree when the TTGIR gives it
+            open_rows = any(("depends on the merge tree" in r or "unguarded Welford ratio" in r)
+                            for r in out[0].reasons | out[1].reasons)
+            if open_rows and op.node_id in self._ttgir_layouts()[1]:
+                return self._tree_reduce(op, args, axis, env, state, "Welford closed form depends on the merge tree")
+            return out
         (x,) = args
         st_red = np.max(np.where(x.st >= ST_UNDEF, x.st, 0), axis=axis).astype(np.int8)
         cond = np.any(x.cond, axis=axis)
@@ -1323,6 +1488,65 @@ class KernelReferenceEvaluator:
             raise ProgramAbort(f"{op.node_id}: integer combiner {combiner}")
         v = fn(vals, axis=axis)
         return TV("i", x.elem, _wrap(v, width), None, None, st_red, cond, reasons)
+
+    def _tree_reduce(self, op, args, axis, env, state, why):
+        """A reduction with an arbitrary combine region, interpreted step by step along the combination order of the
+        locked lowering (DSL v2 rc3 02 6.2: with a trusted order the target is order-specific).  Order: sequential
+        within a thread in register order, butterfly over the lanes along the axis, then over the warps (layout from
+        the captured TTGIR; the same model the bitwise emulator checks against the device).  A warp-synchronous
+        result (one warp along the axis) is held by every lane: its enclosure is the hull over the lanes."""
+
+        if self.mode == NumericMode.ROUNDING_CHECK:
+            raise ProgramAbort(f"{op.node_id}: combine region order is not modelled in rounding-check mode")
+        lay = self._ttgir_layouts()[1].get(op.node_id)
+        if lay is None:
+            raise ProgramAbort(f"{op.node_id}: unrecognized reduction combiner ({why}) and no trusted order: the reduce "
+                               "layout is not available from the TTGIR")
+        shape = args[0].shape
+        n = shape[axis]
+        spt = min(lay["spt"], n)
+        tpw = min(lay["tpw"], max(1, n // spt))
+        wpc = min(lay["wpc"], max(1, n // (spt * tpw)))
+        tile = spt * tpw * wpc
+        if n % tile:
+            raise ProgramAbort(f"{op.node_id}: reduce layout does not tile the reduced axis ({n} vs {tile})")
+        reps = n // tile
+        region = op.regions[0]
+        full = [x.map(lambda a, s=x.shape: np.moveaxis(np.broadcast_to(np.asarray(a), s), axis, -1)) for x in args]
+        idx = (np.arange(reps)[:, None, None, None] * tile + np.arange(wpc)[None, :, None, None] * (spt * tpw)
+               + np.arange(tpw)[None, None, :, None] * spt + np.arange(spt)[None, None, None, :])
+        order = [idx[r, :, :, j] for r in range(reps) for j in range(spt)]
+
+        def pick(t, pos):
+            return t.map(lambda a: a[..., pos])
+
+        def combine(a, b):
+            _, out = self._run_region(region, env, state, list(a) + list(b))
+            return out
+
+        acc = [pick(t, order[0]) for t in full]          # [..., warp, lane]
+        for pos in order[1:]:
+            acc = combine(acc, [pick(t, pos) for t in full])
+        lanes = np.arange(tpw)
+        stride = tpw // 2
+        while stride >= 1:
+            acc = combine(acc, [pick(t, lanes ^ stride) for t in acc])
+            stride //= 2
+        if wpc > 1:
+            part = [t.map(lambda a: a[..., 0]) for t in acc]   # lane 0 of each warp writes the warp partial
+            warps = np.arange(wpc)
+            stride = wpc // 2
+            while stride >= 1:
+                part = combine(part, [pick(t, warps ^ stride) for t in part])
+                stride //= 2
+            res = [t.map(lambda a: a[..., 0]) for t in part]   # broadcast through shared memory
+        else:
+            res = [_lane_hull(t.map(lambda a: a[..., 0, :])) for t in acc]
+        note = (f"assumed:combine order = Triton 3.6.0 reduce lowering tree from the TTGIR layout (spt={spt}, "
+                f"tpw={tpw}, wpc={wpc}; model checked bit-exactly for float sums)@{op.node_id}")
+        self._rules["reduce.generic_region_lowering_order"] += int(np.prod(res[0].shape)) if res[0].shape else 1
+        res = [r.with_reason(note) for r in res]
+        return res if len(res) > 1 else res[0]
 
     def _welford_reduce(self, op, args, axis, env):
         """Reduction with the Welford merge of (mean, M2, weight) triples (``ttir_mapping.match_welford``).
@@ -2444,7 +2668,8 @@ def evaluate_sequence(launches: list, mode: str = NumericMode.NUMERICAL_DIFFEREN
             if not (same_window and buf.after_raw is not None and np.array_equal(buf.after_raw, before)):
                 external.append({"launch": position, "buffer": arg.name, "storage": arg.storage_ptr})
                 del memory[arg.storage_ptr]
-        evaluator = KernelReferenceEvaluator(module, mode=mode, masked_fill_zero=masked_fill_zero)
+        evaluator = KernelReferenceEvaluator(module, mode=mode, masked_fill_zero=masked_fill_zero,
+                                             ttgir=launch.asm.get("ttgir"))
         programs = programs_for(launch) if programs_for is not None else None
         results.append(evaluator.evaluate(launch, programs=programs, pin_loads=pin_loads, memory=memory))
     return SequenceReference(results, external, memory)

@@ -200,7 +200,7 @@ MAPPING: dict[str, Rule] = {
     "cf.cond_br": S("A", "cond_br"),
     "cf.switch": R("A", "cf.switch is not supported in this version"),
     "ub.poison": S("A", "poison"),
-    "gpu.barrier": S("H", "nop"),
+    "gpu.barrier": S("H", "barrier"),  # orders the threads of one program (block): starts a new access epoch
 }
 for _name in _ELEMENTARY:
     MAPPING[f"math.{_name}"] = S("D", _name)

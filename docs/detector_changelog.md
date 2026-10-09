@@ -1,5 +1,24 @@
 # 检测器 / 工具版本变更记录
 
+## 4.0（开发中，dsl-v2 分支，未发布、未冻结）——参照 DSL v2 rc3 正式版的第一个增量
+
+依据 `reference_dsl_v2_rc3_official_20261009.zip`（SHA-256 8050903f…6faf）。general-v3.1 与它下面的结构验收 v1.1 结果不动；
+v1.1 的计分只绑定运行 r20261008T2030。
+
+- **通用 combine 区域（rc3 02 §6.2，04 W2）**：没有快速路径的 `tt.reduce` 不再以「unrecognized reduction combiner」拒绝。
+  它沿锁定 lowering 的合并次序逐步解释区域：次序取自捕获的 TTGIR 布局，线程内按寄存器次序、lane 间 butterfly、warp 间 butterfly，
+  一个 warp 内同步的结果取各 lane 包围的并。目标是「顺序特定」的。前提交审阅方：次序模型（逐位模拟器在浮点求和上与设备逐位一致；
+  combine 内的操作数次序按 lowering 源码）。没有 TTGIR 布局时记未建立。Welford 闭式（Φ 证书）保留为快速路径；闭式因零权重而依赖
+  合并树的行，改按实际的树求值。规则改变：v3.1 的两条「拒绝」测试改为核对顺序特定参照，并在测试里独立实现精确有理数的归约树。
+- **执行有效性（rc3 02 §6.3、§8.7，04 W4）**：
+  - 同一次启动中，一个 program 读的地址被另一个 program 写，无论求值先后都记执行竞争；v3.1 只抓到「读到已写值」的一半。
+  - 同一 program 先 store、后 load 同一元素，中间没有屏障：两次访问由同一个线程持有（TTGIR 布局）才算有序；被别的线程读到是执行竞争；
+    线程映射不可得时执行有效性未建立，不宣称竞争。
+  - 被复制的元素由最小线程号写入，这一点在 PTX 上可见：标量 store 的谓词只放行线程 0，load 没有谓词，中间没有 bar.sync。
+  - `gpu.barrier` 开始新的阶段（原来是空操作）。
+  - 新测试只在 CPU 上求值编译产物（`triton.compile`，不启动），有竞争的 kernel 从不运行。
+- 注册表写到 `results/dsl_v2/rule_registry.json`（`scripts/dsl_v2/build_rule_registry.py`）；`results/general/` 下的 v3.1 注册表冻结不改。
+
 ## 3.1（2026-10-08，标签 `general-v3.1`）——审计修正（替代 general-v3.0 作为第 5 项的冻结版本）
 
 冻结：提交 d6e177e，src 树 `cd21ef56cf46eb3cff2c00c50b8918b30a604d26`。

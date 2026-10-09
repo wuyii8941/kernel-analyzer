@@ -4,7 +4,13 @@ Containment argument (also in results/general/rule_registry.json): for weights w
 the pairwise Welford merge equals the closed form mean = sum w m / W, M2 = sum s + sum w (m - mean)^2, weight = W; the
 evaluator encloses the closed form, so the tree Triton chooses does not matter.  Counterexample: a merge that drops a
 factor is not Welford and must be rejected; negative control: a three-value region of independent sums is not
-matched; premise check: possibly negative weights -> not established."""
+matched; premise check: possibly negative weights -> not established.
+
+DSL v2 (rc3 02 6.2): a combine region without an order-free fast path is no longer rejected.  It is interpreted step by
+step along the lowering's combination order read from the TTGIR, and the target is order-specific.  The tests below
+that used to expect "unrecognized reduction combiner" now check that order-specific reference against an exact
+rational fold written independently here (64 elements, 4 warps: one element per thread, a butterfly over the 32 lanes
+of each of 2 warps, then over the 2 warps)."""
 from __future__ import annotations
 
 import random
@@ -95,7 +101,7 @@ def _make(combine):
 _KERNELS = {"welford": _make(_welford_combine), "broken": _make(_broken_combine), "three_sums": _make(_three_sums)}
 
 
-def _run(kind, weights):
+def _run(kind, weights, keep=None):
     kern = _KERNELS[kind]
 
     class Case(check.Case):
@@ -110,7 +116,39 @@ def _run(kind, weights):
             kern[(1,)](inp["x"], inp["w"], out, N=64)
             return {"out": out}
 
-    return check.run(Case(), dev=[0], conf=[1, 2])
+    return check.run(Case(), dev=[0], conf=[1, 2], keep=keep)
+
+
+def _inputs(seed, weights):
+    g = torch.Generator().manual_seed(seed)
+    x = torch.randn(64, generator=g).double().numpy()
+    return [F(float(v)) for v in x], [F(float(np.float32(w))) for w in weights(seed)]
+
+
+def _tree_fold(combine, leaves):
+    """The documented lowering order for 64 elements with 4 warps (tpw = 32, wpc = 2), in exact arithmetic."""
+    lanes = [[leaves[w * 32 + l] for l in range(32)] for w in range(2)]
+    for w in range(2):
+        stride = 16
+        while stride >= 1:
+            lanes[w] = [combine(lanes[w][l], lanes[w][l ^ stride]) for l in range(32)]
+            stride //= 2
+    part = [lanes[0][0], lanes[1][0]]
+    return combine(part[0], part[1])
+
+
+def _exact_merge_broken(a, b):
+    (m1, s1, w1), (m2, s2, w2) = a, b
+    nw = w1 + w2
+    r = F(0) if nw == 0 else w2 / nw
+    d = m2 - m1
+    return (m1 + d * r, s1 + s2 + d * d * r, nw)
+
+
+def _encloses(keep_rows, seed_value):
+    for r in keep_rows:
+        for i, v in enumerate(seed_value(r["seed"])):
+            assert F(float(r["r_lo"][i])) <= v <= F(float(r["r_hi"][i])), (r["seed"], i)
 
 
 @pytestmark_cuda
@@ -122,18 +160,31 @@ def test_handwritten_welford_merge_has_a_complete_reference():
 
 
 @pytestmark_cuda
-def test_merge_without_the_weight_factor_is_rejected():
-    rep = _run("broken", lambda s: [1.0] * 64)
-    assert rep["ttir_coverage_complete"] == [False] or rep.get("outputs_whose_writing_programs_aborted")
-    aborted = rep.get("outputs_whose_writing_programs_aborted") or {}
-    assert any("unrecognized reduction combiner" in r for v in aborted.values() for r in v)
+def test_merge_without_the_weight_factor_gets_an_order_specific_reference():
+    keep = {}
+    w = lambda s: [1.0] * 64  # noqa: E731
+    rep = _run("broken", w, keep)
+    o = rep["outputs"]["out"]
+    assert o["reference_classes"]["finite_complete_fraction"] == 1.0
+    assert any("tpw=32, wpc=2" in k for k in (o.get("not_established_reasons_seed0") or {}))
+
+    def exact(seed):
+        x, ww = _inputs(seed, w)
+        return _tree_fold(_exact_merge_broken, [(x[i], F(0), ww[i]) for i in range(64)])
+    _encloses(keep["out"], exact)
 
 
 @pytestmark_cuda
-def test_three_independent_sums_are_not_taken_for_welford():
-    rep = _run("three_sums", lambda s: [1.0] * 64)
-    aborted = rep.get("outputs_whose_writing_programs_aborted") or {}
-    assert any("unrecognized reduction combiner" in r for v in aborted.values() for r in v)
+def test_three_independent_sums_get_a_complete_reference():
+    keep = {}
+    w = lambda s: [1.0] * 64  # noqa: E731
+    rep = _run("three_sums", w, keep)
+    assert rep["outputs"]["out"]["reference_classes"]["finite_complete_fraction"] == 1.0
+
+    def exact(seed):
+        x, ww = _inputs(seed, w)
+        return (sum(x), F(0), sum(ww))
+    _encloses(keep["out"], exact)
 
 
 @pytestmark_cuda
@@ -189,15 +240,25 @@ _KERNELS["unguarded"] = _make(_unguarded_combine)
 
 @pytestmark_cuda
 def test_unguarded_ratio_with_zero_weights_is_not_established():
+    # in this tree the 32 zero weights all sit in warp 0, so the lane butterfly divides 0 by 0: mean and M2 have no
+    # real value (the closed form cannot decide it; the actual tree does), the total weight does
     rep = _run("unguarded", lambda s: [0.0] * 32 + [1.0] * 32)
     o = rep["outputs"]["out"]
-    assert o["reference_classes"]["finite_complete_fraction"] < 1.0
-    assert any("unguarded Welford ratio" in k for k in (o.get("not_established_reasons_seed0") or {}))
+    assert abs(o["reference_classes"]["finite_complete_fraction"] - 1 / 3) < 1e-9
+    assert any("domain of div" in k for k in (o.get("not_established_reasons_seed0") or {}))
 
 
 @pytestmark_cuda
-def test_all_zero_weights_leave_the_mean_open_and_give_m2_as_the_sum_of_s():
-    rep = _run("welford", lambda s: [0.0] * 64)
+def test_all_zero_weights_follow_the_actual_merge_tree():
+    # the closed form leaves the mean open (it depends on the merge tree); the actual tree keeps the left operand at
+    # every merge (r = 0), so the mean is the first element; M2 = sum of s = 0 and W = 0
+    keep = {}
+    w = lambda s: [0.0] * 64  # noqa: E731
+    rep = _run("welford", w, keep)
     o = rep["outputs"]["out"]
-    assert abs(o["reference_classes"]["finite_complete_fraction"] - 2 / 3) < 1e-9   # mean open; M2 and W established
-    assert any("zero total weight" in k for k in (o.get("not_established_reasons_seed0") or {}))
+    assert o["reference_classes"]["finite_complete_fraction"] == 1.0
+
+    def exact(seed):
+        x, ww = _inputs(seed, w)
+        return _tree_fold(merge, [(x[i], F(0), ww[i]) for i in range(64)])
+    _encloses(keep["out"], exact)

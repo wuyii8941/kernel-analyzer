@@ -4,7 +4,9 @@ One entry per key (operation, attributes, types, sub-region): status, coverage c
 containment argument, a counterexample test and a negative control (``tests/<file>.py::<function>``), or the reason of
 a rejection.  Built from the version-locked mapping (``ttir_mapping.MAPPING``, the libdevice and inline-asm tables,
 the registered combiners); ``tests/test_rule_registry.py`` checks that every operation of the locked build has an
-entry, every referenced test exists, and the committed ``results/general/rule_registry.json`` is current.
+entry, every referenced test exists, and the committed registry of this version (``REGISTRY_OUT``) is current.
+DSL v2 writes ``results/dsl_v2/rule_registry.json``; ``results/general/rule_registry.json`` stays the frozen record of
+general-v3.1.
 
 Status values: SUPPORTED; DECLARED_PREMISE (supported under a premise the code does not check -- listed for the
 reviewer); NOT_ESTABLISHED (recognized, result reported as not established); REJECTED (semantics missing).
@@ -24,6 +26,8 @@ T_GU = "tests/test_reference_eval_guards.py"
 T_WF = "tests/test_welford_reduction.py"
 T_GR = "tests/test_general_rules.py"
 T_UP = "tests/test_upstream_sources.py"
+T_EV = "tests/test_execution_validity.py"
+REGISTRY_OUT = "results/dsl_v2/rule_registry.json"
 
 CATEGORY = {
     "A": ("Integer, boolean, address and layout operations are exact in two's-complement width; control flow follows "
@@ -44,9 +48,10 @@ CATEGORY = {
           f"{T_CE}::test_sin_enclosure_includes_an_interior_maximum",
           f"{T_CE}::test_log1p_domain_is_open_at_minus_one"),
     "E": ("Reductions, scans and dot products: sums and dot products by SumK / DotK with the Ogita-Rump-Oishi bound "
-          "(tool 3.0); only registered combiners (sub-entries).",
+          "(tool 3.0); registered order-free combiners as fast paths, any other combine region interpreted along the "
+          "lowering's combination order (sub-entries).",
           f"{T_CE}::test_exp_then_sum_keeps_a_nonzero_enclosing_width",
-          f"{T_WF}::test_three_independent_sums_are_not_taken_for_welford"),
+          f"{T_WF}::test_three_independent_sums_get_a_complete_reference"),
     "F": ("Conversions: in numerical-difference mode a floating conversion is the identity on the reals (its rounding "
           "belongs to e_num); integer <-> float conversions are exact or enclose the lost units.",
           f"{T_TT}::test_large_integer_to_float_keeps_the_lost_unit_inside_the_interval",
@@ -57,9 +62,13 @@ CATEGORY = {
           f"{T_TT}::test_copysign_and_signbit_read_the_sign_of_zero"),
     "H": ("Memory, atomics, program ids: a load reads the reference value of the last store (composed across "
           "launches and aliases); races and stores through addresses that are not established invalidate the "
-          "target; values made by non-Triton ops inside the capture enter as exact inputs and mark the output mixed.",
-          f"{T_CE}::test_store_then_load_keeps_the_reference_value",
-          f"{T_TT}::test_stores_from_several_instances_to_one_address_are_a_race_unless_equal"),
+          "target; values made by non-Triton ops inside the capture enter as exact inputs and mark the output mixed.  "
+          "Execution validity (DSL v2): an address one program reads and another program of the launch writes is an "
+          "execution race in either order; a value stored and loaded back in one program without a barrier is ordered "
+          "only when the same single thread holds it in both accesses (TTGIR layouts), an execution race when another "
+          "thread reads it, not established when the thread mapping is unknown; gpu.barrier starts a new phase.",
+          f"{T_EV}::test_scalar_roundtrip_without_barrier_is_an_execution_race",
+          f"{T_EV}::test_tensor_roundtrip_in_one_layout_is_ordered"),
     "I": ("Calls are evaluated in place; extern libdevice symbols and inline assembly only by registered "
           "declarations (sub-entries); anything else is rejected.",
           f"{T_CE}::test_rounding_suffix_does_not_change_numerical_difference_reference",
@@ -107,12 +116,21 @@ def build() -> dict:
         "triples only add s); W = 0 (all input weights exactly 0) -> mean not established, M2 = sum s; possibly "
         "negative weights -> not established; unguarded ratio r = w_b / W with two weights that may be 0 -> 0 / 0 in "
         "some merge tree -> not established; rounding-check mode and the bit-exact emulator reject it (float Welford "
-        "depends on the merge tree).  Matched on dataflow, never on names.",
-        f"{T_WF}::test_merge_without_the_weight_factor_is_rejected", f"{T_WF}::test_possibly_negative_weights_are_not_established",
+        "depends on the merge tree).  Matched on dataflow, never on names; a fast path (Phi certificate): rows the "
+        "closed form leaves open because they depend on the merge tree are evaluated along the actual tree when the "
+        "TTGIR gives it (generic combine region entry).",
+        f"{T_WF}::test_all_zero_weights_follow_the_actual_merge_tree", f"{T_WF}::test_possibly_negative_weights_are_not_established",
         subregion="welford(mean, M2, weight)"))
-    entries.append(_entry("tt.reduce", "REJECTED", "E", reason="unregistered combine region: reduction tree not "
-                          "declared, semantics not guessed", ce=f"{T_WF}::test_three_independent_sums_are_not_taken_for_welford",
-                          subregion="other"))
+    entries.append(_entry(
+        "tt.reduce", "DECLARED_PREMISE", "E", "generic_region_lowering_order",
+        "Any other combine region is interpreted step by step with interval semantics along the combination order of "
+        "the locked lowering, read from the captured TTGIR layout (sequential within a thread in register order, "
+        "butterfly over lanes, then over warps; a warp-synchronous result is the hull over its lanes).  The target is "
+        "order-specific (DSL v2 rc3 02 6.2).  Premise for the reviewer: the order model (checked bit-exactly against "
+        "the device for float sums by the emulator; the operand order inside a combine follows the lowering source).  "
+        "No TTGIR layout -> not established, never guessed.",
+        f"{T_WF}::test_merge_without_the_weight_factor_gets_an_order_specific_reference",
+        f"{T_WF}::test_unguarded_ratio_with_zero_weights_is_not_established", subregion="other"))
     # ---- sub-regions of tt.scan
     entries.append(_entry("tt.scan", "SUPPORTED", "E", "sum", "Prefix sums enclosed with the gamma bound per prefix.",
                           f"{T_TT}::test_scan_with_a_custom_combine_region_encloses_the_exact_prefix",

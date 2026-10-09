@@ -52,7 +52,8 @@ def test_registered_combiners_and_tables_are_all_entries():
 
 
 def test_committed_registry_is_current():
-    committed = json.loads((ROOT / "results/general/rule_registry.json").read_text())
+    from kernel_analyzer.reference_eval.rule_registry import REGISTRY_OUT
+    committed = json.loads((ROOT / REGISTRY_OUT).read_text())
     assert committed == json.loads(json.dumps(REG, ensure_ascii=False))
 
 

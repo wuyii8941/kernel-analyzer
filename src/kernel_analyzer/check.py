@@ -28,7 +28,9 @@ from .reference_eval.ttir_eval import ST_NINF, ST_OK, evaluate_sequence, ptx_zer
 from .reference_eval.ttir_mapping import kernel_coverage
 from .reference_eval.ttir_parser import parse_ttir
 
-TOOL_VERSION = "3.1"   # 3.1: audit fixes -- SumK final pass adds p_n last (the 3.0 bound was not rigorous), Welford
+TOOL_VERSION = "4.0"   # 4.0 (dsl-v2 branch, unreleased): generic combine regions along the lowering order; execution
+#                        validity (cross-program read/write, same-program cross-thread write -> read, barrier phases);
+#                        3.1: audit fixes -- SumK final pass adds p_n last (the 3.0 bound was not rigorous), Welford
 #                        unguarded ratio / zero-weight rows / rounding-check, upstream copies of the inputs tagged;
 #                        3.0: Welford multi-value reduction; SumK / DotK accumulation; x - x, x / x one variable;
 #                        2.3: upstream (non-Triton) sources tracked through the launches' own stores, not byte changes,
