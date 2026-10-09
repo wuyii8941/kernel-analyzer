@@ -184,7 +184,26 @@ def _flatten_args(args, names, signature):
     increment 6: the official main build passes shapes and strides of tensor descriptors and lists of tensors as
     tuples (test_tensor_descriptor, test_cat_nd)."""
     def walk(name, value, sig):
-        if isinstance(value, (tuple, list)):  # includes torch.Size
+        if isinstance(sig, str) and sig.startswith("tensordesc") and hasattr(value, "base") and hasattr(value, "strides"):
+            # a host tensor descriptor, decomposed ABI (targets without TMA, e.g. sm_86; official
+            # triton/backends/driver.py decompose_descriptor): base, shape, strides, padding == "nan",
+            # round_f32_to_tf32, then shape (i32) and strides again
+            shape, strides = [int(v) for v in value.shape], [int(v) for v in value.strides]
+            yield name, value.base, "*desc"
+            for k, v in enumerate(shape):
+                yield f"{name}.shape.{k}", v, "i64"
+            for k, v in enumerate(strides):
+                yield f"{name}.stride.{k}", v, "i64"
+            yield f"{name}.padding", bool(getattr(value, "padding", "zero") == "nan"), "i1"
+            yield f"{name}.roundF32ToTF32", bool(getattr(value, "round_f32_to_tf32", False)), "i1"
+            for k, v in enumerate(shape):
+                yield f"{name}.shape.{k}", v, "i32"
+            for k, v in enumerate(strides):
+                yield f"{name}.stride.{k}", v, "i64"
+            return
+        # a tuple is flattened only when its signature entry is a tuple too (a constexpr tuple such as an output shape
+        # has the single entry "constexpr" and stays one argument)
+        if isinstance(value, (tuple, list)) and (isinstance(sig, (tuple, list)) or sig is None):  # includes torch.Size
             sigs = sig if isinstance(sig, (tuple, list)) else [None] * len(value)
             for k, v in enumerate(value):
                 yield from walk(f"{name}.{k}", v, sigs[k] if k < len(sigs) else None)
