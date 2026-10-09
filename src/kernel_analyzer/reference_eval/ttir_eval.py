@@ -155,14 +155,18 @@ def _lane_hull(t: TV) -> TV:
     st0 = t.st[..., 0]
     same_st = np.all(t.st == st0[..., None], axis=-1)
     cond = np.any(t.cond, axis=-1)
+    why = frozenset({"not_established:the lanes of a warp hold different results after the butterfly (which lane the "
+                     "consumer reads is not modelled)"})
     if t.kind == "f":
         d = None if t.d is None else (np.min(t.d[0], axis=-1), np.max(t.d[1], axis=-1))
         return TV("f", t.elem, np.min(t.lo, axis=-1), np.max(t.hi, axis=-1), None,
-                  np.where(same_st, st0, ST_NE).astype(np.int8), cond, t.reasons, d)
+                  np.where(same_st, st0, ST_NE).astype(np.int8), cond,
+                  t.reasons | (why if not same_st.all() else frozenset()), d)
     v0 = t.lo[..., 0]
     same = same_st & np.all(t.lo == v0[..., None], axis=-1)
     return TV(t.kind, t.elem, v0, None, None if t.base is None else t.base[..., 0],
-              np.where(same, st0, ST_NE).astype(np.int8), cond, t.reasons)
+              np.where(same, st0, ST_NE).astype(np.int8), cond,
+              t.reasons | (why if not same.all() else frozenset()))
 
 
 def _merge_status(*vals: TV) -> np.ndarray:
