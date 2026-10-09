@@ -2638,11 +2638,19 @@ class KernelReferenceEvaluator:
         self._shared_write(state, view, val)
         return None
 
+    def _single_cta_mma(self, op):
+        """two_ctas (operands distributed over a CTA pair) and multicast tcgen05 MMAs are not modelled: the reference
+        evaluates one program at a time (DSL v2 increment 13)."""
+        for key in ("two_ctas", "multicast"):
+            if key in op.attrs:
+                raise ProgramAbort(f"{op.node_id}: tcgen05 MMA with {key} (CTA-pair data distribution) is not modelled")
+
     def _op_tc_gen5_mma(self, op, args, env, state):
         """ttng.tc_gen5_mma (Blackwell tcgen05, official TritonNvidiaGPUOps.td): D += A.B, D = A.B when useD is false,
         nothing when pred is false.  Asynchronous: the result is safe to read after a wait on one of its barriers,
         so D stays pending until such a wait observes the completion (later MMAs on D are ordered by the hardware)."""
         a_m, b_m, d_m, use_d, pred = args[:5]
+        self._single_cta_mma(op)
         for flag in (use_d, pred):
             if np.asarray(flag.st).max() != ST_OK or int(np.asarray(flag.lo)) == MAYBE:
                 raise ProgramAbort(f"{op.node_id}: tcgen05 MMA with an undecided flag")
@@ -2674,6 +2682,39 @@ class KernelReferenceEvaluator:
                 m["attached"].append((sid, idx))
                 self._arrive(m, 1)   # tcgen05.commit arrives once the MMA completes
         self._rules["nvidia.tc_gen5_mma"] += 1
+        return None
+
+    def _op_tc_gen5_mma_scaled(self, op, args, env, state):
+        """ttng.tc_gen5_mma_scaled (DSL v2 increment 13, official TritonNvidiaGPUOps.td): D += scale(A, a_scale) .
+        scale(B, b_scale), decoded as tt.dot_scaled; useD, pred, barriers and completion as ttng.tc_gen5_mma."""
+        a_m, b_m, d_m, sa_m, sb_m, use_d, pred = args[:7]
+        self._single_cta_mma(op)
+        for flag in (use_d, pred):
+            if np.asarray(flag.st).max() != ST_OK or int(np.asarray(flag.lo)) == MAYBE:
+                raise ProgramAbort(f"{op.node_id}: tcgen05 MMA with an undecided flag")
+        if int(np.asarray(pred.lo)) == 0:
+            return None
+        a, b = self._as_value(op, state, a_m), self._as_value(op, state, b_m)
+        sa, sb = self._as_value(op, state, sa_m), self._as_value(op, state, sb_m)
+        dshape = np.asarray(d_m.lo).shape
+        buf = state.shared[int(np.asarray(d_m.base).reshape(-1)[0])]
+        if int(np.asarray(use_d.lo)) == 1:
+            idx = np.asarray(d_m.lo)
+            c = _ftv(d_m.elem, buf.lo[idx], buf.hi[idx], buf.st[idx], buf.cond[idx], frozenset())
+        else:
+            c = _ftv(d_m.elem, np.zeros(dshape), np.zeros(dshape), np.zeros(dshape, dtype=np.int8),
+                     np.zeros(dshape, dtype=bool), frozenset())
+        d = self._scaled_dot(op, a, sa, b, sb, c, op.attrs.get("lhs"), op.attrs.get("rhs"))
+        tag = 1 if "is_async" in op.attrs else -1
+        _, idx = self._shared_write(state, d_m, d, pending=tag)
+        sid = int(np.asarray(d_m.base).reshape(-1)[0])
+        for k in range(int(op.attrs.get("n_barriers", 0))):
+            bar, bpred = args[7 + 2 * k], args[8 + 2 * k]
+            if int(np.asarray(bpred.lo)) == 1:
+                m = self._mbar(op, state, bar)
+                m["attached"].append((sid, idx))
+                self._arrive(m, 1)   # tcgen05.commit arrives once the MMA completes
+        self._rules["nvidia.tc_gen5_mma_scaled"] += 1
         return None
 
     def _op_memdesc_trans(self, op, args, env, state):
@@ -3584,6 +3625,11 @@ class KernelReferenceEvaluator:
             (a, b, c), sa, sb = args, None, None
         else:
             raise ProgramAbort(f"{op.node_id}: dot_scaled with {len(args)} operands")
+        return self._scaled_dot(op, a, sa, b, sb, c, fmt_a, fmt_b)
+
+    def _scaled_dot(self, op, a, sa, b, sb, c, fmt_a, fmt_b):
+        """The exact MX decoding and enclosed dot product of tt.dot_scaled, shared with ttng.tc_gen5_mma_scaled (DSL v2
+        increment 13): a scale is [M, K/32] for a, [N, K/32] for b."""
         ok_fmt = {"e4m3", "e5m2", "e2m1", "bf16", "fp16"}
         if fmt_a not in ok_fmt or fmt_b not in ok_fmt:
             raise ProgramAbort(f"{op.node_id}: dot_scaled format {fmt_a} / {fmt_b} has no declared semantics")
@@ -3623,7 +3669,11 @@ class KernelReferenceEvaluator:
         st = np.where(row_bad | col_bad | (c.st != ST_OK), ST_NE, ST_OK).astype(np.int8)
         cond = np.any(a.cond, axis=-1)[..., :, None] | np.any(b.cond, axis=-2)[..., None, :] | c.cond
         self._rules["dot_scaled.exact_decode"] += int(st.size)
-        return _ftv(c.elem, lo, hi, st, cond, a.reasons | b.reasons | c.reasons | {f"dot_scaled:{fmt_a}x{fmt_b}"})
+        reasons = a.reasons | b.reasons | c.reasons | {f"dot_scaled:{fmt_a}x{fmt_b}"}
+        for s_ in (sa, sb):
+            if s_ is not None:
+                reasons = reasons | s_.reasons
+        return _ftv(c.elem, lo, hi, st, cond, reasons)
 
     # ---- elementwise --------------------------------------------------------------
 

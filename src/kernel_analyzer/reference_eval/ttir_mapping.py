@@ -238,7 +238,7 @@ MAPPING: dict[str, Rule] = {
     "ttng.tmem_store": S("H", "tmem_store"),
     "ttng.tmem_load": S("H", "local_load"),
     "ttng.tc_gen5_mma": S("E", "tc_gen5_mma"),
-    "ttng.tc_gen5_mma_scaled": R("E", "scaled tcgen05 MMA is not modelled in this version"),
+    "ttng.tc_gen5_mma_scaled": S("E", "tc_gen5_mma_scaled"),  # DSL v2 increment 13
     "ttg.memdesc_trans": S("H", "memdesc_trans"),
     "ttg.fp4_to_fp": S("C", "fp4_to_fp"),
     # DSL v2 increment 12: AMD gfx9xx TTGIR modules (CPU semantics; device validation pending)
