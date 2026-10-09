@@ -623,14 +623,17 @@
     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[-inf]",
     "tests/test_signatures_atomics.py::test_frontend_float_max_on_bit_patterns[0.5]",
     "tests/test_signatures_core.py::test_core_signature[arith.bitcast-positive]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[positive]",
     "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]"
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.bitcast-boundary]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
     "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.bitcast-premise_violation]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
     "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]",
     "tests/test_general_rules.py::test_bitcast_round_trip_of_point_values_is_exact"
    ]
@@ -646,6 +649,9 @@
    "tests/test_signatures_core.py::test_core_signature[arith.bitcast-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.bitcast-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.bitcast-premise_violation]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[positive]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]",
    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]",
    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]"
@@ -718,7 +724,16 @@
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]",
+    "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[positive]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[positive]",
+    "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[positive]",
+    "tests/test_signatures_gluon.py::test_mbarrier_wait_that_cannot_complete_is_not_established",
+    "tests/test_signatures_gluon.py::test_shared_scatter_signature[positive]",
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
+    "tests/test_signatures_nvidia.py::test_blackwell_kernel_uses_tensor_memory_barriers_and_invalidation",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-positive]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-positive]",
+    "tests/test_signatures_nvidia.py::test_transposed_operand_signature[positive]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[positive]",
     "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
@@ -726,14 +741,28 @@
    "boundary": [
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e4m3]",
+    "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_shared_scatter_signature[boundary]",
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
+    "tests/test_signatures_nvidia.py::test_transposed_operand_signature[boundary]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+    "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_shared_scatter_signature[premise_violation]",
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
+    "tests/test_signatures_nvidia.py::test_transposed_operand_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[premise_violation]"
    ]
@@ -747,9 +776,32 @@
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+   "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[positive]",
+   "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[premise_violation]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[positive]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
+   "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[positive]",
+   "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[premise_violation]",
+   "tests/test_signatures_gluon.py::test_mbarrier_wait_that_cannot_complete_is_not_established",
+   "tests/test_signatures_gluon.py::test_shared_scatter_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_shared_scatter_signature[positive]",
+   "tests/test_signatures_gluon.py::test_shared_scatter_signature[premise_violation]",
    "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
    "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
    "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
+   "tests/test_signatures_nvidia.py::test_blackwell_kernel_uses_tensor_memory_barriers_and_invalidation",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-positive]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-positive]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
+   "tests/test_signatures_nvidia.py::test_transposed_operand_signature[boundary]",
+   "tests/test_signatures_nvidia.py::test_transposed_operand_signature[positive]",
+   "tests/test_signatures_nvidia.py::test_transposed_operand_signature[premise_violation]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
@@ -1366,14 +1418,20 @@
     "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-positive]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-positive]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]"
    ],
    "boundary": [
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]"
    ]
   },
@@ -1383,6 +1441,12 @@
    "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
    "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
    "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-positive]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-positive]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]"
@@ -1535,6 +1599,13 @@
     "tests/test_reference_eval_ttir.py::test_store_through_a_not_established_address_invalidates_the_target",
     "tests/test_reference_eval_ttir.py::test_straight_line_ptx_snippet_has_exact_lanewise_semantics",
     "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
+    "tests/test_signatures_ptx_bits.py::test_environment_read_has_no_reference_value_and_the_program_continues",
+    "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[positive]",
+    "tests/test_signatures_ptx_bits.py::test_funnel_shift_signature[positive]",
+    "tests/test_signatures_ptx_bits.py::test_memory_effect_inside_asm_is_not_established",
+    "tests/test_signatures_ptx_bits.py::test_multiple_outputs_signature[positive]",
+    "tests/test_signatures_ptx_bits.py::test_packed_bit_ops_signature[positive]",
+    "tests/test_signatures_ptx_bits.py::test_packed_multiple_outputs_signature[positive]",
     "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-positive]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cos.approx.f32 $0, $1;-positive]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[ex2.approx.f32 $0, $1;-positive]",
@@ -1543,12 +1614,14 @@
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[rcp.approx.f32 $0, $1;-positive]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[rcp.rn.f32 $0, $1;-positive]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[rsqrt.approx.f32 $0, $1;-positive]",
-    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sin.approx.f32 $0, $1;-positive]",
-    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sqrt.approx.f32 $0, $1;-positive]",
-    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sqrt.rn.f32 $0, $1;-positive]",
-    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[tanh.approx.f32 $0, $1;-positive]"
+    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sin.approx.f32 $0, $1;-positive]"
    ],
    "boundary": [
+    "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[boundary]",
+    "tests/test_signatures_ptx_bits.py::test_funnel_shift_signature[boundary]",
+    "tests/test_signatures_ptx_bits.py::test_multiple_outputs_signature[boundary]",
+    "tests/test_signatures_ptx_bits.py::test_packed_bit_ops_signature[boundary]",
+    "tests/test_signatures_ptx_bits.py::test_packed_multiple_outputs_signature[boundary]",
     "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-boundary]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cos.approx.f32 $0, $1;-boundary]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[ex2.approx.f32 $0, $1;-boundary]",
@@ -1563,6 +1636,11 @@
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[tanh.approx.f32 $0, $1;-boundary]"
    ],
    "premise_violation": [
+    "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[premise_violation]",
+    "tests/test_signatures_ptx_bits.py::test_funnel_shift_signature[premise_violation]",
+    "tests/test_signatures_ptx_bits.py::test_multiple_outputs_signature[premise_violation]",
+    "tests/test_signatures_ptx_bits.py::test_packed_bit_ops_signature[premise_violation]",
+    "tests/test_signatures_ptx_bits.py::test_packed_multiple_outputs_signature[premise_violation]",
     "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-premise_violation]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[cos.approx.f32 $0, $1;-premise_violation]",
     "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[ex2.approx.f32 $0, $1;-premise_violation]",
@@ -1582,6 +1660,23 @@
    "tests/test_reference_eval_ttir.py::test_store_through_a_not_established_address_invalidates_the_target",
    "tests/test_reference_eval_ttir.py::test_straight_line_ptx_snippet_has_exact_lanewise_semantics",
    "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
+   "tests/test_signatures_ptx_bits.py::test_environment_read_has_no_reference_value_and_the_program_continues",
+   "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[boundary]",
+   "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[positive]",
+   "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[premise_violation]",
+   "tests/test_signatures_ptx_bits.py::test_funnel_shift_signature[boundary]",
+   "tests/test_signatures_ptx_bits.py::test_funnel_shift_signature[positive]",
+   "tests/test_signatures_ptx_bits.py::test_funnel_shift_signature[premise_violation]",
+   "tests/test_signatures_ptx_bits.py::test_memory_effect_inside_asm_is_not_established",
+   "tests/test_signatures_ptx_bits.py::test_multiple_outputs_signature[boundary]",
+   "tests/test_signatures_ptx_bits.py::test_multiple_outputs_signature[positive]",
+   "tests/test_signatures_ptx_bits.py::test_multiple_outputs_signature[premise_violation]",
+   "tests/test_signatures_ptx_bits.py::test_packed_bit_ops_signature[boundary]",
+   "tests/test_signatures_ptx_bits.py::test_packed_bit_ops_signature[positive]",
+   "tests/test_signatures_ptx_bits.py::test_packed_bit_ops_signature[premise_violation]",
+   "tests/test_signatures_ptx_bits.py::test_packed_multiple_outputs_signature[boundary]",
+   "tests/test_signatures_ptx_bits.py::test_packed_multiple_outputs_signature[positive]",
+   "tests/test_signatures_ptx_bits.py::test_packed_multiple_outputs_signature[premise_violation]",
    "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-boundary]",
    "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-positive]",
    "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-premise_violation]",
@@ -1610,14 +1705,7 @@
    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sin.approx.f32 $0, $1;-positive]",
    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sin.approx.f32 $0, $1;-premise_violation]",
    "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sqrt.approx.f32 $0, $1;-boundary]",
-   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sqrt.approx.f32 $0, $1;-positive]",
-   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sqrt.approx.f32 $0, $1;-premise_violation]",
-   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sqrt.rn.f32 $0, $1;-boundary]",
-   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sqrt.rn.f32 $0, $1;-positive]",
-   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sqrt.rn.f32 $0, $1;-premise_violation]",
-   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[tanh.approx.f32 $0, $1;-boundary]",
-   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[tanh.approx.f32 $0, $1;-positive]",
-   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[tanh.approx.f32 $0, $1;-premise_violation]"
+   "tests/test_signatures_w1.py::test_inline_asm_pattern_signature[sqrt.approx.f32 $0, $1;-positive]"
   ],
   "device_validation": [
    {
@@ -1628,7 +1716,7 @@
      "tests/test_reference_eval_ttir.py::test_store_through_a_not_established_address_invalidates_the_target",
      "tests/test_reference_eval_ttir.py::test_straight_line_ptx_snippet_has_exact_lanewise_semantics",
      "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
-     "tests/test_signatures_sync.py::test_approximate_division_signature[div.full.f32-boundary]"
+     "tests/test_signatures_ptx_bits.py::test_environment_read_has_no_reference_value_and_the_program_continues"
     ]
    }
   ],
@@ -1687,7 +1775,16 @@
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]",
+    "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[positive]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[positive]",
+    "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[positive]",
+    "tests/test_signatures_gluon.py::test_mbarrier_wait_that_cannot_complete_is_not_established",
+    "tests/test_signatures_gluon.py::test_shared_scatter_signature[positive]",
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
+    "tests/test_signatures_nvidia.py::test_blackwell_kernel_uses_tensor_memory_barriers_and_invalidation",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-positive]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-positive]",
+    "tests/test_signatures_nvidia.py::test_transposed_operand_signature[positive]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[positive]",
     "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
@@ -1695,14 +1792,28 @@
    "boundary": [
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e4m3]",
+    "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_shared_scatter_signature[boundary]",
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
+    "tests/test_signatures_nvidia.py::test_transposed_operand_signature[boundary]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+    "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_shared_scatter_signature[premise_violation]",
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
+    "tests/test_signatures_nvidia.py::test_transposed_operand_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[premise_violation]"
    ]
@@ -1716,9 +1827,32 @@
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+   "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[positive]",
+   "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[premise_violation]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[positive]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
+   "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[positive]",
+   "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[premise_violation]",
+   "tests/test_signatures_gluon.py::test_mbarrier_wait_that_cannot_complete_is_not_established",
+   "tests/test_signatures_gluon.py::test_shared_scatter_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_shared_scatter_signature[positive]",
+   "tests/test_signatures_gluon.py::test_shared_scatter_signature[premise_violation]",
    "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
    "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
    "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
+   "tests/test_signatures_nvidia.py::test_blackwell_kernel_uses_tensor_memory_barriers_and_invalidation",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-positive]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-positive]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
+   "tests/test_signatures_nvidia.py::test_transposed_operand_signature[boundary]",
+   "tests/test_signatures_nvidia.py::test_transposed_operand_signature[positive]",
+   "tests/test_signatures_nvidia.py::test_transposed_operand_signature[premise_violation]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
@@ -3875,6 +4009,7 @@
     "tests/test_signatures_structural.py::test_reduce_signature[sum-boundary]",
     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[boundary]",
     "tests/test_signatures_w1.py::test_generic_combine_categories[boundary]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[boundary]",
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[and-boundary]",
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_int-boundary]",
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_nan-boundary]",
@@ -3884,8 +4019,7 @@
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[min_nan-boundary]",
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[min_select-boundary]",
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[min_uint-boundary]",
-    "tests/test_signatures_w1.py::test_reduce_combiner_signature[or-boundary]",
-    "tests/test_signatures_w1.py::test_reduce_combiner_signature[prod-boundary]"
+    "tests/test_signatures_w1.py::test_reduce_combiner_signature[or-boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
@@ -3897,6 +4031,7 @@
     "tests/test_signatures_structural.py::test_reduce_signature[sum-premise_violation]",
     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_generic_combine_categories[premise_violation]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[and-premise_violation]",
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_int-premise_violation]",
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_nan-premise_violation]",
@@ -3906,8 +4041,7 @@
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[min_nan-premise_violation]",
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[min_select-premise_violation]",
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[min_uint-premise_violation]",
-    "tests/test_signatures_w1.py::test_reduce_combiner_signature[or-premise_violation]",
-    "tests/test_signatures_w1.py::test_reduce_combiner_signature[prod-premise_violation]"
+    "tests/test_signatures_w1.py::test_reduce_combiner_signature[or-premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -3950,6 +4084,9 @@
    "tests/test_signatures_w1.py::test_generic_combine_categories[boundary]",
    "tests/test_signatures_w1.py::test_generic_combine_categories[positive]",
    "tests/test_signatures_w1.py::test_generic_combine_categories[premise_violation]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[boundary]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[positive]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]",
    "tests/test_signatures_w1.py::test_reduce_combiner_signature[and-boundary]",
    "tests/test_signatures_w1.py::test_reduce_combiner_signature[and-positive]",
    "tests/test_signatures_w1.py::test_reduce_combiner_signature[and-premise_violation]",
@@ -3957,10 +4094,7 @@
    "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_int-positive]",
    "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_int-premise_violation]",
    "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_nan-boundary]",
-   "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_nan-positive]",
-   "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_nan-premise_violation]",
-   "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_select-boundary]",
-   "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_select-positive]"
+   "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_nan-positive]"
   ],
   "device_validation": [
    {
@@ -5191,6 +5325,7 @@
     "tests/test_signatures_structural.py::test_reduce_signature[sum-boundary]",
     "tests/test_signatures_structural.py::test_shape_ops_signature[boundary]",
     "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[boundary]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[boundary]",
     "tests/test_signatures_w1.py::test_noinline_call_signature[boundary]",
     "tests/test_signatures_w1.py::test_pointer_integer_round_trip_signature[boundary]",
     "tests/test_signatures_w1.py::test_reduce_combiner_signature[max_nan-boundary]",
@@ -5265,10 +5400,10 @@
    "tests/test_signatures_w1.py::test_atomic_cas_categories[premise_violation]",
    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[boundary]",
    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[positive]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[boundary]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[positive]",
    "tests/test_signatures_w1.py::test_noinline_call_signature[boundary]",
-   "tests/test_signatures_w1.py::test_noinline_call_signature[positive]",
-   "tests/test_signatures_w1.py::test_noinline_call_signature[premise_violation]",
-   "tests/test_signatures_w1.py::test_pointer_integer_round_trip_signature[boundary]"
+   "tests/test_signatures_w1.py::test_noinline_call_signature[positive]"
   ],
   "device_validation": [
    {
@@ -5357,15 +5492,22 @@
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.addi-boundary]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_shared_scatter_signature[boundary]",
     "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
     "tests/test_signatures_sync.py::test_atomic_poll_signature[boundary]",
     "tests/test_signatures_w1.py::test_barrier_signature[boundary]",
     "tests/test_signatures_w1.py::test_generic_combine_categories[boundary]",
     "tests/test_signatures_w1.py::test_pointer_integer_round_trip_signature[boundary]",
-    "tests/test_signatures_w1.py::test_program_ids_signature[boundary]"
+    "tests/test_signatures_w1.py::test_program_ids_signature[boundary]",
+    "tests/test_signatures_w1.py::test_store_then_load_alias_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.addi-premise_violation]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_shared_scatter_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
     "tests/test_signatures_sync.py::test_atomic_poll_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_barrier_signature[premise_violation]",
@@ -5408,6 +5550,15 @@
    "tests/test_signatures_core.py::test_core_signature[arith.addi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.addi-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.addi-premise_violation]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[positive]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
+   "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[positive]",
+   "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[premise_violation]",
+   "tests/test_signatures_gluon.py::test_shared_scatter_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_shared_scatter_signature[positive]",
+   "tests/test_signatures_gluon.py::test_shared_scatter_signature[premise_violation]",
    "tests/test_signatures_inc6.py::test_tuple_arguments_are_flattened_like_the_frontend",
    "tests/test_signatures_locks.py::test_a_lock_never_released_is_not_established_and_does_not_hang",
    "tests/test_signatures_structural.py::test_atomic_cas_without_contention_is_determined_and_with_contention_is_a_race",
@@ -5415,16 +5566,7 @@
    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
    "tests/test_signatures_sync.py::test_atomic_poll_signature[boundary]",
-   "tests/test_signatures_sync.py::test_atomic_poll_signature[positive]",
-   "tests/test_signatures_sync.py::test_atomic_poll_signature[premise_violation]",
-   "tests/test_signatures_w1.py::test_barrier_signature[boundary]",
-   "tests/test_signatures_w1.py::test_barrier_signature[positive]",
-   "tests/test_signatures_w1.py::test_barrier_signature[premise_violation]",
-   "tests/test_signatures_w1.py::test_generic_combine_categories[boundary]",
-   "tests/test_signatures_w1.py::test_generic_combine_categories[positive]",
-   "tests/test_signatures_w1.py::test_multi_operand_scan_signature[premise_violation]",
-   "tests/test_signatures_w1.py::test_pointer_integer_round_trip_signature[boundary]",
-   "tests/test_signatures_w1.py::test_pointer_integer_round_trip_signature[positive]"
+   "tests/test_signatures_sync.py::test_atomic_poll_signature[positive]"
   ],
   "device_validation": [
    {
@@ -5886,6 +6028,7 @@
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
     "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
     "tests/test_signatures_w1.py::test_assert_and_print_signature[positive]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[positive]",
     "tests/test_welford_reduction.py::test_all_zero_weights_follow_the_actual_merge_tree",
     "tests/test_welford_reduction.py::test_merge_without_the_weight_factor_gets_an_order_specific_reference"
    ],
@@ -5894,7 +6037,8 @@
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
     "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
-    "tests/test_signatures_w1.py::test_assert_and_print_signature[boundary]"
+    "tests/test_signatures_w1.py::test_assert_and_print_signature[boundary]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.cmpf+select-premise_violation]",
@@ -5903,6 +6047,7 @@
     "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_assert_and_print_signature[premise_violation]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_welford_categories[premise_violation]",
     "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone"
    ]
@@ -5931,6 +6076,9 @@
    "tests/test_signatures_w1.py::test_assert_and_print_signature[boundary]",
    "tests/test_signatures_w1.py::test_assert_and_print_signature[positive]",
    "tests/test_signatures_w1.py::test_assert_and_print_signature[premise_violation]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[boundary]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[positive]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]",
    "tests/test_signatures_w1.py::test_welford_categories[premise_violation]",
    "tests/test_welford_reduction.py::test_all_zero_weights_follow_the_actual_merge_tree",
    "tests/test_welford_reduction.py::test_merge_without_the_weight_factor_gets_an_order_specific_reference"
@@ -6022,6 +6170,8 @@
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-boundary]",
+    "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
     "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
@@ -6041,6 +6191,8 @@
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-premise_violation]",
+    "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
     "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
     "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]",
@@ -6050,13 +6202,14 @@
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-premise_violation]",
+    "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[premise_violation]",
+    "tests/test_signatures_ptx_bits.py::test_multiple_outputs_signature[premise_violation]",
+    "tests/test_signatures_ptx_bits.py::test_packed_bit_ops_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_reduce_xor_and_argmax_signature[premise_violation]",
     "tests/test_signatures_sync.py::test_histogram_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_atomic_cas_categories[premise_violation]",
-    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]",
-    "tests/test_signatures_w1.py::test_poison_signature[premise_violation]",
-    "tests/test_signatures_w1.py::test_unconditional_branch_signature[premise_violation]"
+    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -6104,12 +6257,12 @@
    "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-premise_violation]",
-   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
-   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-positive]",
-   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
-   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
-   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-positive]",
-   "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]"
+   "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[positive]",
+   "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[premise_violation]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[positive]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]"
   ],
   "device_validation": [
    {
@@ -6200,6 +6353,10 @@
     "tests/test_signatures_core.py::test_core_signature[arith.negf-boundary]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e4m3]",
+    "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_shared_scatter_signature[boundary]",
     "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-boundary]",
@@ -6208,20 +6365,20 @@
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-boundary]",
-    "tests/test_signatures_structural.py::test_atomic_add_signature[boundary]",
-    "tests/test_signatures_structural.py::test_clamp_and_fp8_signature[boundary]",
-    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
-    "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
-    "tests/test_signatures_structural.py::test_reduce_signature[max-boundary]",
-    "tests/test_signatures_structural.py::test_reduce_signature[min-boundary]",
-    "tests/test_signatures_structural.py::test_reduce_signature[sum-boundary]",
-    "tests/test_signatures_structural.py::test_shape_ops_signature[boundary]",
-    "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[boundary]"
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
+    "tests/test_signatures_nvidia.py::test_transposed_operand_signature[boundary]",
+    "tests/test_signatures_ptx_bits.py::test_funnel_shift_signature[boundary]",
+    "tests/test_signatures_structural.py::test_atomic_add_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.negf-premise_violation]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+    "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_shared_scatter_signature[premise_violation]",
     "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]",
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-premise_violation]",
@@ -6230,15 +6387,11 @@
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-premise_violation]",
-    "tests/test_signatures_structural.py::test_atomic_add_signature[premise_violation]",
-    "tests/test_signatures_structural.py::test_clamp_and_fp8_signature[premise_violation]",
-    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
-    "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
-    "tests/test_signatures_structural.py::test_reduce_signature[max-premise_violation]",
-    "tests/test_signatures_structural.py::test_reduce_signature[min-premise_violation]",
-    "tests/test_signatures_structural.py::test_reduce_signature[sum-premise_violation]",
-    "tests/test_signatures_structural.py::test_shape_ops_signature[premise_violation]",
-    "tests/test_signatures_structural.py::test_unsigned_atomics_and_wide_mulhi_signature[premise_violation]"
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
+    "tests/test_signatures_nvidia.py::test_transposed_operand_signature[premise_violation]",
+    "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[premise_violation]",
+    "tests/test_signatures_ptx_bits.py::test_funnel_shift_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -6365,6 +6518,7 @@
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
     "tests/test_signatures_atomics.py::test_bit_view_needs_definite_bits",
     "tests/test_signatures_core.py::test_core_signature[arith.divf-positive]",
+    "tests/test_signatures_w1.py::test_launch_sequence_signature[positive]",
     "tests/test_signatures_w1.py::test_noinline_call_signature[positive]",
     "tests/test_signatures_w1.py::test_welford_categories[positive]",
     "tests/test_welford_reduction.py::test_all_zero_weights_follow_the_actual_merge_tree",
@@ -6374,11 +6528,13 @@
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.divf-boundary]",
+    "tests/test_signatures_w1.py::test_launch_sequence_signature[boundary]",
     "tests/test_signatures_w1.py::test_noinline_call_signature[boundary]",
     "tests/test_signatures_w1.py::test_welford_categories[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.divf-premise_violation]",
+    "tests/test_signatures_w1.py::test_launch_sequence_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_noinline_call_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_welford_categories[premise_violation]"
    ]
@@ -6396,6 +6552,9 @@
    "tests/test_signatures_core.py::test_core_signature[arith.divf-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.divf-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.divf-premise_violation]",
+   "tests/test_signatures_w1.py::test_launch_sequence_signature[boundary]",
+   "tests/test_signatures_w1.py::test_launch_sequence_signature[positive]",
+   "tests/test_signatures_w1.py::test_launch_sequence_signature[premise_violation]",
    "tests/test_signatures_w1.py::test_noinline_call_signature[boundary]",
    "tests/test_signatures_w1.py::test_noinline_call_signature[positive]",
    "tests/test_signatures_w1.py::test_noinline_call_signature[premise_violation]",
@@ -6641,15 +6800,18 @@
     "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[2]",
     "tests/test_signatures_core.py::test_core_signature[arith.extf-positive]",
     "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]",
+    "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[positive]",
     "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.extf-boundary]",
-    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]"
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]",
+    "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.extf-premise_violation]",
-    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]"
+    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]",
+    "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -6661,6 +6823,9 @@
    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[boundary]",
    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[positive]",
    "tests/test_signatures_inc6.py::test_bitcast_bf16_and_fp8_signature[premise_violation]",
+   "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[boundary]",
+   "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[positive]",
+   "tests/test_signatures_ptx_bits.py::test_fp8e4b15_to_fp16_conversion_signature[premise_violation]",
    "tests/test_welford_reduction.py::test_inductor_bfloat16_variance_encloses_the_exact_variance"
   ],
   "device_validation": [
@@ -7946,7 +8111,9 @@
     "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
     "tests/test_signatures_structural.py::test_scan_int_and_cumprod_signature[boundary]",
     "tests/test_signatures_w1.py::test_assert_and_print_signature[boundary]",
-    "tests/test_signatures_w1.py::test_barrier_signature[boundary]"
+    "tests/test_signatures_w1.py::test_barrier_signature[boundary]",
+    "tests/test_signatures_w1.py::test_launch_sequence_signature[boundary]",
+    "tests/test_signatures_w1.py::test_store_then_load_alias_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.mulf-premise_violation]",
@@ -7954,6 +8121,7 @@
     "tests/test_signatures_structural.py::test_scan_int_and_cumprod_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_assert_and_print_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_barrier_signature[premise_violation]",
+    "tests/test_signatures_w1.py::test_launch_sequence_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_welford_categories[premise_violation]"
    ]
   },
@@ -7994,6 +8162,11 @@
    "tests/test_signatures_w1.py::test_barrier_signature[boundary]",
    "tests/test_signatures_w1.py::test_barrier_signature[positive]",
    "tests/test_signatures_w1.py::test_barrier_signature[premise_violation]",
+   "tests/test_signatures_w1.py::test_launch_sequence_signature[boundary]",
+   "tests/test_signatures_w1.py::test_launch_sequence_signature[positive]",
+   "tests/test_signatures_w1.py::test_launch_sequence_signature[premise_violation]",
+   "tests/test_signatures_w1.py::test_store_then_load_alias_signature[boundary]",
+   "tests/test_signatures_w1.py::test_store_then_load_alias_signature[positive]",
    "tests/test_signatures_w1.py::test_welford_categories[premise_violation]",
    "tests/test_welford_reduction.py::test_all_zero_weights_follow_the_actual_merge_tree",
    "tests/test_welford_reduction.py::test_merge_without_the_weight_factor_gets_an_order_specific_reference",
@@ -8088,7 +8261,14 @@
     "tests/test_signatures_core.py::test_core_signature[arith.muli-boundary]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[boundary-e4m3]",
+    "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[boundary]",
+    "tests/test_signatures_gluon.py::test_shared_scatter_signature[boundary]",
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
+    "tests/test_signatures_nvidia.py::test_transposed_operand_signature[boundary]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
     "tests/test_signatures_w1.py::test_generic_combine_categories[boundary]",
     "tests/test_signatures_w1.py::test_program_ids_signature[boundary]",
@@ -8098,7 +8278,14 @@
     "tests/test_signatures_core.py::test_core_signature[arith.muli-premise_violation]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
     "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
+    "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[premise_violation]",
+    "tests/test_signatures_gluon.py::test_shared_scatter_signature[premise_violation]",
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
+    "tests/test_signatures_nvidia.py::test_transposed_operand_signature[premise_violation]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_multi_operand_scan_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_program_ids_signature[premise_violation]",
@@ -8151,11 +8338,11 @@
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[positive-e4m3]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e2m1]",
    "tests/test_signatures_dot_scaled.py::test_dot_scaled_signature[premise_violation-e4m3]",
-   "tests/test_signatures_inc6.py::test_tuple_arguments_are_flattened_like_the_frontend",
-   "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
-   "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
-   "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
-   "tests/test_signatures_locks.py::test_layer_norm_style_first_store_then_accumulate"
+   "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[positive]",
+   "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[premise_violation]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
+   "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[positive]"
   ],
   "device_validation": [
    {
@@ -8590,12 +8777,14 @@
     "tests/test_reference_eval_ttir.py::test_undefined_integer_times_established_zero_is_determined",
     "tests/test_signatures_core.py::test_core_signature[arith.remsi-positive]",
     "tests/test_signatures_sync.py::test_atomic_load_store_signature[positive]",
-    "tests/test_signatures_w1.py::test_barrier_signature[positive]"
+    "tests/test_signatures_w1.py::test_barrier_signature[positive]",
+    "tests/test_signatures_w1.py::test_store_then_load_alias_signature[positive]"
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.remsi-boundary]",
     "tests/test_signatures_sync.py::test_atomic_load_store_signature[boundary]",
-    "tests/test_signatures_w1.py::test_barrier_signature[boundary]"
+    "tests/test_signatures_w1.py::test_barrier_signature[boundary]",
+    "tests/test_signatures_w1.py::test_store_then_load_alias_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.remsi-premise_violation]",
@@ -8615,7 +8804,9 @@
    "tests/test_signatures_sync.py::test_atomic_load_store_signature[positive]",
    "tests/test_signatures_w1.py::test_barrier_signature[boundary]",
    "tests/test_signatures_w1.py::test_barrier_signature[positive]",
-   "tests/test_signatures_w1.py::test_barrier_signature[premise_violation]"
+   "tests/test_signatures_w1.py::test_barrier_signature[premise_violation]",
+   "tests/test_signatures_w1.py::test_store_then_load_alias_signature[boundary]",
+   "tests/test_signatures_w1.py::test_store_then_load_alias_signature[positive]"
   ],
   "device_validation": [
    {
@@ -9355,12 +9546,14 @@
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.negf-boundary]",
-    "tests/test_signatures_core.py::test_core_signature[arith.subf-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.subf-boundary]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.negf-premise_violation]",
     "tests/test_signatures_core.py::test_core_signature[arith.subf-premise_violation]",
     "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]",
     "tests/test_signatures_w1.py::test_welford_categories[premise_violation]"
    ]
   },
@@ -9386,6 +9579,8 @@
    "tests/test_signatures_core.py::test_core_signature[arith.subf-premise_violation]",
    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[boundary]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]",
    "tests/test_signatures_w1.py::test_welford_categories[premise_violation]",
    "tests/test_welford_reduction.py::test_all_zero_weights_follow_the_actual_merge_tree",
    "tests/test_welford_reduction.py::test_merge_without_the_weight_factor_gets_an_order_specific_reference",
@@ -13289,13 +13484,16 @@
     "tests/test_reference_eval_ttir.py::test_control_dependence_on_a_pinned_load_downgrades_writes[loop_bound_from_loaded-%n]",
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
     "tests/test_reference_eval_ttir.py::test_undefined_integer_times_established_zero_is_determined",
-    "tests/test_signatures_structural.py::test_control_flow_signature[positive]"
+    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[positive]"
    ],
    "boundary": [
-    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]"
+    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[boundary]"
    ],
    "premise_violation": [
-    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]"
+    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -13306,7 +13504,10 @@
    "tests/test_reference_eval_ttir.py::test_undefined_integer_times_established_zero_is_determined",
    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
-   "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]"
+   "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[boundary]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[positive]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]"
   ],
   "device_validation": [
    {
@@ -13500,14 +13701,17 @@
     "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
     "tests/test_signatures_sync.py::test_atomic_load_of_a_concurrently_stored_address_is_a_set",
     "tests/test_signatures_sync.py::test_message_passing_through_a_poll_orders_the_payload",
-    "tests/test_signatures_sync.py::test_poll_dependency_cycle_is_not_established_and_does_not_hang"
+    "tests/test_signatures_sync.py::test_poll_dependency_cycle_is_not_established_and_does_not_hang",
+    "tests/test_signatures_w1.py::test_nested_control_signature[positive]"
    ],
    "boundary": [
-    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]"
+    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
-    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]"
+    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -13522,7 +13726,10 @@
    "tests/test_signatures_sync.py::test_atomic_load_of_a_concurrently_stored_address_is_a_set",
    "tests/test_signatures_sync.py::test_message_passing_through_a_poll_orders_the_payload",
    "tests/test_signatures_sync.py::test_poll_dependency_cycle_is_not_established_and_does_not_hang",
-   "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]"
+   "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[boundary]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[positive]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]"
   ],
   "device_validation": [
    {
@@ -13940,13 +14147,16 @@
     "tests/test_reference_eval_ttir.py::test_undefined_integer_times_established_zero_is_determined",
     "tests/test_signatures_locks.py::test_a_lock_never_released_is_not_established_and_does_not_hang",
     "tests/test_signatures_locks.py::test_layer_norm_style_first_store_then_accumulate",
-    "tests/test_signatures_structural.py::test_control_flow_signature[positive]"
+    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[positive]"
    ],
    "boundary": [
-    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]"
+    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[boundary]"
    ],
    "premise_violation": [
-    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]"
+    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -13960,7 +14170,10 @@
    "tests/test_signatures_locks.py::test_layer_norm_style_first_store_then_accumulate",
    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
-   "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]"
+   "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[boundary]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[positive]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]"
   ],
   "device_validation": [
    {
@@ -14485,15 +14698,18 @@
     "tests/test_signatures_locks.py::test_lock_without_acquire_leaves_the_critical_section_racing[relaxed]",
     "tests/test_signatures_locks.py::test_lock_without_acquire_leaves_the_critical_section_racing[release]",
     "tests/test_signatures_w1.py::test_barrier_signature[positive]",
-    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[positive]"
+    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[positive]",
+    "tests/test_signatures_w1.py::test_store_then_load_alias_signature[positive]"
    ],
    "boundary": [
     "tests/test_signatures_w1.py::test_barrier_signature[boundary]",
-    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[boundary]"
+    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[boundary]",
+    "tests/test_signatures_w1.py::test_store_then_load_alias_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_w1.py::test_atomic_cas_categories[premise_violation]",
-    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]"
+    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]",
+    "tests/test_signatures_w1.py::test_store_then_load_alias_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -14514,7 +14730,10 @@
    "tests/test_signatures_w1.py::test_barrier_signature[positive]",
    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[boundary]",
    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[positive]",
-   "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]"
+   "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]",
+   "tests/test_signatures_w1.py::test_store_then_load_alias_signature[boundary]",
+   "tests/test_signatures_w1.py::test_store_then_load_alias_signature[positive]",
+   "tests/test_signatures_w1.py::test_store_then_load_alias_signature[premise_violation]"
   ],
   "device_validation": [
    {
@@ -19782,15 +20001,18 @@
     "tests/test_reference_eval_ttir.py::test_comparison_of_a_value_with_itself_is_decided_by_nan_alone",
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
     "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
-    "tests/test_signatures_structural.py::test_reduce_signature[sum-positive]"
+    "tests/test_signatures_structural.py::test_reduce_signature[sum-positive]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[positive]"
    ],
    "boundary": [
     "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
-    "tests/test_signatures_structural.py::test_reduce_signature[sum-boundary]"
+    "tests/test_signatures_structural.py::test_reduce_signature[sum-boundary]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
-    "tests/test_signatures_structural.py::test_reduce_signature[sum-premise_violation]"
+    "tests/test_signatures_structural.py::test_reduce_signature[sum-premise_violation]",
+    "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -19807,7 +20029,10 @@
    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
    "tests/test_signatures_structural.py::test_reduce_signature[sum-boundary]",
    "tests/test_signatures_structural.py::test_reduce_signature[sum-positive]",
-   "tests/test_signatures_structural.py::test_reduce_signature[sum-premise_violation]"
+   "tests/test_signatures_structural.py::test_reduce_signature[sum-premise_violation]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[boundary]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[positive]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]"
   ],
   "device_validation": [
    {
@@ -27468,6 +27693,82 @@
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_fast_fabsf-boundary]",
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_fast_fabsf-positive]",
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_fast_fabsf-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_fast_fdividef",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_fast_fdividef"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_fast_fdividef-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_fast_fdividef-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_fast_fdividef-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_fast_fdividef-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_fast_fdividef-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_fast_fdividef-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_fast_fdividef-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_fast_fdividef-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_fast_fdividef-premise_violation]"
     ]
    }
   ],
@@ -40438,14 +40739,20 @@
     "tests/test_reference_eval_emulate.py::test_tensor_core_dot_is_not_emulable",
     "tests/test_reference_eval_ttir.py::test_numerical_difference_reference_contains_independent_exact_values",
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-positive]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-positive]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]"
    ],
    "boundary": [
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
+    "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
     "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]"
    ]
   },
@@ -40455,6 +40762,12 @@
    "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
    "tests/test_signatures_int_dot.py::test_int8_dot_signature[positive]",
    "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-boundary]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-positive]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[100-ttng.tc_gen5_mma-premise_violation]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-boundary]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-positive]",
+   "tests/test_signatures_nvidia.py::test_hardware_dot_signature[90-ttng.warp_group_dot-premise_violation]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[boundary]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[positive]",
    "tests/test_signatures_structural.py::test_dot_ieee_signature[premise_violation]"
@@ -40522,16 +40835,34 @@
    "results/dsl_v2/rule_registry.json"
   ],
   "tests": {
-   "positive": [],
-   "boundary": [],
-   "premise_violation": []
+   "positive": [
+    "tests/test_general_rules.py::test_nested_loops_and_data_branch_are_exact_where_decided",
+    "tests/test_signatures_w1.py::test_nested_control_signature[positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_w1.py::test_nested_control_signature[boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]",
+    "tests/test_general_rules.py::test_nested_loops_and_data_branch_are_exact_where_decided"
+   ]
   },
-  "trigger_evidence": [],
+  "trigger_evidence": [
+   "tests/test_general_rules.py::test_nested_loops_and_data_branch_are_exact_where_decided",
+   "tests/test_signatures_w1.py::test_nested_control_signature[boundary]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[positive]",
+   "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]"
+  ],
   "device_validation": [
    {
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
-    "status": "not-run",
-    "evidence": []
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_general_rules.py::test_nested_loops_and_data_branch_are_exact_where_decided",
+     "tests/test_signatures_w1.py::test_nested_control_signature[boundary]",
+     "tests/test_signatures_w1.py::test_nested_control_signature[positive]",
+     "tests/test_signatures_w1.py::test_nested_control_signature[premise_violation]"
+    ]
    }
   ],
   "forbidden_fallback": [
@@ -40593,16 +40924,85 @@
    "results/dsl_v2/rule_registry.json"
   ],
   "tests": {
-   "positive": [],
-   "boundary": [],
-   "premise_violation": []
+   "positive": [
+    "tests/test_execution_validity.py::test_barrier_orders_the_scalar_roundtrip",
+    "tests/test_execution_validity.py::test_reading_the_slot_another_program_writes_is_an_execution_race",
+    "tests/test_execution_validity.py::test_scalar_roundtrip_without_barrier_is_an_execution_race",
+    "tests/test_execution_validity.py::test_tensor_roundtrip_in_one_layout_is_ordered",
+    "tests/test_general_rules.py::test_store_then_load_through_an_alias_carries_the_reference_value",
+    "tests/test_reference_eval_analysis.py::test_unified_entry_runs_reference_and_statistics",
+    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
+    "tests/test_reference_eval_ttir.py::test_pinning_a_load_to_its_captured_value_downgrades_the_output",
+    "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[3]",
+    "tests/test_signatures_locks.py::test_first_writer_inside_a_lock_depends_on_the_order",
+    "tests/test_signatures_locks.py::test_layer_norm_style_first_store_then_accumulate",
+    "tests/test_signatures_locks.py::test_lock_protected_accumulation_is_established_under_the_order_premise[None]",
+    "tests/test_signatures_locks.py::test_lock_protected_accumulation_is_established_under_the_order_premise[acq_rel]",
+    "tests/test_signatures_locks.py::test_lock_protected_accumulation_is_established_under_the_order_premise[acquire]",
+    "tests/test_signatures_locks.py::test_lock_without_acquire_leaves_the_critical_section_racing[relaxed]",
+    "tests/test_signatures_locks.py::test_lock_without_acquire_leaves_the_critical_section_racing[release]",
+    "tests/test_signatures_sync.py::test_atomic_load_of_a_concurrently_stored_address_is_a_set",
+    "tests/test_signatures_sync.py::test_message_passing_through_a_poll_orders_the_payload",
+    "tests/test_signatures_w1.py::test_barrier_signature[positive]",
+    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_w1.py::test_barrier_signature[boundary]",
+    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[boundary]",
+    "tests/test_signatures_w1.py::test_launch_sequence_signature[boundary]",
+    "tests/test_signatures_w1.py::test_store_then_load_alias_signature[boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_w1.py::test_atomic_cas_categories[premise_violation]",
+    "tests/test_signatures_w1.py::test_barrier_signature[premise_violation]",
+    "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]",
+    "tests/test_signatures_w1.py::test_store_then_load_alias_signature[premise_violation]",
+    "tests/test_general_rules.py::test_store_then_load_through_an_alias_carries_the_reference_value"
+   ]
   },
-  "trigger_evidence": [],
+  "trigger_evidence": [
+   "tests/test_execution_validity.py::test_barrier_orders_the_scalar_roundtrip",
+   "tests/test_execution_validity.py::test_reading_the_slot_another_program_writes_is_an_execution_race",
+   "tests/test_execution_validity.py::test_scalar_roundtrip_without_barrier_is_an_execution_race",
+   "tests/test_execution_validity.py::test_tensor_roundtrip_in_one_layout_is_ordered",
+   "tests/test_general_rules.py::test_store_then_load_through_an_alias_carries_the_reference_value",
+   "tests/test_reference_eval_analysis.py::test_unified_entry_runs_reference_and_statistics",
+   "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
+   "tests/test_reference_eval_ttir.py::test_pinning_a_load_to_its_captured_value_downgrades_the_output",
+   "tests/test_reference_eval_ttir.py::test_rounding_check_mode_reproduces_ieee_kernels_bit_for_bit[3]",
+   "tests/test_signatures_locks.py::test_first_writer_inside_a_lock_depends_on_the_order",
+   "tests/test_signatures_locks.py::test_layer_norm_style_first_store_then_accumulate",
+   "tests/test_signatures_locks.py::test_lock_protected_accumulation_is_established_under_the_order_premise[None]",
+   "tests/test_signatures_locks.py::test_lock_protected_accumulation_is_established_under_the_order_premise[acq_rel]",
+   "tests/test_signatures_locks.py::test_lock_protected_accumulation_is_established_under_the_order_premise[acquire]",
+   "tests/test_signatures_locks.py::test_lock_without_acquire_leaves_the_critical_section_racing[relaxed]",
+   "tests/test_signatures_locks.py::test_lock_without_acquire_leaves_the_critical_section_racing[release]",
+   "tests/test_signatures_sync.py::test_atomic_load_of_a_concurrently_stored_address_is_a_set",
+   "tests/test_signatures_sync.py::test_message_passing_through_a_poll_orders_the_payload",
+   "tests/test_signatures_w1.py::test_atomic_cas_categories[premise_violation]",
+   "tests/test_signatures_w1.py::test_barrier_signature[boundary]",
+   "tests/test_signatures_w1.py::test_barrier_signature[positive]",
+   "tests/test_signatures_w1.py::test_barrier_signature[premise_violation]",
+   "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[boundary]",
+   "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[positive]",
+   "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]",
+   "tests/test_signatures_w1.py::test_launch_sequence_signature[boundary]",
+   "tests/test_signatures_w1.py::test_launch_sequence_signature[positive]",
+   "tests/test_signatures_w1.py::test_store_then_load_alias_signature[boundary]",
+   "tests/test_signatures_w1.py::test_store_then_load_alias_signature[positive]",
+   "tests/test_signatures_w1.py::test_store_then_load_alias_signature[premise_violation]"
+  ],
   "device_validation": [
    {
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
-    "status": "not-run",
-    "evidence": []
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_execution_validity.py::test_barrier_orders_the_scalar_roundtrip",
+     "tests/test_execution_validity.py::test_reading_the_slot_another_program_writes_is_an_execution_race",
+     "tests/test_execution_validity.py::test_scalar_roundtrip_without_barrier_is_an_execution_race",
+     "tests/test_execution_validity.py::test_tensor_roundtrip_in_one_layout_is_ordered",
+     "tests/test_general_rules.py::test_store_then_load_through_an_alias_carries_the_reference_value"
+    ]
    }
   ],
   "forbidden_fallback": [
@@ -40662,16 +41062,41 @@
    "results/dsl_v2/rule_registry.json"
   ],
   "tests": {
-   "positive": [],
-   "boundary": [],
-   "premise_violation": []
+   "positive": [
+    "tests/test_reference_eval_analysis.py::test_unified_entry_runs_reference_and_statistics",
+    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
+    "tests/test_reference_eval_ttir.py::test_store_through_a_not_established_address_invalidates_the_target",
+    "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
+    "tests/test_signatures_w1.py::test_launch_sequence_signature[positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_w1.py::test_launch_sequence_signature[boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_w1.py::test_launch_sequence_signature[premise_violation]",
+    "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture"
+   ]
   },
-  "trigger_evidence": [],
+  "trigger_evidence": [
+   "tests/test_reference_eval_analysis.py::test_unified_entry_runs_reference_and_statistics",
+   "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
+   "tests/test_reference_eval_ttir.py::test_store_through_a_not_established_address_invalidates_the_target",
+   "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
+   "tests/test_signatures_w1.py::test_launch_sequence_signature[boundary]",
+   "tests/test_signatures_w1.py::test_launch_sequence_signature[positive]",
+   "tests/test_signatures_w1.py::test_launch_sequence_signature[premise_violation]"
+  ],
   "device_validation": [
    {
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
-    "status": "not-run",
-    "evidence": []
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_reference_eval_analysis.py::test_unified_entry_runs_reference_and_statistics",
+     "tests/test_reference_eval_ttir.py::test_composed_reference_across_launches_with_windowed_capture",
+     "tests/test_reference_eval_ttir.py::test_store_through_a_not_established_address_invalidates_the_target",
+     "tests/test_reference_eval_ttir.py::test_values_changed_by_an_aborted_program_are_not_established_downstream",
+     "tests/test_signatures_w1.py::test_launch_sequence_signature[boundary]"
+    ]
    }
   ],
   "forbidden_fallback": [

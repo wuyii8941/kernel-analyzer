@@ -646,3 +646,90 @@ def test_multi_operand_scan_signature(category):
             best, bi = v, j
         want.append(bi)
     assert (st == H.ST_OK).all() and [int(v) for v in lo] == want
+
+
+# ---------------------------------------------------------------- part 4: composite rules (increment 11)
+
+@pytest.mark.parametrize("category", CATS)
+def test_nested_control_signature(category):
+    x = np.asarray({"positive": [1.0, -2.0, 3.0, -4.0, 5.0, 6.0, -7.0, 8.0], "boundary": [0.0, -0.0, 1e-45, -1e-45, 0.0, 1.0, -1.0, 0.0],
+                    "premise_violation": [NAN, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]}[category], np.float32)
+    body = ("    i = tl.arange(0, N)\n    x = tl.load(x_ptr + i)\n    acc = tl.zeros([N], dtype=tl.float32)\n"
+            "    for k in range(3):\n        s = tl.sum(x, axis=0)\n        if s > 0:\n            acc += x\n"
+            "        else:\n            acc -= x\n    tl.store(out + i, acc)\n")
+    lo, hi, st = _run("nested_ctl", body, {"x_ptr": ("fp32", x), "out": ("fp32", np.zeros(8))})
+    s = sum(float(v) for v in x)
+    if category == "premise_violation":    # NaN > 0 is false: the else branch, NaN propagates into every lane
+        assert (st != H.ST_OK).all() or not np.isfinite(s)
+        return
+    sign = 1 if s > 0 else -1
+    _check(category, lo, hi, st, [mp.mpf(float(v)) * 3 * sign for v in x])
+
+
+@pytest.mark.parametrize("category", CATS)
+def test_store_then_load_alias_signature(category):
+    x = np.arange(8, dtype=np.float32) + 0.25
+    if category == "premise_violation":
+        # the store address is data dependent on an undefined value: the target's elements lose their reference value
+        body = ("    i = tl.arange(0, N)\n    k = tl.load(k_ptr + i, mask=tl.load(m_ptr + i) != 0)\n"
+                "    tl.store(tmp + k, tl.load(x_ptr + i))\n    tl.debug_barrier()\n    tl.store(out + i, tl.load(tmp + i))\n")
+    else:
+        off = 0 if category == "positive" else 7
+        body = ("    i = tl.arange(0, N)\n    tl.store(tmp + i, tl.load(x_ptr + i) * 2.0)\n    tl.debug_barrier()\n"
+                f"    tl.store(out + i, tl.load(tmp + (i + {off}) % N))\n")
+    lo, hi, st = _run("alias_" + category[:3], body, {"x_ptr": ("fp32", x), "k_ptr": ("int32", np.zeros(8)),
+                                                       "m_ptr": ("int32", np.zeros(8)), "tmp": ("fp32", np.zeros(8)),
+                                                       "out": ("fp32", np.zeros(8))})
+    if category == "premise_violation":
+        assert (st != H.ST_OK).all()
+        return
+    off = 0 if category == "positive" else 7
+    assert (st == H.ST_OK).all() and [float(v) for v in lo] == [float(x[(j + off) % 8]) * 2 for j in range(8)]
+
+
+@pytest.mark.parametrize("category", CATS)
+def test_launch_sequence_signature(category):
+    """Two launches chained through one buffer; the second launch's operand matches the first launch's output
+    (positive, boundary) or was rewritten in between (premise violation: it re-enters as an exact input)."""
+    from kernel_analyzer.reference_eval.capture import CapturedArg, CapturedLaunch
+    from kernel_analyzer.reference_eval.ttir_eval import evaluate_sequence
+    import test_signatures_structural as S
+    body1 = "    i = tl.arange(0, N)\n    tl.store(y_ptr + i, tl.load(x_ptr + i) / 3.0)\n"
+    body2 = "    i = tl.arange(0, N)\n    tl.store(z_ptr + i, tl.load(y_ptr + i) * 3.0)\n"
+    x = (np.arange(8) + 1).astype(np.float32) * (1.0 if category != "boundary" else 1e-30)
+    asm = []
+    for name, body, params in (("seq1", body1, ["x_ptr", "y_ptr"]), ("seq2", body2, ["y_ptr", "z_ptr"])):
+        mod = S._kernel(name, body, params)
+        from triton.backends.compiler import GPUTarget
+        from triton.compiler import ASTSource
+        ck = triton.compile(ASTSource(fn=mod.kernel, signature={params[0]: "*fp32", params[1]: "*fp32", "N": "constexpr"},
+                                      constexprs={"N": 8}), target=GPUTarget("cuda", 86, 32), options={"num_warps": 1})
+        asm.append({k: ck.asm[k] for k in ("ttir", "ttgir")})
+    y_after = (x.astype(np.float32) / np.float32(3.0)).astype(np.float32)
+    y_before2 = y_after if category != "premise_violation" else y_after + np.float32(1.0)
+
+    def arg(i, name, arr, before, after, sid):
+        raw_b, raw_a = np.asarray(before, np.float32).view(np.uint8).copy(), np.asarray(after, np.float32).view(np.uint8).copy()
+        return CapturedArg(index=i, name=name, kind="tensor", constexpr=False, signature_type="*fp32", dtype="float32",
+                           shape=(8,), stride=(1,), element_size=4, data_ptr=sid, storage_ptr=sid, storage_nbytes=32,
+                           storage_id=sid, before=raw_b, after=raw_a)
+
+    n_arg = lambda i: CapturedArg(index=i, name="N", kind="int", constexpr=True, signature_type="constexpr", value=8)
+    l1 = CapturedLaunch(index=0, kernel_name="seq1", kernel_hash="", grid=(1, 1, 1),
+                        args=[arg(0, "x_ptr", x, x, x, 1 << 20), arg(1, "y_ptr", y_after, np.zeros(8), y_after, 2 << 20), n_arg(2)],
+                        asm=asm[0], cubin_sha256=None, metadata={}, libtriton_sha256=None)
+    z = y_before2 * np.float32(3.0)
+    l2 = CapturedLaunch(index=1, kernel_name="seq2", kernel_hash="", grid=(1, 1, 1),
+                        args=[arg(0, "y_ptr", y_before2, y_before2, y_before2, 2 << 20), arg(1, "z_ptr", z, np.zeros(8), z, 3 << 20),
+                              n_arg(2)],
+                        asm=asm[1], cubin_sha256=None, metadata={}, libtriton_sha256=None)
+    seq = evaluate_sequence([l1, l2])
+    zb = seq.launches[1].buffers[3 << 20]
+    lo, hi, st = np.asarray(zb.lo), np.asarray(zb.hi), np.asarray(zb.st)
+    if category == "premise_violation":
+        assert seq.external_writes and seq.external_writes[0]["buffer"] == "y_ptr"
+        assert (st == H.ST_OK).all() and np.allclose(lo, y_before2.astype(np.float64) * 3.0)
+        return
+    # composed: z = (x / 3) * 3 = x exactly in the reals, although the captured y was rounded
+    assert not seq.external_writes
+    assert (st == H.ST_OK).all() and all(lo[j] <= float(x[j]) <= hi[j] for j in range(8))

@@ -548,6 +548,7 @@ class ProgramState:
     epoch: int = 0  # barrier phase inside the program (gpu.barrier orders the threads of one program)
     occ: dict = field(default_factory=dict)  # atomic node -> executions so far (keys of atomic events)
     rel_epoch: int = 0  # release operations performed so far (writes before release e carry epoch <= e)
+    loop_depth: int = 0  # enclosing scf.for / scf.while (trigger evidence of nested control, increment 11)
     # DSL v2 increment 10 (TTGIR): the program's shared memory, its outstanding async copies and mbarriers
     shared: dict = field(default_factory=dict)  # id -> SharedBuf
     async_open: list = field(default_factory=list)  # (shared id, element indices) issued, not yet attached / committed
@@ -1413,6 +1414,8 @@ class KernelReferenceEvaluator:
             carried = safe & buf.written[idx]
             if carried.any() and not pinned:
                 self._rules["memory.load_reads_reference_value"] += int(carried.sum())
+                if _TRIGGER_PATH:   # DSL v2 increment 11: the composite rule "one storage, the reference value"
+                    _trace("tt.load/tt.store (alias):memory")
             if pinned:
                 self._rules["observability.pinned_load_lanes"] += int(safe.sum())
             race = safe & (buf.writer[idx] != -1) & (buf.writer[idx] != state.pid_index)
@@ -1492,8 +1495,17 @@ class KernelReferenceEvaluator:
             targets = np.unique(np.broadcast_to(ptr.base, shape)[blind]) if ptr.base is not None else []
             if len(targets) == 0:
                 raise ProgramAbort(f"{op.node_id}: store through an address of unknown buffer")
-            self._poisoned.update(int(i) for i in targets)  # applied at the end of the launch (no program order)
+            self._poisoned.update(int(i) for i in targets)  # applied again at the end of the launch
             self._stored.update(int(i) for i in targets)
+            # DSL v2 increment 11 (defect found by the W1 alias test): the store may have written any element, so a
+            # later load in this program must not read the old value as established; and it counts as a write to
+            # every element against reads of other programs
+            for t in targets:
+                tb = state.memory.get(int(t))
+                if tb is not None:
+                    tb.st = np.full(tb.st.shape, ST_NE, dtype=np.int8)
+                    tb.written[:] = True
+                    self._check_read_then_write(tb, np.arange(tb.st.size), state)
             self._reasons[f"not_established:store through a not-established address@{op.node_id}"] += int(blind.sum())
             active = active & ~blind
         buf, index, in_range = self._addresses(op, ptr, state)
@@ -2700,6 +2712,7 @@ class KernelReferenceEvaluator:
         bound_flag = any(b.cond.any() for b in bounds)
         bound_reasons = frozenset().union(*(b.reasons for b in bounds))
         state.ctrl.append((bound_flag, bound_reasons))
+        state.loop_depth += 1
         try:
             i = lb
             count = 0
@@ -2712,6 +2725,7 @@ class KernelReferenceEvaluator:
                     raise ProgramAbort("loop bound too large")
         finally:
             state.ctrl.pop()
+            state.loop_depth -= 1
         if bound_flag:
             carried = [TV(v.kind, v.elem, v.lo, v.hi, v.base, v.st, v.cond | True, v.reasons | bound_reasons, v.d)
                        for v in carried]
@@ -2724,6 +2738,8 @@ class KernelReferenceEvaluator:
 
     def _op_if(self, op, args, env, state):
         cond = env[op.operands[0]]
+        if _TRIGGER_PATH and state.loop_depth > 0:
+            _trace("scf.for/scf.if (nested):control")
         if cond.st.max() >= ST_UNDEF:
             raise ProgramAbort(f"{op.node_id}: undefined branch condition")
         c = int(cond.lo)
@@ -4470,6 +4486,8 @@ def evaluate_sequence(launches: list, mode: str = NumericMode.NUMERICAL_DIFFEREN
         for arg in launch.args:
             if arg.kind != "tensor" or arg.storage_ptr not in memory:
                 continue
+            if _TRIGGER_PATH:   # DSL v2 increment 11: a later launch reads the composed reference memory
+                _trace("launch sequence (cross-launch state):composed")
             buf = memory[arg.storage_ptr]
             before = arg.before.numpy() if hasattr(arg.before, "numpy") else arg.before
             win = _window_of(arg)
