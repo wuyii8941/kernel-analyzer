@@ -550,6 +550,24 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
         op.attrs["has_other"] = "1" if re.search(r"\bother\s+%", head) else ""
         op.operands = _values(head)
         op.operand_types, op.result_types = operand_types, result_types
+    elif name == "ttng.tc_gen5_mma":  # DSL v2 increment 11: "%a, %b, %d[%tok], %useD, %pred, %bar[%bp], ... {is_async}"
+        toks = [t.strip() for t in _split_top(head, ",") if t.strip().startswith("%")]
+        ops = []
+        for k, t in enumerate(toks):
+            mm = re.fullmatch(r"(%[\w$.#-]+)(?:\[(%[\w$.#-]+)\])?", t)
+            if not mm:
+                continue
+            ops.append(mm.group(1))
+            if k >= 5 and mm.group(2):
+                ops.append(mm.group(2))
+        op.operands = ops
+        op.attrs["n_barriers"] = max(0, (len(ops) - 5) // 2)
+        op.operand_types, op.result_types = operand_types, result_types
+    elif name == "ttng.wait_barrier":  # "%bar, %phase[, %pred] [deps %a, ...]"
+        main = head.split(" deps ")[0]
+        op.attrs["n_main"] = len(_values(main))
+        op.operands = _values(head)
+        op.operand_types, op.result_types = operand_types, result_types
     elif name in ("ttng.init_barrier", "ttng.arrive_barrier"):  # "%bar, 1[, %pred] : T"
         nums = [p.strip() for p in head.split(",")[1:] if re.fullmatch(r"\s*-?\d+\s*", p)]
         op.attrs["count"] = int(nums[0]) if nums else 1

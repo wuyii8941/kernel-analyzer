@@ -29,6 +29,7 @@ from __future__ import annotations
 import collections
 import dataclasses
 import math
+import re
 import struct
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -2360,7 +2361,8 @@ class KernelReferenceEvaluator:
         that come later in program order or from other warps: not established (progress not proven)."""
         m = self._mbar(op, state, args[0])
         par = args[1]
-        pred = args[2] if len(args) > 2 else None
+        n_main = int(op.attrs.get("n_main", len(args)))
+        pred = args[2] if n_main > 2 else None   # operands after the main ones are dependencies ("deps")
         if pred is not None and int(np.asarray(pred.lo)) == 0:
             return None
         if np.asarray(par.st).max() != ST_OK:
@@ -2373,6 +2375,119 @@ class KernelReferenceEvaluator:
             self._retire(state, copies)
         m["phase_copies"] = [[] for _ in m["phase_copies"]]
         return None
+
+    # ---- TTGIR: NVIDIA Hopper / Blackwell modules (DSL v2 increment 11; device validation pending) ------------------
+
+    _PRECISION = {"0": "tf32", "1": "tf32x3", "2": "ieee", "3": "bf16x3", "4": "bf16x6"}
+
+    def _as_value(self, op, state, v: TV, rtype=None) -> TV:
+        """A matrix operand as a value: a register tensor as is, a shared-memory descriptor read in program order."""
+        if v.kind != "m":
+            return v
+        from .ttir_parser import TType
+        return self._shared_read(op, state, v, rtype or TType(np.asarray(v.lo).shape, v.elem))
+
+    def _dot_values(self, op, a, b, c):
+        import dataclasses
+        prec = str(op.attrs.get("inputPrecision", "2")).split(":")[0].strip()
+        dop = dataclasses.replace(op, attrs={**op.attrs, "inputPrecision": self._PRECISION.get(prec, prec)})
+        return self._op_dot(dop, [a, b, c], None, None)
+
+    def _op_warp_group_dot(self, op, args, env, state):
+        """ttng.warp_group_dot (Hopper wgmma): d = a.b + c, the tt.dot rule on the operands' values (a register tensor
+        or shared memory, b shared memory read in program order; the pipeliner keeps an asynchronously read buffer
+        unchanged until warp_group_dot_wait)."""
+        a, b, c = (self._as_value(op, state, x) for x in args[:3])
+        self._rules["nvidia.warp_group_dot"] += 1
+        return self._dot_values(op, a, b, c)
+
+    def _op_warp_group_dot_wait(self, op, args, env, state):
+        """Completion of asynchronous wgmma: its results are its operands."""
+        return list(args) if len(args) > 1 else args[0]
+
+    def _op_fence_async_shared(self, op, args, env, state):
+        """Orders generic-proxy shared-memory writes before async-proxy reads (wgmma, tcgen05, TMA); in the program-
+        order model of shared memory it has no value effect."""
+        return None
+
+    def _op_mbar_inval(self, op, args, env, state):
+        bar = args[0]
+        key = (int(np.asarray(bar.base).reshape(-1)[0]), int(np.asarray(bar.lo).reshape(-1)[0]))
+        state.mbars.pop(key, None)   # a later use without init_barrier is not established (_mbar)
+        return None
+
+    def _op_tmem_store(self, op, args, env, state):
+        val, view = args[0], args[1]
+        pred = args[2] if len(args) > 2 else None
+        if pred is not None:
+            if np.asarray(pred.st).max() != ST_OK or int(np.asarray(pred.lo)) == MAYBE:
+                raise ProgramAbort(f"{op.node_id}: tensor-memory store with an undecided predicate")
+            if int(np.asarray(pred.lo)) == 0:
+                return None
+        self._shared_write(state, view, val)
+        return None
+
+    def _op_tc_gen5_mma(self, op, args, env, state):
+        """ttng.tc_gen5_mma (Blackwell tcgen05, official TritonNvidiaGPUOps.td): D += A.B, D = A.B when useD is false,
+        nothing when pred is false.  Asynchronous: the result is safe to read after a wait on one of its barriers,
+        so D stays pending until such a wait observes the completion (later MMAs on D are ordered by the hardware)."""
+        a_m, b_m, d_m, use_d, pred = args[:5]
+        for flag in (use_d, pred):
+            if np.asarray(flag.st).max() != ST_OK or int(np.asarray(flag.lo)) == MAYBE:
+                raise ProgramAbort(f"{op.node_id}: tcgen05 MMA with an undecided flag")
+        if int(np.asarray(pred.lo)) == 0:
+            return None
+        from .ttir_parser import TType
+        a = self._as_value(op, state, a_m)
+        b = self._as_value(op, state, b_m)
+        dshape = np.asarray(d_m.lo).shape
+        buf = state.shared[int(np.asarray(d_m.base).reshape(-1)[0])]
+        if int(np.asarray(use_d.lo)) == 1:
+            idx = np.asarray(d_m.lo)
+            c = _ftv(d_m.elem, buf.lo[idx], buf.hi[idx], buf.st[idx], buf.cond[idx], frozenset()) \
+                if kind_of(d_m.elem) == "f" else TV("i", d_m.elem, buf.lo[idx].astype(np.int64), None, None, buf.st[idx])
+        else:
+            c = _ftv(d_m.elem, np.zeros(dshape), np.zeros(dshape), np.zeros(dshape, dtype=np.int8),
+                     np.zeros(dshape, dtype=bool), frozenset()) if kind_of(d_m.elem) == "f" else \
+                TV("i", d_m.elem, np.zeros(dshape, dtype=np.int64))
+        d = self._dot_values(op, a, b, c)
+        is_async = "is_async" in op.attrs
+        nb = int(op.attrs.get("n_barriers", 0))
+        tag = 1 if is_async else -1
+        _, idx = self._shared_write(state, d_m, d, pending=tag)
+        sid = int(np.asarray(d_m.base).reshape(-1)[0])
+        for k in range(nb):
+            bar, bpred = args[5 + 2 * k], args[6 + 2 * k]
+            if int(np.asarray(bpred.lo)) == 1:
+                m = self._mbar(op, state, bar)
+                m["attached"].append((sid, idx))
+                self._arrive(m, 1)   # tcgen05.commit arrives once the MMA completes
+        self._rules["nvidia.tc_gen5_mma"] += 1
+        return None
+
+    def _op_memdesc_trans(self, op, args, env, state):
+        view = args[0]
+        text = str(op.attrs.get("order", ""))
+        mm = re.search(r"array<i\d+\s*:\s*([^>]*)>", text)
+        order = [int(x) for x in re.findall(r"-?\d+", mm.group(1) if mm else text)]
+        lo = np.asarray(view.lo)
+        if sorted(order) != list(range(lo.ndim)):
+            raise ProgramAbort(f"{op.node_id}: memdesc_trans order {order} not understood")
+        return self._memdesc(int(np.asarray(view.base).reshape(-1)[0]), np.transpose(lo, order), view.elem)
+
+    _E2M1 = np.array([0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0, -0.0, -0.5, -1.0, -1.5, -2.0, -3.0, -4.0, -6.0])
+
+    def _op_fp4_to_fp(self, op, args, env, state):
+        """ttg.fp4_to_fp: two e2m1 values per byte, low nibble first, along ``axis``; decoded exactly."""
+        x = args[0]
+        rt = op.result_types[0]
+        axis = int(str(op.attrs.get("axis", "0")).split(":")[0])
+        raw = np.asarray(x.lo, dtype=np.int64) & 0xFF
+        lo_n, hi_n = self._E2M1[raw & 0xF], self._E2M1[raw >> 4]
+        vals = np.stack([lo_n, hi_n], axis=axis + 1).reshape(rt.shape)
+        st = np.repeat(np.asarray(x.st), 2, axis=axis).reshape(rt.shape)
+        return _ftv(rt.elem, vals, vals.copy(), st.astype(np.int8), np.repeat(np.asarray(x.cond), 2, axis=axis).reshape(rt.shape),
+                    x.reasons)
 
     def _op_histogram(self, op, args, env, state):
         """tt.histogram (DSL v2 increment 5, rc3 02 6.8): exact counts in bins of width 1 starting at 0.  Inputs

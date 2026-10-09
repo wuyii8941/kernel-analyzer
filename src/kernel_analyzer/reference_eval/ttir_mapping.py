@@ -229,6 +229,18 @@ MAPPING: dict[str, Rule] = {
     "ttng.arrive_barrier": S("H", "mbar_arrive"),
     "ttng.wait_barrier": S("H", "mbar_wait"),
     "ttng.async_copy_mbarrier_arrive": S("H", "mbar_async_arrive"),
+    # DSL v2 increment 11: NVIDIA Hopper / Blackwell modules (CPU semantics; device validation pending)
+    "ttng.warp_group_dot": S("E", "warp_group_dot"),
+    "ttng.warp_group_dot_wait": S("E", "warp_group_dot_wait"),
+    "ttng.fence_async_shared": S("H", "fence_async_shared"),
+    "ttng.inval_barrier": S("H", "mbar_inval"),
+    "ttng.tmem_alloc": S("H", "local_alloc"),
+    "ttng.tmem_store": S("H", "tmem_store"),
+    "ttng.tmem_load": S("H", "local_load"),
+    "ttng.tc_gen5_mma": S("E", "tc_gen5_mma"),
+    "ttng.tc_gen5_mma_scaled": R("E", "scaled tcgen05 MMA is not modelled in this version"),
+    "ttg.memdesc_trans": S("H", "memdesc_trans"),
+    "ttg.fp4_to_fp": S("C", "fp4_to_fp"),
     "ttg.inline_asm": R("I", "thread-wise inline asm (ttg.inline_asm) is not modelled"),
     "ttg.warp_specialize": R("H", "warp specialization (concurrent partitions) is not modelled"),
     "ttg.warp_yield": R("H", "warp specialization (concurrent partitions) is not modelled"),
@@ -375,7 +387,10 @@ OTHER_PROFILE_NAMES.update({n: "e50b186e (TTGIR)" for n in (
     "ttg.memdesc_subslice", "ttg.memdesc_index", "ttg.memdesc_reshape", "ttg.memdesc_reinterpret", "ttg.local_gather",
     "ttg.local_scatter", "ttg.local_atomic_scatter_rmw", "ttg.async_copy_global_to_local", "ttg.async_commit_group",
     "ttg.async_wait", "ttng.init_barrier", "ttng.arrive_barrier", "ttng.wait_barrier",
-    "ttng.async_copy_mbarrier_arrive", "ttg.inline_asm", "ttg.warp_specialize", "ttg.warp_yield", "ttg.warp_return")})
+    "ttng.async_copy_mbarrier_arrive", "ttg.inline_asm", "ttg.warp_specialize", "ttg.warp_yield", "ttg.warp_return",
+    "ttng.warp_group_dot", "ttng.warp_group_dot_wait", "ttng.fence_async_shared", "ttng.inval_barrier", "ttng.tmem_alloc",
+    "ttng.tmem_store", "ttng.tmem_load", "ttng.tc_gen5_mma", "ttng.tc_gen5_mma_scaled", "ttg.memdesc_trans",
+    "ttg.fp4_to_fp")})
 
 
 # ---------------------------------------------------------------------------
