@@ -645,8 +645,11 @@ def apply_direction_rules(name, lows, highs, ref_measure, decl, n_cal, n_conf, a
         # elementwise residual is declared (|<e, w>| <= M_e ||w||_1 <= M_e sqrt(d) for a unit direction)
         from .sensitivity import sensitivity_fields
         mb = decl.get("magnitude_bound")
-        M = float(mb["elementwise"]) * math.sqrt(int(valid.sum())) if mb and not rule.startswith("grouped_") else None
-        results[-1].update(sensitivity_fields(l, h, alpha, M, (mb or {}).get("basis")))
+        scale = math.sqrt(int(valid.sum()))
+        M = float(mb["elementwise"]) * scale if mb and not rule.startswith("grouped_") else None
+        # a declared elementwise width bound (before the data) gives the pre-data detectable effect (audit 5.3)
+        W = float(mb["width_elementwise"]) * scale if mb and mb.get("width_elementwise") is not None and M else None
+        results[-1].update(sensitivity_fields(l, h, alpha, M, (mb or {}).get("basis"), W))
         results[-1]["interpretation"] = interpret(rule, results[-1]["verdict"])
         results[-1].update(extra)  # unresolved results carry no p-value and stay out of Holm
     return results

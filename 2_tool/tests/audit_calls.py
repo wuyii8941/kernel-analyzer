@@ -92,3 +92,39 @@ def aten_output(inp):
     """An output written by ATen, not by Triton: no reference (structured 'not established' result)."""
     _affine_of(inp["x"])
     return {"y": inp["x"] * 2.0}
+
+
+_compiled = None
+
+
+def compiled_after_copy(inp):
+    """An ATen copy of the input read by an Inductor-compiled kernel.  Under the trace of the provenance run the
+    compiled function runs as eager ATen ops (no Triton launch), so the runs cannot be aligned: no producer record."""
+    global _compiled
+    if _compiled is None:
+        _compiled = torch.compile(lambda t: t * 3.0 + 1.0)
+    x = inp["x"]
+    return {"y": _compiled(x.reshape(32, -1).t().contiguous().reshape(-1))}
+
+
+@triton.jit
+def _row_cumsum(x_ptr, y_ptr, N: tl.constexpr):
+    r = tl.program_id(0)
+    offs = tl.arange(0, N)
+    tl.store(y_ptr + r * N + offs, tl.cumsum(tl.load(x_ptr + r * N + offs), 0))
+
+
+def cumsum_rows(inp):
+    x = inp["x"]
+    y = torch.empty_like(x)
+    _row_cumsum[(x.shape[0],)](x, y, N=x.shape[1])
+    return {"y": y}
+
+
+def cancelling_rows(seed, shape, dtype):
+    """Rows of +-2^20 pairs plus small values: prefix sums that cancel, where the gamma_n bound is loose."""
+    import numpy as np
+    rng = np.random.default_rng(seed)
+    big = np.where(np.arange(shape[-1]) % 2 == 0, 2.0 ** 20, -2.0 ** 20)
+    a = big + rng.uniform(0.5, 1.5, shape)
+    return torch.tensor(a, dtype=torch.float32, device="cuda")

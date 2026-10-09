@@ -343,10 +343,12 @@ def test_three_program_non_commutative_lock_is_not_a_point_answer():
     assert cls[0] not in ("complete_composed", "conditional_local"), cls
 
 
-def test_cas_order_agreement_is_a_premise_not_an_unconditional_reference():
-    """full interpreter: a lock-protected accumulation over 16 programs keeps its value, but as complete under a
-    declared premise (two serializations agree), never in the unconditional complete class"""
+def test_cas_lock_certificate_proves_commuting_critical_sections():
+    """full interpreter: lock-protected critical sections that commute -- a serialized add over 16 programs, and the
+    layer-norm pattern (first holder stores its part, later holders add theirs, a branch on a shared counter) --
+    are proved order-independent by the commutativity certificate: unconditional complete, with the proof recorded"""
     pytest.importorskip("triton")
+    pytest.importorskip("z3")
     from test_signatures_structural import _run
 
     body = ("    i = tl.arange(0, N)\n    while tl.atomic_cas(lock, 0, 1) == 1:\n        pass\n"
@@ -355,16 +357,47 @@ def test_cas_order_agreement_is_a_premise_not_an_unconditional_reference():
                       full=True)
     buf = ref.buffers[ident["data"]]
     assert (np.asarray(buf.st) == ST_OK).all() and (np.asarray(buf.lo) == 16).all()
-    cls = ref.element_classes(ident["data"])
-    assert (cls == "complete_under_premise").all(), cls
-    assert ref.compare()["data"]["classes"].get("complete_under_premise") == 8
+    assert (ref.element_classes(ident["data"]) == "complete_composed").all()
+    assert any(r.startswith("proved:the launch result does not depend") for r in ref.reasons), sorted(ref.reasons)
+    ln = ("    pid = tl.program_id(0)\n    i = tl.arange(0, N)\n    part = tl.load(x + pid * N + i)\n"
+          "    while tl.atomic_cas(lock, 0, 1) == 1:\n        pass\n    count = tl.load(cnt)\n"
+          "    if count == 0:\n        tl.atomic_xchg(cnt, 1)\n    else:\n        part += tl.load(dw + i)\n"
+          "    tl.store(dw + i, part)\n    tl.debug_barrier()\n    tl.atomic_xchg(lock, 0)\n")
+    x = np.random.default_rng(4).standard_normal((16, 8)).astype(np.float32)
+    ref, ident = _run("audit_lock_ln", ln, {"x": ("fp32", x.reshape(-1)), "dw": ("fp32", np.zeros(8)),
+                                            "cnt": ("int32", [0]), "lock": ("int32", [0])}, grid=(16, 1, 1), full=True)
+    assert (ref.element_classes(ident["dw"]) == "complete_composed").all()
+    dw = ref.buffers[ident["dw"]]
+    for j in range(8):
+        exact = sum(Fr(float(v)) for v in x[:, j])
+        assert Fr(float(dw.lo[j])) <= exact <= Fr(float(dw.hi[j]))
 
 
-def test_scan_bracketing_agreement_is_a_premise():
-    """full interpreter: a generic associative_scan whose two bracketings agree keeps its values under the premise
-    "combine associative", not as an unconditional reference; a plain cumsum (associativity of real addition) stays
-    unconditional (ordinary control)"""
+def test_cas_order_agreement_without_commutativity_stays_a_premise():
+    """full interpreter: six programs, x <- x + 1 or 2x by a palindromic program type, so program order and reverse
+    order agree but other orders do not; the sections do not commute, the certificate is refused and the value holds
+    only under the premise -- never in the unconditional complete class"""
     pytest.importorskip("triton")
+    from test_signatures_structural import _run
+
+    body = ("    pid = tl.program_id(0)\n    t = tl.minimum(pid, 5 - pid) % 2\n"
+            "    while tl.atomic_cas(lock, 0, 1) == 1:\n        pass\n"
+            "    v = tl.load(xs)\n    v = tl.where(t == 1, v * 2.0, v + 1.0)\n    tl.store(xs, v)\n"
+            "    tl.debug_barrier()\n    tl.atomic_xchg(lock, 0)\n")
+    ref, ident = _run("audit_lock_pal", body, {"xs": ("fp32", [0.0]), "lock": ("int32", [0])}, grid=(6, 1, 1),
+                      full=True)
+    assert (ref.element_classes(ident["xs"]) == "complete_under_premise").all()
+    assert ref.compare()["xs"]["classes"].get("complete_under_premise") == 1
+    assert any(r.startswith("assumed:the launch result does not depend") for r in ref.reasons)
+
+
+def test_scan_premise_unless_a_certificate_proves_associativity():
+    """full interpreter: a generic associative_scan whose combine region z3 proves associative (cummax with index
+    tie-break) is unconditional, with the proof recorded; a region that is not associative in general (the official
+    test's "roll", refuted by z3) keeps the premise even where the two bracketings agree on these inputs; a plain
+    cumsum (associativity of real addition) is unconditional (ordinary control)"""
+    pytest.importorskip("triton")
+    pytest.importorskip("z3")
     from test_signatures_structural import _run
 
     comb = "    take = v2 > v1\n    return tl.where(take, v2, v1), tl.where(take, i2, i1)\n"
@@ -373,12 +406,57 @@ def test_scan_bracketing_agreement_is_a_premise():
             "\n\n@triton.jit\ndef _cm(v1, i1, v2, i2):\n" + comb)
     x = np.asarray([3, 1, 4, 1, 5, 9, 2, 6], np.int32)
     ref, ident = _run("scan_cummax", body, {"x_ptr": ("int32", x), "out": ("int32", np.zeros(8))}, full=True)
-    cls = ref.element_classes(ident["out"])
-    assert (cls == "complete_under_premise").all(), cls
+    assert (ref.element_classes(ident["out"]) == "complete_composed").all()
+    assert any(r.startswith("proved:scan combine associative") for r in ref.reasons), sorted(ref.reasons)
+    roll = ("    i = tl.arange(0, N)\n    f = tl.load(f_ptr + i)\n    x = tl.load(x_ptr + i)\n"
+            "    a, l, c = tl.associative_scan((f, x, x), 0, _cm)\n    tl.store(out + i, l)\n"
+            "\n\n@triton.jit\ndef _cm(a1, l1, c1, a2, l2, c2):\n"
+            "    return a1 + a2, tl.where(a2 == 1, c1, 0) + l2, c2\n")
+    ref, ident = _run("audit_scan_roll", roll, {"f_ptr": ("int32", np.zeros(8)), "x_ptr": ("int32", x),
+                                                "out": ("int32", np.zeros(8))}, full=True)
+    assert (ref.element_classes(ident["out"]) == "complete_under_premise").all()
+    assert any(r.startswith("assumed:scan combine associative") for r in ref.reasons), sorted(ref.reasons)
     body = "    i = tl.arange(0, N)\n    tl.store(out + i, tl.cumsum(tl.load(x_ptr + i), 0))\n"
     ref, ident = _run("audit_cumsum", body, {"x_ptr": ("fp32", x.astype(np.float32)), "out": ("fp32", np.zeros(8))},
                       full=True)
     assert (ref.element_classes(ident["out"]) == "complete_composed").all()
+
+
+def test_scan_certificate_unit_cases():
+    """rule level: z3 proves cumprod, the linear recurrence and take-first associative, refutes roll and a + b / 2,
+    and gives no certificate for an operation outside the translated set"""
+    pytest.importorskip("z3")
+    from kernel_analyzer.reference_eval import certificates as C
+    from kernel_analyzer.reference_eval.ttir_parser import parse_ttir
+
+    def region(args, body, ret):
+        text = ("module {\n  tt.func public @k(%x: tensor<8xf32>) {\n    %c1 = arith.constant 1 : i32\n"
+                "    %c0 = arith.constant 0 : i32\n"
+                f"    %r = \"tt.scan\"(%x) <{{axis = 0 : i32, reverse = false}}> ({{\n    ^bb0({args}):\n{body}"
+                f"      tt.scan.return {ret}\n    }}) : (tensor<8xf32>) -> tensor<8xf32>\n    tt.return\n  }}\n}}\n")
+        mod = parse_ttir(text)
+        op = next(o for o in mod.entry().walk() if o.name == "tt.scan")
+        return op.regions[0]
+    const = {"%c1": ("const", "i32", 1), "%c0": ("const", "i32", 0)}
+    lit = lambda o: int(o.attrs["value"].split(":")[0])  # noqa: E731
+    cases = {
+        "prod": (region("%a: f32, %b: f32", "      %p = arith.mulf %a, %b : f32\n", "%p : f32"), True),
+        "first": (region("%a: f32, %b: f32", "", "%a : f32"), True),
+        "linrec": (region("%a1: f32, %b1: f32, %a2: f32, %b2: f32",
+                          "      %m = arith.mulf %a1, %a2 : f32\n      %n = arith.mulf %b1, %a2 : f32\n"
+                          "      %s = arith.addf %n, %b2 : f32\n", "%m, %s : f32, f32"), True),
+        "half": (region("%a: f32, %b: f32", "      %h = arith.mulf %b, %b : f32\n      %s = arith.subf %a, %h : f32\n",
+                        "%s : f32"), False),
+        "roll": (region("%a1: i32, %l1: i32, %c1_: i32, %a2: i32, %l2: i32, %c2: i32",
+                        "      %s = arith.addi %a1, %a2 : i32\n      %e = arith.cmpi eq, %a2, %c1 : i32\n"
+                        "      %w = arith.select %e, %c1_, %c0 : i32\n      %t = arith.addi %w, %l2 : i32\n",
+                        "%s, %t, %c2 : i32, i32, i32"), False),
+        "div": (region("%a: f32, %b: f32", "      %d = arith.divf %a, %b : f32\n", "%d : f32"), False),
+    }
+    got = {k: C.scan_associativity(r, {n: v for n, v in const.items() if n in C.outer_names(r)}, lit).proved
+           for k, (r, _) in cases.items()}
+    assert got == {k: want for k, (_, want) in cases.items()}, got
+    assert "not translated" in C.scan_associativity(cases["div"][0], {}, lit).detail
 
 
 def test_audit_order_probe_on_the_production_function():
@@ -610,17 +688,58 @@ def test_float_atomic_kernel_through_the_unified_entry(tmp_path):
 
 
 @CUDA
-@pytest.mark.parametrize("call", ["value_equal_upstream", "zero_upstream", "honest_copy", "atomic_row_sum"])
+@pytest.mark.parametrize("call", ["value_equal_upstream", "zero_upstream", "compiled_after_copy"])
 def test_upstream_values_equal_to_inputs_are_not_promoted_to_call_level(tmp_path, call):
-    """F04: neither a value-equal computed buffer, an all-zero underflowed buffer, an unrecorded copy nor an
-    accumulator zero-filled by ATen (read by the atomic update) proves provenance: the reference stays kernel-level"""
-    x = {"sampler": {"normal": [0, 1]}, "shape": [8, 512], "dtype": "float32"} if call == "atomic_row_sum" else X1D
-    rep, lv = _e2e(tmp_path, call, x)
+    """F04: neither a value-equal computed buffer nor an all-zero underflowed buffer proves provenance (their producers
+    are arithmetic), and a copy read by a compiled kernel has no aligned producer record: the reference stays
+    kernel-level"""
+    rep, lv = _e2e(tmp_path, call, X1D)
     assert lv["status"] == "ok", lv
     y = lv["outputs"]["y"]
     assert y["mixed_non_triton_sources"], y
     assert y["reference"]["reference_scope"].startswith("kernel-level"), y["reference"]
     assert y["reference"]["complete_rate_call_level"] == 0.0
+
+
+@CUDA
+@pytest.mark.parametrize("call,producer", [("honest_copy", "copy: aten.clone"), ("atomic_row_sum", "const: aten.zeros")])
+def test_upstream_copies_and_constants_with_producer_records_are_call_level(tmp_path, call, producer):
+    """F04 follow-up: a true copy of the input (ATen layout change) and an accumulator zero-filled by ATen have real
+    producers in the traced run (copy of the declared input / exact constant): call-level, with the record named"""
+    x = {"sampler": {"normal": [0, 1]}, "shape": [8, 512], "dtype": "float32"} if call == "atomic_row_sum" else X1D
+    rep, lv = _e2e(tmp_path, call, x)
+    assert lv["status"] == "ok", lv
+    y = lv["outputs"]["y"]
+    assert not y["mixed_non_triton_sources"], y
+    assert any(producer in r for r in y["upstream_with_producer_record"]), y["upstream_with_producer_record"]
+    assert y["reference"]["reference_scope"].startswith("call-level (upstream copies"), y["reference"]
+    assert y["reference"]["complete_rate_call_level"] == y["reference"]["complete_rate"] == 1.0
+
+
+def test_producer_classification_of_aten_ops():
+    """rule level (CPU tensors): copies of inputs and exact constants are clean; arithmetic, a constant that rounds in
+    the dtype, a dtype change and an in-place update of an input are computed"""
+    from types import SimpleNamespace
+
+    from kernel_analyzer import provenance as P
+    rec = SimpleNamespace(launches=[])
+    x = torch.rand(16) + 1.0
+    prov = {x.untyped_storage().data_ptr(): ("input", "declared input")}
+    tr = P._Trace(rec)
+    with tr.mode:
+        a = x.reshape(4, 4).t().contiguous()
+        b = (x[:1] + 2.0 ** -25).repeat(16)
+        c = torch.full((4,), 0.1)
+        d = torch.full((4,), 0.5)
+        e = x.to(torch.float16)
+        f = torch.cat([x, d])
+        x.mul_(0.5)
+    for ev in tr.events:
+        P._apply(prov, ev)
+    status = {k: prov[t.untyped_storage().data_ptr()][0] for k, t in
+              dict(a=a, b=b, c=c, d=d, e=e, f=f, x=x).items()}
+    assert status == {"a": "copy", "b": "computed", "c": "computed", "d": "const", "e": "computed", "f": "copy",
+                      "x": "computed"}, status
 
 
 def test_float_atomic_mark_is_kept_until_a_plain_store():
@@ -684,3 +803,74 @@ def test_heavy_imports_happen_before_the_case_timeout_is_armed(tmp_path):
     out = subprocess.run([sys.executable, str(script)], capture_output=True, text=True, timeout=900)
     res = json.loads(out.stdout.strip().splitlines()[-1])
     assert res == {"armed_after_imports": [True], "status": "ok"}, (res, out.stderr[-2000:])
+
+
+# ------------------------------------------------------------------------------------------------ audit section 5.3
+
+def test_bounded_route_does_not_call_an_observed_width_a_pre_data_guarantee():
+    """audit section 5.3: the detectable effect of the bounded route used the mean endpoint width observed in this run;
+    it is a sensitivity conditional on those widths.  A pre-data value needs a declared width bound W: 2 r_n + W."""
+    import math
+
+    from kernel_analyzer.reference_eval.sensitivity import bounded_route, sensitivity_fields
+    rng = np.random.default_rng(1)
+    l = rng.normal(0.0, 0.1, 64)
+    h = l + 0.05
+    r = bounded_route(l, h, 1.0, 0.05)
+    assert "guaranteed_detectable_effect" not in r
+    rn = 1.0 * math.sqrt(2.0 * math.log(2.0 / 0.05) / 64)
+    assert abs(r["detectable_effect_given_observed_widths"] - (2 * rn + 0.05)) < 1e-12
+    assert "not a pre-data" in r["detectable_effect_given_observed_widths_meaning"]
+    assert r["pre_data_detectable_effect"] is None
+    r = bounded_route(l, h, 1.0, 0.05, width_bound=0.1)
+    assert abs(r["pre_data_detectable_effect"] - (2 * rn + 0.1)) < 1e-12
+    s = sensitivity_fields(l, h, 0.05)
+    assert "post-data" in s["mde_approximate"]["meaning"]
+
+
+# ------------------------------------------------------------------------------------------------ W2 / W6 precision
+
+def test_compensated_prefix_sums_are_rigorous_and_tighter():
+    """rule level: at working-precision level 2 the prefix sums use a per-prefix compensated (Sum2) bound, intersected
+    with the gamma bound: every enclosure contains the exact rational prefix, and cancelling prefixes get much
+    narrower enclosures than at level 1"""
+    from kernel_analyzer.reference_eval import intervals as iv
+    rng = np.random.default_rng(3)
+    x = (np.where(np.arange(64) % 2 == 0, 2.0 ** 20, -2.0 ** 20) + rng.uniform(0.5, 1.5, 64)).reshape(1, 64)
+    x = x.astype(np.float32).astype(np.float64)
+    exact = np.cumsum([Fr(float(v)) for v in x[0]])
+    with iv.working_precision(1):
+        lo1, hi1 = iv.icumsum(x, x, 1)
+    with iv.working_precision(2):
+        lo2, hi2 = iv.icumsum(x, x, 1)
+        rlo, rhi = iv.icumsum(x[:, ::-1].copy(), x[:, ::-1].copy(), 1, reverse=True)
+    assert all(Fr(float(lo2[0, j])) <= exact[j] <= Fr(float(hi2[0, j])) for j in range(64))
+    yf = [Fr(float(v)) for v in x[0, ::-1]]                         # the scanned row (x flipped)
+    rexact = [sum(yf[j:], Fr(0)) for j in range(64)]                # reverse scan: suffix sums
+    assert all(Fr(float(rlo[0, j])) <= rexact[j] <= Fr(float(rhi[0, j])) for j in range(64))
+    assert np.max(hi2 - lo2) < 1e-3 * np.max(hi1 - lo1)
+    assert iv.precision_level() == 1
+
+
+@CUDA
+def test_refinement_raises_the_working_precision_until_the_resolution_is_met(tmp_path):
+    """W2 / W6 (audit task book section 5): a requested resolution that level 1 misses is recomputed at higher working
+    precision; the report states each level, the outcome and the level that met the target"""
+    rep, lv = _e2e(tmp_path, "cumsum_rows", {"state": "audit_calls.py:cancelling_rows", "shape": [4, 256],
+                                              "dtype": "float32"}, resolution={"ulp_fraction": 0.125})
+    assert lv["status"] == "ok", lv
+    ref = lv["outputs"]["y"]["reference"]
+    steps = lv["refinement"]["levels"]
+    assert steps[0]["level"] == 1 and steps[0]["resolution_met"] is False, steps
+    assert lv["refinement"]["outcome"].startswith("met at level"), lv["refinement"]
+    assert ref["resolution_met"] is True and lv["refinement"]["final_level"] >= 2
+
+
+@CUDA
+def test_refinement_reports_a_target_it_cannot_reach(tmp_path):
+    """a target no working precision reaches gives an explicit outcome, never a met resolution"""
+    rep, lv = _e2e(tmp_path, "cumsum_rows", {"state": "audit_calls.py:cancelling_rows", "shape": [4, 256],
+                                              "dtype": "float32"}, resolution={"ulp_fraction": 1e-12, "max_level": 2})
+    assert lv["status"] == "ok", lv
+    assert lv["outputs"]["y"]["reference"]["resolution_met"] is False
+    assert lv["refinement"]["outcome"].startswith(("not met", "no improvement")), lv["refinement"]

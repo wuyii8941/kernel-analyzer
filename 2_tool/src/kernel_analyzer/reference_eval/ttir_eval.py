@@ -900,6 +900,14 @@ class KernelReferenceEvaluator:
         self._returning_atomics = any(op.name in ("tt.atomic_load", "tt.atomic_poll")
                                       for fn in module.funcs.values() for op in fn.walk()) or \
             bool(_scoped_used_atomics(module))
+        # audit F03 follow-up: CAS spin-lock critical sections for the commutativity certificate
+        self._lock_sections, self._cas_all_locked, self._lock_hooks = {}, False, {}
+        if self._has_cas:
+            from .lock_certificate import find_sections
+            self._lock_sections, self._cas_all_locked = find_sections(module, self.func)
+            for sec in self._lock_sections.values():
+                self._lock_hooks[sec.while_node] = sec
+                self._lock_hooks[sec.release_node] = sec
 
     def _ttgir_layouts(self) -> tuple:
         """(layouts, reduce node -> axis parameters, load/store node -> pointer layout, num_warps); empty without a
@@ -1117,6 +1125,53 @@ class KernelReferenceEvaluator:
                                notes, dict(reasons), dict(self._rules), set(self._loaded), set(self._loaded_any),
                                set(self._stored))
 
+    def _lock_event(self, op, env, state):
+        """Section boundaries of a CAS spin lock (audit F03 follow-up): at the end of the acquire loop, the values the
+        critical section takes from outside; at the release, the count."""
+        sec = self._lock_hooks[op.node_id]
+        if op.node_id == sec.while_node:
+            self._lock_counts[(sec.while_node, "acquire", state.pid_index)] += 1
+            snap = {name: env[name] for name in sec.outer if name in env}
+            self._lock_records[sec.while_node][state.pid_index] = snap if len(snap) == len(sec.outer) else None
+            lock = env.get(sec.lock)
+            if lock is not None and lock.kind == "p" and lock.base is not None:
+                buf = state.memory.get(int(np.asarray(lock.base).reshape(-1)[0]))
+                if buf is not None and buf.elem in ELEM_SIZE:
+                    self._lock_locs.add((buf.ident, int(np.asarray(lock.lo).reshape(-1)[0]) // ELEM_SIZE[buf.elem]))
+        else:
+            self._lock_counts[(sec.while_node, "release", state.pid_index)] += 1
+
+    def _lock_certificate(self, programs, grid, aborted, reasons, records, counts, events, locs, snapshot, memory):
+        """Commutativity certificate for the launch's CAS spin lock (``lock_certificate``), or None."""
+        from .lock_certificate import prove
+        if not self._cas_all_locked or len(self._lock_sections) != 1 or aborted or \
+                len(programs) != grid[0] * grid[1] * grid[2]:
+            return None
+        if any(m in r for r in reasons for m in ("race", "execution validity", "conflicting lanes", "not decidable",
+                                                 "progress not proven")):
+            return None
+        sec = next(iter(self._lock_sections.values()))
+        recs = records.get(sec.while_node, {})
+        n = len(programs)
+        if len(recs) != n or any(v is None for v in recs.values()) or any(
+                counts[(sec.while_node, k, i)] != 1 for i in range(n) for k in ("acquire", "release")):
+            return None
+        if sec.exit_on == "eq_val":
+            for ident, e in locs:
+                b = snapshot.get(ident)
+                if b is None or int(b.lo[e]) not in (sec.cmp_value, sec.val_value):
+                    return None
+        cert = prove(self, sec, recs, memory)
+        if not cert.proved:
+            self._rules["execution.cas_certificate_refused"] += 1
+            return cert
+        # an atomic update outside the critical sections on what a section reads or writes interleaves with them
+        outside = [e for e in events if e[7] not in sec.nodes and e[7] != sec.release_node]
+        if any((e[0], int(i)) in cert.footprint for e in outside for i in np.asarray(e[1]).reshape(-1)):
+            self._rules["execution.cas_certificate_refused"] += 1
+            return None
+        return cert
+
     def _cas_reverse_order(self, programs, grid, bindings, memory, snapshot, aborted, reasons):
         """DSL v2 increment 7 (rc3 02 6.9, declared order + evidence): the launch was evaluated as one serialization of
         its contended compare-and-swap operations (program order).  Re-evaluate it from the memory before the launch
@@ -1129,6 +1184,8 @@ class KernelReferenceEvaluator:
         n = len(programs)
         exhaustive = n <= CAS_ALL_ORDERS_MAX
         import itertools
+        first_lock = (getattr(self, "_lock_records", {}), getattr(self, "_lock_counts", collections.Counter()),
+                      list(getattr(self, "_events", [])), set(getattr(self, "_lock_locs", set())))
         orders = [list(p) for p in itertools.permutations(range(n))][1:] if exhaustive else [list(range(n))[::-1]]
         runs = [{k: b.copy() for k, b in memory.items()}]
         all_rules = collections.Counter(self._rules)
@@ -1177,8 +1234,16 @@ class KernelReferenceEvaluator:
             merged[f"not_established:the launch result depends on the order of its contended compare-and-swap "
                    f"operations ({which} differ)"] += differ
             self._rules["execution.cas_order_dependent_elements"] += differ
-        merged[f"assumed:the launch result does not depend on the order of its contended compare-and-swap operations "
-               f"({which} agree; a declared premise, not a proof over every serialization)"] += 1
+        cert = None if differ or not getattr(self, "_lock_sections", None) else \
+            self._lock_certificate(programs, grid, all_aborted, reasons, *first_lock, snapshot, memory)
+        if cert is not None and cert.proved:
+            # audit F03 follow-up: a proof over every serialization replaces the premise
+            self._rules["execution.cas_commutativity_certified"] += 1
+            merged[f"proved:the launch result does not depend on the order of its contended compare-and-swap "
+                   f"operations ({cert.detail})"] += 1
+        else:
+            merged[f"assumed:the launch result does not depend on the order of its contended compare-and-swap "
+                   f"operations ({which} agree; a declared premise, not a proof over every serialization)"] += 1
         return all_aborted, merged
 
     def _mark_premises(self, memory, reasons, premise_before):
@@ -1228,6 +1293,9 @@ class KernelReferenceEvaluator:
         self._read_chain = {}  # ident -> (last reader, its epoch, every earlier reader happens before it)
         self._cas_contended = False
         self._two_pass_bad = set()
+        self._lock_records = collections.defaultdict(dict)  # section -> program index -> section inputs at entry
+        self._lock_counts = collections.Counter()           # (section, "acquire" / "release", program index)
+        self._lock_locs = set()                             # (storage, element) of the locks
         # DSL v2 increment 14: integer set targets stored in this run, ident -> {element: (lo, hi, program)}; set
         # targets of earlier launches are carried as records of program -1
         self._iset_records = {}
@@ -1353,6 +1421,8 @@ class KernelReferenceEvaluator:
                     block = target
                     break
                 self._exec(op, env, state)
+                if self._lock_hooks and op.node_id in self._lock_hooks:
+                    self._lock_event(op, env, state)
             else:
                 return []
 
@@ -3739,6 +3809,30 @@ class KernelReferenceEvaluator:
             result = self._check_scan_bracketing(op, args, axis, reverse, env, state, result)
         return result if len(result) > 1 else result[0]
 
+    def _scan_certificate(self, op, args, env):
+        """Certificate that the scan's combine region is associative for every argument (audit F03 follow-up,
+        ``certificates.scan_associativity``), or None.  The proof is over finite reals / bit-vectors, so it is used
+        only when every scanned element is a finite established value; values the region takes from the enclosing
+        scope enter as their scalar value in this execution, or as a variable the proof covers for every choice."""
+        from . import certificates as C
+        if not C.available() or not all(np.all(np.asarray(a.st) == ST_OK) for a in args):
+            return None
+        region = op.regions[0]
+        outer = {}
+        for name in C.outer_names(region):
+            v = env.get(name)
+            if v is None:
+                return None
+            lo = np.asarray(v.lo)
+            if v.kind != "p" and lo.shape == () and int(np.asarray(v.st)) == ST_OK and \
+                    (v.kind != "f" or float(np.asarray(v.hi)) == float(lo)):
+                outer[name] = ("const", str(v.elem), lo.item())
+            else:
+                outer[name] = ("var", str(v.elem))
+        key = "\n".join([repr([str(t.elem) for _, t in region.entry.args])] + [o.text for o in region.entry.ops])
+        return C.scan_associativity(region, outer, lambda o: np.asarray(_constant(o).lo).reshape(-1)[0].item(),
+                                    key=key)
+
     def _check_scan_bracketing(self, op, args, axis, reverse, env, state, seq):
         """DSL v2 increment 8: a Triton scan requires an associative combine (the tl.associative_scan precondition)
         and the hardware brackets it as a tree.  The sequential fold is checked on these inputs against a second
@@ -3767,6 +3861,9 @@ class KernelReferenceEvaluator:
         alt = [flip(x) for x in cur]
         out = []
         disagree_any = False
+        cert = self._scan_certificate(op, args, env)
+        if cert is not None and cert.proved:
+            self._rules["scan.associativity_certified"] += 1
         for a, b in zip(seq, alt):
             both = (a.st == ST_OK) & (b.st == ST_OK)
             if a.kind == "f":
@@ -3778,8 +3875,12 @@ class KernelReferenceEvaluator:
             same_special = (a.st == b.st) & (a.st != ST_OK)
             bad = ~(agree | same_special)
             disagree_any |= bool(bad.any())
-            premise = (f"assumed:scan combine associative (the tl.associative_scan precondition; two bracketings agree "
-                       f"on these inputs)@{op.node_id}")
+            if cert is not None and cert.proved:
+                # audit F03 follow-up: a proof, not a premise (certificates.scan_associativity)
+                premise = f"proved:scan combine associative ({cert.detail})@{op.node_id}"
+            else:
+                premise = (f"assumed:scan combine associative (the tl.associative_scan precondition; two bracketings "
+                           f"agree on these inputs)@{op.node_id}")
             reasons = a.reasons | {premise}
             # audit F03: recorded for the launch at once, whatever path (store, atomic, shared memory) the result takes
             self._reasons[premise] += 1
@@ -3925,7 +4026,7 @@ class KernelReferenceEvaluator:
                     if ok and rel:
                         self._acquire(state, rel[-1])
             buf.writer[idx] = state.pid_index
-            if buf.float_atomic is not None:
+            if getattr(buf, "float_atomic", None) is not None:
                 buf.float_atomic[idx] = False
             self._mark_plain(buf, idx)
             we = self._wepoch.get(buf.ident)

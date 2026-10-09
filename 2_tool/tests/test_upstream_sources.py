@@ -95,11 +95,12 @@ def test_input_modified_in_place_by_aten_inside_the_launch_is_an_intermediate():
     assert rep["outputs"]["y"]["depends_on_non_triton_intermediates"], "the in-place modified input must count as upstream"
 
 
-def test_unrecorded_copy_upstream_is_not_promoted_to_a_declared_input():
+def test_copy_upstream_needs_a_producer_record():
     """an ATen layout change (a true copy of the declared input) is upstream.  Its values are the input values, but
     equal values are not provenance (audit F04: ATen arithmetic can round back to the input bits): without a producer
-    record it stays an upstream intermediate and the unified entry keeps the reference kernel-level.  (Until the
-    audit fix it was tagged "[copy of inputs]" from the element bit patterns and counted as call-level.)"""
+    record it stays an upstream intermediate; with the traced run's record (aten.clone of the declared input) it is
+    reported as an upstream copy, not a mixed source.  (Until the audit fix it was tagged "[copy of inputs]" from the
+    element bit patterns.)"""
     class Case(check.Case):
         name = "copy_upstream"
 
@@ -112,6 +113,10 @@ def test_unrecorded_copy_upstream_is_not_promoted_to_a_declared_input():
             _plus_one[(N // 128,)](t, y, N, BLOCK=128)
             return {"y": y}
 
-    rep = check.run(Case(), dev=[0], conf=[1, 2])
+    rep = check.run(Case(), dev=[0], conf=[1, 2], producer_records=False)
     deps = rep["outputs"]["y"]["depends_on_non_triton_intermediates"]
     assert deps and not any("copy of inputs" in d for d in deps)
+    assert not rep["outputs"]["y"]["upstream_with_producer_record"]
+    rep = check.run(Case(), dev=[0], conf=[1, 2])
+    assert not rep["outputs"]["y"]["depends_on_non_triton_intermediates"]
+    assert any("aten.clone" in d for d in rep["outputs"]["y"]["upstream_with_producer_record"])

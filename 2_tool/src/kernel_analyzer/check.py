@@ -160,7 +160,10 @@ def input_storages(inp):
     return out
 
 
-def torch_intermediates(launches, seq, inp, digests_before=None, input_ptrs=None):
+PRODUCER_RECORD = " [producer record: "   # label suffix of an upstream buffer with a recorded copy / constant chain
+
+
+def torch_intermediates(launches, seq, inp, digests_before=None, input_ptrs=None, producers=None):
     """Per written storage: the float buffers upstream of it (through the recorded launches) that the reference
     loaded but that are neither inputs of the case nor written by an earlier recorded launch, i.e. produced by a
     torch / ATen op in between.  K_R treats their captured values as exact inputs, so an output depending on them
@@ -170,7 +173,11 @@ def torch_intermediates(launches, seq, inp, digests_before=None, input_ptrs=None
     bytes are that input's bytes before the launch (not modified in place).  Equal values elsewhere -- every element
     bit pattern found among the inputs, or an all-zero buffer -- are not provenance (audit F04: ATen arithmetic can
     round back to the input bits, an underflow can give zeros whose real value is not zero); without a producer
-    record and an element mapping such a buffer stays upstream and the reference kernel-level."""
+    record and an element mapping such a buffer stays upstream and the reference kernel-level.
+
+    ``producers`` ({(launch, argument): (provenance, chain)} from ``provenance.producer_records``): a buffer whose
+    recorded producers are only copies of declared inputs or exact constants gets the label suffix
+    ``PRODUCER_RECORD``; it is an upstream buffer whose captured values are the call's own values, not a mixed one."""
     import hashlib
 
     def digest(a):
@@ -204,7 +211,10 @@ def torch_intermediates(launches, seq, inp, digests_before=None, input_ptrs=None
                 upstream |= deps[a.storage_ptr]  # unchanged since a recorded launch wrote it
             elif a.storage_ptr in ref.loaded and str(a.dtype).startswith(("float", "bfloat")):
                 if not (a.storage_ptr in ptrs and digest(raw) in inputs):
-                    upstream.add(f"L{i}:{l.kernel_name[:40]}:{a.name}")
+                    rec_ = (producers or {}).get((i, a.name))
+                    tag = f"{PRODUCER_RECORD}{rec_[0]}: {rec_[1][:120]}]" if rec_ and rec_[0] in ("input", "const",
+                                                                                                    "copy") else ""
+                    upstream.add(f"L{i}:{l.kernel_name[:40]}:{a.name}{tag}")
         stored = getattr(ref, "stored", set())
         for a in tensors:
             before = np.asarray(a.before.numpy() if hasattr(a.before, "numpy") else a.before)
@@ -220,7 +230,7 @@ def torch_intermediates(launches, seq, inp, digests_before=None, input_ptrs=None
 
 
 def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_rel=None, repeats=None,
-        magnitude_bound=None, alpha=0.05):
+        magnitude_bound=None, alpha=0.05, producer_records=True, precision_level=1):
     """One case through mode A or B.  ``keep``: a dict that receives, per output and seed, the reference interval
     and K in the output's logical element order (for independent recomputation of K_R); ``equivalence_rel``: passed
     to the decision layer (the equivalence axis next to each nonzero verdict).
@@ -236,6 +246,10 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     (from a derivation such as a per-input error budget, never from the sample); e_num rules then also report the
     bounded route (Hoeffding on truncated endpoints).  Every rule reports the approximate route's sensitivity.
     ``alpha``: the level of every rule test (the declared significance level of the unified entry).
+    ``producer_records``: when a kernel reads a float buffer that is not a declared input, run the call once more per
+    seed, unmeasured, under an ATen trace (``provenance.producer_records``); buffers produced only by copies of the
+    inputs or exact constants are then not mixed sources (audit F04 follow-up).
+    ``precision_level``: working precision of the reference (``intervals.working_precision``: 1, 2 or 3).
 
     Proof status (audit F03): elements whose reference holds only under an unproven premise are reported apart
     (``complete_under_premise_fraction``) and are not ok for the statistics.  IR (audit F05): each launch is analysed
@@ -287,10 +301,17 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             zero_fill = [ptx_zero_fills(l.asm.get("ptx", "")) for l in rec.launches]
             fill = zero_fill_mode == "auto" and all(zero_fill)
         t_phase = time.time()
-        seq = evaluate_sequence(rec.launches, masked_fill_zero=fill)
+        with iv.working_precision(precision_level):
+            seq = evaluate_sequence(rec.launches, masked_fill_zero=fill)
         timing["reference"] += time.time() - t_phase
         # every seed (audit F04): the upstream sources of a storage can change with the data and the allocator
         mixed_sources = torch_intermediates(rec.launches, seq, inp, digest0, ptrs0)
+        if producer_records and any(mixed_sources.values()):
+            # an unmeasured traced run of the call for this seed: producer records for the upstream buffers
+            from .provenance import producer_records as _producers
+            prods = _producers(case, seed, rec.launches, seq)
+            if prods:
+                mixed_sources = torch_intermediates(rec.launches, seq, inp, digest0, ptrs0, prods)
         if external is None:
             # a buffer changed between recorded launches (a torch op in between): from there on its captured value
             # re-enters as an exact input, so K_R downstream carries the upstream numerical error of K
@@ -464,7 +485,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
               "versions": {k: _version(k) for k in ("liger-kernel", "transformers", "torch", "triton")},
               "seeds": {"development": [list(dev)[0], list(dev)[-1]], "confirmation": [list(conf)[0], list(conf)[-1]]},
               "seconds": round(seconds, 1), "outputs": {},
-              "tool_version": TOOL_VERSION, "launches_per_input": r_exec,
+              "tool_version": TOOL_VERSION, "launches_per_input": r_exec, "precision_level": precision_level,
               "outputs_not_written_by_triton": sorted(not_triton),
               "outputs_binding_not_established": sorted(binding_unconfirmed),
               "outputs_at_address_of_another_recorded_storage": sorted(reused_address),
@@ -482,7 +503,11 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         premised = np.stack([p["premise"] for p in rows])
         premises = sorted({str(r).split("@")[0] for p in rows for r in (p["reasons"] or {}) if unproven_premise(r)})
         entry = {"elements_per_seed": int(written[0].sum()), "shape": list(rows[0]["shape"]),
-                 "depends_on_non_triton_intermediates": sorted(mixed_by_output.get(name, ())),
+                 "depends_on_non_triton_intermediates": sorted(d for d in mixed_by_output.get(name, ())
+                                                               if PRODUCER_RECORD not in d),
+                 # upstream buffers whose recorded producers are copies of the declared inputs or exact constants
+                 "upstream_with_producer_record": sorted(d for d in mixed_by_output.get(name, ())
+                                                         if PRODUCER_RECORD in d),
                  # written elements whose reference is complete and finite, or a special value of f's class
                  "reference_classes": {"complete_fraction": float(resolved[written].mean()) if written.any() else 0.0,
                                        "finite_complete_fraction": float(ok[written].mean()) if written.any() else 0.0,
@@ -491,6 +516,9 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                                        "written_fraction": float(written.mean())},
                  # proof status (audit F03): proved / holds only under an unproven premise / not established
                  "proof_status": {"unproven_premises": premises,
+                                  "proved_by_certificate": sorted({str(r).split("@")[0][:200] for p in rows
+                                                                   for r in (p["reasons"] or {})
+                                                                   if str(r).startswith("proved:")}),
                                   "meaning": "complete_fraction counts proved references only; elements that hold "
                                              "only under an unproven premise are counted apart and are not used by "
                                              "the statistics"},

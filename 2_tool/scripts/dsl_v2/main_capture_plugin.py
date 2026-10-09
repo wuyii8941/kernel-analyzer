@@ -62,7 +62,7 @@ def pytest_runtest_call(item):
                        aborted=sorted(set(ref.aborted.values()))[:3],
                        reasons=sorted(k for k in ref.reasons if k.startswith("not_established"))[:5],
                        set_reasons=sorted(k for k in ref.reasons if k.startswith("set:"))[:5],
-                       notes=sorted(k for k in ref.reasons if k.startswith(("assumed:", "dot_input_precision:")))[:5],
+                       notes=sorted(k for k in ref.reasons if k.startswith(("assumed:", "proved:", "dot_input_precision:")))[:5],
                        execution={k: v for k, v in ref.rules.items()
                                   if k.startswith(("execution.", "premise.", "atomic.", "dot.integer"))})
         except Exception as exc:  # noqa: BLE001 -- recorded: an evaluator crash is a defect, never hidden

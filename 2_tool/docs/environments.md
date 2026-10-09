@@ -18,6 +18,7 @@
 | torch | 2.10.0+cu128 |
 | triton | 3.6.0（wheel，无 git 提交号；以 wheel 版本与 LLVM 哈希锁定） |
 | gmpy2 / python-flint | MPFR 区间与精确有理数 / Arb |
+| z3-solver 4.13.4.0 | scan 结合性证书与 CAS 自旋锁可交换性证书（未安装时不发证书，相应结果保持「前提下完整」） |
 | numpy、scipy、pytest | — |
 
 不装 liger-kernel、bitsandbytes、torchao、transformers。需要它们的旧案例用下面的

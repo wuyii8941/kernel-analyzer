@@ -54,7 +54,7 @@ from . import check
 
 DEFAULT_RULE_CLASSES = {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]}
 DEFAULT_UNITS = {"development": 32, "confirmation": 64, "seed_offset": 0}
-DEFAULT_RESOLUTION = {"ulp_fraction": 0.125}
+DEFAULT_RESOLUTION = {"ulp_fraction": 0.125, "max_level": 3}
 ALLOWED_REFERENCE_CLASSES = ["complete_composed"]
 SAMPLERS = ("normal", "uniform", "randint", "bernoulli", "lognormal", "sparse", "rare_tail")
 N_MIN = 16
@@ -225,24 +225,32 @@ def expand(decl: dict) -> dict:
            "bounded_route": "magnitude_bound (a declared population bound M on |K - G| per element, not proven by the "
                             "tool) is passed to check.run: every rule reports the bounded route (Hoeffding on the "
                             "per-unit projections, per rule at alpha) next to the approximate route (endpoint-"
-                            "conservative t); without M no distribution-free statement.  error_budget is recorded "
-                            "only (not applied)",
+                            "conservative t); without M no distribution-free statement.  A declared "
+                            "magnitude_bound.width_elementwise W (before the data) gives the pre-data detectable "
+                            "effect 2 r_n + W; without it the detectable effect is conditional on the observed widths. "
+                            "error_budget is recorded only (not applied)",
            "equivalence_policy": "equivalence.rel (delta relative to the reference scale q_R) is passed to check.run: "
                                  "every fixed-direction rule reports the equivalence axis (TOST); without delta no "
                                  "equivalence statement",
-           "resolution_policy": "resolved_fraction is measured against resolution.ulp_fraction; no recomputation at "
-                                "higher precision (adaptive refinement not implemented, rc3 W2 / W6): an unmet target "
-                                "is reported as 'enclosure too wide' and resolution_met = false, never as met",
+           "resolution_policy": "resolved_fraction is measured against resolution.ulp_fraction; while the target is "
+                                "not met the level is measured again at a higher working precision (levels 1-3: SumK / "
+                                "DotK K = 3, 5, 8, compensated prefix sums from level 2; up to resolution.max_level), "
+                                "stopping when met, at the highest level, when the budget is spent or when a level "
+                                "brings no improvement; the outcome and every level are reported, an unmet target is "
+                                "'enclosure too wide' with resolution_met = false, never written as met",
            "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
            "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) at alpha + contract_v3 "
                          "cannot-judge rules (S0 = 2, N0 = 64, n_min = 16)",
            "reference_scope": "call-level complete only when every float buffer the kernels read is a declared input's "
-                              "own storage (unchanged) or written by a recorded launch; otherwise kernel-level "
-                              "(upstream values captured) and not counted as complete for the call.  Equal values "
-                              "(every element found among the inputs, an all-zero buffer) are not provenance",
+                              "own storage (unchanged), written by a recorded launch, or produced (by an unmeasured "
+                              "traced run of the call, aligned launch for launch) only by copies of the declared inputs "
+                              "or exact constants; otherwise kernel-level (upstream values captured) and not counted as "
+                              "complete for the call.  Equal values (every element found among the inputs, an all-zero "
+                              "buffer) are not provenance",
            "proof_status": "complete_rate counts proved references only; elements that hold only under an unproven "
-                           "premise (CAS serializations, scan bracketings) are reported as complete_under_premise_rate "
-                           "and are not used by the statistics",
+                           "premise (CAS serializations without the lock commutativity certificate, scan bracketings "
+                           "without the associativity certificate) are reported as complete_under_premise_rate and are "
+                           "not used by the statistics; certificates are listed under proof_status",
            "source_hashes": source_hashes(decl, base_dir)}
     # the input sample stream: call, inputs, compare and budget only (the digest of earlier versions, kept so that the
     # same declaration draws the same inputs, and a statistics setting does not change them)
@@ -347,8 +355,7 @@ def reference_quality(keep_rows: list, dtype: str, ulp_fraction: float) -> dict:
             "width_over_ulp": {"median": q(0.5), "p90": q(0.9), "max": float(w.max()) if w.size else None},
             "resolution_target_ulp_fraction": ulp_fraction,
             "resolved_fraction": resolved / n_ok if n_ok else None,
-            "resolution_met": (resolved == n_ok) if n_ok else None,
-            "refinement": "not implemented (rc3 W2 / W6): no recomputation at higher precision"}
+            "resolution_met": (resolved == n_ok) if n_ok else None}
 
 
 def _holm(ps):
@@ -388,7 +395,8 @@ def class_statistics(num_rec: dict, rule_classes: dict, alpha: float) -> dict:
             j["mde_approximate"] = (r.get("mde_approximate") or {}).get("mde")
             if r.get("bounded"):  # DSL v2: the bounded route next to the approximate one (not merged into it)
                 j["bounded"] = {k: r["bounded"].get(k) for k in ("verdict", "interval", "M", "M_basis",
-                                                                 "guaranteed_detectable_effect", "reason")}
+                                                                 "detectable_effect_given_observed_widths",
+                                                                 "pre_data_detectable_effect", "reason")}
             per[n] = j
         js = [v["judgment"] for v in per.values()]
         if any(x.startswith("nonzero") for x in js):
@@ -486,6 +494,62 @@ def _semantic(keep_rows, fas, name):
 
 
 def run_level(exp: dict, level: dict) -> dict:
+    """One factor level with adaptive working precision (rc3 W2 / W6; external audit task book section 5): the level
+    is measured at working precision 1; while the requested resolution is not met, it is measured again at the next
+    level (``intervals.PRECISION_LEVELS``, up to ``resolution.max_level``, default 3).  The refinement stops when the
+    target is met, the highest level is reached, the budget is spent, or a level brings no improvement (the widths are
+    then not limited by the working precision).  float64 outputs are not refined: a nonzero enclosure width cannot get
+    below a fraction of a float64 ulp with float64 endpoints.  The report keeps every level and the outcome; the
+    result of the last completed level is the level's result."""
+    res = exp["resolution"]
+    max_level = int(res.get("max_level", 3))
+    frac = float(res["ulp_fraction"])
+    t0 = time.time()
+    steps, best, outcome, prec = [], None, None, 1
+    while True:
+        out = _measure_pass(exp, level, prec)
+        if out.get("status") != "ok":
+            if best is None:
+                return out
+            outcome = (f"not met: the pass at level {prec} ended with '{out.get('status')}' "
+                       f"({str(out.get('reason'))[:120]}); the result of level {prec - 1} stands")
+            prec -= 1
+            break
+        best = out
+        evaluated = {n: o for n, o in out["outputs"].items() if o.get("status") == "evaluated"}
+        unmet = {n: o for n, o in evaluated.items() if o["reference"].get("resolution_met") is False}
+        refinable = {n: o for n, o in unmet.items() if not (o.get("dtype") == "float64" and frac < 1.0)}
+        steps.append({"level": prec, "resolution_met": not unmet,
+                      "resolved_fraction": {n: o["reference"].get("resolved_fraction") for n, o in evaluated.items()},
+                      "seconds": out.get("seconds")})
+        if not unmet:
+            outcome = f"met at level {prec}"
+            break
+        if not refinable:
+            outcome = ("not attainable: float64 outputs with nonzero enclosure width cannot get below a fraction of a "
+                       "float64 ulp with float64 endpoints; not refined")
+            break
+        if len(steps) >= 2 and all((steps[-1]["resolved_fraction"].get(n) or 0.0) <=
+                                   (steps[-2]["resolved_fraction"].get(n) or 0.0) for n in refinable):
+            outcome = (f"not met: no improvement at level {prec} (the remaining widths are not limited by the working "
+                       f"precision)")
+            break
+        if prec >= max_level:
+            outcome = f"not met: highest working precision level {max_level} reached"
+            break
+        if time.time() - t0 > float(exp["budget"]["gpu_seconds"]):
+            outcome = f"not met: budget exhausted after level {prec}"
+            break
+        prec += 1
+    best["refinement"] = {"levels": steps, "outcome": outcome, "final_level": prec,
+                          "target_ulp_fraction": frac, "max_level": max_level,
+                          "levels_meaning": {str(k): v for k, v in sorted(__import__(
+                              "kernel_analyzer.reference_eval.intervals", fromlist=["PRECISION_LEVELS"]
+                          ).PRECISION_LEVELS.items())}}
+    return best
+
+
+def _measure_pass(exp: dict, level: dict, precision_level: int = 1) -> dict:
     call = resolve(exp["call"], exp["_base_dir"])
     measure_names = list(exp["compare"]["measure"])
     spec_fn = resolve(exp["compare"]["spec"], exp["_base_dir"]) if exp["compare"]["mode"] == "B" else None
@@ -549,7 +613,7 @@ def run_level(exp: dict, level: dict) -> dict:
     try:
         rep = check.run(case, dev=dev, conf=conf, keep=keep, magnitude_bound=exp.get("magnitude_bound"),
                         alpha=exp["alpha"], equivalence_rel=(exp.get("equivalence") or {}).get("rel"),
-                        repeats=exp.get("repeats"))
+                        repeats=exp.get("repeats"), precision_level=precision_level)
     except _Timeout as exc:
         return {"level": level, "status": "over budget", "reason": str(exc), "failure_class": "over budget",
                 "seconds": round(time.time() - t0, 1)}
@@ -579,14 +643,20 @@ def run_level(exp: dict, level: dict) -> dict:
             failures.append(outputs[name]["failure_class"])
             continue
         quality = reference_quality(keep.get(name, []), dtypes.get(name, "float32"), exp["resolution"]["ulp_fraction"])
-        # audit F04: every non-Triton upstream buffer keeps the reference kernel-level (equal values prove nothing)
+        # audit F04: a non-Triton upstream buffer keeps the reference kernel-level (equal values prove nothing),
+        # unless its recorded producers are copies of the declared inputs or exact constants
         backfilled = list(o.get("depends_on_non_triton_intermediates") or [])
+        recorded = list(o.get("upstream_with_producer_record") or [])
         quality["reference_scope"] = ("kernel-level: upstream non-Triton values captured (" + ", ".join(backfilled)[:200]
-                                      + ")") if backfilled else "call-level"
+                                      + ")") if backfilled else (
+            "call-level (upstream copies / exact constants with producer records: " + ", ".join(recorded)[:200] + ")"
+            if recorded else "call-level")
         quality["complete_rate_call_level"] = 0.0 if backfilled else quality["complete_rate"]
         stats = class_statistics(o.get("numerical"), exp["rule_classes"], exp["alpha"])
-        entry = {"status": "evaluated", "reference": quality, "statistics": stats, "guarantee": o.get("guarantee"),
+        entry = {"status": "evaluated", "dtype": dtypes.get(name, "float32"), "reference": quality,
+                 "statistics": stats, "guarantee": o.get("guarantee"),
                  "proof_status": o.get("proof_status"), "execution": o.get("execution"),
+                 "upstream_with_producer_record": recorded,
                  "mixed_non_triton_sources": o.get("depends_on_non_triton_intermediates") or [],
                  "not_established_reasons_seed0": o.get("not_established_reasons_seed0"),
                  "special_values": o.get("special_values")}
@@ -596,7 +666,7 @@ def run_level(exp: dict, level: dict) -> dict:
             # only then do the tool's reasons explain missing elements (otherwise they are notes such as the dot
             # input precision or a checked premise)
             entry["failure_classes"] = sorted({classify_failure(r) for r in reasons if not str(r).startswith(
-                ("assumed:", "dot_input_precision:", "set:"))})
+                ("assumed:", "proved:", "dot_input_precision:", "set:"))})
             if quality["complete_under_premise"]:   # audit F03: a conditional diagnosis, not a complete reference
                 entry["failure_classes"].append("unproven premise (conditional diagnosis)")
             entry["failure_classes"] = sorted(set(entry["failure_classes"])) or ["unclassified"]
@@ -612,7 +682,8 @@ def run_level(exp: dict, level: dict) -> dict:
                                                   else "pure Triton: K_R vs f_r exact comparison")
         failures.extend(entry["failure_classes"])
         outputs[name] = entry
-    return {"level": level, "status": "ok", "units": {"development": len(dev), "confirmation": len(conf)},
+    return {"level": level, "status": "ok", "precision_level": precision_level,
+            "units": {"development": len(dev), "confirmation": len(conf)},
             "notes": notes, "outputs": outputs, "timing_seconds": rep.get("timing_seconds"),
             "seconds": round(seconds, 1), "failure_classes": sorted(set(failures)),
             "over_budget": seconds > float(budget["gpu_seconds"])}

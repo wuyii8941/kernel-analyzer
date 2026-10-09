@@ -43,6 +43,24 @@ v1.1 的计分只绑定运行 r20261008T2030。
   打断这次导入，留下半初始化的模块，使同一进程中后续所有水平出错——现在先导入再武装；（2）超时异常是 `Exception`，在声明的调用里触发时
   被调用包装当作「调用拒绝了声明的输入」（归为绑定失败）——现在是 `BaseException`，预算耗尽总是报「over budget」。两者都有修复前失败的测试。
 
+### 外部审计修复版的欠账补齐，2026-10-10
+
+- **scan 结合性证书**（`reference_eval/certificates.py`）：通用 combine 区域按参照语义翻译成 z3 项（浮点为实数、整数为定宽位向量），证明
+  f(f(a,b),c) = f(a,f(b,c)) 对全部参数成立；扫描元素都是有限值时结果不再依赖前提（cumprod、cummax 带下标、线性递推、取首元等）。
+  z3 反驳或无法翻译（如官方测试的 roll、含除法的区域）时前提照旧。依赖 `z3-solver`（未安装时不发证书）。
+- **CAS 自旋锁可交换性证书**（`reference_eval/lock_certificate.py`）：识别「CAS 自旋获取 + exchange 释放」模式；每个 program 的临界区按符号
+  重放（区段入口的内存为符号，外部浮点值全称量化，整数与地址取已求值的具体值），z3 证明有重叠足迹的各对 program 的临界区两两可交换；
+  成立时结果对一切串行化成立，不再依赖前提。不可交换（例如程序次序与逆序恰好一致的回文情形）时拒绝发证。
+- **调用级来源的生产者记录**（`provenance.py`）：有非 Triton 上游时，对同一 seed 另做一次不计入测量的、带 ATen 调度轨迹的调用；只由声明输入
+  的复制（clone / repeat / cat / gather / index ...）或可精确表示的常数（zeros / full / fill）产生的缓冲不再算混合来源（报告中单列
+  `upstream_with_producer_record`），调用级完整。轨迹运行的 Triton 启动序列须与测量逐个一致；编译代码在调度模式下退回 eager、对不上，
+  则不给证据。值相等仍不是证据。
+- **工作精度与按需提高精度**（W2 / W6）：`intervals.working_precision` 三级（SumK / DotK 的 K = 3、5、8，二级起前缀和用逐前缀的 Sum2 补偿界并与
+  γ 界取交）；`measure` 在请求分辨率未满足时逐级重算，报告每级结果与结局（达标于第 k 级 / 无改善 / 预算用尽 / 已到最高级 / float64 输出
+  不可达）。
+- **灵敏度表述**（审计 §5.3）：`guaranteed_detectable_effect` 改为 `detectable_effect_given_observed_widths`（依赖本次观察到的宽度，不是事前
+  功效保证）；声明 `magnitude_bound.width_elementwise` 时另给事前值 `pre_data_detectable_effect` = 2 r_n + W。
+
 ## 3.1（2026-10-08，标签 `general-v3.1`）——审计修正（替代 general-v3.0 作为第 5 项的冻结版本）
 
 冻结：提交 d6e177e，src 树 `cd21ef56cf46eb3cff2c00c50b8918b30a604d26`。

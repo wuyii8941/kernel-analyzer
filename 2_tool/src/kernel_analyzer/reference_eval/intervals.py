@@ -447,6 +447,35 @@ def gamma(n) -> float:
     return n * U / (1 - n * U)
 
 
+# Working precision (DSL v2 rc3 02 / 04 W2, W6; external audit follow-up).  The enclosures keep float64 endpoints; the
+# level sets how the summation-type rules spend effort: K of SumK / DotK, and the prefix-sum bound (level 1: the
+# gamma_n bound on |x|; levels 2-3: the compensated Sum2 bound per prefix, intersected with the gamma bound).
+PRECISION_LEVELS = {1: {"sum_k": 3, "cumsum": "gamma"}, 2: {"sum_k": 5, "cumsum": "sum2"},
+                    3: {"sum_k": 8, "cumsum": "sum2"}}
+_PRECISION = [1]
+
+
+def precision_level() -> int:
+    return _PRECISION[-1]
+
+
+class working_precision:
+    """Context manager: evaluate the enclosed reference at working-precision ``level`` (1, 2 or 3)."""
+
+    def __init__(self, level: int):
+        if level not in PRECISION_LEVELS:
+            raise ValueError(f"working precision level {level} (levels: {sorted(PRECISION_LEVELS)})")
+        self.level = level
+
+    def __enter__(self):
+        _PRECISION.append(self.level)
+        return self
+
+    def __exit__(self, *exc):
+        _PRECISION.pop()
+        return False
+
+
 def _vecsum_last(p):
     """One error-free transformation pass along the last axis (Ogita, Rump, Oishi 2005, Algorithm 4.3): afterwards
     p[..., -1] is the floating sum and the other entries carry the exact errors; the exact sum is unchanged."""
@@ -458,7 +487,7 @@ def _vecsum_last(p):
     return p
 
 
-def sum_k(x, axis=-1, K=3):
+def sum_k(x, axis=-1, K=None):
     """SumK (Ogita, Rump, Oishi 2005, Algorithm 4.8): (res, err) with |sum(x) - res| <= err rigorously
     (Proposition 4.10: |res - s| <= (u + 3 gamma_{n-1}^2) |s| + gamma_{2n-2}^K S, S = sum |x_i|; valid without
     overflow and with gradual underflow, 4 n u <= 1).  Final pass: numpy's pairwise sum of the first n - 1 terms
@@ -466,6 +495,7 @@ def sum_k(x, axis=-1, K=3):
     structure the proof uses.  Returns (res, err, ok): ok is False where a non-finite value appeared (callers fall
     back to the gamma bound there)."""
 
+    K = PRECISION_LEVELS[precision_level()]["sum_k"] if K is None else K
     x = np.moveaxis(np.asarray(x, dtype=np.float64), axis, -1)
     n = x.shape[-1]
     if n == 0:
@@ -548,7 +578,37 @@ def project_bounds(lo, hi, w):
     return fsum_bounds(np.minimum(a_lo, b_lo), np.maximum(a_hi, b_hi), axis=-1)
 
 
+def _prefix_sum2(x, axis):
+    """Enclosures of the exact prefix sums of ``x`` along ``axis`` by Sum2 (Ogita, Rump, Oishi 2005, Algorithm 4.4)
+    applied to every prefix at once: pi_j, q_j = TwoSum(pi_{j-1}, x_j), sigma_j = fl(sigma_{j-1} + q_j), res_j =
+    fl(pi_j + sigma_j); Proposition 4.5 gives |res_j - s_j| <= u |s_j| + gamma_{j}^2 S_j for the j + 1 terms (S_j =
+    sum |x_i|, accumulated with upward rounding).  Non-finite prefixes get (-inf, inf)."""
+    x = np.moveaxis(np.asarray(x, dtype=np.float64), axis, -1)
+    n = x.shape[-1]
+    lo, hi = np.empty_like(x), np.empty_like(x)
+    pi = np.zeros(x.shape[:-1])
+    sigma = np.zeros(x.shape[:-1])
+    S = np.zeros(x.shape[:-1])
+    with np.errstate(all="ignore"):
+        for j in range(n):
+            xj = x[..., j]
+            pi, q = two_sum(pi, xj)
+            sigma = sigma + q
+            S = up(S + np.abs(xj))
+            res = pi + sigma
+            g = gamma(max(j, 1))
+            tail = up(g * g * S)
+            abs_s = (np.abs(res) + tail) / (1 - U)
+            err = up((U * abs_s + tail) * (1 + 8 * U))
+            fin = np.isfinite(res) & np.isfinite(err)
+            lo[..., j] = np.where(fin, down(res - err), -np.inf)
+            hi[..., j] = np.where(fin, up(res + err), np.inf)
+    return np.moveaxis(lo, -1, axis), np.moveaxis(hi, -1, axis)
+
+
 def icumsum(lo, hi, axis, reverse=False):
+    """Enclosure of the exact prefix sums along ``axis``: the gamma_n bound; at working-precision level >= 2 also the
+    per-prefix Sum2 bound (``_prefix_sum2``), the two intersected."""
     if reverse:
         lo, hi = np.flip(lo, axis), np.flip(hi, axis)
     n = lo.shape[axis]
@@ -559,12 +619,16 @@ def icumsum(lo, hi, axis, reverse=False):
         b_lo = np.cumsum(np.abs(lo), axis=axis) * g
         b_hi = np.cumsum(np.abs(hi), axis=axis) * g
     out = down(s_lo - b_lo), up(s_hi + b_hi)
+    if PRECISION_LEVELS[precision_level()]["cumsum"] == "sum2" and _accumulation_mode() != "gamma":
+        c_lo = _prefix_sum2(lo, axis)[0]
+        c_hi = _prefix_sum2(hi, axis)[1]
+        out = np.maximum(out[0], c_lo), np.minimum(out[1], c_hi)
     if reverse:
         out = np.flip(out[0], axis), np.flip(out[1], axis)
     return out
 
 
-def dot_k(a, b, K=3, max_elems=1 << 24):
+def dot_k(a, b, K=None, max_elems=1 << 24):
     """DotK: (res, err, ok) for the exact A @ B of float64 matrices (..., m, k) @ (..., k, n): every product split
     exactly by two_prod, the 2k terms summed by SumK.  Underflowing products are not error-free in two_prod; the
     caller adds k * 2^-1070 (as the gamma version does).  ok False where a non-finite value appeared."""

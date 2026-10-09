@@ -138,10 +138,13 @@ def build() -> dict:
         "Contended compare-and-swap (DSL v2 increment 7, rc3 02 6.9 declared order + evidence): the launch is "
         "evaluated in every program order when it has at most 4 program instances, otherwise in program order and "
         "reverse program order, each from the memory before the launch; only elements every evaluated order "
-        "establishes and agrees on keep a value (hull), reported as complete under the premise (proof status axis, "
-        "audit F03), never in the unconditional complete class.  Happens-before through release / acquire with vector "
-        "clocks; relaxed locks keep racing.  Premise for the reviewer: agreement of the evaluated orders stands for "
-        "every serialization (evidence, not a proof: a program may enter several critical sections).",
+        "establishes and agrees on keep a value (hull).  For a spin lock (acquire loop + exchange release, one "
+        "critical section per program) the commutativity certificate replays every program's critical section "
+        "symbolically and z3 proves the sections commute pairwise: the result then holds for every serialization "
+        "(unconditional).  Otherwise the values are complete under the premise (proof status axis, audit F03), never "
+        "in the unconditional complete class.  Happens-before through release / acquire with vector clocks; relaxed "
+        "locks keep racing.  Premise for the reviewer when no certificate: agreement of the evaluated orders stands "
+        "for every serialization (evidence, not a proof).",
         f"{T_LK}::test_lock_protected_accumulation_is_established_under_the_order_premise",
         f"{T_LK}::test_first_writer_inside_a_lock_depends_on_the_order", attrs="contended"))
     # ---- sub-regions of tt.scan
@@ -156,8 +159,10 @@ def build() -> dict:
             "The combine region is folded in scan order with interval semantics and checked against a second "
             "bracketing (Hillis-Steele doubling) on the same inputs; prefixes the two disagree on are not "
             "established.  Exact in the reals only if the combiner is associative (the tl.associative_scan "
-            "precondition): agreement on these inputs is evidence, not a proof, so the results are reported as "
-            "complete under the premise (proof status axis, audit F03; premise for the reviewer).",
+            "precondition): when z3 proves the combine region associative for all arguments (reals / bit-vectors, "
+            "finite scanned values) the results are unconditional; otherwise agreement on these inputs is evidence, "
+            "not a proof, and the results are complete under the premise (proof status axis, audit F03; premise for "
+            "the reviewer).",
             f"{T_TT}::test_scan_with_a_custom_combine_region_encloses_the_exact_prefix",
             f"{T_TT}::test_product_scan_encloses_the_exact_prefix_products", subregion=sub))
     # ---- extern libdevice and inline asm
