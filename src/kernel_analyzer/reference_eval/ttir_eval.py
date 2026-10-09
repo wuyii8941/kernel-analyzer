@@ -304,6 +304,43 @@ def _unsigned(x: np.ndarray, width: int) -> np.ndarray:
 _BIT_LAYOUT = {"f32": (np.float32, np.int32), "f64": (np.float64, np.int64), "f16": (np.float16, np.int16)}
 
 
+def _scoped_used_atomics(module) -> list:
+    """tt.atomic_rmw ops whose result is used inside its own block (and the regions nested in that block).  SSA names
+    are reused across sibling regions (an unused exchange in an scf.if may share its name with a used CAS result in a
+    while region), so a module-wide name set over-approximates (DSL v2 increment 7)."""
+    from .ttir_parser import _walk_region
+
+    out = []
+
+    def block_uses(block):
+        names = set()
+        for o in block.ops:
+            names.update(o.operands)
+            for _, vals in o.successors:
+                names.update(vals)
+            for r in o.regions:
+                for x in _walk_region(r):
+                    names.update(x.operands)
+                    for _, vals in x.successors:
+                        names.update(vals)
+        return names
+
+    def visit(region):
+        for block in region.blocks:
+            used = None
+            for o in block.ops:
+                if o.name == "tt.atomic_rmw" and o.results:
+                    used = block_uses(block) if used is None else used
+                    if o.results[0] in used:
+                        out.append(o)
+                for r in o.regions:
+                    visit(r)
+
+    for fn in module.funcs.values():
+        visit(fn.body)
+    return out
+
+
 def _float_bits(elem: str, lo, hi, st):
     """Bit patterns of float reference values and whether they are definite (the tt.bitcast policy): a point exactly
     representable in the format, or an infinity.  NaN payloads and non-points are not definite."""
@@ -596,9 +633,10 @@ class KernelReferenceEvaluator:
         self.ttgir = ttgir
         self._layout_cache = None
         self._uses = self._collect_uses()
-        self._returning_atomics = any(
-            (op.name == "tt.atomic_rmw" and op.results and op.results[0] in self._uses)
-            or op.name in ("tt.atomic_load", "tt.atomic_poll") for fn in module.funcs.values() for op in fn.walk())
+        self._has_cas = any(op.name == "tt.atomic_cas" for fn in module.funcs.values() for op in fn.walk())
+        self._returning_atomics = any(op.name in ("tt.atomic_load", "tt.atomic_poll")
+                                      for fn in module.funcs.values() for op in fn.walk()) or \
+            bool(_scoped_used_atomics(module))
 
     def _ttgir_layouts(self) -> tuple:
         """(layouts, reduce node -> axis parameters, load/store node -> pointer layout, num_warps); empty without a
@@ -733,6 +771,8 @@ class KernelReferenceEvaluator:
         self._pin = set(pin_loads)
         self._atomic_pass, self._atomic_table, self._atomic_init, self._plain_prev = 0, None, None, None
         self._cyclic = set()
+        self._cas_serial = self._has_cas and not self._returning_atomics
+        cas_snapshot = {k: b.copy() for k, b in memory.items()} if self._cas_serial else None
         snapshot = table = None
         if self._returning_atomics:
             # DSL v2 increment 4: returned atomic values need every update of their address in this launch.  Pass 1
@@ -758,6 +798,9 @@ class KernelReferenceEvaluator:
                                                   order if self._atomic_pass == 2 else None)
         if self._atomic_pass == 2:
             self._check_two_pass(table, memory, reasons)
+        if self._cas_serial and self._cas_contended and len(programs) > 1:
+            aborted, reasons = self._cas_reverse_order(programs, grid, bindings, memory, cas_snapshot, aborted,
+                                                       reasons)
         if aborted:
             # An aborted program may stop before some of its stores: elements the kernel changed but the reference
             # did not write in this launch keep their earlier reference value, which a later launch would read as
@@ -791,6 +834,53 @@ class KernelReferenceEvaluator:
                                notes, dict(reasons), dict(self._rules), set(self._loaded), set(self._loaded_any),
                                set(self._stored))
 
+    def _cas_reverse_order(self, programs, grid, bindings, memory, snapshot, aborted, reasons):
+        """DSL v2 increment 7 (rc3 02 6.9, declared order + evidence): the launch was evaluated as one serialization of
+        its contended compare-and-swap operations (program order).  Re-evaluate it in reverse program order from the
+        memory before the launch and keep, per element, only what both orders establish and agree on (the hull when
+        the enclosures overlap); elements the two orders disagree on are not established.  Agreement of two orders is
+        evidence, not a proof over every serialization: recorded as a declared premise."""
+        first = {k: b.copy() for k, b in memory.items()}
+        first_rules = collections.Counter(self._rules)
+        for k in list(memory):
+            memory[k] = snapshot[k].copy()
+        aborted2, reasons2 = self._run_programs(programs, grid, bindings, memory,
+                                                list(range(len(programs)))[::-1])
+        differ = 0
+        for k, b2 in memory.items():
+            b1 = first[k]
+            w = np.asarray(b1.written) | np.asarray(b2.written)
+            if not w.any():
+                continue
+            both_ok = (b1.st == ST_OK) & (b2.st == ST_OK)
+            if b1.kind == "f":
+                overlap = both_ok & (b1.lo <= b2.hi) & (b2.lo <= b1.hi)
+                b2.lo = np.where(overlap, np.minimum(b1.lo, b2.lo), b2.lo)
+                b2.hi = np.where(overlap, np.maximum(b1.hi, b2.hi), b2.hi)
+            else:
+                overlap = both_ok & (b1.lo == b2.lo)
+            same_special = (b1.st == b2.st) & (b1.st != ST_OK) & (b1.st < ST_UNDEF) & \
+                ((b1.kind != "f") | True)
+            agree = overlap | same_special
+            bad = w & ~agree & ((b1.st == ST_OK) | (b2.st == ST_OK) | (b1.st != b2.st))
+            if bad.any():
+                differ += int(bad.sum())
+                b2.st = np.where(bad, ST_NE, b2.st).astype(np.int8)
+            b2.written = w
+        merged = collections.Counter(reasons)
+        merged.update(reasons2)
+        self._rules.update(first_rules)
+        self._rules["execution.cas_two_order_launches"] += 1
+        if differ:
+            merged["not_established:the launch result depends on the order of its contended compare-and-swap "
+                   "operations (program order and reverse order differ)"] += differ
+            self._rules["execution.cas_order_dependent_elements"] += differ
+        merged["assumed:the launch result does not depend on the order of its contended compare-and-swap operations "
+               "(program order and reverse order agree; a declared premise, not a proof over every order)"] += 1
+        all_aborted = dict(aborted)
+        all_aborted.update(aborted2)
+        return all_aborted, merged
+
     def _run_programs(self, programs, grid, bindings, memory, order=None) -> tuple:
         """Run every program instance of the launch once on ``memory`` (in ``order``: indices into ``programs``, by
         default their order; the program index stays its position in ``programs``); launch-level execution checks at
@@ -817,6 +907,9 @@ class KernelReferenceEvaluator:
         self._releases = collections.defaultdict(list)  # (ident, address) -> [(program, epoch, value)]
         self._hb = collections.defaultdict(dict)  # program -> {writer program: highest acquired release epoch}
         self._polls = []  # (program, ident, address, expected) recorded by atomic_poll
+        self._awriter = {}  # ident -> (program, release epoch) of the last atomic write per element
+        self._read_chain = {}  # ident -> (last reader, its epoch, every earlier reader happens before it)
+        self._cas_contended = False
         for buf in memory.values():
             buf.writer[:] = -1  # kernel boundaries order all earlier writes
         aborted = {}
@@ -1086,15 +1179,41 @@ class KernelReferenceEvaluator:
         cur = r[idx]
         r[idx] = np.where((cur == -1) | (cur == state.pid_index), state.pid_index, -3)
         self._reader_programs[buf.ident].add(state.pid_index)
+        # DSL v2 increment 7: the last reader of each element and whether every earlier reader happens before it
+        chain = self._read_chain.get(buf.ident)
+        if chain is None:
+            n = buf.writer.shape
+            chain = self._read_chain[buf.ident] = (np.full(n, -1, dtype=np.int64), np.full(n, -1, dtype=np.int64),
+                                                   np.ones(n, dtype=bool))
+        last, epoch, ok = chain
+        prev = last[idx]
+        covered = (prev == -1) | (prev == state.pid_index) | self._hb_covers(state, prev, epoch[idx])
+        ok[idx] = ok[idx] & covered
+        last[idx], epoch[idx] = state.pid_index, state.rel_epoch
+
+    def _hb_covers(self, state, programs, epochs):
+        """Elementwise: program p's actions up to epoch e happen before this program's next action."""
+        edges = self._hb.get(state.pid_index)
+        if not edges:
+            return np.zeros(np.shape(programs), dtype=bool)
+        out = [p >= 0 and edges.get(int(p), -1) >= int(e) for p, e in zip(np.ravel(programs).tolist(),
+                                                                         np.ravel(epochs).tolist())]
+        return np.asarray(out, dtype=bool).reshape(np.shape(programs))
 
     def _check_read_then_write(self, buf, idx, state):
         """A write (store or atomic) to addresses another program of this launch already read: that program's reads
-        depend on the schedule (no happens-before between programs of one launch)."""
+        depend on the schedule, unless every earlier read happens before this write (DSL v2 increment 7: reads ordered
+        by acquired releases, e.g. inside a lock)."""
         r = self._readers.get(buf.ident)
         if r is None or not idx.size:
             return
         others = r[idx]
         clash = (others != -1) & (others != state.pid_index)
+        chain = self._read_chain.get(buf.ident)
+        if clash.any() and chain is not None and self._hb.get(state.pid_index):
+            last, epoch, ok = chain
+            ordered = ok[idx] & ((last[idx] == state.pid_index) | self._hb_covers(state, last[idx], epoch[idx]))
+            clash = clash & ~ordered
         if not clash.any():
             return
         self._race_programs.update(int(p) for p in np.unique(others[clash & (others >= 0)]))
@@ -1389,6 +1508,8 @@ class KernelReferenceEvaluator:
             st_w = np.where(dup, ST_NE, st_w)
             self._check_read_then_write(buf, idx, state)
             other_writer = (buf.writer[idx] != -1) & (buf.writer[idx] != state.pid_index)
+            if other_writer.any() and self._hb.get(state.pid_index):
+                other_writer = other_writer & ~self._ordered_by_hb(buf, idx, state)
             if other_writer.any():
                 old_differs = (buf.lo[idx] != lo_w) | (buf.st[idx] != st_w)
                 if hi_w is not None:
@@ -1554,22 +1675,48 @@ class KernelReferenceEvaluator:
         buf.writer[idx] = -2
         buf.written[idx] = True
         self._stored.add(buf.ident)
+        aw = self._awriter.get(buf.ident)
+        if aw is None:
+            aw = self._awriter[buf.ident] = (np.full(buf.writer.shape, -1, dtype=np.int64),
+                                             np.full(buf.writer.shape, -1, dtype=np.int64))
+        aw[0][idx], aw[1][idx] = state.pid_index, state.rel_epoch
         if op.attrs.get("sem") in ("release", "acq_rel"):
             # a release: the program's earlier writes (epoch <= rel_epoch) happen before an acquire that reads it
             vals = np.asarray(contrib_lo)
+            snap = dict(self._hb.get(state.pid_index, {}))
             for j, a in enumerate(idx.tolist()):
-                self._releases[(buf.ident, a)].append((state.pid_index, state.rel_epoch, vals[j].item()))
+                self._releases[(buf.ident, a)].append((state.pid_index, state.rel_epoch, vals[j].item(), snap))
             state.rel_epoch += 1
         return olds if op.results else None
 
+    def _acquire(self, state, release):
+        """Merge a release (program, epoch, value, happens-before snapshot) into this program's edges (DSL v2
+        increments 5 / 7): the releasing program's writes up to that epoch, and everything that program had acquired
+        before releasing (transitivity), happen before this program's later accesses."""
+        w, epoch, _, snap = release
+        if w == state.pid_index:
+            return
+        edges = self._hb[state.pid_index]
+        edges[w] = max(edges.get(w, -1), epoch)
+        for v, ev in snap.items():
+            if v != state.pid_index:
+                edges[v] = max(edges.get(v, -1), ev)
+        self._rules["execution.happens_before_edges"] += 1
+
     def _ordered_by_hb(self, buf, idx, state):
-        """Lanes whose last writer's write happens before this program's access through an acquired release."""
+        """Lanes whose last writer's write happens before this program's access through an acquired release (plain
+        writers from the write epochs, atomic writers from the atomic-writer table)."""
         edges = self._hb.get(state.pid_index, {})
         we = self._wepoch.get(buf.ident)
-        writers = buf.writer[idx]
-        if we is None or not edges:
+        writers = np.array(buf.writer[idx], copy=True)
+        if not edges:
             return np.zeros(writers.shape, dtype=bool)
-        epochs = we[idx]
+        epochs = we[idx] if we is not None else np.full(writers.shape, -1, dtype=np.int64)
+        aw = self._awriter.get(buf.ident)
+        if aw is not None:
+            atomic = writers == -2
+            writers = np.where(atomic, aw[0][idx], writers)
+            epochs = np.where(atomic, aw[1][idx], epochs)
         ok = [w >= 0 and edges.get(int(w), -1) >= int(e) for w, e in zip(np.ravel(writers).tolist(),
                                                                           np.ravel(epochs).tolist())]
         return np.asarray(ok, dtype=bool).reshape(np.shape(writers))
@@ -1745,10 +1892,9 @@ class KernelReferenceEvaluator:
                 writers = {e[0][0] for e in produced}
                 if op.attrs.get("sem") == "acquire" and init != x and len(writers) == 1:
                     w = writers.pop()
-                    eps = [e for (p, e, v) in self._releases.get((buf.ident, a), []) if p == w and v == x]
-                    if eps:
-                        self._hb[state.pid_index][w] = max(self._hb[state.pid_index].get(w, -1), min(eps))
-                        self._rules["execution.happens_before_edges"] += 1
+                    rel = [r for r in self._releases.get((buf.ident, a), []) if r[0] == w and r[2] == x]
+                    if rel:
+                        self._acquire(state, min(rel, key=lambda r: r[1]))
             elif init == x:
                 why["the expected value may be overwritten before the first load: progress not proven"] += 1
             else:
@@ -2108,7 +2254,14 @@ class KernelReferenceEvaluator:
     def _op_while(self, op, args, env, state):
         carried = [env[v] for v in op.operands]
         before, after = op.regions
-        for _ in range(10_000_000):
+        from .ttir_parser import _walk_region
+        spin = any(o.name in ("tt.atomic_cas", "tt.atomic_load") for r in op.regions for o in _walk_region(r))
+        for it in range(10_000_000):
+            if spin and it >= 10_000:
+                # DSL v2 increment 7: in the serialization the earlier programs have finished; a spin loop that has
+                # not acquired by now waits for a program that never releases in this order: progress not proven
+                raise ProgramAbort(f"{op.node_id}: not_established: spin loop does not acquire in the reference "
+                                   f"serialization (progress not proven)")
             term, vals = self._run_region(before, env, state, carried)
             c = vals[0]
             if c.st.max() >= ST_UNDEF or int(c.lo) == MAYBE:
@@ -2566,7 +2719,13 @@ class KernelReferenceEvaluator:
             owner = self._readers.setdefault(("cas", buf.ident), np.full(buf.writer.shape, -1, dtype=np.int64))
             others = owner[idx]
             clash = (others >= 0) & (others != state.pid_index)
-            if clash.any():
+            if clash.any() and self._cas_serial:
+                # DSL v2 increment 7: one serialization of the contended CAS (program order); evaluate() checks the
+                # reverse order and keeps only what both orders agree on
+                self._cas_contended = True
+                self._rules["execution.atomic_cas_serialized_lanes"] += int(clash.sum())
+                clash = np.zeros(clash.shape, dtype=bool)
+            elif clash.any():
                 self._race_programs.update(int(p) for p in np.unique(others[clash]))
                 self._race_programs.add(state.pid_index)
                 self._rules["execution.atomic_cas_contention_lanes"] += int(clash.sum())
@@ -2574,7 +2733,8 @@ class KernelReferenceEvaluator:
                             f"(interleaving relation not modelled yet)@{op.node_id}")
             owner[idx] = state.pid_index
             self._check_read_then_write(buf, idx, state)
-            self._track_read(buf, idx, state)  # the CAS reads the old value
+            if not self._cas_serial:
+                self._track_read(buf, idx, state)  # the CAS reads the old value (an atomic read in serialization)
             uniq, counts = np.unique(idx, return_counts=True)
             dup = np.isin(idx, uniq[counts > 1])
             lo_m = buf.lo[idx].astype(np.float64)
@@ -2597,8 +2757,24 @@ class KernelReferenceEvaluator:
             if buf.hi is not None:
                 buf.hi[idx] = np.where(swap, v_hi, buf.hi[idx])
             buf.st[idx] = np.where(decided, buf.st[idx], ST_NE)
+            if self._cas_serial and op.attrs.get("sem") in ("acquire", "acq_rel"):
+                # the value read was written by the latest release of that value at the address (program order)
+                for a, v, ok in zip(idx.tolist(), lo_m.tolist(), decided.tolist()):
+                    rel = [r for r in self._releases.get((buf.ident, a), []) if r[2] == v]
+                    if ok and rel:
+                        self._acquire(state, rel[-1])
             buf.writer[idx] = state.pid_index
             self._mark_plain(buf, idx)
+            we = self._wepoch.get(buf.ident)
+            if we is None:
+                we = self._wepoch[buf.ident] = np.full(buf.writer.shape, -1, dtype=np.int64)
+            we[idx] = state.rel_epoch
+            if self._cas_serial and op.attrs.get("sem") in ("release", "acq_rel"):
+                snap = dict(self._hb.get(state.pid_index, {}))
+                new_vals = np.asarray(new_lo)
+                for j, a in enumerate(idx.tolist()):
+                    self._releases[(buf.ident, a)].append((state.pid_index, state.rel_epoch, new_vals[j].item(), snap))
+                state.rel_epoch += 1
             buf.written[idx] = True
             self._stored.add(buf.ident)
             if (~decided).any():
