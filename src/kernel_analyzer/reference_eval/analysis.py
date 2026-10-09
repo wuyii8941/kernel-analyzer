@@ -641,6 +641,12 @@ def apply_direction_rules(name, lows, highs, ref_measure, decl, n_cal, n_conf, a
             arrays[f"{name}__{rule}"] = saved
         l, h = _project(lo[conf], hi[conf], w)
         results.append(_with_units(_summarize(name, rule, l, h, alpha), l, h, record))
+        # DSL v2 (rc3 02 8.2-8.5): sensitivity of the design, and the bounded route when a population bound on the
+        # elementwise residual is declared (|<e, w>| <= M_e ||w||_1 <= M_e sqrt(d) for a unit direction)
+        from .sensitivity import sensitivity_fields
+        mb = decl.get("magnitude_bound")
+        M = float(mb["elementwise"]) * math.sqrt(int(valid.sum())) if mb and not rule.startswith("grouped_") else None
+        results[-1].update(sensitivity_fields(l, h, alpha, M, (mb or {}).get("basis")))
         results[-1]["interpretation"] = interpret(rule, results[-1]["verdict"])
         results[-1].update(extra)  # unresolved results carry no p-value and stay out of Holm
     return results
@@ -659,7 +665,8 @@ def residual_summary(lows, highs, valid) -> dict:
 
 def assess_units(name, lows, highs, ref_mid, ok, n_dev, rules, alpha=0.05, groups=None, declared_vectors=None,
                  alignment_reference=None, detector_shape=None, run_detector=True, cross_fit_folds=2,
-                 confirmation_invalid="unresolved", measurement=None, unit_ids=None, seed=0, equivalence_rel=None):
+                 confirmation_invalid="unresolved", measurement=None, unit_ids=None, seed=0, equivalence_rel=None,
+                 magnitude_bound=None):
     """The decision layer for one measured quantity: units x coordinates residual intervals -> record.
 
     ``equivalence_rel``: when given, every fixed-direction rule also reports the equivalence axis (TOST against
@@ -705,7 +712,7 @@ def assess_units(name, lows, highs, ref_mid, ok, n_dev, rules, alpha=0.05, group
     arrays[f"{name}__coordinate_set"] = valid
     record["residual"] = residual_summary(lows, highs, valid)
     decl = {"direction_rules": list(rules), "groups": groups, "cross_fit_folds": cross_fit_folds,
-            "declared_vectors": declared_vectors}
+            "declared_vectors": declared_vectors, "magnitude_bound": magnitude_bound}
     record["rules"] = apply_direction_rules(name, lows, highs, ref_mid, decl, n_dev, n_conf, alpha, valid=valid,
                                             arrays=arrays)
     if run_detector:

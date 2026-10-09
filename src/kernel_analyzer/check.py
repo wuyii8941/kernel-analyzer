@@ -214,7 +214,8 @@ def torch_intermediates(launches, seq, inp, digests_before=None):
     return {k: sorted(v) for k, v in deps.items()}
 
 
-def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_rel=None, repeats=None):
+def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_rel=None, repeats=None,
+        magnitude_bound=None):
     """One case through mode A or B.  ``keep``: a dict that receives, per output and seed, the reference interval
     and K in the output's logical element order (for independent recomputation of K_R); ``equivalence_rel``: passed
     to the decision layer (the equivalence axis next to each nonzero verdict).
@@ -224,7 +225,11 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     reference does not depend on the schedule).  Per output: bitwise identical -> as before; an execution race found by
     the reference -> statistics withheld; different and the launch has float atomics (order-free fold admitted) ->
     residual intervals averaged within the input over the launches (outward rounding), the input is the unit;
-    different for no identified reason -> execution validity not established, statistics withheld (diagnosis)."""
+    different for no identified reason -> execution validity not established, statistics withheld (diagnosis).
+
+    ``magnitude_bound``: {"elementwise": M, "basis": text}, a bound on |K - G| per element over the declared population
+    (from a derivation such as a per-input error budget, never from the sample); e_num rules then also report the
+    bounded route (Hoeffding on truncated endpoints).  Every rule reports the approximate route's sensitivity."""
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.set_float32_matmul_precision("highest")
     import torch._inductor.config as inductor_config
@@ -473,7 +478,8 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                 rec = {"comparison": f"{name}: {label}", "verdict": "NOT_ESTABLISHED", "reason": execution["status"]}
             else:
                 rec, _ = assess_units(f"{name}: {label}", lo, hi, kr, ok, n_dev, RULES, alignment_reference=kr,
-                                      unit_ids=list(dev) + list(conf), equivalence_rel=equivalence_rel)
+                                      unit_ids=list(dev) + list(conf), equivalence_rel=equivalence_rel,
+                                      magnitude_bound=magnitude_bound if key == "n" else None)
             timing["statistics"] += time.time() - t_phase
             mid = 0.5 * (lo + hi)
             if ok.any():

@@ -66,7 +66,9 @@ def _run(scenario, keep):
     TritonLaunchRecorder.__init__ = init
     try:
         case = _Case(scenario)
-        report = check.run(case, dev=[0], conf=[1, 2])
+        # one launch per input: the repeated launches of tool 4.0 run outside the recorded region and would add
+        # address reuses this test does not count (it is about binding inside the recorded region)
+        report = check.run(case, dev=[0], conf=[1, 2], repeats=1)
     finally:
         TritonLaunchRecorder.__init__ = original
     return case, report

@@ -40,6 +40,30 @@ from .ttir_mapping import (LIBDEVICE, LIBDEVICE_ROUNDING, inline_asm_internal, i
 from .ttir_parser import PtrType, TFunc, TModule, TOp, TRegion, TType, parse_ttir
 
 ST_OK, ST_NAN, ST_PINF, ST_NINF, ST_UNDEF, ST_NE = 0, 1, 2, 3, 4, 5
+
+# Trigger evidence (DSL v2 rc3 04 W1): with KA_TRIGGER_TRACE=<path>, every executed (operation, internal rule) and every
+# reduction route is recorded with the running pytest test id and written to <path>.<pid> at exit.  Off by default.
+_TRIGGER_PATH = __import__("os").environ.get("KA_TRIGGER_TRACE")
+_TRIGGER_SEEN: set = set()
+
+
+def _trace(signature: str) -> None:
+    if _TRIGGER_PATH:
+        import os
+        test = os.environ.get("PYTEST_CURRENT_TEST", "").rsplit(" ", 1)[0]
+        _TRIGGER_SEEN.add((test, signature))
+
+
+def _flush_trace() -> None:
+    if _TRIGGER_PATH and _TRIGGER_SEEN:
+        import os
+        with open(f"{_TRIGGER_PATH}.{os.getpid()}", "a") as handle:
+            for test, sig in sorted(_TRIGGER_SEEN):
+                handle.write(f"{test}\t{sig}\n")
+
+
+if _TRIGGER_PATH:
+    __import__("atexit").register(_flush_trace)
 _ROUNDING_MODES = {"rtne": "rtne", "rn": "rtne", "rtz": "rtz", "rz": "rtz", "rd": "rd", "rm": "rd",
                    "ru": "ru", "rp": "ru"}
 MAYBE = 2
@@ -719,6 +743,8 @@ class KernelReferenceEvaluator:
             raise ProgramAbort(f"{op.node_id}: {op.name} has no reference rule"
                                + (f" ({rule.reason})" if rule else ""))
         handler = getattr(self, f"_op_{rule.internal}", None)
+        if _TRIGGER_PATH:
+            _trace(f"{op.name}:{rule.internal}")
         args = [env[v] for v in op.operands] if rule.internal not in ("for", "if", "while") else None
         if handler is not None:
             out = handler(op, args, env, state)
@@ -1203,6 +1229,8 @@ class KernelReferenceEvaluator:
         active = (m == 1) & in_range
         idx = index[active].astype(np.int64)
         result_used = op.results and op.results[0] in self._uses
+        if _TRIGGER_PATH:
+            _trace(f"tt.atomic_rmw/return {'used' if result_used else 'unused'}")
         if result_used:
             self._rules["atomic.return_value_not_established_lanes"] += int(((m == 1) & in_range).sum())
         else:
@@ -1386,6 +1414,8 @@ class KernelReferenceEvaluator:
     def _op_reduce(self, op, args, env, state):
         axis = int(op.attrs["axis"].split(":")[0])
         combiner = recognize_combiner(op)
+        if _TRIGGER_PATH:
+            _trace(f"tt.reduce/{combiner or 'other'}")
         if combiner is None:  # any combine region: interpret it along the lowering's combination order
             return self._tree_reduce(op, args, axis, env, state, "no order-free fast path matches the region")
         if combiner in ("argmax", "argmin"):
@@ -1662,6 +1692,8 @@ class KernelReferenceEvaluator:
         axis = int(op.attrs["axis"].split(":")[0])
         reverse = op.attrs.get("reverse", "false").startswith("true")
         combiner = recognize_combiner(op)
+        if _TRIGGER_PATH:
+            _trace(f"tt.scan/{combiner if combiner in ('sum', 'sum_int') else ('generic fold (several operands)' if len(args) > 1 else 'generic fold (one operand)')}")
         if len(args) > 1:  # several operands (e.g. cummax values + indices): only the generic fold applies
             if self.mode == NumericMode.ROUNDING_CHECK:
                 raise ProgramAbort(f"{op.node_id}: multi-operand scan in rounding-check mode")
@@ -1754,6 +1786,8 @@ class KernelReferenceEvaluator:
 
     def _op_extern(self, op, args, env, state):
         symbol = op.attrs.get("symbol", "").strip('"')
+        if _TRIGGER_PATH:
+            _trace(f"tt.extern_elementwise/symbol={symbol}")
         internal = LIBDEVICE.get(symbol)
         if internal is None:
             raise ProgramAbort(f"{op.node_id}: libdevice {symbol} has no declared semantics")
@@ -1768,6 +1802,9 @@ class KernelReferenceEvaluator:
 
     def _op_inline_asm(self, op, args, env, state):
         internal = inline_asm_internal(op.attrs.get("asm", ""))
+        if _TRIGGER_PATH:
+            from .ttir_mapping import _normalize_asm
+            _trace(f"tt.elementwise_inline_asm/asm={_normalize_asm(op.attrs.get('asm', ''))}")
         if internal is None:
             program = parse_ptx_program(op.attrs.get("asm", ""))
             if program is None or len(op.results) != 1 or \

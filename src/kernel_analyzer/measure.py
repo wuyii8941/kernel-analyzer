@@ -166,6 +166,7 @@ def expand(decl: dict) -> dict:
            "factors": decl.get("factors") or {},
            "factor_levels": _factor_levels(decl["inputs"], decl.get("factors")), "versions": _versions(),
            "error_budget": decl.get("error_budget"),
+           "magnitude_bound": decl.get("magnitude_bound"),
            "bounded_route": "recorded only: the entry does not apply the declared error budget (bounded_mean_test is "
                             "used by the calibration); approximate route (endpoint-conservative t) for every output",
            "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
@@ -303,6 +304,10 @@ def class_statistics(num_rec: dict, rule_classes: dict, alpha: float) -> dict:
             j["holm_adjusted_p"] = adj.get(n)
             j["mean_projection"] = r.get("mean_projection")
             j["n"] = r.get("n")
+            j["mde_approximate"] = (r.get("mde_approximate") or {}).get("mde")
+            if r.get("bounded"):  # DSL v2: the bounded route next to the approximate one (not merged into it)
+                j["bounded"] = {k: r["bounded"].get(k) for k in ("verdict", "interval", "M", "M_basis",
+                                                                 "guaranteed_detectable_effect", "reason")}
             per[n] = j
         js = [v["judgment"] for v in per.values()]
         if any(x.startswith("nonzero") for x in js):
@@ -455,7 +460,7 @@ def run_level(exp: dict, level: dict) -> dict:
     t0 = time.time()
     old = _alarm(budget["case_timeout"])
     try:
-        rep = check.run(case, dev=dev, conf=conf, keep=keep)
+        rep = check.run(case, dev=dev, conf=conf, keep=keep, magnitude_bound=exp.get("magnitude_bound"))
     except _Timeout as exc:
         return {"level": level, "status": "over budget", "reason": str(exc), "failure_class": "over budget",
                 "seconds": round(time.time() - t0, 1)}
