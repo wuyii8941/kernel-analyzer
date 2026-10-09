@@ -378,6 +378,7 @@
   "tests": {
    "positive": [
     "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[positive]",
+    "tests/test_signatures_inc15.py::test_compare_and_swap_compares_integers_exactly[positive]",
     "tests/test_signatures_locks.py::test_a_lock_never_released_is_not_established_and_does_not_hang",
     "tests/test_signatures_locks.py::test_first_writer_inside_a_lock_depends_on_the_order",
     "tests/test_signatures_locks.py::test_layer_norm_style_first_store_then_accumulate",
@@ -392,11 +393,13 @@
    ],
    "boundary": [
     "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[boundary]",
+    "tests/test_signatures_inc15.py::test_compare_and_swap_compares_integers_exactly[boundary]",
     "tests/test_signatures_w1.py::test_atomic_cas_categories[boundary]",
     "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[premise_violation]",
+    "tests/test_signatures_inc15.py::test_compare_and_swap_compares_integers_exactly[premise_violation]",
     "tests/test_signatures_w1.py::test_atomic_cas_categories[premise_violation]",
     "tests/test_signatures_w1.py::test_contended_cas_serialization_categories[premise_violation]"
    ]
@@ -405,6 +408,9 @@
    "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[boundary]",
    "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[positive]",
    "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[premise_violation]",
+   "tests/test_signatures_inc15.py::test_compare_and_swap_compares_integers_exactly[boundary]",
+   "tests/test_signatures_inc15.py::test_compare_and_swap_compares_integers_exactly[positive]",
+   "tests/test_signatures_inc15.py::test_compare_and_swap_compares_integers_exactly[premise_violation]",
    "tests/test_signatures_locks.py::test_a_lock_never_released_is_not_established_and_does_not_hang",
    "tests/test_signatures_locks.py::test_first_writer_inside_a_lock_depends_on_the_order",
    "tests/test_signatures_locks.py::test_layer_norm_style_first_store_then_accumulate",
@@ -429,8 +435,8 @@
      "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[boundary]",
      "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[positive]",
      "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[premise_violation]",
-     "tests/test_signatures_locks.py::test_a_lock_never_released_is_not_established_and_does_not_hang",
-     "tests/test_signatures_locks.py::test_first_writer_inside_a_lock_depends_on_the_order"
+     "tests/test_signatures_inc15.py::test_compare_and_swap_compares_integers_exactly[boundary]",
+     "tests/test_signatures_inc15.py::test_compare_and_swap_compares_integers_exactly[positive]"
     ]
    }
   ],
@@ -2141,6 +2147,10 @@
     "tests/test_reference_eval_ttir.py::test_copysign_and_signbit_read_the_sign_of_zero",
     "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[0]",
     "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[1]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-positive]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-positive]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-positive]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-positive]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_abs-positive]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_absf-positive]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_acos-positive]",
@@ -2152,13 +2162,13 @@
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_asinh-positive]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_asinhf-positive]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atan-positive]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanf-positive]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanh-positive]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanhf-positive]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cbrt-positive]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cbrtf-positive]"
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanf-positive]"
    ],
    "boundary": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-boundary]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-boundary]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-boundary]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_abs-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_absf-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_acos-boundary]",
@@ -2174,13 +2184,13 @@
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanh-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanhf-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cbrt-boundary]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cbrtf-boundary]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_ceil-boundary]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_ceilf-boundary]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_copysignf-boundary]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cos-boundary]"
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cbrtf-boundary]"
    ],
    "premise_violation": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-premise_violation]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-premise_violation]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-premise_violation]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_abs-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_absf-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_acos-premise_violation]",
@@ -2196,11 +2206,7 @@
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanh-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanhf-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cbrt-premise_violation]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cbrtf-premise_violation]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_ceil-premise_violation]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_ceilf-premise_violation]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_copysignf-premise_violation]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cos-premise_violation]"
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cbrtf-premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -2208,6 +2214,18 @@
    "tests/test_reference_eval_ttir.py::test_copysign_and_signbit_read_the_sign_of_zero",
    "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[0]",
    "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[1]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-boundary]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-positive]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-premise_violation]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-boundary]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-positive]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-premise_violation]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-boundary]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-positive]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-premise_violation]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-boundary]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-positive]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-premise_violation]",
    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_abs-boundary]",
    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_abs-positive]",
    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_abs-premise_violation]",
@@ -2241,19 +2259,7 @@
    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atan-boundary]",
    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atan-positive]",
    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atan-premise_violation]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanf-boundary]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanf-positive]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanf-premise_violation]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanh-boundary]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanh-positive]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanh-premise_violation]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanhf-boundary]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanhf-positive]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanhf-premise_violation]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cbrt-boundary]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cbrt-positive]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cbrt-premise_violation]",
-   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_cbrtf-boundary]"
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_atanf-boundary]"
   ],
   "device_validation": [
    {
@@ -2264,7 +2270,7 @@
      "tests/test_reference_eval_ttir.py::test_copysign_and_signbit_read_the_sign_of_zero",
      "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[0]",
      "tests/test_reference_eval_ttir.py::test_directed_rounding_fixes_the_sign_of_a_final_residual[1]",
-     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_abs-boundary]"
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-boundary]"
     ]
    }
   ],
@@ -2782,6 +2788,7 @@
    "boundary": [
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[boundary]",
+    "tests/test_signatures_inc15.py::test_compare_and_swap_compares_integers_exactly[boundary]",
     "tests/test_signatures_int_sets.py::test_bitwise_kinds_return_the_hull_of_the_reachable_values[and-boundary]",
     "tests/test_signatures_int_sets.py::test_bitwise_kinds_return_the_hull_of_the_reachable_values[or-boundary]",
     "tests/test_signatures_int_sets.py::test_bitwise_kinds_return_the_hull_of_the_reachable_values[xor-boundary]",
@@ -2798,12 +2805,12 @@
     "tests/test_signatures_int_sets.py::test_undecided_branch_keeps_a_set_target_only_if_both_branches_agree[boundary]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
-    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
-    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-boundary]"
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[premise_violation]",
+    "tests/test_signatures_inc15.py::test_compare_and_swap_compares_integers_exactly[premise_violation]",
     "tests/test_signatures_int_sets.py::test_bitwise_kinds_return_the_hull_of_the_reachable_values[and-premise_violation]",
     "tests/test_signatures_int_sets.py::test_bitwise_kinds_return_the_hull_of_the_reachable_values[or-premise_violation]",
     "tests/test_signatures_int_sets.py::test_bitwise_kinds_return_the_hull_of_the_reachable_values[xor-premise_violation]",
@@ -2820,8 +2827,7 @@
     "tests/test_signatures_int_sets.py::test_undecided_branch_keeps_a_set_target_only_if_both_branches_agree[premise_violation]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
-    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
-    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s2-256-2-premise_violation]"
+    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -2873,8 +2879,8 @@
    "tests/test_signatures_atomics.py::test_official_pattern_contended_float_add_returns_a_set[fp32]",
    "tests/test_signatures_atomics.py::test_returned_value_used_as_an_address_does_not_crash_and_is_not_established",
    "tests/test_signatures_atomics.py::test_returned_value_without_contention_is_the_value_before_the_launch",
-   "tests/test_signatures_int_sets.py::test_bitwise_kinds_return_the_hull_of_the_reachable_values[and-boundary]",
-   "tests/test_signatures_int_sets.py::test_bitwise_kinds_return_the_hull_of_the_reachable_values[and-positive]"
+   "tests/test_signatures_inc15.py::test_compare_and_swap_compares_integers_exactly[boundary]",
+   "tests/test_signatures_inc15.py::test_compare_and_swap_compares_integers_exactly[positive]"
   ],
   "device_validation": [
    {
@@ -6595,17 +6601,17 @@
     "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-boundary]",
     "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[boundary]",
     "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
-    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-boundary]",
-    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-boundary]",
-    "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
-    "tests/test_signatures_int_sets.py::test_gluon_local_atomic_integer_return_is_a_set_target[boundary]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-boundary]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isfinited-boundary]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-boundary]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-boundary]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-boundary]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-boundary]",
-    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]"
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-boundary]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-boundary]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-boundary]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-boundary]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctlz-boundary]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctpop-boundary]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-cttz-boundary]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctlz-boundary]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctpop-boundary]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-cttz-boundary]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_buffer_load_mask_other_signature[premise_violation]",
@@ -6617,17 +6623,17 @@
     "tests/test_signatures_core.py::test_core_signature[arith.cmpi+select-premise_violation]",
     "tests/test_signatures_gluon.py::test_async_copy_with_mbarrier_signature[premise_violation]",
     "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
-    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmax-premise_violation]",
-    "tests/test_signatures_inc6.py::test_arg_reduction_over_nan_follows_the_lowering_tree[argmin-premise_violation]",
-    "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]",
-    "tests/test_signatures_int_sets.py::test_gluon_local_atomic_integer_return_is_a_set_target[premise_violation]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-premise_violation]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isfinited-premise_violation]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-premise_violation]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinff-premise_violation]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnand-premise_violation]",
-    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isnanf-premise_violation]",
-    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]"
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-premise_violation]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-premise_violation]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-premise_violation]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-premise_violation]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctlz-premise_violation]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctpop-premise_violation]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-cttz-premise_violation]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctlz-premise_violation]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctpop-premise_violation]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-cttz-premise_violation]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -6784,10 +6790,10 @@
     "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[boundary]",
     "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[boundary]",
     "tests/test_signatures_gluon.py::test_shared_scatter_signature[boundary]",
-    "tests/test_signatures_inc6.py::test_map_elementwise_signature[boundary]",
-    "tests/test_signatures_int_dot.py::test_int8_dot_signature[boundary]",
-    "tests/test_signatures_int_sets.py::test_bitwise_kinds_return_the_hull_of_the_reachable_values[and-boundary]",
-    "tests/test_signatures_int_sets.py::test_bitwise_kinds_return_the_hull_of_the_reachable_values[or-boundary]"
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-boundary]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-boundary]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-boundary]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[premise_violation]",
@@ -6806,10 +6812,10 @@
     "tests/test_signatures_gluon.py::test_atomic_scatter_rmw_signature[premise_violation]",
     "tests/test_signatures_gluon.py::test_gather_from_a_padded_subslice_signature[premise_violation]",
     "tests/test_signatures_gluon.py::test_shared_scatter_signature[premise_violation]",
-    "tests/test_signatures_inc6.py::test_map_elementwise_signature[premise_violation]",
-    "tests/test_signatures_int_dot.py::test_int8_dot_signature[premise_violation]",
-    "tests/test_signatures_int_sets.py::test_bitwise_kinds_return_the_hull_of_the_reachable_values[and-premise_violation]",
-    "tests/test_signatures_int_sets.py::test_bitwise_kinds_return_the_hull_of_the_reachable_values[or-premise_violation]"
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-premise_violation]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-premise_violation]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-premise_violation]",
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-premise_violation]"
    ]
   },
   "trigger_evidence": [
@@ -7055,6 +7061,7 @@
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[positive]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[positive]",
     "tests/test_signatures_core.py::test_core_signature[arith.divsi-positive]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[positive]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
@@ -7065,6 +7072,7 @@
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[boundary]",
     "tests/test_signatures_core.py::test_core_signature[arith.divsi-boundary]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
@@ -7075,6 +7083,7 @@
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[premise_violation]",
     "tests/test_signatures_core.py::test_core_signature[arith.divsi-premise_violation]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[premise_violation]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
@@ -7097,6 +7106,9 @@
    "tests/test_signatures_core.py::test_core_signature[arith.divsi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.divsi-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.divsi-premise_violation]",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[positive]",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[premise_violation]",
    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
@@ -7358,6 +7370,8 @@
     "tests/test_signatures_amd.py::test_buffer_store_mask_signature[positive]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[positive]",
     "tests/test_signatures_core.py::test_core_signature[arith.extsi-positive]",
+    "tests/test_signatures_inc15.py::test_integer_undefined_behavior_has_a_reason",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[positive]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
@@ -7368,6 +7382,7 @@
     "tests/test_signatures_amd.py::test_buffer_store_mask_signature[boundary]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_core.py::test_core_signature[arith.extsi-boundary]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-boundary]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-boundary]",
@@ -7378,6 +7393,7 @@
     "tests/test_signatures_amd.py::test_buffer_store_mask_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
     "tests/test_signatures_core.py::test_core_signature[arith.extsi-premise_violation]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[premise_violation]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-premise_violation]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-premise_violation]",
@@ -7399,6 +7415,10 @@
    "tests/test_signatures_core.py::test_core_signature[arith.extsi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.extsi-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.extsi-premise_violation]",
+   "tests/test_signatures_inc15.py::test_integer_undefined_behavior_has_a_reason",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[positive]",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[premise_violation]",
    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
@@ -7480,6 +7500,8 @@
     "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[positive]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[positive]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[positive]",
+    "tests/test_signatures_inc15.py::test_integer_undefined_behavior_has_a_reason",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[positive]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-positive]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isfinited-positive]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-positive]",
@@ -7495,6 +7517,7 @@
     "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[boundary]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[boundary]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[boundary]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isfinited-boundary]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_isinfd-boundary]",
@@ -7510,6 +7533,7 @@
     "tests/test_signatures_amd.py::test_buffer_atomic_cas_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[premise_violation]",
     "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[premise_violation]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[premise_violation]",
     "tests/test_signatures_int_sets.py::test_order_kinds_return_a_set_target[max-uint32-premise_violation]",
     "tests/test_signatures_int_sets.py::test_order_kinds_return_a_set_target[min-uint32-premise_violation]",
     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-premise_violation]",
@@ -7535,6 +7559,10 @@
    "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[boundary]",
    "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[positive]",
    "tests/test_signatures_amd.py::test_scaled_upcast_fp8_signature[premise_violation]",
+   "tests/test_signatures_inc15.py::test_integer_undefined_behavior_has_a_reason",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[positive]",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[premise_violation]",
    "tests/test_signatures_int_sets.py::test_order_kinds_return_a_set_target[max-uint32-premise_violation]",
    "tests/test_signatures_int_sets.py::test_order_kinds_return_a_set_target[min-uint32-premise_violation]",
    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_finitef-boundary]",
@@ -8159,19 +8187,27 @@
   ],
   "tests": {
    "positive": [
-    "tests/test_signatures_core.py::test_core_signature[arith.maxsi-positive]"
+    "tests/test_signatures_core.py::test_core_signature[arith.maxsi-positive]",
+    "tests/test_signatures_inc15.py::test_integer_undefined_behavior_has_a_reason",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[positive]"
    ],
    "boundary": [
-    "tests/test_signatures_core.py::test_core_signature[arith.maxsi-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.maxsi-boundary]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]"
    ],
    "premise_violation": [
-    "tests/test_signatures_core.py::test_core_signature[arith.maxsi-premise_violation]"
+    "tests/test_signatures_core.py::test_core_signature[arith.maxsi-premise_violation]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[premise_violation]"
    ]
   },
   "trigger_evidence": [
    "tests/test_signatures_core.py::test_core_signature[arith.maxsi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.maxsi-positive]",
-   "tests/test_signatures_core.py::test_core_signature[arith.maxsi-premise_violation]"
+   "tests/test_signatures_core.py::test_core_signature[arith.maxsi-premise_violation]",
+   "tests/test_signatures_inc15.py::test_integer_undefined_behavior_has_a_reason",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[positive]",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[premise_violation]"
   ],
   "device_validation": [
    {
@@ -8180,7 +8216,9 @@
     "evidence": [
      "tests/test_signatures_core.py::test_core_signature[arith.maxsi-boundary]",
      "tests/test_signatures_core.py::test_core_signature[arith.maxsi-positive]",
-     "tests/test_signatures_core.py::test_core_signature[arith.maxsi-premise_violation]"
+     "tests/test_signatures_core.py::test_core_signature[arith.maxsi-premise_violation]",
+     "tests/test_signatures_inc15.py::test_integer_undefined_behavior_has_a_reason",
+     "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]"
     ]
    }
   ],
@@ -9245,19 +9283,25 @@
   ],
   "tests": {
    "positive": [
-    "tests/test_signatures_core.py::test_core_signature[arith.remf-positive]"
+    "tests/test_signatures_core.py::test_core_signature[arith.remf-positive]",
+    "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[positive]"
    ],
    "boundary": [
-    "tests/test_signatures_core.py::test_core_signature[arith.remf-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.remf-boundary]",
+    "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[boundary]"
    ],
    "premise_violation": [
-    "tests/test_signatures_core.py::test_core_signature[arith.remf-premise_violation]"
+    "tests/test_signatures_core.py::test_core_signature[arith.remf-premise_violation]",
+    "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[premise_violation]"
    ]
   },
   "trigger_evidence": [
    "tests/test_signatures_core.py::test_core_signature[arith.remf-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.remf-positive]",
-   "tests/test_signatures_core.py::test_core_signature[arith.remf-premise_violation]"
+   "tests/test_signatures_core.py::test_core_signature[arith.remf-premise_violation]",
+   "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[boundary]",
+   "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[positive]",
+   "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[premise_violation]"
   ],
   "device_validation": [
    {
@@ -9266,7 +9310,9 @@
     "evidence": [
      "tests/test_signatures_core.py::test_core_signature[arith.remf-boundary]",
      "tests/test_signatures_core.py::test_core_signature[arith.remf-positive]",
-     "tests/test_signatures_core.py::test_core_signature[arith.remf-premise_violation]"
+     "tests/test_signatures_core.py::test_core_signature[arith.remf-premise_violation]",
+     "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[boundary]",
+     "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[positive]"
     ]
    }
   ],
@@ -9329,6 +9375,7 @@
     "tests/test_signatures_amd.py::test_scaled_upcast_fp4_signature[positive]",
     "tests/test_signatures_amd.py::test_scheduling_hints_signature[positive]",
     "tests/test_signatures_core.py::test_core_signature[arith.remsi-positive]",
+    "tests/test_signatures_inc15.py::test_integer_undefined_behavior_has_a_reason",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s3-128-3-positive]",
     "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n256_s1-256-1-positive]",
@@ -9375,6 +9422,7 @@
    "tests/test_signatures_core.py::test_core_signature[arith.remsi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.remsi-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.remsi-premise_violation]",
+   "tests/test_signatures_inc15.py::test_integer_undefined_behavior_has_a_reason",
    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-boundary]",
    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-positive]",
    "tests/test_signatures_nvidia_scaled.py::test_scaled_mma_fp4_pipelines_signature[mxfp4_matmul_n128_s1-128-1-premise_violation]",
@@ -9915,19 +9963,27 @@
   ],
   "tests": {
    "positive": [
-    "tests/test_signatures_core.py::test_core_signature[arith.shrsi-positive]"
+    "tests/test_signatures_core.py::test_core_signature[arith.shrsi-positive]",
+    "tests/test_signatures_inc15.py::test_integer_undefined_behavior_has_a_reason",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[positive]"
    ],
    "boundary": [
-    "tests/test_signatures_core.py::test_core_signature[arith.shrsi-boundary]"
+    "tests/test_signatures_core.py::test_core_signature[arith.shrsi-boundary]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]"
    ],
    "premise_violation": [
-    "tests/test_signatures_core.py::test_core_signature[arith.shrsi-premise_violation]"
+    "tests/test_signatures_core.py::test_core_signature[arith.shrsi-premise_violation]",
+    "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[premise_violation]"
    ]
   },
   "trigger_evidence": [
    "tests/test_signatures_core.py::test_core_signature[arith.shrsi-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.shrsi-positive]",
-   "tests/test_signatures_core.py::test_core_signature[arith.shrsi-premise_violation]"
+   "tests/test_signatures_core.py::test_core_signature[arith.shrsi-premise_violation]",
+   "tests/test_signatures_inc15.py::test_integer_undefined_behavior_has_a_reason",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[positive]",
+   "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[premise_violation]"
   ],
   "device_validation": [
    {
@@ -9936,7 +9992,9 @@
     "evidence": [
      "tests/test_signatures_core.py::test_core_signature[arith.shrsi-boundary]",
      "tests/test_signatures_core.py::test_core_signature[arith.shrsi-positive]",
-     "tests/test_signatures_core.py::test_core_signature[arith.shrsi-premise_violation]"
+     "tests/test_signatures_core.py::test_core_signature[arith.shrsi-premise_violation]",
+     "tests/test_signatures_inc15.py::test_integer_undefined_behavior_has_a_reason",
+     "tests/test_signatures_inc15.py::test_signed_operations_on_unsigned_storage[boundary]"
     ]
    }
   ],
@@ -10079,15 +10137,18 @@
     "tests/test_reference_eval_ttir.py::test_large_integer_to_float_keeps_the_lost_unit_inside_the_interval",
     "tests/test_reference_eval_ttir.py::test_stores_from_several_instances_to_one_address_are_a_race_unless_equal[False]",
     "tests/test_signatures_core.py::test_core_signature[arith.sitofp-positive]",
+    "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[positive]",
     "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
     "tests/test_signatures_structural.py::test_num_programs_and_pointer_casts_signature"
    ],
    "boundary": [
     "tests/test_signatures_core.py::test_core_signature[arith.sitofp-boundary]",
+    "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[boundary]",
     "tests/test_signatures_structural.py::test_control_flow_signature[boundary]"
    ],
    "premise_violation": [
     "tests/test_signatures_core.py::test_core_signature[arith.sitofp-premise_violation]",
+    "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[premise_violation]",
     "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
     "tests/test_reference_eval_ttir.py::test_large_integer_to_float_keeps_the_lost_unit_inside_the_interval"
    ]
@@ -10099,6 +10160,9 @@
    "tests/test_signatures_core.py::test_core_signature[arith.sitofp-boundary]",
    "tests/test_signatures_core.py::test_core_signature[arith.sitofp-positive]",
    "tests/test_signatures_core.py::test_core_signature[arith.sitofp-premise_violation]",
+   "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[boundary]",
+   "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[positive]",
+   "tests/test_signatures_inc15.py::test_remf_with_a_converted_int64_divisor[premise_violation]",
    "tests/test_signatures_structural.py::test_control_flow_signature[boundary]",
    "tests/test_signatures_structural.py::test_control_flow_signature[positive]",
    "tests/test_signatures_structural.py::test_control_flow_signature[premise_violation]",
@@ -11790,8 +11854,8 @@
  {
   "schema": "reference-dsl-v2-rule-rc3",
   "rule_id": "math.ctlz",
-  "language_status": "needs-specification",
-  "implementation_status": "planned",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
   "source": {
    "op_pattern": "math.ctlz",
    "official_source_ids": [
@@ -11804,16 +11868,16 @@
    "region_signature": "none",
    "effects": []
   },
-  "semantics": "bit counting is not supported in this version",
+  "semantics": "Bit-level reinterpretation: exact on point values; a non-point interval cannot be reinterpreted -> not established.",
   "policy_contracts": [
    {
     "mode": "numerical_difference",
     "when": "as admitted (see admission obligations)",
     "target_kind": "single",
-    "precision": "not-established",
+    "precision": "enclosure-only",
     "preserved_rounding": [],
     "intrinsic_width": "none",
-    "evaluator_obligation": "not implemented"
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
    }
   ],
   "admission_obligations": [
@@ -11824,20 +11888,44 @@
     "checker": "ttir_eval bitcast"
    }
   ],
-  "output_guarantee": "none: rejected or not established",
-  "proof_status": "none",
-  "proof_evidence": [],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
   "tests": {
-   "positive": [],
-   "boundary": [],
-   "premise_violation": []
+   "positive": [
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctlz-positive]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctlz-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctlz-boundary]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctlz-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctlz-premise_violation]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctlz-premise_violation]"
+   ]
   },
-  "trigger_evidence": [],
+  "trigger_evidence": [
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctlz-boundary]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctlz-positive]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctlz-premise_violation]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctlz-boundary]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctlz-positive]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctlz-premise_violation]"
+  ],
   "device_validation": [
    {
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
-    "status": "not-run",
-    "evidence": []
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctlz-boundary]",
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctlz-positive]",
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctlz-premise_violation]",
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctlz-boundary]",
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctlz-positive]"
+    ]
    }
   ],
   "forbidden_fallback": [
@@ -11848,8 +11936,8 @@
  {
   "schema": "reference-dsl-v2-rule-rc3",
   "rule_id": "math.ctpop",
-  "language_status": "needs-specification",
-  "implementation_status": "planned",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
   "source": {
    "op_pattern": "math.ctpop",
    "official_source_ids": [
@@ -11862,16 +11950,16 @@
    "region_signature": "none",
    "effects": []
   },
-  "semantics": "bit counting is not supported in this version",
+  "semantics": "Bit-level reinterpretation: exact on point values; a non-point interval cannot be reinterpreted -> not established.",
   "policy_contracts": [
    {
     "mode": "numerical_difference",
     "when": "as admitted (see admission obligations)",
     "target_kind": "single",
-    "precision": "not-established",
+    "precision": "enclosure-only",
     "preserved_rounding": [],
     "intrinsic_width": "none",
-    "evaluator_obligation": "not implemented"
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
    }
   ],
   "admission_obligations": [
@@ -11882,20 +11970,44 @@
     "checker": "ttir_eval bitcast"
    }
   ],
-  "output_guarantee": "none: rejected or not established",
-  "proof_status": "none",
-  "proof_evidence": [],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
   "tests": {
-   "positive": [],
-   "boundary": [],
-   "premise_violation": []
+   "positive": [
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctpop-positive]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctpop-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctpop-boundary]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctpop-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctpop-premise_violation]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctpop-premise_violation]"
+   ]
   },
-  "trigger_evidence": [],
+  "trigger_evidence": [
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctpop-boundary]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctpop-positive]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctpop-premise_violation]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctpop-boundary]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctpop-positive]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctpop-premise_violation]"
+  ],
   "device_validation": [
    {
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
-    "status": "not-run",
-    "evidence": []
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctpop-boundary]",
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctpop-positive]",
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-ctpop-premise_violation]",
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctpop-boundary]",
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-ctpop-positive]"
+    ]
    }
   ],
   "forbidden_fallback": [
@@ -11906,8 +12018,8 @@
  {
   "schema": "reference-dsl-v2-rule-rc3",
   "rule_id": "math.cttz",
-  "language_status": "needs-specification",
-  "implementation_status": "planned",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
   "source": {
    "op_pattern": "math.cttz",
    "official_source_ids": [
@@ -11920,16 +12032,16 @@
    "region_signature": "none",
    "effects": []
   },
-  "semantics": "bit counting is not supported in this version",
+  "semantics": "Bit-level reinterpretation: exact on point values; a non-point interval cannot be reinterpreted -> not established.",
   "policy_contracts": [
    {
     "mode": "numerical_difference",
     "when": "as admitted (see admission obligations)",
     "target_kind": "single",
-    "precision": "not-established",
+    "precision": "enclosure-only",
     "preserved_rounding": [],
     "intrinsic_width": "none",
-    "evaluator_obligation": "not implemented"
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
    }
   ],
   "admission_obligations": [
@@ -11940,20 +12052,44 @@
     "checker": "ttir_eval bitcast"
    }
   ],
-  "output_guarantee": "none: rejected or not established",
-  "proof_status": "none",
-  "proof_evidence": [],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
   "tests": {
-   "positive": [],
-   "boundary": [],
-   "premise_violation": []
+   "positive": [
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-cttz-positive]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-cttz-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-cttz-boundary]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-cttz-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-cttz-premise_violation]",
+    "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-cttz-premise_violation]"
+   ]
   },
-  "trigger_evidence": [],
+  "trigger_evidence": [
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-cttz-boundary]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-cttz-positive]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-cttz-premise_violation]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-cttz-boundary]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-cttz-positive]",
+   "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-cttz-premise_violation]"
+  ],
   "device_validation": [
    {
     "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
-    "status": "not-run",
-    "evidence": []
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-cttz-boundary]",
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-cttz-positive]",
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i32-cttz-premise_violation]",
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-cttz-boundary]",
+     "tests/test_signatures_inc15.py::test_math_bit_counting_signature[i64-cttz-positive]"
+    ]
    }
   ],
   "forbidden_fallback": [
@@ -23246,6 +23382,158 @@
  },
  {
   "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_clz",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_clz"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-boundary]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-positive]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-boundary]",
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-positive]",
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int32-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_clzll",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_clzll"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-boundary]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-positive]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-boundary]",
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-positive]",
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[clz-int64-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_copysignf",
   "language_status": "specified",
   "implementation_status": "implemented-unvalidated",
@@ -33898,6 +34186,82 @@
  },
  {
   "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_nearbyint",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_nearbyint"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_nearbyint-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_nearbyint-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_nearbyint-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_nearbyint-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_nearbyint-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_nearbyint-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_nearbyint-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_nearbyint-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_nearbyint-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
   "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_nearbyintf",
   "language_status": "specified",
   "implementation_status": "implemented-unvalidated",
@@ -33964,6 +34328,158 @@
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_nearbyintf-boundary]",
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_nearbyintf-positive]",
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_nearbyintf-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_popc",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_popc"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-boundary]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-positive]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-boundary]",
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-positive]",
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int32-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_popcll",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_popcll"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-boundary]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-positive]",
+   "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-boundary]",
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-positive]",
+     "tests/test_signatures_inc15.py::test_libdevice_bit_counting_signature[popc-int64-premise_violation]"
     ]
    }
   ],
@@ -34192,6 +34708,82 @@
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rcp64h-boundary]",
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rcp64h-positive]",
      "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rcp64h-premise_violation]"
+    ]
+   }
+  ],
+  "forbidden_fallback": [
+   "no captured intermediate value is filled in as a complete reference",
+   "no undeclared change of the target and no removal of an official signature"
+  ]
+ },
+ {
+  "schema": "reference-dsl-v2-rule-rc3",
+  "rule_id": "tt.extern_elementwise|attrs=symbol=__nv_rint",
+  "language_status": "specified",
+  "implementation_status": "implemented-unvalidated",
+  "source": {
+   "op_pattern": "tt.extern_elementwise",
+   "official_source_ids": [
+    "e50b186e:tt.extern_elementwise"
+   ],
+   "source_profile": "triton-3.6.0 regression profile (sm_86); official e50b186e listed where the op still exists",
+   "target_guard": "NVIDIA sm_86, Triton 3.6.0 lowering",
+   "type_guard": "as admitted by the 3.6.0 verifier",
+   "attrs_guard": [
+    "symbol=__nv_rint"
+   ],
+   "region_signature": "none",
+   "effects": []
+  },
+  "semantics": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+  "policy_contracts": [
+   {
+    "mode": "numerical_difference",
+    "when": "as admitted (see admission obligations)",
+    "target_kind": "single",
+    "precision": "enclosure-only",
+    "preserved_rounding": [],
+    "intrinsic_width": "none",
+    "evaluator_obligation": "float64 directed-rounding interval (not refinable to an arbitrary width)"
+   }
+  ],
+  "admission_obligations": [
+   {
+    "obligation": "input interval inside the function's domain",
+    "evidence_kind": "per_sample",
+    "covers": "reference-reachable",
+    "checker": "ttir_eval elementary"
+   }
+  ],
+  "output_guarantee": "enclosure of the reference value on the evaluated sample",
+  "proof_status": "argument",
+  "proof_evidence": [
+   "results/dsl_v2/rule_registry.json"
+  ],
+  "tests": {
+   "positive": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rint-positive]"
+   ],
+   "boundary": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rint-boundary]"
+   ],
+   "premise_violation": [
+    "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rint-premise_violation]"
+   ]
+  },
+  "trigger_evidence": [
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rint-boundary]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rint-positive]",
+   "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rint-premise_violation]"
+  ],
+  "device_validation": [
+   {
+    "target_profile": "nvidia-sm_86 (RTX A6000), Triton 3.6.0",
+    "status": "device-tested",
+    "evidence": [
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rint-boundary]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rint-positive]",
+     "tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rint-premise_violation]"
     ]
    }
   ],

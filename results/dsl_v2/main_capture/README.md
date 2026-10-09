@@ -33,6 +33,7 @@ One JSON line per launch.  Measurement only; the official tests' own assertions 
 | `inc14_gluon_test_core_atomic.jsonl` | Gluon test_core -k atomic | increment 14 | `w14_capture_run.sh` |
 | `inc14_compare_test_core_vs_inc6.json`, `inc14_compare_gluon_vs_inc10.json` | per-launch status against inc6_combined / inc10_gluon_test_core | — | `inc14_compare.py` |
 | `inc14_broad.jsonl`, `inc14_broad_summary.json` | as inc6_broad (all six official test files); status run after increment 14, not a registered evaluation | increment 14 (`1b61e55`) | `w14_broad_run.sh` |
+| `inc15_broad.jsonl`, `inc15_broad_summary.json`, `inc15_compare_broad_vs_inc14.json` | as inc14_broad; the registered increment-15 evaluation, compared per launch with inc14_broad (`inc14_compare.py`) | increment 15 | `w15_broad_run.sh` |
 | `inc6_combined_summary.json` | `scripts/dsl_v2/summarize_capture.py inc6_combined.jsonl --baseline inc4_broad.jsonl` | — | — |
 
 Status per launch: `complete` (every written element established), `partial`, `aborted` (a program instance aborted),
