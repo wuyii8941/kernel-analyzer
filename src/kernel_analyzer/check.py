@@ -214,10 +214,17 @@ def torch_intermediates(launches, seq, inp, digests_before=None):
     return {k: sorted(v) for k, v in deps.items()}
 
 
-def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_rel=None):
+def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_rel=None, repeats=None):
     """One case through mode A or B.  ``keep``: a dict that receives, per output and seed, the reference interval
     and K in the output's logical element order (for independent recomputation of K_R); ``equivalence_rel``: passed
-    to the decision layer (the equivalence axis next to each nonzero verdict)."""
+    to the decision layer (the equivalence axis next to each nonzero verdict).
+
+    ``repeats`` (DSL v2 rc3 02 8.7): launches per input, the recorded one included; default 2, or 8 when a launch has
+    float atomics.  The extra launches regenerate the input from the seed (digests checked) and keep K only (the
+    reference does not depend on the schedule).  Per output: bitwise identical -> as before; an execution race found by
+    the reference -> statistics withheld; different and the launch has float atomics (order-free fold admitted) ->
+    residual intervals averaged within the input over the launches (outward rounding), the input is the unit;
+    different for no identified reason -> execution validity not established, statistics withheld (diagnosis)."""
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.set_float32_matmul_precision("highest")
     import torch._inductor.config as inductor_config
@@ -228,7 +235,8 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     # cached graph can be reused for a different op when its guards do not pin the callable (pytorch#197811; B017)
     torch._dynamo.reset()
     timing = {"setup_compile_warmup": 0.0, "inputs": 0.0, "capture_first_seed": 0.0, "capture": 0.0, "reference": 0.0,
-              "specification": 0.0, "statistics": 0.0}
+              "specification": 0.0, "statistics": 0.0, "repeat_launches": 0.0}
+    r_exec = None
     t_phase = time.time()
     case.setup()
     timing["setup_compile_warmup"] = time.time() - t_phase
@@ -245,7 +253,8 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         inp = case.inputs(seed)
         timing["inputs"] += time.time() - t_phase
         t_phase = time.time()
-        before = input_digests(inp) if mixed_sources is None else None
+        digest0 = input_digests(inp)
+        before = digest0 if mixed_sources is None else None
         rec = TritonLaunchRecorder()
         with rec:
             outs = case.launch(inp)
@@ -389,12 +398,36 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                                                   "k": frame(np.asarray(k, dtype=np.float64)), "ok": frame(ok_e, False),
                                                   "shape": tuple(out.shape)})
             per.setdefault(name, []).append({
+                "seed": seed, "r_lo": frame(r_lo), "r_hi": frame(r_hi), "k_reps": [], "repeat_inputs_differ": False,
                 "n": (frame(n_lo), frame(n_hi)), "s": (frame(s_lo), frame(s_hi)) if has_f else None,
                 "kr": frame(0.5 * (r_lo + r_hi)), "k": frame(np.asarray(k, dtype=np.float64)),
                 "ok": frame(ok_e, False), "written": frame(np.ones(idx.size, dtype=bool), False),
                 "resolved": frame(ok_e | special_agree, False), "inside": np.ones(nv, dtype=bool), "idx": pos,
                 "pos": pos, "shape": tuple(out.shape), "width": frame(r_hi - r_lo), "reasons": reasons,
                 "aborted": aborted})
+        # repeated launches of the same input, outside the recorder: K only
+        if r_exec is None:
+            r_exec = int(repeats) if repeats is not None else (
+                8 if any(li.get("float_atomics") for li in (launch_info or [])) else 2)
+        mine = {name: rows[-1] for name, rows in per.items() if rows and rows[-1]["seed"] == seed}
+        t_phase = time.time()
+        for _ in range(max(0, r_exec - 1)):
+            inp_r = case.inputs(seed)
+            same_input = input_digests(inp_r) == digest0
+            outs_r = case.launch(inp_r)
+            torch.cuda.synchronize()
+            for name, row in mine.items():
+                if not same_input:
+                    row["repeat_inputs_differ"] = True
+                o = outs_r.get(name)
+                if o is None or tuple(o.shape) != row["shape"]:
+                    row["repeat_inputs_differ"] = True
+                    continue
+                v = o.detach()
+                v = v.float() if v.dtype in (torch.bfloat16, torch.float16) or (
+                    v.dtype.itemsize == 1 and v.is_floating_point()) else v
+                row["k_reps"].append(v.cpu().double().numpy().reshape(-1))
+        timing["repeat_launches"] += time.time() - t_phase
     seconds = time.time() - t0
     n_dev = len(list(dev))
     report = {"case": case.name, "mode": mode, "implementation": case.implementation,
@@ -404,7 +437,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
               "versions": {k: _version(k) for k in ("liger-kernel", "transformers", "torch", "triton")},
               "seeds": {"development": [list(dev)[0], list(dev)[-1]], "confirmation": [list(conf)[0], list(conf)[-1]]},
               "seconds": round(seconds, 1), "outputs": {},
-              "tool_version": TOOL_VERSION,
+              "tool_version": TOOL_VERSION, "launches_per_input": r_exec,
               "outputs_not_written_by_triton": sorted(not_triton),
               "outputs_binding_not_established": sorted(binding_unconfirmed),
               "outputs_at_address_of_another_recorded_storage": sorted(reused_address),
@@ -428,12 +461,19 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                  "special_values": special.get(name),
                  "not_established_reasons_seed0": rows[0]["reasons"],
                  "aborted_programs_seed0": rows[0]["aborted"]}
+        execution = _execution_status(rows, launch_info, r_exec)
+        entry["execution"] = execution
         for key, label in (("n", "e_num = K - K_R"), ("s", "e_sem = K_R - f"))[: 2 if mode == "B" else 1]:
             lo = np.stack([p[key][0] for p in rows])
             hi = np.stack([p[key][1] for p in rows])
+            if key == "n" and execution["statistics"] == "within-input mean":
+                lo, hi = _within_input_mean_residual(rows)
             t_phase = time.time()
-            rec, _ = assess_units(f"{name}: {label}", lo, hi, kr, ok, n_dev, RULES, alignment_reference=kr,
-                                  unit_ids=list(dev) + list(conf), equivalence_rel=equivalence_rel)
+            if execution["statistics"] == "withheld":
+                rec = {"comparison": f"{name}: {label}", "verdict": "NOT_ESTABLISHED", "reason": execution["status"]}
+            else:
+                rec, _ = assess_units(f"{name}: {label}", lo, hi, kr, ok, n_dev, RULES, alignment_reference=kr,
+                                      unit_ids=list(dev) + list(conf), equivalence_rel=equivalence_rel)
             timing["statistics"] += time.time() - t_phase
             mid = 0.5 * (lo + hi)
             if ok.any():
@@ -483,6 +523,54 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     # the recorder), reference (TTIR evaluation), specification, statistics; "seconds" keeps its old meaning
     report["timing_seconds"] = {k: round(v, 3) for k, v in timing.items()}
     return report
+
+
+def _execution_status(rows, launch_info, r_exec) -> dict:
+    """Execution validity of one output over the units (DSL v2 rc3 02 8.7): repeated launches and race findings."""
+    race = sorted({r.split("@")[0] for p in rows for r in (p["reasons"] or {}) if "execution race" in r})
+    unknown = sorted({r.split("@")[0] for p in rows for r in (p["reasons"] or {}) if "execution validity" in r})
+    differ, reps_done, inputs_differ = [], 0, False
+    for p in rows:
+        w = p["written"]
+        reps_done = max(reps_done, len(p["k_reps"]))
+        inputs_differ |= p["repeat_inputs_differ"]
+        if any(not np.array_equal(k[w], p["k"][w], equal_nan=True) for k in p["k_reps"] if k.shape == p["k"].shape):
+            differ.append(p["seed"])
+    atomics = any(li.get("float_atomics") for li in (launch_info or []))
+    out = {"launches_per_input": 1 + reps_done, "units_with_different_repeats": len(differ),
+           "units": len(rows), "repeat_inputs_not_reproducible": inputs_differ, "race_findings": race,
+           "unknown_validity_findings": unknown, "float_atomics": atomics}
+    if race:
+        out.update(status="execution race found by the reference: statistics withheld", statistics="withheld")
+    elif differ and atomics and not inputs_differ:
+        out.update(status=f"atomic execution randomness: residuals averaged within the input over {1 + reps_done} "
+                          "launches", statistics="within-input mean")
+    elif differ:
+        out.update(status="repeated launches differ without an identified cause: execution validity not established "
+                          "(diagnosis needed)" + ("; the regenerated inputs differ" if inputs_differ else ""),
+                   statistics="withheld")
+    elif reps_done == 0:
+        out.update(status="not repeated", statistics="per launch")
+    else:
+        out.update(status="repeated launches bitwise identical", statistics="per launch")
+    return out
+
+
+def _within_input_mean_residual(rows):
+    """Per unit: outward enclosure of the mean of K_j - K_R over the launches j (exact sums one ulp outward, then a
+    directed division by the number of launches); elements without a complete reference keep 0 (not ok)."""
+    lo_u, hi_u = [], []
+    for p in rows:
+        ks = [p["k"]] + [k for k in p["k_reps"] if k.shape == p["k"].shape]
+        los, his = zip(*(residual_interval(k, p["r_lo"], p["r_hi"]) for k in ks))
+        okm = p["ok"]
+        L = np.where(okm, np.stack(los), 0.0)
+        H = np.where(okm, np.stack(his), 0.0)
+        s_lo, s_hi = iv.fsum_bounds(L, H, axis=0)
+        n = float(len(ks))
+        lo_u.append(iv.div_bounds(s_lo, n)[0])
+        hi_u.append(iv.div_bounds(s_hi, n)[1])
+    return np.stack(lo_u), np.stack(hi_u)
 
 
 def run_black_box(case, dev=DEV, conf=CONF, equivalence_rel=None):
