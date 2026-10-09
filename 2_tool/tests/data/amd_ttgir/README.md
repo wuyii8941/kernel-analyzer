@@ -17,3 +17,4 @@ the test and say so.
 | `mxfp8_mxfp4_matmul` | `AC7H67ID5IHQKKA2CFSP5IZZQXBS2SOSOSOKZYOF2OJJ2QOAEZKA/mxfp8_mxfp4_matmul_tma.ttir` | gfx942 | `c8aa269d36ca1310` | `99b8d5e88b54a15d` |
 | `matmul_pipelined` | `4HWPURTIJ5SK2FBW26OGB2EZB7FK3SQI47QX7HV4D6VOR4MZ4CVQ/matmul_kernel.ttir` | gfx942 | `4ba16424ba73be40` | `cf30def81db2ac71` |
 | `gather_dot_pipeline` | `WTWAG6XUOV7RFC64IDTYPZXT2EMWMZ3Y7HWR4Q4VCV2IBKVXTA7Q/tma_gather_dot_pipeline.ttir` | gfx950 | `8f0165ecc0248c79` | `1ffff154c0c4230b` |
+| `serialized_add_gfx942` | official `test_core.py::test_atomic_cas` `serialized_add` (int32, acq_rel, num_warps 4), TTIR compiled by official main for sm_86 | gfx942 | `390f4f588908779a` | `09ea0da5e9f6f533` |

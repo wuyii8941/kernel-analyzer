@@ -85,9 +85,17 @@ def _cmp(kind, a, b):
             "gt": lambda: a > b, "ge": lambda: a >= b}[kind]()
 
 
-def _translate(op, a, constant):
-    """One operation on z3 terms (``a``: operand terms); ``constant(op)`` gives a literal's scalar value."""
+def _translate(op, a, constant, rounding=False):
+    """One operation on z3 terms (``a``: operand terms); ``constant(op)`` gives a literal's scalar value.  Float width
+    changes are exact in the numerical-difference reference (rounding belongs to K); in the rounding-check mode
+    (``rounding``) a narrowing conversion rounds and is not translated."""
     n = op.name
+    if n == "arith.extf":
+        return a[0]
+    if n == "arith.truncf":
+        if rounding:
+            raise Unsupported("truncf rounds in the rounding-check mode")
+        return a[0]
     rt = op.result_types[0].elem if op.result_types else None
     if n == "arith.constant":
         if op.result_types[0].shape:
@@ -158,7 +166,7 @@ def _translate(op, a, constant):
     raise Unsupported(n)
 
 
-def _apply(region, args, outer, constant):
+def _apply(region, args, outer, constant, rounding=False):
     """The region's yielded terms for the argument terms ``args``; ``outer``: terms of values defined outside it."""
     block = region.entry
     if len(region.blocks) != 1 or len(block.args) != len(args):
@@ -175,7 +183,7 @@ def _apply(region, args, outer, constant):
             operands = [env[v] for v in op.operands]
         except KeyError as exc:
             raise Unsupported(f"value {exc} not available") from exc
-        env[op.results[0]] = _translate(op, operands, constant)
+        env[op.results[0]] = _translate(op, operands, constant, rounding)
     raise Unsupported("no tt.scan.return")
 
 
@@ -192,13 +200,13 @@ def outer_names(region) -> list:
     return used
 
 
-def scan_associativity(region, outer: dict, constant, key=None) -> Certificate:
+def scan_associativity(region, outer: dict, constant, key=None, rounding=False) -> Certificate:
     """Certificate that the scan combine ``region`` is associative.  ``outer``: name -> ("const", elem, value) for a
     scalar value fixed in this execution, or ("var", elem) for a value the proof must cover for every choice.
     ``constant(op)`` returns the scalar of an ``arith.constant`` inside the region."""
     if z3 is None:
         return Certificate(False, "z3 not available")
-    ck = (key, tuple(sorted((k, v) for k, v in outer.items()))) if key is not None else None
+    ck = (key, rounding, tuple(sorted((k, v) for k, v in outer.items()))) if key is not None else None
     if ck is not None and ck in _CACHE:
         return _CACHE[ck]
     try:
@@ -215,10 +223,10 @@ def scan_associativity(region, outer: dict, constant, key=None) -> Certificate:
         A = [_var(f"a{j}", e) for j, e in enumerate(elems)]
         B = [_var(f"b{j}", e) for j, e in enumerate(elems)]
         C = [_var(f"c{j}", e) for j, e in enumerate(elems)]
-        ab = _apply(region, A + B, terms, constant)
-        bc = _apply(region, B + C, terms, constant)
-        left = _apply(region, ab + C, terms, constant)
-        right = _apply(region, A + bc, terms, constant)
+        ab = _apply(region, A + B, terms, constant, rounding)
+        bc = _apply(region, B + C, terms, constant, rounding)
+        left = _apply(region, ab + C, terms, constant, rounding)
+        right = _apply(region, A + bc, terms, constant, rounding)
         if len(left) != k or len(right) != k:
             raise Unsupported("yield arity")
         s = z3.Solver()

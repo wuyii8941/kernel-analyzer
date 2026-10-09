@@ -992,3 +992,48 @@ def test_cas_lock_certificate_with_the_official_main_barrier():
                             libtriton_sha256=None)
     ref = evaluate_sequence([launch]).launches[0]
     assert (ref.element_classes(1 << 20) == "complete_composed").all(), sorted(ref.reasons)
+
+
+def test_cas_lock_certificate_on_amd_buffer_ops():
+    """full interpreter (official AMD gfx942 TTGIR fixture of the official test_atomic_cas kernel): the critical
+    section uses amdg.buffer_load / amdg.buffer_store; the replay follows the evaluator's address rule and certifies
+    the 50-program serialized add (found by the AMD cross-level capture: the TTIR side was certified, this side not)"""
+    pytest.importorskip("z3")
+    from pathlib import Path
+
+    from kernel_analyzer.reference_eval.capture import CapturedArg, CapturedLaunch
+    from kernel_analyzer.reference_eval.ttir_eval import evaluate_sequence
+    ttgir = (Path(__file__).parent / "data/amd_ttgir/serialized_add_gfx942.ttgir").read_text()
+    assert "amdg.buffer_load" in ttgir and "amdg.buffer_store" in ttgir
+    raw_d, raw_l = np.zeros(128, np.float32).view(np.uint8), np.zeros(1, np.int32).view(np.uint8)
+    args = [CapturedArg(index=0, name="data", kind="tensor", constexpr=False, signature_type="*fp32", dtype="float32",
+                        shape=(128,), stride=None, element_size=4, data_ptr=1 << 20, storage_ptr=1 << 20,
+                        storage_nbytes=512, storage_id=0, before=raw_d.copy(), after=raw_d.copy()),
+            CapturedArg(index=1, name="Lock", kind="tensor", constexpr=False, signature_type="*i32", dtype="int32",
+                        shape=(1,), stride=None, element_size=4, data_ptr=2 << 20, storage_ptr=2 << 20,
+                        storage_nbytes=4, storage_id=1, before=raw_l.copy(), after=raw_l.copy()),
+            CapturedArg(index=2, name="triton_dtype", kind="int", constexpr=True, signature_type="constexpr", value=0),
+            CapturedArg(index=3, name="SEM", kind="int", constexpr=True, signature_type="constexpr", value=0)]
+    launch = CapturedLaunch(index=0, kernel_name="serialized_add", kernel_hash="", grid=(50, 1, 1), args=args,
+                            asm={"ttgir": ttgir}, cubin_sha256=None, metadata={}, libtriton_sha256=None)
+    ref = evaluate_sequence([launch]).launches[0]
+    assert (np.asarray(ref.buffers[1 << 20].lo) == 50).all()
+    assert (ref.element_classes(1 << 20) == "complete_composed").all(), sorted(ref.reasons)
+
+
+def test_cas_lock_certificate_with_float_width_changes():
+    """full interpreter: tutorial 05 keeps its partial sums in fp16 and widens them (arith.extf) inside the critical
+    section; in the numerical-difference reference extf / truncf are exact, so the section still commutes and is
+    certified (found by the tutorial capture)"""
+    pytest.importorskip("triton")
+    pytest.importorskip("z3")
+    from test_signatures_structural import _run
+
+    body = ("    pid = tl.program_id(0)\n    i = tl.arange(0, N)\n    part = tl.load(x + pid * N + i)\n"
+            "    while tl.atomic_cas(lock, 0, 1) == 1:\n        pass\n"
+            "    acc = part.to(tl.float32) + tl.load(dw + i)\n    tl.store(dw + i, acc)\n"
+            "    tl.debug_barrier()\n    tl.atomic_xchg(lock, 0)\n")
+    x = np.random.default_rng(6).standard_normal((9, 8)).astype(np.float16)
+    ref, ident = _run("audit_lock_extf", body, {"x": ("fp16", x.reshape(-1)), "dw": ("fp32", np.zeros(8)),
+                                                "lock": ("int32", [0])}, out_name="dw", grid=(9, 1, 1), full=True)
+    assert (ref.element_classes(ident["dw"]) == "complete_composed").all(), sorted(ref.reasons)

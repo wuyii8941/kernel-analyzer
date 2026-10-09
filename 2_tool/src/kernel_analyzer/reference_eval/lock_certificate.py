@@ -38,7 +38,8 @@ MAX_PAIR_CHECKS = 400
 MAX_LANES = 1 << 14
 
 _SECTION_OPS = {"arith.constant", "tt.splat", "tt.broadcast", "tt.expand_dims", "tt.make_range", "tt.addptr",
-                "tt.load", "tt.store", "gpu.barrier", "ttg.barrier", "tt.atomic_rmw", "scf.if", "scf.yield"}
+                "tt.load", "tt.store", "gpu.barrier", "ttg.barrier", "tt.atomic_rmw", "scf.if", "scf.yield",
+                "amdg.buffer_load", "amdg.buffer_store"}
 _BARRIERS = ("gpu.barrier", "ttg.barrier")   # tl.debug_barrier: gpu.barrier in 3.6.0, ttg.barrier on official main
 
 
@@ -255,8 +256,8 @@ def _concrete_bool(t):
 
 
 class _Replay:
-    def __init__(self, elems, elem_size, ptr_elem_size, constant):
-        self.elems, self.elem_size, self.ptr_elem_size, self.constant = elems, elem_size, ptr_elem_size, constant
+    def __init__(self, elems, elem_size, constant, rounding=False):
+        self.elems, self.elem_size, self.constant, self.rounding = elems, elem_size, constant, rounding
         self.prefix = "P"
 
     def undefined(self, op, idx, elem):
@@ -277,8 +278,9 @@ class _Replay:
             a = np.empty(shape, dtype=object)
             base = np.broadcast_to(np.asarray(tv.base), shape)
             lo = np.broadcast_to(np.asarray(tv.lo), shape)
+            pointee = getattr(tv.elem, "pointee", None)
             for idx in np.ndindex(*shape) if shape else [()]:
-                a[idx] = ("ptr", int(base[idx]), int(lo[idx]))
+                a[idx] = ("ptr", int(base[idx]), int(lo[idx]), pointee)
             return a
         if tv.kind == "i":
             if tv.hi is not None:
@@ -307,13 +309,49 @@ class _Replay:
     def loc(self, p):
         if not (isinstance(p, tuple) and p[0] == "ptr"):
             raise Unsupported("not a concrete pointer")
-        _, ident, byte = p
+        _, ident, byte, pointee = p
         if ident not in self.elems:
             raise Unsupported("pointer into an unknown buffer")
+        if pointee != self.elems[ident]:
+            raise Unsupported("pointer type differs from the storage element type")
         size = self.elem_size[ident]
         if byte % size:
             raise Unsupported("unaligned element")
         return ident, byte // size
+
+    def offset(self, ptr, off):
+        """ptr + off elements of the pointee (the evaluator's tt.addptr rule)."""
+        if not (isinstance(ptr, tuple) and ptr[0] == "ptr"):
+            raise Unsupported("addptr on a symbolic pointer")
+        from .ttir_eval import ELEM_SIZE
+        if ptr[3] not in ELEM_SIZE:
+            raise Unsupported("pointer element type")
+        return ("ptr", ptr[1], ptr[2] + _numeral(off) * ELEM_SIZE[ptr[3]], ptr[3])
+
+    def load(self, op, ptr, mask, other, state, elem):
+        out = np.empty(ptr.shape, dtype=object)
+        for idx in np.ndindex(*ptr.shape) if ptr.shape else [()]:
+            m = True if mask is None else _concrete_bool(mask[idx])
+            if m is True:
+                out[idx] = state.read(self.loc(ptr[idx]))
+            elif m is False:
+                out[idx] = other[idx] if other is not None else self.undefined(op, idx, elem)
+            else:
+                alt = other[idx] if other is not None else self.undefined(op, idx, elem)
+                out[idx] = C.z3.If(mask[idx], state.read(self.loc(ptr[idx])), alt)
+        return out
+
+    def store(self, ptr, val, mask, state):
+        seen = set()
+        for idx in np.ndindex(*ptr.shape) if ptr.shape else [()]:
+            m = True if mask is None else _concrete_bool(mask[idx])
+            if m is False:
+                continue
+            loc = self.loc(ptr[idx])
+            if loc in seen:
+                raise Unsupported("one store writes an address from several lanes")
+            seen.add(loc)
+            state.write(loc, val[idx] if m is True else C.z3.If(mask[idx], val[idx], state.read(loc)))
 
     def run(self, ops, env, state):
         for op in ops:
@@ -353,47 +391,28 @@ class _Replay:
                 arr[k] = C.z3.BitVecVal(s + k, 32)
             return [arr]
         if n == "tt.addptr":
-            size = self.ptr_elem_size(rt)
             p, off = np.broadcast_arrays(a[0], a[1])
             out = np.empty(p.shape, dtype=object)
             for idx in np.ndindex(*p.shape) if p.shape else [()]:
-                q = p[idx]
-                if not (isinstance(q, tuple) and q[0] == "ptr"):
-                    raise Unsupported("addptr on a symbolic pointer")
-                out[idx] = ("ptr", q[1], q[2] + _numeral(off[idx]) * size)
+                out[idx] = self.offset(p[idx], off[idx])
             return [out]
+        if n in ("amdg.buffer_load", "amdg.buffer_store"):
+            # the evaluator's rule: address = splat(ptr) + element offsets; mask / other by role
+            roles = dict(zip(op.attrs["roles"].split(","), a))
+            base, off = roles["ptr"].reshape(-1)[0], roles["offsets"]
+            ptr = np.empty(off.shape, dtype=object)
+            for idx in np.ndindex(*off.shape) if off.shape else [()]:
+                ptr[idx] = self.offset(base, off[idx])
+            if n == "amdg.buffer_store":
+                self.store(ptr, np.broadcast_to(roles["value"], off.shape), roles.get("mask"), state)
+                return None
+            return [self.load(op, ptr, roles.get("mask"), roles.get("other"), state, rt.elem)]
         if n in _BARRIERS:   # orders the threads of one program; no effect on the section's memory transformation
             return None
         if n == "tt.load":
-            ptr = a[0]
-            mask = a[1] if len(a) > 1 else None
-            other = a[2] if len(a) > 2 else None
-            out = np.empty(ptr.shape, dtype=object)
-            for idx in np.ndindex(*ptr.shape) if ptr.shape else [()]:
-                m = True if mask is None else _concrete_bool(mask[idx])
-                elem = rt.elem
-                if m is True:
-                    out[idx] = state.read(self.loc(ptr[idx]))
-                elif m is False:
-                    out[idx] = other[idx] if other is not None else self.undefined(op, idx, elem)
-                else:
-                    alt = other[idx] if other is not None else self.undefined(op, idx, elem)
-                    out[idx] = C.z3.If(mask[idx], state.read(self.loc(ptr[idx])), alt)
-            return [out]
+            return [self.load(op, a[0], a[1] if len(a) > 1 else None, a[2] if len(a) > 2 else None, state, rt.elem)]
         if n == "tt.store":
-            ptr, val = a[0], a[1]
-            mask = a[2] if len(a) > 2 else None
-            seen = set()
-            for idx in np.ndindex(*ptr.shape) if ptr.shape else [()]:
-                m = True if mask is None else _concrete_bool(mask[idx])
-                if m is False:
-                    continue
-                loc = self.loc(ptr[idx])
-                if loc in seen:
-                    raise Unsupported("one store writes an address from several lanes")
-                seen.add(loc)
-                v = val[idx] if m is True else C.z3.If(mask[idx], val[idx], state.read(loc))
-                state.write(loc, v)
+            self.store(a[0], a[1], a[2] if len(a) > 2 else None, state)
             return None
         if n == "tt.atomic_rmw":
             kind = op.attrs.get("rmw_op")
@@ -452,7 +471,7 @@ class _Replay:
             out = np.empty(shape, dtype=object)
             for idx in np.ndindex(*shape) if shape else [()]:
                 try:
-                    out[idx] = C._translate(op, [x[idx] for x in xs], self.constant)
+                    out[idx] = C._translate(op, [x[idx] for x in xs], self.constant, self.rounding)
                 except C.Unsupported as exc:
                     raise Unsupported(str(exc)) from exc
             return [out]
@@ -487,14 +506,9 @@ def prove(evaluator, section: LockSection, records: dict, memory) -> LockCertifi
     from .ttir_eval import ELEM_SIZE, _constant
     elems = {k: b.elem for k, b in memory.items()}
     elem_size = {k: ELEM_SIZE[b.elem] for k, b in memory.items() if b.elem in ELEM_SIZE}
-
-    def ptr_size(rt):
-        pointee = rt.elem.pointee if hasattr(rt.elem, "pointee") else None
-        if pointee is None or pointee not in ELEM_SIZE:
-            raise Unsupported("pointer element type")
-        return ELEM_SIZE[pointee]
-
-    replay = _Replay(elems, elem_size, ptr_size, lambda o: np.asarray(_constant(o).lo).reshape(-1)[0].item())
+    from .ttir_eval import NumericMode
+    replay = _Replay(elems, elem_size, lambda o: np.asarray(_constant(o).lo).reshape(-1)[0].item(),
+                     getattr(evaluator, "mode", None) == NumericMode.ROUNDING_CHECK)
     try:
         classes = {}
         for pid, snap in records.items():

@@ -3848,7 +3848,7 @@ class KernelReferenceEvaluator:
                 outer[name] = ("var", str(v.elem))
         key = "\n".join([repr([str(t.elem) for _, t in region.entry.args])] + [o.text for o in region.entry.ops])
         return C.scan_associativity(region, outer, lambda o: np.asarray(_constant(o).lo).reshape(-1)[0].item(),
-                                    key=key)
+                                    key=key, rounding=self.mode == NumericMode.ROUNDING_CHECK)
 
     def _check_scan_bracketing(self, op, args, axis, reverse, env, state, seq):
         """DSL v2 increment 8: a Triton scan requires an associative combine (the tl.associative_scan precondition)
