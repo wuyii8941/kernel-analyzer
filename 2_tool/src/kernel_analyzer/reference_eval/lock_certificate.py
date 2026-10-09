@@ -33,9 +33,10 @@ import numpy as np
 
 from . import certificates as C
 
-MAX_CLASSES = 256
+MAX_CLASSES = 4096
 MAX_PAIR_CHECKS = 400
 MAX_LANES = 1 << 14
+MAX_TERMS = 3_000_000   # lane-level operations replayed per certificate (deterministic budget; beyond it: premise)
 
 _SECTION_OPS = {"arith.constant", "tt.splat", "tt.broadcast", "tt.expand_dims", "tt.make_range", "tt.addptr",
                 "tt.load", "tt.store", "gpu.barrier", "ttg.barrier", "tt.atomic_rmw", "scf.if", "scf.yield",
@@ -259,6 +260,7 @@ class _Replay:
     def __init__(self, elems, elem_size, constant, rounding=False):
         self.elems, self.elem_size, self.constant, self.rounding = elems, elem_size, constant, rounding
         self.prefix = "P"
+        self.terms = 0
 
     def undefined(self, op, idx, elem):
         """A masked-off lane of a load without ``other``: undefined, so a fresh value the proof covers for every
@@ -355,6 +357,10 @@ class _Replay:
 
     def run(self, ops, env, state):
         for op in ops:
+            self.terms += max(1, max((int(np.prod(np.shape(v))) for v in (env.get(o) for o in op.operands)
+                                      if isinstance(v, np.ndarray)), default=1))
+            if self.terms > MAX_TERMS:
+                raise Unsupported("certificate budget exceeded")
             if op.name not in _SECTION_OPS and not op.name.startswith("arith."):
                 raise Unsupported(op.name)
             if op.name == "scf.yield":
@@ -499,6 +505,31 @@ def _class_key(snapshot):
     return tuple(key)
 
 
+def _canonical(snap):
+    """(key, shifts): the class key with every pointer made relative to the smallest byte offset of its storage among
+    the section's inputs, and those offsets.  Two classes with equal keys are translations of each other: their
+    critical sections are the same transformation up to the renaming of locations by the per-storage shift."""
+    mins = {}
+    for tv in snap.values():
+        if tv.kind == "p":
+            base = np.broadcast_to(np.asarray(tv.base), np.shape(tv.lo)).reshape(-1)
+            for b, o in zip(base.tolist(), np.asarray(tv.lo).reshape(-1).tolist()):
+                mins[b] = min(mins.get(b, o), o)
+    key = []
+    for name in sorted(snap):
+        tv = snap[name]
+        shape = tuple(np.shape(tv.lo))
+        if tv.kind == "f":
+            key.append((name, "f", shape))
+        elif tv.kind == "p":
+            base = np.broadcast_to(np.asarray(tv.base), shape).reshape(-1)
+            rel = np.asarray(tv.lo).reshape(-1) - np.array([mins[b] for b in base.tolist()], dtype=np.int64)
+            key.append((name, "p", base.tobytes(), rel.tobytes(), shape))
+        else:
+            key.append((name, tv.kind, np.asarray(tv.lo).tobytes(), shape))
+    return tuple(key), mins
+
+
 def prove(evaluator, section: LockSection, records: dict, memory) -> LockCertificate:
     """``records``: program index -> values of ``section.outer`` at section entry (the evaluated program order)."""
     if not C.available():
@@ -524,34 +555,70 @@ def prove(evaluator, section: LockSection, records: dict, memory) -> LockCertifi
             replay.run(section.ops, env, st)
             return st
 
-        reps = {k: transform(p, "P") for k, p in classes.items()}
-        keys = list(classes)
+        # translation families: one replay per family, footprints of the other members by shifting
+        families, shift_of = {}, {}
+        for k, pids in classes.items():
+            ckey, mins = _canonical(records[pids[0]])
+            families.setdefault(ckey, []).append(k)
+            shift_of[k] = mins
+        footprint_of, reps = {}, {}
+        for ckey, members in families.items():
+            rep = members[0]
+            reps[ckey] = transform(classes[rep], "P")
+            base_fp = reps[ckey].reads | reps[ckey].writes
+            for k in members:
+                d = {}
+                for b, m in shift_of[k].items():
+                    delta = m - shift_of[rep][b]
+                    if b not in elem_size or delta % elem_size[b]:
+                        raise Unsupported("a translation that is not a whole number of elements")
+                    d[b] = delta // elem_size[b]
+                if any(ident not in d for ident, _ in base_fp):
+                    raise Unsupported("a location outside the storages of the section's pointers")
+                footprint_of[k] = ({(i, e + d[i]) for i, e in reps[ckey].reads},
+                                   {(i, e + d[i]) for i, e in reps[ckey].writes})
         checks = 0
+
+        def commute(ka, kb):
+            ab = transform(classes[kb], "Q", transform(classes[ka], "P"))
+            ba = transform(classes[ka], "P", transform(classes[kb], "Q"))
+            locs = set(ab.mem) | set(ba.mem)
+            sv = C.z3.Solver()
+            sv.set("timeout", C.TIMEOUT_MS)
+            sv.add(C.z3.Not(C.z3.And(*[ab.read(l) == ba.read(l) for l in locs]) if locs else C.z3.BoolVal(True)))
+            return sv.check()
+
+        # two programs of one family: equivalent to two instances of its representative (renaming of locations)
+        for ckey, members in families.items():
+            if len(members) > 1 or len(classes[members[0]]) > 1:
+                rep = members[0]
+                r_, w_ = footprint_of[rep]
+                checks += 1
+                r = commute(rep, rep)
+                if r != C.z3.unsat:
+                    return LockCertificate(False, f"critical sections do not commute "
+                                                  f"({'counterexample' if r == C.z3.sat else r})")
+        # distinct classes whose footprints overlap: checked with their own values
+        keys = list(classes)
         for i, ka in enumerate(keys):
-            for kb in keys[i:]:
-                if ka == kb and len(classes[ka]) < 2:
-                    continue
-                fa, fb = reps[ka], reps[kb]
-                if not ((fa.reads | fa.writes) & fb.writes or fa.writes & (fb.reads | fb.writes)):
+            ra, wa = footprint_of[ka]
+            for kb in keys[i + 1:]:
+                rb, wb = footprint_of[kb]
+                if not ((ra | wa) & wb or wa & (rb | wb)):
                     continue
                 checks += 1
                 if checks > MAX_PAIR_CHECKS:
                     raise Unsupported("too many overlapping program pairs")
-                ab = transform(classes[kb], "Q", transform(classes[ka], "P"))
-                ba = transform(classes[ka], "P", transform(classes[kb], "Q"))
-                locs = set(ab.mem) | set(ba.mem)
-                s = C.z3.Solver()
-                s.set("timeout", C.TIMEOUT_MS)
-                s.add(C.z3.Not(C.z3.And(*[ab.read(l) == ba.read(l) for l in locs]) if locs else C.z3.BoolVal(True)))
-                r = s.check()
+                r = commute(ka, kb)
                 if r != C.z3.unsat:
-                    return LockCertificate(False, f"critical sections do not commute ({'counterexample' if r == C.z3.sat else r})")
+                    return LockCertificate(False, f"critical sections do not commute "
+                                                  f"({'counterexample' if r == C.z3.sat else r})")
         lock_locs = getattr(evaluator, "_lock_locs", set())
-        footprint = set().union(*(f.reads | f.writes for f in reps.values())) if reps else set()
+        footprint = set().union(*(r_ | w_ for r_, w_ in footprint_of.values())) if footprint_of else set()
         if footprint & lock_locs:
             raise Unsupported("a critical section touches the lock")
         return LockCertificate(True, f"z3 {C.z3.get_version_string()}: the critical sections of all {len(records)} "
-                                     f"programs commute pairwise ({len(classes)} program classes, {checks} pair checks)",
-                               footprint)
+                                     f"programs commute pairwise ({len(classes)} program classes in {len(families)} "
+                                     f"translation families, {checks} pair checks)", footprint)
     except Unsupported as exc:
         return LockCertificate(False, f"not translated: {exc}")

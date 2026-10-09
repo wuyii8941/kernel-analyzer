@@ -1037,3 +1037,18 @@ def test_cas_lock_certificate_with_float_width_changes():
     ref, ident = _run("audit_lock_extf", body, {"x": ("fp16", x.reshape(-1)), "dw": ("fp32", np.zeros(8)),
                                                 "lock": ("int32", [0])}, out_name="dw", grid=(9, 1, 1), full=True)
     assert (ref.element_classes(ident["dw"]) == "complete_composed").all(), sorted(ref.reasons)
+
+
+def test_cas_lock_certificate_budget_refusal_keeps_the_premise(monkeypatch):
+    """full interpreter: a certificate over its deterministic budget is refused (the premise stays), never assumed"""
+    pytest.importorskip("triton")
+    pytest.importorskip("z3")
+    from test_signatures_structural import _run
+
+    from kernel_analyzer.reference_eval import lock_certificate as LC
+    monkeypatch.setattr(LC, "MAX_TERMS", 4)
+    body = ("    i = tl.arange(0, N)\n    while tl.atomic_cas(lock, 0, 1) == 1:\n        pass\n"
+            "    tl.store(data + i, tl.load(data + i) + 1.0)\n    tl.debug_barrier()\n    tl.atomic_xchg(lock, 0)\n")
+    ref, ident = _run("audit_lock_budget", body, {"data": ("fp32", np.zeros(8)), "lock": ("int32", [0])},
+                      grid=(7, 1, 1), full=True)
+    assert (ref.element_classes(ident["data"]) == "complete_under_premise").all(), sorted(ref.reasons)
