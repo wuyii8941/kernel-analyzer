@@ -3737,7 +3737,11 @@ class KernelReferenceEvaluator:
             raise ProgramAbort(f"{op.node_id}: atomic_cas through an address of unknown buffer")
         active = in_range & (np.broadcast_to(ptr.st, shape) == ST_OK)
         idx = np.asarray(index)[active].astype(np.int64)
-        old_lo = np.zeros(shape)
+        # DSL v2 increment 15 (defect): integer values are compared and returned in int64, in the signed representation
+        # of the width (they were compared in float64, and stored values of unsigned storages are unsigned)
+        int_cas = buf.kind == "i" and kind_of(ptr.elem.pointee) == "i"
+        iw = INT_WIDTH.get(ptr.elem.pointee, 64)
+        old_lo = np.zeros(shape, dtype=np.int64 if int_cas else np.float64)
         old_st = np.full(shape, ST_NE, dtype=np.int8)
         reasons = set(ptr.reasons | cmp.reasons | val.reasons)
         if idx.size:
@@ -3764,10 +3768,14 @@ class KernelReferenceEvaluator:
                 self._track_read(buf, idx, state)  # the CAS reads the old value (an atomic read in serialization)
             uniq, counts = np.unique(idx, return_counts=True)
             dup = np.isin(idx, uniq[counts > 1])
-            lo_m = buf.lo[idx].astype(np.float64)
-            hi_m = (buf.hi[idx] if buf.hi is not None else buf.lo[idx]).astype(np.float64)
-            c_lo = np.broadcast_to(cmp.lo, shape)[active].astype(np.float64)
-            c_hi = np.broadcast_to(cmp.hi if cmp.hi is not None else cmp.lo, shape)[active].astype(np.float64)
+            if int_cas:
+                lo_m = hi_m = _wrap(np.asarray(buf.lo[idx], dtype=np.int64), iw)
+                c_lo = c_hi = _wrap(np.broadcast_to(cmp.lo, shape)[active].astype(np.int64), iw)
+            else:
+                lo_m = buf.lo[idx].astype(np.float64)
+                hi_m = (buf.hi[idx] if buf.hi is not None else buf.lo[idx]).astype(np.float64)
+                c_lo = np.broadcast_to(cmp.lo, shape)[active].astype(np.float64)
+                c_hi = np.broadcast_to(cmp.hi if cmp.hi is not None else cmp.lo, shape)[active].astype(np.float64)
             v_lo = np.broadcast_to(val.lo, shape)[active]
             v_hi = np.broadcast_to(val.hi if val.hi is not None else val.lo, shape)[active]
             point = (lo_m == hi_m) & (c_lo == c_hi) & (buf.st[idx] == ST_OK) & \
@@ -3892,6 +3900,8 @@ class KernelReferenceEvaluator:
             # returned 0 for every lane, found by the per-signature tests)
             if internal == "abs" and all(a.kind == "i" for a in args):
                 return _int_op("absi", op, args)
+            if internal in ("ctlz", "ctpop") and all(a.kind == "i" for a in args):   # DSL v2 increment 15
+                return _int_op(internal, op, args)
             raise ProgramAbort(f"{op.node_id}: libdevice {symbol} with integer operands has no declared semantics")
         mode = LIBDEVICE_ROUNDING.get(symbol)
         if mode is not None:
@@ -4194,9 +4204,12 @@ class KernelReferenceEvaluator:
             hi = np.where(sign_neg, -mag_lo, mag_hi)
         elif name == "remf":
             point = (los[0] == his[0]) & (los[1] == his[1]) & (los[1] != 0)
-            ok = point
-            lo = np.where(point, np.fmod(los[0], np.where(point, los[1], 1.0)), 0.0)
-            hi = lo
+            # DSL v2 increment 15: fmod(x, y) = x exactly whenever |x| < |y| (y away from 0), intervals included
+            y_min = np.where((los[1] > 0) | (his[1] < 0), np.minimum(np.abs(los[1]), np.abs(his[1])), 0.0)
+            small = ~point & (y_min > 0) & (np.maximum(np.abs(los[0]), np.abs(his[0])) < y_min)
+            ok = point | small
+            lo = np.where(point, np.fmod(los[0], np.where(point, los[1], 1.0)), np.where(small, los[0], 0.0))
+            hi = np.where(point, lo, np.where(small, his[0], 0.0))
         elif name == "saturate":
             lo, hi = np.clip(los[0], 0.0, 1.0), np.clip(his[0], 0.0, 1.0)
         elif name == "identity":
@@ -4632,7 +4645,7 @@ _ZERO_TANGENT_OK = {"cmpf", "isnan", "isinf", "isfinite", "signbit", "fptosi", "
 
 _INT_OPS = {"addi", "subi", "muli", "divsi", "divui", "remsi", "remui", "andi", "ori", "xori", "shli",
             "shrsi", "shrui", "maxsi", "minsi", "maxui", "minui", "extsi", "extui", "trunci", "ceildivsi",
-            "ceildivui", "floordivsi", "mulhiui", "absi"}
+            "ceildivui", "floordivsi", "mulhiui", "absi", "ctlz", "cttz", "ctpop"}
 
 
 def _int_op(name, op, args) -> TV:
@@ -4662,12 +4675,16 @@ def _int_op(name, op, args) -> TV:
                 vals = -vals
         elif name == "extui":
             vals = _unsigned(vals, in_w).astype(np.int64)
+        elif name == "extsi":   # DSL v2 increment 15: sign-extend the signed representation of the input
+            vals = _wrap(vals, in_w)
         v = _wrap(vals, width)
         kind = "b" if out_elem == "i1" else "i"
         if kind == "b":
             v = (v & 1).astype(np.int8)
         return TV(kind, out_elem, v, None, None, st, cond, reasons)
     vals = [x.lo.astype(np.int64) for x in args]
+    if name in ("divsi", "remsi", "ceildivsi", "floordivsi", "shrsi", "maxsi", "minsi", "absi"):
+        vals = [_wrap(v, width) for v in vals]   # DSL v2 increment 15: signed operations on the signed representation
     with np.errstate(all="ignore"):
         if name == "addi":
             v = vals[0] + vals[1]
@@ -4679,6 +4696,9 @@ def _int_op(name, op, args) -> TV:
             a, b = vals
             zero = (b == 0) | ((a == -(1 << (width - 1))) & (b == -1))  # division by zero, INT_MIN / -1
             st = np.where(zero, ST_NE, st).astype(np.int8)
+            if zero.any():
+                reasons = reasons | {f"not_established:integer division by zero or INT_MIN / -1 (undefined behavior)"
+                                     f"@{op.node_id}"}
             bb = np.where(zero, 1, b)
             q = np.abs(a) // np.abs(bb) * np.where((a >= 0) == (bb >= 0), 1, -1)
             if name == "divsi":
@@ -4693,6 +4713,8 @@ def _int_op(name, op, args) -> TV:
             a, b = (_unsigned(x, width).astype(np.int64) for x in vals)
             zero = b == 0
             st = np.where(zero, ST_NE, st).astype(np.int8)
+            if zero.any():
+                reasons = reasons | {f"not_established:integer division by zero (undefined behavior)@{op.node_id}"}
             bb = np.where(zero, 1, b)
             v = a // bb if name == "divui" else (a % bb if name == "remui" else -((-a) // bb))
         elif name == "andi":
@@ -4705,6 +4727,8 @@ def _int_op(name, op, args) -> TV:
             a, s = vals
             bad = (s < 0) | (s >= width)
             st = np.where(bad, ST_NE, st).astype(np.int8)
+            if bad.any():
+                reasons = reasons | {f"not_established:shift amount outside the width (poison)@{op.node_id}"}
             s = np.where(bad, 0, s)
             if name == "shli":
                 v = a << s
@@ -4730,6 +4754,18 @@ def _int_op(name, op, args) -> TV:
                 raise ProgramAbort(f"{op.node_id}: mulhiui width {width}")
         elif name == "absi":
             v = np.abs(vals[0])
+        elif name in ("ctlz", "cttz", "ctpop"):
+            # DSL v2 increment 15: bit counting on the bit pattern of the operand's width (MLIR math: 0 -> the
+            # width for ctlz / cttz); libdevice __nv_clzll / __nv_popcll return i32 for an i64 operand
+            in_w = INT_WIDTH[args[0].elem]
+            u = np.asarray(_unsigned(vals[0], in_w)).reshape(-1).tolist()
+            if name == "ctpop":
+                c = [bin(int(t)).count("1") for t in u]
+            elif name == "ctlz":
+                c = [in_w - int(t).bit_length() for t in u]
+            else:
+                c = [(int(t) & -int(t)).bit_length() - 1 if t else in_w for t in u]
+            v = np.array(c, dtype=np.int64).reshape(np.shape(vals[0]))
         else:
             raise ProgramAbort(f"{op.node_id}: integer op {name}")
     if name in ("muli", "andi"):
@@ -4756,6 +4792,8 @@ def _cmpi(op, args) -> TV:
         maybe = np.zeros(np.broadcast_shapes(av.shape, bv.shape), dtype=bool)
     if pred.startswith("u"):
         av, bv = _unsigned(av, width).astype(np.int64), _unsigned(bv, width).astype(np.int64)
+    elif a.kind == "i":   # DSL v2 increment 15: values are kept modulo 2^width; compare the signed representation
+        av, bv = _wrap(av, width), _wrap(bv, width)
     fn = {"eq": np.equal, "ne": np.not_equal, "slt": np.less, "sle": np.less_equal, "sgt": np.greater,
           "sge": np.greater_equal, "ult": np.less, "ule": np.less_equal, "ugt": np.greater,
           "uge": np.greater_equal}[pred]

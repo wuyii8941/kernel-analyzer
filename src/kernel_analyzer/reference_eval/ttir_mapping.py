@@ -173,9 +173,9 @@ MAPPING: dict[str, Rule] = {
     "math.ceil": S("C", "ceil"),
     "math.clampf": S("C", "math_clampf"),  # DSL v2 increment 8: NaN or min > max (poison) not established
     "math.copysign": S("C", "copysign"),
-    "math.ctlz": R("G", "bit counting is not supported in this version"),
-    "math.ctpop": R("G", "bit counting is not supported in this version"),
-    "math.cttz": R("G", "bit counting is not supported in this version"),
+    "math.ctlz": S("G", "ctlz"),  # DSL v2 increment 15: bit counting on the operand's bit pattern
+    "math.ctpop": S("G", "ctpop"),
+    "math.cttz": S("G", "cttz"),
     "math.floor": S("C", "floor"),
     "math.fma": S("B", "fma"),
     "math.fpowi": R("D", "fpowi is not supported in this version"),
@@ -289,6 +289,9 @@ LIBDEVICE.update({
     "__nv_y0f": "bessel_y0", "__nv_y0": "bessel_y0", "__nv_y1f": "bessel_y1", "__nv_y1": "bessel_y1",
     "__nv_cyl_bessel_i0f": "bessel_i0", "__nv_cyl_bessel_i0": "bessel_i0",
     "__nv_cyl_bessel_i1f": "bessel_i1", "__nv_cyl_bessel_i1": "bessel_i1",
+    # DSL v2 increment 15: bit counting (int / long long operands, int result) and the double rint
+    "__nv_clz": "ctlz", "__nv_clzll": "ctlz", "__nv_popc": "ctpop", "__nv_popcll": "ctpop",
+    "__nv_rint": "roundeven", "__nv_nearbyint": "roundeven",
 })
 
 # Rounding-suffixed libdevice operations: the declared semantics is the real operation (the

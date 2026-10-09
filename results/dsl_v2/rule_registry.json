@@ -3,8 +3,8 @@
  "triton": "3.6.0",
  "source": "ttir_mapping (MAPPING, LIBDEVICE, LIBDEVICE_ROUNDING, INLINE_ASM, combiners)",
  "counts": {
-  "SUPPORTED": 417,
-  "REJECTED": 96,
+  "SUPPORTED": 426,
+  "REJECTED": 93,
   "DECLARED_PREMISE": 4,
   "NOT_ESTABLISHED": 1
  },
@@ -1756,13 +1756,13 @@
     "types": "*",
     "subregion": "*"
    },
-   "status": "REJECTED",
+   "status": "SUPPORTED",
    "category": "G",
-   "internal": null,
-   "containment_argument": "",
-   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_unknown_op_or_attribute_is_rejected_not_skipped",
-   "negative_control": "",
-   "reason": "bit counting is not supported in this version"
+   "internal": "ctlz",
+   "containment_argument": "Bit-level reinterpretation: exact on point values; a non-point interval cannot be reinterpreted -> not established.",
+   "counterexample_test": "tests/test_general_rules.py::test_bitcast_round_trip_of_point_values_is_exact",
+   "negative_control": "tests/test_reference_eval_ttir.py::test_copysign_and_signbit_read_the_sign_of_zero",
+   "reason": ""
   },
   {
    "key": {
@@ -1771,13 +1771,13 @@
     "types": "*",
     "subregion": "*"
    },
-   "status": "REJECTED",
+   "status": "SUPPORTED",
    "category": "G",
-   "internal": null,
-   "containment_argument": "",
-   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_unknown_op_or_attribute_is_rejected_not_skipped",
-   "negative_control": "",
-   "reason": "bit counting is not supported in this version"
+   "internal": "ctpop",
+   "containment_argument": "Bit-level reinterpretation: exact on point values; a non-point interval cannot be reinterpreted -> not established.",
+   "counterexample_test": "tests/test_general_rules.py::test_bitcast_round_trip_of_point_values_is_exact",
+   "negative_control": "tests/test_reference_eval_ttir.py::test_copysign_and_signbit_read_the_sign_of_zero",
+   "reason": ""
   },
   {
    "key": {
@@ -1786,13 +1786,13 @@
     "types": "*",
     "subregion": "*"
    },
-   "status": "REJECTED",
+   "status": "SUPPORTED",
    "category": "G",
-   "internal": null,
-   "containment_argument": "",
-   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_unknown_op_or_attribute_is_rejected_not_skipped",
-   "negative_control": "",
-   "reason": "bit counting is not supported in this version"
+   "internal": "cttz",
+   "containment_argument": "Bit-level reinterpretation: exact on point values; a non-point interval cannot be reinterpreted -> not established.",
+   "counterexample_test": "tests/test_general_rules.py::test_bitcast_round_trip_of_point_values_is_exact",
+   "negative_control": "tests/test_reference_eval_ttir.py::test_copysign_and_signbit_read_the_sign_of_zero",
+   "reason": ""
   },
   {
    "key": {
@@ -4107,6 +4107,36 @@
   {
    "key": {
     "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_clz",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "ctlz",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_clzll",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "ctlz",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
     "attrs": "symbol=__nv_copysignf",
     "types": "*",
     "subregion": "*"
@@ -6207,6 +6237,21 @@
   {
    "key": {
     "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_nearbyint",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "roundeven",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
     "attrs": "symbol=__nv_nearbyintf",
     "types": "*",
     "subregion": "*"
@@ -6214,6 +6259,36 @@
    "status": "SUPPORTED",
    "category": "D",
    "internal": "roundeven",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_popc",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "ctpop",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_popcll",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "ctpop",
    "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
    "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
    "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
@@ -6259,6 +6334,21 @@
    "status": "SUPPORTED",
    "category": "D",
    "internal": "rcp",
+   "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
+   "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
+   "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
+   "reason": ""
+  },
+  {
+   "key": {
+    "op": "tt.extern_elementwise",
+    "attrs": "symbol=__nv_rint",
+    "types": "*",
+    "subregion": "*"
+   },
+   "status": "SUPPORTED",
+   "category": "D",
+   "internal": "roundeven",
    "containment_argument": "Elementary functions: MPFR-rounded (or proven-error) enclosures of the real function over the input interval, interior extrema included; outside the domain -> not established.",
    "counterexample_test": "tests/test_reference_eval_counterexamples.py::test_sin_enclosure_includes_an_interior_maximum",
    "negative_control": "tests/test_reference_eval_counterexamples.py::test_log1p_domain_is_open_at_minus_one",
