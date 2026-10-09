@@ -1,0 +1,454 @@
+{
+ "tool_version": "4.0",
+ "expanded_declaration": {
+  "call": "audit_calls.py:honest_copy",
+  "inputs": {
+   "x": {
+    "sampler": {
+     "uniform": [
+      1,
+      2
+     ]
+    },
+    "shape": [
+     1024
+    ],
+    "dtype": "float32"
+   }
+  },
+  "compare": {
+   "mode": "A",
+   "measure": [
+    "y"
+   ]
+  },
+  "budget": {
+   "cpu_seconds": 600,
+   "gpu_seconds": 600,
+   "case_timeout": 300,
+   "max_units": 6
+  },
+  "rule_classes": {
+   "fixed_mean": [
+    "R1",
+    "R5"
+   ],
+   "aligned": [
+    "R2",
+    "R3"
+   ]
+  },
+  "multiplicity": "Holm within each rule class",
+  "units": {
+   "development": 2,
+   "confirmation": 4,
+   "seed_offset": 0
+  },
+  "alpha": 0.05,
+  "reference_classes_allowed": [
+   "complete_composed"
+  ],
+  "resolution": {
+   "ulp_fraction": 0.125,
+   "max_level": 3
+  },
+  "factors": {},
+  "factor_levels": [
+   {}
+  ],
+  "versions": {
+   "torch": "2.10.0+cu128",
+   "triton": "3.6.0",
+   "device": "NVIDIA RTX A6000",
+   "tool": "4.0",
+   "python": "3.11.16"
+  },
+  "error_budget": null,
+  "magnitude_bound": null,
+  "equivalence": null,
+  "repeats": null,
+  "repeats_policy": "launches per input: the declared repeats, else 2, or 8 when a launch has float atomics",
+  "bounded_route": "magnitude_bound (a declared population bound M on |K - G| per element, not proven by the tool) is passed to check.run: every rule reports the bounded route (Hoeffding on the per-unit projections, per rule at alpha) next to the approximate route (endpoint-conservative t); without M no distribution-free statement.  A declared magnitude_bound.width_elementwise W (before the data) gives the pre-data detectable effect 2 r_n + W; without it the detectable effect is conditional on the observed widths. error_budget is recorded only (not applied)",
+  "equivalence_policy": "equivalence.rel (delta relative to the reference scale q_R) is passed to check.run: every fixed-direction rule reports the equivalence axis (TOST); without delta no equivalence statement",
+  "resolution_policy": "resolved_fraction is measured against resolution.ulp_fraction; while the target is not met the level is measured again at a higher working precision (levels 1-3: SumK / DotK K = 3, 5, 8, compensated prefix sums from level 2; up to resolution.max_level), stopping when met, at the highest level, when the budget is spent or when a level brings no improvement; the outcome and every level are reported, an unmet target is 'enclosure too wide' with resolution_met = false, never written as met",
+  "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
+  "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) at alpha + contract_v3 cannot-judge rules (S0 = 2, N0 = 64, n_min = 16)",
+  "reference_scope": "call-level complete only when every float buffer the kernels read is a declared input's own storage (unchanged), written by a recorded launch, or produced (by an unmeasured traced run of the call, aligned launch for launch) only by copies of the declared inputs or exact constants; otherwise kernel-level (upstream values captured) and not counted as complete for the call.  Equal values (every element found among the inputs, an all-zero buffer) are not provenance",
+  "proof_status": "complete_rate counts proved references only; elements that hold only under an unproven premise (CAS serializations without the lock commutativity certificate, scan bracketings without the associativity certificate) are reported as complete_under_premise_rate and are not used by the statistics; certificates are listed under proof_status",
+  "source_hashes": {
+   "call": {
+    "ref": "audit_calls.py:honest_copy",
+    "sha256": "cc6a715bb4196b25af607092f36f26d929d3162e2c2c132b3b1797161e2ca8ce"
+   }
+  },
+  "sampling_seed_sha256": "8cb0f188011ccfa6b78d825b1e7d54293ab526d0c460755eed2e9da76ad29d1a",
+  "digest_scope": "declaration_sha256: SHA-256 of the canonical JSON of every other field of this expanded declaration",
+  "declaration_sha256": "a9c27c52ed54092bfb9fcbc8702118e23c35de71a16b1b821e11e6e68fddee30"
+ },
+ "levels": [
+  {
+   "level": {},
+   "status": "ok",
+   "precision_level": 1,
+   "units": {
+    "development": 2,
+    "confirmation": 4
+   },
+   "notes": {
+    "outputs_not_written_by_triton": [],
+    "outputs_binding_not_established": [],
+    "outputs_modified_after_last_triton_write": [],
+    "outputs_whose_writing_programs_aborted": {},
+    "outputs_at_address_of_another_recorded_storage": [],
+    "ttir_coverage_complete": [
+     true
+    ],
+    "ir_coverage_complete": [
+     true
+    ],
+    "ir_kinds": [
+     "ttir"
+    ]
+   },
+   "outputs": {
+    "y": {
+     "status": "evaluated",
+     "dtype": "float32",
+     "reference": {
+      "elements": 6144,
+      "complete_finite": 6144,
+      "complete_rate": 1.0,
+      "complete_under_premise": 0,
+      "complete_under_premise_rate": 0.0,
+      "width_over_ulp": {
+       "median": 0.0,
+       "p90": 0.0,
+       "max": 0.0
+      },
+      "resolution_target_ulp_fraction": 0.125,
+      "resolved_fraction": 1.0,
+      "resolution_met": true,
+      "reference_scope": "call-level (upstream copies / exact constants with producer records: L0:_affine:x_ptr [producer record: copy: aten.clone.default])",
+      "complete_rate_call_level": 1.0
+     },
+     "statistics": {
+      "fixed_mean": {
+       "rules": {
+        "R1": {
+         "judgment": "cannot judge (sample)",
+         "basis": "n = 4 < n_min = 16",
+         "holm_adjusted_p": 0.534406191461678,
+         "alpha": 0.05,
+         "equivalence": "no equivalence bound declared: no equivalence statement",
+         "mean_projection": -5.21540641784668e-08,
+         "n": 4,
+         "mde_approximate": 3.1007717441122613e-07
+        },
+        "R5": {
+         "judgment": "cannot judge (sample)",
+         "basis": "n = 4 < n_min = 16",
+         "holm_adjusted_p": 0.4069795604841702,
+         "alpha": 0.05,
+         "equivalence": "no equivalence bound declared: no equivalence statement",
+         "mean_projection": -8.738976756911936e-08,
+         "n": 4,
+         "mde_approximate": 2.2433621078353695e-07
+        }
+       },
+       "summary": "cannot judge / not established (no statement about bias)"
+      },
+      "aligned": {
+       "rules": {
+        "R2": {
+         "judgment": "cannot judge (sample)",
+         "basis": "n = 4 < n_min = 16",
+         "holm_adjusted_p": 1.0,
+         "alpha": 0.05,
+         "equivalence": "no equivalence bound declared: no equivalence statement",
+         "mean_projection": -5.21540641784668e-08,
+         "n": 4,
+         "mde_approximate": 3.1007717441122613e-07
+        },
+        "R3": {
+         "judgment": "cannot judge (sample)",
+         "basis": "n = 4 < n_min = 16",
+         "holm_adjusted_p": 1.0,
+         "alpha": 0.05,
+         "equivalence": "no equivalence bound declared: no equivalence statement",
+         "mean_projection": -3.954985707942592e-08,
+         "n": 4,
+         "mde_approximate": 3.0572903746479803e-07
+        }
+       },
+       "summary": "cannot judge / not established (no statement about bias)"
+      }
+     },
+     "guarantee": {
+      "fragment": "point (L_Q / L_C)",
+      "set_targets": []
+     },
+     "proof_status": {
+      "unproven_premises": [],
+      "proved_by_certificate": [],
+      "meaning": "complete_fraction counts proved references only; elements that hold only under an unproven premise are counted apart and are not used by the statistics"
+     },
+     "execution": {
+      "launches_per_input": 2,
+      "units_with_different_repeats": 0,
+      "units": 6,
+      "repeat_inputs_not_reproducible": false,
+      "race_findings": [],
+      "unknown_validity_findings": [],
+      "float_atomics": false,
+      "differences_outside_float_atomic_elements": false,
+      "validity": "no finding",
+      "status": "repeated launches bitwise identical",
+      "statistics": "per launch"
+     },
+     "upstream_with_producer_record": [
+      "L0:_affine:x_ptr [producer record: copy: aten.clone.default]"
+     ],
+     "mixed_non_triton_sources": [],
+     "not_established_reasons_seed0": {},
+     "special_values": {
+      "elements_with_special_K_R": 0,
+      "k_vs_kr_class_mismatch": 0,
+      "examples": []
+     },
+     "failure_classes": [
+      "statistics insufficient"
+     ]
+    }
+   },
+   "timing_seconds": {
+    "setup_compile_warmup": 1.525,
+    "inputs": 0.002,
+    "capture_first_seed": 1.37,
+    "capture": 0.005,
+    "reference": 0.109,
+    "specification": 0.0,
+    "statistics": 1.143,
+    "repeat_launches": 0.004
+   },
+   "seconds": 4.2,
+   "failure_classes": [
+    "statistics insufficient"
+   ],
+   "over_budget": false,
+   "refinement": {
+    "levels": [
+     {
+      "level": 1,
+      "resolution_met": true,
+      "resolved_fraction": {
+       "y": 1.0
+      },
+      "seconds": 4.2
+     }
+    ],
+    "outcome": "met at level 1",
+    "final_level": 1,
+    "target_ulp_fraction": 0.125,
+    "max_level": 3,
+    "levels_meaning": {
+     "1": {
+      "sum_k": 3,
+      "cumsum": "gamma"
+     },
+     "2": {
+      "sum_k": 5,
+      "cumsum": "sum2"
+     },
+     "3": {
+      "sum_k": 8,
+      "cumsum": "sum2"
+     }
+    }
+   }
+  }
+ ],
+ "failure_counts": {
+  "semantics missing": 0,
+  "binding": 0,
+  "enclosure too wide": 0,
+  "over budget": 0,
+  "statistics insufficient": 1,
+  "set target width (L_E)": 0,
+  "unproven premise (conditional diagnosis)": 0
+ },
+ "failure_table": [
+  [
+   "call rejected the declared inputs",
+   "binding"
+  ],
+  [
+   "address outside every captured storage",
+   "binding"
+  ],
+  [
+   "invalid address",
+   "binding"
+  ],
+  [
+   "unrecognized",
+   "semantics missing"
+  ],
+  [
+   "no declared semantics",
+   "semantics missing"
+  ],
+  [
+   "unknown callee",
+   "semantics missing"
+  ],
+  [
+   "no reference rule",
+   "semantics missing"
+  ],
+  [
+   "libdevice",
+   "semantics missing"
+  ],
+  [
+   "loop bound",
+   "over budget"
+  ],
+  [
+   "unknown buffer",
+   "semantics missing"
+  ],
+  [
+   "domain of",
+   "enclosure too wide"
+  ],
+  [
+   "non-point",
+   "enclosure too wide"
+  ],
+  [
+   "float-to-int",
+   "enclosure too wide"
+  ],
+  [
+   "reinterpret",
+   "enclosure too wide"
+  ],
+  [
+   "not supported",
+   "semantics missing"
+  ],
+  [
+   "unsupported",
+   "semantics missing"
+  ],
+  [
+   "unknown op",
+   "semantics missing"
+  ],
+  [
+   "no derivative rule",
+   "semantics missing"
+  ],
+  [
+   "store through a not-established address",
+   "semantics missing"
+  ],
+  [
+   "atomic",
+   "semantics missing"
+  ],
+  [
+   "order is not declared",
+   "semantics missing"
+  ],
+  [
+   "cross-program race",
+   "semantics missing"
+  ],
+  [
+   "inline_asm",
+   "semantics missing"
+  ],
+  [
+   "binding",
+   "binding"
+  ],
+  [
+   "not written by triton",
+   "binding"
+  ],
+  [
+   "modified after",
+   "binding"
+  ],
+  [
+   "another recorded storage",
+   "binding"
+  ],
+  [
+   "out-of-bounds",
+   "binding"
+  ],
+  [
+   "outside the captured windows",
+   "binding"
+  ],
+  [
+   "non-triton intermediate",
+   "binding"
+  ],
+  [
+   "shape varies across units",
+   "binding"
+  ],
+  [
+   "pinned_load",
+   "enclosure too wide"
+  ],
+  [
+   "undecided",
+   "enclosure too wide"
+  ],
+  [
+   "overlap",
+   "enclosure too wide"
+  ],
+  [
+   "straddl",
+   "enclosure too wide"
+  ],
+  [
+   "may be zero",
+   "enclosure too wide"
+  ],
+  [
+   "may be negative",
+   "enclosure too wide"
+  ],
+  [
+   "too wide",
+   "enclosure too wide"
+  ],
+  [
+   "interval width",
+   "enclosure too wide"
+  ],
+  [
+   "timeout",
+   "over budget"
+  ],
+  [
+   "budget",
+   "over budget"
+  ],
+  [
+   "cannot judge",
+   "statistics insufficient"
+  ],
+  [
+   "unresolved_sample",
+   "statistics insufficient"
+  ]
+ ],
+ "seconds": 5.3
+}

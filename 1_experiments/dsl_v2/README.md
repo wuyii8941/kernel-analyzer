@@ -10,14 +10,14 @@
 
 | 项 | 结果 | 数据 |
 | --- | --- | --- |
-| 官方测试广泛捕获（官方主线 e50b186e，sm_86，6 个官方测试文件；外部审计修复版之后重跑） | 12,766 次启动：完整 11,548、完整（集合目标）260，合计 92.50%；完整（未证明前提下）709（通用 scan 703、CAS 竞争 6），与前者合计 98.05%；部分 118、中止 2、求值器错误 0 | [captures/auditfix_broad.jsonl](captures/auditfix_broad.jsonl.gz) |
-| TTIR 与 NVIDIA sm_90 / sm_100 TTGIR 两层对照 | 每个目标 7,344,666 个元素都建立，不相交 0 | [captures/inc11_cross_level_combined.jsonl](captures/inc11_cross_level_combined.jsonl.gz) |
-| TTIR 与 AMD gfx942 / gfx950 TTGIR 两层对照 | 每个目标 7,344,666 个元素都建立，不相交 0 | [captures/inc12_cross_level_amd.jsonl](captures/inc12_cross_level_amd.jsonl.gz) |
+| 官方测试广泛捕获（官方主线 e50b186e，sm_86，6 个官方测试文件；外部审计修复版与证书之后重跑，提交 503a19e） | 12,766 次启动：完整 12,100、完整（集合目标）260，合计 96.82%（无条件）；完整（未证明前提下）157（官方 roll 等 z3 不能证明结合的 scan），与前者合计 98.05%；部分 118、中止 2、求值器错误 0 | [captures/auditfix_broad.jsonl](captures/auditfix_broad.jsonl.gz) |
+| TTIR 与 NVIDIA sm_90 / sm_100 TTGIR 两层对照（审计修复版之后重跑） | 每个目标 2,138 次启动、7,344,666 个元素两层都建立，不相交 0；两层都无条件完整 1,981 次，roll 等 156 次两层都在前提下 | [captures/auditfix_cross_nvidia.jsonl](captures/auditfix_cross_nvidia.jsonl.gz) |
+| TTIR 与 AMD gfx942 / gfx950 TTGIR 两层对照（审计修复版之后重跑） | 同上：7,344,666 个元素不相交 0，1,981 / 156；补充集 454 次启动两层都完整 362 次（含官方 test_atomic_cas 的锁证书） | [captures/auditfix_cross_amd.jsonl](captures/auditfix_cross_amd.jsonl.gz) |
 | 官方 TTGIR 名字覆盖 | sm_90 / sm_100 观察到的 129 个操作 129/129；gfx942 / gfx950 的 5952 个 kernel 5949/5952 | [w0/](w0/) |
 | W1 规则契约（3.6.0 回归 profile） | 430/430 个支持条目三类测试齐全并有触发证据 | [w1_contracts/coverage.json](w1_contracts/coverage.json) |
 | v1.1 程序回归（非盲测） | 见增量 1 | [regression_v11/](regression_v11/) |
 | 设备验证（sm_90 / sm_100 / gfx942 / gfx950） | 0（本机只有 sm_86；这些路径只编译、在 CPU 上求值） | — |
-| 外部审计（基线 1aee15e）发现的 F01–F07 | 已修复（提交 5fe8e56），受影响的开发结果按影响表重算 | [3_audits/fix_1aee15e](../../3_audits/fix_1aee15e/README.md) |
+| 外部审计（基线 1aee15e）发现的 F01–F07 | 已修复（提交 5fe8e56 起），欠账补齐（证书、生产者记录、按需精度）；受影响的捕获全部重跑 | [3_audits/fix_1aee15e](../../3_audits/fix_1aee15e/README.md) |
 
 ## 增量一览
 
@@ -43,9 +43,13 @@
 
 ## 数据目录
 
-- [captures/](captures/)：官方测试捕获与两层对照（每行一次启动），运行脚本在 [captures/run/](captures/run/)。只保留最新版本：
-  广泛捕获 `auditfix_broad`（审计修复版后重跑；增量 15 的 `inc15_broad` 被它替换，逐启动对照 `auditfix_compare_broad_vs_inc15.json`），原子测试 `inc14_*`，两层对照 `inc11_cross_level_combined`、`inc12_cross_level_amd*`，合成捕获
-  `inc13_scaled_mma_synthetic`，Gluon `inc10_gluon_test_core`，教程 `inc4_tutorials`、`inc7_tutorial05`；`inc1x_compare_*` 是逐启动比较。
+- [captures/](captures/)：官方测试捕获与两层对照（每行一次启动），运行脚本在 [captures/run/](captures/run/)。只保留最新版本：外部审计修复版与证书
+  之后（提交 503a19e）全部重跑，`auditfix_broad`（广泛捕获，含 test_core 的原子测试）、`auditfix_gluon_test_core`（含 Gluon 原子测试）、
+  `auditfix_cross_nvidia`、`auditfix_cross_amd*`、`auditfix_tutorials`，运行脚本 `run/auditfix_rerun_all.sh`；与各自前一版的逐启动对照在
+  `auditfix_capture_comparisons.json`。被替换的增量文件（`inc15_broad`、`inc14_test_core_atomic`、`inc14_gluon_test_core_atomic`、
+  `inc10_gluon_test_core`、`inc11_cross_level_combined`、`inc12_cross_level_amd*`、`inc4_tutorials`、`inc7_tutorial05`）在 git 历史里
+  （本次记录提交之前的 `1_experiments/dsl_v2/captures/`），下文各增量一节提到它们时指的是当时的运行。合成捕获 `inc13_scaled_mma_synthetic`
+  与 `inc1x_compare_*`（各增量当时的逐启动比较）保留。
 - [w0/](w0/)：W0 官方清单（源码、注册表枚举、观察到的操作，NVIDIA 与 AMD）与覆盖结果。
 - [w1_contracts/](w1_contracts/)：W1 规则契约与完成度。
 - [regression_v11/](regression_v11/)：v1.1 程序回归运行。

@@ -1,0 +1,154 @@
+{
+ "honest_copy": {
+  "status": "ok",
+  "reference_scope": "call-level (upstream copies / exact constants with producer records: L0:_affine:x_ptr [producer record: copy: aten.clone.default])",
+  "mixed": [],
+  "producer_records": [
+   "L0:_affine:x_ptr [producer record: copy: aten.clone.default]"
+  ],
+  "resolution_met": true,
+  "refinement": "met at level 1",
+  "levels": [
+   {
+    "level": 1,
+    "resolution_met": true,
+    "resolved_fraction": {
+     "y": 1.0
+    },
+    "seconds": 4.2
+   }
+  ]
+ },
+ "atomic_row_sum": {
+  "status": "ok",
+  "reference_scope": "call-level (upstream copies / exact constants with producer records: L0:_row_sum_atomic:y_ptr [producer record: const: aten.zeros.default])",
+  "mixed": [],
+  "producer_records": [
+   "L0:_row_sum_atomic:y_ptr [producer record: const: aten.zeros.default]"
+  ],
+  "resolution_met": true,
+  "refinement": "met at level 1",
+  "levels": [
+   {
+    "level": 1,
+    "resolution_met": true,
+    "resolved_fraction": {
+     "y": 1.0
+    },
+    "seconds": 0.9
+   }
+  ]
+ },
+ "value_equal_upstream": {
+  "status": "ok",
+  "reference_scope": "kernel-level: upstream non-Triton values captured (L0:_affine:x_ptr)",
+  "mixed": [
+   "L0:_affine:x_ptr"
+  ],
+  "producer_records": [],
+  "resolution_met": true,
+  "refinement": "met at level 1",
+  "levels": [
+   {
+    "level": 1,
+    "resolution_met": true,
+    "resolved_fraction": {
+     "y": 1.0
+    },
+    "seconds": 0.2
+   }
+  ]
+ },
+ "zero_upstream": {
+  "status": "ok",
+  "reference_scope": "kernel-level: upstream non-Triton values captured (L0:_affine:x_ptr)",
+  "mixed": [
+   "L0:_affine:x_ptr"
+  ],
+  "producer_records": [],
+  "resolution_met": true,
+  "refinement": "met at level 1",
+  "levels": [
+   {
+    "level": 1,
+    "resolution_met": true,
+    "resolved_fraction": {
+     "y": 1.0
+    },
+    "seconds": 0.1
+   }
+  ]
+ },
+ "compiled_after_copy": {
+  "status": "ok",
+  "reference_scope": "kernel-level: upstream non-Triton values captured (L0:triton_poi_fused_add_mul_0:in_ptr0)",
+  "mixed": [
+   "L0:triton_poi_fused_add_mul_0:in_ptr0"
+  ],
+  "producer_records": [],
+  "resolution_met": true,
+  "refinement": "met at level 1",
+  "levels": [
+   {
+    "level": 1,
+    "resolution_met": true,
+    "resolved_fraction": {
+     "y": 1.0
+    },
+    "seconds": 1.5
+   }
+  ]
+ },
+ "cumsum_rows": {
+  "status": "ok",
+  "reference_scope": "call-level",
+  "mixed": [],
+  "producer_records": [],
+  "resolution_met": true,
+  "refinement": "met at level 2",
+  "levels": [
+   {
+    "level": 1,
+    "resolution_met": false,
+    "resolved_fraction": {
+     "y": 0.5
+    },
+    "seconds": 0.1
+   },
+   {
+    "level": 2,
+    "resolution_met": true,
+    "resolved_fraction": {
+     "y": 1.0
+    },
+    "seconds": 0.4
+   }
+  ]
+ },
+ "cumsum_rows__unreachable": {
+  "status": "ok",
+  "reference_scope": "call-level",
+  "mixed": [],
+  "producer_records": [],
+  "resolution_met": false,
+  "refinement": "not met: no improvement at level 2 (the remaining widths are not limited by the working precision)",
+  "levels": [
+   {
+    "level": 1,
+    "resolution_met": false,
+    "resolved_fraction": {
+     "y": 0.0
+    },
+    "seconds": 0.1
+   },
+   {
+    "level": 2,
+    "resolution_met": false,
+    "resolved_fraction": {
+     "y": 0.0
+    },
+    "seconds": 0.6
+   }
+  ]
+ }
+}

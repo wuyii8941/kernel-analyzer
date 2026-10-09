@@ -1,26 +1,30 @@
 ........................................................................ [  4%]
 ........................................................................ [  9%]
-........................................................................ [ 14%]
+........................................................................ [ 13%]
 ........................................................................ [ 18%]
 ........................................................................ [ 23%]
-........................................................................ [ 28%]
+........................................................................ [ 27%]
 ........................................................................ [ 32%]
 ........................................................................ [ 37%]
-........................................................................ [ 42%]
+........................................................................ [ 41%]
 ........................................................................ [ 46%]
 ........................................................................ [ 51%]
-........................................................................ [ 56%]
+........................................................................ [ 55%]
 ........................................................................ [ 60%]
-........................................................................ [ 65%]
-........................................................................ [ 70%]
-........................................................................ [ 75%]
-........................................................................ [ 79%]
-........................................................................ [ 84%]
-........................................................................ [ 89%]
-........................................................................ [ 93%]
-........................................................................ [ 98%]
-........................                                                 [100%]
+........................................................................ [ 64%]
+........................................................................ [ 69%]
+........................................................................ [ 74%]
+........................................................................ [ 78%]
+........................................................................ [ 83%]
+........................................................................ [ 88%]
+........................................................................ [ 92%]
+........................................................................ [ 97%]
+.......................................                                  [100%]
 =============================== warnings summary ===============================
+2_tool/tests/test_audit_findings.py: 14 warnings
+  /data1/tzh/envs/ka_main/lib/python3.11/site-packages/torch/jit/_script.py:362: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
 2_tool/tests/test_reference_eval_guards.py::test_detector_never_detects_on_too_few_units_or_numerical_failure[one_unit]
   /data1/tzh/kernel-analyzer/2_tool/src/kernel_analyzer/reference_eval/detect.py:172: RuntimeWarning: Mean of empty slice
     w = _unit(mid[dev].mean(axis=0))
@@ -39,7 +43,7 @@
 2_tool/tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rint-boundary]
 2_tool/tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_round-boundary]
 2_tool/tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_trunc-boundary]
-  /data1/tzh/kernel-analyzer/2_tool/src/kernel_analyzer/reference_eval/ttir_eval.py:4393: RuntimeWarning: overflow encountered in nextafter
+  /data1/tzh/kernel-analyzer/2_tool/src/kernel_analyzer/reference_eval/ttir_eval.py:4513: RuntimeWarning: overflow encountered in nextafter
     s_lo = np.where(exact_limit, s_val, np.nextafter(s_val, -np.inf))
 
 2_tool/tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_ceil-boundary]
@@ -49,13 +53,9 @@
 2_tool/tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_rint-boundary]
 2_tool/tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_round-boundary]
 2_tool/tests/test_signatures_libdevice.py::test_libdevice_signature[__nv_trunc-boundary]
-  /data1/tzh/kernel-analyzer/2_tool/src/kernel_analyzer/reference_eval/ttir_eval.py:4394: RuntimeWarning: overflow encountered in nextafter
+  /data1/tzh/kernel-analyzer/2_tool/src/kernel_analyzer/reference_eval/ttir_eval.py:4514: RuntimeWarning: overflow encountered in nextafter
     s_hi = np.where(exact_limit, s_val, np.nextafter(s_val, np.inf))
 
-2_tool/tests/test_welford_reduction.py: 14 warnings
-  /data1/tzh/envs/ka_main/lib/python3.11/site-packages/torch/jit/_script.py:362: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
-    warnings.warn(
-
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-1536 passed, 30 warnings in 457.45s (0:07:37)
+1551 passed, 30 warnings in 464.18s (0:07:44)
 EXIT 0

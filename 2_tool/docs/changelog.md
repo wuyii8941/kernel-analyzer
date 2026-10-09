@@ -60,6 +60,9 @@ v1.1 的计分只绑定运行 r20261008T2030。
   不可达）。
 - **灵敏度表述**（审计 §5.3）：`guaranteed_detectable_effect` 改为 `detectable_effect_given_observed_widths`（依赖本次观察到的宽度，不是事前
   功效保证）；声明 `magnitude_bound.width_elementwise` 时另给事前值 `pre_data_detectable_effect` = 2 r_n + W。
+- **重算捕获时发现并修正的证书问题**：锁字若有获取与释放之外的写入者（例如别名指针）则不发锁证书；官方测试的锁值写法（`.item()`
+  → `tt.unsplat`）、由锁指针派生的计数器、无 `other` 的被掩码 load、官方主线的 `ttg.barrier`、AMD 的 `amdg.buffer_load / buffer_store`、
+  数值差异模式下精确的 `extf / truncf` 都能翻译；平移族（各组只差常数指针平移时一次重放覆盖整族）与确定性的项数预算（超出则保留前提）。
 
 ## 3.1（2026-10-08，标签 `general-v3.1`）——审计修正（替代 general-v3.0 作为第 5 项的冻结版本）
 
