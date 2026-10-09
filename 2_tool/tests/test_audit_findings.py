@@ -874,3 +874,42 @@ def test_refinement_reports_a_target_it_cannot_reach(tmp_path):
     assert lv["status"] == "ok", lv
     assert lv["outputs"]["y"]["reference"]["resolution_met"] is False
     assert lv["refinement"]["outcome"].startswith(("not met", "no improvement")), lv["refinement"]
+
+
+def test_cas_lock_certificate_refuses_an_aliased_lock_word():
+    """full interpreter: a second pointer argument bound to the lock storage resets the lock word before the acquire
+    loop (outside the critical section, so the section footprint check does not see it).  On a device that breaks
+    mutual exclusion; the serial evaluation does not show it.  The lock word has a writer other than its acquire and
+    release: no certificate."""
+    triton = pytest.importorskip("triton")
+    pytest.importorskip("z3")
+
+    body = ("    i = tl.arange(0, N)\n    tl.store(other, 0)\n    while tl.atomic_cas(lock, 0, 1) == 1:\n        pass\n"
+            "    tl.store(data + i, tl.load(data + i) + 1.0)\n"
+            "    tl.debug_barrier()\n    tl.atomic_xchg(lock, 0)\n")
+    from kernel_analyzer.reference_eval.capture import CapturedArg, CapturedLaunch
+    from kernel_analyzer.reference_eval.ttir_eval import evaluate_sequence
+    from test_signatures_structural import C, _kernel
+    from triton.backends.compiler import GPUTarget
+    from triton.compiler import ASTSource
+    mod = _kernel("audit_lock_alias", body, ["data", "lock", "other"])
+    sig = {"data": "*fp32", "lock": "*i32", "other": "*i32", "N": "constexpr"}
+    ck = triton.compile(ASTSource(fn=mod.kernel, signature=sig, constexprs={"N": C}), target=GPUTarget("cuda", 86, 32),
+                        options={"num_warps": 1})
+    raw_d = np.zeros(8, np.float32).view(np.uint8)
+    raw_l = np.zeros(1, np.int32).view(np.uint8)
+    args = [CapturedArg(index=0, name="data", kind="tensor", constexpr=False, signature_type="*fp32", dtype="float32",
+                        shape=(8,), stride=None, element_size=4, data_ptr=1 << 20, storage_ptr=1 << 20,
+                        storage_nbytes=32, storage_id=0, before=raw_d.copy(), after=raw_d.copy())]
+    for k, name in ((1, "lock"), (2, "other")):     # both pointers bound to the same lock storage
+        args.append(CapturedArg(index=k, name=name, kind="tensor", constexpr=False, signature_type="*i32",
+                                dtype="int32", shape=(1,), stride=None, element_size=4, data_ptr=2 << 20,
+                                storage_ptr=2 << 20, storage_nbytes=4, storage_id=1, before=raw_l.copy(),
+                                after=raw_l.copy()))
+    args.append(CapturedArg(index=3, name="N", kind="int", constexpr=True, signature_type="constexpr", value=C))
+    launch = CapturedLaunch(index=0, kernel_name="alias", kernel_hash="", grid=(8, 1, 1), args=args,
+                            asm={k: ck.asm[k] for k in ("ttir", "ttgir", "ptx")}, cubin_sha256=None, metadata={},
+                            libtriton_sha256=None)
+    ref = evaluate_sequence([launch]).launches[0]
+    assert not any(r.startswith("proved:the launch result") for r in ref.reasons), sorted(ref.reasons)
+    assert not (ref.element_classes(1 << 20) == "complete_composed").any()

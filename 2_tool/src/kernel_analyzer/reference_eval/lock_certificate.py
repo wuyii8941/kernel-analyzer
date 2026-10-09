@@ -56,6 +56,8 @@ class LockSection:
     ops: list                       # the critical section
     outer: list                     # values the section takes from outside
     nodes: set = field(default_factory=set)
+    cas_node: str = ""
+    lock_root: str = ""             # kernel parameter the lock pointer is derived from (by tt.addptr)
 
 
 # ---------------------------------------------------------------------------------------------------- static pattern
@@ -165,8 +167,13 @@ def find_sections(module, func) -> tuple:
             later = [v for o in _walk(ops[rel + 1:]) for v in o.operands]
             if made & set(later):
                 continue
+            root = lock
+            while root in defs and defs[root].name == "tt.addptr":
+                root = defs[root].operands[0]
+            if root in defs or root not in {name for name, *_ in func.params}:
+                continue                                     # the lock storage must be a kernel parameter's
             sec = LockSection(w.node_id, ops[rel].node_id, lock, cmp_value, val_value, exit_on, section,
-                              _outer_names(section), {o.node_id for o in _walk(section)})
+                              _outer_names(section), {o.node_id for o in _walk(section)}, cas.node_id, root)
             sections[w.node_id] = sec
             cas_in.add(cas.node_id)
     all_cas = {o.node_id for fn in module.funcs.values() for b in fn.body.blocks for o in _walk(b.ops)

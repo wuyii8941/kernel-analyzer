@@ -902,6 +902,7 @@ class KernelReferenceEvaluator:
             bool(_scoped_used_atomics(module))
         # audit F03 follow-up: CAS spin-lock critical sections for the commutativity certificate
         self._lock_sections, self._cas_all_locked, self._lock_hooks = {}, False, {}
+        self._lock_storages, self._lock_writers = set(), collections.defaultdict(set)
         if self._has_cas:
             from .lock_certificate import find_sections
             self._lock_sections, self._cas_all_locked = find_sections(module, self.func)
@@ -1046,6 +1047,10 @@ class KernelReferenceEvaluator:
         cas_snapshot = {k: b.copy() for k, b in memory.items()} if self._cas_serial else None
         # audit F03: storages holding elements established under an unproven premise of an earlier launch
         premise_before = {k for k, b in memory.items() if b.premise is not None and np.asarray(b.premise).any()}
+        # lock certificate: the storages of the locks (every write to them is recorded with its op)
+        self._lock_storages = {int(np.asarray(bindings[sec.lock_root].base).reshape(-1)[0])
+                               for sec in self._lock_sections.values()
+                               if sec.lock_root in bindings and bindings[sec.lock_root].base is not None}
         snapshot = table = None
         if self._returning_atomics:
             # DSL v2 increment 4: returned atomic values need every update of their address in this launch.  Pass 1
@@ -1125,6 +1130,11 @@ class KernelReferenceEvaluator:
                                notes, dict(reasons), dict(self._rules), set(self._loaded), set(self._loaded_any),
                                set(self._stored))
 
+    def _note_lock_write(self, buf, idx, op):
+        if self._lock_storages and buf.ident in self._lock_storages:
+            for e in np.asarray(idx).reshape(-1).tolist():
+                self._lock_writers[(buf.ident, int(e))].add(op.node_id)
+
     def _lock_event(self, op, env, state):
         """Section boundaries of a CAS spin lock (audit F03 follow-up): at the end of the acquire loop, the values the
         critical section takes from outside; at the release, the count."""
@@ -1155,6 +1165,10 @@ class KernelReferenceEvaluator:
         n = len(programs)
         if len(recs) != n or any(v is None for v in recs.values()) or any(
                 counts[(sec.while_node, k, i)] != 1 for i in range(n) for k in ("acquire", "release")):
+            return None
+        # the lock words are written only by the acquire CAS and the release (no alias reaches them)
+        if not locs or any(not self._lock_writers.get(loc, set()) <= {sec.cas_node, sec.release_node} for loc in locs) \
+                or any(loc[0] not in self._lock_storages for loc in locs):
             return None
         if sec.exit_on == "eq_val":
             for ident, e in locs:
@@ -1296,6 +1310,7 @@ class KernelReferenceEvaluator:
         self._lock_records = collections.defaultdict(dict)  # section -> program index -> section inputs at entry
         self._lock_counts = collections.Counter()           # (section, "acquire" / "release", program index)
         self._lock_locs = set()                             # (storage, element) of the locks
+        self._lock_writers = collections.defaultdict(set)   # (lock storage, element) -> ops that wrote it
         # DSL v2 increment 14: integer set targets stored in this run, ident -> {element: (lo, hi, program)}; set
         # targets of earlier launches are carried as records of program -1
         self._iset_records = {}
@@ -2029,6 +2044,7 @@ class KernelReferenceEvaluator:
             buf.written[idx] = True
             if buf.float_atomic is not None:
                 buf.float_atomic[idx] = False
+            self._note_lock_write(buf, idx, op)
             self._mark_plain(buf, idx)
             we = self._wepoch.get(buf.ident)
             if we is None:
@@ -2173,6 +2189,7 @@ class KernelReferenceEvaluator:
             buf.cond[idx] = buf.cond[idx] | extra
         buf.writer[idx] = -2
         buf.written[idx] = True
+        self._note_lock_write(buf, idx, op)
         if buf.kind == "f":
             if buf.float_atomic is None:
                 buf.float_atomic = np.zeros(buf.st.shape, dtype=bool)
@@ -4028,6 +4045,8 @@ class KernelReferenceEvaluator:
             buf.writer[idx] = state.pid_index
             if getattr(buf, "float_atomic", None) is not None:
                 buf.float_atomic[idx] = False
+            if getattr(self, "_lock_storages", None):
+                self._note_lock_write(buf, idx, op)
             self._mark_plain(buf, idx)
             we = self._wepoch.get(buf.ident)
             if we is None:
