@@ -335,7 +335,7 @@ def _scoped_used_atomics(module) -> list:
         for block in region.blocks:
             used = None
             for o in block.ops:
-                if o.name == "tt.atomic_rmw" and o.results:
+                if o.name in ("tt.atomic_rmw", "amdg.buffer_atomic_rmw") and o.results:
                     used = block_uses(block) if used is None else used
                     if o.results[0] in used:
                         out.append(o)
@@ -737,7 +737,8 @@ class KernelReferenceEvaluator:
         self.ttgir = ttgir
         self._layout_cache = None
         self._uses = self._collect_uses()
-        self._has_cas = any(op.name == "tt.atomic_cas" for fn in module.funcs.values() for op in fn.walk())
+        self._has_cas = any(op.name in ("tt.atomic_cas", "amdg.buffer_atomic_cas")
+                            for fn in module.funcs.values() for op in fn.walk())
         self._returning_atomics = any(op.name in ("tt.atomic_load", "tt.atomic_poll")
                                       for fn in module.funcs.values() for op in fn.walk()) or \
             bool(_scoped_used_atomics(module))
@@ -2399,6 +2400,113 @@ class KernelReferenceEvaluator:
         self._rules["shared.async_copies"] += 1
         return TV("i", "i32", np.array(0, dtype=np.int64))
 
+    # ---- AMD target ops (DSL v2 increment 12; official TritonAMDGPUOps.td at e50b186e8bd2) ----
+
+    def _buffer_operands(self, op, args):
+        """Operands of an amdg buffer op by role (parser: attrs["roles"]) and the address tensor ptr + offsets: the
+        offsets are element offsets of the pointee type (the lowering multiplies them by the element size).  stride,
+        cachePolicy and contiguity are performance hints without a value effect."""
+        roles = dict(zip(op.attrs["roles"].split(","), args))
+        ptr, off = roles["ptr"], roles["offsets"]
+        shape = off.shape
+        splat = ptr.map(lambda a: np.broadcast_to(a, shape).copy())
+        return roles, self._op_addptr(op, [splat, off], None, None)
+
+    def _true_mask(self, shape):
+        return TV("b", "i1", np.ones(shape, dtype=np.int8))
+
+    def _op_buffer_load(self, op, args, env, state):
+        """amdg.buffer_load: tt.load at ptr + offsets with mask / other.  A masked-off lane without other is
+        undefined as for tt.load: the official lowering returns 0 there, the operation's description does not say."""
+        roles, addr = self._buffer_operands(op, args)
+        mask, other = roles.get("mask"), roles.get("other")
+        if other is not None and mask is None:
+            mask = self._true_mask(addr.shape)
+        self._rules["amd.buffer_load"] += 1
+        return self._op_load(op, [addr] + ([mask] if mask is not None else []) + ([other] if other is not None else []),
+                             env, state)
+
+    def _op_buffer_store(self, op, args, env, state):
+        roles, addr = self._buffer_operands(op, args)
+        self._rules["amd.buffer_store"] += 1
+        return self._op_store(op, [addr, roles["value"]] + ([roles["mask"]] if "mask" in roles else []), env, state)
+
+    def _op_buffer_atomic_rmw(self, op, args, env, state):
+        roles, addr = self._buffer_operands(op, args)
+        self._rules["amd.buffer_atomic_rmw"] += 1
+        return self._op_atomic_rmw(op, [addr, roles["value"]] + ([roles["mask"]] if "mask" in roles else []), env,
+                                   state)
+
+    def _op_buffer_atomic_cas(self, op, args, env, state):
+        roles, addr = self._buffer_operands(op, args)
+        self._rules["amd.buffer_atomic_cas"] += 1
+        return self._op_atomic_cas(op, [addr, roles["cmp"], roles["value"]], env, state)
+
+    def _op_buffer_load_to_local(self, op, args, env, state):
+        """amdg.buffer_load_to_local: the asynchronous copy of increment 10 (ttg.async_copy_global_to_local) with the
+        buffer address ptr + offsets."""
+        roles, addr = self._buffer_operands(op, args)
+        copy_args = [addr, roles["dest"]] + [roles[k] for k in ("mask", "other") if k in roles]
+        self._rules["amd.buffer_load_to_local"] += 1
+        return self._op_async_copy_global_to_local(op, copy_args, env, state)
+
+    def _op_in_thread_transpose(self, op, args, env, state):
+        """amdg.in_thread_transpose: a register layout change inside each thread, a special case of ttg.convert_layout
+        (official description): the values are unchanged."""
+        return args[0]
+
+    def _op_sched_hint(self, op, args, env, state):
+        """rocdl.s.setprio (wave priority) and rocdl.sched.barrier (compiler scheduling barrier): no value or memory
+        effect."""
+        self._rules["amd.scheduling_hint"] += 1
+        return None
+
+    def _e8m0_exponent(self, op, scale):
+        """The E8M0 exponent of an amdg.scaled_upcast scale: the exponent field of a BF16 carrier's bit pattern, or the
+        byte of an i8 scale.  Returns (e, established)."""
+        if scale.kind == "f":
+            bits, definite = _float_bits(scale.elem, scale.lo, scale.hi, scale.st)
+            e = (np.asarray(bits, dtype=np.int64) >> 7) & 0xFF
+            return e, np.asarray(definite, dtype=bool)
+        return np.asarray(scale.lo, dtype=np.int64) & 0xFF, np.asarray(scale.st) == ST_OK
+
+    def _scaled_upcast(self, op, vals, x_st, x_cond, x_reasons, scale):
+        rt = op.result_types[0]
+        e, ok = self._e8m0_exponent(op, scale)
+        e, ok = np.broadcast_to(e, rt.shape), np.broadcast_to(ok, rt.shape)
+        nan_scale = ok & (e == 255)
+        good = ok & ~nan_scale
+        factor = np.ldexp(1.0, np.where(good, e, 127) - 127)
+        x_st = np.broadcast_to(x_st, rt.shape)
+        st = np.where(good, x_st, ST_NE).astype(np.int8)
+        prod = np.where(st == ST_OK, vals * factor, 0.0)
+        reasons = set(x_reasons | scale.reasons)
+        if nan_scale.any():
+            reasons.add(f"not_established:E8M0 scale 0xFF (NaN marker, replaced by the compiler's maskNan)@{op.node_id}")
+        if (~ok).any():
+            reasons.add(f"not_established:scale without definite bits@{op.node_id}")
+        self._rules[f"amd.{op.name.split('.')[-1]}"] += 1
+        out = _ftv(rt.elem, prod, prod.copy(), st, np.broadcast_to(x_cond, rt.shape) | np.broadcast_to(scale.cond, rt.shape),
+                   frozenset(reasons))
+        return self._maybe_round(out, op, rt.elem, False)
+
+    def _op_scaled_upcast_fp4(self, op, args, env, state):
+        """amdg.scaled_upcast_fp4: e2m1 pairs (low nibble first, along ``axis``) decoded exactly as ttg.fp4_to_fp, times
+        2^(e - 127) of the E8M0 scale; the result format's rounding is checked only in the rounding-check mode."""
+        x, scale = args
+        rt = op.result_types[0]
+        axis = int(str(op.attrs.get("axis", "0")).split(":")[0])
+        raw = np.asarray(x.lo, dtype=np.int64) & 0xFF
+        vals = np.stack([self._E2M1[raw & 0xF], self._E2M1[raw >> 4]], axis=axis + 1).reshape(rt.shape)
+        st = np.repeat(np.asarray(x.st), 2, axis=axis).reshape(rt.shape)
+        cond = np.repeat(np.broadcast_to(x.cond, np.shape(x.lo)), 2, axis=axis).reshape(rt.shape)
+        return self._scaled_upcast(op, vals, st, cond, x.reasons, scale)
+
+    def _op_scaled_upcast_fp8(self, op, args, env, state):
+        """amdg.scaled_upcast_fp8: an fp8 (e4m3fn / e5m2) value times 2^(e - 127) of the E8M0 scale."""
+        x, scale = args
+        return self._scaled_upcast(op, np.asarray(x.lo, dtype=np.float64), x.st, x.cond, x.reasons, scale)
+
     def _retire(self, state, entries):
         for sid, idx in entries:
             state.shared[sid].pending[idx] = -1
@@ -2875,7 +2983,8 @@ class KernelReferenceEvaluator:
         carried = [env[v] for v in op.operands]
         before, after = op.regions
         from .ttir_parser import _walk_region
-        spin = any(o.name in ("tt.atomic_cas", "tt.atomic_load") for r in op.regions for o in _walk_region(r))
+        spin = any(o.name in ("tt.atomic_cas", "tt.atomic_load", "amdg.buffer_atomic_cas")
+                   for r in op.regions for o in _walk_region(r))
         for it in range(10_000_000):
             if spin and it >= 10_000:
                 # DSL v2 increment 7: in the serialization the earlier programs have finished; a spin loop that has

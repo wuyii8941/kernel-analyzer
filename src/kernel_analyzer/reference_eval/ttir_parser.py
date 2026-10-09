@@ -417,6 +417,75 @@ _ARROW_OPS = {"tt.splat", "tt.broadcast", "tt.expand_dims", "tt.reshape", "tt.tr
               "tt.cat", "tt.histogram", "tt.gather"}
 
 
+_AMD_BUFFER_OPS = ("amdg.buffer_load", "amdg.buffer_store", "amdg.buffer_atomic_rmw", "amdg.buffer_atomic_cas",
+                   "amdg.buffer_load_to_local")
+_VAL = r"%[\w$.#-]+"
+
+
+def _parse_amd_buffer(op: TOp, name: str, head: str, rest: str, operand_types: list, result_types: list):
+    """amdg buffer ops (official assembly formats):
+
+        buffer_load          $ptr[$offsets] (, $mask)? (, $other)? (stride = $stride)? : ptr -> T
+        buffer_store         $value, $ptr[$offsets] (, $mask)? (stride = $stride)? : ptr -> T
+        buffer_atomic_rmw    $op, $sem, $scope, $value, $ptr[$offsets] (, $mask)? (stride = $stride)? : ptr -> T
+        buffer_atomic_cas    $sem, $scope, $cmp, $val, $ptr[$offsets] (stride = $stride)? : ptr -> T
+        buffer_load_to_local $ptr[$offsets] (mask = $m)? (other = $o)? (stride = $s)? into $dest : ptr[T] T? -> memdesc
+
+    ``attrs["roles"]`` names the operands in order (ptr, offsets, mask, other, value, cmp, dest, stride)."""
+    stride = re.search(rf"\bstride\s*=\s*({_VAL})", head)
+    h = re.sub(rf"\bstride\s*=\s*{_VAL}", "", head)
+    ops, roles = [], []
+    if name == "amdg.buffer_load_to_local":
+        mm = re.match(rf"\s*({_VAL})\[({_VAL})\](.*)\binto\s+({_VAL})", h)
+        if not mm:
+            raise TTIRParseError(f"cannot parse {name}: {head!r}")
+        ops, roles = [mm.group(1), mm.group(2)], ["ptr", "offsets"]
+        for key in ("mask", "other"):
+            km = re.search(rf"\b{key}\s*=\s*({_VAL})", mm.group(3))
+            if km:
+                ops.append(km.group(1))
+                roles.append(key)
+        op.attrs["has_mask"] = "1" if "mask" in roles else ""
+        op.attrs["has_other"] = "1" if "other" in roles else ""
+        ops.append(mm.group(4))
+        roles.append("dest")
+        pm = re.search(r":\s*(!tt\.ptr<[^>]*>)", rest)
+        op.operand_types = [parse_type(pm.group(1))] if pm else []
+        am = re.search(r"->\s*(.+)$", rest)
+        op.result_types = [parse_type(am.group(1).strip())] if am else []
+    else:
+        parts = [x.strip() for x in _split_top(h, ",") if x.strip()]
+        words = [x for x in parts if not x.startswith("%")]
+        vals = [x for x in parts if x.startswith("%")]
+        if name == "amdg.buffer_atomic_rmw":
+            op.attrs["rmw_op"], op.attrs["sem"], op.attrs["scope"] = words[:3]
+        elif name == "amdg.buffer_atomic_cas":
+            op.attrs["sem"], op.attrs["scope"] = words[:2]
+        before = {"amdg.buffer_load": [], "amdg.buffer_store": ["value"], "amdg.buffer_atomic_rmw": ["value"],
+                  "amdg.buffer_atomic_cas": ["cmp", "value"]}[name]
+        after = {"amdg.buffer_load": ["mask", "other"]}.get(name, ["mask"] if name != "amdg.buffer_atomic_cas" else [])
+        k = 0
+        for role in before:
+            ops.append(vals[k])
+            roles.append(role)
+            k += 1
+        mm = re.fullmatch(rf"({_VAL})\[({_VAL})\]", vals[k]) if k < len(vals) else None
+        if not mm:
+            raise TTIRParseError(f"cannot parse {name}: {head!r}")
+        ops += [mm.group(1), mm.group(2)]
+        roles += ["ptr", "offsets"]
+        for role, v in zip(after, vals[k + 1:]):
+            ops.append(v)
+            roles.append(role)
+        op.operand_types = operand_types
+        op.result_types = result_types if name != "amdg.buffer_store" else []
+    if stride:
+        ops.append(stride.group(1))
+        roles.append("stride")
+    op.operands = ops
+    op.attrs["roles"] = ",".join(roles)
+
+
 def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
     body = body.strip()
     # Generic form: "name"(operands) <{props}> ({  or  ... : (types) -> types
@@ -545,6 +614,8 @@ def _parse_op_line(body: str, results: list, line_no: int, raw: str) -> TOp:
         op.attrs["rmw_op"] = head.split(",")[0].strip()
         op.operands = _values(head)
         op.operand_types, op.result_types = operand_types, result_types
+    elif name in _AMD_BUFFER_OPS:  # DSL v2 increment 12: operand roles from the custom assembly (TritonAMDGPUOps.td)
+        _parse_amd_buffer(op, name, head, rest_no_attrs, operand_types, result_types)
     elif name == "ttg.async_copy_global_to_local":  # "%p, %m mask %k other %o : T -> <memdesc>"
         op.attrs["has_mask"] = "1" if re.search(r"\bmask\s+%", head) else ""
         op.attrs["has_other"] = "1" if re.search(r"\bother\s+%", head) else ""

@@ -10,7 +10,7 @@ export KA_CROSS_LEVEL_OUT=${OUT:-$R/.cache/dsl_v2/w12_cross.jsonl}
 rm -f $KA_CROSS_LEVEL_OUT
 LOG=${LOG:-$R/.cache/dsl_v2/w12_cross.log}
 cd $R/.cache/tmp/w4broad
-timeout 7200 /data1/tzh/envs/triton_main/bin/python -m pytest -q -p no:cacheprovider -p cross_level_plugin test_core.py \
+timeout 7200 /data1/tzh/envs/triton_main/bin/python -m pytest -q -p no:cacheprovider -p cross_level_plugin ${TFILE:-test_core.py} \
   -k "$KSEL" \
   > $LOG 2>&1
 echo "EXIT $?" >> $LOG

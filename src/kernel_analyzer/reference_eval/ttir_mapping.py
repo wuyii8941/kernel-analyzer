@@ -241,6 +241,17 @@ MAPPING: dict[str, Rule] = {
     "ttng.tc_gen5_mma_scaled": R("E", "scaled tcgen05 MMA is not modelled in this version"),
     "ttg.memdesc_trans": S("H", "memdesc_trans"),
     "ttg.fp4_to_fp": S("C", "fp4_to_fp"),
+    # DSL v2 increment 12: AMD gfx9xx TTGIR modules (CPU semantics; device validation pending)
+    "amdg.buffer_load": S("H", "buffer_load"),
+    "amdg.buffer_store": S("H", "buffer_store"),
+    "amdg.buffer_atomic_rmw": S("H", "buffer_atomic_rmw"),
+    "amdg.buffer_atomic_cas": S("H", "buffer_atomic_cas"),
+    "amdg.buffer_load_to_local": S("H", "buffer_load_to_local"),
+    "amdg.in_thread_transpose": S("A", "in_thread_transpose"),
+    "amdg.scaled_upcast_fp4": S("C", "scaled_upcast_fp4"),
+    "amdg.scaled_upcast_fp8": S("C", "scaled_upcast_fp8"),
+    "rocdl.s.setprio": S("H", "sched_hint"),
+    "rocdl.sched.barrier": S("H", "sched_hint"),
     "ttg.inline_asm": R("I", "thread-wise inline asm (ttg.inline_asm) is not modelled"),
     "ttg.warp_specialize": R("H", "warp specialization (concurrent partitions) is not modelled"),
     "ttg.warp_yield": R("H", "warp specialization (concurrent partitions) is not modelled"),
@@ -394,6 +405,11 @@ OTHER_PROFILE_NAMES.update({n: "e50b186e (TTGIR)" for n in (
     "ttng.warp_group_dot", "ttng.warp_group_dot_wait", "ttng.fence_async_shared", "ttng.inval_barrier", "ttng.tmem_alloc",
     "ttng.tmem_store", "ttng.tmem_load", "ttng.tc_gen5_mma", "ttng.tc_gen5_mma_scaled", "ttg.memdesc_trans",
     "ttg.fp4_to_fp")})
+# AMD gfx9xx TTGIR operations (DSL v2 increment 12; registered in results/dsl_v2/w0/registered_e50b186e8bd2.json)
+OTHER_PROFILE_NAMES.update({n: "e50b186e (AMD TTGIR)" for n in (
+    "amdg.buffer_load", "amdg.buffer_store", "amdg.buffer_atomic_rmw", "amdg.buffer_atomic_cas",
+    "amdg.buffer_load_to_local", "amdg.in_thread_transpose", "amdg.scaled_upcast_fp4", "amdg.scaled_upcast_fp8",
+    "rocdl.s.setprio", "rocdl.sched.barrier")})
 
 
 # ---------------------------------------------------------------------------
