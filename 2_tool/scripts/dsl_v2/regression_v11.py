@@ -8,6 +8,11 @@ launches per rc3 02 8.7) and is compared with its general-v3.1 main-round mode-B
     python scripts/dsl_v2/regression_v11.py --run-id ID --all --workers 16
     python scripts/dsl_v2/regression_v11.py --run-id ID --program prog_17          # one program (worker)
 
+The race programs (T5: prog_01, prog_13, prog_22, prog_23) are never launched by default: running a kernel with a data
+race on the GPU needs the user's explicit permission (audit task book), so ``--all`` skips them and ``--program`` refuses
+them unless ``--allow-race-programs`` is given.  Their job files from reg20261009T1051 are carried instead (batch 1:
+a run without this guard launched them by mistake; 3_audits/batch1_semantic_core).
+
 Expectations were registered before the run in docs/dsl_v2/increment_01.md.
 """
 from __future__ import annotations
@@ -35,6 +40,7 @@ import structure_v11 as S  # noqa: E402  (manifest and binding loader only)
 V31 = ROOT.parent / ".cache/acceptance/structure_v1_1_rc1/r20261008T2030/jobs"
 OUT = ROOT.parent / "1_experiments/dsl_v2/regression_v11"
 DEV, CONF = list(range(0, 32)), list(range(32, 96))
+RACE_PROGRAMS = ("prog_01", "prog_13", "prog_22", "prog_23")   # T5: kernels with data races, never launched by default
 PY = "/data1/tzh/envs/ka_main/bin/python"
 
 
@@ -121,16 +127,21 @@ def main():
     ap.add_argument("--program")
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--workers", type=int, default=16)
+    ap.add_argument("--allow-race-programs", action="store_true",
+                    help="also launch the T5 race programs (only with the user's explicit permission)")
     a = ap.parse_args()
     out = OUT / a.run_id
     out.mkdir(parents=True, exist_ok=True)
+    if a.program and a.program in RACE_PROGRAMS and not a.allow_race_programs:
+        raise SystemExit(f"{a.program} is a race program: not launched without --allow-race-programs (explicit permission)")
     if a.program:
         job = run_one(a.program, a.run_id)
         (out / f"{a.program}.json").write_text(json.dumps(job, indent=1, default=str) + "\n")
         print(a.program, job["status"], job.get("seconds"), flush=True)
         return
     man = S.manifest()
-    todo = [p for p, e in sorted(man.items()) if e["execution_lane"] == "measurement" and not (out / f"{p}.json").exists()]
+    todo = [p for p, e in sorted(man.items()) if e["execution_lane"] == "measurement" and not (out / f"{p}.json").exists()
+            and (a.allow_race_programs or p not in RACE_PROGRAMS)]
     todo.sort(key=lambda p: -int(man[p].get("execution_repeats", 1)))
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", OMP_NUM_THREADS="2", MKL_NUM_THREADS="2")
     logs = ROOT.parent / ".cache" / "dsl_v2" / a.run_id

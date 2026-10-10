@@ -1,0 +1,414 @@
+{
+ "items": [
+  {
+   "id": "H-P1a",
+   "group": "provenance",
+   "lineage": "Gluon (TTGIR)",
+   "structure": "ATen in-place add, bytes unchanged, on an input",
+   "truth": "not clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "observed": "kernel-level",
+   "state": "成立",
+   "note": null,
+   "seconds": 11.7
+  },
+  {
+   "id": "H-P1b",
+   "group": "provenance",
+   "lineage": "Gluon (TTGIR)",
+   "structure": "ATen in-place clamp that is the identity on the data",
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "observed": "kernel-level",
+   "state": "成立",
+   "note": "conservative (truth clean, as pre-registered)",
+   "seconds": 12.1
+  },
+  {
+   "id": "H-P2",
+   "group": "provenance",
+   "lineage": "classic Triton, 2D strided",
+   "structure": "transposed view of a declared input",
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "call-level"
+   },
+   "observed": "call-level",
+   "state": "成立",
+   "note": null,
+   "seconds": 13.0
+  },
+  {
+   "id": "H-P3",
+   "group": "provenance",
+   "lineage": "classic Triton, 2D strided",
+   "structure": "overlapping windows (unfold) of an input",
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "call-level"
+   },
+   "observed": "call-level",
+   "state": "成立",
+   "note": null,
+   "seconds": 15.2
+  },
+  {
+   "id": "H-P4",
+   "group": "provenance",
+   "lineage": "ATen where + classic Triton",
+   "structure": "elements of x or exact zeros",
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "call-level (producer record)"
+   },
+   "observed": "call-level (producer record)",
+   "state": "成立",
+   "note": null,
+   "seconds": 11.8
+  },
+  {
+   "id": "H-P5",
+   "group": "provenance",
+   "lineage": "ATen cat + classic Triton",
+   "structure": "x followed by exact ones",
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "call-level (producer record)"
+   },
+   "observed": "call-level (producer record)",
+   "state": "成立",
+   "note": null,
+   "seconds": 13.0
+  },
+  {
+   "id": "H-P6",
+   "group": "provenance",
+   "lineage": "ATen index_put_ + classic Triton",
+   "structure": "partial constant write over a rounded product",
+   "truth": "not clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "observed": "kernel-level",
+   "state": "成立",
+   "note": null,
+   "seconds": 13.3
+  },
+  {
+   "id": "H-P7",
+   "group": "provenance",
+   "lineage": "ATen index_put_ + classic Triton",
+   "structure": "an exact copy through index_put_",
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "observed": "kernel-level",
+   "state": "成立",
+   "note": "conservative (truth clean, as pre-registered)",
+   "seconds": 14.1
+  },
+  {
+   "id": "H-P8",
+   "group": "provenance",
+   "lineage": "Inductor-compiled reader",
+   "structure": "cross-input bytes written through .data",
+   "truth": "not clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "observed": "kernel-level",
+   "state": "成立",
+   "note": null,
+   "seconds": 17.8
+  },
+  {
+   "id": "H-P9",
+   "group": "provenance",
+   "lineage": "Inductor-compiled reader",
+   "structure": "declared input read by compiled code",
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "call-level"
+   },
+   "observed": "call-level",
+   "state": "成立",
+   "note": null,
+   "seconds": 19.2
+  },
+  {
+   "id": "H-P10",
+   "group": "provenance",
+   "lineage": "classic Triton, inference-mode input",
+   "structure": "input without a version counter",
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "call-level"
+   },
+   "observed": "call-level",
+   "state": "成立",
+   "note": null,
+   "seconds": 13.4
+  },
+  {
+   "id": "H-P11",
+   "group": "provenance",
+   "lineage": "classic Triton, inference-mode input",
+   "structure": "in-place add without a version counter",
+   "truth": "not clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "observed": "kernel-level",
+   "state": "成立",
+   "note": null,
+   "seconds": 15.8
+  },
+  {
+   "id": "H-P12",
+   "group": "provenance",
+   "lineage": "classic Triton, two launches",
+   "structure": "ATen write to the other half between launches",
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "observed": "kernel-level",
+   "state": "成立",
+   "note": "conservative (truth clean, as pre-registered)",
+   "seconds": 14.9
+  },
+  {
+   "id": "H-P13",
+   "group": "provenance",
+   "lineage": "classic Triton, two launches",
+   "structure": "exact ATen scaling between launches",
+   "truth": "not clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "observed": "kernel-level",
+   "state": "成立",
+   "note": null,
+   "seconds": 13.8
+  },
+  {
+   "id": "H-R1",
+   "group": "precision",
+   "lineage": "classic Triton",
+   "structure": "axis-1 tile sum, n = 256, cancelling pairs up to 2^90, sum ~2^-60",
+   "truth": null,
+   "expected": {
+    "ratios_width_over_ulp": {
+     "1": "1.76621e+14",
+     "2": "3.72488e-9",
+     "3": "3.72456e-9"
+    },
+    "target": 0.125,
+    "category": "met",
+    "level": 2,
+    "uncertain": false
+   },
+   "observed": {
+    "category": "met",
+    "final_level": 2,
+    "outcome": "met at level 2"
+   },
+   "state": "成立",
+   "note": null,
+   "seconds": 18.3
+  },
+  {
+   "id": "H-R2",
+   "group": "precision",
+   "lineage": "classic Triton",
+   "structure": "reverse prefix sum, n = 256, alternating +-2^22 plus [0.25, 4)",
+   "truth": null,
+   "expected": {
+    "ratios_width_over_ulp": {
+     "1": "8.0",
+     "2": "3.72529e-9",
+     "3": "3.72529e-9"
+    },
+    "target": 0.125,
+    "category": "met",
+    "level": 2,
+    "uncertain": false
+   },
+   "observed": {
+    "category": "met",
+    "final_level": 2,
+    "outcome": "met at level 2"
+   },
+   "state": "成立",
+   "note": null,
+   "seconds": 18.0
+  },
+  {
+   "id": "H-R3",
+   "group": "precision",
+   "lineage": "classic Triton",
+   "structure": "elementwise exp, target 1e-9 ulp",
+   "truth": null,
+   "expected": {
+    "category": "backend limit",
+    "outcome_prefix": "backend limit: no rule",
+    "final_level": 1
+   },
+   "observed": {
+    "category": "backend limit",
+    "final_level": 1,
+    "outcome": "backend limit: no rule on the reference path depends on the working-precision level (precision_dependent_calls = 0 at level 1); a higher level gives the same enclosures"
+   },
+   "state": "成立",
+   "note": null,
+   "seconds": 13.4
+  },
+  {
+   "id": "H-R4",
+   "group": "precision",
+   "lineage": "classic Triton",
+   "structure": "float64 row sum, target 1/8 ulp",
+   "truth": null,
+   "expected": {
+    "category": "backend limit",
+    "outcome_prefix": "backend limit: float64",
+    "final_level": 1
+   },
+   "observed": {
+    "category": "backend limit",
+    "final_level": 1,
+    "outcome": "backend limit: float64 outputs with nonzero enclosure width cannot get below a fraction of a float64 ulp with float64 endpoints; not refined"
+   },
+   "state": "成立",
+   "note": null,
+   "seconds": 13.1
+  },
+  {
+   "id": "H-R5",
+   "group": "precision",
+   "lineage": "classic Triton",
+   "structure": "16 programs atomic_add one int32 counter and store the old value",
+   "truth": null,
+   "expected": {
+    "category": "intrinsic set width",
+    "final_level": 1
+   },
+   "observed": {
+    "category": "intrinsic set width",
+    "final_level": 1,
+    "outcome": "intrinsic set width at level 1: the remaining elements are set targets (L_E); every numerical enclosure is met"
+   },
+   "state": "成立",
+   "note": null,
+   "seconds": 12.5
+  },
+  {
+   "id": "H-Q1",
+   "group": "bias",
+   "lineage": "classic Triton",
+   "structure": "bf16 rounding toward zero of 3x + 1",
+   "truth": null,
+   "expected": {
+    "fixed_mean.R1.approximate": "nonzero (positive)",
+    "fixed_mean.R1.bounded": "nonzero (positive)",
+    "aligned.R2.approximate": "nonzero (positive)",
+    "aligned.R2.bounded": "nonzero (positive)",
+    "fixed_mean.R1.equivalence": "not shown"
+   },
+   "observed": {
+    "fixed_mean.R1.approximate": "nonzero (positive)",
+    "fixed_mean.R1.bounded": "nonzero (positive)",
+    "aligned.R2.approximate": "nonzero (positive)",
+    "aligned.R2.bounded": "nonzero (positive)",
+    "fixed_mean.R1.equivalence": "not shown"
+   },
+   "state": "成立",
+   "note": null,
+   "seconds": 14.5
+  },
+  {
+   "id": "H-Q2",
+   "group": "bias",
+   "lineage": "classic Triton",
+   "structure": "bf16 rounding to nearest even of 3x + 1",
+   "truth": null,
+   "expected": {
+    "fixed_mean.R1.equivalence": "within delta",
+    "aligned.R2.equivalence": "within delta"
+   },
+   "observed": {
+    "fixed_mean.R1.equivalence": "within delta",
+    "aligned.R2.equivalence": "within delta"
+   },
+   "state": "成立",
+   "note": null,
+   "seconds": 14.2
+  },
+  {
+   "id": "H-Q3",
+   "group": "bias",
+   "lineage": "declaration",
+   "structure": "equivalence axis requested without delta",
+   "truth": null,
+   "expected": {
+    "missing_prefix": "equivalence.rel"
+   },
+   "observed": [
+    "equivalence.rel (required because query.axes includes equivalence: the tolerance delta is declared before the data)"
+   ],
+   "state": "成立",
+   "note": null,
+   "seconds": 4.1
+  },
+  {
+   "id": "H-K1",
+   "group": "packaging",
+   "lineage": "wheel",
+   "structure": "clean wheel install outside the source tree",
+   "truth": null,
+   "expected": {
+    "log_line": "CLEAN_WHEEL_ACCEPTANCE_OK"
+   },
+   "observed": 0,
+   "state": "成立",
+   "note": null,
+   "seconds": 35.6
+  },
+  {
+   "id": "H-G1",
+   "group": "regression",
+   "lineage": "public v1.1 programs",
+   "structure": "28 programs, mode B, 96 units",
+   "truth": null,
+   "expected": {
+    "same_as": "1_experiments/dsl_v2/regression_v11/reg20261009T2319/summary.json"
+   },
+   "observed": {
+    "programs": 28,
+    "differences": 0,
+    "expectations_met": {
+     "old": 27,
+     "new": 27
+    },
+    "safety_violations": {
+     "old": [],
+     "new": []
+    }
+   },
+   "state": "成立",
+   "note": "evaluated by compare_regression.py (protocol section 4) on run reg20261010T1241; execution deviation: the 4 race programs were launched on the GPU by mistake, their results are not in the record (carried job files of reg20261009T1051 kept)",
+   "seconds": 0.0
+  }
+ ],
+ "counts": {
+  "成立": 24,
+  "不成立": 0,
+  "无法判断": 0
+ },
+ "frozen_commit": "da4b64e (tool code d26d5f6)"
+}

@@ -6,7 +6,7 @@
 依据：根目录 `CURRENT.json`、`CLAUDE.md`、rc3 设计 `1_experiments/dsl_v2/design_rc3/design/02_language_and_guarantees.md` 与
 `04_implementation_plan.md`（W2 区域与数值、W4 内存与并发、W6 统计与查询、W7 验收）。
 
-本页状态：实现已提交并通过全量测试；验收协议在运行之前冻结（`1_experiments/batch1_acceptance/protocol.md`），验收结果见第 8 节。
+本页状态：实现提交 `d26d5f6`（全量测试 1602 通过）；验收协议与保留集在运行之前冻结于 `da4b64e`；验收 24 项全部成立（第 8 节），记有一处执行偏差（竞争程序误上 GPU，结果不入记录）。
 
 ## 1. 来源 / 内存效果：三类问题的修复
 
@@ -109,6 +109,7 @@ registry_sha256: c8367a2dcee05e5aae3f0357d6067cb9143d594800792813e0e92544b4c81fd
 | `measure.py` | 精度控制器与类别、`reference_quality` 分开集合目标、`query`、两个判定轴、有界路线 Holm、`unit_split` |
 | `reference_eval/sensitivity.py` | 有界路线的 p 值与方向 |
 | `contract_v3.py`、`cli.py`、`composition_rules.py`（新） | 见第 3、5 节 |
+| `2_tool/scripts/dsl_v2/regression_v11.py`（冻结后） | 默认不运行竞争程序（第 8 节的执行偏差） |
 | 测试（新） | `test_storage_effects.py`（15，CPU，独立答案）、`test_batch1_guarantees.py`（26，GPU 端到端与控制器）、`test_bias_query.py`（6）、`test_composition_rules.py`（4） |
 | 测试（调整） | `test_audit_findings.py` 三处：生产者表改用 `StorageMap` 接口（期望标签不变）；精度结局断言改为新类别（「最高级」）；`compiled_after_copy` 加 D12 断言（基线上失败）；`test_output_binding.py` 场景改用私有内存池（断言不变，基线上通过） |
 
@@ -124,8 +125,29 @@ classic）与精确行和的包围检查。编译原地写入那一项在基线�
 
 ## 8. 验收
 
-协议与保留集在运行之前冻结：`1_experiments/batch1_acceptance/`（`protocol.md`、`items.json`、`predictions.json`、`holdout_calls.py`、
-`predict_levels.py`、`run_acceptance.py`、`compare_regression.py`）。结果待运行后填入本节与 `1_experiments/batch1_acceptance/README.md`。
+协议与保留集在运行之前冻结于 `da4b64e`（工具代码 `d26d5f6`）：`1_experiments/batch1_acceptance/`（`protocol.md`、`items.json`、
+`predictions.json`、`holdout_calls.py`、`predict_levels.py`、`run_acceptance.py`、`compare_regression.py`）。保留集的结构与谱系没有参与开发
+（Gluon、二维跨步 / 重叠 view、`where` / `cat` / `index_put_`、Inductor 编译的读者、inference-mode 输入、两次启动链、n = 256 的轴 1 求和、
+反向前缀和、exp / float64 / 争用整数输出、bf16 舍入偏差、干净 wheel、公开 v1.1 回归），种子从 7000 / 9000 起。逐项结果：
+[1_experiments/batch1_acceptance/README.md](../../1_experiments/batch1_acceptance/README.md)，报告与日志在其 `results/`。
+
+| 组 | 项数 | 成立 | 不成立 | 无法判断 | 要点 |
+| --- | --- | --- | --- | --- | --- |
+| 来源 | 14 | 14 | 0 | 0 | 真值不干净而给 call 级：0（可靠性违反 0）；真值干净而给 kernel 级：3（H-P1b 恒等 `clamp_`、H-P7 `index_put_` 拷贝、H-P12 改写另一半），与事先登记的保守预期一致 |
+| 精度 | 5 | 5 | 0 | 0 | H-R1、H-R2 在第 2 级达标，与 60 位精度下的独立预测一致；exp 为「无精度相关规则」、float64 为「float64 端点」、争用整数返回值为「固有集合宽度」 |
+| bias | 3 | 3 | 0 | 0 | 向零舍入：R1 / R2 在近似与有界路线（类内 Holm）都判非零（正向，即坐标均值为负、幅度被拉向零），等价轴「未显示」；就近偶舍入：等价轴「在 δ 内」；请求等价而无 δ：声明不完整 |
+| 安装 | 1 | 1 | 0 | 0 | `git archive` 构建、源码树外新虚拟环境、两个入口、一次真实测量；审计钩子下对 `2_tool/` 的访问为空 |
+| 回归 | 1 | 1 | 0 | 0 | 公开 v1.1 的 28 个常规程序与 reg20261009T2319 逐程序相同（预计命中 27/28、安全违反 0 也相同）；运行 reg20261010T1241 |
+
+另做的捕获抽查：官方主线 Triton 下重跑教程 01、02、05 的捕获，5 次启动的状态与计数和 `auditfix_tutorials` 记录相同（捕获插件按单次启动
+求值，本批改动不改变它们）。
+
+**执行偏差（人工介入记录）**：回归运行脚本按测量通道选全部程序；上一轮靠预先放入沿用的作业文件把 4 个竞争程序（T5：prog_01、prog_13、
+prog_22、prog_23）排除在 GPU 之外，这一轮没有放入，它们被在 GPU 上运行（各约 11 分钟，正常退出）。这违反任务书「不绕过权限运行竞争
+kernel」的要求；运行没有经过、也没有绕过权限提示，但不应发生。处理：4 份结果移出记录（本地 `.cache/batch1/race_programs_run_in_error/`
+保留作偏差证据），记录仍沿用 reg20261009T1051 的作业文件；比较只用 28 个常规程序（与上一轮相同的范围）。冻结之后的改动：只改了运行
+脚本 `2_tool/scripts/dsl_v2/regression_v11.py`——默认跳过竞争程序，`--program` 拒绝它们，只有显式的 `--allow-race-programs`（需用户本人
+许可）才运行；工具代码未改，验收结论不受影响。
 
 ## 9. 待验收与未完成
 
