@@ -19,6 +19,31 @@ v1.1 的计分只绑定运行 r20261008T2030。
   - 新测试只在 CPU 上求值编译产物（`triton.compile`，不启动），有竞争的 kernel 从不运行。
 - 注册表写到 `2_tool/data/rule_registry.json`（`2_tool/scripts/dsl_v2/build_rule_registry.py`）；`pre-reorg-20261009:results/general/` 下的 v3.1 注册表冻结不改。
 
+### 第一批：共同语义内核的来源、精度、安装与查询，2026-10-10
+
+逐项的语义义务、实现入口、独立答案、组合测试与报告字段见 [3_audits/batch1_semantic_core](../../3_audits/batch1_semantic_core/README.md)；
+组合规则登记在 `kernel_analyzer/composition_rules.py`（M1–M5、T1、P1–P3、Q1–Q3、K1），展开声明写出规则集与摘要。
+
+- **来源 / 内存效果（`reference_eval/storage_effects.py`）**：存储身份与生命周期（分析持有存储，按地址与 StorageImpl 身份匹配）、
+  真实覆盖（view 的写入只覆盖它的元素字节，含偏移、跨步、重叠与 stride 0；读取只算参照真正从初值读到的元素）、内容不是来源
+  （声明输入的读取要求读到的字节落在声明输入张量内、等于该存储自己在调用前的字节、且没有写入证据）、跨启动沿用（字节不变且没有
+  写入证据）、生产者格（逐字节标签）。写入证据：版本计数器（AOTAutograd 对编译代码原地写入的 `increment_version` 记为已宣告的裸指针写，
+  不算 ATen 写）与对齐的生产者追踪。修复三类问题：跨输入摘要误配（另一输入的字节不再当成本输入）、原地算术后字节未变（输入上、经
+  `.data`、两次启动之间）、重叠 view 部分写入当成整块常数。输入快照只做设备到主机的直接拷贝（不在设备上分配，不改变被测运行的
+  缓存分配器状态）；重复启动的输入核对改为按输入路径的有序摘要。
+- **生产者追踪不干扰被测运行（新发现 D12）**：在 dispatch mode 下调用一次 `torch.compile` 的函数，此后每次调用都按 eager 执行（不再有
+  Triton 启动）。追踪改在 `torch.compiler.set_stance("force_eager")` 下运行，编译代码与缓存不变；没有该 API 时不做追踪。追踪现在对每个
+  读到浮点初值的 seed 都运行（它是声明输入的写入证据），报告 `producer_trace_per_seed` 与 seed 0 的逐读取判定 `provenance_seed0`。
+- **精度控制器**：不再用「达标比例没变」推断「加精度无效」；只有参照路径上没有精度相关规则（`intervals.PRECISION_DEPENDENT_CALLS`）时
+  才提前停止。停止类别：达标 / 预算耗尽 / 后端限制（float64 端点、最高级、无精度相关规则）/ 固有集合宽度 / 无数值包围 / 本级失败。
+  分辨率只按数值包围计算，集合目标单独计数（宽度取集合上下界）。三级求和反例从统一入口走到第 3 级达标。
+- **安装包**：`contract_v3` 移入包内（`kernel_analyzer/contract_v3.py`，`scripts/essential/contract_v3.py` 只做转出）；包内不再按仓库
+  路径导入；硬件预言机缓存默认放在 `KA_CACHE_DIR` / `$XDG_CACHE_HOME/kernel_analyzer`；新增入口 `kernel-analyzer-measure`、
+  `kernel-analyzer-analyze`（`kernel_analyzer/cli.py`），声明运行依赖。
+- **bias 查询**：展开声明的 `query` 固定比较目标、输入分布、观察量（输出、投影、坐标集）与抽样单位、判定轴与规则族；有界路线给出
+  Hoeffding p 值，每个规则类内 Holm（FWER ≤ alpha，独立于近似路线）；非零与等价两个判定轴分开报告（`statistics.<类>.axes`）；只有请求
+  等价轴（`query.axes` 或给出 `equivalence.rel`）时要求 δ。
+
 ### 外部审计（基线 1aee15e）修复版，2026-10-09
 
 逐项处理、修复前后测试与证据见 [3_audits/fix_1aee15e](../../3_audits/fix_1aee15e/README.md)。

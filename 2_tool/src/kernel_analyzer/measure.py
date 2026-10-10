@@ -19,7 +19,13 @@ Declaration::
      "budget": {"cpu_seconds": 600, "gpu_seconds": 600, "case_timeout": 300, "max_units": 96},
      # optional: "units": {"development": 32, "confirmation": 64, "seed_offset": 0}, "alpha": 0.05,
      #           "resolution": {"ulp_fraction": 0.125}, "magnitude_bound": {"elementwise": M, "basis": "..."},
-     #           "equivalence": {"rel": delta, "basis": "..."}, "repeats": 2, "error_budget": "file.py:bound"}
+     #           "equivalence": {"rel": delta, "basis": "..."}, "repeats": 2, "error_budget": "file.py:bound",
+     #           "query": {"axes": ["nonzero"] | ["nonzero", "equivalence"]}}
+
+The bias query (composition rules Q1-Q3) is fixed in ``expanded_declaration.query`` before any unit is drawn: the
+comparison target, the input distribution, the observable (outputs, projections, coordinate set) and the sampling
+unit, with the decision axes and the rule families.  The nonzero axis is always reported; the equivalence axis only
+when requested, and then a tolerance ``equivalence.rel`` is required (declaring it requests the axis).
 
 ``declaration_sha256`` binds the whole expanded declaration -- every setting that affects a conclusion (units and
 seeds, alpha, factors, resolution, M, delta, repeats, the statistics family and the policies), the versions and the
@@ -56,6 +62,7 @@ DEFAULT_RULE_CLASSES = {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]}
 DEFAULT_UNITS = {"development": 32, "confirmation": 64, "seed_offset": 0}
 DEFAULT_RESOLUTION = {"ulp_fraction": 0.125, "max_level": 3}
 ALLOWED_REFERENCE_CLASSES = ["complete_composed"]
+QUERY_AXES = ("nonzero", "equivalence")
 SAMPLERS = ("normal", "uniform", "randint", "bernoulli", "lognormal", "sparse", "rare_tail")
 N_MIN = 16
 
@@ -120,6 +127,16 @@ def missing_items(decl: dict) -> list:
     eq = decl.get("equivalence")
     if eq is not None and not (isinstance(eq, dict) and isinstance(eq.get("rel"), (int, float)) and eq["rel"] > 0):
         out.append("equivalence.rel (a positive relative bound delta)")
+    q = decl.get("query")
+    if q is not None:
+        axes = q.get("axes") if isinstance(q, dict) else None
+        if not isinstance(axes, list) or not axes or not set(axes) <= set(QUERY_AXES) or "nonzero" not in axes:
+            out.append("query.axes (a list of " + " / ".join(QUERY_AXES) + ", the nonzero axis always included)")
+        elif "equivalence" in axes and eq is None:
+            out.append("equivalence.rel (required because query.axes includes equivalence: the tolerance delta is "
+                       "declared before the data)")
+        elif "equivalence" not in axes and eq is not None:
+            out.append("query.axes (equivalence.rel is declared but query.axes excludes the equivalence axis)")
     rep = decl.get("repeats")
     if rep is not None and not (isinstance(rep, int) and rep >= 1):
         out.append("repeats (launches per input, an integer >= 1)")
@@ -232,12 +249,16 @@ def expand(decl: dict) -> dict:
            "equivalence_policy": "equivalence.rel (delta relative to the reference scale q_R) is passed to check.run: "
                                  "every fixed-direction rule reports the equivalence axis (TOST); without delta no "
                                  "equivalence statement",
-           "resolution_policy": "resolved_fraction is measured against resolution.ulp_fraction; while the target is "
-                                "not met the level is measured again at a higher working precision (levels 1-3: SumK / "
-                                "DotK K = 3, 5, 8, compensated prefix sums from level 2; up to resolution.max_level), "
-                                "stopping when met, at the highest level, when the budget is spent or when a level "
-                                "brings no improvement; the outcome and every level are reported, an unmet target is "
-                                "'enclosure too wide' with resolution_met = false, never written as met",
+           "resolution_policy": "resolved_fraction is measured against resolution.ulp_fraction over the numerical "
+                                "enclosures (set targets counted apart); while some output's target is not met and "
+                                "can be, the level is measured again at a higher working precision (levels 1-3: SumK / "
+                                "DotK K = 3, 5, 8, compensated prefix sums from level 2; up to resolution.max_level). "
+                                "Stops with a category: met; budget exhausted; backend limit (float64 endpoints, the "
+                                "highest level, or no precision-dependent rule on the reference path); intrinsic set "
+                                "width; no numerical enclosure; pass failed.  An unchanged pass fraction is not a stop "
+                                "reason.  Every level "
+                                "is reported, an unmet target is 'enclosure too wide' with resolution_met = false, "
+                                "never written as met",
            "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
            "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) at alpha + contract_v3 "
                          "cannot-judge rules (S0 = 2, N0 = 64, n_min = 16)",
@@ -256,11 +277,68 @@ def expand(decl: dict) -> dict:
     # same declaration draws the same inputs, and a statistics setting does not change them)
     body = json.dumps({k: decl[k] for k in ("call", "inputs", "compare", "budget")}, sort_keys=True, default=str)
     exp["sampling_seed_sha256"] = hashlib.sha256(body.encode()).hexdigest()
+    exp["query"] = query_of(decl, exp)
+    from . import composition_rules
+    exp["composition_rules"] = composition_rules.summary()
     exp["digest_scope"] = ("declaration_sha256: SHA-256 of the canonical JSON of every other field of this expanded "
                            "declaration")
     exp["declaration_sha256"] = hashlib.sha256(json.dumps(exp, sort_keys=True, default=str).encode()).hexdigest()
     exp["_base_dir"] = base_dir
     return exp
+
+
+def unit_split(exp: dict) -> tuple:
+    """(development seeds, confirmation seeds) actually drawn: at most budget.max_units units in all, of which at most
+    a third (and at least one) for development."""
+    u = exp["units"]
+    n_total = min(u["development"] + u["confirmation"], int(exp["budget"]["max_units"]))
+    seeds = [u["seed_offset"] + i for i in range(n_total)]
+    n_dev = min(u["development"], max(1, n_total // 3))
+    return seeds[:n_dev], seeds[n_dev:]
+
+
+def query_of(decl: dict, exp: dict) -> dict:
+    """The bias query fixed before the data (composition rule Q1): what is compared, over which input distribution,
+    on which observable, with which sampling unit, along which axes and rule families."""
+    from .reference_eval.analysis import RULES as RULE_DEFS, rule_base
+    cmp_ = decl["compare"]
+    mode = cmp_["mode"]
+    axes = list((decl.get("query") or {}).get("axes") or
+                (["nonzero", "equivalence"] if decl.get("equivalence") else ["nonzero"]))
+    dev, conf = unit_split(exp)
+    rules = sorted({r for names in exp["rule_classes"].values() for r in names})
+    return {
+        "comparison_target": {
+            "mode": mode,
+            "quantity": "e_num = K - G_pi" if mode == "A" else
+                        f"e_num = K - G_pi and e_sem = G_pi - f (f: {cmp_.get('spec')})",
+            "K": "the call's outputs on the inputs it actually received",
+            "G_pi": "the reference generated from the captured program under the numerical-difference policy pi "
+                    "(real arithmetic, rc3 02 1); call-level only when every float buffer read is a declared input, "
+                    "a recorded launch's output or a recorded copy / exact constant (composition rules M1-M5)"},
+        "input_distribution": {
+            "inputs": decl["inputs"], "factors": decl.get("factors") or {},
+            "sampling_seed_sha256": exp["sampling_seed_sha256"],
+            "meaning": "each unit draws every input from its declared source with the unit's seed (numpy "
+                       "SeedSequence of the seed and the sampling digest); state sources are called with the seed"},
+        "observable": {
+            "outputs": list(cmp_["measure"]),
+            "projections": {r: RULE_DEFS[rule_base(r)]["definition"] for r in rules},
+            "coordinate_set": "fixed on the development units: the elements whose reference is complete composed "
+                              "(proved, finite, not conditional) in every development unit"},
+        "sampling_unit": {
+            "unit": "one input draw (one seed); the call is launched repeats times per unit and K is compared "
+                    "launch by launch; residuals are averaged within a unit only for admitted float-atomic orders",
+            "development_seeds": [dev[0], dev[-1]] if dev else [], "confirmation_seeds": [conf[0], conf[-1]] if conf
+            else [], "development": len(dev), "confirmation": len(conf),
+            "independence": "units are independent draws; launches within a unit are not units"},
+        "axes": axes,
+        "families": {cls: list(names) for cls, names in exp["rule_classes"].items()},
+        "family_guarantee": "per declared rule class and per route: Holm over the class's rules, FWER <= alpha; the "
+                            "approximate route (endpoint-conservative t, contract_v3 cannot-judge rules) and the "
+                            "bounded route (Hoeffding, only with a declared magnitude_bound M) are separate families",
+        "equivalence_tolerance": decl.get("equivalence") if "equivalence" in axes else None,
+    }
 
 
 # ------------------------------------------------------------------------------------------------ callables, inputs
@@ -335,13 +413,20 @@ def ulp_of(x: np.ndarray, dtype: str) -> np.ndarray:
 
 
 def reference_quality(keep_rows: list, dtype: str, ulp_fraction: float) -> dict:
-    widths, resolved, n_ok, n_all, n_premise = [], 0, 0, 0, 0
+    """Resolution of the numerical enclosures (complete finite elements) against ``ulp_fraction``; set targets (L_E)
+    are counted apart: their width is the target's own, not an enclosure a working precision shrinks."""
+    widths, resolved, n_ok, n_all, n_premise, n_set, set_w = [], 0, 0, 0, 0, 0, 0.0
     for r in keep_rows:
         ok = np.asarray(r["ok"], bool)
         lo, hi = np.asarray(r["r_lo"], np.float64), np.asarray(r["r_hi"], np.float64)
         n_all += ok.size
         n_ok += int(ok.sum())
         n_premise += int(np.asarray(r.get("premise", np.zeros(ok.size, bool)), bool).sum())
+        st = np.asarray(r.get("set_target", np.zeros(ok.size, bool)), bool)
+        n_set += int(st.sum())
+        if st.any():
+            sw = np.asarray(r.get("set_width", hi - lo), np.float64)
+            set_w = max(set_w, float(np.max(sw[st])))
         if ok.any():
             mid = 0.5 * (lo[ok] + hi[ok])
             w = (hi[ok] - lo[ok]) / ulp_of(mid, dtype)
@@ -355,7 +440,9 @@ def reference_quality(keep_rows: list, dtype: str, ulp_fraction: float) -> dict:
             "width_over_ulp": {"median": q(0.5), "p90": q(0.9), "max": float(w.max()) if w.size else None},
             "resolution_target_ulp_fraction": ulp_fraction,
             "resolved_fraction": resolved / n_ok if n_ok else None,
-            "resolution_met": (resolved == n_ok) if n_ok else None}
+            "unresolved_elements": n_ok - resolved,
+            "resolution_met": (resolved == n_ok) if n_ok else None,
+            "set_target_elements": n_set, "set_target_max_width": set_w if n_set else None}
 
 
 def _holm(ps):
@@ -368,11 +455,13 @@ def _holm(ps):
     return adj
 
 
-def class_statistics(num_rec: dict, rule_classes: dict, alpha: float) -> dict:
-    """Per class: Holm inside the class over the frozen per-rule records, then the v3 cannot-judge rules."""
+def class_statistics(num_rec: dict, rule_classes: dict, alpha: float, equivalence_rel=None) -> dict:
+    """Per class: Holm inside the class over the frozen per-rule records, then the v3 cannot-judge rules.  ``axes``
+    reports the two decision axes apart (composition rules Q2, Q3): the nonzero axis by route (approximate; bounded,
+    with its own Holm family when a magnitude bound M was declared) and the equivalence axis only when it was
+    requested (``equivalence_rel``)."""
 
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts" / "essential"))
-    import contract_v3 as CV
+    from . import contract_v3 as CV
     rules = {r.get("rule"): r for r in (num_rec or {}).get("rules", []) if isinstance(r, dict)}
     out = {}
     for cls, names in rule_classes.items():
@@ -406,8 +495,54 @@ def class_statistics(num_rec: dict, rule_classes: dict, alpha: float) -> dict:
             summary = "cannot judge / not established (no statement about bias)"
         else:
             summary = "not confirmed on these projections (not a statement that the vector has no bias)"
-        out[cls] = {"rules": per, "summary": summary}
+        out[cls] = {"rules": per, "summary": summary,
+                    "axes": _axes(cls, names, recs, per, summary, alpha, equivalence_rel)}
     return out
+
+
+def _axes(cls, names, recs, per, summary, alpha, equivalence_rel) -> dict:
+    """The two decision axes of one rule class (Q2, Q3)."""
+    nonzero = {"approximate": {"family": f"Holm within class '{cls}' at alpha = {alpha} (FWER <= alpha for the class)",
+                               "rules": {n: per[n]["judgment"] for n in names}, "summary": summary}}
+    bounded = [(n, (r or {}).get("bounded")) for n, r in zip(names, recs)]
+    tested = [(n, b) for n, b in bounded if b and b.get("p_value_two_sided") is not None]
+    if not tested:
+        why = sorted({str((b or {}).get("reason")) for _, b in bounded if b}) or ["no magnitude_bound declared"]
+        nonzero["bounded"] = {"available": False, "reason": "; ".join(why)}
+    else:
+        adj = dict(zip([n for n, _ in tested], _holm([b["p_value_two_sided"] for _, b in tested])))
+        rules = {}
+        for n, b in bounded:
+            if not b or n not in adj:
+                rules[n] = {"family_verdict": "not established", "reason": (b or {}).get("reason") or "no record"}
+                continue
+            direction = b.get("direction") or ("positive" if b["interval"][0] > 0 else "negative")
+            rules[n] = {"p": b["p_value_two_sided"], "holm_adjusted_p": adj[n], "interval": b.get("interval"),
+                        "M": b.get("M"), "M_basis": b.get("M_basis"),
+                        "family_verdict": f"nonzero ({direction})" if adj[n] <= alpha else "not confirmed"}
+        hits = [f"{n} {v['family_verdict'][9:-1]}" for n, v in rules.items() if v["family_verdict"].startswith("nonzero")]
+        nonzero["bounded"] = {
+            "available": True, "rules": rules,
+            "family": f"Holm within class '{cls}' over Hoeffding p-values at alpha = {alpha} (FWER <= alpha for the "
+                      "class, given |a| <= M for every unit; distribution-free, finite-sample)",
+            "summary": ("average effect nonzero: " + ", ".join(hits)) if hits else
+                       "not confirmed on these projections (bounded route)"}
+    if equivalence_rel is None:
+        equivalence = {"requested": False, "statement": "not requested: no equivalence statement"}
+    else:
+        verdicts = {}
+        for n, r in zip(names, recs):
+            e = (r or {}).get("equivalence") or {}
+            v = e.get("verdict")
+            verdicts[n] = {"WITHIN_DELTA": "within delta", "NOT_SHOWN": "not shown"}.get(
+                v, f"cannot judge ({v or 'no record'}{': ' + str(e.get('reason')) if e.get('reason') else ''})")
+        all_in = all(v == "within delta" for v in verdicts.values())
+        equivalence = {"requested": True, "delta_rel": equivalence_rel, "rules": verdicts,
+                       "test": "TOST on the projection endpoints at alpha per rule",
+                       "joint": ("every rule of the class within delta (intersection-union test: valid at alpha "
+                                 "without adjustment)") if all_in else
+                                "not every rule of the class shown within delta"}
+    return {"nonzero": nonzero, "equivalence": equivalence}
 
 
 def bounded_mean_test(a: np.ndarray, M: np.ndarray, alpha: float) -> dict:
@@ -493,55 +628,108 @@ def _semantic(keep_rows, fas, name):
     return {"ok_elements": n_ok, "e_sem_certified": n_sem, "max_gap_relative": worst}
 
 
+REFINEMENT_CATEGORIES = {
+    "met": "every numerical enclosure meets the requested resolution",
+    "budget exhausted": "the time budget ran out (or a higher level ran over the case budget) before the target was met",
+    "backend limit": "the backend cannot narrow the enclosures further: float64 endpoints below a float64 ulp, the "
+                     "highest working-precision level reached, or no rule on the reference path depends on the level",
+    "intrinsic set width": "the only elements without a narrow value are set targets (L_E), whose width is the "
+                           "target's own; no precision shrinks it",
+    "pass failed": "a higher level ended without a result (error); the previous level stands",
+    "no numerical enclosure": "an output has no complete finite element and no set target: nothing for a working "
+                              "precision to refine (its failure classes say why the reference is missing)",
+}
+
+
+def _output_refinement(o: dict, frac: float) -> str:
+    """Per evaluated output at one level: met / intrinsic set width / backend limit (float64) / refinable."""
+    q = o["reference"]
+    if q.get("resolution_met") is True:      # every numerical enclosure met; set targets keep their own width
+        return "intrinsic set width" if q.get("set_target_elements") else "met"
+    if q.get("resolution_met") is None:     # no complete finite element
+        return "intrinsic set width" if q.get("set_target_elements") else "nothing to refine"
+    if o.get("dtype") == "float64" and frac < 1.0:
+        return "backend limit"
+    return "refinable"
+
+
 def run_level(exp: dict, level: dict) -> dict:
-    """One factor level with adaptive working precision (rc3 W2 / W6; external audit task book section 5): the level
-    is measured at working precision 1; while the requested resolution is not met, it is measured again at the next
-    level (``intervals.PRECISION_LEVELS``, up to ``resolution.max_level``, default 3).  The refinement stops when the
-    target is met, the highest level is reached, the budget is spent, or a level brings no improvement (the widths are
-    then not limited by the working precision).  float64 outputs are not refined: a nonzero enclosure width cannot get
-    below a fraction of a float64 ulp with float64 endpoints.  The report keeps every level and the outcome; the
+    """One factor level with adaptive working precision (rc3 W2 / W6; external audit task book section 5).  The level
+    is measured at working precision 1; while some output's requested resolution is not met and could be, it is
+    measured again at the next level (``intervals.PRECISION_LEVELS``, up to ``resolution.max_level``, default 3).
+
+    Stops, each with its own category (``REFINEMENT_CATEGORIES``): every output met; no output refinable (float64
+    endpoints, set targets only); no rule on the reference path depends on the working-precision level (the pass
+    reports ``precision_dependent_calls`` = 0, so a higher level gives the same enclosures exactly); the highest level
+    reached; the time budget spent; a higher level that fails.  An unchanged pass fraction is never read as "more
+    precision does not help": the widths can shrink by orders of magnitude while no element crosses the target yet
+    (three-level summation: levels 1 and 2 resolve nothing, level 3 everything).  Every level keeps its widths.  The
     result of the last completed level is the level's result."""
     res = exp["resolution"]
     max_level = int(res.get("max_level", 3))
     frac = float(res["ulp_fraction"])
     t0 = time.time()
-    steps, best, outcome, prec = [], None, None, 1
+    steps, best, outcome, category, prec = [], None, None, None, 1
+    per_output = {}
     while True:
         out = _measure_pass(exp, level, prec)
         if out.get("status") != "ok":
             if best is None:
                 return out
-            outcome = (f"not met: the pass at level {prec} ended with '{out.get('status')}' "
+            over = out.get("status") == "over budget"
+            category = "budget exhausted" if over else "pass failed"
+            outcome = (f"{category}: the pass at level {prec} ended with '{out.get('status')}' "
                        f"({str(out.get('reason'))[:120]}); the result of level {prec - 1} stands")
             prec -= 1
             break
         best = out
         evaluated = {n: o for n, o in out["outputs"].items() if o.get("status") == "evaluated"}
-        unmet = {n: o for n, o in evaluated.items() if o["reference"].get("resolution_met") is False}
-        refinable = {n: o for n, o in unmet.items() if not (o.get("dtype") == "float64" and frac < 1.0)}
-        steps.append({"level": prec, "resolution_met": not unmet,
+        per_output = {n: _output_refinement(o, frac) for n, o in evaluated.items()}
+        steps.append({"level": prec, "resolution_met": all(v in ("met", "intrinsic set width")
+                                                            for v in per_output.values()),
+                      "per_output": dict(per_output),
                       "resolved_fraction": {n: o["reference"].get("resolved_fraction") for n, o in evaluated.items()},
+                      "unresolved_elements": {n: o["reference"].get("unresolved_elements")
+                                              for n, o in evaluated.items()},
+                      "width_over_ulp": {n: o["reference"].get("width_over_ulp") for n, o in evaluated.items()},
+                      "precision_dependent_calls": out.get("precision_dependent_calls"),
                       "seconds": out.get("seconds")})
-        if not unmet:
-            outcome = f"met at level {prec}"
-            break
+        refinable = [n for n, v in per_output.items() if v == "refinable"]
         if not refinable:
-            outcome = ("not attainable: float64 outputs with nonzero enclosure width cannot get below a fraction of a "
-                       "float64 ulp with float64 endpoints; not refined")
+            kinds = set(per_output.values())
+            if kinds <= {"met"}:
+                category, outcome = "met", f"met at level {prec}"
+            elif kinds <= {"met", "intrinsic set width"}:
+                category = "intrinsic set width"
+                outcome = (f"intrinsic set width at level {prec}: the remaining elements are set targets (L_E); "
+                           "every numerical enclosure is met")
+            elif "backend limit" in kinds:
+                category = "backend limit"
+                outcome = ("backend limit: float64 outputs with nonzero enclosure width cannot get below a fraction "
+                           "of a float64 ulp with float64 endpoints; not refined")
+            else:
+                category = "no numerical enclosure"
+                outcome = ("no numerical enclosure: " + ", ".join(sorted(n for n, v in per_output.items()
+                                                                         if v == "nothing to refine")) +
+                           " without a complete finite element or set target; nothing to refine")
             break
-        if len(steps) >= 2 and all((steps[-1]["resolved_fraction"].get(n) or 0.0) <=
-                                   (steps[-2]["resolved_fraction"].get(n) or 0.0) for n in refinable):
-            outcome = (f"not met: no improvement at level {prec} (the remaining widths are not limited by the working "
-                       f"precision)")
+        if out.get("precision_dependent_calls") == 0:
+            category = "backend limit"
+            outcome = (f"backend limit: no rule on the reference path depends on the working-precision level "
+                       f"(precision_dependent_calls = 0 at level {prec}); a higher level gives the same enclosures")
             break
         if prec >= max_level:
-            outcome = f"not met: highest working precision level {max_level} reached"
+            category = "backend limit"
+            outcome = f"backend limit: highest working precision level {max_level} reached; target not met"
             break
         if time.time() - t0 > float(exp["budget"]["gpu_seconds"]):
-            outcome = f"not met: budget exhausted after level {prec}"
+            category = "budget exhausted"
+            outcome = f"budget exhausted after level {prec}; target not met"
             break
         prec += 1
-    best["refinement"] = {"levels": steps, "outcome": outcome, "final_level": prec,
+    best["refinement"] = {"levels": steps, "outcome": outcome, "category": category,
+                          "category_meaning": REFINEMENT_CATEGORIES.get(category),
+                          "per_output": per_output, "final_level": prec,
                           "target_ulp_fraction": frac, "max_level": max_level,
                           "levels_meaning": {str(k): v for k, v in sorted(__import__(
                               "kernel_analyzer.reference_eval.intervals", fromlist=["PRECISION_LEVELS"]
@@ -554,11 +742,8 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1) -> dict:
     measure_names = list(exp["compare"]["measure"])
     spec_fn = resolve(exp["compare"]["spec"], exp["_base_dir"]) if exp["compare"]["mode"] == "B" else None
     budget = exp["budget"]
-    u = exp["units"]
-    n_total = min(u["development"] + u["confirmation"], int(budget["max_units"]))
-    seeds = [u["seed_offset"] + i for i in range(n_total)]
-    n_dev = min(u["development"], max(1, n_total // 3))
-    dev, conf = seeds[:n_dev], seeds[n_dev:]
+    dev, conf = unit_split(exp)
+    seeds = dev + conf
     fas = {}
     shapes = {}
 
@@ -652,7 +837,8 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1) -> dict:
             "call-level (upstream copies / exact constants with producer records: " + ", ".join(recorded)[:200] + ")"
             if recorded else "call-level")
         quality["complete_rate_call_level"] = 0.0 if backfilled else quality["complete_rate"]
-        stats = class_statistics(o.get("numerical"), exp["rule_classes"], exp["alpha"])
+        stats = class_statistics(o.get("numerical"), exp["rule_classes"], exp["alpha"],
+                                 equivalence_rel=(exp.get("equivalence") or {}).get("rel"))
         entry = {"status": "evaluated", "dtype": dtypes.get(name, "float32"), "reference": quality,
                  "statistics": stats, "guarantee": o.get("guarantee"),
                  "proof_status": o.get("proof_status"), "execution": o.get("execution"),
@@ -671,9 +857,12 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1) -> dict:
                 entry["failure_classes"].append("unproven premise (conditional diagnosis)")
             entry["failure_classes"] = sorted(set(entry["failure_classes"])) or ["unclassified"]
         if quality["resolved_fraction"] is not None and quality["resolved_fraction"] < 1.0:
+            # the resolution counts numerical enclosures only (complete finite elements); set targets are not among
+            # them, so an unresolved element is always an enclosure that is too wide
+            entry["failure_classes"] = sorted(set(entry["failure_classes"]) | {"enclosure too wide"})
+        if quality.get("set_target_elements"):
             # a set target's width is part of the target, not a numerical enclosure that precision would shrink
-            wide = "set target width (L_E)" if (o.get("guarantee") or {}).get("set_targets") else "enclosure too wide"
-            entry["failure_classes"] = sorted(set(entry["failure_classes"]) | {wide})
+            entry["failure_classes"] = sorted(set(entry["failure_classes"]) | {"set target width (L_E)"})
         if any(v["summary"].startswith("cannot judge") for v in stats.values()):
             entry["failure_classes"] = sorted(set(entry["failure_classes"]) | {"statistics insufficient"})
         if spec_fn is not None and name in keep:
@@ -683,6 +872,9 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1) -> dict:
         failures.extend(entry["failure_classes"])
         outputs[name] = entry
     return {"level": level, "status": "ok", "precision_level": precision_level,
+            "precision_dependent_calls": rep.get("precision_dependent_calls"),
+            "producer_trace_per_seed": rep.get("producer_trace_per_seed"),
+            "provenance_seed0": rep.get("provenance_seed0"),
             "units": {"development": len(dev), "confirmation": len(conf)},
             "notes": notes, "outputs": outputs, "timing_seconds": rep.get("timing_seconds"),
             "seconds": round(seconds, 1), "failure_classes": sorted(set(failures)),

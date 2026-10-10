@@ -1,6 +1,6 @@
 {
   "schema": "kernel-analyzer-current-index-v2",
-  "updated": "2026-10-09",
+  "updated": "2026-10-10",
   "note": "The single current index. The repository has four parts; each keeps only the latest, most complete version. Everything removed in the 2026-10-09 reorganization is recoverable from tag pre-reorg-20261009 (git show pre-reorg-20261009:<old path>).",
   "parts": {
     "experiments": "1_experiments/README.md",
@@ -20,11 +20,12 @@
     "branch": "dsl-v2",
     "tool_version": "4.0",
     "package_version": "4.0.0.dev1",
-    "status": "unreleased and not frozen: reference DSL v2 rc3 official, increments 1-15 and the fix release for the external audit at 1aee15e (development evidence, not blind results)",
+    "status": "unreleased and not frozen: reference DSL v2 rc3 official, increments 1-15, the fix release for the external audit at 1aee15e, and batch 1 of the common semantic kernel (development evidence, not blind results)",
     "record": "1_experiments/dsl_v2/README.md",
     "design": "1_experiments/dsl_v2/design_rc3/README.md (rc3 official, sha256 8050903ff9fbc4c9922813d6789a08437a40c92db963872aaa8704253cd76faf)",
     "audit_fix": "3_audits/fix_1aee15e/README.md (external audit at 1aee15e: F01-F07 fixed in 5fe8e56 and 6f0ef38; the debts closed in c3dd596-503a19e -- scan associativity and CAS spin-lock commutativity certificates (z3), producer records for call-level provenance, adaptive working precision, sensitivity wording; every affected capture rerun (broad capture 96.82% unconditional complete); ledgers, before / after tests and evidence; awaiting the reviewer's recheck)",
-    "open_audit_findings": "3_audits/fix_1aee15e/README.md sections 4-5 (W0-W7 gaps and decisions for the reviewer)"
+    "open_audit_findings": "3_audits/fix_1aee15e/README.md sections 4-5 (W0-W7 gaps and decisions for the reviewer)",
+    "batch1": "3_audits/batch1_semantic_core/README.md (baseline dsl-v2@3532066: memory-effect composition rules M1-M5 fixing the cross-input digest, unchanged-bytes in-place arithmetic and overlapping partial-write provenance classes; producer trace non-interference T1 (finding D12); precision controller P1-P3 (three-level summation reaches level 3 from the unified entry; stop categories); packaging K1 (no repository path at run time, console entry points); bias query Q1-Q3; acceptance protocol frozen before the run in 1_experiments/batch1_acceptance)"
   },
   "versions": {
     "tool": {"value": "4.0", "where": "2_tool/src/kernel_analyzer/check.py TOOL_VERSION", "changelog": "2_tool/docs/changelog.md"},
@@ -43,7 +44,9 @@
     "unified": "PYTHONPATH=2_tool/src python 2_tool/scripts/measure.py --declaration DECLARATION.json --out REPORT.json",
     "binding": "kernel_analyzer.check (2_tool/docs/binding_guide.md)",
     "captured_packages": "2_tool/scripts/run_reference_analysis.py",
-    "tests": "python -m pytest -q 2_tool/tests"
+    "tests": "python -m pytest -q 2_tool/tests",
+    "installed": "kernel-analyzer-measure --declaration D.json --out R.json; kernel-analyzer-analyze (pip install of the repository wheel)",
+    "composition_rules": "kernel_analyzer.composition_rules (registry; checked by 2_tool/tests/test_composition_rules.py)"
   },
   "external_materials_pending": "3_audits/README.md section 3 (M01-M12)",
   "test_policy": "tests must not modify or rewrite tracked files (2_tool/tests/conftest.py guard); outputs go to tmp_path"

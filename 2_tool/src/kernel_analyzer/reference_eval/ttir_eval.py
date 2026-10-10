@@ -773,6 +773,9 @@ class KernelReference:
     loaded: set = field(default_factory=set)  # storages whose captured initial values the reference loaded
     loaded_any: set = field(default_factory=set)  # storages the reference loaded from at all
     stored: set = field(default_factory=set)  # storages this launch's reference wrote (stores, atomics, poisoned targets)
+    # storage -> (storage-relative element indices, element size): the elements whose captured initial values the
+    # reference read (the read coverage of storage_effects M2; a subset of the captured elements)
+    loaded_elements: dict = field(default_factory=dict)
 
     def element_classes(self, ident: int):
         """Per element: complete_composed / conditional_local / not_established / set_target / complete_under_premise
@@ -1128,7 +1131,20 @@ class KernelReferenceEvaluator:
             self._rules["path.program_aborted"] += len(aborted)
         return KernelReference(self.func.name, self.mode, memory, [tuple(p) for p in programs], aborted,
                                notes, dict(reasons), dict(self._rules), set(self._loaded), set(self._loaded_any),
-                               set(self._stored))
+                               set(self._stored), self._loaded_elements())
+
+    def _note_initial_read(self, buf, positions):
+        """Positions (into ``buf``) whose captured initial value a lane read: the read coverage (storage_effects M2)."""
+        positions = np.asarray(positions, dtype=np.int64).reshape(-1)
+        if positions.size:
+            self._loaded_elems.setdefault(buf.ident, (buf, []))[1].append(np.unique(positions))
+
+    def _loaded_elements(self) -> dict:
+        out = {}
+        for ident, (buf, parts) in getattr(self, "_loaded_elems", {}).items():
+            pos = np.unique(np.concatenate(parts))
+            out[ident] = (buf.global_indices()[pos], ELEM_SIZE.get(buf.elem, 0))
+        return out
 
     def _note_lock_write(self, buf, idx, op):
         if self._lock_storages and buf.ident in self._lock_storages:
@@ -1285,6 +1301,7 @@ class KernelReferenceEvaluator:
         self._outside_window = False
         self._loaded = set()
         self._loaded_any = set()
+        self._loaded_elems = {}
         self._stored = set()
         self._poisoned = set()
         # execution validity (DSL v2 rc3 02 6.3 / 04 W4): who read each address in this launch, and which store,
@@ -1643,8 +1660,10 @@ class KernelReferenceEvaluator:
         idx = np.asarray(idx, dtype=np.int64)
         if idx.size:
             self._loaded_any.add(buf.ident)
-            if (~np.asarray(buf.written)[idx]).any():
+            fresh = ~np.asarray(buf.written)[idx]
+            if fresh.any():
                 self._loaded.add(buf.ident)
+                self._note_initial_read(buf, idx[fresh])
 
     def _track_read(self, buf, idx, state):
         r = self._readers.get(buf.ident)
@@ -1830,6 +1849,7 @@ class KernelReferenceEvaluator:
                 self._loaded_any.add(buf.ident)
             if (safe & ~buf.written[idx]).any():
                 self._loaded.add(buf.ident)  # lanes read the captured initial value (not a reference write)
+                self._note_initial_read(buf, idx[safe & ~buf.written[idx]])
             if pinned:
                 src_lo = buf.actual_after
                 src_hi = buf.actual_after if kind == "f" else None
@@ -5174,6 +5194,8 @@ class SequenceReference:
     launches: list  # KernelReference per launch (sharing the final memory state)
     external_writes: list  # buffers rewritten outside the evaluated launches
     memory: dict
+    # per carried-over buffer: the evidence the carry-over rests on (storage_effects.carry_over, M4)
+    carry_overs: list = field(default_factory=list)
 
 
 def _window_of(arg):
@@ -5267,13 +5289,21 @@ def evaluate_sequence(launches: list, mode: str = NumericMode.NUMERICAL_DIFFEREN
 
     Before each launch every operand buffer is checked: if its captured bytes
     before this launch equal its captured bytes after the previous launch that
-    touched it, the reference state carries over; otherwise something outside
-    the evaluated launches wrote it, so it re-enters as an external input
-    (captured value) and the event is recorded.
+    touched it, and no write evidence lies in between (storage_effects M4: an
+    ATen in-place op can leave every byte unchanged, e.g. x + 2^-25 rounding back
+    to x, and still be a different real value), the reference state carries
+    over; otherwise something outside the evaluated launches wrote it, so it
+    re-enters as an external input (captured value) and the event is recorded.
+    Write evidence: the recorder's version-counter count per argument
+    (``CapturedArg.mutations``); a capture without it rests on bytes alone and the
+    carry-over says so.
     """
+    from .storage_effects import carry_over
 
     memory: dict = {}
     external = []
+    carried = []
+    last_mutations: dict = {}   # storage -> write-evidence count at the last launch that touched it
     results = []
     modules: dict = {}
     for position, launch in enumerate(launches):
@@ -5291,11 +5321,21 @@ def evaluate_sequence(launches: list, mode: str = NumericMode.NUMERICAL_DIFFEREN
             win = _window_of(arg)
             same_window = (buf.index is None and win is None) or (
                 buf.index is not None and win is not None and np.array_equal(buf.index, win))
-            if not (same_window and buf.after_raw is not None and np.array_equal(buf.after_raw, before)):
-                external.append({"launch": position, "buffer": arg.name, "storage": arg.storage_ptr})
+            same_bytes = same_window and buf.after_raw is not None and np.array_equal(buf.after_raw, before)
+            keep, evidence = carry_over(same_bytes, getattr(arg, "mutations", None),
+                                        last_mutations.get(arg.storage_ptr))
+            if not keep:
+                external.append({"launch": position, "buffer": arg.name, "storage": arg.storage_ptr,
+                                 "why": evidence})
                 del memory[arg.storage_ptr]
+            else:
+                carried.append({"launch": position, "buffer": arg.name, "storage": arg.storage_ptr,
+                                "evidence": evidence})
         evaluator = KernelReferenceEvaluator(module, mode=mode, masked_fill_zero=masked_fill_zero,
                                              ttgir=launch.asm.get("ttgir"))
         programs = programs_for(launch) if programs_for is not None else None
         results.append(evaluator.evaluate(launch, programs=programs, pin_loads=pin_loads, memory=memory))
-    return SequenceReference(results, external, memory)
+        for arg in launch.args:
+            if arg.kind == "tensor":
+                last_mutations[arg.storage_ptr] = getattr(arg, "mutations", None)
+    return SequenceReference(results, external, memory, carried)

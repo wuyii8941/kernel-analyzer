@@ -8,14 +8,22 @@ kernel-level.  This module supplies the evidence the audit asks for -- the real 
 * every ATen op is classified: a view (same storage, no data change), a copy (each output element is an input element
   by the op's definition: clone, repeat, cat, gather, index, flip, ...), an exact constant (zeros / ones / full / fill
   with a value representable in the dtype), or anything else (computed);
-* per storage, in event order, the provenance is "input" (a declared input's own storage, unchanged), "const",
-  "copy" (only copies of inputs / constants / copies), or "computed"; a Triton launch that the measured reference
-  records as writing a storage makes it "triton";
+* per storage and per byte (``storage_effects.StorageMap``, rules M1, M2, M5), in event order, the provenance is
+  "input" (the bytes of a declared input tensor, unchanged), "const", "copy" (only copies of inputs / constants /
+  copies), or "computed"; a Triton launch that the measured reference records as writing a storage makes it
+  "triton".  A write through a view changes exactly the bytes of its elements (offset, strides, overlap, stride 0):
+  a fill through an overlapping or stride-0 view of an uninitialised buffer leaves the other bytes uninitialised,
+  not constant.  Storages with a clean byte are held alive, so an address names one storage while its label lives;
+* the label of a launch argument is the join over the bytes the measured reference read from its initial values
+  (``KernelReference.loaded_elements``), not over the whole storage;
 * the trace run is used only when its Triton launches match the measured run's launch for launch (kernel name, grid,
   argument names and dtypes).  A compiled callable runs as eager ATen ops under a dispatch mode (no Triton launch), so
   for compiled code the sequences differ and no evidence is given: the reference stays kernel-level.
 
-The dispatch mode never wraps the measured launches.
+The dispatch mode never wraps the measured launches, and the traced run must not change them either: a
+``torch.compile``d function called once under a dispatch mode runs eagerly at every later call (no Triton launch any
+more; found in batch 1, finding D12).  The traced run therefore runs under ``torch.compiler.set_stance("force_eager")``,
+which leaves the compiled code and its caches untouched; without that API no traced run is made (no evidence).
 """
 from __future__ import annotations
 
@@ -33,7 +41,7 @@ COPY_OPS = {"clone", "contiguous", "repeat", "cat", "stack", "index_select", "ga
             "repeat_interleave", "tile", "masked_select", "_unsafe_index"}
 CONST_OPS = {"zeros", "ones", "full", "zeros_like", "ones_like", "full_like", "new_zeros", "new_ones", "new_full",
              "zero", "fill", "scalar_tensor"}
-CLEAN = ("input", "const", "copy")
+from .reference_eval.storage_effects import CLEAN, StorageMap, byte_runs, hull_run
 
 
 def _base(func) -> str:
@@ -80,8 +88,15 @@ class _Trace:
         self.mode = Mode()
 
 
+def _runs(t):
+    """(byte runs, exact) of the view ``t`` (storage_effects M2)."""
+    runs = byte_runs(t)
+    return (runs, True) if runs is not None else (hull_run(t), False)
+
+
 def _clean(prov, tensors) -> bool:
-    return all(prov.get(t.untyped_storage().data_ptr(), ("computed",))[0] in CLEAN for t in tensors)
+    """Every byte each tensor view reads carries a clean label."""
+    return all(prov.read(t.untyped_storage().data_ptr(), _runs(t)[0])[0] in CLEAN for t in tensors)
 
 
 def _argument(func, args, kwargs, name):
@@ -124,20 +139,22 @@ def _apply(prov, event):
     else:
         label = ("computed", str(func))
     for t in mutated:
-        p = t.untyped_storage().data_ptr()
-        old = prov.get(p, ("computed",))
-        partial = t.numel() * t.element_size() < t.untyped_storage().nbytes()
-        if label[0] == "computed" or (partial and old[0] not in CLEAN):
-            prov[p] = ("computed", label[1])
-        elif partial:
-            prov[p] = ("copy", f"{old[1]}; {label[1]} (part of the storage)")
-        else:
-            prov[p] = label
+        # exactly the bytes of the written view's elements (M2); a hull (coverage not enumerable) joins (M5)
+        runs, exact = _runs(t)
+        prov.write(t.untyped_storage(), runs, label, exact=exact)
+    born = set()
     for t in outs:
         p = t.untyped_storage().data_ptr()
         if p in in_ptrs or p in mut_ptrs:
             continue                                                     # a view or the mutated argument itself
-        prov[p] = label
+        runs, exact = _runs(t)
+        if p not in born:                                                # a storage born at this event (M1)
+            born.add(p)
+            prov.bind(t.untyped_storage(), runs if exact else [], label)
+            if not exact:
+                prov.write(t.untyped_storage(), runs, label, exact=False)
+        else:
+            prov.write(t.untyped_storage(), runs, label, exact=exact)
 
 
 def _signature(launch):
@@ -151,17 +168,27 @@ def producer_records(case, seed, measured_launches, seq) -> Optional[dict]:
     the measured launches (different Triton launch sequence, an error in the traced run)."""
     from .reference_eval.capture import TritonLaunchRecorder
 
+    stance = getattr(getattr(torch, "compiler", None), "set_stance", None)
+    if stance is None:
+        return None
     try:
         inp = case.inputs(seed)
-        prov = {}
+        prov = StorageMap()
         for t in _flat(inp):
             if torch.is_tensor(t) and t.is_floating_point():
-                prov[t.untyped_storage().data_ptr()] = ("input", "declared input")
+                runs, exact = _runs(t)
+                if not exact:
+                    continue                      # no claim about bytes whose coverage is not enumerable
+                if t.untyped_storage().data_ptr() in prov:
+                    prov.write(t.untyped_storage(), runs, ("input", "declared input"))
+                else:
+                    prov.bind(t.untyped_storage(), runs, ("input", "declared input"))
         rec = TritonLaunchRecorder(copy_tensors=False, keep_storages=True)
         trace = _Trace(rec)
         with rec:
-            with trace.mode:
-                case.launch(inp)
+            with stance("force_eager"):
+                with trace.mode:
+                    case.launch(inp)
             torch.cuda.synchronize()
     except Exception:  # noqa: BLE001 -- no evidence; the reference stays kernel-level
         return None
@@ -171,16 +198,51 @@ def producer_records(case, seed, measured_launches, seq) -> Optional[dict]:
     out = {}
     events = iter(trace.events)
     pending = next(events, None)
+    storages = {}
+    for launch in rec.launches:            # the recorder held every launch storage alive (keep_storages)
+        for a in launch.args:
+            if a.kind == "tensor":
+                storages.setdefault(a.storage_ptr, a)
     for i, (tl_, ml) in enumerate(zip(rec.launches, measured_launches)):
         while pending is not None and pending[0] <= i:
             _apply(prov, pending)
             pending = next(events, None)
+        measured = {b.name: b for b in ml.args if b.kind == "tensor"}
         for a in tl_.args:
             if a.kind == "tensor" and str(a.dtype).startswith(("float", "bfloat")):
-                out[(i, a.name)] = prov.get(a.storage_ptr, ("computed", "no producer recorded"))
+                out[(i, a.name)] = prov.read(a.storage_ptr, _read_runs(seq.launches[i], measured.get(a.name), a))
         stored_measured = getattr(seq.launches[i], "stored", set())
         names = {b.name for b in ml.args if b.kind == "tensor" and b.storage_ptr in stored_measured}
         for a in tl_.args:
             if a.kind == "tensor" and a.name in names:
-                prov[a.storage_ptr] = ("triton", tl_.kernel_name)
+                prov.write(_StorageRef(a), None, ("triton", tl_.kernel_name))
     return out
+
+
+class _StorageRef:
+    """The storage of a recorded trace-run argument, by address (the recorder keeps it alive)."""
+
+    def __init__(self, arg):
+        self._ptr, self._nbytes = arg.storage_ptr, arg.storage_nbytes
+
+    def data_ptr(self):
+        return self._ptr
+
+    def nbytes(self):
+        return self._nbytes
+
+
+def _read_runs(ref, measured_arg, trace_arg):
+    """The bytes the measured reference read from ``measured_arg``'s initial values, as runs of the trace run's
+    storage: only when the two arguments sit at the same offset in storages of the same size (else every byte)."""
+    if measured_arg is None:
+        return None
+    if (measured_arg.data_ptr - measured_arg.storage_ptr, measured_arg.storage_nbytes) != \
+            (trace_arg.data_ptr - trace_arg.storage_ptr, trace_arg.storage_nbytes):
+        return None
+    got = (getattr(ref, "loaded_elements", None) or {}).get(measured_arg.storage_ptr)
+    if got is None:
+        return None
+    from .reference_eval.storage_effects import element_runs
+    elems, size = got
+    return element_runs(elems, size) if size else None

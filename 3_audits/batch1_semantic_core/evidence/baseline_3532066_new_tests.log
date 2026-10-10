@@ -1,0 +1,73 @@
+# new batch-1 tests run against the audit baseline dsl-v2@35320669a335e000bdeeb7b66782032d1ef90333 (worktree, tool code unchanged)
+=== test_batch1_guarantees
+E       AssertionError: call-level
+E       AssertionError: call-level
+E       AssertionError: call-level
+E       AssertionError: call-level
+E       AssertionError: call-level (upstream copies / exact constants with producer records: L0:_affine:x_ptr [producer record: const: aten.fill_.Scalar])
+E       AssertionError: kernel-level: upstream non-Triton values captured (L0:_affine:x_ptr)
+E       KeyError: 'producer_trace_per_seed'
+E       AssertionError: {'levels': [{'level': 1, 'resolution_met': False, 'resolved_fraction': {'y': 0.0}, 'seconds': 0.3}, {'level': 2, 'reso... (the remaining widths are not limited by the working precision)', 'final_level': 2, 'target_ulp_fraction': 0.125, ...}
+E       KeyError: 'category'
+E       KeyError: 'category'
+E       KeyError: 'category'
+E       KeyError: 'category'
+E       KeyError: 'category'
+E       KeyError: 'category'
+E       KeyError: 'category'
+E       KeyError: 'category'
+E       KeyError: 'category'
+E       KeyError: 'category'
+E       AssertionError: Traceback (most recent call last):
+E         ModuleNotFoundError: No module named 'contract_v3'
+PASSED 2_tool/tests/test_batch1_guarantees.py::test_copies_and_exact_constants_keep_the_call_level_reference[zeros_then_partial_copy]
+PASSED 2_tool/tests/test_batch1_guarantees.py::test_copies_and_exact_constants_keep_the_call_level_reference[honest_copy]
+PASSED 2_tool/tests/test_batch1_guarantees.py::test_declared_inputs_and_legal_aliases_stay_declared[inplace_after_read]
+PASSED 2_tool/tests/test_batch1_guarantees.py::test_declared_inputs_and_legal_aliases_stay_declared[input_offset_view]
+PASSED 2_tool/tests/test_batch1_guarantees.py::test_declared_inputs_and_legal_aliases_stay_declared[classic]
+PASSED 2_tool/tests/test_batch1_guarantees.py::test_three_level_summation_enclosures_against_exact_row_sums
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_cross_input_digest_match_is_not_a_declared_input
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_inplace_arithmetic_with_unchanged_bytes_on_an_input
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_inplace_arithmetic_through_data_is_seen_by_the_producer_trace
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_inplace_arithmetic_between_recorded_launches
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_partial_write_through_an_overlapping_full_size_view
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_copies_and_exact_constants_keep_the_call_level_reference[partial_init_read]
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_announced_compiled_inplace_write_keeps_the_composition
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_three_level_summation_reaches_level_3_from_the_unified_entry
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_controller_does_not_stop_on_an_unchanged_pass_fraction
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_controller_stop_categories[passes0-3-backend limit-backend limit: highest]
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_controller_stop_categories[passes1-3-backend limit-backend limit: no rule]
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_controller_stop_categories[passes2-3-backend limit-backend limit: float64]
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_controller_stop_categories[passes3-3-intrinsic set width-intrinsic set width]
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_controller_stop_categories[passes4-3-intrinsic set width-intrinsic set width]
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_controller_stop_categories[passes5-3-no numerical enclosure-no numerical enclosure: z]
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_controller_stop_categories[passes6-3-met-met at level 1]
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_controller_stop_categories[passes7-3-budget exhausted-budget exhausted: the pass at level 2]
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_controller_stop_categories[passes8-3-pass failed-pass failed]
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_controller_budget_between_levels
+FAILED 2_tool/tests/test_batch1_guarantees.py::test_package_runs_from_a_copy_outside_the_repository
+20 failed, 6 passed, 14 warnings in 15.35s
+=== test_storage_effects
+E   ImportError: cannot import name 'storage_effects' from 'kernel_analyzer.reference_eval' (/data1/tzh/kernel-analyzer/.cache/baseline_3532066/2_tool/src/kernel_analyzer/reference_eval/__init__.py)
+ERROR 2_tool/tests/test_storage_effects.py
+1 error in 2.12s
+=== test_bias_query
+E       KeyError: 'query'
+E               KeyError: 'p_value_two_sided'
+E               KeyError: 'p_value_two_sided'
+E       KeyError: 'axes'
+FAILED 2_tool/tests/test_bias_query.py::test_query_fixes_target_distribution_observable_and_unit
+FAILED 2_tool/tests/test_bias_query.py::test_bounded_p_value_matches_the_hoeffding_interval
+FAILED 2_tool/tests/test_bias_query.py::test_bounded_route_family_wise_error_under_the_null
+FAILED 2_tool/tests/test_bias_query.py::test_bounded_route_holm_within_class
+FAILED 2_tool/tests/test_bias_query.py::test_equivalence_axis_requires_delta_only_when_requested
+FAILED 2_tool/tests/test_bias_query.py::test_axes_are_reported_apart - TypeEr...
+6 failed in 2.47s
+=== test_composition_rules
+E   ImportError: cannot import name 'composition_rules' from 'kernel_analyzer' (/data1/tzh/kernel-analyzer/.cache/baseline_3532066/2_tool/src/kernel_analyzer/__init__.py)
+ERROR 2_tool/tests/test_composition_rules.py
+1 error in 0.17s
+
+=== test_audit_findings.py::test_upstream_values_equal_to_inputs_are_not_promoted_to_call_level (D12 assertion added in batch 1)
+FAILED [compiled_after_copy] - AssertionError: {"outputs_not_written_by_triton": ["y"], ...}
+1 failed, 2 passed

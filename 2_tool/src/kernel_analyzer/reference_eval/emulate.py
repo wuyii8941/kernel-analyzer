@@ -70,11 +70,21 @@ _BITS = {"f32": (np.float32, np.uint32), "f16": (np.float16, np.uint16), "f64": 
 # ---------------------------------------------------------------------------
 
 
+def default_cache_dir() -> Path:
+    """KA_CACHE_DIR, else $XDG_CACHE_HOME/kernel_analyzer, else ~/.cache/kernel_analyzer -- never a path relative to
+    the installed package."""
+    import os
+    if os.environ.get("KA_CACHE_DIR"):
+        return Path(os.environ["KA_CACHE_DIR"])
+    base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    return Path(base) / "kernel_analyzer"
+
+
 class HardwareOracle:
     """Runs one TTIR elementwise operation on the device, compiled by the installed Triton."""
 
     def __init__(self, cache_dir: Optional[Path] = None, options: Optional[dict] = None, device: str = "cuda"):
-        self.cache_dir = Path(cache_dir) if cache_dir else Path(__file__).resolve().parents[4] / ".cache" / "oracle"
+        self.cache_dir = Path(cache_dir) if cache_dir else default_cache_dir() / "oracle"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.options = {"num_warps": 4, **(options or {})}
         self.device = device

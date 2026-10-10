@@ -7,11 +7,16 @@ name = "kernel-analyzer"
 version = "4.0.0.dev1"
 description = "Systematic numerical difference of Triton kernels against an automatically generated real-semantics reference"
 requires-python = ">=3.8"
+dependencies = ["numpy>=1.24", "scipy>=1.10", "gmpy2>=2.2", "torch>=2.4", "triton>=3.0"]
+
+[project.scripts]
+kernel-analyzer-measure = "kernel_analyzer.cli:measure_main"
+kernel-analyzer-analyze = "kernel_analyzer.cli:analysis_main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 statistics = ["numpy", "scipy"]
-reference = ["gmpy2>=2.2", "python-flint", "z3-solver>=4.12"]
+reference = ["python-flint", "z3-solver>=4.12"]
 
 [tool.setuptools]
 packages = ["kernel_analyzer", "kernel_analyzer.reference_eval", "scripts"]

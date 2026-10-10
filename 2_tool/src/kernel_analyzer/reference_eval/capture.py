@@ -50,6 +50,9 @@ class CapturedArg:
     before: Any = None  # CPU copy (uint8) of the storage, or of the window elements, before launch
     after: Any = None  # the same after launch
     window: Any = None  # storage-relative element indices of a windowed copy (None: whole storage)
+    # write evidence at this launch (storage_effects.StorageWatch, M3 / M4): ATen-visible version increments on the
+    # storage since the recorder first saw a tensor on it, announced raw-pointer writes excluded; None: no evidence
+    mutations: Optional[int] = None
 
 
 @dataclass
@@ -245,6 +248,10 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
         self.launch_count = 0
         self.keep_storages = keep_storages
         self._kept = []
+        # version-counter write evidence per storage (storage_effects M3 / M4); holding the tensors keeps their
+        # storages alive, so it is tied to keep_storages
+        from .storage_effects import StorageWatch
+        self.watch = StorageWatch() if keep_storages else None
         self._original = None
         self._inductor_static = None
         self._libtriton = _libtriton_sha256()
@@ -289,6 +296,13 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
 
         CompiledKernel.run = property(patched)
 
+    def watch_tensors(self, *tensors):
+        """Tensors to watch from now on (the declared inputs, before the call): a later launch's ``mutations`` on their
+        storages counts the ATen-visible writes since this call."""
+        if self.watch is not None:
+            for t in tensors:
+                self.watch.hold(t)
+
     @classmethod
     def register_implicit(cls, *tensors):
         """Tensors that the next launches read or write through raw addresses (e.g. a table of weight pointers
@@ -315,11 +329,16 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
         self._installed_here = TritonLaunchRecorder._hook_original is None
         TritonLaunchRecorder.install_hook()
         TritonLaunchRecorder._active = self
+        if self.watch is not None:
+            self.watch.install()
         return self
 
     def __exit__(self, *exc):
         TritonLaunchRecorder._active = None
         self._kept = []  # identities are recorded as integers; tensors created inside the region are already bound
+        if self.watch is not None:
+            self.watch.uninstall()
+            self.watch._held, self.watch._ids = {}, {}   # the evidence is in the captured arguments
         if self._installed_here:  # a hook installed by install_hook() beforehand stays
             TritonLaunchRecorder.remove_hook()
         if self._inductor_static is not None:
@@ -352,6 +371,8 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
                     storage_nbytes=storage.nbytes(), storage_id=storage._cdata)
                 if self.keep_storages:
                     self._kept.append(storage)
+                if self.watch is not None:
+                    item.mutations = self.watch.observe(arg)
                 if self.copy_tensors:
                     indices = self.window(kernel.name, name, arg) if self.window is not None else None
                     if indices is None:
@@ -389,6 +410,8 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
                                storage_nbytes=t.untyped_storage().nbytes(), storage_id=t.untyped_storage()._cdata)
             if self.keep_storages:
                 self._kept.append(t.untyped_storage())
+            if self.watch is not None:
+                item.mutations = self.watch.observe(t)
             if self.copy_tensors:
                 item.before = _storage_copy(t)
             record.implicit.append(item)

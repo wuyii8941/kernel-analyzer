@@ -13,12 +13,13 @@
 | 解析与映射 | `reference_eval/ttir_parser.py`、`ttir_mapping.py`、`rule_registry.py` | IR 解析；每个操作的规则（支持 / 声明前提 / 未建立 / 拒绝），注册表 [data/rule_registry.json](data/rule_registry.json)（Triton 3.6.0 回归 profile），报告 [pre-reorg-20261009:docs/rule_registry_report.md](docs/rule_registry_report.md) |
 | 求值 | `reference_eval/ttir_eval.py`、`intervals.py`、`numbers.py`、`layouts.py`、`ptx_bits.py` | 区间语义（SumK / DotK、MPFR / Arb 初等函数）、控制流、原子与执行有效性、共享存储、NVIDIA / AMD 目标操作、位级 inline PTX |
 | 核内定位 | `reference_eval/emulate.py` | 逐位模拟与逐节点精确替换（锁定 3.6.0 / sm_86 的下降规则） |
-| 统计 | `reference_eval/analysis.py`、`detect.py`、`sensitivity.py`、`update_layer.py` | 方向规则 R1 / R5（固定均值）、R2 / R3（对齐），类内 Holm，契约 v3 的「无法判断」规则（`2_tool/scripts/essential/contract_v3.py`） |
-| 入口 | `2_tool/src/kernel_analyzer/measure.py`（统一入口）、`check.py`（绑定入口） | 声明调用、输入来源、比较方式与预算，工具展开其余部分 |
+| 统计 | `reference_eval/analysis.py`、`detect.py`、`sensitivity.py`、`update_layer.py` | 方向规则 R1 / R5（固定均值）、R2 / R3（对齐），类内 Holm，契约 v3 的「无法判断」规则（`kernel_analyzer/contract_v3.py`）；有界路线类内 Holm，非零 / 等价两轴分报 |
+| 入口 | `2_tool/src/kernel_analyzer/measure.py`（统一入口）、`check.py`（绑定入口）、`cli.py`（安装后的 `kernel-analyzer-measure` / `kernel-analyzer-analyze`） | 声明调用、输入来源、比较方式与预算，工具展开其余部分（含固定的 bias 查询 `query`） |
+| 组合规则 | `reference_eval/storage_effects.py`（来源 / 内存效果）、`composition_rules.py`（登记） | 存储身份与生命周期、真实覆盖、内容不是来源、跨启动沿用、生产者格；精度相关规则与停止类别；查询固定、有界路线族保证、两个判定轴 |
 
 DSL v2 的实现进度、每个增量的预期与结果见 [1_experiments/dsl_v2/README.md](../1_experiments/dsl_v2/README.md)；
 外部审计（基线 1aee15e）的七项发现 F01–F07 已按任务书修复，欠账也已补齐（[3_audits/fix_1aee15e](../3_audits/fix_1aee15e/README.md)，
-等审阅方复核）；仍开放的工作包差距见该页第 4、5 节。
+等审阅方复核）；仍开放的工作包差距见该页第 4、5 节。第一批共同语义内核（来源 / 精度 / 安装 / 查询）的修复、组合规则与验收见 [3_audits/batch1_semantic_core](../3_audits/batch1_semantic_core/README.md)。
 
 ## 用法
 

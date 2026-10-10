@@ -12,6 +12,7 @@ All functions assume finite inputs; callers handle special values first.
 
 from __future__ import annotations
 
+import collections
 import math
 
 import gmpy2
@@ -453,6 +454,11 @@ def gamma(n) -> float:
 PRECISION_LEVELS = {1: {"sum_k": 3, "cumsum": "gamma"}, 2: {"sum_k": 5, "cumsum": "sum2"},
                     3: {"sum_k": 8, "cumsum": "sum2"}}
 _PRECISION = [1]
+# Calls of the rules whose enclosure depends on the working-precision level (SumK / DotK with the level's K, prefix
+# sums).  When a reference evaluation makes none, a higher level gives the same enclosures exactly: the precision
+# controller (measure.run_level) uses this, and only this, to stop early (rc3 W2 / W6; no inference from an unchanged
+# pass fraction).
+PRECISION_DEPENDENT_CALLS = collections.Counter()
 
 
 def precision_level() -> int:
@@ -495,6 +501,8 @@ def sum_k(x, axis=-1, K=None):
     structure the proof uses.  Returns (res, err, ok): ok is False where a non-finite value appeared (callers fall
     back to the gamma bound there)."""
 
+    if K is None:
+        PRECISION_DEPENDENT_CALLS["sum_k"] += 1
     K = PRECISION_LEVELS[precision_level()]["sum_k"] if K is None else K
     x = np.moveaxis(np.asarray(x, dtype=np.float64), axis, -1)
     n = x.shape[-1]
@@ -609,6 +617,7 @@ def _prefix_sum2(x, axis):
 def icumsum(lo, hi, axis, reverse=False):
     """Enclosure of the exact prefix sums along ``axis``: the gamma_n bound; at working-precision level >= 2 also the
     per-prefix Sum2 bound (``_prefix_sum2``), the two intersected."""
+    PRECISION_DEPENDENT_CALLS["cumsum"] += 1
     if reverse:
         lo, hi = np.flip(lo, axis), np.flip(hi, axis)
     n = lo.shape[axis]

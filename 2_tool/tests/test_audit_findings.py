@@ -699,6 +699,10 @@ def test_upstream_values_equal_to_inputs_are_not_promoted_to_call_level(tmp_path
     assert y["mixed_non_triton_sources"], y
     assert y["reference"]["reference_scope"].startswith("kernel-level"), y["reference"]
     assert y["reference"]["complete_rate_call_level"] == 0.0
+    if call == "compiled_after_copy":
+        # batch 1, finding D12: the unmeasured producer trace must not switch the compiled reader to eager execution
+        # for the later seeds (it did before: 'y' then came out as not written by Triton)
+        assert lv["notes"]["outputs_not_written_by_triton"] == [], lv["notes"]
 
 
 @CUDA
@@ -722,9 +726,11 @@ def test_producer_classification_of_aten_ops():
     from types import SimpleNamespace
 
     from kernel_analyzer import provenance as P
+    from kernel_analyzer.reference_eval.storage_effects import StorageMap, byte_runs
     rec = SimpleNamespace(launches=[])
     x = torch.rand(16) + 1.0
-    prov = {x.untyped_storage().data_ptr(): ("input", "declared input")}
+    prov = StorageMap()     # batch 1: per-byte labels (storage_effects M2 / M5); the classification is unchanged
+    prov.bind(x.untyped_storage(), byte_runs(x), ("input", "declared input"))
     tr = P._Trace(rec)
     with tr.mode:
         a = x.reshape(4, 4).t().contiguous()
@@ -736,7 +742,7 @@ def test_producer_classification_of_aten_ops():
         x.mul_(0.5)
     for ev in tr.events:
         P._apply(prov, ev)
-    status = {k: prov[t.untyped_storage().data_ptr()][0] for k, t in
+    status = {k: prov.read(t.untyped_storage().data_ptr())[0] for k, t in
               dict(a=a, b=b, c=c, d=d, e=e, f=f, x=x).items()}
     assert status == {"a": "copy", "b": "computed", "c": "computed", "d": "const", "e": "computed", "f": "copy",
                       "x": "computed"}, status
@@ -873,7 +879,9 @@ def test_refinement_reports_a_target_it_cannot_reach(tmp_path):
                                               "dtype": "float32"}, resolution={"ulp_fraction": 1e-12, "max_level": 2})
     assert lv["status"] == "ok", lv
     assert lv["outputs"]["y"]["reference"]["resolution_met"] is False
-    assert lv["refinement"]["outcome"].startswith(("not met", "no improvement")), lv["refinement"]
+    # batch 1: the stop has its own category (here the highest declared level), never an inferred "no improvement"
+    assert lv["refinement"]["category"] == "backend limit", lv["refinement"]
+    assert lv["refinement"]["outcome"].startswith("backend limit: highest working precision level 2"), lv["refinement"]
 
 
 def test_cas_lock_certificate_refuses_an_aliased_lock_word():

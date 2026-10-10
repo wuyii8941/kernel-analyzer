@@ -15,6 +15,7 @@ A case (``Case``) gives ``setup`` (compilation, warm-up; outside the recorder), 
 
 from __future__ import annotations
 
+import collections
 import importlib.metadata as md
 import time
 
@@ -24,6 +25,7 @@ import torch
 from .reference_eval import intervals as iv
 from .reference_eval.analysis import assess_units, residual_interval
 from .reference_eval.capture import TritonLaunchRecorder
+from .reference_eval.storage_effects import InputSnapshot
 from .reference_eval.ttir_eval import ST_NINF, ST_OK, evaluate_sequence, launch_ir, ptx_zero_fills, unproven_premise
 from .reference_eval.ttir_mapping import kernel_coverage
 from .reference_eval.ttir_parser import parse_ttir
@@ -163,43 +165,39 @@ def input_storages(inp):
 PRODUCER_RECORD = " [producer record: "   # label suffix of an upstream buffer with a recorded copy / constant chain
 
 
-def torch_intermediates(launches, seq, inp, digests_before=None, input_ptrs=None, producers=None):
+def torch_intermediates(launches, seq, inp, snapshot=None, producers=None, decisions=None):
     """Per written storage: the float buffers upstream of it (through the recorded launches) that the reference
-    loaded but that are neither inputs of the case nor written by an earlier recorded launch, i.e. produced by a
-    torch / ATen op in between.  K_R treats their captured values as exact inputs, so an output depending on them
-    carries K's upstream numerical error in K_R, and its e_sem is mixed rather than purely semantic.
+    loaded but that are neither declared inputs of the case nor carried over from an earlier recorded launch, i.e.
+    produced by a torch / ATen op in between.  K_R treats their captured values as exact inputs, so an output
+    depending on them carries K's upstream numerical error in K_R, and its e_sem is mixed rather than purely semantic.
 
-    A loaded buffer is a declared input only when it is the storage of a floating input tensor of the case and its
-    bytes are that input's bytes before the launch (not modified in place).  Equal values elsewhere -- every element
-    bit pattern found among the inputs, or an all-zero buffer -- are not provenance (audit F04: ATen arithmetic can
-    round back to the input bits, an underflow can give zeros whose real value is not zero); without a producer
-    record and an element mapping such a buffer stays upstream and the reference kernel-level.
+    The memory-effect rules are those of ``reference_eval.storage_effects`` (M1-M5).  A read of a buffer's captured
+    initial values is a declared-input read only when (M1) the storage is a declared input's storage instance, held
+    alive since before the call, (M2, M3) the bytes the reference read lie inside the declared input tensors on that
+    storage and equal *that storage's own* bytes before the call (``snapshot``: ``InputSnapshot`` taken before the
+    call; equal bytes of another input, or zeros, are not provenance), and (M3) there is no write evidence: no
+    unannounced ATen-visible version increment on the storage (``CapturedArg.mutations``), and no ATen write of the
+    bytes read in the aligned producer trace (``producers``).  A buffer written by a recorded launch carries over
+    only when its bytes are unchanged and no write evidence lies in between (M4).  ATen arithmetic can round back to
+    the input bits or to the bits of another input (x + 2^-25 -> x for x in [1, 2)), and an underflow gives zeros
+    whose real value is not zero; such buffers stay upstream and the reference kernel-level.
 
     ``producers`` ({(launch, argument): (provenance, chain)} from ``provenance.producer_records``): a buffer whose
     recorded producers are only copies of declared inputs or exact constants gets the label suffix
-    ``PRODUCER_RECORD``; it is an upstream buffer whose captured values are the call's own values, not a mixed one."""
+    ``PRODUCER_RECORD``; it is an upstream buffer whose captured values are the call's own values, not a mixed one.
+    ``decisions``: a list that receives one entry per float read (launch, argument, outcome, reason) for the report.
+    Without ``snapshot`` one is taken now (after the call): callers that can should take it before the call."""
     import hashlib
+
+    from .reference_eval.storage_effects import InputSnapshot, carry_over, read_runs_of
 
     def digest(a):
         return hashlib.sha1(np.ascontiguousarray(np.asarray(a)).view(np.uint8).tobytes()).hexdigest()
 
-    def tensors(obj):
-        if torch.is_tensor(obj):
-            yield obj
-        elif isinstance(obj, dict):
-            for v in obj.values():
-                yield from tensors(v)
-        elif isinstance(obj, (list, tuple)):
-            for v in obj:
-                yield from tensors(v)
-
-    # raw bytes (bf16 / fp8 have no NumPy dtype); digests taken before the launch when the caller has them
-    inputs = digests_before if digests_before is not None else \
-        {digest(v.detach().contiguous().cpu().reshape(-1).view(torch.uint8).numpy()) for v in tensors(inp)
-         if v.is_floating_point()}
-    ptrs = input_ptrs if input_ptrs is not None else input_storages(inp)
-    deps = {}  # storage -> set of foreign buffer labels it depends on
+    snap = snapshot if snapshot is not None else InputSnapshot(inp)
+    deps = {}        # storage -> set of foreign buffer labels it depends on
     last_after = {}  # storage -> digest of its bytes after the last recorded launch that wrote it
+    last_mut = {}    # storage -> write-evidence count at that launch
     for i, (l, ref) in enumerate(zip(launches, seq.launches)):
         tensors = [a for a in l.args if a.kind == "tensor"]
         upstream = set()
@@ -207,14 +205,41 @@ def torch_intermediates(launches, seq, inp, digests_before=None, input_ptrs=None
             if a.storage_ptr not in ref.loaded_any:
                 continue
             raw = a.before.numpy() if hasattr(a.before, "numpy") else a.before
-            if a.storage_ptr in deps and last_after.get(a.storage_ptr) == digest(raw):
-                upstream |= deps[a.storage_ptr]  # unchanged since a recorded launch wrote it
-            elif a.storage_ptr in ref.loaded and str(a.dtype).startswith(("float", "bfloat")):
-                if not (a.storage_ptr in ptrs and digest(raw) in inputs):
-                    rec_ = (producers or {}).get((i, a.name))
-                    tag = f"{PRODUCER_RECORD}{rec_[0]}: {rec_[1][:120]}]" if rec_ and rec_[0] in ("input", "const",
-                                                                                                    "copy") else ""
-                    upstream.add(f"L{i}:{l.kernel_name[:40]}:{a.name}{tag}")
+            mut = getattr(a, "mutations", None)
+            if a.storage_ptr in deps:
+                keep, why = carry_over(last_after.get(a.storage_ptr) == digest(raw), mut, last_mut.get(a.storage_ptr))
+                if keep:
+                    upstream |= deps[a.storage_ptr]  # unchanged since a recorded launch wrote it (M4)
+                    continue
+            else:
+                why = None
+            if a.storage_ptr in ref.loaded and str(a.dtype).startswith(("float", "bfloat")):
+                rec_ = (producers or {}).get((i, a.name))
+                if why is None:
+                    ok, why = snap.declared_read(a, read_runs_of(ref, a))
+                    if ok:
+                        # write evidence (M3): every source that saw a write is reported
+                        seen = []
+                        if mut:
+                            seen.append(f"ATen-visible write before the launch ({mut} version increments)")
+                        if rec_ is not None and rec_[0] != "input":
+                            seen.append(f"ATen write in the producer trace ({rec_[0]}: {str(rec_[1])[:80]})")
+                        if not seen and mut is None and (rec_ is None or rec_[0] != "input"):
+                            seen.append("no write evidence (no version counter, no aligned producer trace)")
+                        if seen:
+                            ok, why = False, "; ".join(seen)
+                    if ok:
+                        if decisions is not None:
+                            decisions.append({"launch": i, "argument": a.name, "outcome": "declared input",
+                                              "evidence": "identity, coverage, own bytes, " + (
+                                                  "version counters" if mut == 0 else "producer trace")})
+                        continue
+                tag = f"{PRODUCER_RECORD}{rec_[0]}: {rec_[1][:120]}]" if rec_ and rec_[0] in ("input", "const",
+                                                                                                "copy") else ""
+                upstream.add(f"L{i}:{l.kernel_name[:40]}:{a.name}{tag}")
+                if decisions is not None:
+                    decisions.append({"launch": i, "argument": a.name, "outcome": "upstream", "reason": why,
+                                      "producer": list(rec_) if rec_ else None})
         stored = getattr(ref, "stored", set())
         for a in tensors:
             before = np.asarray(a.before.numpy() if hasattr(a.before, "numpy") else a.before)
@@ -226,6 +251,7 @@ def torch_intermediates(launches, seq, inp, digests_before=None, input_ptrs=None
                     not np.array_equal(before.view(np.uint8), after.view(np.uint8)):
                 deps[a.storage_ptr] = set(upstream)
                 last_after[a.storage_ptr] = digest(after)
+                last_mut[a.storage_ptr] = getattr(a, "mutations", None)
     return {k: sorted(v) for k, v in deps.items()}
 
 
@@ -246,9 +272,11 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     (from a derivation such as a per-input error budget, never from the sample); e_num rules then also report the
     bounded route (Hoeffding on truncated endpoints).  Every rule reports the approximate route's sensitivity.
     ``alpha``: the level of every rule test (the declared significance level of the unified entry).
-    ``producer_records``: when a kernel reads a float buffer that is not a declared input, run the call once more per
-    seed, unmeasured, under an ATen trace (``provenance.producer_records``); buffers produced only by copies of the
-    inputs or exact constants are then not mixed sources (audit F04 follow-up).
+    ``producer_records``: when a kernel reads the initial values of a float buffer, run the call once more per seed,
+    unmeasured, under an ATen trace (``provenance.producer_records``): the trace is write evidence for declared inputs
+    (an ATen write the version counters miss, e.g. through ``tensor.data``) and gives the producers of upstream
+    buffers; buffers produced only by copies of the inputs or exact constants are then not mixed sources (audit F04
+    follow-up; storage_effects M3).
     ``precision_level``: working precision of the reference (``intervals.working_precision``: 1, 2 or 3).
 
     Proof status (audit F03): elements whose reference holds only under an unproven premise are reported apart
@@ -273,6 +301,9 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     per, coverage, launch_info = {}, None, None
     not_triton, modified_after, aborted_outputs, mixed_by_output = set(), set(), {}, {}
     binding_unconfirmed, reused_address = set(), set()  # detector 2.2: output-to-producer binding by storage identity
+    trace_status = collections.Counter()
+    provenance_seed0 = None
+    precision_calls = 0   # calls of working-precision-dependent rules in the reference evaluations
     external = None
     special = {}
     mode = None
@@ -282,9 +313,11 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         inp = case.inputs(seed)
         timing["inputs"] += time.time() - t_phase
         t_phase = time.time()
-        digest0 = input_digests(inp)
-        ptrs0 = input_storages(inp)
+        # the declared inputs before the call (storage_effects M1 / M3): storages held, own bytes, coverage, and an
+        # ordered digest per input path (two inputs that swap contents are different inputs)
+        snap = InputSnapshot(inp)
         rec = TritonLaunchRecorder()
+        rec.watch_tensors(*snap.tensors)
         with rec:
             outs = case.launch(inp)
             torch.cuda.synchronize()
@@ -301,17 +334,25 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             zero_fill = [ptx_zero_fills(l.asm.get("ptx", "")) for l in rec.launches]
             fill = zero_fill_mode == "auto" and all(zero_fill)
         t_phase = time.time()
+        calls0 = sum(iv.PRECISION_DEPENDENT_CALLS.values())
         with iv.working_precision(precision_level):
             seq = evaluate_sequence(rec.launches, masked_fill_zero=fill)
+        precision_calls += sum(iv.PRECISION_DEPENDENT_CALLS.values()) - calls0
         timing["reference"] += time.time() - t_phase
         # every seed (audit F04): the upstream sources of a storage can change with the data and the allocator
-        mixed_sources = torch_intermediates(rec.launches, seq, inp, digest0, ptrs0)
-        if producer_records and any(mixed_sources.values()):
-            # an unmeasured traced run of the call for this seed: producer records for the upstream buffers
+        prods = None
+        if producer_records and any(r.loaded for r in seq.launches):
+            # an unmeasured traced run of the call for this seed: write evidence for the declared inputs and producer
+            # records for the upstream buffers (None when it cannot be aligned with the measured launches)
             from .provenance import producer_records as _producers
             prods = _producers(case, seed, rec.launches, seq)
-            if prods:
-                mixed_sources = torch_intermediates(rec.launches, seq, inp, digest0, ptrs0, prods)
+        trace_status[("aligned" if prods is not None else "not aligned") if producer_records and
+                     any(r.loaded for r in seq.launches) else "not run"] += 1
+        decisions = [] if seed == list(dev)[0] else None
+        mixed_sources = torch_intermediates(rec.launches, seq, inp, snap, prods, decisions)
+        if decisions is not None:
+            provenance_seed0 = {"reads": decisions, "carry_overs": seq.carry_overs,
+                                "external_reentries": seq.external_writes}
         if external is None:
             # a buffer changed between recorded launches (a torch op in between): from there on its captured value
             # re-enters as an exact input, so K_R downstream carries the upstream numerical error of K
@@ -433,6 +474,10 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             else:
                 special_agree = decided & (kr_cls > 0) & (k_cls == kr_cls) & ~prem
             under_premise = prem & (buf.st[m] <= ST_NINF) & ~buf.cond[m]
+            # integer set targets (L_E): their width is the target's, no working precision shrinks it
+            set_t = np.asarray(buf.iset[m], dtype=bool) if buf.iset is not None else np.zeros(idx.size, bool)
+            set_w = np.where(set_t, (buf.iset_hi[m] - buf.iset_lo[m]).astype(np.float64), 0.0) if set_t.any() \
+                else np.zeros(idx.size)
             # elements whose last write is a float atomic update: only there may repeated launches differ by the
             # order of the updates (audit F07)
             atomic_w = np.asarray(buf.float_atomic[m], dtype=bool) if buf.float_atomic is not None else \
@@ -440,7 +485,8 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             if keep is not None:
                 keep.setdefault(name, []).append({"seed": seed, "r_lo": frame(r_lo), "r_hi": frame(r_hi),
                                                   "k": frame(np.asarray(k, dtype=np.float64)), "ok": frame(ok_e, False),
-                                                  "premise": frame(under_premise, False), "shape": tuple(out.shape)})
+                                                  "premise": frame(under_premise, False), "shape": tuple(out.shape),
+                                                  "set_target": frame(set_t, False), "set_width": frame(set_w)})
             per.setdefault(name, []).append({
                 "seed": seed, "r_lo": frame(r_lo), "r_hi": frame(r_hi), "k_reps": [], "repeat_inputs_differ": False,
                 "n": (frame(n_lo), frame(n_hi)), "s": (frame(s_lo), frame(s_hi)) if has_f else None,
@@ -457,7 +503,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         t_phase = time.time()
         for _ in range(max(0, r_exec - 1)):
             inp_r = case.inputs(seed)
-            same_input = input_digests(inp_r) == digest0
+            same_input = InputSnapshot.digests_of(inp_r) == snap.digest_map
             outs_r = case.launch(inp_r)
             torch.cuda.synchronize()
             for name, row in mine.items():
@@ -486,12 +532,19 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
               "seeds": {"development": [list(dev)[0], list(dev)[-1]], "confirmation": [list(conf)[0], list(conf)[-1]]},
               "seconds": round(seconds, 1), "outputs": {},
               "tool_version": TOOL_VERSION, "launches_per_input": r_exec, "precision_level": precision_level,
+              # 0: no rule on the reference path depends on the working-precision level (a higher level gives the
+              # same enclosures exactly)
+              "precision_dependent_calls": precision_calls,
               "outputs_not_written_by_triton": sorted(not_triton),
               "outputs_binding_not_established": sorted(binding_unconfirmed),
               "outputs_at_address_of_another_recorded_storage": sorted(reused_address),
               "outputs_modified_after_last_triton_write": sorted(modified_after),
               "outputs_whose_writing_programs_aborted": aborted_outputs,
               "external_reentries_seed0": external,
+              # memory-effect evidence (storage_effects M1-M5): per float read of seed 0 the decision and its basis,
+              # the carried-over buffers with their evidence, and the producer trace per seed
+              "provenance_seed0": provenance_seed0,
+              "producer_trace_per_seed": dict(trace_status),
               "masked_lane_assumption": {"applied": fill, "ptx_zero_fills_per_launch": zero_fill,
                                          "meaning": "masked-off lanes of loads without `other` taken as 0 (the "
                                                     "lowering zero-initializes them; TTIR leaves them undefined)"}}

@@ -35,6 +35,7 @@ class _Case(check.Case):
     def __init__(self, scenario):
         self.scenario = scenario
         self.addresses = []
+        self.pools = []
 
     def inputs(self, seed):
         g = torch.Generator(device="cpu").manual_seed(seed)
@@ -42,16 +43,23 @@ class _Case(check.Case):
 
     def launch(self, inp):
         x = inp["x"]
-        a = torch.empty_like(x)
-        _double[(triton.cdiv(N, 256),)](x, a, N, BLOCK=256)
-        a_addr = a.untyped_storage().data_ptr()
-        del a                                                   # the Triton intermediate is freed
-        if self.scenario == "different_size":
-            b = torch.full((N + 5,), 1.0, device="cuda")
-        elif self.scenario == "same_size_other_content":
-            b = torch.full((N,), 3.0, device="cuda")
-        else:                                                   # same size, same content as the intermediate
-            b = x * 2.0
+        # the scenario sets up its own allocator state: A and B come from a private memory pool, so B can only
+        # reuse A's block once A is freed and nothing else decides where B lands (batch 1: with the shared caching
+        # allocator, blocks left by the unmeasured producer trace of earlier seeds or by earlier tests could serve
+        # B, and the reuse this test needs depended on test order)
+        pool = torch.cuda.MemPool()
+        self.pools.append(pool)
+        with torch.cuda.use_mem_pool(pool):
+            a = torch.empty_like(x)
+            _double[(triton.cdiv(N, 256),)](x, a, N, BLOCK=256)
+            a_addr = a.untyped_storage().data_ptr()
+            del a                                               # the Triton intermediate is freed
+            if self.scenario == "different_size":
+                b = torch.full((N + 5,), 1.0, device="cuda")
+            elif self.scenario == "same_size_other_content":
+                b = torch.full((N,), 3.0, device="cuda")
+            else:                                               # same size, same content as the intermediate
+                b = x * 2.0
         self.addresses.append(b.untyped_storage().data_ptr() == a_addr)
         return {"out": b}
 

@@ -6,6 +6,9 @@ For a rule the decision layer has per-unit projection bounds l_i <= a_i <= h_i (
   sample), the endpoints are truncated to [-M, M] (still l'_i <= a_i <= h'_i) and Hoeffding gives, with probability at
   least 1 - alpha, mu in [mean(l') - r_n, mean(h') + r_n], r_n = M sqrt(2 ln(2 / alpha) / n).  It needs no sample
   variance (s = 0 is allowed).  Empty truncated boxes mean the numerical evidence contradicts M: an error, no interval.
+  The two-sided p-value of mu = 0 is p = min(1, 2 exp(-n d^2 / (2 M^2))), d = max(mean(l'), -mean(h'), 0): Hoeffding's
+  tail at the observed distance, so p < alpha exactly when the interval excludes 0.  It is what Holm needs for the
+  family-wise guarantee of the bounded route within a declared rule class (``measure.class_statistics``).
 * ``approximate_mde``: the effect the endpoint-conservative t route detects with the given power at the frozen design
   (n, alpha) and the observed spread, plus the mean endpoint width.  A post-data sensitivity of the design (it uses
   the observed spread and widths), not an excluded effect (only the equivalence axis excludes effects).
@@ -35,8 +38,11 @@ def bounded_route(l, h, M: float, alpha: float, width_bound: Optional[float] = N
     r = M * math.sqrt(2.0 * math.log(2.0 / alpha) / n)
     lo, hi = float(lt.mean()) - r, float(ht.mean()) + r
     width = float((ht - lt).mean())
+    d = max(float(lt.mean()), -float(ht.mean()), 0.0)
+    p = min(1.0, 2.0 * math.exp(-n * d * d / (2.0 * M * M)))
     return {"method": "Hoeffding on endpoints truncated to [-M, M] (rc3 02 8.3)", "M": M, "n": int(n),
-            "half_width_r_n": r, "interval": [lo, hi],
+            "half_width_r_n": r, "interval": [lo, hi], "p_value_two_sided": p,
+            "direction": "positive" if lt.mean() > 0 else ("negative" if ht.mean() < 0 else None),
             "verdict": "DETECTED_POSITIVE" if lo > 0 else ("DETECTED_NEGATIVE" if hi < 0 else "NOT_CONFIRMED"),
             "detectable_effect_given_observed_widths": 2.0 * r + width,
             "detectable_effect_given_observed_widths_meaning": (
