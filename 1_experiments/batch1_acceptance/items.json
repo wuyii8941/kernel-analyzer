@@ -1,0 +1,1089 @@
+{
+ "schema": "batch1-acceptance-items-v1",
+ "items": [
+  {
+   "id": "H-P1a",
+   "group": "provenance",
+   "lineage": "Gluon (TTGIR)",
+   "structure": "ATen in-place add, bytes unchanged, on an input",
+   "call": "gluon_inplace_tiny_add",
+   "declaration": {
+    "call": "holdout_calls.py:gluon_inplace_tiny_add",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "not clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "answer_basis": "x + 2^-25 is a different real value for x in [1, 2) although it rounds back to x (M3)"
+  },
+  {
+   "id": "H-P1b",
+   "group": "provenance",
+   "lineage": "Gluon (TTGIR)",
+   "structure": "ATen in-place clamp that is the identity on the data",
+   "call": "gluon_inplace_clamp_noop",
+   "declaration": {
+    "call": "holdout_calls.py:gluon_inplace_clamp_noop",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "answer_basis": "the real value is x, but a version increment is write evidence and the rules do not know that clamp is the identity on these values: conservative (capability gap, not a soundness case)"
+  },
+  {
+   "id": "H-P2",
+   "group": "provenance",
+   "lineage": "classic Triton, 2D strided",
+   "structure": "transposed view of a declared input",
+   "call": "strided_transposed_input",
+   "declaration": {
+    "call": "holdout_calls.py:strided_transposed_input",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       32,
+       64
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "call-level"
+   },
+   "answer_basis": "every byte read is a declared input byte, unchanged (M1-M3)"
+  },
+  {
+   "id": "H-P3",
+   "group": "provenance",
+   "lineage": "classic Triton, 2D strided",
+   "structure": "overlapping windows (unfold) of an input",
+   "call": "unfold_overlapping_read",
+   "declaration": {
+    "call": "holdout_calls.py:unfold_overlapping_read",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "call-level"
+   },
+   "answer_basis": "overlapping reads of declared input bytes, unchanged (M2, M3)"
+  },
+  {
+   "id": "H-P4",
+   "group": "provenance",
+   "lineage": "ATen where + classic Triton",
+   "structure": "elements of x or exact zeros",
+   "call": "where_copy",
+   "declaration": {
+    "call": "holdout_calls.py:where_copy",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "call-level (producer record)"
+   },
+   "answer_basis": "where is an element copy; zeros are exact constants (M5)"
+  },
+  {
+   "id": "H-P5",
+   "group": "provenance",
+   "lineage": "ATen cat + classic Triton",
+   "structure": "x followed by exact ones",
+   "call": "cat_copy",
+   "declaration": {
+    "call": "holdout_calls.py:cat_copy",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "call-level (producer record)"
+   },
+   "answer_basis": "cat copies x; ones are exact constants (M5)"
+  },
+  {
+   "id": "H-P6",
+   "group": "provenance",
+   "lineage": "ATen index_put_ + classic Triton",
+   "structure": "partial constant write over a rounded product",
+   "call": "index_put_partial_over_computed",
+   "declaration": {
+    "call": "holdout_calls.py:index_put_partial_over_computed",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "not clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "answer_basis": "the odd elements keep 3x rounded to float32; the partial write covers only the even ones (M2, M5)"
+  },
+  {
+   "id": "H-P7",
+   "group": "provenance",
+   "lineage": "ATen index_put_ + classic Triton",
+   "structure": "an exact copy through index_put_",
+   "call": "index_put_copy",
+   "declaration": {
+    "call": "holdout_calls.py:index_put_copy",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "answer_basis": "the values are exact copies, but index_put_ is not a listed copy op: computed, conservative (capability gap)"
+  },
+  {
+   "id": "H-P8",
+   "group": "provenance",
+   "lineage": "Inductor-compiled reader",
+   "structure": "cross-input bytes written through .data",
+   "call": "compiled_reader_cross_input",
+   "declaration": {
+    "call": "holdout_calls.py:compiled_reader_cross_input",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     },
+     "w": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "not clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "answer_basis": "x holds w (1 + 2^-30) rounded to w's bytes: not x's own bytes (M3); the trace of compiled code is not aligned, the content check decides"
+  },
+  {
+   "id": "H-P9",
+   "group": "provenance",
+   "lineage": "Inductor-compiled reader",
+   "structure": "declared input read by compiled code",
+   "call": "compiled_reader_clean",
+   "declaration": {
+    "call": "holdout_calls.py:compiled_reader_clean",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "call-level"
+   },
+   "answer_basis": "declared input, unchanged; version evidence (the trace is not aligned for compiled code)"
+  },
+  {
+   "id": "H-P10",
+   "group": "provenance",
+   "lineage": "classic Triton, inference-mode input",
+   "structure": "input without a version counter",
+   "call": "inference_clean",
+   "declaration": {
+    "call": "holdout_calls.py:inference_clean",
+    "inputs": {
+     "x": {
+      "state": "holdout_calls.py:inference_input",
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "call-level"
+   },
+   "answer_basis": "no version evidence; the aligned producer trace shows no write (M3)"
+  },
+  {
+   "id": "H-P11",
+   "group": "provenance",
+   "lineage": "classic Triton, inference-mode input",
+   "structure": "in-place add without a version counter",
+   "call": "inference_tiny_add",
+   "declaration": {
+    "call": "holdout_calls.py:inference_tiny_add",
+    "inputs": {
+     "x": {
+      "state": "holdout_calls.py:inference_input",
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "not clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "answer_basis": "x + 2^-25 under inference mode: no version counter, the producer trace sees the ATen write (M3)"
+  },
+  {
+   "id": "H-P12",
+   "group": "provenance",
+   "lineage": "classic Triton, two launches",
+   "structure": "ATen write to the other half between launches",
+   "call": "region_write_other_part",
+   "declaration": {
+    "call": "holdout_calls.py:region_write_other_part",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "answer_basis": "the half read is untouched, but the version counter covers the whole storage: the carry-over is refused, conservative (capability gap)"
+  },
+  {
+   "id": "H-P13",
+   "group": "provenance",
+   "lineage": "classic Triton, two launches",
+   "structure": "exact ATen scaling between launches",
+   "call": "exact_scale_between_launches",
+   "declaration": {
+    "call": "holdout_calls.py:exact_scale_between_launches",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    }
+   },
+   "truth": "not clean",
+   "expected": {
+    "reference_scope": "kernel-level"
+   },
+   "answer_basis": "launch 2 reads 2 K(t): K's rounding of launch 1 re-enters as an exact input (M4)"
+  },
+  {
+   "id": "H-R1",
+   "group": "precision",
+   "lineage": "classic Triton",
+   "structure": "axis-1 tile sum, n = 256, cancelling pairs up to 2^90, sum ~2^-60",
+   "call": "sum_axis1",
+   "declaration": {
+    "call": "holdout_calls.py:sum_axis1",
+    "inputs": {
+     "x": {
+      "state": "holdout_calls.py:axis1_rows",
+      "shape": [
+       8,
+       256
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 1800,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    },
+    "resolution": {
+     "ulp_fraction": 0.125,
+     "max_level": 3
+    }
+   },
+   "expected": {
+    "from_predictions": true
+   },
+   "answer_basis": "predict_levels.py: SumK bound evaluated in 60-digit arithmetic on the unit inputs"
+  },
+  {
+   "id": "H-R2",
+   "group": "precision",
+   "lineage": "classic Triton",
+   "structure": "reverse prefix sum, n = 256, alternating +-2^22 plus [0.25, 4)",
+   "call": "rev_cumsum",
+   "declaration": {
+    "call": "holdout_calls.py:rev_cumsum",
+    "inputs": {
+     "x": {
+      "state": "holdout_calls.py:cancel_rows_rev",
+      "shape": [
+       4,
+       256
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 1800,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    },
+    "resolution": {
+     "ulp_fraction": 0.125,
+     "max_level": 3
+    }
+   },
+   "expected": {
+    "from_predictions": true
+   },
+   "answer_basis": "predict_levels.py: gamma bound (level 1) and Sum2 bound (levels 2-3) evaluated in 60-digit arithmetic"
+  },
+  {
+   "id": "H-R3",
+   "group": "precision",
+   "lineage": "classic Triton",
+   "structure": "elementwise exp, target 1e-9 ulp",
+   "call": "exp1d",
+   "declaration": {
+    "call": "holdout_calls.py:exp1d",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        -1,
+        1
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 1800,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    },
+    "resolution": {
+     "ulp_fraction": 1e-09,
+     "max_level": 3
+    }
+   },
+   "expected": {
+    "category": "backend limit",
+    "outcome_prefix": "backend limit: no rule",
+    "final_level": 1
+   },
+   "answer_basis": "no reduction or prefix sum on the path: no precision-dependent rule; a higher level gives the same enclosures"
+  },
+  {
+   "id": "H-R4",
+   "group": "precision",
+   "lineage": "classic Triton",
+   "structure": "float64 row sum, target 1/8 ulp",
+   "call": "row_sum64",
+   "declaration": {
+    "call": "holdout_calls.py:row_sum64",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "normal": [
+        0,
+        1
+       ]
+      },
+      "shape": [
+       4,
+       128
+      ],
+      "dtype": "float64"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 1800,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    },
+    "resolution": {
+     "ulp_fraction": 0.125,
+     "max_level": 3
+    }
+   },
+   "expected": {
+    "category": "backend limit",
+    "outcome_prefix": "backend limit: float64",
+    "final_level": 1
+   },
+   "answer_basis": "the u|s| term alone makes the width about one float64 ulp: below 1/8 ulp is out of reach with float64 endpoints"
+  },
+  {
+   "id": "H-R5",
+   "group": "precision",
+   "lineage": "classic Triton",
+   "structure": "16 programs atomic_add one int32 counter and store the old value",
+   "call": "contended_int",
+   "declaration": {
+    "call": "holdout_calls.py:contended_int",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "randint": [
+        1,
+        10
+       ]
+      },
+      "shape": [
+       16
+      ],
+      "dtype": "int32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 1800,
+     "case_timeout": 600,
+     "max_units": 32
+    },
+    "units": {
+     "development": 4,
+     "confirmation": 28,
+     "seed_offset": 7000
+    },
+    "resolution": {
+     "ulp_fraction": 0.125,
+     "max_level": 3
+    }
+   },
+   "expected": {
+    "category": "intrinsic set width",
+    "final_level": 1
+   },
+   "answer_basis": "the returned old value depends on the order: a set target (L_E), no precision shrinks it"
+  },
+  {
+   "id": "H-Q1",
+   "group": "bias",
+   "lineage": "classic Triton",
+   "structure": "bf16 rounding toward zero of 3x + 1",
+   "call": "rtz_bf16",
+   "declaration": {
+    "call": "holdout_calls.py:rtz_bf16",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 72
+    },
+    "units": {
+     "development": 8,
+     "confirmation": 64,
+     "seed_offset": 9000
+    },
+    "magnitude_bound": {
+     "elementwise": 0.031250953674316406,
+     "basis": "3x + 1 in [4, 7]: rounding toward zero to bf16 errs by (-2^-5, 0] (bf16 ulp on [4, 8)), the float32 evaluation of 3x + 1 by at most 2^-21; sum < 2^-5 + 2^-20 (derived before the data)"
+    },
+    "equivalence": {
+     "rel": 0.0001,
+     "basis": "declared tolerance"
+    },
+    "query": {
+     "axes": [
+      "nonzero",
+      "equivalence"
+     ]
+    }
+   },
+   "expected": {
+    "fixed_mean.R1.approximate": "nonzero (positive)",
+    "fixed_mean.R1.bounded": "nonzero (positive)",
+    "aligned.R2.approximate": "nonzero (positive)",
+    "aligned.R2.bounded": "nonzero (positive)",
+    "fixed_mean.R1.equivalence": "not shown"
+   },
+   "answer_basis": "every residual is at most 2^-21 and the truncation part averages about -2^-6: the coordinate mean is negative (R1 positive) and magnitudes are pulled toward zero (R2 positive); |mean| is far above delta = 1e-4 q_R"
+  },
+  {
+   "id": "H-Q2",
+   "group": "bias",
+   "lineage": "classic Triton",
+   "structure": "bf16 rounding to nearest even of 3x + 1",
+   "call": "rne_bf16",
+   "declaration": {
+    "call": "holdout_calls.py:rne_bf16",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 72
+    },
+    "units": {
+     "development": 8,
+     "confirmation": 64,
+     "seed_offset": 9000
+    },
+    "magnitude_bound": {
+     "elementwise": 0.015625953674316406,
+     "basis": "nearest-even bf16 rounding errs by at most 2^-6 on [4, 8), the float32 evaluation by at most 2^-21 (derived before the data)"
+    },
+    "equivalence": {
+     "rel": 0.01,
+     "basis": "declared tolerance"
+    },
+    "query": {
+     "axes": [
+      "nonzero",
+      "equivalence"
+     ]
+    }
+   },
+   "expected": {
+    "fixed_mean.R1.equivalence": "within delta",
+    "aligned.R2.equivalence": "within delta"
+   },
+   "answer_basis": "|K - G| <= 0.0157 per element against delta = 0.01 q_R (about 0.056) per coordinate; no commitment on the nonzero axis (a small systematic effect of nearest-even rounding is possible)"
+  },
+  {
+   "id": "H-Q3",
+   "group": "bias",
+   "lineage": "declaration",
+   "structure": "equivalence axis requested without delta",
+   "call": "rne_bf16",
+   "declaration": {
+    "call": "holdout_calls.py:rne_bf16",
+    "inputs": {
+     "x": {
+      "sampler": {
+       "uniform": [
+        1,
+        2
+       ]
+      },
+      "shape": [
+       1024
+      ],
+      "dtype": "float32"
+     }
+    },
+    "compare": {
+     "mode": "A",
+     "measure": [
+      "y"
+     ]
+    },
+    "budget": {
+     "cpu_seconds": 900,
+     "gpu_seconds": 900,
+     "case_timeout": 600,
+     "max_units": 72
+    },
+    "units": {
+     "development": 8,
+     "confirmation": 64,
+     "seed_offset": 9000
+    },
+    "query": {
+     "axes": [
+      "nonzero",
+      "equivalence"
+     ]
+    }
+   },
+   "expected": {
+    "missing_prefix": "equivalence.rel"
+   },
+   "answer_basis": "Q3: delta is required exactly when the equivalence axis is requested"
+  },
+  {
+   "id": "H-K1",
+   "group": "packaging",
+   "lineage": "wheel",
+   "structure": "clean wheel install outside the source tree",
+   "expected": {
+    "log_line": "CLEAN_WHEEL_ACCEPTANCE_OK"
+   },
+   "answer_basis": "2_tool/scripts/acceptance/clean_wheel_install.sh on the frozen commit (K1)"
+  },
+  {
+   "id": "H-G1",
+   "group": "regression",
+   "lineage": "public v1.1 programs",
+   "structure": "28 programs, mode B, 96 units",
+   "expected": {
+    "same_as": "1_experiments/dsl_v2/regression_v11/reg20261009T2319/summary.json"
+   },
+   "answer_basis": "batch 1 changes provenance evidence and the precision controller only; on these programs every v3.1 comparison field and every e_num / e_sem summary stays as in reg20261009T2319"
+  }
+ ]
+}
