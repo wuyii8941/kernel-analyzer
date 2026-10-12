@@ -249,3 +249,35 @@ def three_level_rows(seed, shape, dtype):
         small = float(np.float32(rng.uniform(1.0, 2.0) * 2.0 ** -100))
         a[r] = rng.permutation(np.concatenate([pairs, [small, 0.0]]))
     return torch.tensor(a, dtype=torch.float32, device="cuda")
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Round 2 (measurement fixes before the tolerance study).
+
+def inplace_between_launches_data(inp):
+    """t = 3x + 1 (launch 1); t.data + 2^-23 leaves every byte and the version counter unchanged; launch 2 reads t.
+    Only the producer trace sees the ATen write."""
+    t = _affine_of(inp["x"])
+    t.data.add_(2.0 ** -23)
+    return {"y": _affine_of(t)}
+
+
+def row_sum_counted(inp):
+    """row_sum, counting how often the call runs (fixed-capture refinement: higher levels must not re-execute)."""
+    import audit_state
+    audit_state.CALLS["row_sum_counted"] += 1
+    return row_sum(inp)
+
+
+def switches_seen(inp):
+    """Records the precision switches the call actually runs under."""
+    import audit_state
+    audit_state.SWITCHES.append((torch.backends.cuda.matmul.allow_tf32, torch.get_float32_matmul_precision(),
+                                 torch.backends.cudnn.allow_tf32))
+    return {"y": _affine_of(inp["x"])}
+
+
+def dropout_then_affine(inp):
+    """An in-call random mask (global RNG) before a kernel: the unmeasured trace must not shift the stream."""
+    x = inp["x"]
+    return {"y": _affine_of(x * (torch.rand_like(x) > 0.5))}

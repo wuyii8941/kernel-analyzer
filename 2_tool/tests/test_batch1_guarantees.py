@@ -176,7 +176,9 @@ def _fake_pass(results):
     """A _measure_pass stand-in returning one synthetic pass per level."""
     it = iter(results)
 
-    def fake(exp, level, prec):
+    def fake(exp, level, prec, captures=None):
+        if captures is not None:          # a filled capture store: higher levels replay it (round 2)
+            captures.setdefault("seeds", {0: {}})
         r = next(it)
         if "status" in r:
             return r
@@ -208,7 +210,7 @@ def test_controller_does_not_stop_on_an_unchanged_pass_fraction(monkeypatch):
     ([{"outputs": {"y": (0.5, "float32", 0)}, "calls": 0}], 3, "backend limit", "backend limit: no rule"),
     ([{"outputs": {"y": (0.5, "float64", 0)}}], 3, "backend limit", "backend limit: float64"),
     ([{"outputs": {"y": (None, "int32", 12)}}], 3, "intrinsic set width", "intrinsic set width"),
-    ([{"outputs": {"y": (1.0, "int32", 12)}}], 3, "intrinsic set width", "intrinsic set width"),
+    ([{"outputs": {"y": (1.0, "int32", 12)}}], 3, "met", "met at level 1 (set targets of y keep their own width)"),
     ([{"outputs": {"y": (1.0, "float32", 0), "z": (None, "float32", 0)}}], 3, "no numerical enclosure",
      "no numerical enclosure: z"),
     ([{"outputs": {"y": (1.0, "float32", 0), "z": (1.0, "float32", 0)}}], 3, "met", "met at level 1"),

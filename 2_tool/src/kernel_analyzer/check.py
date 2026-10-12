@@ -195,9 +195,12 @@ def torch_intermediates(launches, seq, inp, snapshot=None, producers=None, decis
         return hashlib.sha1(np.ascontiguousarray(np.asarray(a)).view(np.uint8).tobytes()).hexdigest()
 
     snap = snapshot if snapshot is not None else InputSnapshot(inp)
+    from .provenance import ATEN_WRITES
+    aten = (producers or {}).get(ATEN_WRITES) or {}
     deps = {}        # storage -> set of foreign buffer labels it depends on
     last_after = {}  # storage -> digest of its bytes after the last recorded launch that wrote it
     last_mut = {}    # storage -> write-evidence count at that launch
+    last_writer = {}  # storage -> index of that launch
     for i, (l, ref) in enumerate(zip(launches, seq.launches)):
         tensors = [a for a in l.args if a.kind == "tensor"]
         upstream = set()
@@ -208,6 +211,11 @@ def torch_intermediates(launches, seq, inp, snapshot=None, producers=None, decis
             mut = getattr(a, "mutations", None)
             if a.storage_ptr in deps:
                 keep, why = carry_over(last_after.get(a.storage_ptr) == digest(raw), mut, last_mut.get(a.storage_ptr))
+                n_now = aten.get(i, {}).get(a.storage_ptr)
+                n_then = aten.get(last_writer.get(a.storage_ptr), {}).get(a.storage_ptr)
+                if keep and n_now is not None and n_then is not None and n_now > n_then:
+                    # M4: the producer trace saw an ATen write that bytes and version counters miss (tensor.data)
+                    keep, why = False, f"ATen write between the launches in the producer trace ({n_now - n_then})"
                 if keep:
                     upstream |= deps[a.storage_ptr]  # unchanged since a recorded launch wrote it (M4)
                     continue
@@ -252,11 +260,63 @@ def torch_intermediates(launches, seq, inp, snapshot=None, producers=None, decis
                 deps[a.storage_ptr] = set(upstream)
                 last_after[a.storage_ptr] = digest(after)
                 last_mut[a.storage_ptr] = getattr(a, "mutations", None)
+                last_writer[a.storage_ptr] = i
     return {k: sorted(v) for k, v in deps.items()}
 
 
+CAPTURE_STORE_BYTES = int(__import__("os").environ.get("KA_CAPTURE_STORE_BYTES", str(8 << 30)))
+
+
+def precision_environment() -> dict:
+    """The precision switches the candidate runs under (recorded, never changed by the analysis)."""
+    import os
+    m = torch.backends.cuda.matmul
+    return {"torch.backends.cuda.matmul.allow_tf32": bool(m.allow_tf32),
+            "float32_matmul_precision": torch.get_float32_matmul_precision(),
+            "torch.backends.cudnn.allow_tf32": bool(torch.backends.cudnn.allow_tf32),
+            "allow_fp16_reduced_precision_reduction": bool(getattr(m, "allow_fp16_reduced_precision_reduction", False)),
+            "allow_bf16_reduced_precision_reduction": bool(getattr(m, "allow_bf16_reduced_precision_reduction", False)),
+            "TRITON_F32_DEFAULT": os.environ.get("TRITON_F32_DEFAULT")}
+
+
+ANALYSIS_INTERVENTIONS = [
+    "torch._inductor.config.use_static_cuda_launcher = False: Inductor launches its compiled kernels through the Python "
+    "launcher, where the recorder's hook sits (same kernel binaries, same arguments)",
+    "torch._dynamo.reset() before the case setup (each case starts from an empty Dynamo cache)",
+    "the producer trace: one unmeasured call per seed under an ATen dispatch mode and force_eager stance, from the "
+    "measured run's random state; the random state is restored afterwards",
+    "no precision switch (TF32, float32 matmul precision, reduced-precision reductions) is set by the analysis"]
+
+
+def _capture_bytes(launches) -> int:
+    n = 0
+    for l in launches:
+        for a in list(l.args) + list(getattr(l, "implicit", []) or []):
+            for t in (a.before, a.after):
+                if t is not None:
+                    n += int(t.numel() * t.element_size()) if hasattr(t, "numel") else int(np.asarray(t).nbytes)
+    return n
+
+
+def _trace_conflicts(launches, seq, prods) -> set:
+    """(launch, storage) pairs the reference memory carried over although the aligned producer trace saw an ATen
+    write to the storage after the last recorded launch that touched it (storage_effects M4)."""
+    from .provenance import ATEN_WRITES
+    aten = (prods or {}).get(ATEN_WRITES) or {}
+    out = set()
+    for c in seq.carry_overs:
+        i, ptr = c["launch"], c["storage"]
+        prev = [j for j in range(i) if any(a.kind == "tensor" and a.storage_ptr == ptr for a in launches[j].args)]
+        if not prev:
+            continue
+        n_now, n_then = aten.get(i, {}).get(ptr), aten.get(prev[-1], {}).get(ptr)
+        if n_now is not None and n_then is not None and n_now > n_then:
+            out.add((i, ptr))
+    return out
+
+
 def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_rel=None, repeats=None,
-        magnitude_bound=None, alpha=0.05, producer_records=True, precision_level=1):
+        magnitude_bound=None, alpha=0.05, producer_records=True, precision_level=1, captures=None):
     """One case through mode A or B.  ``keep``: a dict that receives, per output and seed, the reference interval
     and K in the output's logical element order (for independent recomputation of K_R); ``equivalence_rel``: passed
     to the decision layer (the equivalence axis next to each nonzero verdict).
@@ -278,25 +338,43 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     buffers; buffers produced only by copies of the inputs or exact constants are then not mixed sources (audit F04
     follow-up; storage_effects M3).
     ``precision_level``: working precision of the reference (``intervals.working_precision``: 1, 2 or 3).
+    ``captures``: a dict.  Empty: every seed's capture (launches, outputs, input snapshot, producer records,
+    specification, repeated launches) is stored in it.  Filled by an earlier call: nothing is executed; the reference and
+    the statistics are recomputed on the stored capture (same inputs, initial state and actual outputs), e.g. at a
+    higher working precision.  When the stored launches exceed ``CAPTURE_STORE_BYTES`` the store is dropped and
+    ``captures["overflow"]`` set.
+
+    The analysis never changes the candidate's precision switches; they are recorded (``precision_environment``),
+    with the analysis' own interventions (``analysis_interventions``).
 
     Proof status (audit F03): elements whose reference holds only under an unproven premise are reported apart
     (``complete_under_premise_fraction``) and are not ok for the statistics.  IR (audit F05): each launch is analysed
     on the IR it was captured with (TTIR, or TTGIR for Gluon kernels), the same choice for coverage, atomic
     detection and evaluation, and its kind is reported."""
-    torch.backends.cuda.matmul.allow_tf32 = False
-    torch.set_float32_matmul_precision("highest")
+    from .provenance import rng_state
+
+    replay = captures is not None and bool(captures.get("seeds"))
+    store = captures is not None and not replay and not captures.get("overflow")
+    if store:
+        captures["seeds"], captures["bytes"] = {}, 0
     import torch._inductor.config as inductor_config
 
     inductor_config.use_static_cuda_launcher = False  # Inductor's static launcher bypasses the launch hook
     TritonLaunchRecorder.install_hook()
-    # every case starts from an empty Dynamo cache, as PyTorch's own tests do: cases run several to a process, and a
-    # cached graph can be reused for a different op when its guards do not pin the callable (pytorch#197811; B017)
-    torch._dynamo.reset()
     timing = {"setup_compile_warmup": 0.0, "inputs": 0.0, "capture_first_seed": 0.0, "capture": 0.0, "reference": 0.0,
               "specification": 0.0, "statistics": 0.0, "repeat_launches": 0.0}
     r_exec = None
     t_phase = time.time()
-    case.setup()
+    if replay:
+        precision_env = captures["precision_environment"]
+    else:
+        # every case starts from an empty Dynamo cache, as PyTorch's own tests do: cases run several to a process, and
+        # a cached graph can be reused for a different op when its guards do not pin the callable (pytorch#197811)
+        torch._dynamo.reset()
+        case.setup()
+        precision_env = precision_environment()
+        if captures is not None:
+            captures["precision_environment"] = precision_env
     timing["setup_compile_warmup"] = time.time() - t_phase
     per, coverage, launch_info = {}, None, None
     not_triton, modified_after, aborted_outputs, mixed_by_output = set(), set(), {}, {}
@@ -309,20 +387,31 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     mode = None
     t0 = time.time()
     for seed in list(dev) + list(conf):
-        t_phase = time.time()
-        inp = case.inputs(seed)
-        timing["inputs"] += time.time() - t_phase
-        t_phase = time.time()
-        # the declared inputs before the call (storage_effects M1 / M3): storages held, own bytes, coverage, and an
-        # ordered digest per input path (two inputs that swap contents are different inputs)
-        snap = InputSnapshot(inp)
-        rec = TritonLaunchRecorder()
-        rec.watch_tensors(*snap.tensors)
-        with rec:
-            outs = case.launch(inp)
-            torch.cuda.synchronize()
-        # the first seed's capture also pays any JIT compilation the case's setup did not warm up
-        timing["capture_first_seed" if seed == list(dev)[0] else "capture"] += time.time() - t_phase
+        if replay:
+            cap = captures["seeds"][seed]
+            inp, snap, rec, outs = cap["inp"], cap["snap"], cap["rec"], cap["outs"]
+        else:
+            t_phase = time.time()
+            inp = case.inputs(seed)
+            timing["inputs"] += time.time() - t_phase
+            t_phase = time.time()
+            # the declared inputs before the call (storage_effects M1 / M3): storages held, own bytes, coverage, and an
+            # ordered digest per input path (two inputs that swap contents are different inputs)
+            snap = InputSnapshot(inp)
+            rec = TritonLaunchRecorder()
+            rec.watch_tensors(*snap.tensors)
+            rng_before = rng_state()       # the trace replays the measured run's random draws (T1)
+            with rec:
+                outs = case.launch(inp)
+                torch.cuda.synchronize()
+            # the first seed's capture also pays any JIT compilation the case's setup did not warm up
+            timing["capture_first_seed" if seed == list(dev)[0] else "capture"] += time.time() - t_phase
+            if store:
+                captures["bytes"] += _capture_bytes(rec.launches)
+                if captures["bytes"] > CAPTURE_STORE_BYTES:
+                    captures["seeds"], store, captures["overflow"] = None, False, True
+                else:
+                    cap = captures["seeds"][seed] = {"inp": inp, "snap": snap, "rec": rec, "outs": outs}
         if coverage is None:
             irs = [launch_ir(l) for l in rec.launches]   # one IR choice for coverage, atomics and evaluation
             coverage = [kernel_coverage(parse_ttir(text))["complete"] for _, text in irs]
@@ -340,26 +429,48 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         precision_calls += sum(iv.PRECISION_DEPENDENT_CALLS.values()) - calls0
         timing["reference"] += time.time() - t_phase
         # every seed (audit F04): the upstream sources of a storage can change with the data and the allocator
-        prods = None
-        if producer_records and any(r.loaded for r in seq.launches):
-            # an unmeasured traced run of the call for this seed: write evidence for the declared inputs and producer
-            # records for the upstream buffers (None when it cannot be aligned with the measured launches)
-            from .provenance import producer_records as _producers
-            prods = _producers(case, seed, rec.launches, seq)
-        trace_status[("aligned" if prods is not None else "not aligned") if producer_records and
-                     any(r.loaded for r in seq.launches) else "not run"] += 1
+        if replay:
+            prods, status = cap["prods"], cap["trace_status"]
+        else:
+            prods = None
+            if producer_records and any(r.loaded for r in seq.launches):
+                # an unmeasured traced run of the call for this seed: write evidence for the declared inputs and
+                # producer records for the upstream buffers (None when it cannot be aligned with the measured launches)
+                from .provenance import producer_records as _producers
+                prods = _producers(case, seed, rec.launches, seq, rng_before=rng_before)
+            status = ("aligned" if prods is not None else "not aligned") if producer_records and \
+                any(r.loaded for r in seq.launches) else "not run"
+            if store:
+                cap.update(prods=prods, trace_status=status)
+        trace_status[status] += 1
+        # M4: a carry-over the producer trace contradicts (an ATen write the bytes and version counters miss) is
+        # withdrawn and the reference re-evaluated with the buffer re-entering as an external input
+        withdrawn = _trace_conflicts(rec.launches, seq, prods) if prods else set()
+        if withdrawn:
+            t_phase = time.time()
+            calls0 = sum(iv.PRECISION_DEPENDENT_CALLS.values())
+            with iv.working_precision(precision_level):
+                seq = evaluate_sequence(rec.launches, masked_fill_zero=fill, force_external=withdrawn)
+            precision_calls += sum(iv.PRECISION_DEPENDENT_CALLS.values()) - calls0
+            timing["reference"] += time.time() - t_phase
         decisions = [] if seed == list(dev)[0] else None
         mixed_sources = torch_intermediates(rec.launches, seq, inp, snap, prods, decisions)
         if decisions is not None:
             provenance_seed0 = {"reads": decisions, "carry_overs": seq.carry_overs,
-                                "external_reentries": seq.external_writes}
+                                "external_reentries": seq.external_writes,
+                                "carry_overs_withdrawn_by_trace": sorted([list(x) for x in withdrawn])}
         if external is None:
             # a buffer changed between recorded launches (a torch op in between): from there on its captured value
             # re-enters as an exact input, so K_R downstream carries the upstream numerical error of K
             external = [{"launch": e["launch"], "kernel": rec.launches[e["launch"]].kernel_name, "buffer": e["buffer"]}
                         for e in seq.external_writes]
         t_phase = time.time()
-        specs = case.spec(inp)
+        if replay:
+            specs = cap["specs"]
+        else:
+            specs = case.spec(inp)
+            if store:
+                cap["specs"] = specs
         timing["specification"] += time.time() - t_phase
         this_mode = "A" if specs is None else "B"
         if mode not in (None, this_mode):
@@ -501,11 +612,20 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                 8 if any(li.get("float_atomics") for li in (launch_info or [])) else 2)
         mine = {name: rows[-1] for name, rows in per.items() if rows and rows[-1]["seed"] == seed}
         t_phase = time.time()
-        for _ in range(max(0, r_exec - 1)):
-            inp_r = case.inputs(seed)
-            same_input = InputSnapshot.digests_of(inp_r) == snap.digest_map
-            outs_r = case.launch(inp_r)
-            torch.cuda.synchronize()
+        if replay:
+            reps = cap["reps"]
+        else:
+            reps = []
+            for _ in range(max(0, r_exec - 1)):
+                inp_r = case.inputs(seed)
+                same_input = InputSnapshot.digests_of(inp_r) == snap.digest_map
+                outs_r = case.launch(inp_r)
+                torch.cuda.synchronize()
+                reps.append((same_input, {k: v.detach().clone() for k, v in outs_r.items()
+                                          if torch.is_tensor(v)}))
+            if store:
+                cap["reps"] = reps
+        for same_input, outs_r in reps:
             for name, row in mine.items():
                 if not same_input:
                     row["repeat_inputs_differ"] = True
@@ -532,6 +652,8 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
               "seeds": {"development": [list(dev)[0], list(dev)[-1]], "confirmation": [list(conf)[0], list(conf)[-1]]},
               "seconds": round(seconds, 1), "outputs": {},
               "tool_version": TOOL_VERSION, "launches_per_input": r_exec, "precision_level": precision_level,
+              "capture": "reused" if replay else "captured",
+              "precision_environment": precision_env, "analysis_interventions": ANALYSIS_INTERVENTIONS,
               # 0: no rule on the reference path depends on the working-precision level (a higher level gives the
               # same enclosures exactly)
               "precision_dependent_calls": precision_calls,

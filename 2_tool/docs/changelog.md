@@ -19,6 +19,13 @@ v1.1 的计分只绑定运行 r20261008T2030。
   - 新测试只在 CPU 上求值编译产物（`triton.compile`，不启动），有竞争的 kernel 从不运行。
 - 注册表写到 `2_tool/data/rule_registry.json`（`2_tool/scripts/dsl_v2/build_rule_registry.py`）；`pre-reorg-20261009:results/general/` 下的 v3.1 注册表冻结不改。
 
+### 第二轮：容差研究之前的测量修复，2026-10-12
+
+见 [3_audits/round2_measurement](../../3_audits/round2_measurement/README.md)。跨启动沿用与生产者证据一致（经 `tensor.data` 的写入撤回沿用
+并重新求值，M4）；精度细化固定同一次捕获、只重算参照，捕获放不下时拒绝细化而不重新执行（P2）；分析不再设置 TF32 与
+float32 矩阵乘精度，改为报告候选的精度开关与分析干预（T2）；生产者追踪从被测运行前的随机状态开始并在结束后恢复（T1）；
+没有数值包围时不报告达标（P2、P3）。
+
 ### 第一批：共同语义内核的来源、精度、安装与查询，2026-10-10
 
 逐项的语义义务、实现入口、独立答案、组合测试与报告字段见 [3_audits/batch1_semantic_core](../../3_audits/batch1_semantic_core/README.md)；

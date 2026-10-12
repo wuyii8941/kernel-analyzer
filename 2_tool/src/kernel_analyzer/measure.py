@@ -642,12 +642,13 @@ REFINEMENT_CATEGORIES = {
 
 
 def _output_refinement(o: dict, frac: float) -> str:
-    """Per evaluated output at one level: met / intrinsic set width / backend limit (float64) / refinable."""
+    """Per evaluated output at one level: met (set targets, if any, keep their own width) / set targets only /
+    nothing to refine / backend limit (float64) / refinable.  No numerical enclosure is never 'met'."""
     q = o["reference"]
     if q.get("resolution_met") is True:      # every numerical enclosure met; set targets keep their own width
-        return "intrinsic set width" if q.get("set_target_elements") else "met"
+        return "met"
     if q.get("resolution_met") is None:     # no complete finite element
-        return "intrinsic set width" if q.get("set_target_elements") else "nothing to refine"
+        return "set targets only" if q.get("set_target_elements") else "nothing to refine"
     if o.get("dtype") == "float64" and frac < 1.0:
         return "backend limit"
     return "refinable"
@@ -671,8 +672,18 @@ def run_level(exp: dict, level: dict) -> dict:
     t0 = time.time()
     steps, best, outcome, category, prec = [], None, None, None, 1
     per_output = {}
+    # one capture for every level (brief: a precision curve never mixes executions): level 1 runs the call and stores
+    # the capture, higher levels recompute only the reference and the statistics on it
+    captures = {}
     while True:
-        out = _measure_pass(exp, level, prec)
+        if prec > 1 and not captures.get("seeds"):
+            category = "budget exhausted"
+            outcome = (f"budget exhausted: the capture of level 1 exceeds the capture store "
+                       f"({check.CAPTURE_STORE_BYTES} bytes); refining would re-execute the call, which mixes "
+                       f"executions -- not done; the result of level {prec - 1} stands")
+            prec -= 1
+            break
+        out = _measure_pass(exp, level, prec, captures)
         if out.get("status") != "ok":
             if best is None:
                 return out
@@ -685,8 +696,13 @@ def run_level(exp: dict, level: dict) -> dict:
         best = out
         evaluated = {n: o for n, o in out["outputs"].items() if o.get("status") == "evaluated"}
         per_output = {n: _output_refinement(o, frac) for n, o in evaluated.items()}
-        steps.append({"level": prec, "resolution_met": all(v in ("met", "intrinsic set width")
-                                                            for v in per_output.values()),
+        kinds = set(per_output.values())
+        steps.append({"level": prec,
+                      # True only with numerical enclosures that all meet the target; None without any
+                      "resolution_met": (None if kinds <= {"set targets only", "nothing to refine"} else
+                                         kinds <= {"met", "set targets only", "nothing to refine"} and
+                                         "nothing to refine" not in kinds),
+                      "capture": out.get("capture"),
                       "per_output": dict(per_output),
                       "resolved_fraction": {n: o["reference"].get("resolved_fraction") for n, o in evaluated.items()},
                       "unresolved_elements": {n: o["reference"].get("unresolved_elements")
@@ -696,13 +712,15 @@ def run_level(exp: dict, level: dict) -> dict:
                       "seconds": out.get("seconds")})
         refinable = [n for n, v in per_output.items() if v == "refinable"]
         if not refinable:
-            kinds = set(per_output.values())
+            sets = sorted(n for n, o in evaluated.items() if o["reference"].get("set_target_elements"))
             if kinds <= {"met"}:
-                category, outcome = "met", f"met at level {prec}"
-            elif kinds <= {"met", "intrinsic set width"}:
+                category, outcome = "met", f"met at level {prec}" + (
+                    f" (set targets of {', '.join(sets)} keep their own width)" if sets else "")
+            elif kinds <= {"met", "set targets only"}:
                 category = "intrinsic set width"
-                outcome = (f"intrinsic set width at level {prec}: the remaining elements are set targets (L_E); "
-                           "every numerical enclosure is met")
+                outcome = (f"intrinsic set width at level {prec}: " + ", ".join(
+                    sorted(n for n, v in per_output.items() if v == "set targets only")) +
+                    " has no numerical enclosure, only set targets (L_E); nothing for a working precision to resolve")
             elif "backend limit" in kinds:
                 category = "backend limit"
                 outcome = ("backend limit: float64 outputs with nonzero enclosure width cannot get below a fraction "
@@ -737,15 +755,18 @@ def run_level(exp: dict, level: dict) -> dict:
     return best
 
 
-def _measure_pass(exp: dict, level: dict, precision_level: int = 1) -> dict:
+def _measure_pass(exp: dict, level: dict, precision_level: int = 1, captures=None) -> dict:
     call = resolve(exp["call"], exp["_base_dir"])
     measure_names = list(exp["compare"]["measure"])
     spec_fn = resolve(exp["compare"]["spec"], exp["_base_dir"]) if exp["compare"]["mode"] == "B" else None
     budget = exp["budget"]
     dev, conf = unit_split(exp)
     seeds = dev + conf
-    fas = {}
-    shapes = {}
+    # per-call state the call fills in (specification values, output shapes and dtypes); kept with the capture, so a
+    # replayed pass (higher working precision, nothing executed) sees the same values
+    store = captures if captures is not None else {}
+    fas = store.setdefault("fas", {})
+    shapes = store.setdefault("shapes", {})
 
     class Case(check.Case):
         name = f"measure:{exp['call']}:{level}"
@@ -798,7 +819,7 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1) -> dict:
     try:
         rep = check.run(case, dev=dev, conf=conf, keep=keep, magnitude_bound=exp.get("magnitude_bound"),
                         alpha=exp["alpha"], equivalence_rel=(exp.get("equivalence") or {}).get("rel"),
-                        repeats=exp.get("repeats"), precision_level=precision_level)
+                        repeats=exp.get("repeats"), precision_level=precision_level, captures=captures)
     except _Timeout as exc:
         return {"level": level, "status": "over budget", "reason": str(exc), "failure_class": "over budget",
                 "seconds": round(time.time() - t0, 1)}
@@ -811,7 +832,8 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1) -> dict:
         signal.alarm(0)
         signal.signal(signal.SIGALRM, old)
     seconds = time.time() - t0
-    dtypes = getattr(case, "_last_dtypes", {})
+    dtypes = getattr(case, "_last_dtypes", None) or store.get("dtypes") or {}
+    store["dtypes"] = dtypes
     outputs = {}
     failures = []
     notes = {k: rep.get(k) for k in ("outputs_not_written_by_triton", "outputs_binding_not_established",
@@ -872,6 +894,8 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1) -> dict:
         failures.extend(entry["failure_classes"])
         outputs[name] = entry
     return {"level": level, "status": "ok", "precision_level": precision_level,
+            "capture": rep.get("capture"), "precision_environment": rep.get("precision_environment"),
+            "analysis_interventions": rep.get("analysis_interventions"),
             "precision_dependent_calls": rep.get("precision_dependent_calls"),
             "producer_trace_per_seed": rep.get("producer_trace_per_seed"),
             "provenance_seed0": rep.get("provenance_seed0"),

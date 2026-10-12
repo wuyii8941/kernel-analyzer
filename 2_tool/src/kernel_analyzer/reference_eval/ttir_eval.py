@@ -5284,7 +5284,8 @@ def launch_ir(launch) -> tuple:
 
 
 def evaluate_sequence(launches: list, mode: str = NumericMode.NUMERICAL_DIFFERENCE,
-                      programs_for=None, pin_loads: tuple = (), masked_fill_zero: bool = False) -> SequenceReference:
+                      programs_for=None, pin_loads: tuple = (), masked_fill_zero: bool = False,
+                      force_external=()) -> SequenceReference:
     """Chain launches through one reference memory (composed reference).
 
     Before each launch every operand buffer is checked: if its captured bytes
@@ -5296,7 +5297,10 @@ def evaluate_sequence(launches: list, mode: str = NumericMode.NUMERICAL_DIFFEREN
     re-enters as an external input (captured value) and the event is recorded.
     Write evidence: the recorder's version-counter count per argument
     (``CapturedArg.mutations``); a capture without it rests on bytes alone and the
-    carry-over says so.
+    carry-over says so.  ``force_external``: (launch position, storage) pairs whose
+    carry-over other evidence contradicts (an ATen write in the aligned producer
+    trace that bytes and version counters miss, e.g. through ``tensor.data``): the
+    buffer re-enters as an external input there.
     """
     from .storage_effects import carry_over
 
@@ -5324,6 +5328,8 @@ def evaluate_sequence(launches: list, mode: str = NumericMode.NUMERICAL_DIFFEREN
             same_bytes = same_window and buf.after_raw is not None and np.array_equal(buf.after_raw, before)
             keep, evidence = carry_over(same_bytes, getattr(arg, "mutations", None),
                                         last_mutations.get(arg.storage_ptr))
+            if keep and (position, arg.storage_ptr) in force_external:
+                keep, evidence = False, "ATen write between the launches in the producer trace"
             if not keep:
                 external.append({"launch": position, "buffer": arg.name, "storage": arg.storage_ptr,
                                  "why": evidence})

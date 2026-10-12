@@ -25,6 +25,7 @@ T_SE = "tests/test_storage_effects.py"
 T_B1 = "tests/test_batch1_guarantees.py"
 T_AF = "tests/test_audit_findings.py"
 T_Q = "tests/test_bias_query.py"
+T_R2 = "tests/test_round2_measurement.py"
 
 RULES = [
     {"id": "M1", "family": "memory effects", "name": "storage identity and lifetime",
@@ -66,16 +67,22 @@ RULES = [
      "report": ["provenance_seed0.reads", "outputs.*.reference.reference_scope"]},
     {"id": "M4", "family": "memory effects", "name": "cross-launch carry-over",
      "obligation": "the reference memory of a recorded launch carries over only with unchanged bytes and no write "
-                   "evidence in between; announced raw-pointer writes (AOTAutograd) are not ATen writes",
+                   "evidence in between; announced raw-pointer writes (AOTAutograd) are not ATen writes; an ATen "
+                   "write the aligned producer trace sees (tensor.data) withdraws a carry-over that bytes and version "
+                   "counters allowed, and the reference is re-evaluated with the buffer re-entering",
      "entry": ["kernel_analyzer.reference_eval.storage_effects:carry_over",
                "kernel_analyzer.reference_eval.ttir_eval:evaluate_sequence",
-               "kernel_analyzer.reference_eval.storage_effects:StorageWatch.install"],
-     "independent_answer": "real version counters around torch.autograd.graph.increment_version",
+               "kernel_analyzer.reference_eval.storage_effects:StorageWatch.install",
+               "kernel_analyzer.check:_trace_conflicts", "kernel_analyzer.provenance:ATEN_WRITES"],
+     "independent_answer": "real version counters around torch.autograd.graph.increment_version; ATen in-place "
+                           "events of the dispatch trace",
      "tests": [f"{T_SE}::test_carry_over_needs_bytes_and_agreeing_counts",
                f"{T_SE}::test_storage_watch_excludes_announced_raw_pointer_writes",
                f"{T_B1}::test_inplace_arithmetic_between_recorded_launches",
-               f"{T_B1}::test_announced_compiled_inplace_write_keeps_the_composition"],
-     "report": ["provenance_seed0.carry_overs", "provenance_seed0.external_reentries"]},
+               f"{T_B1}::test_announced_compiled_inplace_write_keeps_the_composition",
+               f"{T_R2}::test_data_write_between_launches_stops_the_carry_over"],
+     "report": ["provenance_seed0.carry_overs", "provenance_seed0.external_reentries",
+                "provenance_seed0.carry_overs_withdrawn_by_trace"]},
     {"id": "M5", "family": "memory effects", "name": "producer lattice",
      "obligation": "input < const < copy are clean, computed / triton / unlabeled are not; a read joins the labels of "
                    "the bytes it reads; an exact write replaces, a hull write joins",
@@ -88,12 +95,22 @@ RULES = [
                f"{T_SE}::test_partial_constant_write_over_uninitialised_bytes_stays_computed"],
      "report": ["outputs.*.upstream_with_producer_record", "outputs.*.mixed_non_triton_sources"]},
     {"id": "T1", "family": "trace non-interference", "name": "the traced run does not change the measured runs",
-     "obligation": "the unmeasured producer trace leaves compiled code and its caches untouched (force_eager stance); "
-                   "without that API no trace is made",
-     "entry": ["kernel_analyzer.provenance:producer_records"],
-     "independent_answer": "the recorded launches of every later seed (the compiled kernel is still launched)",
-     "tests": [f"{T_B1}::test_announced_compiled_inplace_write_keeps_the_composition"],
+     "obligation": "the unmeasured producer trace leaves compiled code and its caches untouched (force_eager stance; "
+                   "without that API no trace is made), starts from the measured run's random state and restores the "
+                   "random state afterwards (no shift of later seeds' draws)",
+     "entry": ["kernel_analyzer.provenance:producer_records", "kernel_analyzer.provenance:rng_state"],
+     "independent_answer": "the recorded launches of every later seed (the compiled kernel is still launched); K of "
+                           "every seed with and without the trace (an in-call random mask)",
+     "tests": [f"{T_B1}::test_announced_compiled_inplace_write_keeps_the_composition",
+               f"{T_R2}::test_producer_trace_does_not_shift_the_rng_stream"],
      "report": ["producer_trace_per_seed", "notes.ir_kinds"]},
+    {"id": "T2", "family": "trace non-interference", "name": "the analysis does not change the candidate's precision",
+     "obligation": "no precision switch (TF32, float32 matmul precision, reduced-precision reductions) is set by the "
+                   "analysis; the switches the candidate runs under and the analysis' own interventions are reported",
+     "entry": ["kernel_analyzer.check:precision_environment", "kernel_analyzer.check:ANALYSIS_INTERVENTIONS"],
+     "independent_answer": "the switches the call itself observes while it runs",
+     "tests": [f"{T_R2}::test_analysis_leaves_the_precision_switches_alone"],
+     "report": ["precision_environment", "analysis_interventions"]},
     {"id": "P1", "family": "precision", "name": "precision dependence is observed, not inferred",
      "obligation": "a higher working-precision level can change an enclosure only through a precision-dependent rule "
                    "(SumK / DotK with the level's K, prefix sums); the pass counts their calls",
@@ -105,14 +122,21 @@ RULES = [
     {"id": "P2", "family": "precision", "name": "refinement stop categories",
      "obligation": "the controller refines while an output can still improve and stops only as met, budget exhausted, "
                    "backend limit (float64 endpoints, highest level, no precision-dependent rule), intrinsic set "
-                   "width, no numerical enclosure or pass failed; an unchanged pass fraction is not a stop reason",
-     "entry": ["kernel_analyzer.measure:run_level", "kernel_analyzer.measure:REFINEMENT_CATEGORIES"],
+                   "width, no numerical enclosure or pass failed; an unchanged pass fraction is not a stop reason; "
+                   "every level is computed on the one capture of level 1 (same inputs, initial state and actual "
+                   "outputs), and refinement is refused rather than re-executed when that capture cannot be kept; "
+                   "no level reports a met resolution without a numerical enclosure",
+     "entry": ["kernel_analyzer.measure:run_level", "kernel_analyzer.measure:REFINEMENT_CATEGORIES",
+               "kernel_analyzer.check:CAPTURE_STORE_BYTES"],
      "independent_answer": "level-by-level widths of the three-level summation (levels 1 and 2 resolve nothing)",
      "tests": [f"{T_B1}::test_three_level_summation_reaches_level_3_from_the_unified_entry",
                f"{T_B1}::test_controller_does_not_stop_on_an_unchanged_pass_fraction",
                f"{T_B1}::test_controller_stop_categories", f"{T_B1}::test_controller_budget_between_levels",
-               f"{T_AF}::test_refinement_reports_a_target_it_cannot_reach"],
-     "report": ["refinement.category", "refinement.outcome", "refinement.per_output"]},
+               f"{T_AF}::test_refinement_reports_a_target_it_cannot_reach",
+               f"{T_R2}::test_refinement_reevaluates_the_same_capture",
+               f"{T_R2}::test_refinement_is_refused_rather_than_re_executed_when_the_capture_store_overflows",
+               f"{T_R2}::test_set_only_output_is_not_reported_as_resolution_met"],
+     "report": ["refinement.category", "refinement.outcome", "refinement.per_output", "capture"]},
     {"id": "P3", "family": "precision", "name": "resolution counts numerical enclosures only",
      "obligation": "the requested resolution is measured on complete finite elements; set targets (L_E) are counted "
                    "apart with their own width and never reported as an enclosure that is too wide",

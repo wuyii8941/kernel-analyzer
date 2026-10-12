@@ -106,15 +106,15 @@ def _argument(func, args, kwargs, name):
     return None
 
 
-def _apply(prov, event):
-    """Update the per-storage provenance with one ATen event."""
+def _apply(prov, event) -> set:
+    """Update the per-storage provenance with one ATen event; returns the storages the event wrote in place."""
     _, base, func, args, kwargs, out, mutated = event
     ins = [t for t in _flat((args, kwargs)) if torch.is_tensor(t)]
     in_ptrs = {t.untyped_storage().data_ptr() for t in ins}
     mut_ptrs = {t.untyped_storage().data_ptr() for t in mutated}
     outs = [t for t in _flat(out) if torch.is_tensor(t)]
     if base in VIEW_OPS and not mutated:
-        return
+        return set()
     targets = mutated or outs
     # data sources: float tensors other than the written ones (integer / bool tensors are indices and masks)
     sources = [t for t in ins if t.is_floating_point() and t.untyped_storage().data_ptr() not in mut_ptrs]
@@ -155,6 +155,7 @@ def _apply(prov, event):
                 prov.write(t.untyped_storage(), runs, label, exact=False)
         else:
             prov.write(t.untyped_storage(), runs, label, exact=exact)
+    return mut_ptrs
 
 
 def _signature(launch):
@@ -162,17 +163,58 @@ def _signature(launch):
             tuple((a.name, str(a.dtype)) for a in launch.args if a.kind == "tensor"))
 
 
-def producer_records(case, seed, measured_launches, seq) -> Optional[dict]:
+ATEN_WRITES = "__aten_writes__"   # key of {launch index: {measured storage address: ATen in-place writes so far}}
+
+
+def rng_state() -> dict:
+    """The random states a call can draw from (torch CPU and CUDA, Python, NumPy)."""
+    import random
+
+    import numpy as np
+    return {"torch": torch.get_rng_state(),
+            "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+            "python": random.getstate(), "numpy": np.random.get_state()}
+
+
+def set_rng_state(state: dict):
+    import random
+
+    import numpy as np
+    torch.set_rng_state(state["torch"])
+    if state.get("cuda") is not None:
+        torch.cuda.set_rng_state_all(state["cuda"])
+    random.setstate(state["python"])
+    np.random.set_state(state["numpy"])
+
+
+def producer_records(case, seed, measured_launches, seq, rng_before=None) -> Optional[dict]:
     """{(launch index, argument name): (provenance, producer chain)} for the float tensor arguments of the measured
     launches, from an unmeasured traced run of the call for ``seed``; None when the traced run cannot be aligned with
-    the measured launches (different Triton launch sequence, an error in the traced run)."""
+    the measured launches (different Triton launch sequence, an error in the traced run).  Under the key
+    ``ATEN_WRITES``: per launch, the number of ATen in-place writes so far to each storage the launch touches (keyed by
+    the measured run's storage address), the write evidence between two launches that bytes and version counters miss
+    (``tensor.data``; storage_effects M4).
+
+    ``rng_before``: the random state before the measured run (``rng_state``).  The traced run starts from it, so an
+    in-call random draw (a dropout mask) is the measured run's, and afterwards every random state is restored to what
+    the measured run left: the trace does not shift the stream of later seeds (trace non-interference, T1)."""
     from .reference_eval.capture import TritonLaunchRecorder
 
     stance = getattr(getattr(torch, "compiler", None), "set_stance", None)
     if stance is None:
         return None
+    after = rng_state()
+    try:
+        return _traced(case, seed, measured_launches, seq, stance, TritonLaunchRecorder, rng_before)
+    finally:
+        set_rng_state(after)
+
+
+def _traced(case, seed, measured_launches, seq, stance, TritonLaunchRecorder, rng_before):
     try:
         inp = case.inputs(seed)
+        if rng_before is not None:     # after the inputs: the launch draws what the measured launch drew
+            set_rng_state(rng_before)
         prov = StorageMap()
         for t in _flat(inp):
             if torch.is_tensor(t) and t.is_floating_point():
@@ -198,16 +240,16 @@ def producer_records(case, seed, measured_launches, seq) -> Optional[dict]:
     out = {}
     events = iter(trace.events)
     pending = next(events, None)
-    storages = {}
-    for launch in rec.launches:            # the recorder held every launch storage alive (keep_storages)
-        for a in launch.args:
-            if a.kind == "tensor":
-                storages.setdefault(a.storage_ptr, a)
+    writes = {}                            # trace storage -> ATen in-place writes so far
+    out[ATEN_WRITES] = {}
     for i, (tl_, ml) in enumerate(zip(rec.launches, measured_launches)):
         while pending is not None and pending[0] <= i:
-            _apply(prov, pending)
+            for p in _apply(prov, pending):
+                writes[p] = writes.get(p, 0) + 1
             pending = next(events, None)
         measured = {b.name: b for b in ml.args if b.kind == "tensor"}
+        out[ATEN_WRITES][i] = {measured[a.name].storage_ptr: writes.get(a.storage_ptr, 0)
+                               for a in tl_.args if a.kind == "tensor" and a.name in measured}
         for a in tl_.args:
             if a.kind == "tensor" and str(a.dtype).startswith(("float", "bfloat")):
                 out[(i, a.name)] = prov.read(a.storage_ptr, _read_runs(seq.launches[i], measured.get(a.name), a))
