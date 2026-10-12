@@ -1,0 +1,6548 @@
+{
+ "group": "C",
+ "layer": 2,
+ "mat": "q_proj",
+ "units": [
+  0,
+  31
+ ],
+ "checks": {
+  "default": {
+   "rtol": 1.3e-06,
+   "atol": 1e-05
+  },
+  "tf32_convention": {
+   "rtol": 1.3e-06,
+   "atol": 0.005
+  },
+  "strict": "1 fp32 ulp"
+ },
+ "summary": {
+  "triton_default|exact": {
+   "default": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.9657461983816964
+   },
+   "tf32_convention": {
+    "pass_units": 32,
+    "units": 32,
+    "mean_fail_fraction": 0.0
+   },
+   "strict": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.9999373299734933
+   },
+   "alignment": {
+    "mean": -0.0003520196979648966,
+    "sd": 4.903622635344818e-06,
+    "min": -0.0003637980053673391,
+    "max": -0.00034232993799900366
+   },
+   "mean_error_over_rms_reference": {
+    "mean": 1.0689981027376643e-05,
+    "sd": 3.0067363622124595e-06,
+    "min": 2.0579436470096785e-06,
+    "max": 1.6338675900494643e-05
+   },
+   "relative_rms": {
+    "mean": 0.0003888220369087512,
+    "sd": 5.087416291783557e-06,
+    "min": 0.0003795870092658107,
+    "max": 0.00040212514824550336
+   }
+  },
+  "triton_default|cublas_highest": {
+   "default": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.9657440185546875
+   },
+   "tf32_convention": {
+    "pass_units": 32,
+    "units": 32,
+    "mean_fail_fraction": 0.0
+   },
+   "strict": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.9999076298304967
+   },
+   "alignment": {
+    "mean": -0.0003520195214815329,
+    "sd": 4.903642937615292e-06,
+    "min": -0.00036379844718224444,
+    "max": -0.00034232900331941716
+   },
+   "mean_error_over_rms_reference": {
+    "mean": 1.068992228327467e-05,
+    "sd": 3.006692992413742e-06,
+    "min": 2.058418649367658e-06,
+    "max": 1.633815359141616e-05
+   },
+   "relative_rms": {
+    "mean": 0.0003888218610670794,
+    "sd": 5.087408967793343e-06,
+    "min": 0.0003795864211205896,
+    "max": 0.00040212383156146584
+   }
+  },
+  "inductor_high|exact": {
+   "default": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.9657461983816964
+   },
+   "tf32_convention": {
+    "pass_units": 32,
+    "units": 32,
+    "mean_fail_fraction": 0.0
+   },
+   "strict": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.9999373299734933
+   },
+   "alignment": {
+    "mean": -0.0003520196979648966,
+    "sd": 4.903622635344818e-06,
+    "min": -0.0003637980053673391,
+    "max": -0.00034232993799900366
+   },
+   "mean_error_over_rms_reference": {
+    "mean": 1.0689981027376643e-05,
+    "sd": 3.0067363622124595e-06,
+    "min": 2.0579436470096785e-06,
+    "max": 1.6338675900494643e-05
+   },
+   "relative_rms": {
+    "mean": 0.0003888220369087512,
+    "sd": 5.087416291783557e-06,
+    "min": 0.0003795870092658107,
+    "max": 0.00040212514824550336
+   }
+  },
+  "inductor_high|cublas_highest": {
+   "default": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.9657440185546875
+   },
+   "tf32_convention": {
+    "pass_units": 32,
+    "units": 32,
+    "mean_fail_fraction": 0.0
+   },
+   "strict": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.9999076298304967
+   },
+   "alignment": {
+    "mean": -0.0003520195214815329,
+    "sd": 4.903642937615292e-06,
+    "min": -0.00036379844718224444,
+    "max": -0.00034232900331941716
+   },
+   "mean_error_over_rms_reference": {
+    "mean": 1.068992228327467e-05,
+    "sd": 3.006692992413742e-06,
+    "min": 2.058418649367658e-06,
+    "max": 1.633815359141616e-05
+   },
+   "relative_rms": {
+    "mean": 0.0003888218610670794,
+    "sd": 5.087408967793343e-06,
+    "min": 0.0003795864211205896,
+    "max": 0.00040212383156146584
+   }
+  },
+  "cublas_high|exact": {
+   "default": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.911006110055106
+   },
+   "tf32_convention": {
+    "pass_units": 32,
+    "units": 32,
+    "mean_fail_fraction": 0.0
+   },
+   "strict": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.9996615818568638
+   },
+   "alignment": {
+    "mean": -1.656885293947115e-06,
+    "sd": 4.4818579834305815e-06,
+    "min": -1.108512782385925e-05,
+    "max": 6.6669051061478294e-06
+   },
+   "mean_error_over_rms_reference": {
+    "mean": 2.0585336337206396e-07,
+    "sd": 6.158078677068445e-07,
+    "min": -7.562998173829643e-07,
+    "max": 1.5841368817227305e-06
+   },
+   "relative_rms": {
+    "mean": 0.00015644520581823248,
+    "sd": 2.6245765410013952e-06,
+    "min": 0.0001513851786805141,
+    "max": 0.00016157332362633274
+   }
+  },
+  "cublas_high|cublas_highest": {
+   "default": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.9110091073172433
+   },
+   "tf32_convention": {
+    "pass_units": 32,
+    "units": 32,
+    "mean_fail_fraction": 0.0
+   },
+   "strict": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.999514171055385
+   },
+   "alignment": {
+    "mean": -1.6567087625873968e-06,
+    "sd": 4.481841202799998e-06,
+    "min": -1.108569565539311e-05,
+    "max": 6.667901455226784e-06
+   },
+   "mean_error_over_rms_reference": {
+    "mean": 2.0579461755024974e-07,
+    "sd": 6.158086110059192e-07,
+    "min": -7.56091271605464e-07,
+    "max": 1.5836946081606225e-06
+   },
+   "relative_rms": {
+    "mean": 0.0001564452481598894,
+    "sd": 2.6247013862159123e-06,
+    "min": 0.0001513841556796003,
+    "max": 0.00016157313749780088
+   }
+  },
+  "triton_ieee|exact": {
+   "default": {
+    "pass_units": 32,
+    "units": 32,
+    "mean_fail_fraction": 0.0
+   },
+   "tf32_convention": {
+    "pass_units": 32,
+    "units": 32,
+    "mean_fail_fraction": 0.0
+   },
+   "strict": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.8841773441859654
+   },
+   "alignment": {
+    "mean": 1.1718591157372256e-10,
+    "sd": 3.155310291057123e-09,
+    "min": -4.879954274458367e-09,
+    "max": 7.127576165936981e-09
+   },
+   "mean_error_over_rms_reference": {
+    "mean": -1.390114900502557e-10,
+    "sd": 1.4696688293873637e-09,
+    "min": -2.8390524535975933e-09,
+    "max": 3.1044665001084862e-09
+   },
+   "relative_rms": {
+    "mean": 5.225766592009654e-07,
+    "sd": 5.59786850618082e-09,
+    "min": 5.131976533134061e-07,
+    "max": 5.363595176564502e-07
+   }
+  },
+  "triton_ieee|cublas_highest": {
+   "default": {
+    "pass_units": 32,
+    "units": 32,
+    "mean_fail_fraction": 0.0
+   },
+   "tf32_convention": {
+    "pass_units": 32,
+    "units": 32,
+    "mean_fail_fraction": 0.0
+   },
+   "strict": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.8361549377441406
+   },
+   "alignment": {
+    "mean": 2.937177967470058e-10,
+    "sd": 3.1542821008938864e-09,
+    "min": -5.379849674680089e-09,
+    "max": 6.407650170864898e-09
+   },
+   "mean_error_over_rms_reference": {
+    "mean": -1.9775739511035665e-10,
+    "sd": 1.507877400214988e-09,
+    "min": -3.101014893640786e-09,
+    "max": 2.7315432082696857e-09
+   },
+   "relative_rms": {
+    "mean": 5.360751687139077e-07,
+    "sd": 5.037349551927113e-09,
+    "min": 5.27341501969901e-07,
+    "max": 5.48106930155942e-07
+   }
+  },
+  "cublas_highest|exact": {
+   "default": {
+    "pass_units": 32,
+    "units": 32,
+    "mean_fail_fraction": 0.0
+   },
+   "tf32_convention": {
+    "pass_units": 32,
+    "units": 32,
+    "mean_fail_fraction": 0.0
+   },
+   "strict": {
+    "pass_units": 0,
+    "units": 32,
+    "mean_fail_fraction": 0.6060900006975447
+   },
+   "alignment": {
+    "mean": -1.7654661536396494e-10,
+    "sd": 6.76376646767874e-10,
+    "min": -1.505590250206894e-09,
+    "max": 1.3774466996319956e-09
+   },
+   "mean_error_over_rms_reference": {
+    "mean": 5.874590505768058e-11,
+    "sd": 3.478299700968719e-10,
+    "min": -5.53594722345274e-10,
+    "max": 6.806668738283768e-10
+   },
+   "relative_rms": {
+    "mean": 1.2319071745107672e-07,
+    "sd": 1.0475159489813195e-09,
+    "min": 1.2152423671720101e-07,
+    "max": 1.2607903041461535e-07
+   }
+  }
+ },
+ "per_unit": [
+  {
+   "unit": 0,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9640851702008929,
+      "max_abs_diff": 0.0026949161286236034,
+      "relative_rms": 0.0003797285276169581
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026949161286236034,
+      "relative_rms": 0.0003797285276169581
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.0003424951240533919,
+     "mean_error_over_rms_reference": 1.1155086241046847e-05,
+     "relative_rms": 0.0003797285276169581
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9640677315848214,
+      "max_abs_diff": 0.0026946067810058594,
+      "relative_rms": 0.0003797285487258979
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026946067810058594,
+      "relative_rms": 0.0003797285487258979
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.0003424953786857899,
+     "mean_error_over_rms_reference": 1.1154405571330887e-05,
+     "relative_rms": 0.0003797285487258979
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9640851702008929,
+      "max_abs_diff": 0.0026949161286236034,
+      "relative_rms": 0.0003797285276169581
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026949161286236034,
+      "relative_rms": 0.0003797285276169581
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.0003424951240533919,
+     "mean_error_over_rms_reference": 1.1155086241046847e-05,
+     "relative_rms": 0.0003797285276169581
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9640677315848214,
+      "max_abs_diff": 0.0026946067810058594,
+      "relative_rms": 0.0003797285487258979
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026946067810058594,
+      "relative_rms": 0.0003797285487258979
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.0003424953786857899,
+     "mean_error_over_rms_reference": 1.1154405571330887e-05,
+     "relative_rms": 0.0003797285487258979
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9099644252232143,
+      "max_abs_diff": 0.0011272272431579466,
+      "relative_rms": 0.00015175808510287556
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011272272431579466,
+      "relative_rms": 0.00015175808510287556
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995291573660714
+     },
+     "alignment": -2.155333910833437e-06,
+     "mean_error_over_rms_reference": 3.5445786972065215e-07,
+     "relative_rms": 0.00015175808510287556
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9100080217633929,
+      "max_abs_diff": 0.0011273622512817383,
+      "relative_rms": 0.00015175845578197541
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011273622512817383,
+      "relative_rms": 0.00015175845578197541
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9993547712053571
+     },
+     "alignment": -2.1555887648748314e-06,
+     "mean_error_over_rms_reference": 3.537772027566818e-07,
+     "relative_rms": 0.00015175845578197541
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.381085863680028e-06,
+      "relative_rms": 5.156404328313685e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.381085863680028e-06,
+      "relative_rms": 5.156404328313685e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8829694475446429
+     },
+     "alignment": 2.5192678227689204e-09,
+     "mean_error_over_rms_reference": -5.077252665495246e-10,
+     "relative_rms": 5.156404328313685e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.5367431640625e-06,
+      "relative_rms": 5.293796998913382e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.5367431640625e-06,
+      "relative_rms": 5.293796998913382e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8361118861607143
+     },
+     "alignment": 2.264461762318593e-09,
+     "mean_error_over_rms_reference": -1.1883921400751004e-09,
+     "relative_rms": 5.293796998913382e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2346482805014602e-06,
+      "relative_rms": 1.2263018767550628e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2346482805014602e-06,
+      "relative_rms": 1.2263018767550628e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6053902762276786
+     },
+     "alignment": 2.547913613094848e-10,
+     "mean_error_over_rms_reference": 6.806668738283768e-10,
+     "relative_rms": 1.2263018767550628e-07
+    }
+   }
+  },
+  {
+   "unit": 1,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9655848911830357,
+      "max_abs_diff": 0.0029696576109650152,
+      "relative_rms": 0.00039324089290534574
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029696576109650152,
+      "relative_rms": 0.00039324089290534574
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.00035366012404722583,
+     "mean_error_over_rms_reference": 9.983421901415037e-06,
+     "relative_rms": 0.00039324089290534574
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9655674525669643,
+      "max_abs_diff": 0.0029692649841308594,
+      "relative_rms": 0.0003932405915528369
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029692649841308594,
+      "relative_rms": 0.0003932405915528369
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998517717633929
+     },
+     "alignment": -0.0003536597444110263,
+     "mean_error_over_rms_reference": 9.983372294383724e-06,
+     "relative_rms": 0.0003932405915528369
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9655848911830357,
+      "max_abs_diff": 0.0029696576109650152,
+      "relative_rms": 0.00039324089290534574
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029696576109650152,
+      "relative_rms": 0.00039324089290534574
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.00035366012404722583,
+     "mean_error_over_rms_reference": 9.983421901415037e-06,
+     "relative_rms": 0.00039324089290534574
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9655674525669643,
+      "max_abs_diff": 0.0029692649841308594,
+      "relative_rms": 0.0003932405915528369
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029692649841308594,
+      "relative_rms": 0.0003932405915528369
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998517717633929
+     },
+     "alignment": -0.0003536597444110263,
+     "mean_error_over_rms_reference": 9.983372294383724e-06,
+     "relative_rms": 0.0003932405915528369
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9117867606026786,
+      "max_abs_diff": 0.0010335549056907922,
+      "relative_rms": 0.00015899163956937954
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010335549056907922,
+      "relative_rms": 0.00015899163956937954
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9997122628348214
+     },
+     "alignment": 1.0953001661943177e-06,
+     "mean_error_over_rms_reference": -4.856569077971053e-09,
+     "relative_rms": 0.00015899163956937954
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9119175502232143,
+      "max_abs_diff": 0.0010334253311157227,
+      "relative_rms": 0.00015899248076647052
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010334253311157227,
+      "relative_rms": 0.00015899248076647052
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9994855608258929
+     },
+     "alignment": 1.0956798195594535e-06,
+     "mean_error_over_rms_reference": -4.906179902694321e-09,
+     "relative_rms": 0.00015899248076647052
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.176322027151571e-06,
+      "relative_rms": 5.218566192687502e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.176322027151571e-06,
+      "relative_rms": 5.218566192687502e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8852975027901786
+     },
+     "alignment": -2.144463118610113e-09,
+     "mean_error_over_rms_reference": 3.9936454288692415e-10,
+     "relative_rms": 5.218566192687502e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.198883056640625e-06,
+      "relative_rms": 5.362885056066869e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.198883056640625e-06,
+      "relative_rms": 5.362885056066869e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8372889927455357
+     },
+     "alignment": -1.7646844885188726e-09,
+     "mean_error_over_rms_reference": 3.497537201598227e-10,
+     "relative_rms": 5.362885056066869e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1405381528106773e-06,
+      "relative_rms": 1.2508144282969452e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1405381528106773e-06,
+      "relative_rms": 1.2508144282969452e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6110578264508928
+     },
+     "alignment": -3.7979408963029396e-10,
+     "mean_error_over_rms_reference": 4.9610822859933055e-11,
+     "relative_rms": 1.2508144282969452e-07
+    }
+   }
+  },
+  {
+   "unit": 2,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660470145089286,
+      "max_abs_diff": 0.002456537614366816,
+      "relative_rms": 0.0003903758680439109
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002456537614366816,
+      "relative_rms": 0.0003903758680439109
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.0003533290198163997,
+     "mean_error_over_rms_reference": 1.0852085663404718e-05,
+     "relative_rms": 0.0003903758680439109
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660382952008929,
+      "max_abs_diff": 0.002456188201904297,
+      "relative_rms": 0.0003903756974776884
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002456188201904297,
+      "relative_rms": 0.0003903756974776884
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99993896484375
+     },
+     "alignment": -0.0003533287764863205,
+     "mean_error_over_rms_reference": 1.0851795378794289e-05,
+     "relative_rms": 0.0003903756974776884
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660470145089286,
+      "max_abs_diff": 0.002456537614366816,
+      "relative_rms": 0.0003903758680439109
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002456537614366816,
+      "relative_rms": 0.0003903758680439109
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.0003533290198163997,
+     "mean_error_over_rms_reference": 1.0852085663404718e-05,
+     "relative_rms": 0.0003903758680439109
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660382952008929,
+      "max_abs_diff": 0.002456188201904297,
+      "relative_rms": 0.0003903756974776884
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002456188201904297,
+      "relative_rms": 0.0003903756974776884
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99993896484375
+     },
+     "alignment": -0.0003533287764863205,
+     "mean_error_over_rms_reference": 1.0851795378794289e-05,
+     "relative_rms": 0.0003903756974776884
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9133213588169643,
+      "max_abs_diff": 0.0014836033254121972,
+      "relative_rms": 0.00016157332362633274
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0014836033254121972,
+      "relative_rms": 0.00016157332362633274
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9997471400669643
+     },
+     "alignment": -4.938900558862832e-06,
+     "mean_error_over_rms_reference": 4.846500555255245e-07,
+     "relative_rms": 0.00016157332362633274
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9132603236607143,
+      "max_abs_diff": 0.0014835596084594727,
+      "relative_rms": 0.00016157313749780088
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0014835596084594727,
+      "relative_rms": 0.00016157313749780088
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995465959821429
+     },
+     "alignment": -4.9386570957046795e-06,
+     "mean_error_over_rms_reference": 4.843597683912907e-07,
+     "relative_rms": 0.00016157313749780088
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.324727239854667e-06,
+      "relative_rms": 5.242661924791874e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.324727239854667e-06,
+      "relative_rms": 5.242661924791874e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8831612723214286
+     },
+     "alignment": -2.187011276204029e-09,
+     "mean_error_over_rms_reference": 8.163132870937243e-10,
+     "relative_rms": 5.242661924791874e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.377233554334028e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.377233554334028e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8344552176339286
+     },
+     "alignment": -1.943582939935276e-09,
+     "mean_error_over_rms_reference": 5.260260350776545e-10,
+     "relative_rms": 5.377233554334028e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.0401479286770154e-06,
+      "relative_rms": 1.2607903041461535e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.0401479286770154e-06,
+      "relative_rms": 1.2607903041461535e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6119820731026786
+     },
+     "alignment": -2.4344343085911394e-10,
+     "mean_error_over_rms_reference": 2.9028725214412333e-10,
+     "relative_rms": 1.2607903041461535e-07
+    }
+   }
+  },
+  {
+   "unit": 3,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.96710205078125,
+      "max_abs_diff": 0.002957421894162593,
+      "relative_rms": 0.00039255284409095637
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002957421894162593,
+      "relative_rms": 0.00039255284409095637
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.000356958143551091,
+     "mean_error_over_rms_reference": 4.532297770569814e-06,
+     "relative_rms": 0.00039255284409095637
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9671107700892857,
+      "max_abs_diff": 0.0029578208923339844,
+      "relative_rms": 0.0003925521318397498
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029578208923339844,
+      "relative_rms": 0.0003925521318397498
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.0003569574431890057,
+     "mean_error_over_rms_reference": 4.5324770868944536e-06,
+     "relative_rms": 0.0003925521318397498
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.96710205078125,
+      "max_abs_diff": 0.002957421894162593,
+      "relative_rms": 0.00039255284409095637
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002957421894162593,
+      "relative_rms": 0.00039255284409095637
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.000356958143551091,
+     "mean_error_over_rms_reference": 4.532297770569814e-06,
+     "relative_rms": 0.00039255284409095637
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9671107700892857,
+      "max_abs_diff": 0.0029578208923339844,
+      "relative_rms": 0.0003925521318397498
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029578208923339844,
+      "relative_rms": 0.0003925521318397498
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.0003569574431890057,
+     "mean_error_over_rms_reference": 4.5324770868944536e-06,
+     "relative_rms": 0.0003925521318397498
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9125627790178571,
+      "max_abs_diff": 0.0010980187872302594,
+      "relative_rms": 0.0001580449114434933
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010980187872302594,
+      "relative_rms": 0.0001580449114434933
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996599469866071
+     },
+     "alignment": -8.238117078938171e-06,
+     "mean_error_over_rms_reference": -1.535755164872646e-07,
+     "relative_rms": 0.0001580449114434933
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.91265869140625,
+      "max_abs_diff": 0.0010978281497955322,
+      "relative_rms": 0.00015804449438050697
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010978281497955322,
+      "relative_rms": 0.00015804449438050697
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99951171875
+     },
+     "alignment": -8.237416442010337e-06,
+     "mean_error_over_rms_reference": -1.5339620344546704e-07,
+     "relative_rms": 0.00015804449438050697
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.563152570279954e-06,
+      "relative_rms": 5.299218860112297e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.563152570279954e-06,
+      "relative_rms": 5.299218860112297e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.88519287109375
+     },
+     "alignment": -2.0617488065570523e-09,
+     "mean_error_over_rms_reference": -1.5467449588087174e-09,
+     "relative_rms": 5.299218860112297e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.5367431640625e-06,
+      "relative_rms": 5.426711983300972e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.5367431640625e-06,
+      "relative_rms": 5.426711983300972e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8373587472098214
+     },
+     "alignment": -1.3611731081556442e-09,
+     "mean_error_over_rms_reference": -1.367431810502453e-09,
+     "relative_rms": 5.426711983300972e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 2.0728828804550403e-06,
+      "relative_rms": 1.2329450971274105e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 2.0728828804550403e-06,
+      "relative_rms": 1.2329450971274105e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6046055385044643
+     },
+     "alignment": -7.005901384886046e-10,
+     "mean_error_over_rms_reference": -1.7931314926426311e-10,
+     "relative_rms": 1.2329450971274105e-07
+    }
+   }
+  },
+  {
+   "unit": 4,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9662126813616071,
+      "max_abs_diff": 0.0026171644914185777,
+      "relative_rms": 0.0003845886666605909
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026171644914185777,
+      "relative_rms": 0.0003845886666605909
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99993896484375
+     },
+     "alignment": -0.00035090531974183315,
+     "mean_error_over_rms_reference": 8.351521396024534e-06,
+     "relative_rms": 0.0003845886666605909
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9661865234375,
+      "max_abs_diff": 0.00261688232421875,
+      "relative_rms": 0.0003845887839092015
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.00261688232421875,
+      "relative_rms": 0.0003845887839092015
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.0003509056315148414,
+     "mean_error_over_rms_reference": 8.351027982203779e-06,
+     "relative_rms": 0.0003845887839092015
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9662126813616071,
+      "max_abs_diff": 0.0026171644914185777,
+      "relative_rms": 0.0003845886666605909
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026171644914185777,
+      "relative_rms": 0.0003845886666605909
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99993896484375
+     },
+     "alignment": -0.00035090531974183315,
+     "mean_error_over_rms_reference": 8.351521396024534e-06,
+     "relative_rms": 0.0003845886666605909
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9661865234375,
+      "max_abs_diff": 0.00261688232421875,
+      "relative_rms": 0.0003845887839092015
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.00261688232421875,
+      "relative_rms": 0.0003845887839092015
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.0003509056315148414,
+     "mean_error_over_rms_reference": 8.351027982203779e-06,
+     "relative_rms": 0.0003845887839092015
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9147600446428571,
+      "max_abs_diff": 0.0012690537022415072,
+      "relative_rms": 0.00016045539763881846
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0012690537022415072,
+      "relative_rms": 0.00016045539763881846
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.999755859375
+     },
+     "alignment": 5.8559134573313255e-06,
+     "mean_error_over_rms_reference": -6.078721448000141e-07,
+     "relative_rms": 0.00016045539763881846
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9149082728794643,
+      "max_abs_diff": 0.0012688636779785156,
+      "relative_rms": 0.00016045615477538599
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0012688636779785156,
+      "relative_rms": 0.00016045615477538599
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995553152901786
+     },
+     "alignment": 5.855601385385747e-06,
+     "mean_error_over_rms_reference": -6.083655558259162e-07,
+     "relative_rms": 0.00016045615477538599
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.21586343818592e-06,
+      "relative_rms": 5.243187764378093e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.21586343818592e-06,
+      "relative_rms": 5.243187764378093e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.88555908203125
+     },
+     "alignment": 6.719603721020778e-09,
+     "mean_error_over_rms_reference": 7.577504276412949e-10,
+     "relative_rms": 5.243187764378093e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.198883056640625e-06,
+      "relative_rms": 5.370361383453712e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.198883056640625e-06,
+      "relative_rms": 5.370361383453712e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8383004324776786
+     },
+     "alignment": 6.407650170864898e-09,
+     "mean_error_over_rms_reference": 2.643392118791871e-10,
+     "relative_rms": 5.370361383453712e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2176316133150067e-06,
+      "relative_rms": 1.226145795861e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2176316133150067e-06,
+      "relative_rms": 1.226145795861e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6060703822544643
+     },
+     "alignment": 3.1193928017325216e-10,
+     "mean_error_over_rms_reference": 4.934112156796481e-10,
+     "relative_rms": 1.226145795861e-07
+    }
+   }
+  },
+  {
+   "unit": 5,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9664481026785714,
+      "max_abs_diff": 0.003111140734247897,
+      "relative_rms": 0.00039237862795277575
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.003111140734247897,
+      "relative_rms": 0.00039237862795277575
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999040876116071
+     },
+     "alignment": -0.0003560057451485481,
+     "mean_error_over_rms_reference": 1.2234541179250371e-05,
+     "relative_rms": 0.00039237862795277575
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9664655412946429,
+      "max_abs_diff": 0.0031108856201171875,
+      "relative_rms": 0.00039237815481558643
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0031108856201171875,
+      "relative_rms": 0.00039237815481558643
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.00035600543987865407,
+     "mean_error_over_rms_reference": 1.2234749728993992e-05,
+     "relative_rms": 0.00039237815481558643
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9664481026785714,
+      "max_abs_diff": 0.003111140734247897,
+      "relative_rms": 0.00039237862795277575
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.003111140734247897,
+      "relative_rms": 0.00039237862795277575
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999040876116071
+     },
+     "alignment": -0.0003560057451485481,
+     "mean_error_over_rms_reference": 1.2234541179250371e-05,
+     "relative_rms": 0.00039237862795277575
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9664655412946429,
+      "max_abs_diff": 0.0031108856201171875,
+      "relative_rms": 0.00039237815481558643
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0031108856201171875,
+      "relative_rms": 0.00039237815481558643
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.00035600543987865407,
+     "mean_error_over_rms_reference": 1.2234749728993992e-05,
+     "relative_rms": 0.00039237815481558643
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9097638811383929,
+      "max_abs_diff": 0.001154504430931791,
+      "relative_rms": 0.00015454612785421732
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.001154504430931791,
+      "relative_rms": 0.00015454612785421732
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996686662946429
+     },
+     "alignment": 2.8714236197924997e-06,
+     "mean_error_over_rms_reference": -7.562998173829643e-07,
+     "relative_rms": 0.00015454612785421732
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.90972900390625,
+      "max_abs_diff": 0.0011544227600097656,
+      "relative_rms": 0.00015454653780122573
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011544227600097656,
+      "relative_rms": 0.00015454653780122573
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995465959821429
+     },
+     "alignment": 2.8717288597737813e-06,
+     "mean_error_over_rms_reference": -7.56091271605464e-07,
+     "relative_rms": 0.00015454653780122573
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.304213072740652e-06,
+      "relative_rms": 5.279579480053938e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.304213072740652e-06,
+      "relative_rms": 5.279579480053938e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8848789760044643
+     },
+     "alignment": -1.2964943225964132e-09,
+     "mean_error_over_rms_reference": 1.4763631251948184e-09,
+     "relative_rms": 5.279579480053938e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.106231689453125e-06,
+      "relative_rms": 5.405829379446283e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.106231689453125e-06,
+      "relative_rms": 5.405829379446283e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8365129743303572
+     },
+     "alignment": -9.911994920518834e-10,
+     "mean_error_over_rms_reference": 1.6849091340454945e-09,
+     "relative_rms": 5.405829379446283e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.877769979738105e-07,
+      "relative_rms": 1.22095135435643e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.877769979738105e-07,
+      "relative_rms": 1.22095135435643e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6035679408482143
+     },
+     "alignment": -3.0530902991968637e-10,
+     "mean_error_over_rms_reference": -2.0854600833627067e-10,
+     "relative_rms": 1.22095135435643e-07
+    }
+   }
+  },
+  {
+   "unit": 6,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9667619977678571,
+      "max_abs_diff": 0.002868684297826718,
+      "relative_rms": 0.00038619822046374235
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002868684297826718,
+      "relative_rms": 0.00038619822046374235
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.00035073487254355814,
+     "mean_error_over_rms_reference": 5.5006025406615385e-06,
+     "relative_rms": 0.00038619822046374235
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9667532784598214,
+      "max_abs_diff": 0.00286865234375,
+      "relative_rms": 0.0003861970778620496
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.00286865234375,
+      "relative_rms": 0.0003861970778620496
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999040876116071
+     },
+     "alignment": -0.0003507336571842816,
+     "mean_error_over_rms_reference": 5.500752367781039e-06,
+     "relative_rms": 0.0003861970778620496
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9667619977678571,
+      "max_abs_diff": 0.002868684297826718,
+      "relative_rms": 0.00038619822046374235
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002868684297826718,
+      "relative_rms": 0.00038619822046374235
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.00035073487254355814,
+     "mean_error_over_rms_reference": 5.5006025406615385e-06,
+     "relative_rms": 0.00038619822046374235
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9667532784598214,
+      "max_abs_diff": 0.00286865234375,
+      "relative_rms": 0.0003861970778620496
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.00286865234375,
+      "relative_rms": 0.0003861970778620496
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999040876116071
+     },
+     "alignment": -0.0003507336571842816,
+     "mean_error_over_rms_reference": 5.500752367781039e-06,
+     "relative_rms": 0.0003861970778620496
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9119524274553571,
+      "max_abs_diff": 0.0014028967966313033,
+      "relative_rms": 0.00015313036394723278
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0014028967966313033,
+      "relative_rms": 0.00015313036394723278
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996512276785714
+     },
+     "alignment": -7.144926043774512e-06,
+     "mean_error_over_rms_reference": -9.319164200976467e-08,
+     "relative_rms": 0.00015313036394723278
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9119349888392857,
+      "max_abs_diff": 0.0014023780822753906,
+      "relative_rms": 0.00015313088517463047
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0014023780822753906,
+      "relative_rms": 0.00015313088517463047
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9994942801339286
+     },
+     "alignment": -7.143710370283582e-06,
+     "mean_error_over_rms_reference": -9.304182169103478e-08,
+     "relative_rms": 0.00015313088517463047
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.421682598263146e-06,
+      "relative_rms": 5.296945245201248e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.421682598263146e-06,
+      "relative_rms": 5.296945245201248e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8866751534598214
+     },
+     "alignment": 3.999256976446117e-12,
+     "mean_error_over_rms_reference": -1.6950627710325696e-09,
+     "relative_rms": 5.296945245201248e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.429538786459131e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.429538786459131e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8393641880580357
+     },
+     "alignment": 1.2197627971557757e-09,
+     "mean_error_over_rms_reference": -1.5452423410638234e-09,
+     "relative_rms": 5.429538786459131e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1569460678373389e-06,
+      "relative_rms": 1.2338933084754368e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1569460678373389e-06,
+      "relative_rms": 1.2338933084754368e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6060267857142857
+     },
+     "alignment": -1.2157782609890667e-09,
+     "mean_error_over_rms_reference": -1.498204318474068e-10,
+     "relative_rms": 1.2338933084754368e-07
+    }
+   }
+  },
+  {
+   "unit": 7,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9674333844866071,
+      "max_abs_diff": 0.002927267922716581,
+      "relative_rms": 0.000388653219075988
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002927267922716581,
+      "relative_rms": 0.000388653219075988
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999738420758929
+     },
+     "alignment": -0.0003513415344304904,
+     "mean_error_over_rms_reference": 8.78898877710129e-06,
+     "relative_rms": 0.000388653219075988
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9674595424107143,
+      "max_abs_diff": 0.002926349639892578,
+      "relative_rms": 0.0003886524069096115
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002926349639892578,
+      "relative_rms": 0.0003886524069096115
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999564034598214
+     },
+     "alignment": -0.00035134132863975855,
+     "mean_error_over_rms_reference": 8.788763665833393e-06,
+     "relative_rms": 0.0003886524069096115
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9674333844866071,
+      "max_abs_diff": 0.002927267922716581,
+      "relative_rms": 0.000388653219075988
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002927267922716581,
+      "relative_rms": 0.000388653219075988
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999738420758929
+     },
+     "alignment": -0.0003513415344304904,
+     "mean_error_over_rms_reference": 8.78898877710129e-06,
+     "relative_rms": 0.000388653219075988
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9674595424107143,
+      "max_abs_diff": 0.002926349639892578,
+      "relative_rms": 0.0003886524069096115
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002926349639892578,
+      "relative_rms": 0.0003886524069096115
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999564034598214
+     },
+     "alignment": -0.00035134132863975855,
+     "mean_error_over_rms_reference": 8.788763665833393e-06,
+     "relative_rms": 0.0003886524069096115
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9121355329241071,
+      "max_abs_diff": 0.0011259842017663502,
+      "relative_rms": 0.0001541399453884447
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011259842017663502,
+      "relative_rms": 0.0001541399453884447
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996250697544643
+     },
+     "alignment": -2.4058919542388505e-06,
+     "mean_error_over_rms_reference": -4.002808954264326e-07,
+     "relative_rms": 0.0001541399453884447
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9120744977678571,
+      "max_abs_diff": 0.0011262893676757812,
+      "relative_rms": 0.00015414071959952855
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011262893676757812,
+      "relative_rms": 0.00015414071959952855
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9994942801339286
+     },
+     "alignment": -2.4056864550250906e-06,
+     "mean_error_over_rms_reference": -4.005060085838223e-07,
+     "relative_rms": 0.00015414071959952855
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.803358214568789e-06,
+      "relative_rms": 5.131976533134061e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.803358214568789e-06,
+      "relative_rms": 5.131976533134061e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.882568359375
+     },
+     "alignment": 3.8233208213874503e-10,
+     "mean_error_over_rms_reference": 4.6014466406016506e-10,
+     "relative_rms": 5.131976533134061e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.67572021484375e-06,
+      "relative_rms": 5.27341501969901e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.67572021484375e-06,
+      "relative_rms": 5.27341501969901e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8329031808035714
+     },
+     "alignment": 5.879442591077758e-10,
+     "mean_error_over_rms_reference": 2.3503158907060986e-10,
+     "relative_rms": 5.27341501969901e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1218144608804437e-06,
+      "relative_rms": 1.2258315030842423e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1218144608804437e-06,
+      "relative_rms": 1.2258315030842423e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6043265206473214
+     },
+     "alignment": -2.056270486557243e-10,
+     "mean_error_over_rms_reference": 2.251130750378823e-10,
+     "relative_rms": 1.2258315030842423e-07
+    }
+   }
+  },
+  {
+   "unit": 8,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9643467494419643,
+      "max_abs_diff": 0.0029883899650275936,
+      "relative_rms": 0.0003877874395802978
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029883899650275936,
+      "relative_rms": 0.0003877874395802978
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999651227678571
+     },
+     "alignment": -0.0003515948782542586,
+     "mean_error_over_rms_reference": 1.2312676378845846e-05,
+     "relative_rms": 0.0003877874395802978
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9643467494419643,
+      "max_abs_diff": 0.0029883384704589844,
+      "relative_rms": 0.0003877866430607814
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029883384704589844,
+      "relative_rms": 0.0003877866430607814
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.0003515938823296296,
+     "mean_error_over_rms_reference": 1.2312637897909677e-05,
+     "relative_rms": 0.0003877866430607814
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9643467494419643,
+      "max_abs_diff": 0.0029883899650275936,
+      "relative_rms": 0.0003877874395802978
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029883899650275936,
+      "relative_rms": 0.0003877874395802978
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999651227678571
+     },
+     "alignment": -0.0003515948782542586,
+     "mean_error_over_rms_reference": 1.2312676378845846e-05,
+     "relative_rms": 0.0003877874395802978
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9643467494419643,
+      "max_abs_diff": 0.0029883384704589844,
+      "relative_rms": 0.0003877866430607814
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029883384704589844,
+      "relative_rms": 0.0003877866430607814
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.0003515938823296296,
+     "mean_error_over_rms_reference": 1.2312637897909677e-05,
+     "relative_rms": 0.0003877866430607814
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9114554268973214,
+      "max_abs_diff": 0.0012924327745000852,
+      "relative_rms": 0.00015997452300069878
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0012924327745000852,
+      "relative_rms": 0.00015997452300069878
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996861049107143
+     },
+     "alignment": 6.6669051061478294e-06,
+     "mean_error_over_rms_reference": 8.396669267779241e-08,
+     "relative_rms": 0.00015997452300069878
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9114728655133929,
+      "max_abs_diff": 0.0012924671173095703,
+      "relative_rms": 0.00015997440066848462
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0012924671173095703,
+      "relative_rms": 0.00015997440066848462
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995989118303571
+     },
+     "alignment": 6.667901455226784e-06,
+     "mean_error_over_rms_reference": 8.3928199557961e-08,
+     "relative_rms": 0.00015997440066848462
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.985370665153368e-06,
+      "relative_rms": 5.183644469213667e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.985370665153368e-06,
+      "relative_rms": 5.183644469213667e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8854108537946429
+     },
+     "alignment": -1.0454072622028715e-09,
+     "mean_error_over_rms_reference": 4.987920091156811e-10,
+     "relative_rms": 5.183644469213667e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.315265730329205e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.315265730329205e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8364606584821428
+     },
+     "alignment": -4.909797495227436e-11,
+     "mean_error_over_rms_reference": 4.602988061238185e-10,
+     "relative_rms": 5.315265730329205e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.0017217313418314e-06,
+      "relative_rms": 1.2324460242798217e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.0017217313418314e-06,
+      "relative_rms": 1.2324460242798217e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6036638532366072
+     },
+     "alignment": -9.963237913631677e-10,
+     "mean_error_over_rms_reference": 3.849320345046582e-11,
+     "relative_rms": 1.2324460242798217e-07
+    }
+   }
+  },
+  {
+   "unit": 9,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9662737165178571,
+      "max_abs_diff": 0.0030496757615061654,
+      "relative_rms": 0.0003878907200750611
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030496757615061654,
+      "relative_rms": 0.0003878907200750611
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999564034598214
+     },
+     "alignment": -0.0003504897079261133,
+     "mean_error_over_rms_reference": 1.451338830232921e-05,
+     "relative_rms": 0.0003878907200750611
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9662824358258929,
+      "max_abs_diff": 0.0030488967895507812,
+      "relative_rms": 0.00038789102328739243
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030488967895507812,
+      "relative_rms": 0.00038789102328739243
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.00035049020758173464,
+     "mean_error_over_rms_reference": 1.4513322757226519e-05,
+     "relative_rms": 0.00038789102328739243
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9662737165178571,
+      "max_abs_diff": 0.0030496757615061654,
+      "relative_rms": 0.0003878907200750611
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030496757615061654,
+      "relative_rms": 0.0003878907200750611
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999564034598214
+     },
+     "alignment": -0.0003504897079261133,
+     "mean_error_over_rms_reference": 1.451338830232921e-05,
+     "relative_rms": 0.0003878907200750611
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9662824358258929,
+      "max_abs_diff": 0.0030488967895507812,
+      "relative_rms": 0.00038789102328739243
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030488967895507812,
+      "relative_rms": 0.00038789102328739243
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.00035049020758173464,
+     "mean_error_over_rms_reference": 1.4513322757226519e-05,
+     "relative_rms": 0.00038789102328739243
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9146641322544643,
+      "max_abs_diff": 0.0011862416544898835,
+      "relative_rms": 0.00016101222728498828
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011862416544898835,
+      "relative_rms": 0.00016101222728498828
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9997384207589286
+     },
+     "alignment": 1.6841142956291915e-06,
+     "mean_error_over_rms_reference": 5.189210790705671e-07,
+     "relative_rms": 0.00016101222728498828
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9146990094866071,
+      "max_abs_diff": 0.0011858940124511719,
+      "relative_rms": 0.00016101251498050283
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011858940124511719,
+      "relative_rms": 0.00016101251498050283
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995640345982143
+     },
+     "alignment": 1.6836143592657822e-06,
+     "mean_error_over_rms_reference": 5.188555409635458e-07,
+     "relative_rms": 0.00016101251498050283
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.408366486634122e-06,
+      "relative_rms": 5.220547136235685e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.408366486634122e-06,
+      "relative_rms": 5.220547136235685e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8832746233258929
+     },
+     "alignment": -4.879954274458367e-09,
+     "mean_error_over_rms_reference": -1.5735357230823296e-09,
+     "relative_rms": 5.220547136235685e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.106231689453125e-06,
+      "relative_rms": 5.354091668177565e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.106231689453125e-06,
+      "relative_rms": 5.354091668177565e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8365652901785714
+     },
+     "alignment": -5.379849674680089e-09,
+     "mean_error_over_rms_reference": -1.6390735699144877e-09,
+     "relative_rms": 5.354091668177565e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2206840553918852e-06,
+      "relative_rms": 1.2442826419017596e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2206840553918852e-06,
+      "relative_rms": 1.2442826419017596e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6097935267857143
+     },
+     "alignment": 4.998806034778141e-10,
+     "mean_error_over_rms_reference": 6.553784765151162e-11,
+     "relative_rms": 1.2442826419017596e-07
+    }
+   }
+  },
+  {
+   "unit": 10,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660993303571429,
+      "max_abs_diff": 0.002908349356923523,
+      "relative_rms": 0.0003859109502897252
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002908349356923523,
+      "relative_rms": 0.0003859109502897252
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.0003501669779224217,
+     "mean_error_over_rms_reference": 1.3830225244730333e-05,
+     "relative_rms": 0.0003859109502897252
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660818917410714,
+      "max_abs_diff": 0.0029087066650390625,
+      "relative_rms": 0.0003859110649646899
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029087066650390625,
+      "relative_rms": 0.0003859110649646899
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.000350166865654578,
+     "mean_error_over_rms_reference": 1.3830561134006243e-05,
+     "relative_rms": 0.0003859110649646899
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660993303571429,
+      "max_abs_diff": 0.002908349356923523,
+      "relative_rms": 0.0003859109502897252
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002908349356923523,
+      "relative_rms": 0.0003859109502897252
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.0003501669779224217,
+     "mean_error_over_rms_reference": 1.3830225244730333e-05,
+     "relative_rms": 0.0003859109502897252
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660818917410714,
+      "max_abs_diff": 0.0029087066650390625,
+      "relative_rms": 0.0003859110649646899
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029087066650390625,
+      "relative_rms": 0.0003859110649646899
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.000350166865654578,
+     "mean_error_over_rms_reference": 1.3830561134006243e-05,
+     "relative_rms": 0.0003859110649646899
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9122140066964286,
+      "max_abs_diff": 0.001095582010048446,
+      "relative_rms": 0.00015615271044755685
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.001095582010048446,
+      "relative_rms": 0.00015615271044755685
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996250697544643
+     },
+     "alignment": 4.503726611417664e-06,
+     "mean_error_over_rms_reference": 1.2692924958023143e-06,
+     "relative_rms": 0.00015615271044755685
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9121180943080357,
+      "max_abs_diff": 0.0010952949523925781,
+      "relative_rms": 0.00015615328795039136
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010952949523925781,
+      "relative_rms": 0.00015615328795039136
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995029994419643
+     },
+     "alignment": 4.503838913046295e-06,
+     "mean_error_over_rms_reference": 1.2696283836664913e-06,
+     "relative_rms": 0.00015615328795039136
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.907475241848317e-06,
+      "relative_rms": 5.19433854299688e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.907475241848317e-06,
+      "relative_rms": 5.19433854299688e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8840244838169643
+     },
+     "alignment": -2.6271990668471366e-09,
+     "mean_error_over_rms_reference": -8.654661751084366e-11,
+     "relative_rms": 5.19433854299688e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.059906005859375e-06,
+      "relative_rms": 5.334910982038218e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.059906005859375e-06,
+      "relative_rms": 5.334910982038218e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8360072544642857
+     },
+     "alignment": -2.514815675714619e-09,
+     "mean_error_over_rms_reference": 2.493411039994539e-10,
+     "relative_rms": 5.334910982038218e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.272858398237986e-06,
+      "relative_rms": 1.2152423671720101e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.272858398237986e-06,
+      "relative_rms": 1.2152423671720101e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6020246233258928
+     },
+     "alignment": -1.1239817637925924e-10,
+     "mean_error_over_rms_reference": -3.358877214822739e-10,
+     "relative_rms": 1.2152423671720101e-07
+    }
+   }
+  },
+  {
+   "unit": 11,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9659598214285714,
+      "max_abs_diff": 0.0027751942150260334,
+      "relative_rms": 0.0003816296795840273
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0027751942150260334,
+      "relative_rms": 0.0003816296795840273
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999651227678571
+     },
+     "alignment": -0.00034407672690153117,
+     "mean_error_over_rms_reference": 1.2050803147000243e-05,
+     "relative_rms": 0.0003816296795840273
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9659423828125,
+      "max_abs_diff": 0.0027756690979003906,
+      "relative_rms": 0.000381629623607689
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0027756690979003906,
+      "relative_rms": 0.000381629623607689
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.00034407669252042953,
+     "mean_error_over_rms_reference": 1.2050360873798012e-05,
+     "relative_rms": 0.000381629623607689
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9659598214285714,
+      "max_abs_diff": 0.0027751942150260334,
+      "relative_rms": 0.0003816296795840273
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0027751942150260334,
+      "relative_rms": 0.0003816296795840273
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999651227678571
+     },
+     "alignment": -0.00034407672690153117,
+     "mean_error_over_rms_reference": 1.2050803147000243e-05,
+     "relative_rms": 0.0003816296795840273
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9659423828125,
+      "max_abs_diff": 0.0027756690979003906,
+      "relative_rms": 0.000381629623607689
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0027756690979003906,
+      "relative_rms": 0.000381629623607689
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.00034407669252042953,
+     "mean_error_over_rms_reference": 1.2050360873798012e-05,
+     "relative_rms": 0.000381629623607689
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9112897600446429,
+      "max_abs_diff": 0.0011224102383842194,
+      "relative_rms": 0.00015535387511388213
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011224102383842194,
+      "relative_rms": 0.00015535387511388213
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996773856026786
+     },
+     "alignment": -6.747313248379994e-06,
+     "mean_error_over_rms_reference": 1.5841368817227305e-06,
+     "relative_rms": 0.00015535387511388213
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9112025669642857,
+      "max_abs_diff": 0.0011224746704101562,
+      "relative_rms": 0.0001553539276429401
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011224746704101562,
+      "relative_rms": 0.0001553539276429401
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995901925223214
+     },
+     "alignment": -6.747278873608347e-06,
+     "mean_error_over_rms_reference": 1.5836946081606225e-06,
+     "relative_rms": 0.0001553539276429401
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.346354046257943e-06,
+      "relative_rms": 5.172182852939931e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.346354046257943e-06,
+      "relative_rms": 5.172182852939931e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.88238525390625
+     },
+     "alignment": -1.9485034187075187e-09,
+     "mean_error_over_rms_reference": 1.875647592693689e-09,
+     "relative_rms": 5.172182852939931e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.059906005859375e-06,
+      "relative_rms": 5.321490417201843e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.059906005859375e-06,
+      "relative_rms": 5.321490417201843e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8342459542410714
+     },
+     "alignment": -1.9141278573595115e-09,
+     "mean_error_over_rms_reference": 1.433373976182314e-09,
+     "relative_rms": 5.321490417201843e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.0221349775463295e-06,
+      "relative_rms": 1.2311062263694445e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.0221349775463295e-06,
+      "relative_rms": 1.2311062263694445e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6038033621651786
+     },
+     "alignment": -3.439097351631047e-11,
+     "mean_error_over_rms_reference": 4.4227361656065907e-10,
+     "relative_rms": 1.2311062263694445e-07
+    }
+   }
+  },
+  {
+   "unit": 12,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660906110491071,
+      "max_abs_diff": 0.0030741440870123427,
+      "relative_rms": 0.0003869459100846447
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030741440870123427,
+      "relative_rms": 0.0003869459100846447
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999651227678571
+     },
+     "alignment": -0.00035092374581028365,
+     "mean_error_over_rms_reference": 8.659961890233132e-06,
+     "relative_rms": 0.0003869459100846447
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660906110491071,
+      "max_abs_diff": 0.0030736923217773438,
+      "relative_rms": 0.00038694506652977987
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030736923217773438,
+      "relative_rms": 0.00038694506652977987
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.00035092282202150147,
+     "mean_error_over_rms_reference": 8.659696199377607e-06,
+     "relative_rms": 0.00038694506652977987
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660906110491071,
+      "max_abs_diff": 0.0030741440870123427,
+      "relative_rms": 0.0003869459100846447
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030741440870123427,
+      "relative_rms": 0.0003869459100846447
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999651227678571
+     },
+     "alignment": -0.00035092374581028365,
+     "mean_error_over_rms_reference": 8.659961890233132e-06,
+     "relative_rms": 0.0003869459100846447
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660906110491071,
+      "max_abs_diff": 0.0030736923217773438,
+      "relative_rms": 0.00038694506652977987
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030736923217773438,
+      "relative_rms": 0.00038694506652977987
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.00035092282202150147,
+     "mean_error_over_rms_reference": 8.659696199377607e-06,
+     "relative_rms": 0.00038694506652977987
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9139665876116071,
+      "max_abs_diff": 0.0010916416860538014,
+      "relative_rms": 0.00015925088218254465
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010916416860538014,
+      "relative_rms": 0.00015925088218254465
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9997297014508929
+     },
+     "alignment": -2.361872949133107e-06,
+     "mean_error_over_rms_reference": 5.115691270409571e-07,
+     "relative_rms": 0.00015925088218254465
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.91387939453125,
+      "max_abs_diff": 0.0010921955108642578,
+      "relative_rms": 0.00015925117781886387
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010921955108642578,
+      "relative_rms": 0.00015925117781886387
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995465959821429
+     },
+     "alignment": -2.3609488897364904e-06,
+     "mean_error_over_rms_reference": 5.113034286554151e-07,
+     "relative_rms": 0.00015925117781886387
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.408366486634122e-06,
+      "relative_rms": 5.152435814198826e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.408366486634122e-06,
+      "relative_rms": 5.152435814198826e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8843645368303571
+     },
+     "alignment": -1.5632447795547831e-09,
+     "mean_error_over_rms_reference": 7.785768583998984e-10,
+     "relative_rms": 5.152435814198826e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.289610649149584e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.289610649149584e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8357631138392857
+     },
+     "alignment": -6.391411255413058e-10,
+     "mean_error_over_rms_reference": 5.128780008306715e-10,
+     "relative_rms": 5.289610649149584e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1970322617571583e-06,
+      "relative_rms": 1.2332242042936003e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1970322617571583e-06,
+      "relative_rms": 1.2332242042936003e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6093226841517857
+     },
+     "alignment": -9.241184213341845e-10,
+     "mean_error_over_rms_reference": 2.6569885804318314e-10,
+     "relative_rms": 1.2332242042936003e-07
+    }
+   }
+  },
+  {
+   "unit": 13,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660382952008929,
+      "max_abs_diff": 0.0029071447431512354,
+      "relative_rms": 0.0003924397044399053
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029071447431512354,
+      "relative_rms": 0.0003924397044399053
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.0003561079601225089,
+     "mean_error_over_rms_reference": 1.3933349702548905e-05,
+     "relative_rms": 0.0003924397044399053
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.96612548828125,
+      "max_abs_diff": 0.00290679931640625,
+      "relative_rms": 0.0003924400066968874
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.00290679931640625,
+      "relative_rms": 0.0003924400066968874
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.00035610823196329184,
+     "mean_error_over_rms_reference": 1.393368700186175e-05,
+     "relative_rms": 0.0003924400066968874
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660382952008929,
+      "max_abs_diff": 0.0029071447431512354,
+      "relative_rms": 0.0003924397044399053
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0029071447431512354,
+      "relative_rms": 0.0003924397044399053
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.0003561079601225089,
+     "mean_error_over_rms_reference": 1.3933349702548905e-05,
+     "relative_rms": 0.0003924397044399053
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.96612548828125,
+      "max_abs_diff": 0.00290679931640625,
+      "relative_rms": 0.0003924400066968874
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.00290679931640625,
+      "relative_rms": 0.0003924400066968874
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.00035610823196329184,
+     "mean_error_over_rms_reference": 1.393368700186175e-05,
+     "relative_rms": 0.0003924400066968874
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9107230050223214,
+      "max_abs_diff": 0.0010440484641467407,
+      "relative_rms": 0.00015709073780855
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010440484641467407,
+      "relative_rms": 0.00015709073780855
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996250697544643
+     },
+     "alignment": -1.7973679625184786e-06,
+     "mean_error_over_rms_reference": 7.423844543066308e-08,
+     "relative_rms": 0.00015709073780855
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9107230050223214,
+      "max_abs_diff": 0.0010433197021484375,
+      "relative_rms": 0.00015709069099839113
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010433197021484375,
+      "relative_rms": 0.00015709069099839113
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995291573660714
+     },
+     "alignment": -1.7976398699804348e-06,
+     "mean_error_over_rms_reference": 7.457574851202142e-08,
+     "relative_rms": 0.00015709069099839113
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.44071874603236e-06,
+      "relative_rms": 5.173226382559256e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.44071874603236e-06,
+      "relative_rms": 5.173226382559256e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8842686244419643
+     },
+     "alignment": -4.2426175242841066e-10,
+     "mean_error_over_rms_reference": 1.770319646627574e-10,
+     "relative_rms": 5.173226382559256e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.311097649045786e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.311097649045786e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8363560267857143
+     },
+     "alignment": -6.961847657851539e-10,
+     "mean_error_over_rms_reference": 5.1433506615942e-10,
+     "relative_rms": 5.311097649045786e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2302989125245745e-06,
+      "relative_rms": 1.2283200366195636e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2302989125245745e-06,
+      "relative_rms": 1.2283200366195636e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6067243303571428
+     },
+     "alignment": 2.719082424495493e-10,
+     "mean_error_over_rms_reference": -3.3730310163651844e-10,
+     "relative_rms": 1.2283200366195636e-07
+    }
+   }
+  },
+  {
+   "unit": 14,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660731724330357,
+      "max_abs_diff": 0.003287233566233283,
+      "relative_rms": 0.0003898331518720998
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.003287233566233283,
+      "relative_rms": 0.0003898331518720998
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999651227678571
+     },
+     "alignment": -0.00035079855695871974,
+     "mean_error_over_rms_reference": 1.1401087728688151e-05,
+     "relative_rms": 0.0003898331518720998
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660382952008929,
+      "max_abs_diff": 0.003287792205810547,
+      "relative_rms": 0.00038983310308663923
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.003287792205810547,
+      "relative_rms": 0.00038983310308663923
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.00035079848309845196,
+     "mean_error_over_rms_reference": 1.1401255474331814e-05,
+     "relative_rms": 0.00038983310308663923
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660731724330357,
+      "max_abs_diff": 0.003287233566233283,
+      "relative_rms": 0.0003898331518720998
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.003287233566233283,
+      "relative_rms": 0.0003898331518720998
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999651227678571
+     },
+     "alignment": -0.00035079855695871974,
+     "mean_error_over_rms_reference": 1.1401087728688151e-05,
+     "relative_rms": 0.0003898331518720998
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660382952008929,
+      "max_abs_diff": 0.003287792205810547,
+      "relative_rms": 0.00038983310308663923
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.003287792205810547,
+      "relative_rms": 0.00038983310308663923
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.00035079848309845196,
+     "mean_error_over_rms_reference": 1.1401255474331814e-05,
+     "relative_rms": 0.00038983310308663923
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.90869140625,
+      "max_abs_diff": 0.0010528933594047274,
+      "relative_rms": 0.0001513851786805141
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010528933594047274,
+      "relative_rms": 0.0001513851786805141
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995814732142857
+     },
+     "alignment": -9.30797514400104e-07,
+     "mean_error_over_rms_reference": -6.899294716261417e-07,
+     "relative_rms": 0.0001513851786805141
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9087698800223214,
+      "max_abs_diff": 0.0010529160499572754,
+      "relative_rms": 0.0001513841556796003
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010529160499572754,
+      "relative_rms": 0.0001513841556796003
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9994855608258929
+     },
+     "alignment": -9.307234665876349e-07,
+     "mean_error_over_rms_reference": -6.89761726875923e-07,
+     "relative_rms": 0.0001513841556796003
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.496329590101936e-06,
+      "relative_rms": 5.238530966029542e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.496329590101936e-06,
+      "relative_rms": 5.238530966029542e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8840767996651786
+     },
+     "alignment": 3.5917266763964957e-09,
+     "mean_error_over_rms_reference": 1.8962522236840626e-09,
+     "relative_rms": 5.238530966029542e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.58306884765625e-06,
+      "relative_rms": 5.375229938262143e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.58306884765625e-06,
+      "relative_rms": 5.375229938262143e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.83599853515625
+     },
+     "alignment": 3.665612504157818e-09,
+     "mean_error_over_rms_reference": 2.0639970250238387e-09,
+     "relative_rms": 5.375229938262143e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.206988179625057e-06,
+      "relative_rms": 1.2306601147392199e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.206988179625057e-06,
+      "relative_rms": 1.2306601147392199e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6057564871651786
+     },
+     "alignment": -7.39006542921994e-11,
+     "mean_error_over_rms_reference": -1.6774480118726072e-10,
+     "relative_rms": 1.2306601147392199e-07
+    }
+   }
+  },
+  {
+   "unit": 15,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9663870675223214,
+      "max_abs_diff": 0.0031208931955006847,
+      "relative_rms": 0.0003973642035866444
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0031208931955006847,
+      "relative_rms": 0.0003973642035866444
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.0003612437216983349,
+     "mean_error_over_rms_reference": 8.25378452430141e-06,
+     "relative_rms": 0.0003973642035866444
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9664045061383929,
+      "max_abs_diff": 0.003120899200439453,
+      "relative_rms": 0.0003973647818056834
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.003120899200439453,
+      "relative_rms": 0.0003973647818056834
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.0003612447648506315,
+     "mean_error_over_rms_reference": 8.253160949769888e-06,
+     "relative_rms": 0.0003973647818056834
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9663870675223214,
+      "max_abs_diff": 0.0031208931955006847,
+      "relative_rms": 0.0003973642035866444
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0031208931955006847,
+      "relative_rms": 0.0003973642035866444
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.0003612437216983349,
+     "mean_error_over_rms_reference": 8.25378452430141e-06,
+     "relative_rms": 0.0003973642035866444
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9664045061383929,
+      "max_abs_diff": 0.003120899200439453,
+      "relative_rms": 0.0003973647818056834
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.003120899200439453,
+      "relative_rms": 0.0003973647818056834
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.0003612447648506315,
+     "mean_error_over_rms_reference": 8.253160949769888e-06,
+     "relative_rms": 0.0003973647818056834
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9097551618303571,
+      "max_abs_diff": 0.0011706434018528,
+      "relative_rms": 0.00015719280748508716
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011706434018528,
+      "relative_rms": 0.00015719280748508716
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996163504464286
+     },
+     "alignment": 6.990703924164861e-07,
+     "mean_error_over_rms_reference": -2.818788068876495e-07,
+     "relative_rms": 0.00015719280748508716
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9097638811383929,
+      "max_abs_diff": 0.0011701583862304688,
+      "relative_rms": 0.00015719356482694192
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011701583862304688,
+      "relative_rms": 0.00015719356482694192
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9994594029017857
+     },
+     "alignment": 6.980265954712341e-07,
+     "mean_error_over_rms_reference": -2.8250237251070006e-07,
+     "relative_rms": 0.00015719356482694192
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.631211252994262e-06,
+      "relative_rms": 5.347181244529647e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.631211252994262e-06,
+      "relative_rms": 5.347181244529647e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8841465541294643
+     },
+     "alignment": 3.732025432672107e-09,
+     "mean_error_over_rms_reference": -6.39066616834976e-10,
+     "relative_rms": 5.347181244529647e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.152557373046875e-06,
+      "relative_rms": 5.464462145805195e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.152557373046875e-06,
+      "relative_rms": 5.464462145805195e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.83642578125
+     },
+     "alignment": 2.6883426736075836e-09,
+     "mean_error_over_rms_reference": -1.2626325334089115e-09,
+     "relative_rms": 5.464462145805195e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1407115358963438e-06,
+      "relative_rms": 1.2291888567233555e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1407115358963438e-06,
+      "relative_rms": 1.2291888567233555e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6059395926339286
+     },
+     "alignment": 1.0436688589300597e-09,
+     "mean_error_over_rms_reference": 6.235659178917154e-10,
+     "relative_rms": 1.2291888567233555e-07
+    }
+   }
+  },
+  {
+   "unit": 16,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9645211356026786,
+      "max_abs_diff": 0.0031030013322723704,
+      "relative_rms": 0.00038976954789427556
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0031030013322723704,
+      "relative_rms": 0.00038976954789427556
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.0003501786397961844,
+     "mean_error_over_rms_reference": 1.153698282094732e-05,
+     "relative_rms": 0.00038976954789427556
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9644862583705357,
+      "max_abs_diff": 0.0031032562255859375,
+      "relative_rms": 0.0003897697929562016
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0031032562255859375,
+      "relative_rms": 0.0003897697929562016
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.0003501790713372618,
+     "mean_error_over_rms_reference": 1.1537030982891096e-05,
+     "relative_rms": 0.0003897697929562016
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9645211356026786,
+      "max_abs_diff": 0.0031030013322723704,
+      "relative_rms": 0.00038976954789427556
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0031030013322723704,
+      "relative_rms": 0.00038976954789427556
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.0003501786397961844,
+     "mean_error_over_rms_reference": 1.153698282094732e-05,
+     "relative_rms": 0.00038976954789427556
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9644862583705357,
+      "max_abs_diff": 0.0031032562255859375,
+      "relative_rms": 0.0003897697929562016
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0031032562255859375,
+      "relative_rms": 0.0003897697929562016
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.0003501790713372618,
+     "mean_error_over_rms_reference": 1.1537030982891096e-05,
+     "relative_rms": 0.0003897697929562016
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9095197405133929,
+      "max_abs_diff": 0.001358485932582365,
+      "relative_rms": 0.00015488315286203014
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.001358485932582365,
+      "relative_rms": 0.00015488315286203014
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99969482421875
+     },
+     "alignment": -6.9020126887691445e-06,
+     "mean_error_over_rms_reference": 5.540586036375444e-07,
+     "relative_rms": 0.00015488315286203014
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9095633370535714,
+      "max_abs_diff": 0.0013587474822998047,
+      "relative_rms": 0.00015488324893710273
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0013587474822998047,
+      "relative_rms": 0.00015488324893710273
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9994768415178571
+     },
+     "alignment": -6.902444445571796e-06,
+     "mean_error_over_rms_reference": 5.541067703231726e-07,
+     "relative_rms": 0.00015488324893710273
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.291525518202889e-06,
+      "relative_rms": 5.191803412286834e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.291525518202889e-06,
+      "relative_rms": 5.191803412286834e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8841029575892857
+     },
+     "alignment": -8.744582089856861e-10,
+     "mean_error_over_rms_reference": 9.679306412292302e-10,
+     "relative_rms": 5.191803412286834e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.245208740234375e-06,
+      "relative_rms": 5.333377996467454e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.245208740234375e-06,
+      "relative_rms": 5.333377996467454e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8363473074776786
+     },
+     "alignment": -1.3062135304563164e-09,
+     "mean_error_over_rms_reference": 1.016097565653022e-09,
+     "relative_rms": 5.333377996467454e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2502766004729438e-06,
+      "relative_rms": 1.2477307083924646e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2502766004729438e-06,
+      "relative_rms": 1.2477307083924646e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6086948939732143
+     },
+     "alignment": 4.3174008794790623e-10,
+     "mean_error_over_rms_reference": -4.816692486248954e-11,
+     "relative_rms": 1.2477307083924646e-07
+    }
+   }
+  },
+  {
+   "unit": 17,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.96636962890625,
+      "max_abs_diff": 0.0027612336284086325,
+      "relative_rms": 0.000390083312738156
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0027612336284086325,
+      "relative_rms": 0.000390083312738156
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.00035405580093726864,
+     "mean_error_over_rms_reference": 1.2939596582190325e-05,
+     "relative_rms": 0.000390083312738156
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9663957868303571,
+      "max_abs_diff": 0.002761363983154297,
+      "relative_rms": 0.0003900832942239101
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002761363983154297,
+      "relative_rms": 0.0003900832942239101
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.00035405536740579197,
+     "mean_error_over_rms_reference": 1.2939560166845985e-05,
+     "relative_rms": 0.0003900832942239101
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.96636962890625,
+      "max_abs_diff": 0.0027612336284086325,
+      "relative_rms": 0.000390083312738156
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0027612336284086325,
+      "relative_rms": 0.000390083312738156
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.00035405580093726864,
+     "mean_error_over_rms_reference": 1.2939596582190325e-05,
+     "relative_rms": 0.000390083312738156
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9663957868303571,
+      "max_abs_diff": 0.002761363983154297,
+      "relative_rms": 0.0003900832942239101
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002761363983154297,
+      "relative_rms": 0.0003900832942239101
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.00035405536740579197,
+     "mean_error_over_rms_reference": 1.2939560166845985e-05,
+     "relative_rms": 0.0003900832942239101
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9099905831473214,
+      "max_abs_diff": 0.0011293452264249382,
+      "relative_rms": 0.0001558296844941038
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011293452264249382,
+      "relative_rms": 0.0001558296844941038
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996163504464286
+     },
+     "alignment": 3.022608896718391e-06,
+     "mean_error_over_rms_reference": -2.9682048019460346e-07,
+     "relative_rms": 0.0001558296844941038
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.909912109375,
+      "max_abs_diff": 0.0011293888092041016,
+      "relative_rms": 0.00015582913924474596
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011293888092041016,
+      "relative_rms": 0.00015582913924474596
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9994942801339286
+     },
+     "alignment": 3.023042815707085e-06,
+     "mean_error_over_rms_reference": -2.9685690128131675e-07,
+     "relative_rms": 0.00015582913924474596
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.75341540748542e-06,
+      "relative_rms": 5.207380641444002e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.75341540748542e-06,
+      "relative_rms": 5.207380641444002e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8851231166294643
+     },
+     "alignment": 1.3759563257698596e-09,
+     "mean_error_over_rms_reference": -3.3320371384862637e-10,
+     "relative_rms": 5.207380641444002e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.58306884765625e-06,
+      "relative_rms": 5.340067209881857e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.58306884765625e-06,
+      "relative_rms": 5.340067209881857e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8361642020089286
+     },
+     "alignment": 1.8097807191070352e-09,
+     "mean_error_over_rms_reference": -3.696246719363921e-10,
+     "relative_rms": 5.340067209881857e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.364445579632445e-06,
+      "relative_rms": 1.2352904635351844e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.364445579632445e-06,
+      "relative_rms": 1.2352904635351844e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6076224190848214
+     },
+     "alignment": -4.338390190027252e-10,
+     "mean_error_over_rms_reference": 3.642095792741096e-11,
+     "relative_rms": 1.2352904635351844e-07
+    }
+   }
+  },
+  {
+   "unit": 18,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9673985072544643,
+      "max_abs_diff": 0.0030496757615061654,
+      "relative_rms": 0.00040212514824550336
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030496757615061654,
+      "relative_rms": 0.00040212514824550336
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.00036122836852074984,
+     "mean_error_over_rms_reference": 1.1953737802247945e-05,
+     "relative_rms": 0.00040212514824550336
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9673897879464286,
+      "max_abs_diff": 0.0030488967895507812,
+      "relative_rms": 0.00040212383156146584
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030488967895507812,
+      "relative_rms": 0.00040212383156146584
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.0003612273978390997,
+     "mean_error_over_rms_reference": 1.1953473849907128e-05,
+     "relative_rms": 0.00040212383156146584
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9673985072544643,
+      "max_abs_diff": 0.0030496757615061654,
+      "relative_rms": 0.00040212514824550336
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030496757615061654,
+      "relative_rms": 0.00040212514824550336
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.00036122836852074984,
+     "mean_error_over_rms_reference": 1.1953737802247945e-05,
+     "relative_rms": 0.00040212514824550336
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9673897879464286,
+      "max_abs_diff": 0.0030488967895507812,
+      "relative_rms": 0.00040212383156146584
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030488967895507812,
+      "relative_rms": 0.00040212383156146584
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.0003612273978390997,
+     "mean_error_over_rms_reference": 1.1953473849907128e-05,
+     "relative_rms": 0.00040212383156146584
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9149693080357143,
+      "max_abs_diff": 0.0010748433162941495,
+      "relative_rms": 0.00015902819057913504
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010748433162941495,
+      "relative_rms": 0.00015902819057913504
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996512276785714
+     },
+     "alignment": 2.899903342842976e-06,
+     "mean_error_over_rms_reference": -2.19803681856592e-08,
+     "relative_rms": 0.00015902819057913504
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9150041852678571,
+      "max_abs_diff": 0.0010749101638793945,
+      "relative_rms": 0.0001590288826763785
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010749101638793945,
+      "relative_rms": 0.0001590288826763785
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995901925223214
+     },
+     "alignment": 2.9008740918569676e-06,
+     "mean_error_over_rms_reference": -2.224433215314467e-08,
+     "relative_rms": 0.0001590288826763785
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.408366486634122e-06,
+      "relative_rms": 5.212897556418928e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.408366486634122e-06,
+      "relative_rms": 5.212897556418928e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.88336181640625
+     },
+     "alignment": 1.1437532950680703e-09,
+     "mean_error_over_rms_reference": 1.1896777084598578e-09,
+     "relative_rms": 5.212897556418928e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.364889717108298e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.364889717108298e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8338361467633928
+     },
+     "alignment": 2.1145986804728487e-09,
+     "mean_error_over_rms_reference": 9.257137634691109e-10,
+     "relative_rms": 5.364889717108298e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.286844508285867e-06,
+      "relative_rms": 1.258087461362707e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.286844508285867e-06,
+      "relative_rms": 1.258087461362707e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6133946010044643
+     },
+     "alignment": -9.708613339225848e-10,
+     "mean_error_over_rms_reference": 2.639639458894794e-10,
+     "relative_rms": 1.258087461362707e-07
+    }
+   }
+  },
+  {
+   "unit": 19,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9635968889508929,
+      "max_abs_diff": 0.002595534980479819,
+      "relative_rms": 0.0003834776505316521
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002595534980479819,
+      "relative_rms": 0.0003834776505316521
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.00034568306579112575,
+     "mean_error_over_rms_reference": 1.6338675900494643e-05,
+     "relative_rms": 0.0003834776505316521
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9635445731026786,
+      "max_abs_diff": 0.0025954246520996094,
+      "relative_rms": 0.00038347779773878835
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0025954246520996094,
+      "relative_rms": 0.00038347779773878835
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.00034568308596381756,
+     "mean_error_over_rms_reference": 1.633815359141616e-05,
+     "relative_rms": 0.00038347779773878835
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9635968889508929,
+      "max_abs_diff": 0.002595534980479819,
+      "relative_rms": 0.0003834776505316521
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002595534980479819,
+      "relative_rms": 0.0003834776505316521
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.00034568306579112575,
+     "mean_error_over_rms_reference": 1.6338675900494643e-05,
+     "relative_rms": 0.0003834776505316521
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9635445731026786,
+      "max_abs_diff": 0.0025954246520996094,
+      "relative_rms": 0.00038347779773878835
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0025954246520996094,
+      "relative_rms": 0.00038347779773878835
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.00034568308596381756,
+     "mean_error_over_rms_reference": 1.633815359141616e-05,
+     "relative_rms": 0.00038347779773878835
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9053693498883929,
+      "max_abs_diff": 0.0011878307855770487,
+      "relative_rms": 0.00015214678990431958
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011878307855770487,
+      "relative_rms": 0.00015214678990431958
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996250697544643
+     },
+     "alignment": -4.409189270971752e-06,
+     "mean_error_over_rms_reference": -2.972201620871442e-07,
+     "relative_rms": 0.00015214678990431958
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9054129464285714,
+      "max_abs_diff": 0.0011878013610839844,
+      "relative_rms": 0.0001521459182358262
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011878013610839844,
+      "relative_rms": 0.0001521459182358262
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9994070870535714
+     },
+     "alignment": -4.409209268329093e-06,
+     "mean_error_over_rms_reference": -2.9774247083074173e-07,
+     "relative_rms": 0.0001521459182358262
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.007145465503072e-06,
+      "relative_rms": 5.226870192271995e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.007145465503072e-06,
+      "relative_rms": 5.226870192271995e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8866402762276786
+     },
+     "alignment": -2.5382700516211716e-09,
+     "mean_error_over_rms_reference": -7.791522665120626e-10,
+     "relative_rms": 5.226870192271995e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.7220458984375e-06,
+      "relative_rms": 5.360270993489565e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.7220458984375e-06,
+      "relative_rms": 5.360270993489565e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8370710100446428
+     },
+     "alignment": -2.5584072687587196e-09,
+     "mean_error_over_rms_reference": -1.3014610160769662e-09,
+     "relative_rms": 5.360270993489565e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2712976520390384e-06,
+      "relative_rms": 1.22284999611851e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2712976520390384e-06,
+      "relative_rms": 1.22284999611851e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6059483119419643
+     },
+     "alignment": 2.0122678764396773e-11,
+     "mean_error_over_rms_reference": 5.223087495911024e-10,
+     "relative_rms": 1.22284999611851e-07
+    }
+   }
+  },
+  {
+   "unit": 20,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9652971540178571,
+      "max_abs_diff": 0.0030496757615061654,
+      "relative_rms": 0.00039227314634068827
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030496757615061654,
+      "relative_rms": 0.00039227314634068827
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998953683035714
+     },
+     "alignment": -0.00035516624946830796,
+     "mean_error_over_rms_reference": 1.426140293994715e-05,
+     "relative_rms": 0.00039227314634068827
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9653145926339286,
+      "max_abs_diff": 0.0030488967895507812,
+      "relative_rms": 0.0003922730619776692
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030488967895507812,
+      "relative_rms": 0.0003922730619776692
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998779296875
+     },
+     "alignment": -0.00035516582416722487,
+     "mean_error_over_rms_reference": 1.4261030022723217e-05,
+     "relative_rms": 0.0003922730619776692
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9652971540178571,
+      "max_abs_diff": 0.0030496757615061654,
+      "relative_rms": 0.00039227314634068827
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030496757615061654,
+      "relative_rms": 0.00039227314634068827
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998953683035714
+     },
+     "alignment": -0.00035516624946830796,
+     "mean_error_over_rms_reference": 1.426140293994715e-05,
+     "relative_rms": 0.00039227314634068827
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9653145926339286,
+      "max_abs_diff": 0.0030488967895507812,
+      "relative_rms": 0.0003922730619776692
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030488967895507812,
+      "relative_rms": 0.0003922730619776692
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998779296875
+     },
+     "alignment": -0.00035516582416722487,
+     "mean_error_over_rms_reference": 1.4261030022723217e-05,
+     "relative_rms": 0.0003922730619776692
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9071568080357143,
+      "max_abs_diff": 0.0011568774536971915,
+      "relative_rms": 0.00015589482717556723
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011568774536971915,
+      "relative_rms": 0.00015589482717556723
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995814732142857
+     },
+     "alignment": 4.0051855910124045e-07,
+     "mean_error_over_rms_reference": 5.41831876452661e-07,
+     "relative_rms": 0.00015589482717556723
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9072004045758929,
+      "max_abs_diff": 0.0011568069458007812,
+      "relative_rms": 0.00015589469563643556
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011568069458007812,
+      "relative_rms": 0.00015589469563643556
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9994594029017857
+     },
+     "alignment": 4.009441501793917e-07,
+     "mean_error_over_rms_reference": 5.414589533900884e-07,
+     "relative_rms": 0.00015589469563643556
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.408366486634122e-06,
+      "relative_rms": 5.233011127587055e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.408366486634122e-06,
+      "relative_rms": 5.233011127587055e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8820277622767857
+     },
+     "alignment": -3.4690365204586676e-09,
+     "mean_error_over_rms_reference": 3.1044665001084862e-09,
+     "relative_rms": 5.233011127587055e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.366953382513792e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.366953382513792e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8361380440848214
+     },
+     "alignment": -3.043473401678407e-09,
+     "mean_error_over_rms_reference": 2.7315432082696857e-09,
+     "relative_rms": 5.366953382513792e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.316963200944883e-07,
+      "relative_rms": 1.231187535190136e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 9.316963200944883e-07,
+      "relative_rms": 1.231187535190136e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6060093470982143
+     },
+     "alignment": -4.255777994000402e-10,
+     "mean_error_over_rms_reference": 3.72923293001264e-10,
+     "relative_rms": 1.231187535190136e-07
+    }
+   }
+  },
+  {
+   "unit": 21,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9644862583705357,
+      "max_abs_diff": 0.0024603075303719635,
+      "relative_rms": 0.0003868404778714524
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0024603075303719635,
+      "relative_rms": 0.0003868404778714524
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99993896484375
+     },
+     "alignment": -0.00034889198051898284,
+     "mean_error_over_rms_reference": 9.704680194891894e-06,
+     "relative_rms": 0.0003868404778714524
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9644862583705357,
+      "max_abs_diff": 0.002460479736328125,
+      "relative_rms": 0.00038684171779846446
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002460479736328125,
+      "relative_rms": 0.00038684171779846446
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998692103794643
+     },
+     "alignment": -0.0003488933574918617,
+     "mean_error_over_rms_reference": 9.705195600861955e-06,
+     "relative_rms": 0.00038684171779846446
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9644862583705357,
+      "max_abs_diff": 0.0024603075303719635,
+      "relative_rms": 0.0003868404778714524
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0024603075303719635,
+      "relative_rms": 0.0003868404778714524
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99993896484375
+     },
+     "alignment": -0.00034889198051898284,
+     "mean_error_over_rms_reference": 9.704680194891894e-06,
+     "relative_rms": 0.0003868404778714524
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9644862583705357,
+      "max_abs_diff": 0.002460479736328125,
+      "relative_rms": 0.00038684171779846446
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002460479736328125,
+      "relative_rms": 0.00038684171779846446
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998692103794643
+     },
+     "alignment": -0.0003488933574918617,
+     "mean_error_over_rms_reference": 9.705195600861955e-06,
+     "relative_rms": 0.00038684171779846446
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9087785993303571,
+      "max_abs_diff": 0.0010173257719117146,
+      "relative_rms": 0.0001545704824331228
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010173257719117146,
+      "relative_rms": 0.0001545704824331228
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9997645786830357
+     },
+     "alignment": -3.0581724879020008e-06,
+     "mean_error_over_rms_reference": 6.143947609502892e-07,
+     "relative_rms": 0.0001545704824331228
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9087785993303571,
+      "max_abs_diff": 0.0010173320770263672,
+      "relative_rms": 0.00015457061348357016
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010173320770263672,
+      "relative_rms": 0.00015457061348357016
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99957275390625
+     },
+     "alignment": -3.059549953949732e-06,
+     "mean_error_over_rms_reference": 6.149101794418003e-07,
+     "relative_rms": 0.00015457061348357016
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.725504561127082e-06,
+      "relative_rms": 5.221144045831874e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.725504561127082e-06,
+      "relative_rms": 5.221144045831874e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8831438337053571
+     },
+     "alignment": 7.127576165936981e-09,
+     "mean_error_over_rms_reference": 1.1517660441544473e-10,
+     "relative_rms": 5.221144045831874e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.9604644775390625e-06,
+      "relative_rms": 5.34764642025695e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.9604644775390625e-06,
+      "relative_rms": 5.34764642025695e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8365129743303572
+     },
+     "alignment": 5.750115278149463e-09,
+     "mean_error_over_rms_reference": 6.305959420685724e-10,
+     "relative_rms": 5.34764642025695e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.0951359321609289e-06,
+      "relative_rms": 1.2237179941140048e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.0951359321609289e-06,
+      "relative_rms": 1.2237179941140048e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6047799246651786
+     },
+     "alignment": 1.3774466996319956e-09,
+     "mean_error_over_rms_reference": -5.154193385217446e-10,
+     "relative_rms": 1.2237179941140048e-07
+    }
+   }
+  },
+  {
+   "unit": 22,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9652448381696429,
+      "max_abs_diff": 0.003151641864877597,
+      "relative_rms": 0.0003922698712475082
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.003151641864877597,
+      "relative_rms": 0.0003922698712475082
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99993896484375
+     },
+     "alignment": -0.0003549610818540208,
+     "mean_error_over_rms_reference": 9.29246522311899e-06,
+     "relative_rms": 0.0003922698712475082
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9652535574776786,
+      "max_abs_diff": 0.00315093994140625,
+      "relative_rms": 0.00039227003007363766
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.00315093994140625,
+      "relative_rms": 0.00039227003007363766
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.0003549612425884819,
+     "mean_error_over_rms_reference": 9.29212781876844e-06,
+     "relative_rms": 0.00039227003007363766
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9652448381696429,
+      "max_abs_diff": 0.003151641864877597,
+      "relative_rms": 0.0003922698712475082
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.003151641864877597,
+      "relative_rms": 0.0003922698712475082
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99993896484375
+     },
+     "alignment": -0.0003549610818540208,
+     "mean_error_over_rms_reference": 9.29246522311899e-06,
+     "relative_rms": 0.0003922698712475082
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9652535574776786,
+      "max_abs_diff": 0.00315093994140625,
+      "relative_rms": 0.00039227003007363766
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.00315093994140625,
+      "relative_rms": 0.00039227003007363766
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.0003549612425884819,
+     "mean_error_over_rms_reference": 9.29212781876844e-06,
+     "relative_rms": 0.00039227003007363766
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9074794224330357,
+      "max_abs_diff": 0.0012409459567805925,
+      "relative_rms": 0.00015456593606298213
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0012409459567805925,
+      "relative_rms": 0.00015456593606298213
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996686662946429
+     },
+     "alignment": -2.585916257085266e-06,
+     "mean_error_over_rms_reference": 5.543319399726069e-07,
+     "relative_rms": 0.00015456593606298213
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9074968610491071,
+      "max_abs_diff": 0.0012409687042236328,
+      "relative_rms": 0.00015456563992207958
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0012409687042236328,
+      "relative_rms": 0.00015456563992207958
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9994942801339286
+     },
+     "alignment": -2.586076996763691e-06,
+     "mean_error_over_rms_reference": 5.539945370270261e-07,
+     "relative_rms": 0.00015456563992207958
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.463614212748325e-06,
+      "relative_rms": 5.363595176564502e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.463614212748325e-06,
+      "relative_rms": 5.363595176564502e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8868844168526786
+     },
+     "alignment": -4.558766756785537e-09,
+     "mean_error_over_rms_reference": -9.151553109376101e-10,
+     "relative_rms": 5.363595176564502e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.198883056640625e-06,
+      "relative_rms": 5.48106930155942e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.198883056640625e-06,
+      "relative_rms": 5.48106930155942e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8390590122767857
+     },
+     "alignment": -4.719559404551962e-09,
+     "mean_error_over_rms_reference": -1.252558167242269e-09,
+     "relative_rms": 5.48106930155942e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.197186517032378e-06,
+      "relative_rms": 1.2383356734274284e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.197186517032378e-06,
+      "relative_rms": 1.2383356734274284e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6098894391741072
+     },
+     "alignment": 1.607786120705055e-10,
+     "mean_error_over_rms_reference": 3.3740285650605316e-10,
+     "relative_rms": 1.2383356734274284e-07
+    }
+   }
+  },
+  {
+   "unit": 23,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9639369419642857,
+      "max_abs_diff": 0.003267824015287246,
+      "relative_rms": 0.0003852168325708684
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.003267824015287246,
+      "relative_rms": 0.0003852168325708684
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.0003495405681778486,
+     "mean_error_over_rms_reference": 1.3047391481028422e-05,
+     "relative_rms": 0.0003852168325708684
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9638846261160714,
+      "max_abs_diff": 0.0032677650451660156,
+      "relative_rms": 0.00038521647642754734
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0032677650451660156,
+      "relative_rms": 0.00038521647642754734
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998953683035714
+     },
+     "alignment": -0.00034954071533965206,
+     "mean_error_over_rms_reference": 1.3046972233948974e-05,
+     "relative_rms": 0.00038521647642754734
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9639369419642857,
+      "max_abs_diff": 0.003267824015287246,
+      "relative_rms": 0.0003852168325708684
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.003267824015287246,
+      "relative_rms": 0.0003852168325708684
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.0003495405681778486,
+     "mean_error_over_rms_reference": 1.3047391481028422e-05,
+     "relative_rms": 0.0003852168325708684
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9638846261160714,
+      "max_abs_diff": 0.0032677650451660156,
+      "relative_rms": 0.00038521647642754734
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0032677650451660156,
+      "relative_rms": 0.00038521647642754734
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998953683035714
+     },
+     "alignment": -0.00034954071533965206,
+     "mean_error_over_rms_reference": 1.3046972233948974e-05,
+     "relative_rms": 0.00038521647642754734
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9078717912946429,
+      "max_abs_diff": 0.0010437328365675569,
+      "relative_rms": 0.000155148404375278
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010437328365675569,
+      "relative_rms": 0.000155148404375278
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9997035435267857
+     },
+     "alignment": -2.2729796799955015e-06,
+     "mean_error_over_rms_reference": -4.469124528753669e-07,
+     "relative_rms": 0.000155148404375278
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.907958984375,
+      "max_abs_diff": 0.0010437965393066406,
+      "relative_rms": 0.0001551488908292244
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010437965393066406,
+      "relative_rms": 0.0001551488908292244
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995640345982143
+     },
+     "alignment": -2.273127156821534e-06,
+     "mean_error_over_rms_reference": -4.473316979657278e-07,
+     "relative_rms": 0.0001551488908292244
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.705889611742123e-06,
+      "relative_rms": 5.2228697660852e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.705889611742123e-06,
+      "relative_rms": 5.2228697660852e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8839198521205357
+     },
+     "alignment": 2.653216191882786e-09,
+     "mean_error_over_rms_reference": -2.681769737799167e-09,
+     "relative_rms": 5.2228697660852e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.152557373046875e-06,
+      "relative_rms": 5.362728759388381e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.152557373046875e-06,
+      "relative_rms": 5.362728759388381e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8343680245535714
+     },
+     "alignment": 2.5058067687482453e-09,
+     "mean_error_over_rms_reference": -3.101014893640786e-09,
+     "relative_rms": 5.362728759388381e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.139883545775433e-06,
+      "relative_rms": 1.2259927133323669e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.139883545775433e-06,
+      "relative_rms": 1.2259927133323669e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6032976422991072
+     },
+     "alignment": 1.4739450464934349e-10,
+     "mean_error_over_rms_reference": 4.192451562987154e-10,
+     "relative_rms": 1.2259927133323669e-07
+    }
+   }
+  },
+  {
+   "unit": 24,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9639543805803571,
+      "max_abs_diff": 0.0023334356578725846,
+      "relative_rms": 0.0003795870092658107
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0023334356578725846,
+      "relative_rms": 0.0003795870092658107
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.00034232993799900366,
+     "mean_error_over_rms_reference": 8.718557242762137e-06,
+     "relative_rms": 0.0003795870092658107
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.96392822265625,
+      "max_abs_diff": 0.0023331642150878906,
+      "relative_rms": 0.0003795864211205896
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0023331642150878906,
+      "relative_rms": 0.0003795864211205896
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998692103794643
+     },
+     "alignment": -0.00034232900331941716,
+     "mean_error_over_rms_reference": 8.718317909717455e-06,
+     "relative_rms": 0.0003795864211205896
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9639543805803571,
+      "max_abs_diff": 0.0023334356578725846,
+      "relative_rms": 0.0003795870092658107
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0023334356578725846,
+      "relative_rms": 0.0003795870092658107
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.00034232993799900366,
+     "mean_error_over_rms_reference": 8.718557242762137e-06,
+     "relative_rms": 0.0003795870092658107
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.96392822265625,
+      "max_abs_diff": 0.0023331642150878906,
+      "relative_rms": 0.0003795864211205896
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0023331642150878906,
+      "relative_rms": 0.0003795864211205896
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998692103794643
+     },
+     "alignment": -0.00034232900331941716,
+     "mean_error_over_rms_reference": 8.718317909717455e-06,
+     "relative_rms": 0.0003795864211205896
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9112723214285714,
+      "max_abs_diff": 0.0011419736433868621,
+      "relative_rms": 0.00015838365721198295
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011419736433868621,
+      "relative_rms": 0.00015838365721198295
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9997209821428571
+     },
+     "alignment": -7.3675888631612415e-06,
+     "mean_error_over_rms_reference": 1.3933460466399565e-06,
+     "relative_rms": 0.00015838365721198295
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9112636021205357,
+      "max_abs_diff": 0.0011425018310546875,
+      "relative_rms": 0.00015838313421013962
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011425018310546875,
+      "relative_rms": 0.00015838313421013962
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996076311383929
+     },
+     "alignment": -7.3666536976590325e-06,
+     "mean_error_over_rms_reference": 1.393106706745495e-06,
+     "relative_rms": 0.00015838313421013962
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.988014152080723e-06,
+      "relative_rms": 5.196104906272466e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.988014152080723e-06,
+      "relative_rms": 5.196104906272466e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8842860630580357
+     },
+     "alignment": 1.6725327685232919e-09,
+     "mean_error_over_rms_reference": -2.6655233479644404e-09,
+     "relative_rms": 5.196104906272466e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.7220458984375e-06,
+      "relative_rms": 5.329809561421505e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.7220458984375e-06,
+      "relative_rms": 5.329809561421505e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8371669224330357
+     },
+     "alignment": 2.60762215759053e-09,
+     "mean_error_over_rms_reference": -2.904864547831426e-09,
+     "relative_rms": 5.329809561421505e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1212436348273513e-06,
+      "relative_rms": 1.2213814154993044e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1212436348273513e-06,
+      "relative_rms": 1.2213814154993044e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6023821149553572
+     },
+     "alignment": -9.351038798718459e-10,
+     "mean_error_over_rms_reference": 2.3934119715065684e-10,
+     "relative_rms": 1.2213814154993044e-07
+    }
+   }
+  },
+  {
+   "unit": 25,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9656197684151786,
+      "max_abs_diff": 0.0031232386479880248,
+      "relative_rms": 0.0003906319036608159
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0031232386479880248,
+      "relative_rms": 0.0003906319036608159
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999564034598214
+     },
+     "alignment": -0.0003539039199901565,
+     "mean_error_over_rms_reference": 1.2614283657552843e-05,
+     "relative_rms": 0.0003906319036608159
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9656895228794643,
+      "max_abs_diff": 0.0031232833862304688,
+      "relative_rms": 0.00039063052215601135
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0031232833862304688,
+      "relative_rms": 0.00039063052215601135
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.00035390241493324793,
+     "mean_error_over_rms_reference": 1.2614575923409211e-05,
+     "relative_rms": 0.00039063052215601135
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9656197684151786,
+      "max_abs_diff": 0.0031232386479880248,
+      "relative_rms": 0.0003906319036608159
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0031232386479880248,
+      "relative_rms": 0.0003906319036608159
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999564034598214
+     },
+     "alignment": -0.0003539039199901565,
+     "mean_error_over_rms_reference": 1.2614283657552843e-05,
+     "relative_rms": 0.0003906319036608159
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9656895228794643,
+      "max_abs_diff": 0.0031232833862304688,
+      "relative_rms": 0.00039063052215601135
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0031232833862304688,
+      "relative_rms": 0.00039063052215601135
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.00035390241493324793,
+     "mean_error_over_rms_reference": 1.2614575923409211e-05,
+     "relative_rms": 0.00039063052215601135
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9114815848214286,
+      "max_abs_diff": 0.0011472941638395184,
+      "relative_rms": 0.00015849300760357402
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011472941638395184,
+      "relative_rms": 0.00015849300760357402
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996337890625
+     },
+     "alignment": 1.448312419664784e-07,
+     "mean_error_over_rms_reference": -8.447322980451887e-08,
+     "relative_rms": 0.00015849300760357402
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9114031110491071,
+      "max_abs_diff": 0.0011475086212158203,
+      "relative_rms": 0.0001584930235759904
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011475086212158203,
+      "relative_rms": 0.0001584930235759904
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99951171875
+     },
+     "alignment": 1.4633682259207842e-07,
+     "mean_error_over_rms_reference": -8.418098306718274e-08,
+     "relative_rms": 0.0001584930235759904
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.501033049057583e-06,
+      "relative_rms": 5.241262114624797e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.501033049057583e-06,
+      "relative_rms": 5.241262114624797e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8835100446428571
+     },
+     "alignment": 3.801492376534868e-09,
+     "mean_error_over_rms_reference": -1.1716662951879473e-09,
+     "relative_rms": 5.241262114624797e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.821487426757812e-06,
+      "relative_rms": 5.379293091608597e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.821487426757812e-06,
+      "relative_rms": 5.379293091608597e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8351789202008928
+     },
+     "alignment": 5.3070677413400725e-09,
+     "mean_error_over_rms_reference": -8.794194324343839e-10,
+     "relative_rms": 5.379293091608597e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1183410730808419e-06,
+      "relative_rms": 1.2305734053122643e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.1183410730808419e-06,
+      "relative_rms": 1.2305734053122643e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6077444893973214
+     },
+     "alignment": -1.505590250206894e-09,
+     "mean_error_over_rms_reference": -2.922468640776021e-10,
+     "relative_rms": 1.2305734053122643e-07
+    }
+   }
+  },
+  {
+   "unit": 26,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9654889787946429,
+      "max_abs_diff": 0.002865642772110988,
+      "relative_rms": 0.0003854796651171105
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002865642772110988,
+      "relative_rms": 0.0003854796651171105
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99993896484375
+     },
+     "alignment": -0.0003488957793597106,
+     "mean_error_over_rms_reference": 1.1715616734783872e-05,
+     "relative_rms": 0.0003854796651171105
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9654366629464286,
+      "max_abs_diff": 0.0028657913208007812,
+      "relative_rms": 0.0003854796706602069
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0028657913208007812,
+      "relative_rms": 0.0003854796706602069
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.0003488956383551639,
+     "mean_error_over_rms_reference": 1.1716100917411327e-05,
+     "relative_rms": 0.0003854796706602069
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9654889787946429,
+      "max_abs_diff": 0.002865642772110988,
+      "relative_rms": 0.0003854796651171105
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002865642772110988,
+      "relative_rms": 0.0003854796651171105
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99993896484375
+     },
+     "alignment": -0.0003488957793597106,
+     "mean_error_over_rms_reference": 1.1715616734783872e-05,
+     "relative_rms": 0.0003854796651171105
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9654366629464286,
+      "max_abs_diff": 0.0028657913208007812,
+      "relative_rms": 0.0003854796706602069
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0028657913208007812,
+      "relative_rms": 0.0003854796706602069
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.0003488956383551639,
+     "mean_error_over_rms_reference": 1.1716100917411327e-05,
+     "relative_rms": 0.0003854796706602069
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.909423828125,
+      "max_abs_diff": 0.0011753537765368804,
+      "relative_rms": 0.00015445918107578817
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011753537765368804,
+      "relative_rms": 0.00015445918107578817
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996163504464286
+     },
+     "alignment": -5.617441709269331e-06,
+     "mean_error_over_rms_reference": 6.136255941873814e-07,
+     "relative_rms": 0.00015445918107578817
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9094935825892857,
+      "max_abs_diff": 0.0011754035949707031,
+      "relative_rms": 0.00015445907876259981
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011754035949707031,
+      "relative_rms": 0.00015445907876259981
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9994419642857143
+     },
+     "alignment": -5.617300589923727e-06,
+     "mean_error_over_rms_reference": 6.141097752482874e-07,
+     "relative_rms": 0.00015445907876259981
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.521470976712408e-06,
+      "relative_rms": 5.282103629093488e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.521470976712408e-06,
+      "relative_rms": 5.282103629093488e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.88323974609375
+     },
+     "alignment": -4.283632057404956e-09,
+     "mean_error_over_rms_reference": -6.038032567749666e-10,
+     "relative_rms": 5.282103629093488e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.106231689453125e-06,
+      "relative_rms": 5.414664092068063e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.106231689453125e-06,
+      "relative_rms": 5.414664092068063e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8363473074776786
+     },
+     "alignment": -4.142534024126571e-09,
+     "mean_error_over_rms_reference": -1.1962228253963646e-10,
+     "relative_rms": 5.414664092068063e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.0952918700901648e-06,
+      "relative_rms": 1.2304667022877245e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.0952918700901648e-06,
+      "relative_rms": 1.2304667022877245e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6024693080357143
+     },
+     "alignment": -1.4111269453134387e-10,
+     "mean_error_over_rms_reference": -4.841809742522094e-10,
+     "relative_rms": 1.2304667022877245e-07
+    }
+   }
+  },
+  {
+   "unit": 27,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9651227678571429,
+      "max_abs_diff": 0.0026416111624714134,
+      "relative_rms": 0.00039117114271046064
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026416111624714134,
+      "relative_rms": 0.00039117114271046064
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.0003547601843507224,
+     "mean_error_over_rms_reference": 1.0013344552979215e-05,
+     "relative_rms": 0.00039117114271046064
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9651053292410714,
+      "max_abs_diff": 0.0026416778564453125,
+      "relative_rms": 0.00039117180854851156
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026416778564453125,
+      "relative_rms": 0.00039117180854851156
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.0003547606525630939,
+     "mean_error_over_rms_reference": 1.001317042034898e-05,
+     "relative_rms": 0.00039117180854851156
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9651227678571429,
+      "max_abs_diff": 0.0026416111624714134,
+      "relative_rms": 0.00039117114271046064
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026416111624714134,
+      "relative_rms": 0.00039117114271046064
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999215262276786
+     },
+     "alignment": -0.0003547601843507224,
+     "mean_error_over_rms_reference": 1.0013344552979215e-05,
+     "relative_rms": 0.00039117114271046064
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9651053292410714,
+      "max_abs_diff": 0.0026416778564453125,
+      "relative_rms": 0.00039117180854851156
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026416778564453125,
+      "relative_rms": 0.00039117180854851156
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.0003547606525630939,
+     "mean_error_over_rms_reference": 1.001317042034898e-05,
+     "relative_rms": 0.00039117180854851156
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9102434430803571,
+      "max_abs_diff": 0.001206488982983589,
+      "relative_rms": 0.0001563256910496775
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.001206488982983589,
+      "relative_rms": 0.0001563256910496775
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996250697544643
+     },
+     "alignment": -1.3360226995187732e-06,
+     "mean_error_over_rms_reference": -1.5669056310243102e-07,
+     "relative_rms": 0.0001563256910496775
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9102608816964286,
+      "max_abs_diff": 0.0012065321207046509,
+      "relative_rms": 0.00015632480436648393
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0012065321207046509,
+      "relative_rms": 0.00015632480436648393
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9994594029017857
+     },
+     "alignment": -1.3364908437680462e-06,
+     "mean_error_over_rms_reference": -1.5686469097020147e-07,
+     "relative_rms": 0.00015632480436648393
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.975836107869782e-06,
+      "relative_rms": 5.13370872131925e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.975836107869782e-06,
+      "relative_rms": 5.13370872131925e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8809291294642857
+     },
+     "alignment": 1.665640297029999e-09,
+     "mean_error_over_rms_reference": -2.8390524535975933e-09,
+     "relative_rms": 5.13370872131925e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.67572021484375e-06,
+      "relative_rms": 5.277539411136704e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.67572021484375e-06,
+      "relative_rms": 5.277539411136704e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8347516741071428
+     },
+     "alignment": 1.1973487081085893e-09,
+     "mean_error_over_rms_reference": -3.0131803934142637e-09,
+     "relative_rms": 5.277539411136704e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2482457867335484e-06,
+      "relative_rms": 1.2334629059119762e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.2482457867335484e-06,
+      "relative_rms": 1.2334629059119762e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6077968052455357
+     },
+     "alignment": 4.682764933611736e-10,
+     "mean_error_over_rms_reference": 1.7412794122769435e-10,
+     "relative_rms": 1.2334629059119762e-07
+    }
+   }
+  },
+  {
+   "unit": 28,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660382952008929,
+      "max_abs_diff": 0.0023312900357463917,
+      "relative_rms": 0.0003869479219880299
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0023312900357463917,
+      "relative_rms": 0.0003869479219880299
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999651227678571
+     },
+     "alignment": -0.00035065280664077177,
+     "mean_error_over_rms_reference": 1.0477208233023133e-05,
+     "relative_rms": 0.0003869479219880299
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.966064453125,
+      "max_abs_diff": 0.002331256866455078,
+      "relative_rms": 0.000386947048272025
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002331256866455078,
+      "relative_rms": 0.000386947048272025
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.00035065176867392025,
+     "mean_error_over_rms_reference": 1.0477066341604876e-05,
+     "relative_rms": 0.000386947048272025
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9660382952008929,
+      "max_abs_diff": 0.0023312900357463917,
+      "relative_rms": 0.0003869479219880299
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0023312900357463917,
+      "relative_rms": 0.0003869479219880299
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999651227678571
+     },
+     "alignment": -0.00035065280664077177,
+     "mean_error_over_rms_reference": 1.0477208233023133e-05,
+     "relative_rms": 0.0003869479219880299
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.966064453125,
+      "max_abs_diff": 0.002331256866455078,
+      "relative_rms": 0.000386947048272025
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.002331256866455078,
+      "relative_rms": 0.000386947048272025
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999128069196429
+     },
+     "alignment": -0.00035065176867392025,
+     "mean_error_over_rms_reference": 1.0477066341604876e-05,
+     "relative_rms": 0.000386947048272025
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.91156005859375,
+      "max_abs_diff": 0.0012295949157774544,
+      "relative_rms": 0.00015773820748573873
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0012295949157774544,
+      "relative_rms": 0.00015773820748573873
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996076311383929
+     },
+     "alignment": -4.729777061343093e-06,
+     "mean_error_over_rms_reference": 4.990025768828066e-07,
+     "relative_rms": 0.00015773820748573873
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9115513392857143,
+      "max_abs_diff": 0.0012295246124267578,
+      "relative_rms": 0.0001577383456344182
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0012295246124267578,
+      "relative_rms": 0.0001577383456344182
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99945068359375
+     },
+     "alignment": -4.72873873611159e-06,
+     "mean_error_over_rms_reference": 4.988606751036109e-07,
+     "relative_rms": 0.0001577383456344182
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.327093573650245e-06,
+      "relative_rms": 5.194610378372116e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.327093573650245e-06,
+      "relative_rms": 5.194610378372116e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8847569056919643
+     },
+     "alignment": 3.1985967715610006e-09,
+     "mean_error_over_rms_reference": -1.7741855521661863e-09,
+     "relative_rms": 5.194610378372116e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.342762759561825e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.342762759561825e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.83477783203125
+     },
+     "alignment": 4.23694579191389e-09,
+     "mean_error_over_rms_reference": -1.9160878513468927e-09,
+     "relative_rms": 5.342762759561825e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.497353221059711e-07,
+      "relative_rms": 1.2284097523970328e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 8.497353221059711e-07,
+      "relative_rms": 1.2284097523970328e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6053815569196428
+     },
+     "alignment": -1.0383643621908773e-09,
+     "mean_error_over_rms_reference": 1.4190229719112323e-10,
+     "relative_rms": 1.2284097523970328e-07
+    }
+   }
+  },
+  {
+   "unit": 29,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9664481026785714,
+      "max_abs_diff": 0.0026967941366766723,
+      "relative_rms": 0.0003841375180387192
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026967941366766723,
+      "relative_rms": 0.0003841375180387192
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.00034896574174374186,
+     "mean_error_over_rms_reference": 2.0579436470096785e-06,
+     "relative_rms": 0.0003841375180387192
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9664219447544643,
+      "max_abs_diff": 0.0026960372924804688,
+      "relative_rms": 0.0003841381701026123
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026960372924804688,
+      "relative_rms": 0.0003841381701026123
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999564034598214
+     },
+     "alignment": -0.0003489663095483539,
+     "mean_error_over_rms_reference": 2.058418649367658e-06,
+     "relative_rms": 0.0003841381701026123
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9664481026785714,
+      "max_abs_diff": 0.0026967941366766723,
+      "relative_rms": 0.0003841375180387192
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026967941366766723,
+      "relative_rms": 0.0003841375180387192
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.00034896574174374186,
+     "mean_error_over_rms_reference": 2.0579436470096785e-06,
+     "relative_rms": 0.0003841375180387192
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9664219447544643,
+      "max_abs_diff": 0.0026960372924804688,
+      "relative_rms": 0.0003841381701026123
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0026960372924804688,
+      "relative_rms": 0.0003841381701026123
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999564034598214
+     },
+     "alignment": -0.0003489663095483539,
+     "mean_error_over_rms_reference": 2.058418649367658e-06,
+     "relative_rms": 0.0003841381701026123
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9117693219866071,
+      "max_abs_diff": 0.001207748067265868,
+      "relative_rms": 0.00015572502030172797
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.001207748067265868,
+      "relative_rms": 0.00015572502030172797
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996773856026786
+     },
+     "alignment": -1.108512782385925e-05,
+     "mean_error_over_rms_reference": 2.377660535984216e-07,
+     "relative_rms": 0.00015572502030172797
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.91180419921875,
+      "max_abs_diff": 0.0012073516845703125,
+      "relative_rms": 0.00015572433753024482
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0012073516845703125,
+      "relative_rms": 0.00015572433753024482
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99951171875
+     },
+     "alignment": -1.108569565539311e-05,
+     "mean_error_over_rms_reference": 2.3824105699017166e-07,
+     "relative_rms": 0.00015572433753024482
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.084803590018396e-06,
+      "relative_rms": 5.304487181722409e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.084803590018396e-06,
+      "relative_rms": 5.304487181722409e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8830915178571429
+     },
+     "alignment": -4.207369509049828e-09,
+     "mean_error_over_rms_reference": -1.694481157173616e-09,
+     "relative_rms": 5.304487181722409e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.152557373046875e-06,
+      "relative_rms": 5.429490765185558e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.152557373046875e-06,
+      "relative_rms": 5.429490765185558e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8363909040178572
+     },
+     "alignment": -4.77532664925533e-09,
+     "mean_error_over_rms_reference": -1.2194776294220315e-09,
+     "relative_rms": 5.429490765185558e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.0440314710535858e-06,
+      "relative_rms": 1.2207985386241924e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.0440314710535858e-06,
+      "relative_rms": 1.2207985386241924e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.60028076171875
+     },
+     "alignment": 5.679429849557305e-10,
+     "mean_error_over_rms_reference": -4.75003527058982e-10,
+     "relative_rms": 1.2207985386241924e-07
+    }
+   }
+  },
+  {
+   "unit": 30,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9666486467633929,
+      "max_abs_diff": 0.0024356778744536456,
+      "relative_rms": 0.0003857289292141124
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0024356778744536456,
+      "relative_rms": 0.0003857289292141124
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99993896484375
+     },
+     "alignment": -0.00035078604543404684,
+     "mean_error_over_rms_reference": 8.414592936522331e-06,
+     "relative_rms": 0.0003857289292141124
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9666660853794643,
+      "max_abs_diff": 0.0024356842041015625,
+      "relative_rms": 0.00038572801540255445
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0024356842041015625,
+      "relative_rms": 0.00038572801540255445
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.00035078504069049334,
+     "mean_error_over_rms_reference": 8.414648143531075e-06,
+     "relative_rms": 0.00038572801540255445
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9666486467633929,
+      "max_abs_diff": 0.0024356778744536456,
+      "relative_rms": 0.0003857289292141124
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0024356778744536456,
+      "relative_rms": 0.0003857289292141124
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.99993896484375
+     },
+     "alignment": -0.00035078604543404684,
+     "mean_error_over_rms_reference": 8.414592936522331e-06,
+     "relative_rms": 0.0003857289292141124
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9666660853794643,
+      "max_abs_diff": 0.0024356842041015625,
+      "relative_rms": 0.00038572801540255445
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0024356842041015625,
+      "relative_rms": 0.00038572801540255445
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999476841517857
+     },
+     "alignment": -0.00035078504069049334,
+     "mean_error_over_rms_reference": 8.414648143531075e-06,
+     "relative_rms": 0.00038572801540255445
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9133649553571429,
+      "max_abs_diff": 0.0011644771843641877,
+      "relative_rms": 0.00015628409789875282
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011644771843641877,
+      "relative_rms": 0.00015628409789875282
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9997297014508929
+     },
+     "alignment": -3.172260361338926e-06,
+     "mean_error_over_rms_reference": 1.3866937153857178e-06,
+     "relative_rms": 0.00015628409789875282
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9132341657366071,
+      "max_abs_diff": 0.0011647939682006836,
+      "relative_rms": 0.00015628418749428293
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0011647939682006836,
+      "relative_rms": 0.00015628418749428293
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996163504464286
+     },
+     "alignment": -3.171255285625413e-06,
+     "mean_error_over_rms_reference": 1.3867489153307468e-06,
+     "relative_rms": 0.00015628418749428293
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.914494015435423e-06,
+      "relative_rms": 5.213446449314634e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 5.914494015435423e-06,
+      "relative_rms": 5.213446449314634e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8851667131696429
+     },
+     "alignment": 1.6071466382380858e-09,
+     "mean_error_over_rms_reference": 1.7513687074707404e-09,
+     "relative_rms": 5.213446449314634e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.198883056640625e-06,
+      "relative_rms": 5.347029878830438e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.198883056640625e-06,
+      "relative_rms": 5.347029878830438e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8352225167410714
+     },
+     "alignment": 2.612235656122152e-09,
+     "mean_error_over_rms_reference": 1.8065672604994383e-09,
+     "relative_rms": 5.347029878830438e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.6544507230875638e-06,
+      "relative_rms": 1.2225808057162763e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.6544507230875638e-06,
+      "relative_rms": 1.2225808057162763e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6046404157366072
+     },
+     "alignment": -1.0051035396750427e-09,
+     "mean_error_over_rms_reference": -5.5198551212924314e-11,
+     "relative_rms": 1.2225808057162763e-07
+    }
+   }
+  },
+  {
+   "unit": 31,
+   "results": {
+    "triton_default|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9667619977678571,
+      "max_abs_diff": 0.0030663751096300373,
+      "relative_rms": 0.0003990464773222008
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030663751096300373,
+      "relative_rms": 0.0003990464773222008
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.0003637980053673391,
+     "mean_error_over_rms_reference": 1.2639090538401292e-05,
+     "relative_rms": 0.0003990464773222008
+    },
+    "triton_default|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9667794363839286,
+      "max_abs_diff": 0.0030660629272460938,
+      "relative_rms": 0.00039904718899418107
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030660629272460938,
+      "relative_rms": 0.00039904718899418107
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.00036379844718224444,
+     "mean_error_over_rms_reference": 1.263964412753878e-05,
+     "relative_rms": 0.00039904718899418107
+    },
+    "inductor_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9667619977678571,
+      "max_abs_diff": 0.0030663751096300373,
+      "relative_rms": 0.0003990464773222008
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030663751096300373,
+      "relative_rms": 0.0003990464773222008
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9999302455357143
+     },
+     "alignment": -0.0003637980053673391,
+     "mean_error_over_rms_reference": 1.2639090538401292e-05,
+     "relative_rms": 0.0003990464773222008
+    },
+    "inductor_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9667794363839286,
+      "max_abs_diff": 0.0030660629272460938,
+      "relative_rms": 0.00039904718899418107
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0030660629272460938,
+      "relative_rms": 0.00039904718899418107
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9998866489955357
+     },
+     "alignment": -0.00036379844718224444,
+     "mean_error_over_rms_reference": 1.263964412753878e-05,
+     "relative_rms": 0.00039904718899418107
+    },
+    "cublas_high|exact": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9129377092633929,
+      "max_abs_diff": 0.001068427812693784,
+      "relative_rms": 0.00015671751909504176
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.001068427812693784,
+      "relative_rms": 0.00015671751909504176
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9996250697544643
+     },
+     "alignment": 6.3923650284276786e-06,
+     "mean_error_over_rms_reference": -3.9699406684461397e-07,
+     "relative_rms": 0.00015671751909504176
+    },
+    "cublas_high|cublas_highest": {
+     "default": {
+      "pass": false,
+      "fail_fraction": 0.9128330775669643,
+      "max_abs_diff": 0.0010685920715332031,
+      "relative_rms": 0.00015671741423329766
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 0.0010685920715332031,
+      "relative_rms": 0.00015671741423329766
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.9995291573660714
+     },
+     "alignment": 6.3919231868669016e-06,
+     "mean_error_over_rms_reference": -3.964404719471005e-07,
+     "relative_rms": 0.00015671741423329766
+    },
+    "triton_ieee|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.987919428880218e-06,
+      "relative_rms": 5.228607907723227e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 6.987919428880218e-06,
+      "relative_rms": 5.228607907723227e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8852364676339286
+     },
+     "alignment": 2.6649045303132288e-09,
+     "mean_error_over_rms_reference": 7.934505070562179e-10,
+     "relative_rms": 5.228607907723227e-07
+    },
+    "triton_ieee|cublas_highest": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.360529306289134e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 7.62939453125e-06,
+      "relative_rms": 5.360529306289134e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.8375069754464286
+     },
+     "alignment": 2.2230452086608538e-09,
+     "mean_error_over_rms_reference": 1.3470452288062968e-09,
+     "relative_rms": 5.360529306289134e-07
+    },
+    "cublas_highest|exact": {
+     "default": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.4411249606993692e-06,
+      "relative_rms": 1.2280193729215236e-07
+     },
+     "tf32_convention": {
+      "pass": true,
+      "fail_fraction": 0.0,
+      "max_abs_diff": 1.4411249606993692e-06,
+      "relative_rms": 1.2280193729215236e-07
+     },
+     "strict": {
+      "pass": false,
+      "fail_fraction": 0.6044921875
+     },
+     "alignment": 4.418447948608759e-10,
+     "mean_error_over_rms_reference": -5.53594722345274e-10,
+     "relative_rms": 1.2280193729215236e-07
+    }
+   }
+  }
+ ],
+ "seconds": 9.5
+}

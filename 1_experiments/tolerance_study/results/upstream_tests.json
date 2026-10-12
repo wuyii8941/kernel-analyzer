@@ -1,0 +1,26 @@
+{
+ "source": "PyTorch v2.10.0 test files (raw.githubusercontent.com/pytorch/pytorch/v2.10.0), run with the installed torch 2.10.0+cu128 on RTX A6000",
+ "test_optim.py (fused / foreach vs forloop)": {
+  "selection": "-k '(AdamW or RAdam) and cuda' (test_optim: fused/foreach_matches_forloop)",
+  "summary_line": "6 passed, 1799 deselected in 8.90s",
+  "passed_listed": 6,
+  "failed": [],
+  "bf16_tests": [
+   "test_optim.py::TestOptimRenewedCUDA::test_fused_matches_forloop_AdamW_cuda_bfloat16"
+  ],
+  "log": "1_experiments/tolerance_study/results/evidence/upstream_v2.10.0_test_optim_adamw_radam.log"
+ },
+ "inductor/test_compiled_optimizers.py (compiled vs eager)": {
+  "selection": "-k '(AdamW or RAdam) and cuda' (test_optim: fused/foreach_matches_forloop)",
+  "summary_line": "136 passed, 546 deselected, 17 warnings in 504.67s (0:08:24)",
+  "passed_listed": 39,
+  "failed": [],
+  "bf16_tests": [],
+  "log": "1_experiments/tolerance_study/results/evidence/upstream_v2.10.0_test_compiled_optimizers_adamw_radam.log"
+ },
+ "what_they_compare": {
+  "test_fused_matches_forloop": "fused vs forloop implementation, same dtype (bf16 included), tiny synthetic model (Linear 2-3-1), 7 iterations, assertEqual with default tolerances (bf16: rtol 1.6e-2, atol 1e-5)",
+  "test_foreach_matches_forloop": "foreach vs forloop, float64 only",
+  "test_compiled_optimizers check_optim": "compiled vs eager parameters and state, float32 only (dtypes=[torch.float32]), default fp32 tolerances (rtol 1.3e-6, atol 1e-5) except Adadelta / NAdam"
+ }
+}

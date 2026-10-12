@@ -1,0 +1,95 @@
+{
+ "job": {
+  "group": "C",
+  "kind": "measure",
+  "stratum": "l12_down_proj",
+  "layer": 12,
+  "mat": "down_proj",
+  "impl": "cublas_high",
+  "mode": "black-box"
+ },
+ "declaration_sha256": "a9f9f5613bb28bbfd4a0733ce57c7c881f0487fe57bab10b4bb40498341df01d",
+ "status": "ok",
+ "reason": null,
+ "notes": null,
+ "precision_environment": {
+  "torch.backends.cuda.matmul.allow_tf32": false,
+  "float32_matmul_precision": "highest",
+  "torch.backends.cudnn.allow_tf32": true,
+  "allow_fp16_reduced_precision_reduction": true,
+  "allow_bf16_reduced_precision_reduction": true,
+  "TRITON_F32_DEFAULT": null
+ },
+ "producer_trace_per_seed": null,
+ "refinement": "not applicable: black-box comparison (K - f only), no reference enclosure to refine",
+ "units": {
+  "development": 10,
+  "confirmation": 22
+ },
+ "seconds": 25.3,
+ "timing": {
+  "setup_compile_warmup": 0.646,
+  "inputs": 0.755,
+  "call": 0.033,
+  "specification": 0.849,
+  "statistics": 20.046
+ },
+ "outputs": {
+  "y": {
+   "status": "evaluated (black box)",
+   "reason": null,
+   "dtype": "float32",
+   "reference": null,
+   "statistics": {
+    "fixed_mean": {
+     "summary": "not confirmed on these projections (not a statement that the vector has no bias)",
+     "rules": {
+      "R1": {
+       "judgment": "not confirmed",
+       "holm_adjusted_p": 0.5786765099417551,
+       "n": 22,
+       "mean_projection": 4.907129471015751e-06,
+       "mde_approximate": 2.556177787432354e-05
+      },
+      "R5": {
+       "judgment": "not confirmed",
+       "holm_adjusted_p": 0.056819377667624085,
+       "n": 22,
+       "mean_projection": 3.131549443614744e-05,
+       "mde_approximate": 3.9100464654668246e-05
+      }
+     },
+     "bounded": false
+    },
+    "aligned": {
+     "summary": "average effect nonzero: R2 positive, R3 positive",
+     "rules": {
+      "R2": {
+       "judgment": "nonzero (positive)",
+       "holm_adjusted_p": 4.073062395247981e-16,
+       "n": 22,
+       "mean_projection": 0.0005105521155016771,
+       "mde_approximate": 6.490893965779622e-05
+      },
+      "R3": {
+       "judgment": "nonzero (positive)",
+       "holm_adjusted_p": 9.307747731065045e-16,
+       "n": 22,
+       "mean_projection": 0.000674110170877359,
+       "mde_approximate": 9.240370311116283e-05
+      }
+     },
+     "bounded": false
+    }
+   },
+   "scale": {
+    "mean_abs_residual": 2.536480842550078e-05,
+    "max_abs_residual": 0.0004911348071994226,
+    "rms_reference": 0.1623351422621651,
+    "relative_rms": 0.00020364062723898736
+   },
+   "semantic": null,
+   "failure_classes": []
+  }
+ }
+}

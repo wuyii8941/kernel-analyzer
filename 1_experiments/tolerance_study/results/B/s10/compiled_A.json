@@ -1,0 +1,164 @@
+{
+ "job": {
+  "group": "B",
+  "kind": "measure",
+  "stratum": "s10",
+  "step": 10,
+  "impl": "compiled",
+  "mode": "A"
+ },
+ "declaration_sha256": "299144226d067610b8348e3c9555691d3dca3664e3e7700ad03a38443f4daa80",
+ "status": "ok",
+ "reason": null,
+ "notes": {
+  "outputs_not_written_by_triton": [],
+  "outputs_binding_not_established": [],
+  "outputs_modified_after_last_triton_write": [],
+  "outputs_whose_writing_programs_aborted": {},
+  "outputs_at_address_of_another_recorded_storage": [],
+  "ttir_coverage_complete": [
+   true,
+   true
+  ],
+  "ir_coverage_complete": [
+   true,
+   true
+  ],
+  "ir_kinds": [
+   "ttir",
+   "ttir"
+  ]
+ },
+ "precision_environment": {
+  "torch.backends.cuda.matmul.allow_tf32": false,
+  "float32_matmul_precision": "highest",
+  "torch.backends.cudnn.allow_tf32": true,
+  "allow_fp16_reduced_precision_reduction": true,
+  "allow_bf16_reduced_precision_reduction": true,
+  "TRITON_F32_DEFAULT": null
+ },
+ "producer_trace_per_seed": {
+  "not aligned": 32
+ },
+ "refinement": "backend limit: no rule on the reference path depends on the working-precision level (precision_dependent_calls = 0 at level 1); a higher level gives the same enclosures",
+ "units": {
+  "development": 10,
+  "confirmation": 22
+ },
+ "seconds": 1050.4,
+ "timing": {
+  "setup_compile_warmup": 12.39,
+  "inputs": 146.464,
+  "capture_first_seed": 2.157,
+  "capture": 2.258,
+  "reference": 473.039,
+  "specification": 0.001,
+  "statistics": 76.129,
+  "repeat_launches": 166.132
+ },
+ "outputs": {
+  "param": {
+   "status": "evaluated",
+   "reason": null,
+   "dtype": "float32",
+   "reference": {
+    "complete_rate": 1.0,
+    "reference_scope": "kernel-level: upstream non-Triton values captured (L0:triton_for_fused_0:in_ptr0, L0:triton_for_fused_0:out_ptr0, L1:triton_for_fused_1:in_ptr0, L1:triton_for_fused_1:in_ptr1, L1:triton_for_fused_1:in_ptr2, L1:triton_for_fused_1:in_ptr6, L1:triton_for)",
+    "resolved_fraction": 0.9999999215990286,
+    "width_over_ulp": {
+     "median": 3.725290298461914e-09,
+     "p90": 1.30385160446167e-08,
+     "max": 0.5913238525390625
+    },
+    "resolution_met": false
+   },
+   "observation": {
+    "summary": {
+     "units": 32,
+     "coordinates": 12754944,
+     "reference_increment_nonzero": 12754944,
+     "above_floor": 12754944,
+     "near_zero_or_below_floor": 0,
+     "dropped": 26344,
+     "sign_flips": 0,
+     "dropped_fraction": {
+      "mean": 0.0020653951910725755,
+      "min": 0.0017938142260757867,
+      "max": 0.0023281952472703916,
+      "sd": 0.00011066228692953999,
+      "n": 32
+     },
+     "sign_flip_fraction": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "sd": 0.0,
+      "n": 32
+     },
+     "retention": {
+      "mean": 1.0010016458093611,
+      "min": 1.0009273086260206,
+      "max": 1.0010851232785885,
+      "sd": 3.263084857707874e-05,
+      "n": 32
+     },
+     "error_energy_over_increment_energy": {
+      "mean": 0.00036186934519757757,
+      "min": 0.00032650797371387144,
+      "max": 0.0004071176846931733,
+      "sd": 2.1301742971614182e-05,
+      "n": 32
+     }
+    },
+    "decomposition": null
+   },
+   "statistics": {
+    "fixed_mean": {
+     "summary": "average effect nonzero: R1 negative, R5 positive",
+     "rules": {
+      "R1": {
+       "judgment": "nonzero (negative)",
+       "holm_adjusted_p": 4.183176299855778e-06,
+       "n": 22,
+       "mean_projection": -8.052531140281514e-09,
+       "mde_approximate": 3.845746167371438e-09
+      },
+      "R5": {
+       "judgment": "nonzero (positive)",
+       "holm_adjusted_p": 1.6174927528658265e-19,
+       "n": 22,
+       "mean_projection": 3.4311451614698063e-06,
+       "mde_approximate": 2.9750292999469053e-07
+      }
+     },
+     "bounded": false
+    },
+    "aligned": {
+     "summary": "average effect nonzero: R2 negative, R3 negative",
+     "rules": {
+      "R2": {
+       "judgment": "nonzero (negative)",
+       "holm_adjusted_p": 4.550856025518315e-29,
+       "n": 22,
+       "mean_projection": -2.4479828242066323e-07,
+       "mde_approximate": 7.640580374544574e-09
+      },
+      "R3": {
+       "judgment": "nonzero (negative)",
+       "holm_adjusted_p": 2.764491623481578e-29,
+       "n": 22,
+       "mean_projection": -3.1623981474004495e-07,
+       "mde_approximate": 9.324777316031042e-09
+      }
+     },
+     "bounded": false
+    }
+   },
+   "scale": null,
+   "semantic": null,
+   "failure_classes": [
+    "enclosure too wide"
+   ]
+  }
+ }
+}

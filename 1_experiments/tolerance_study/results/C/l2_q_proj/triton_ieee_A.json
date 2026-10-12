@@ -1,0 +1,120 @@
+{
+ "job": {
+  "group": "C",
+  "kind": "measure",
+  "stratum": "l2_q_proj",
+  "layer": 2,
+  "mat": "q_proj",
+  "impl": "triton_ieee",
+  "mode": "A"
+ },
+ "declaration_sha256": "f63fb258781d5fc35fe790404c962f843720a4569a7565a5755267d24691dc94",
+ "status": "ok",
+ "reason": null,
+ "notes": {
+  "outputs_not_written_by_triton": [],
+  "outputs_binding_not_established": [],
+  "outputs_modified_after_last_triton_write": [],
+  "outputs_whose_writing_programs_aborted": {},
+  "outputs_at_address_of_another_recorded_storage": [],
+  "ttir_coverage_complete": [
+   true
+  ],
+  "ir_coverage_complete": [
+   true
+  ],
+  "ir_kinds": [
+   "ttir"
+  ]
+ },
+ "precision_environment": {
+  "torch.backends.cuda.matmul.allow_tf32": false,
+  "float32_matmul_precision": "highest",
+  "torch.backends.cudnn.allow_tf32": true,
+  "allow_fp16_reduced_precision_reduction": true,
+  "allow_bf16_reduced_precision_reduction": true,
+  "TRITON_F32_DEFAULT": null
+ },
+ "producer_trace_per_seed": {
+  "aligned": 32
+ },
+ "refinement": "met at level 1",
+ "units": {
+  "development": 10,
+  "confirmation": 22
+ },
+ "seconds": 938.1,
+ "timing": {
+  "setup_compile_warmup": 2.058,
+  "inputs": 0.784,
+  "capture_first_seed": 1.7,
+  "capture": 0.492,
+  "reference": 901.358,
+  "specification": 0.001,
+  "statistics": 21.699,
+  "repeat_launches": 2.198
+ },
+ "outputs": {
+  "y": {
+   "status": "evaluated",
+   "reason": null,
+   "dtype": "float32",
+   "reference": {
+    "complete_rate": 1.0,
+    "reference_scope": "kernel-level: upstream non-Triton values captured (L0:matmul_kernel:b_ptr)",
+    "resolved_fraction": 1.0,
+    "width_over_ulp": {
+     "median": 7.82310962677002e-08,
+     "p90": 2.7194619178771973e-07,
+     "max": 0.03125
+    },
+    "resolution_met": true
+   },
+   "statistics": {
+    "fixed_mean": {
+     "summary": "not confirmed on these projections (not a statement that the vector has no bias)",
+     "rules": {
+      "R1": {
+       "judgment": "not confirmed",
+       "holm_adjusted_p": 0.9719715945770504,
+       "n": 22,
+       "mean_projection": 4.676754271157732e-08,
+       "mde_approximate": 2.9022995484055316e-07
+      },
+      "R5": {
+       "judgment": "not confirmed",
+       "holm_adjusted_p": 0.9719715945770504,
+       "n": 22,
+       "mean_projection": 1.2518403789334637e-07,
+       "mde_approximate": 5.187021206191503e-07
+      }
+     },
+     "bounded": false
+    },
+    "aligned": {
+     "summary": "not confirmed on these projections (not a statement that the vector has no bias)",
+     "rules": {
+      "R2": {
+       "judgment": "not confirmed",
+       "holm_adjusted_p": 0.5664222766250704,
+       "n": 22,
+       "mean_projection": -9.989420720710153e-08,
+       "mde_approximate": 2.665449389663172e-07
+      },
+      "R3": {
+       "judgment": "not confirmed",
+       "holm_adjusted_p": 0.6197629014327651,
+       "n": 22,
+       "mean_projection": -9.85964839057292e-08,
+       "mde_approximate": 5.753074572223246e-07
+      }
+     },
+     "bounded": false
+    }
+   },
+   "scale": null,
+   "semantic": null,
+   "failure_classes": []
+  }
+ }
+}

@@ -1,0 +1,120 @@
+{
+ "job": {
+  "group": "C",
+  "kind": "measure",
+  "stratum": "l12_q_proj",
+  "layer": 12,
+  "mat": "q_proj",
+  "impl": "triton_ieee",
+  "mode": "A"
+ },
+ "declaration_sha256": "1ced2e43b3d0bd50a618d38304e902dcb442a776c13b65909813031b9cf0c3ee",
+ "status": "ok",
+ "reason": null,
+ "notes": {
+  "outputs_not_written_by_triton": [],
+  "outputs_binding_not_established": [],
+  "outputs_modified_after_last_triton_write": [],
+  "outputs_whose_writing_programs_aborted": {},
+  "outputs_at_address_of_another_recorded_storage": [],
+  "ttir_coverage_complete": [
+   true
+  ],
+  "ir_coverage_complete": [
+   true
+  ],
+  "ir_kinds": [
+   "ttir"
+  ]
+ },
+ "precision_environment": {
+  "torch.backends.cuda.matmul.allow_tf32": false,
+  "float32_matmul_precision": "highest",
+  "torch.backends.cudnn.allow_tf32": true,
+  "allow_fp16_reduced_precision_reduction": true,
+  "allow_bf16_reduced_precision_reduction": true,
+  "TRITON_F32_DEFAULT": null
+ },
+ "producer_trace_per_seed": {
+  "aligned": 32
+ },
+ "refinement": "met at level 1",
+ "units": {
+  "development": 10,
+  "confirmation": 22
+ },
+ "seconds": 993.4,
+ "timing": {
+  "setup_compile_warmup": 2.799,
+  "inputs": 0.836,
+  "capture_first_seed": 2.049,
+  "capture": 0.526,
+  "reference": 959.681,
+  "specification": 0.0,
+  "statistics": 17.428,
+  "repeat_launches": 2.46
+ },
+ "outputs": {
+  "y": {
+   "status": "evaluated",
+   "reason": null,
+   "dtype": "float32",
+   "reference": {
+    "complete_rate": 1.0,
+    "reference_scope": "kernel-level: upstream non-Triton values captured (L0:matmul_kernel:b_ptr)",
+    "resolved_fraction": 1.0,
+    "width_over_ulp": {
+     "median": 8.195638656616211e-08,
+     "p90": 3.0547380447387695e-07,
+     "max": 0.04400634765625
+    },
+    "resolution_met": true
+   },
+   "statistics": {
+    "fixed_mean": {
+     "summary": "average effect nonzero: R5 positive",
+     "rules": {
+      "R1": {
+       "judgment": "not confirmed",
+       "holm_adjusted_p": 0.3318266973717363,
+       "n": 22,
+       "mean_projection": 9.248677320675676e-08,
+       "mde_approximate": 2.7359616348484687e-07
+      },
+      "R5": {
+       "judgment": "nonzero (positive)",
+       "holm_adjusted_p": 0.0330171089614859,
+       "n": 22,
+       "mean_projection": 4.4664705568591987e-07,
+       "mde_approximate": 5.037254224531046e-07
+      }
+     },
+     "bounded": false
+    },
+    "aligned": {
+     "summary": "not confirmed on these projections (not a statement that the vector has no bias)",
+     "rules": {
+      "R2": {
+       "judgment": "not confirmed",
+       "holm_adjusted_p": 1.0,
+       "n": 22,
+       "mean_projection": 3.3045593876588914e-08,
+       "mde_approximate": 2.040083710087135e-07
+      },
+      "R3": {
+       "judgment": "not confirmed",
+       "holm_adjusted_p": 1.0,
+       "n": 22,
+       "mean_projection": -8.803528563359086e-08,
+       "mde_approximate": 4.810894399744558e-07
+      }
+     },
+     "bounded": false
+    }
+   },
+   "scale": null,
+   "semantic": null,
+   "failure_classes": []
+  }
+ }
+}

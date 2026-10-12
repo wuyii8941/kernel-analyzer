@@ -1,0 +1,122 @@
+{
+ "job": {
+  "group": "C",
+  "kind": "measure",
+  "stratum": "l22_q_proj",
+  "layer": 22,
+  "mat": "q_proj",
+  "impl": "triton_default",
+  "mode": "A"
+ },
+ "declaration_sha256": "4ed7434b3be127b45665d7745346a2bea6a676fbc287017e27fb831f6e3d9ad6",
+ "status": "ok",
+ "reason": null,
+ "notes": {
+  "outputs_not_written_by_triton": [],
+  "outputs_binding_not_established": [],
+  "outputs_modified_after_last_triton_write": [],
+  "outputs_whose_writing_programs_aborted": {},
+  "outputs_at_address_of_another_recorded_storage": [],
+  "ttir_coverage_complete": [
+   true
+  ],
+  "ir_coverage_complete": [
+   true
+  ],
+  "ir_kinds": [
+   "ttir"
+  ]
+ },
+ "precision_environment": {
+  "torch.backends.cuda.matmul.allow_tf32": false,
+  "float32_matmul_precision": "highest",
+  "torch.backends.cudnn.allow_tf32": true,
+  "allow_fp16_reduced_precision_reduction": true,
+  "allow_bf16_reduced_precision_reduction": true,
+  "TRITON_F32_DEFAULT": null
+ },
+ "producer_trace_per_seed": {
+  "aligned": 32
+ },
+ "refinement": "backend limit: highest working precision level 1 reached; target not met",
+ "units": {
+  "development": 10,
+  "confirmation": 22
+ },
+ "seconds": 898.1,
+ "timing": {
+  "setup_compile_warmup": 2.442,
+  "inputs": 0.703,
+  "capture_first_seed": 2.689,
+  "capture": 0.446,
+  "reference": 870.266,
+  "specification": 0.0,
+  "statistics": 12.902,
+  "repeat_launches": 1.883
+ },
+ "outputs": {
+  "y": {
+   "status": "evaluated",
+   "reason": null,
+   "dtype": "float32",
+   "reference": {
+    "complete_rate": 1.0,
+    "reference_scope": "kernel-level: upstream non-Triton values captured (L0:matmul_kernel:b_ptr)",
+    "resolved_fraction": 0.9999997275216239,
+    "width_over_ulp": {
+     "median": 8.195638656616211e-08,
+     "p90": 3.2782554626464844e-07,
+     "max": 0.138916015625
+    },
+    "resolution_met": false
+   },
+   "statistics": {
+    "fixed_mean": {
+     "summary": "average effect nonzero: R1 positive, R5 positive",
+     "rules": {
+      "R1": {
+       "judgment": "nonzero (positive)",
+       "holm_adjusted_p": 3.736808471694964e-09,
+       "n": 22,
+       "mean_projection": 0.006169883518543182,
+       "mde_approximate": 0.001882890211654523
+      },
+      "R5": {
+       "judgment": "nonzero (positive)",
+       "holm_adjusted_p": 9.572385371301837e-27,
+       "n": 22,
+       "mean_projection": 0.060927138382478985,
+       "mde_approximate": 0.002375111351771391
+      }
+     },
+     "bounded": false
+    },
+    "aligned": {
+     "summary": "average effect nonzero: R2 positive, R3 positive",
+     "rules": {
+      "R2": {
+       "judgment": "nonzero (positive)",
+       "holm_adjusted_p": 2.1532506059887594e-28,
+       "n": 22,
+       "mean_projection": 0.08434144510408016,
+       "mde_approximate": 0.0028351769300107013
+      },
+      "R3": {
+       "judgment": "nonzero (positive)",
+       "holm_adjusted_p": 3.022883486650011e-31,
+       "n": 22,
+       "mean_projection": 0.11777273405060873,
+       "mde_approximate": 0.002799773051558348
+      }
+     },
+     "bounded": false
+    }
+   },
+   "scale": null,
+   "semantic": null,
+   "failure_classes": [
+    "enclosure too wide"
+   ]
+  }
+ }
+}

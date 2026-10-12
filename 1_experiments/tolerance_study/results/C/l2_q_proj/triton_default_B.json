@@ -1,0 +1,125 @@
+{
+ "job": {
+  "group": "C",
+  "kind": "measure",
+  "stratum": "l2_q_proj",
+  "layer": 2,
+  "mat": "q_proj",
+  "impl": "triton_default",
+  "mode": "B"
+ },
+ "declaration_sha256": "5778eb6ece9b3e5ab06d8f56a4a554d6388e1278c690f4ad186210d01c8e00fc",
+ "status": "ok",
+ "reason": null,
+ "notes": {
+  "outputs_not_written_by_triton": [],
+  "outputs_binding_not_established": [],
+  "outputs_modified_after_last_triton_write": [],
+  "outputs_whose_writing_programs_aborted": {},
+  "outputs_at_address_of_another_recorded_storage": [],
+  "ttir_coverage_complete": [
+   true
+  ],
+  "ir_coverage_complete": [
+   true
+  ],
+  "ir_kinds": [
+   "ttir"
+  ]
+ },
+ "precision_environment": {
+  "torch.backends.cuda.matmul.allow_tf32": false,
+  "float32_matmul_precision": "highest",
+  "torch.backends.cudnn.allow_tf32": true,
+  "allow_fp16_reduced_precision_reduction": true,
+  "allow_bf16_reduced_precision_reduction": true,
+  "TRITON_F32_DEFAULT": null
+ },
+ "producer_trace_per_seed": {
+  "aligned": 32
+ },
+ "refinement": "met at level 1",
+ "units": {
+  "development": 10,
+  "confirmation": 22
+ },
+ "seconds": 970.2,
+ "timing": {
+  "setup_compile_warmup": 2.283,
+  "inputs": 0.702,
+  "capture_first_seed": 1.568,
+  "capture": 0.376,
+  "reference": 914.511,
+  "specification": 0.61,
+  "statistics": 39.222,
+  "repeat_launches": 1.902
+ },
+ "outputs": {
+  "y": {
+   "status": "evaluated",
+   "reason": null,
+   "dtype": "float32",
+   "reference": {
+    "complete_rate": 1.0,
+    "reference_scope": "kernel-level: upstream non-Triton values captured (L0:matmul_kernel:b_ptr)",
+    "resolved_fraction": 1.0,
+    "width_over_ulp": {
+     "median": 7.82310962677002e-08,
+     "p90": 2.7194619178771973e-07,
+     "max": 0.03125
+    },
+    "resolution_met": true
+   },
+   "statistics": {
+    "fixed_mean": {
+     "summary": "average effect nonzero: R1 negative, R5 positive",
+     "rules": {
+      "R1": {
+       "judgment": "nonzero (negative)",
+       "holm_adjusted_p": 3.621820096511048e-14,
+       "n": 22,
+       "mean_projection": -0.0031800771642105726,
+       "mde_approximate": 0.0005237146121845008
+      },
+      "R5": {
+       "judgment": "nonzero (positive)",
+       "holm_adjusted_p": 5.613113093985872e-32,
+       "n": 22,
+       "mean_projection": 0.06095138580435113,
+       "mde_approximate": 0.0013372096015305773
+      }
+     },
+     "bounded": false
+    },
+    "aligned": {
+     "summary": "average effect nonzero: R2 positive, R3 positive",
+     "rules": {
+      "R2": {
+       "judgment": "nonzero (positive)",
+       "holm_adjusted_p": 2.9314787230091837e-36,
+       "n": 22,
+       "mean_projection": 0.07404950752898434,
+       "mde_approximate": 0.001015499575617094
+      },
+      "R3": {
+       "judgment": "nonzero (positive)",
+       "holm_adjusted_p": 2.9314787230091837e-36,
+       "n": 22,
+       "mean_projection": 0.10120579185725949,
+       "mde_approximate": 0.0014122861529490907
+      }
+     },
+     "bounded": false
+    }
+   },
+   "scale": null,
+   "semantic": {
+    "ok_elements": 3670016,
+    "e_sem_certified": 0,
+    "max_gap_relative": 0.0,
+    "verdict_scope": "mixed: not a semantic verdict"
+   },
+   "failure_classes": []
+  }
+ }
+}

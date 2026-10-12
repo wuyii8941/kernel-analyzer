@@ -54,6 +54,8 @@
 | [B022](bugs/B022_inductor_max_pool_backward_scatter_assert.md) | Inductor 的 max_pool 反向改用 scatter_add 分解后，对前向存下的下标 −1（只采到 padding 的窗口、与 padding 并列的 −∞）触发设备端断言，CUDA 上下文丢失 | nightly 2.15.0.dev20260907（本机可运行的最新 CUDA nightly）；main 的分解体相同；2.10 正确 | 编译后训练崩溃 | 合法输入上训练崩溃 | 检索未见报告；草稿待用户决定 | 本质错误一轮第一阶段：nightly 候选在网格中报错，隔离后定位 | 否（崩溃，不是数值检出） |
 | [B023](bugs/B023_gelu_tanh_backward_nan_large_input.md) | `gelu(approximate='tanh')` 反向在 \|x\| ≥ 1.8447e19 时 NaN：`x·x` 溢出为 inf，乘上恰为 0 的 tanh 导数（eager CPU、CUDA 与 Inductor 分解同一公式） | PyTorch 2.10、nightly、main | ④ | 真实导数为 1 / 0，得 NaN；只在 1e19 量级出现 | 检索未见报告（2026-10-07）；草稿待用户决定 | 2b 激活家族预注册高风险组合（gelu_tanh × huge）的 E64 | 是：模式 A 的 FR 报 K 与 K_R 特殊值类别不一致（594/594：K = NaN，K_R 有限且包含 float64 结果）；E 看不到（各后端一致） |
 
+**第二轮现实配置下的证据（2026-10-12）**：B005、B009、B019（A 组）、B012（B 组，只看默认 β₂）、B003 / B006（C 组）在常见配置下的单步、短序列与训练作用，以及原有容差检查是否通过，见 [1_experiments/tolerance_study](../1_experiments/tolerance_study/README.md)。要点：torchtune 默认的纯 bf16 AdamW 每步 91–94% 的参数增量未写入（容差通过），600 步验证损失差 −0.113 nats（方向取决于学习率）；B019 在 PyTorch 与 timm 1.0.30 的 EMA 上 +0.095 nats；torchao 随机舍入（B009 只涉及状态）与 fp32 主副本在 0.01 nats 内等价；B012 在默认 β₂ 下单步偏差非零而对 200 步训练无可测作用；B006 的收缩在真实 Qwen2.5-0.5B 层上约 3.5e-4（cuBLAS TF32 小一到两个数量级），训练作用无法判断。
+
 ## 观察（不算缺陷，记录在案）
 
 | 编号 | 观察 | 组件 | 严重度 | 证据 |
