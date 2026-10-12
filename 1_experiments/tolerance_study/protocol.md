@@ -92,3 +92,28 @@ B 组（RAdam 默认 β₂）与 C 组（TF32）的具体设计在各自数据�
 机器可读台账（`results/ledger.json`，每行 = 机制 × 实现 × 配置 × 输入分布 × 状态 × 观察层 × 参照 × 检查规则 → 结果），
 命令、最小复现、原始结果、对应测试与成本（GPU 时间、额外运行、人工规格与定位）。没有显著结果、没有实际意义、运行失败与
 预算耗尽都保留。
+
+## 附录 B：RAdam 默认 β₂（冻结于 B 组数据之前）
+
+- 现实配置：fp32 参数加 bf16 autocast（常见的混合精度训练），`torch.optim.RAdam` 默认 β = (0.9, 0.999)、eps 1e-8、weight_decay 0，
+  lr 2e-5（与 A 组同一微调任务）；比较 PyTorch 官方教程的编译优化器 `torch.compile(RAdam(foreach=True).step)`（Triton）与 eager
+  foreach RAdam（整流项以 Python float64 计算；ATen，黑箱）。
+- B-1 单步：确认种子 4000–4031（32 个）用 eager RAdam 训练，在第 6、7、10、20、100 步之前捕获（整流判据 ρ_t > 5 从第 6 步起
+  成立）；每层一份统一入口声明（编译：模式 A 与模式 B；eager：黑箱）。规格：精确 RAdam（ρ_t 按有理数精确计算，整流因子与
+  自适应学习率用严格区间）。观察层：参数本身与参数增量。问题 1：PyTorch v2.10.0 `test_compiled_optimizers.py` 的 float32
+  编译对 eager 比较（已运行）与本次比较基线（fp32 默认 assert_close，参数与增量两个位置）。
+- B-2 短序列（配对）：种子 5000–5007（8 个），编译与 eager 两种变体从同一检查点、同一数据次序各跑 200 步；指标：参数轨迹
+  距离对累计位移之比、第 200 步验证损失的配对差（非零轴与 δ_train = 0.01 nats 的等价轴）。
+- 允许的结论：默认 β₂ 下单步更新偏差非零但对训练无可测作用。
+
+## 附录 C：TF32（冻结于 C 组数据之前）
+
+- 现实配置：不开 autocast 的 fp32 训练 / 推理，按 PyTorch Inductor 提示设 `torch.set_float32_matmul_precision('high')`。
+  受影响的实现：Inductor `mode="max-autotune"` 的 Triton 矩阵乘模板（实际选中的后端以记录为准）、Triton `tl.dot` 对 fp32 输入的
+  默认 TF32（直接写的 Triton 内核）、cuBLAS TF32（ATen，黑箱）。对照：'highest'（IEEE fp32）。
+- C-1 单层：Qwen2.5-0.5B 第 2、12、22 层 q_proj 与 down_proj 的真实权重，输入为留出 alpaca 样本的 fp32 前向隐藏状态；独立单位为
+  不同样本（每单位 128 个 token）。确认样本：留出集中按固定种子抽取的 32 个（开发探针只用过一句固定文本）。规格：fp64 计算加
+  2⁻⁴⁰ 的误差预算（矩阵乘的精确值在 fp64 中可严格包围时改用严格包围）。问题 1：PyTorch 对 TF32 的测试惯例（`tf32_on_and_off`
+  的放宽容差）与 fp32 默认容差；隐藏的是方向：误差沿输出方向的分量（固定方向均值与对齐作用分开）。
+- C-2 下游（只在 C-1 的对齐作用非零时执行）：一次前向与反向中 TF32 的对齐作用沿层的传播（logits、损失、梯度），以及 Adam 的
+  尺度不变性是否抵消统一的梯度缩小；必要时 100 步配对短序列（'high' 对 'highest'，8 个种子）。
