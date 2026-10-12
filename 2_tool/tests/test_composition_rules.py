@@ -18,7 +18,7 @@ def test_registry_entries_and_tests_resolve():
 def test_every_rule_states_the_whole_chain():
     for r in C.RULES:
         assert r["obligation"] and r["entry"] and r["independent_answer"] and r["tests"], r["id"]
-        assert r["id"][0] in "MTPQK", r["id"]
+        assert r["id"][0] in "MTPOQK", r["id"]
 
 
 def test_report_fields_are_written_by_the_unified_entry():

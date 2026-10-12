@@ -635,8 +635,16 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                     raise ValueError(f"observe.{name}.old = {ob['old']}: {old.size} elements, the output has {nv}")
                 row = per[name][-1]
                 row["old"] = old
+                fl = floor_of(ob.get("floor"), old)
                 row["increment"] = {"seed": seed, **increment_unit(row["k"], row["r_lo"], row["r_hi"], old, row["ok"],
-                                                                   floor_of(ob.get("floor"), old))}
+                                                                   fl)}
+                if has_f:
+                    # the decomposition in the increment frame: total (K against f), semantic (K_R against f); the
+                    # numerical part (K against K_R) is row["increment"]
+                    fr_lo, fr_hi = frame(f_lo), frame(f_hi)
+                    row["increment_total"] = {"seed": seed, **increment_unit(row["k"], fr_lo, fr_hi, old, row["ok"], fl)}
+                    row["increment_semantic"] = {"seed": seed, **increment_unit(row["kr"], fr_lo, fr_hi, old, row["ok"],
+                                                                                fl)}
         # repeated launches of the same input, outside the recorder: K only
         if r_exec is None:
             r_exec = int(repeats) if repeats is not None else (
@@ -746,6 +754,14 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                                     "directions": "R2 / R3 follow the reference increment (positive R3: the written "
                                                   "increment is scaled down against it)",
                                     "summary": summarize_increment(units), "per_unit": units}
+            if mode == "B":
+                entry["observation"]["decomposition"] = {
+                    "meaning": "increment frame: numerical = K against K_R (summary above), total = K against f, "
+                               "semantic = the midpoint of K_R against f (retention 1: K_R's increment equals f's)",
+                    "total": summarize_increment([p["increment_total"] for p in rows]),
+                    "semantic": summarize_increment([p["increment_semantic"] for p in rows]),
+                    "per_unit_total": [p["increment_total"] for p in rows],
+                    "per_unit_semantic": [p["increment_semantic"] for p in rows]}
             kr = kr - np.stack([p["old"] for p in rows])     # the decision layer's reference frame: the increment
         for key, label in (("n", "e_num = K - K_R"), ("s", "e_sem = K_R - f"))[: 2 if mode == "B" else 1]:
             lo = np.stack([p[key][0] for p in rows])

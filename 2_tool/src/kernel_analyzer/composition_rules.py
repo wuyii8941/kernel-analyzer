@@ -9,8 +9,8 @@ are met -- it is not tied to an operator or kernel name.  Each entry states the 
 field is one the unified entry writes (``tests/test_composition_rules.py``).  The expanded declaration of
 ``measure.run`` lists the rule ids and the registry digest, so a report names the rule set it was produced under.
 
-Families: M (memory effects / provenance), T (trace non-interference), P (precision / region evaluation), Q (the bias
-query), K (packaging).  A rule whose obligation is not met yields no guarantee and the report says which obligation
+Families: M (memory effects / provenance), T (trace non-interference), P (precision / region evaluation), O
+(observation layers), Q (the bias query), K (packaging).  A rule whose obligation is not met yields no guarantee and the report says which obligation
 failed; it never falls back to a weaker reading silently.
 """
 from __future__ import annotations
@@ -147,6 +147,22 @@ RULES = [
      "independent_answer": "per-element set-target masks of the reference (Buffer.iset)",
      "tests": [f"{T_B1}::test_controller_stop_categories"],
      "report": ["outputs.*.reference.set_target_elements", "outputs.*.reference.unresolved_elements"]},
+    {"id": "O1", "family": "observation", "name": "increment layer",
+     "obligation": "for a state or parameter written from a declared old value, the written increment is compared with "
+                   "the reference increment on the same old value; dropped increments, sign flips, retention and error "
+                   "energy are reported per unit, coordinates near zero or below the declared floor are counted and "
+                   "never used for a ratio; the decision layer's reference-dependent directions follow the reference "
+                   "increment; in mode B the increment frame is decomposed into total, numerical and semantic parts",
+     "entry": ["kernel_analyzer.reference_eval.observation:increment_unit",
+               "kernel_analyzer.reference_eval.observation:floor_of", "kernel_analyzer.check:run",
+               "kernel_analyzer.check:run_black_box"],
+     "independent_answer": "per-coordinate counts with exact rational arithmetic (bf16 rounding of the exact update)",
+     "tests": ["tests/test_observation_layer.py::test_increment_unit_matches_a_per_coordinate_count",
+               "tests/test_observation_layer.py::test_dropped_state_increments_through_mode_a_match_the_exact_count",
+               "tests/test_observation_layer.py::test_float32_state_keeps_its_increments",
+               "tests/test_observation_layer.py::test_black_box_state_update_reports_the_same_layer",
+               "tests/test_observation_layer.py::test_mode_b_decomposes_the_increment_frame"],
+     "report": ["outputs.*.observation", "expanded_declaration.query.observable.layers"]},
     {"id": "Q1", "family": "bias query", "name": "the query is fixed before the data",
      "obligation": "comparison target, input distribution, observable and sampling unit are written into the expanded "
                    "declaration (and its digest) before any unit is drawn",

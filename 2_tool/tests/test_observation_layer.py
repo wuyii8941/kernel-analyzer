@@ -119,3 +119,18 @@ def test_observe_declaration_is_validated():
     assert any("not a measured output" in m for m in measure.missing_items(d))
     d = _decl("ema_state_aten", mode="black-box")
     assert any(m.startswith("compare.spec") for m in measure.missing_items(d))
+
+
+@CUDA
+def test_mode_b_decomposes_the_increment_frame():
+    """mode B: the increment layer reports total (K vs f), numerical (K vs K_R) and semantic (K_R vs f) apart"""
+    from kernel_analyzer import measure
+    d = _decl("ema_state_inplace", mode="B")
+    d["compare"]["spec"] = "audit_calls.py:ema_state_spec"
+    lv = measure.run(d)["levels"][0]
+    dec = lv["outputs"]["v"]["observation"]["decomposition"]
+    num = lv["outputs"]["v"]["observation"]["summary"]
+    # the kernel's float32 constant 0.999 differs from the spec's exact 0.999: a small semantic part; the dropped
+    # decrements are numerical (rounding to bf16) and appear in the total too
+    assert num["dropped_fraction"]["mean"] > 0.5 and dec["total"]["dropped_fraction"]["mean"] > 0.5
+    assert dec["semantic"]["dropped"] == 0 and abs(dec["semantic"]["retention"]["mean"] - 1) < 1e-3, dec["semantic"]
