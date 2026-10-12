@@ -76,6 +76,31 @@ def reduce_layouts(module, ttgir: str) -> dict:
     return out
 
 
+def scan_layouts(module, ttgir: str) -> dict:
+    """node_id of each TTIR tt.scan -> axis, reverse flag, shape and layout parameters of the scanned axis (matched in
+    program order; empty when the counts differ)."""
+
+    layouts = parse_layouts(ttgir)
+    found = []
+    for m in re.finditer(r'"tt\.scan"\(([^)]*)\)\s*<\{axis = (\d+) : i32, reverse = (true|false)\}>', ttgir):
+        sig = re.search(r"\}\)\s*:\s*\(tensor<([\dx]+)x\w+,\s*(#[\w]+)>", ttgir[m.end():])
+        if sig is None:
+            return {}
+        shape = tuple(int(s) for s in sig.group(1).split("x") if s)
+        found.append((int(m.group(2)), m.group(3) == "true", shape, sig.group(2), len(m.group(1).split(","))))
+    scans = [op for fn in module.funcs.values() for op in fn.walk() if op.name == "tt.scan"]
+    if len(scans) != len(found):
+        return {}
+    out = {}
+    for op, (axis, reverse, shape, layout, n_operands) in zip(scans, found):
+        lay = layouts.get(layout)
+        if lay is None or lay["kind"] != "blocked":
+            continue
+        out[op.node_id] = {"axis": axis, "reverse": reverse, "shape": shape, "layout": layout,
+                           "operands": n_operands, **_axis_params(layouts, layout, axis)}
+    return out
+
+
 # ------------------------------------------------------------------------------------------- loads and stores
 
 _ACCESS = re.compile(r"\btt\.(load|store)\s+(%[\w#]+)[^\n]*?:\s*(?:\(\s*)?(tensor<([\dx]*)x?!tt\.ptr<[^>]*>,\s*(#[\w]+)>"

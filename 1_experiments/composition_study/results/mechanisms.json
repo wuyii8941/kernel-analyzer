@@ -1,0 +1,165 @@
+{
+ "E1_B1_tf32_operand_truncation": {
+  "form": "C15 dot (tf32, K = 256, BK = 32)",
+  "observable": "alignment <e, r> / <r, r> per matmul",
+  "prediction_basis": "E[tau_A] + E[tau_B], tau = relative RZ-to-tf32 error of the operands (catalog: the conversion is RZ); the accumulation's own RZ is left out of the prediction",
+  "prediction": -0.0007040021928878431,
+  "units": 32,
+  "measured": -0.0007055420754061733,
+  "ci95": [
+   -0.0007081756314385293,
+   -0.0007029085193738172
+  ],
+  "ratio": 1.0021873263093308,
+  "verdict": "成立",
+  "p_nonzero": 2.5437308874629954e-63
+ },
+ "E2_B1_conditional_accumulation_forms": {
+  "C8_loop_4096_steps": {
+   "prediction": "every lane ends at exactly 256",
+   "lanes_at_256": 128,
+   "lanes": 128,
+   "relative_error_mean": -0.9166358208104638,
+   "verdict": "成立"
+  },
+  "C3_reduce_4096": {
+   "prediction": "partial sums of comparable size: |relative bias| below 0.05, far from the loop's stagnation",
+   "measured": 8.37707616326072e-05,
+   "min": -0.0029875527177505726,
+   "max": 0.003148103739457424,
+   "verdict": "成立"
+  },
+  "C4_scan_last_of_4096": {
+   "prediction": "partial sums of comparable size: |relative bias| below 0.05, far from the loop's stagnation",
+   "measured": 8.518977576311529e-05,
+   "min": -0.0022646047979173246,
+   "max": 0.002311953077803466,
+   "verdict": "成立"
+  }
+ },
+ "E3_B2_residual_coefficient_covariance": {
+  "D1 aligned": {
+   "observable": "mean of s_i (RN(a_i b_i) - a_i b_i) per block of 1024",
+   "prediction": 1.372527130607167e-08,
+   "units": 24,
+   "measured": 1.3756896203492714e-08,
+   "ci95": [
+    1.3436788598663637e-08,
+    1.4077003808321791e-08
+   ],
+   "ratio": 1.002304136414925,
+   "verdict": "成立",
+   "p_nonzero": 1.0896670633697585e-30
+  },
+  "D2 anti-aligned": {
+   "observable": "mean of s_i (RN(a_i b_i) - a_i b_i) per block of 1024",
+   "prediction": -1.3533334642749454e-08,
+   "units": 24,
+   "measured": -1.3506359703639422e-08,
+   "ci95": [
+    -1.3711664387838664e-08,
+    -1.330105501944018e-08
+   ],
+   "ratio": 0.9980067780911275,
+   "verdict": "成立",
+   "p_nonzero": 6.197706830895478e-35
+  }
+ },
+ "E4_B3_and_B2_mean_square_of_quantized_values": {
+  "bf16": {
+   "observable": "sum RN(x)^2 / sum x^2 - 1 per block of 4096",
+   "prediction_1_B3_only_uniform_residual": {
+    "prediction": 2.771159785743084e-06,
+    "units": 24,
+    "measured": -3.39637154376099e-05,
+    "ci95": [
+     -8.38503357663307e-05,
+     1.5922904891110903e-05
+    ],
+    "ratio": -12.256137524925347,
+    "verdict": "无法判断",
+    "p_nonzero": 0.172393575692003
+   },
+   "prediction_2_B2_plus_B3_exact_residuals": {
+    "prediction": -3.3963715437639666e-05,
+    "units": 24,
+    "measured": -3.39637154376099e-05,
+    "ci95": [
+     -8.38503357663307e-05,
+     1.5922904891110903e-05
+    ],
+    "ratio": 0.9999999999991235,
+    "verdict": "无法判断",
+    "p_nonzero": 0.172393575692003
+   },
+   "B2_cross_term_2E[x rho]": -3.673760280275936e-05,
+   "B3_square_term_E[rho^2]": 2.7738873651196866e-06
+  },
+  "fp8 e5m2": {
+   "observable": "sum RN(x)^2 / sum x^2 - 1 per block of 4096",
+   "prediction_1_B3_only_uniform_residual": {
+    "prediction": 0.0028284589625650236,
+    "units": 24,
+    "measured": -0.003237971225928102,
+    "ci95": [
+     -0.004591458174344013,
+     -0.0018844842775121904
+    ],
+    "ratio": -1.1447828194727305,
+    "verdict": "不成立",
+    "p_nonzero": 5.294766753524028e-05
+   },
+   "prediction_2_B2_plus_B3_exact_residuals": {
+    "prediction": -0.0032379712259281643,
+    "units": 24,
+    "measured": -0.003237971225928102,
+    "ci95": [
+     -0.004591458174344013,
+     -0.0018844842775121904
+    ],
+    "ratio": 0.9999999999999807,
+    "verdict": "成立",
+    "p_nonzero": 5.294766753524028e-05
+   },
+   "B2_cross_term_2E[x rho]": -0.0060479379480552565,
+   "B3_square_term_E[rho^2]": 0.0028099667221270926
+  }
+ },
+ "E5_B4_discrete_decisions": {
+  "threshold_count_after_bf16_rounding": {
+   "observable": "share of RN_bf16(x) > 1 minus share of x > 1",
+   "prediction": -0.031135689578275505,
+   "units": 24,
+   "measured": -0.030721028645833332,
+   "ci95": [
+    -0.03191852263338368,
+    -0.029523534658282988
+   ],
+   "ratio": 0.9866821342948031,
+   "verdict": "成立",
+   "p_nonzero": 1.4643935010507119e-25
+  },
+  "maximum_of_e5m2_rounded_groups_of_8_spacing_above_spread": {
+   "observable": "mean of max RN(x_i) - max x_i per group of 8 (x ~ 1 + 0.05 N(0,1), fp8 e5m2)",
+   "prediction": "positive",
+   "units": 24,
+   "measured": -0.058956112140246354,
+   "ci95": [
+    -0.05980439635257016,
+    -0.058107827927922545
+   ],
+   "verdict": "不成立"
+  },
+  "maximum_of_e5m2_rounded_groups_of_8_spread_above_spacing": {
+   "observable": "mean of max RN(x_i) - max x_i per group of 8 (x ~ 1 + 0.05 N(0,1), fp8 e5m2)",
+   "prediction": "positive",
+   "units": 24,
+   "measured": -0.004782916314267267,
+   "ci95": [
+    -0.0061451814608392535,
+    -0.00342065116769528
+   ],
+   "verdict": "不成立"
+  }
+ }
+}

@@ -5114,7 +5114,12 @@ def _float_to_int(name, op, x: TV, out_elem) -> TV:
     ok &= (t_lo >= lower) & (t_lo < limit)
     st = np.where(ok, ST_OK, ST_NE).astype(np.int8)
     st = np.where(x.st >= ST_UNDEF, x.st, st).astype(np.int8)
-    v = np.where(ok, t_lo, 0).astype(np.int64)
+    if name == "fptoui" and width == 64:  # [2^63, 2^64) is in range: through uint64, kept as the int64 bit pattern
+        v = np.where(ok, t_lo, 0).astype(np.uint64).view(np.int64)
+    elif name == "fptoui":  # an unsigned result is held in the signed representation of its width (200 -> -56 in i8)
+        v = _wrap(np.where(ok, t_lo, 0).astype(np.int64), width)
+    else:
+        v = np.where(ok, t_lo, 0).astype(np.int64)
     reasons = x.reasons
     if not ok.all():
         reasons = reasons | {f"not_established:float-to-int conversion is discontinuous or out of range@{op.node_id}"}

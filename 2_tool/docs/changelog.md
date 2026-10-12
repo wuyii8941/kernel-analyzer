@@ -19,6 +19,42 @@ v1.1 的计分只绑定运行 r20261008T2030。
   - 新测试只在 CPU 上求值编译产物（`triton.compile`，不启动），有竞争的 kernel 从不运行。
 - 注册表写到 `2_tool/data/rule_registry.json`（`2_tool/scripts/dsl_v2/build_rule_registry.py`）；`pre-reorg-20261009:results/general/` 下的 v3.1 注册表冻结不改。
 
+### 组合研究：逐位仿真器的组合规则，2026-10-13
+
+见 [1_experiments/composition_study](../../1_experiments/composition_study/README.md)。原语 × 组合形式的全组合扫描在设备上检验
+`reference_eval/emulate.py` 的下降规则，找到的缺口逐个先写修复前失败的测试（`tests/test_reference_eval_emulate.py`）再修：
+
+- **新规则**：张量核 dot（`reference_eval/tensor_core.py`）。
+  - tf32 操作数截断到 11 位；乘积精确；
+  - 每 4 个（tf32）/ 8 个（bf16、f16）乘积与累加器对齐到最大的操作数指数和，保留 1 位后截断，再截断到 24 位；
+  - f16 次正规操作数以指数 −14 进入对齐；
+  - 证据：221,184 个元素逐位相同，第二轮 TF32 层的真实数据上 5,505,024 个元素逐位相同。
+- **新规则**：一维正向扫描的组合次序（`reference_eval/scan_order.py`，`layouts.scan_layouts`）。
+  - 线程内顺序，lane 上 Hillis-Steele，warp 总和左折叠；
+  - 证据：131,328 个元素逐位相同。
+- **组合区域与扫描的扩展**：
+  - 组合区域只有一个操作的归约与扫描，按布局 / 扫描次序由设备求组合（乘积归约、非结合与整数扫描）；
+  - 整数与浮点 max/min 的扫描与次序无关，精确求值。
+- **修复（仿真器原先给出错误的位，或没有必要地放弃）**：
+  - 归约溢出：溢出的部分和标为未决定，不再给出超出格式范围的有限值；
+  - FTZ：按 `enable_reflect_ftz` 对 libdevice 下降的 floor / ceil 与带舍入后缀的 f32 运算冲零；
+  - 零的符号：向下舍入时精确零和为 −0；
+  - 精确求值：f64 的 IEEE 运算与带舍入后缀的 f32 libdevice 运算用 MPFR 精确求值，覆盖全部舍入方向、次正规、NaN / inf；
+  - 融合：libdevice 末尾的乘法融合进每个使用它的加法，有 NaN 的 lane 不再让整个程序退回普通加法；
+    穿过同形状的 reshape / 布局转换寻找归约前的乘法；
+  - SASS 证据：内存中的捕获从保留的 cubin 取 SASS；
+  - 无声明语义的 libdevice 调用（及整数结果）由设备求值，未定义的 lane 单独标为未仿真；
+  - 整数结果的不可仿真值改为整数类型（原先写入整数缓冲区时报错）；
+  - 设备求值的下降：sm_86 软件 fp8 e5m2 转换（平局远离零）与 `tt.clampf`（min / max 的零符号）；
+  - 整数精确：整数结果的设备求值按 int64 精确取回（含 i64）；
+  - 整数到浮点：用 MPFR 一次就近舍入（原先超过 2^53 的整数留下区间，之后的 f64 加法取错邻值）；
+  - 区间操作数：只以区间已知的操作数不进入精确求值；
+  - 基础求值器：`fptoui` 到 u64 时 [2^63, 2^64) 的值经 uint64 保留位模式（原先溢出为错误的 int64）；
+  - 除法与移位的整数组合区域（除零、移位超宽是未定义的）不用设备求值，因为分别编译时 LLVM 可能不同地折叠未定义的 lane。
+- 捕获：`_base` + shape / stride / offset 的包装（FlagGems 的 StridedBuffer）按等价的 torch 视图捕获（步长非负时），
+  FlagGems 的生成 kernel 因而可以仿真。
+- 仍不可仿真：原子、多操作的组合区域、反向 / 多维扫描、tf32x3 / bf16x3 / bf16x6 与 fp16 累加器的 dot、fp8 e5m2 dot。
+
 ### 第二轮：容差研究之前的测量修复，2026-10-12
 
 见 [3_audits/round2_measurement](../../3_audits/round2_measurement/README.md)。跨启动沿用与生产者证据一致（经 `tensor.data` 的写入撤回沿用

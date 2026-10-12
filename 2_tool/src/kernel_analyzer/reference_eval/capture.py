@@ -177,6 +177,18 @@ def _unwrap(arg):
         name = _TL_DTYPE.get(getattr(dt, "name", str(dt)))
         if name is not None:
             return base, name
+    # a strided reinterpretation of a base tensor (FlagGems' StridedBuffer: ``_base`` + shape / stride / offset, the
+    # operands of its generated pointwise kernels): the equivalent torch view when the strides are non-negative
+    sb = getattr(arg, "_base", None)
+    if isinstance(sb, torch.Tensor) and hasattr(arg, "data_ptr") and hasattr(arg, "stride") and isinstance(dt, torch.dtype):
+        try:
+            shape, strides = tuple(arg.shape), tuple(arg.stride())
+            if dt == sb.dtype and all(st >= 0 for st in strides):
+                view = torch.as_strided(sb, shape, strides, sb.storage_offset() + int(getattr(arg, "offset", 0)))
+                if view.data_ptr() == arg.data_ptr():
+                    return view, str(dt).replace("torch.", "")
+        except Exception:  # an unusual wrapper: not a tensor operand
+            pass
     return None, None
 
 

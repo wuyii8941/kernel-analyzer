@@ -55,14 +55,395 @@ def test_softmax_and_layernorm_reproduce_bitwise():
 
 
 @cuda
-def test_tensor_core_dot_is_not_emulable():
+@pytest.mark.parametrize("dtype", ["float32", "bfloat16", "float16"])
+def test_tensor_core_dot_reproduces_bitwise(dtype):
+    """tf32 / bf16 / f16 mma follows the tensor_core.py rule bit for bit, also with a masked K tail."""
+    from scripts import reference_eval_kernels as k
+
+    g = torch.Generator(device="cuda").manual_seed(11)
+    dt = getattr(torch, dtype)
+    A = torch.randn(64, 200, device="cuda", generator=g).to(dt)
+    B = (torch.randn(200, 32, device="cuda", generator=g) * 0.1).to(dt)
+    C = torch.empty(64, 32, device="cuda")
+    launch = _capture(lambda: k.matmul[(2, 2)](A, B, C, 64, 32, 200, *A.stride(), *B.stride(), *C.stride(),
+                                               BM=32, BN=16, BK=32, PRECISION="tf32"))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"]
+    assert r["buffers"]["C"]["emulated"] == r["buffers"]["C"]["written"] == 64 * 32
+    assert any(n.startswith("dot_tensor_core") for n in r["nodes"])
+
+
+@cuda
+@pytest.mark.parametrize("dtype", ["float32", "bfloat16"])
+def test_overflowing_reduction_is_not_claimed(dtype):
+    """A partial sum that overflows becomes inf (and inf - inf NaN) on the device: the emulator must not report a
+    finite value beyond the format's range as emulated (composition study, C3 cells)."""
+    from scripts import reference_eval_kernels as k  # noqa: F401
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def rowsum(x, o, N: tl.constexpr):
+        i = tl.arange(0, N)
+        tl.store(o + tl.program_id(0), tl.sum(tl.load(x + tl.program_id(0) * N + i), axis=0))
+
+    dt = getattr(torch, dtype)
+    big = float(torch.finfo(dt).max) * 0.75
+    x = torch.randn(2, 128, device="cuda").to(dt)
+    x[0, :8] = big            # row 0: partial sums overflow to +inf
+    x[1, :4] = big
+    x[1, 64:68] = -big        # row 1: +inf and -inf meet: NaN
+    out = torch.empty(2, device="cuda", dtype=dt)
+    launch = _capture(lambda: rowsum[(2,)](x, out, N=128))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["status"] != "mismatch", r["buffers"]
+    assert r["buffers"]["o"]["mismatch"] == 0
+
+
+@cuda
+@pytest.mark.parametrize("dtype,num_warps", [("float32", 4), ("float16", 1), ("bfloat16", 8)])
+def test_scan_reproduces_bitwise(dtype, num_warps):
+    """A forward 1-D float cumsum follows the scan_order.py combination order bit for bit."""
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def cumsum(x, o, N: tl.constexpr):
+        i = tl.arange(0, N)
+        tl.store(o + tl.program_id(0) * N + i, tl.cumsum(tl.load(x + tl.program_id(0) * N + i), axis=0))
+
+    dt = getattr(torch, dtype)
+    g = torch.Generator(device="cuda").manual_seed(3)
+    x = (torch.randn(3, 1024, device="cuda", generator=g) * 4).to(dt)
+    out = torch.empty_like(x)
+    launch = _capture(lambda: cumsum[(3,)](x, out, N=1024, num_warps=num_warps))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"]
+    assert r["buffers"]["o"]["emulated"] == r["buffers"]["o"]["written"] == 3 * 1024
+    assert r["nodes"].get("scan_order")
+
+
+@cuda
+def test_reverse_scan_is_not_emulable():
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def rcumsum(x, o, N: tl.constexpr):
+        i = tl.arange(0, N)
+        tl.store(o + i, tl.cumsum(tl.load(x + i), axis=0, reverse=True))
+
+    x = torch.randn(256, device="cuda")
+    out = torch.empty_like(x)
+    launch = _capture(lambda: rcumsum[(1,)](x, out, N=256))
+    r = verify(launch)
+    assert r["buffers"]["o"]["emulated"] == 0
+    assert any("scan" in n for n in r["not_emulable_nodes"])
+
+
+def _subnormal_heavy(n, g):
+    """f32 values of which half are subnormal (both signs), the rest ordinary."""
+    tiny = torch.rand(n, device="cuda", generator=g) * 2.0 ** -126 * torch.sign(torch.randn(n, device="cuda", generator=g))
+    big = torch.randn(n, device="cuda", generator=g)
+    return torch.where(torch.arange(n, device="cuda") % 2 == 0, tiny, big)
+
+
+@cuda
+@pytest.mark.parametrize("reflect_ftz", [True, False])
+def test_floor_ceil_and_rounding_libdevice_follow_reflect_ftz(reflect_ftz):
+    """With enable_reflect_ftz the libdevice-lowered floor / ceil and the rounding-suffixed libdevice operations flush
+    subnormal operands and results to signed zero (cvt.rmi.ftz, add.rn.ftz, ...); without it they do not."""
+    import triton
+    import triton.language as tl
+    from triton.language.extra.cuda import libdevice as ld
+
+    @triton.jit
+    def k(x, y, o1, o2, o3, o4, N: tl.constexpr):
+        i = tl.arange(0, N)
+        a = tl.load(x + i)
+        b = tl.load(y + i)
+        tl.store(o1 + i, tl.floor(a))
+        tl.store(o2 + i, tl.ceil(a))
+        tl.store(o3 + i, ld.add_rn(a, b))
+        tl.store(o4 + i, ld.mul_rz(a, b))
+
+    g = torch.Generator(device="cuda").manual_seed(9)
+    x, y = _subnormal_heavy(512, g), _subnormal_heavy(512, g)
+    outs = [torch.empty_like(x) for _ in range(4)]
+    launch = _capture(lambda: k[(1,)](x, y, *outs, N=512, enable_reflect_ftz=reflect_ftz))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], r["buffers"]
+    assert all(v["emulated"] == v["written"] for v in r["buffers"].values())
+
+
+@cuda
+def test_exact_zero_sum_under_round_down_is_negative_zero():
+    import triton
+    import triton.language as tl
+    from triton.language.extra.cuda import libdevice as ld
+
+    @triton.jit
+    def k(x, y, o, N: tl.constexpr):
+        i = tl.arange(0, N)
+        tl.store(o + i, ld.add_rd(tl.load(x + i), tl.load(y + i)))
+
+    x = torch.randn(128, device="cuda", dtype=torch.float64)
+    out = torch.empty_like(x)
+    launch = _capture(lambda: k[(1,)](x, -x, out, N=128))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], r["buffers"]
+    assert bool(torch.all(torch.signbit(out)))
+
+
+@cuda
+def test_libdevice_product_fused_into_every_add_with_nan_lanes():
+    """fast_logf ends in an LLVM multiply that aggressive fusion folds into each add consuming it, whatever the use
+    count; lanes holding NaN (log of a negative) must not push the other lanes off the grouped path."""
+    import triton
+    import triton.language as tl
+    from triton.language.extra.cuda import libdevice as ld
+
+    @triton.jit
+    def k(x, o, N: tl.constexpr):
+        i = tl.arange(0, N)
+        v = ld.fast_logf(tl.load(x + i))
+        w = v + v
+        tl.store(o + i, w + v)
+
+    g = torch.Generator(device="cuda").manual_seed(4)
+    x = torch.randn(1024, device="cuda", generator=g) * 2.0 ** torch.randint(-60, 60, (1024,), device="cuda",
+                                                                             generator=g)
+    out = torch.empty_like(x)
+    launch = _capture(lambda: k[(1,)](x, out, N=1024))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], r["buffers"]
+    assert r["buffers"]["o"]["nan_both"] > 0
+
+
+@cuda
+def test_libdevice_without_declared_semantics_runs_on_the_device():
+    """A libdevice call the reference cannot form (no declared semantics) is still emulated: the device evaluates it on
+    the emulated operands."""
+    import triton
+    import triton.language as tl
+    from triton.language.extra.cuda import libdevice as ld
+
+    @triton.jit
+    def k(x, o, oi, N: tl.constexpr):
+        i = tl.arange(0, N)
+        v = tl.load(x + i)
+        tl.store(o + i, ld.erfcinv(v * 0.5 + 1.0) * 2.0 + v)
+        tl.store(oi + i, ld.brev(v.to(tl.int32)))
+
+    x = torch.randn(256, device="cuda")
+    out, outi = torch.empty_like(x), torch.empty(256, device="cuda", dtype=torch.int32)
+    launch = _capture(lambda: k[(1,)](x, out, outi, N=256))
+    from kernel_analyzer.reference_eval import emulate as E
+    res, emu = E.emulate(launch, ungrouped=[], swapped=[])
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], r["buffers"]
+    assert r["buffers"]["o"]["emulated"] == 256
+    ib = next(b for b in res.buffers.values() if b.name == "oi")
+    assert bool(np.all(ib.lo[ib.written] == ib.actual_after[ib.written]))
+
+
+@cuda
+@pytest.mark.parametrize("fn", ["div_rd", "sqrt_ru", "add_rz", "mul_rn"])
+def test_f64_operations_are_exact_in_every_rounding_mode(fn):
+    import triton
+    import triton.language as tl
+    from triton.language.extra.cuda import libdevice as ld
+
+    @triton.jit
+    def k(x, y, o, N: tl.constexpr, FN: tl.constexpr):
+        i = tl.arange(0, N)
+        a = tl.load(x + i)
+        b = tl.load(y + i)
+        if FN == 0:
+            r = ld.div_rd(a, b)
+        elif FN == 1:
+            r = ld.sqrt_ru(tl.abs(a))
+        elif FN == 2:
+            r = ld.add_rz(a, b)
+        else:
+            r = ld.mul_rn(a, b) + a / b
+        tl.store(o + i, r)
+
+    g = torch.Generator(device="cuda").manual_seed(2)
+    x = torch.randn(512, device="cuda", dtype=torch.float64, generator=g) * 1e-300
+    y = torch.randn(512, device="cuda", dtype=torch.float64, generator=g)
+    out = torch.empty_like(x)
+    code = ["div_rd", "sqrt_ru", "add_rz", "mul_rn"].index(fn)
+    launch = _capture(lambda: k[(1,)](x, y, out, N=512, FN=code))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], r["buffers"]
+    assert r["buffers"]["o"]["emulated"] == 512
+
+
+@cuda
+def test_single_operation_reduce_and_scan_regions_follow_the_layout_order():
+    """A product reduction and non-associative / integer scans: the lowering's order with the device evaluating the
+    region's operation reproduces the device bit for bit."""
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def sub_(a, b):
+        return a - b
+
+    @triton.jit
+    def imax(a, b):
+        return tl.maximum(a, b)
+
+    @triton.jit
+    def k(x, xi, o1, o2, o3, N: tl.constexpr):
+        i = tl.arange(0, N)
+        v = tl.load(x + i)
+        tl.store(o1 + tl.program_id(0), tl.reduce(1.0 + 0.01 * v, 0, _mul))
+        tl.store(o2 + i, tl.associative_scan(v, 0, sub_))
+        tl.store(o3 + i, tl.associative_scan(tl.load(xi + i), 0, imax))
+
+    @triton.jit
+    def _mul(a, b):
+        return a * b
+
+    x = torch.randn(1024, device="cuda")
+    xi = torch.randint(-1000, 1000, (1024,), device="cuda", dtype=torch.int32)
+    o1 = torch.empty(1, device="cuda")
+    o2 = torch.empty_like(x)
+    o3 = torch.empty_like(xi)
+    launch = _capture(lambda: k[(1,)](x, xi, o1, o2, o3, N=1024))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], r["buffers"]
+    assert r["buffers"]["o1"]["emulated"] == 1 and r["buffers"]["o2"]["emulated"] == 1024
+
+
+@cuda
+def test_reshaped_product_reduction_and_broadcast_quotient():
+    """Two lowering facts found on library kernels (Liger group norm, sparsemax): a product reshaped with
+    can_reorder still contracts into the sum's combine, and a scalar div.full broadcast into a vector subtraction is
+    left uncontracted by ptxas -- read from the SASS of the in-memory capture."""
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def k(x, o, ss, N: tl.constexpr):
+        i = tl.arange(0, N)
+        v = tl.load(x + tl.program_id(0) * N + i)
+        sq = tl.sum(tl.reshape(v * v, (N,), can_reorder=True), axis=0)
+        s = tl.sum(v, axis=0)
+        tau = (s - 1.0) / sq
+        tl.store(ss + tl.program_id(0), sq)
+        tl.store(o + tl.program_id(0) * N + i, v - tau)
+
+    x = torch.randn(16, 512, device="cuda")
+    out = torch.empty_like(x)
+    ss = torch.empty(16, device="cuda")
+    launch = _capture(lambda: k[(16,)](x, out, ss, N=512))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], r["buffers"]
+    assert r["nodes"].get("reduce_tree_fused")
+
+
+@cuda
+def test_fp8_conversion_clamp_and_directed_fma_with_flushed_zeros():
+    """sm_86's software fp8 e5m2 conversion rounds ties away from zero (a bf16 tie such as 0.5625 goes to 0.625, not
+    to the even 0.5); tt.clampf's min / max have their own signed-zero rule; an fma rounding down whose operands flush
+    to zero gives +0 (the outward interval of an exact zero must not round to the smallest subnormal)."""
+    import triton
+    import triton.language as tl
+    from triton.language.extra.cuda import libdevice as ld
+
+    @triton.jit
+    def k(x, lo, hi, a, b, o8, oc, of, N: tl.constexpr):
+        i = tl.arange(0, N)
+        v = tl.load(x + i)
+        tl.store(o8 + i, v.to(tl.float8e5))
+        tl.store(oc + i, tl.clamp(v.to(tl.float32), tl.load(lo + i), tl.load(hi + i), propagate_nan=tl.PropagateNan.ALL))
+        tl.store(of + i, ld.fma_rd(tl.load(a + i), tl.load(b + i), tl.load(a + i)))
+
+    g = torch.Generator(device="cuda").manual_seed(8)
+    x = torch.cat([torch.tensor([0.5625, -0.140625, -0.8125, 0.0, -0.0, 3.0], device="cuda"),
+                   torch.randn(250, device="cuda", generator=g)]).to(torch.bfloat16)
+    lo = -torch.rand(256, device="cuda", generator=g)
+    lo[:6] = -0.0
+    hi = torch.rand(256, device="cuda", generator=g)
+    a = _subnormal_heavy(256, g)
+    b = torch.randn(256, device="cuda", generator=g) * 1e30
+    o8 = torch.empty(256, device="cuda", dtype=torch.float8_e5m2)
+    oc, of = torch.empty(256, device="cuda"), torch.empty(256, device="cuda")
+    launch = _capture(lambda: k[(1,)](x, lo, hi, a, b, o8, oc, of, N=256))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], r["buffers"]
+    assert float(o8[0].float()) == 0.625
+
+
+@cuda
+def test_large_integer_conversions_are_exact():
+    """fptoui to u64 above 2^63 keeps its bit pattern, and an i64 beyond 2^53 converts to f64 / f32 with one exact
+    rounding (the float64 path left an interval and a later f64 add claimed the wrong neighbour)."""
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def k(x, n, o1, o2, o3, o4, N: tl.constexpr):
+        i = tl.arange(0, N)
+        tl.store(o1 + i, tl.load(x + i).to(tl.uint64))
+        tl.store(o4 + i, (tl.load(x + i) * 1.3e-17).to(tl.uint8))
+        v = tl.load(n + i)
+        d = v.to(tl.float64)
+        tl.store(o2 + i, d + d)
+        tl.store(o3 + i, v.to(tl.float32))
+
+    g = torch.Generator(device="cuda").manual_seed(6)
+    x = torch.rand(128, device="cuda", generator=g, dtype=torch.float64) * 1.8e19
+    n = torch.randint(-2 ** 62, 2 ** 62, (128,), device="cuda", generator=g, dtype=torch.int64) * 2 + 1
+    o1 = torch.empty(128, device="cuda", dtype=torch.int64)
+    o2 = torch.empty(128, device="cuda", dtype=torch.float64)
+    o3 = torch.empty(128, device="cuda", dtype=torch.float32)
+    o4 = torch.empty(128, device="cuda", dtype=torch.uint8)
+    launch = _capture(lambda: k[(1,)](x, n, o1, o2, o3, o4, N=128))
+    from kernel_analyzer.reference_eval import emulate as E
+    res, emu = E.emulate(launch, ungrouped=[], swapped=[])
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], r["buffers"]
+    assert r["buffers"]["o2"]["emulated"] == 128 and r["buffers"]["o3"]["emulated"] == 128
+    for name in ("o1", "o4"):  # u64 above 2^63, u8 above 127 (held as negative signed values)
+        ib = next(b for b in res.buffers.values() if b.name == name)
+        assert bool(np.all(ib.lo[ib.written] == ib.actual_after[ib.written])), name
+
+
+def test_strided_buffer_operand_is_captured_as_its_view():
+    """A wrapper with ``_base`` + shape / stride / offset (FlagGems' StridedBuffer) is captured as the equivalent view
+    of its base tensor, so library kernels that pass such operands can be emulated (composition study corpus)."""
+    from kernel_analyzer.reference_eval.capture import _unwrap
+
+    class Strided:
+        def __init__(self, base, shape, strides, offset):
+            self._base, self.shape, self._strides, self.offset, self.dtype = base, shape, strides, offset, base.dtype
+
+        def stride(self):
+            return self._strides
+
+        def data_ptr(self):
+            return self._base.data_ptr() + self.offset * self._base.element_size()
+
+    base = torch.arange(24, dtype=torch.float32)
+    t, name = _unwrap(Strided(base, (3, 4), (8, 2), 1))
+    assert name == "float32"
+    assert torch.equal(t, torch.as_strided(base, (3, 4), (8, 2), 1))
+    assert _unwrap(Strided(base, (3,), (-1,), 2)) == (None, None)
+
+
+@cuda
+def test_split_precision_dot_is_not_emulable():
     from scripts import reference_eval_kernels as k
 
     A = torch.randn(64, 48, device="cuda")
     B = torch.randn(48, 32, device="cuda")
     C = torch.empty(64, 32, device="cuda")
     launch = _capture(lambda: k.matmul[(2, 2)](A, B, C, 64, 32, 48, *A.stride(), *B.stride(), *C.stride(),
-                                               BM=32, BN=16, BK=16, PRECISION="tf32"))
+                                               BM=32, BN=16, BK=16, PRECISION="tf32x3"))
     r = verify(launch)
     assert r["buffers"]["C"]["emulated"] == 0
     assert any("tensor-core" in n for n in r["not_emulable_nodes"])

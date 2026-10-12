@@ -1,6 +1,6 @@
 # 4 已找 bug 与重要案例
 
-- [bugs/](bugs/)：问题登记 B001–B023 的中文报告（现象、机制、证据、范围、状态），`4_bugs_cases/bugs/repro` 最小复现，`4_bugs_cases/bugs/upstream_drafts`
+- [bugs/](bugs/)：问题登记 B001–B024 的中文报告（现象、机制、证据、范围、状态），`4_bugs_cases/bugs/repro` 最小复现，`4_bugs_cases/bugs/upstream_drafts`
   英文 issue 草稿（是否提交由用户本人决定，不由 AI 提交）。登记表在下面第 2 节。
 - [cases/](cases/)：重要案例与研究结论（第 1 节）。
 
@@ -53,6 +53,7 @@
 | [B021](bugs/B021_max_pool_empty_window_backward_oob.md) | max_pool 的窗口只采到 padding 时返回越界下标，CPU（1d/2d/3d）与 CUDA（3d）反向把梯度写到下一个通道 / 样本，最后几个通道写出缓冲区（glibc 报堆损坏） | PyTorch 2.10 eager；nightly CPU 2.15.0.dev20261005、CUDA 2.15.0.dev20260907；main 代码相同 | ④ + 越界写 | 静默的梯度串扰；堆损坏 | 检索未见报告（#191920 是 CUDA 超大 dilation 的越界读，不同）；按 `SECURITY.md` 作普通 issue；草稿待用户决定 | 本质错误一轮第一阶段：独立规格（F）与梯度总量性质（P） | 是：F 与 P（eager 不是 Triton，没有 FR） |
 | [B022](bugs/B022_inductor_max_pool_backward_scatter_assert.md) | Inductor 的 max_pool 反向改用 scatter_add 分解后，对前向存下的下标 −1（只采到 padding 的窗口、与 padding 并列的 −∞）触发设备端断言，CUDA 上下文丢失 | nightly 2.15.0.dev20260907（本机可运行的最新 CUDA nightly）；main 的分解体相同；2.10 正确 | 编译后训练崩溃 | 合法输入上训练崩溃 | 检索未见报告；草稿待用户决定 | 本质错误一轮第一阶段：nightly 候选在网格中报错，隔离后定位 | 否（崩溃，不是数值检出） |
 | [B023](bugs/B023_gelu_tanh_backward_nan_large_input.md) | `gelu(approximate='tanh')` 反向在 \|x\| ≥ 1.8447e19 时 NaN：`x·x` 溢出为 inf，乘上恰为 0 的 tanh 导数（eager CPU、CUDA 与 Inductor 分解同一公式） | PyTorch 2.10、nightly、main | ④ | 真实导数为 1 / 0，得 NaN；只在 1e19 量级出现 | 检索未见报告（2026-10-07）；草稿待用户决定 | 2b 激活家族预注册高风险组合（gelu_tanh × huge）的 E64 | 是：模式 A 的 FR 报 K 与 K_R 特殊值类别不一致（594/594：K = NaN，K_R 有限且包含 float64 结果）；E 看不到（各后端一致） |
+| [B024](bugs/B024_triton_float_mod_large_quotient.md) | Triton 浮点 `%`（`arith.remf`）在 NVPTX 上展开为 `x − trunc(x/y)·y`，商不能精确表示时结果错误（`1e20 % 3` 得 2.2e12） | Triton 3.6.0，sm_86 | ④ | 商 ≥ 2²⁴ 时整个量级错误，符号可错 | 已知：issue #11986，PR #11938 / #11987 未合并；LLVM #224141 已合并（不在 3.6.0 中）；不另写草稿 | 组合研究的原语表（2026-10-13） | 是：K − K_R（精确 fmod）在商大的元素上为整个量级 |
 
 **第二轮现实配置下的证据（2026-10-12）**：B005、B009、B019（A 组），B012（B 组，只看默认 β₂），B003 / B006（C 组）在常见配置下的单步作用、短序列作用与训练作用，以及原有容差检查是否通过，见 [1_experiments/tolerance_study](../1_experiments/tolerance_study/README.md)；逐项数值已写进上表。口径上有四点变化：
 1. 纯 bf16 AdamW（B005）在 torchtune 默认配置下，主要作用是参数增量没有写入（每步 91–94%），不是二阶矩。它对训练的作用方向取决于学习率：本配置下验证损失低 0.113 nats，所以不能写成「损害」。

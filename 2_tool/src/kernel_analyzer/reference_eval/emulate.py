@@ -11,7 +11,10 @@ Lowering rules (each one is checked only through the bitwise comparison):
 
 * IEEE operations (add, sub, mul, fma, precise sqrt / div, conversions,
   rounding-suffixed libdevice calls) round once per operation in the declared
-  mode, as in rounding-check mode;
+  mode, as in rounding-check mode; with ``enable_reflect_ftz`` (the default) the
+  rounding-suffixed fp32 libdevice calls and the libdevice-lowered math.floor /
+  math.ceil flush subnormal operands and results to signed zero, and an exact zero
+  sum under round toward -inf is -0;
 * contraction: with ``enable_fp_fusion`` an ``arith.addf`` / ``arith.subf`` with
   an ``arith.mulf`` operand defined in the same block is one fma (LLVM's
   aggressive fusion on NVPTX: every such add is fused; when both operands are
@@ -24,10 +27,17 @@ Lowering rules (each one is checked only through the bitwise comparison):
 * reductions follow the layout in the captured TTGIR: sequential within a
   thread in register order, butterfly over the lanes along the axis, butterfly
   over the warps along the axis;
-* an FP32 ``tt.dot`` with input precision ieee is a sequential fma chain over k.
+* an FP32 ``tt.dot`` with input precision ieee is a sequential fma chain over k;
+* a tensor-core ``tt.dot`` (tf32, bf16 or f16 operands, fp32 accumulator) follows the mma rule in
+  ``tensor_core.py``: tf32 operands cut toward zero, exact products, groups of 4 (tf32) / 8 (bf16, f16) aligned
+  to the largest operand-exponent sum with one extra bit, every term and the group sum cut toward zero.
+
+* a 1-D float ``tt.scan`` (sum or product, forward, blocked layout without replication) follows the order in
+  ``scan_order.py``: sequential inside a thread, Hillis-Steele over lanes, warp totals folded left to right.
 
 Not emulable (localization stops there; the affected elements are reported):
-tensor-core dots (tf32, bf16, f16), scans, atomics.
+tf32x3 / bf16x3 / bf16x6 dots and fp16 accumulators, other scans (reverse, multi-operand, rank > 1, a product operand
+that may be contracted), atomics.
 
 "Node exact" replaces every execution of one TTIR operation by its exact
 real result from its emulated operands; operations downstream keep their
@@ -46,7 +56,9 @@ from typing import Optional
 import numpy as np
 
 from . import intervals as iv
-from .ttir_eval import (ST_NE, ST_OK, ST_UNDEF, TV, KernelReferenceEvaluator, NumericMode, ProgramAbort, _ftv,
+from . import scan_order, tensor_core
+from .ttir_eval import (INT_WIDTH, ST_NAN, ST_NE, ST_NINF, ST_OK, ST_PINF, ST_UNDEF, TV, KernelReferenceEvaluator, NumericMode,
+                        ProgramAbort, _ftv,
                         _merge_cond, _merge_reasons, _merge_status)
 from .ttir_mapping import LIBDEVICE, LIBDEVICE_ROUNDING, inline_asm_internal, recognize_combiner
 from .ttir_parser import TModule, TOp
@@ -56,9 +68,9 @@ ORACLE_OPS = {"arith.divf", "arith.remf", "math.exp", "math.exp2", "math.log", "
               "math.tanh", "math.erf", "math.powf", "math.atan", "math.sinh", "math.cosh",
               "tt.extern_elementwise", "tt.elementwise_inline_asm"}
 _TORCH = {"f32": "float32", "f16": "float16", "bf16": "bfloat16", "f64": "float64", "i32": "int32", "i64": "int64",
-          "i8": "int8", "i16": "int16", "i1": "bool"}
+          "i8": "int8", "i16": "int16", "i1": "bool", "f8E5M2": "float8_e5m2"}
 _TT_TYPE = {"f32": "f32", "f16": "f16", "bf16": "bf16", "f64": "f64", "i32": "i32", "i64": "i64", "i8": "i8",
-            "i16": "i16", "i1": "i1"}
+            "i16": "i16", "i1": "i1", "f8E5M2": "f8E5M2"}
 BLOCK = 1024
 LAYOUT_OPS = {"tt.splat", "tt.broadcast", "tt.expand_dims", "ttg.convert_layout", "tt.reshape"}
 SUBSTITUTIONS = ("mid", "lo", "hi", "rn")
@@ -176,7 +188,11 @@ class HardwareOracle:
         if kernel is None:
             text = self._module("\n    ".join(lines), elems, out_elem)
             path = self.cache_dir / f"oracle_{hashlib.sha256(repr(key).encode()).hexdigest()[:16]}.ttir"
-            path.write_text(text)
+            # write-then-rename: parallel emulations share the cache directory and must never read a partial file
+            import os
+            tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+            tmp.write_text(text)
+            os.replace(tmp, path)
             kernel = triton.compile(str(path), target=GPUTarget("cuda", 86, 32), options=self.options)
             self._kernels[key] = kernel
         arrays = [np.asarray(inputs[n]) for n in ext]
@@ -187,6 +203,8 @@ class HardwareOracle:
         out = torch.empty(max(n, 1), device=self.device, dtype=getattr(torch, _TORCH[out_elem]))
         kernel[(triton.cdiv(max(n, 1), BLOCK), 1, 1)](*tensors, out, n)
         self.calls += 1
+        if out_elem in ("i8", "i16", "i32", "i64"):  # integers exactly (a float64 copy loses i64 bits beyond 2^53)
+            return out[:n].to(torch.int64).cpu().numpy().reshape(shape)
         return out[:n].double().cpu().numpy().reshape(shape)
 
 
@@ -194,7 +212,7 @@ class HardwareOracle:
 # TTGIR reduction layouts and the contraction plan
 # ---------------------------------------------------------------------------
 
-from .layouts import _axis_params, parse_layouts, reduce_layouts  # noqa: E402,F401  (moved; names kept)
+from .layouts import _axis_params, parse_layouts, reduce_layouts, scan_layouts  # noqa: E402,F401  (moved; names kept)
 
 
 def contraction_plan(module: TModule) -> dict:
@@ -374,8 +392,18 @@ def launch_sass(launch) -> Optional[str]:
 
     directory = getattr(launch, "directory", None)
     if directory is None:
-        return None
-    cubins = sorted(Path(directory, "compiled").glob("*.cubin"))
+        # an in-memory capture keeps its compiled kernel: disassemble its cubin from the cache directory
+        kernel = getattr(launch, "kernel", None)
+        cubin = kernel.asm.get("cubin") if kernel is not None and hasattr(kernel, "asm") else None
+        if not isinstance(cubin, (bytes, bytearray)):
+            return None
+        target = default_cache_dir() / "sass" / f"{hashlib.sha256(cubin).hexdigest()[:24]}.cubin"
+        if not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(cubin)
+        cubins = [target]
+    else:
+        cubins = sorted(Path(directory, "compiled").glob("*.cubin"))
     if not cubins:
         return None
     key = str(cubins[0])
@@ -411,10 +439,10 @@ def _fp32_representable(x: np.ndarray, elem: str) -> np.ndarray:
     return np.zeros(np.shape(x), dtype=bool)
 
 
-def _zero_sign(out: TV, kind: str, ops: list) -> TV:
+def _zero_sign(out: TV, kind: str, ops: list, mode: str = "rtne") -> TV:
     """IEEE sign of a zero result: an exact zero sum of opposite-signed (or equal nonzero opposite)
-    operands is +0 under round to nearest, -0 only when both addends are -0; a nonzero result that
-    rounds to zero keeps its sign.  float64 arithmetic on the FP32 operands follows the same rule (the
+    operands is +0 under round to nearest (and toward zero / +inf), -0 under round toward -inf, and -0
+    when both addends are -0; a nonzero result that rounds to zero keeps its sign.  float64 arithmetic on the FP32 operands follows the same rule (the
     product of two FP32 values is exact in float64), so the sign of p + c in float64 is the IEEE sign."""
 
     z = (out.st == ST_OK) & (out.lo == 0)
@@ -427,11 +455,96 @@ def _zero_sign(out: TV, kind: str, ops: list) -> TV:
         exact = xs[0] + (-xs[1])
     else:
         exact = xs[0] * xs[1] + xs[2]
-    lo = np.where(z, np.copysign(0.0, exact), out.lo)
+    sign = np.copysign(1.0, exact)
+    if mode == "rd":  # roundTowardNegative: an exact zero sum is -0 unless both addends are +0
+        if kind == "add":
+            first, second = xs[0], xs[1]
+        elif kind == "sub":
+            first, second = xs[0], -xs[1]
+        else:
+            first, second = xs[0] * xs[1], xs[2]
+        both_plus = (first == 0) & (second == 0) & ~np.signbit(first) & ~np.signbit(second)
+        sign = np.where(exact == 0, np.where(both_plus, 1.0, -1.0), sign)
+    lo = np.where(z, np.copysign(0.0, sign), out.lo)
     hi = np.where(z, lo, out.hi)
     res = _ftv(out.elem, lo, hi, out.st, out.cond, out.reasons)
     res.d = out.d
     return res
+
+
+_F64_MODES = {"rtne": "RoundToNearest", "rtz": "RoundToZero", "rd": "RoundDown", "ru": "RoundUp"}
+
+
+_MPFR_FORMAT = {"f64": (53, -1073, 1024), "f32": (24, -148, 128), "f16": (11, -23, 16), "bf16": (8, -132, 128)}
+
+
+def _f64_ieee(name: str, args: list, mode: str = "rtne", fmt: str = "f64") -> TV:
+    """An IEEE binary64 / binary32 operation evaluated exactly (MPFR with the format's precision, exponent range and
+    subnormals).  For binary64 the float64 interval arithmetic of rounding-check mode cannot decide the rounding (it
+    would leave the element undecided, or claim the wrong neighbour in a directed mode); for binary32 in a directed
+    mode the outward-rounded interval of an exact zero rounds to the smallest subnormal instead of zero."""
+
+    import gmpy2
+
+    shape = np.broadcast_shapes(*(a.shape for a in args))
+    vals = []
+    unknown = np.zeros(shape, dtype=bool)
+    for a in args:  # NaN / +-inf operands are values MPFR takes as they are; unknown operands stop the element
+        v = np.broadcast_to(np.asarray(a.lo, dtype=np.float64), shape)
+        s_ = np.broadcast_to(a.st, shape)
+        vals.append(np.where(s_ == ST_NAN, np.nan, np.where(s_ == ST_PINF, np.inf, np.where(s_ == ST_NINF, -np.inf, v))))
+        unknown |= np.isin(s_, (ST_UNDEF, ST_NE))
+        if a.hi is not None:  # an operand known only as an interval is not a point: no exact evaluation
+            unknown |= np.broadcast_to((np.asarray(a.hi) != np.asarray(a.lo)) & (s_ == ST_OK), shape)
+    st = np.where(unknown, ST_NE, ST_OK).astype(np.int8)
+    out = np.zeros(shape)
+    out_st = np.array(st, dtype=np.int8, copy=True)
+    prec, emin, emax = _MPFR_FORMAT[fmt]
+    ctx = gmpy2.context(precision=prec, emin=emin, emax=emax, subnormalize=True,
+                        round=getattr(gmpy2, _F64_MODES[mode]))
+    with gmpy2.local_context(ctx):
+        for idx in np.ndindex(shape):
+            if st[idx] != ST_OK:
+                continue
+            x = [gmpy2.mpfr(float(v[idx])) for v in vals]
+            if name == "add":
+                r = x[0] + x[1]
+            elif name == "sub":
+                r = x[0] - x[1]
+            elif name == "mul":
+                r = x[0] * x[1]
+            elif name == "div":
+                r = x[0] / x[1]
+            elif name == "rcp":
+                r = 1 / x[0]
+            elif name == "sqrt":
+                r = gmpy2.sqrt(x[0])
+            else:
+                r = gmpy2.fma(x[0], x[1], x[2])
+            f = float(r)
+            if f != f:
+                out_st[idx] = ST_NAN
+            elif f == np.inf:
+                out_st[idx] = ST_PINF
+            elif f == -np.inf:
+                out_st[idx] = ST_NINF
+            else:
+                out[idx] = f
+    return _ftv(fmt, out, out.copy(), out_st, _merge_cond(*args), _merge_reasons(*args))
+
+
+def _flush_subnormal(v: TV) -> TV:
+    """Values below the fp32 normal range to zero of the same sign (both enclosure endpoints)."""
+
+    if v.kind != "f":
+        return v
+    tiny = np.finfo(np.float32).tiny
+
+    def flush(x):
+        x = np.asarray(x, dtype=np.float64)
+        return np.where((x != 0) & (np.abs(x) < tiny), np.copysign(0.0, x), x)
+    out = TV(v.kind, v.elem, flush(v.lo), None if v.hi is None else flush(v.hi), v.base, v.st, v.cond, v.reasons, v.d)
+    return out
 
 
 class GpuEmulator(KernelReferenceEvaluator):
@@ -439,7 +552,8 @@ class GpuEmulator(KernelReferenceEvaluator):
 
     def __init__(self, module: TModule, ttgir: str, enable_fp_fusion: bool = True, exact_nodes=(),
                  oracle: Optional[HardwareOracle] = None, func_name: Optional[str] = None, ungrouped=(),
-                 swapped=(), substitution: str = "mid", ptx: Optional[str] = None, sass: Optional[str] = None):
+                 swapped=(), substitution: str = "mid", ptx: Optional[str] = None, sass: Optional[str] = None,
+                 enable_reflect_ftz: bool = True):
         super().__init__(module, mode=NumericMode.ROUNDING_CHECK, func_name=func_name, ttgir=ttgir)
         if substitution not in SUBSTITUTIONS:
             raise ValueError(f"substitution must be one of {SUBSTITUTIONS}")
@@ -448,7 +562,9 @@ class GpuEmulator(KernelReferenceEvaluator):
         self.ungrouped = set(ungrouped)  # add / sub nodes whose approximate producer is not contracted
         self.oracle = oracle or HardwareOracle()
         self.layouts = reduce_layouts(module, ttgir)
+        self.scan_layouts = scan_layouts(module, ttgir)
         self.enable_fp_fusion = enable_fp_fusion
+        self.reflect_ftz = enable_reflect_ftz
         plan = contraction_plan(module) if enable_fp_fusion else {}
         # Product choices read from the PTX take precedence; the rest can still be given (swapped).
         self.ptx_choices = ptx_product_choices(module, ptx, plan) if (ptx and enable_fp_fusion) else {}
@@ -535,6 +651,9 @@ class GpuEmulator(KernelReferenceEvaluator):
     def _not_emulable(self, op, shape, elem, args, what) -> TV:
         self.trace[(op.node_id, "not_emulable:" + what)] += 1
         st = np.full(shape, ST_NE, dtype=np.int8)
+        if elem not in iv.FLOAT_FORMATS:  # an integer result: an integer value with the not-established status
+            return TV("i", elem, np.zeros(shape, dtype=np.int64), None, None, st, np.zeros(shape, dtype=bool),
+                      frozenset({f"not_emulable:{what}@{op.node_id}"}))
         z = np.zeros(shape)
         return _ftv(elem, z, z.copy(), st, np.zeros(shape, dtype=bool), frozenset({f"not_emulable:{what}@{op.node_id}"}))
 
@@ -556,6 +675,8 @@ class GpuEmulator(KernelReferenceEvaluator):
             self.trace[(node, "fma_contraction")] += 1
             if node in self.exact_nodes:
                 return self._exact_value(super()._float_op, "fma", fused, [a, b, c], out_elem)
+            if out_elem == "f64":
+                return _f64_ieee("fma", [a, b, c])
             return _zero_sign(super()._float_op("fma", fused, [a, b, c], out_elem), "fma", [a, b, c])
         if node in self.exact_nodes:
             self.trace[(node, "exact")] += 1
@@ -567,10 +688,30 @@ class GpuEmulator(KernelReferenceEvaluator):
         if op.name in ORACLE_OPS and not (op.name == "tt.extern_elementwise"
                                          and op.attrs.get("symbol", "").strip('"') in LIBDEVICE_ROUNDING):
             return self._oracle(name, op, args, out_elem)
+        if (op.name == "tt.fp_to_fp" and (out_elem == "f8E5M2" or any(a.elem == "f8E5M2" for a in args))) \
+                or op.name == "tt.clampf":
+            # lowerings that are not the declared IEEE operation: the software fp8 e5m2 conversion of sm_86 rounds
+            # ties away from zero (and goes through an RZ conversion to f16 from f32); tt.clampf's min / max
+            # instructions have their own signed-zero rule -- the device evaluates them on the emulated operands
+            return self._oracle(name, op, args, out_elem)
         self.trace[(node, "fused_product" if node in self.fused_products else "ieee")] += 1
+        symbol = op.attrs.get("symbol", "").strip('"') if op.name == "tt.extern_elementwise" else ""
+        ftz = self.reflect_ftz and (
+            (op.name in ("math.floor", "math.ceil") and out_elem in ("f32", "bf16"))
+            or (symbol in LIBDEVICE_ROUNDING and out_elem == "f32"))
+        if ftz:  # libdevice's FTZ path (cvt.rmi.ftz, add.rn.ftz, ...): subnormal operands and results to signed zero
+            self.trace[(node, "ftz")] += 1
+            args = [_flush_subnormal(a) for a in args]
+        if name in ("add", "sub", "mul", "div", "rcp", "sqrt", "fma") and all(a.kind == "f" for a in args) and (
+                out_elem == "f64" or (out_elem == "f32" and symbol in LIBDEVICE_ROUNDING)):
+            self.trace[(node, f"{out_elem}_exact")] += 1
+            out = _f64_ieee(name, args, LIBDEVICE_ROUNDING.get(symbol, "rtne"), out_elem)
+            return _flush_subnormal(out) if ftz else out
         out = super()._float_op(name, op, args, out_elem)
         if name in ("add", "sub", "fma"):
-            out = _zero_sign(out, name, args)
+            out = _zero_sign(out, name, args, LIBDEVICE_ROUNDING.get(symbol, "rtne"))
+        if ftz:
+            out = _flush_subnormal(out)
         return out
 
     def _is_oracle(self, op) -> bool:
@@ -588,9 +729,13 @@ class GpuEmulator(KernelReferenceEvaluator):
             while prod is not None and prod.name in LAYOUT_OPS and self._block.get(id(prod)) == block:
                 chain.append(prod)
                 prod = self._def.get(prod.operands[0])
-            # Only a single-use result: with other uses the rounded quotient is kept and the add stays plain.
-            single = all(self._uses[c.results[0]] == 1 for c in chain) and prod is not None \
-                and self._uses[prod.results[0]] == 1
+            # Only a single-use result: with other uses the rounded quotient is kept and the add stays plain
+            # (ptxas, for div.full).  A libdevice call is inlined LLVM IR: LLVM's aggressive fusion on NVPTX folds
+            # its final multiply into every add that consumes it, whatever the use count (composition study: a
+            # fast_logf result added to itself and reused in a loop).
+            single = prod is not None and (
+                prod.name == "tt.extern_elementwise"
+                or (all(self._uses[c.results[0]] == 1 for c in chain) and self._uses[prod.results[0]] == 1))
             if prod is not None and self._is_oracle(prod) and self._block.get(id(prod)) == block \
                     and single and prod not in producers:
                 producers.append(prod)
@@ -655,12 +800,20 @@ class GpuEmulator(KernelReferenceEvaluator):
                 inputs[v] = a
         arrays = {}
         for v, t in inputs.items():
-            if (t.st != ST_OK).any():
+            # NaN / +-inf operands are known values and run on the device as such (an all-or-nothing check would
+            # drop the whole program to a plain add when one lane holds a NaN); unknown values still stop the group
+            if np.isin(t.st, (ST_UNDEF, ST_NE)).any():
                 return None
+            vals = t.lo
             if t.kind == "f":
-                if t.elem not in iv.FLOAT_FORMATS or not np.all(_fp32_representable(t.lo, t.elem)):
+                special = t.st != ST_OK
+                vals = np.where(t.st == ST_NAN, np.nan, np.where(t.st == ST_PINF, np.inf,
+                                                                 np.where(t.st == ST_NINF, -np.inf, t.lo)))
+                if t.elem not in iv.FLOAT_FORMATS or not np.all(_fp32_representable(t.lo, t.elem) | special):
                     return None
-            arrays[v] = t.lo
+            elif (t.st != ST_OK).any():
+                return None
+            arrays[v] = vals
         self.trace[(op.node_id, "oracle_group")] += 1
         hw = self.oracle.group(producers + [op], alias, arrays, out_elem)
         st = np.where(np.isnan(hw), 1, np.where(hw == np.inf, 2, np.where(hw == -np.inf, 3, ST_OK))).astype(np.int8)
@@ -700,12 +853,73 @@ class GpuEmulator(KernelReferenceEvaluator):
         vals = np.where(out_st == ST_OK, hw, 0.0)
         return _ftv(out_elem, vals, vals.copy(), out_st, _merge_cond(*args), _merge_reasons(*args))
 
+    def _int_to_float(self, name, op, x, out_elem):
+        """Integer to float rounded exactly (MPFR): the evaluator's float64 path leaves an interval for integers
+        beyond 2^53 (and would round twice for narrow formats)."""
+        if out_elem not in _MPFR_FORMAT or op.node_id in self.exact_nodes:
+            return super()._int_to_float(name, op, x, out_elem)
+        import gmpy2
+        self.trace[(op.node_id, "int_to_float_exact")] += 1
+        width = INT_WIDTH[x.elem]
+        ints = np.asarray(x.lo).astype(np.int64)
+        prec, emin, emax = _MPFR_FORMAT[out_elem]
+        out = np.zeros(ints.shape)
+        st = np.where(x.st == ST_OK, ST_OK, ST_NE).astype(np.int8)
+        ctx = gmpy2.context(precision=prec, emin=emin, emax=emax, subnormalize=True, round=gmpy2.RoundToNearest)
+        with gmpy2.local_context(ctx):
+            for idx in np.ndindex(ints.shape):
+                if st[idx] != ST_OK:
+                    continue
+                v = int(ints[idx])
+                if name == "uitofp":
+                    v &= (1 << width) - 1
+                f = float(gmpy2.mpfr(v))
+                if f in (np.inf, -np.inf):
+                    st[idx] = ST_PINF if f > 0 else ST_NINF
+                else:
+                    out[idx] = f
+        return _ftv(out_elem, out, out.copy(), st, x.cond, x.reasons)
+
     def _op_extern(self, op, args, env, state):
         symbol = op.attrs.get("symbol", "").strip('"')
         internal = LIBDEVICE.get(symbol)
-        if symbol in LIBDEVICE_ROUNDING or internal is None or op.result_types[0].elem not in iv.FLOAT_FORMATS:
+        out_elem = op.result_types[0].elem
+        if internal is None and op.node_id not in self.exact_nodes and len(op.results) == 1:
+            # no declared semantics (a reference cannot be formed), but bitwise emulation needs none: the device
+            # evaluates the call on the emulated operands (deterministic, so equal operands give equal results)
+            return self._oracle_any(op, args, out_elem)
+        if symbol in LIBDEVICE_ROUNDING or internal is None or out_elem not in iv.FLOAT_FORMATS:
             return super()._op_extern(op, args, env, state)
-        return self._float_op(internal, op, args, op.result_types[0].elem)
+        return self._float_op(internal, op, args, out_elem)
+
+    def _oracle_any(self, op, args, out_elem) -> TV:
+        """Run one operation on the device on the emulated operands; float or integer result."""
+        shape = np.broadcast_shapes(*(a.shape for a in args))
+        # lanes with an unknown operand (undefined, not established) are not emulated; the others run as they are
+        unknown = np.zeros(shape, dtype=bool)
+        for a in args:
+            unknown |= np.broadcast_to(np.isin(a.st, (ST_UNDEF, ST_NE)), shape)
+        if out_elem not in (*iv.FLOAT_FORMATS, "i8", "i16", "i32", "i64"):
+            return self._not_emulable(op, list(shape), out_elem, args, f"device evaluation of {out_elem}")
+        self.trace[(op.node_id, "oracle_no_semantics")] += 1
+        inputs = []
+        for a in args:
+            v = np.broadcast_to(a.lo, shape)
+            if a.kind == "f":
+                v = np.where(a.st == ST_NAN, np.nan, np.where(a.st == ST_PINF, np.inf,
+                                                             np.where(a.st == ST_NINF, -np.inf, v)))
+            inputs.append(np.where(unknown, 0, v))
+        hw = np.asarray(self.oracle(op, inputs, out_elem))
+        if out_elem in iv.FLOAT_FORMATS:
+            hw = hw.astype(np.float64)
+            st = np.where(unknown, ST_NE, np.where(np.isnan(hw), ST_NAN, np.where(hw == np.inf, ST_PINF,
+                                                                             np.where(hw == -np.inf, ST_NINF, ST_OK))))
+            st = st.astype(np.int8)
+            vals = np.where(st == ST_OK, hw, 0.0)
+            return _ftv(out_elem, vals, vals.copy(), st, _merge_cond(*args), _merge_reasons(*args))
+        st = np.where(unknown, ST_NE, ST_OK).astype(np.int8)
+        return TV("i", out_elem, np.where(unknown, 0, hw).astype(np.int64), None, None, st,
+                  _merge_cond(*args), _merge_reasons(*args))
 
     def _op_inline_asm(self, op, args, env, state):
         internal = inline_asm_internal(op.attrs.get("asm", "")) or "identity"
@@ -713,10 +927,102 @@ class GpuEmulator(KernelReferenceEvaluator):
 
     # -- reductions, dot, scan, atomics -------------------------------------------------
 
+    @staticmethod
+    def _single_op_region(op):
+        """(inner operation, [first block argument, second block argument]) of a combine region made of one
+        operation on the two block arguments, else None."""
+        block = op.regions[0].entry
+        names = [a[0] for a in block.args]
+        ops = [o for o in block.ops if o.name not in ("tt.reduce.return", "tt.scan.return")]
+        if len(names) != 2 or len(ops) != 1 or len(ops[0].results) != 1:
+            return None
+        inner = ops[0]
+        if sorted(set(inner.operands)) != sorted(set(names)) or block.ops[-1].operands != inner.results:
+            return None
+        return inner, names
+
+    # integer combines with undefined results (division by zero, shifts by the width or more): LLVM may fold the
+    # undefined lanes differently in the kernel and in a separately compiled combine, so they are not emulated
+    _UB_INT_COMBINES = {"arith.divsi", "arith.divui", "arith.remsi", "arith.remui", "arith.ceildivsi", "arith.ceildivui",
+                        "arith.floordivsi", "arith.shli", "arith.shrsi", "arith.shrui"}
+
+    def _device_combine(self, inner, names, elem):
+        """combine(acc, cur) evaluated on the device elementwise (the region's operation; acc is the first block
+        argument, cur the second, as the lowering applies them)."""
+        def combine(a, b):
+            shape = np.broadcast_shapes(np.shape(a), np.shape(b))
+            a, b = np.broadcast_to(a, shape), np.broadcast_to(b, shape)
+            bind = {names[0]: a, names[1]: b}
+            inputs = [bind[v] for v in inner.operands]
+            flat = [np.ascontiguousarray(v).reshape(-1) for v in inputs]
+            out = self.oracle(inner, flat, elem)
+            return np.asarray(out, dtype=np.int64 if elem in ("i8", "i16", "i32", "i64") else np.float64).reshape(shape)
+        return combine
+
+    def _reduce_tree(self, vals, lay, combine):
+        """The layout order of the sum path for any combine: sequential in a thread, butterfly over lanes, butterfly
+        over warps; returns (result, lane-divergent mask)."""
+        n = vals.shape[-1]
+        spt = min(lay["spt"], n)
+        tpw = min(lay["tpw"], max(1, n // spt))
+        wpc = min(lay["wpc"], max(1, n // (spt * tpw)))
+        tile = spt * tpw * wpc
+        reps = max(1, n // tile)
+        idx = (np.arange(reps)[:, None, None, None] * tile + np.arange(wpc)[None, :, None, None] * (spt * tpw)
+               + np.arange(tpw)[None, None, :, None] * spt + np.arange(spt)[None, None, None, :])
+        order = [idx[rep, :, :, j] for rep in range(reps) for j in range(spt)]
+        acc = vals[..., order[0]]
+        for pos in order[1:]:
+            acc = combine(acc, vals[..., pos])
+        lane_of = np.arange(tpw)
+        stride = tpw // 2
+        while stride >= 1:
+            acc = combine(acc, acc[..., lane_of ^ stride])
+            stride //= 2
+        if wpc > 1:
+            part = acc[..., 0]
+            stride = wpc // 2
+            while stride >= 1:
+                part = combine(part, part[..., np.arange(wpc) ^ stride])
+                stride //= 2
+            return part[..., 0], np.zeros(part[..., 0].shape, dtype=bool)
+        lanes = acc[..., 0, :]
+        res = lanes[..., 0]
+        divergent = np.any((lanes != lanes[..., :1]) & ~(np.isnan(lanes) & np.isnan(lanes[..., :1])), axis=-1)
+        return res, divergent
+
+    def _reduce_generic(self, op, x, inner, names):
+        """A float or (<= 32-bit) integer reduce whose region is one operation: the layout order with the combine
+        evaluated on the device."""
+        axis = int(op.attrs["axis"].split(":")[0])
+        out_shape = list(np.delete(np.array(x.shape), axis))
+        lay = self.layouts.get(op.node_id)
+        if (lay is None or op.node_id in self.exact_nodes or inner.name in self._UB_INT_COMBINES
+                or x.elem not in (*iv.FLOAT_FORMATS, "i8", "i16", "i32", "i64")):
+            return self._not_emulable(op, out_shape, x.elem, [x], "reduce region")
+        self.trace[(op.node_id, "reduce_tree_device_combine")] += 1
+        ok = np.moveaxis(x.st == ST_OK, axis, -1)
+        vals = np.moveaxis(np.where(x.st == ST_OK, x.lo, 0), axis, -1).astype(np.int64 if x.kind == "i" else np.float64)
+        res, divergent = self._reduce_tree(vals, lay, self._device_combine(inner, names, x.elem))
+        bad = ~np.all(ok, axis=-1) | divergent
+        if x.kind == "i":
+            st = np.where(bad, ST_NE, ST_OK).astype(np.int8)
+            return TV("i", x.elem, np.where(bad, 0, res).astype(np.int64), None, None, st,
+                      np.any(x.cond, axis=axis), x.reasons)
+        st = np.where(bad, ST_NE, np.where(np.isnan(res), ST_NAN, np.where(res == np.inf, ST_PINF,
+                                                                        np.where(res == -np.inf, ST_NINF, ST_OK))))
+        st = st.astype(np.int8)
+        res = np.where(st == ST_OK, res, 0.0)
+        return _ftv(x.elem, res, res.copy(), st, np.any(x.cond, axis=axis), x.reasons)
+
     def _op_reduce(self, op, args, env, state):
         combiner = recognize_combiner(op)
         if combiner == "welford":  # float Welford depends on the merge tree: not order-free, not emulable here
             raise ProgramAbort(f"{op.node_id}: Welford merge order is not modelled by the emulator")
+        single = self._single_op_region(op) if len(args) == 1 else None
+        if (combiner is None or combiner == "prod") and single is not None:
+            # one operation in the region: the sum path's layout order with the device evaluating the combine
+            return self._reduce_generic(op, args[0], *single)
         if combiner is None:  # the reference interprets the region in real arithmetic; that is not the device's bits
             raise ProgramAbort(f"{op.node_id}: a generic combine region is not emulated bitwise")
         if combiner not in ("sum", "prod") or args[0].kind != "f":
@@ -746,7 +1052,10 @@ class GpuEmulator(KernelReferenceEvaluator):
         tile = spt * tpw * wpc
         reps = max(1, n // tile)
         fmt = x.elem
-        rn = lambda v: iv.round_nearest_even(v, fmt)[0]  # noqa: E731
+
+        def rn(v):  # an overflowing partial becomes inf (and may meet -inf): outside this model, marked undecided
+            r, overflow = iv.round_nearest_even(v, fmt)
+            return np.where(overflow | ~np.isfinite(v), np.nan, r)
 
         def fma(a, b, c):  # RN(a*b + c), or RN(a + c) when b is None
             lo, hi = iv.ifma(a, a, b, b, c, c) if b is not None else iv.iadd(a, a, c, c)
@@ -758,6 +1067,12 @@ class GpuEmulator(KernelReferenceEvaluator):
         # first combine that sees a raw product is an fma (LLVM folds the product with fewer uses,
         # the left one on a tie; a product also sent through a shuffle still folds).
         producer = self._def.get(op.operands[0])
+        # a reshape with allow_reorder (or a layout conversion) of the same shape keeps the product in its register:
+        # LLVM still folds it into the combine (composition study: Liger's group norm sums X * X this way)
+        while (producer is not None and producer.name in ("tt.reshape", "ttg.convert_layout")
+               and self._env.get(producer.operands[0]) is not None
+               and self._env[producer.operands[0]].shape == x.shape):
+            producer = self._def.get(producer.operands[0])
         fused = (self.enable_fp_fusion and producer is not None and producer.name == "arith.mulf"
                  and self._block.get(id(producer)) == self._block.get(id(op)) and op.node_id not in self.exact_nodes)
         if fused:
@@ -813,13 +1128,22 @@ class GpuEmulator(KernelReferenceEvaluator):
         a, b, c = args
         precision = op.attrs.get("inputPrecision", "ieee").strip()  # the default (ieee) is not printed
         shape = np.broadcast_shapes(c.shape)
-        if not (a.elem == b.elem == c.elem == "f32" and precision.startswith("ieee")):
+        tc = tensor_core.mma_format(a.elem, b.elem, c.elem, precision)
+        if tc is None and not (a.elem == b.elem == c.elem == "f32" and precision.startswith("ieee")):
             return self._not_emulable(op, list(shape), c.elem, [a, b, c], f"tensor-core dot ({precision})")
         if op.node_id in self.exact_nodes:
             self.trace[(op.node_id, "exact")] += 1
             lo, hi = iv.idot(a.lo, a.hi, b.lo, b.hi)
             lo, hi = iv.iadd(lo, hi, c.lo, c.hi)
             return self._substitute(c.elem, lo, hi, _merge_status(c).copy(), c.cond, c.reasons)
+        if tc is not None:  # tensor-core rule of the locked build (tensor_core.py)
+            self.trace[(op.node_id, f"dot_tensor_core_{tc}")] += 1
+            acc, covered = tensor_core.mma_chain(a.lo, b.lo, c.lo, tc)
+            bad = (~covered | (c.st != ST_OK) | np.any(a.st != ST_OK, axis=-1)[..., :, None]
+                   | np.any(b.st != ST_OK, axis=-2)[..., None, :])
+            st = np.where(bad, ST_NE, ST_OK).astype(np.int8)
+            acc = np.where(bad, 0.0, acc)
+            return _ftv(c.elem, acc, acc.copy(), st, c.cond | np.any(a.cond, axis=-1)[..., :, None], c.reasons)
         self.trace[(op.node_id, "dot_fma_chain")] += 1
         acc = c.lo.copy()
         for k in range(a.shape[-1]):
@@ -835,10 +1159,77 @@ class GpuEmulator(KernelReferenceEvaluator):
         acc = np.where(bad, 0.0, acc)
         return _ftv(c.elem, acc, acc.copy(), st, c.cond | np.any(a.cond, axis=-1)[..., :, None], c.reasons)
 
+    ORDER_FREE = ("sum_int", "prod_int", "max_int", "min_int", "max_uint", "min_uint", "and", "or", "xor",
+                  "max_num", "min_num", "max_nan", "min_nan")
+
     def _op_scan(self, op, args, env, state):
-        if args[0].kind == "f":
-            return self._not_emulable(op, list(args[0].shape), args[0].elem, args, "scan")
-        return super()._op_scan(op, args, env, state)
+        x = args[0]
+        combiner = recognize_combiner(op)
+        if len(args) == 1 and combiner in self.ORDER_FREE:
+            # associative and commutative without rounding (integers, float max / min): any order gives the
+            # device's values, so the evaluator's own fold is exact
+            mode, self.mode = self.mode, NumericMode.NUMERICAL_DIFFERENCE
+            try:
+                self.trace[(op.node_id, "scan_order_free")] += 1
+                return super()._op_scan(op, args, env, state)
+            finally:
+                self.mode = mode
+        if x.kind != "f" or (len(args) == 1 and combiner not in ("sum", "prod")):
+            return self._scan_device_combine(op, args)
+        info = self.scan_layouts.get(op.node_id)
+        producer = self._def.get(op.operands[0])
+        contracted = (self.enable_fp_fusion and producer is not None and producer.name == "arith.mulf"
+                      and self._block.get(id(producer)) == self._block.get(id(op)))
+        n = x.shape[0] if len(x.shape) == 1 else 0
+        if (info is None or len(args) != 1 or len(x.shape) != 1 or info["axis"] != 0 or info["reverse"]
+                or combiner not in ("sum", "prod") or info["tpw"] != 32 or contracted
+                or n % (info["spt"] * 32 * info["wpc"])):
+            return self._not_emulable(op, list(x.shape), x.elem, args, "scan")
+        if op.node_id in self.exact_nodes:
+            return self._not_emulable(op, list(x.shape), x.elem, args, "scan (exact node)")
+        self.trace[(op.node_id, "scan_order")] += 1
+        fmt = x.elem
+        prod = combiner == "prod"
+
+        def combine(a, b):  # RN(a + b) or RN(a * b); an overflow leaves the model (undecided)
+            lo, hi = (iv.imul(a, a, b, b) if prod else iv.iadd(a, a, b, b))
+            (r_lo, o_lo), (r_hi, o_hi) = iv.round_nearest_even(lo, fmt), iv.round_nearest_even(hi, fmt)
+            r = np.where((r_lo == r_hi) & ~o_lo & ~o_hi & np.isfinite(lo) & np.isfinite(hi), r_lo, np.nan)
+            return np.where(r == 0, np.copysign(0.0, a * b if prod else a + b), r)
+
+        ok = x.st == ST_OK
+        vals = np.where(ok, x.lo, 0.0)
+        res = scan_order.scan_1d(vals, info["spt"], info["wpc"], combine)
+        bad = np.isnan(res) | ~np.logical_and.accumulate(ok)   # an input outside the model spoils what follows it
+        st = np.where(bad, ST_NE, ST_OK).astype(np.int8)
+        res = np.where(bad, 0.0, res)
+        return _ftv(fmt, res, res.copy(), st, x.cond, x.reasons)
+
+    def _scan_device_combine(self, op, args):
+        """A 1-D forward scan whose region is one operation (float, or integer up to 32 bits): the scan_order.py
+        order with the device evaluating the combine."""
+        x = args[0]
+        info = self.scan_layouts.get(op.node_id)
+        single = self._single_op_region(op) if len(args) == 1 else None
+        n = x.shape[0] if len(x.shape) == 1 else 0
+        if (single is None or single[0].name in self._UB_INT_COMBINES or info is None or len(x.shape) != 1
+                or info["axis"] != 0 or info["reverse"]
+                or info["tpw"] != 32 or n % (info["spt"] * 32 * info["wpc"]) or op.node_id in self.exact_nodes
+                or x.elem not in (*iv.FLOAT_FORMATS, "i8", "i16", "i32", "i64")):
+            return self._not_emulable(op, list(x.shape), x.elem, args, "scan")
+        self.trace[(op.node_id, "scan_order_device_combine")] += 1
+        ok = x.st == ST_OK
+        vals = np.where(ok, x.lo, 0).astype(np.int64 if x.kind == "i" else np.float64)
+        res = scan_order.scan_1d(vals, info["spt"], info["wpc"], self._device_combine(*single, x.elem))
+        bad = ~np.logical_and.accumulate(ok)
+        if x.kind == "i":
+            st = np.where(bad, ST_NE, ST_OK).astype(np.int8)
+            return TV("i", x.elem, np.where(bad, 0, res).astype(np.int64), None, None, st, x.cond, x.reasons)
+        st = np.where(bad, ST_NE, np.where(np.isnan(res), ST_NAN, np.where(res == np.inf, ST_PINF,
+                                                                        np.where(res == -np.inf, ST_NINF, ST_OK))))
+        st = st.astype(np.int8)
+        res = np.where(st == ST_OK, res, 0.0)
+        return _ftv(x.elem, res, res.copy(), st, x.cond, x.reasons)
 
     def _op_atomic_rmw(self, op, args, env, state):
         raise ProgramAbort(f"not_emulable:atomic@{op.node_id}")
@@ -921,7 +1312,8 @@ def emulate(launch, exact_nodes=(), oracle: Optional[HardwareOracle] = None, ung
     module.source_text = launch.asm["ttir"]
     emu = GpuEmulator(module, launch.asm["ttgir"], enable_fp_fusion=fusion, exact_nodes=exact_nodes, oracle=oracle,
                       ungrouped=ungrouped, swapped=swapped, substitution=substitution, ptx=launch.asm.get("ptx"),
-                      sass=launch_sass(launch))
+                      sass=launch_sass(launch),
+                      enable_reflect_ftz=bool(launch.metadata.get("enable_reflect_ftz", True)))
     result = emu.evaluate(launch, programs=programs)
     return result, emu
 
