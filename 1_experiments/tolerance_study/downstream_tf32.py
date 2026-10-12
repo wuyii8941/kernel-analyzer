@@ -13,7 +13,8 @@ of C-1's fixed permutation).  Variants, all fp32 parameters and activations, no 
 Reference: the same model in float64 (eager).  Per unit and variant: loss difference, logits relative RMS and alignment
 <e, r>/<r, r>, and per parameter group (attention / MLP matrices, norms) the gradient relative RMS and alignment; for the
 update, one AdamW step (torchtune hyper-parameters) from a zero state -- its direction cosine and scale against the
-reference update.
+reference update.  The frame quantities (relative RMS, alignment, cosine, scale) are the tool's
+(``observation.output_unit``), not a copy.
 
     python downstream_tf32.py --out results/C2/summary.json
 """
@@ -27,6 +28,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
+
+from kernel_analyzer.reference_eval.observation import output_unit
 
 MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 
@@ -109,23 +112,18 @@ def main():
         rows = []
         for (ids, att), (l_ref, lg_ref, g_ref) in zip(data, refs):
             loss, lg, g = fwd_bwd(model, ids.cuda(), att.cuda(), fn)
-            e = lg - lg_ref
-            row = {"loss_diff": loss - l_ref,
-                   "logits_relative_rms": float((e.pow(2).mean() / lg_ref.pow(2).mean()).sqrt()),
-                   "logits_alignment": float((e * lg_ref).sum() / (lg_ref * lg_ref).sum()), "gradients": {}}
+            fl = output_unit(lg.numpy(), lg_ref.numpy())
+            row = {"loss_diff": loss - l_ref, "logits_relative_rms": fl["relative_rms"],
+                   "logits_alignment": fl["alignment"], "gradients": {}}
             for gname, names in grp.items():
                 names = [n for n in names if n in g and n in g_ref]
                 if not names:
                     continue
-                gv = torch.cat([g[n].reshape(-1) for n in names])
-                gr = torch.cat([g_ref[n].reshape(-1) for n in names])
-                eg = gv - gr
-                uv, ur = adam_update(g, names), adam_update(g_ref, names)
-                row["gradients"][gname] = {
-                    "relative_rms": float((eg.pow(2).sum() / gr.pow(2).sum()).sqrt()),
-                    "alignment": float((eg * gr).sum() / (gr * gr).sum()),
-                    "adam_update_cosine": float((uv * ur).sum() / (uv.norm() * ur.norm())),
-                    "adam_update_scale": float((uv * ur).sum() / (ur * ur).sum())}
+                fg = output_unit(torch.cat([g[n].reshape(-1) for n in names]).numpy(),
+                                 torch.cat([g_ref[n].reshape(-1) for n in names]).numpy())
+                fu = output_unit(adam_update(g, names).numpy(), adam_update(g_ref, names).numpy())
+                row["gradients"][gname] = {"relative_rms": fg["relative_rms"], "alignment": fg["alignment"],
+                                           "adam_update_cosine": fu["cosine"], "adam_update_scale": fu["scale_ratio"]}
             rows.append(row)
         agg = {"loss_diff": _d([r["loss_diff"] for r in rows]),
                "logits_relative_rms": _d([r["logits_relative_rms"] for r in rows]),

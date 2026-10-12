@@ -402,6 +402,20 @@ def equivalence(l, h, delta: float, alpha: float) -> dict:
     return rec
 
 
+def unit_axes(values, alpha: float, delta: Optional[float] = None) -> dict:
+    """The two decision axes for one exactly known value per independent unit (a paired difference between two runs
+    of the same seed, a per-unit summary): the nonzero axis of ``_summarize`` and, with a margin delta, the
+    equivalence axis of ``equivalence``, both with l = h = values.  With exact values the endpoint-conservative
+    forms are the ordinary two-sided t test and TOST, so a study that pairs runs uses the same inference, guards and
+    skewness diagnostic as the bias query instead of a copy."""
+
+    v = np.asarray(values, dtype=np.float64)
+    rec = {"nonzero": _summarize("unit values", "mean", v, v, alpha)}
+    if delta is not None:
+        rec["equivalence"] = equivalence(v, v, delta, alpha)
+    return rec
+
+
 def add_equivalence(record: dict, ref_mid, n_dev: int, delta_rel: float, alpha: float = 0.05) -> None:
     """Attach the equivalence axis to every fixed-direction rule of an assess_units record.
 

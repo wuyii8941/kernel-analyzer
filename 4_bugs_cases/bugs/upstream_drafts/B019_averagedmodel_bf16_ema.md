@@ -50,6 +50,11 @@ Output with 2.10.0 and with the 2026-09-07 nightly: the fp32 EMA has closed the 
 
 In a small pure-bf16 language-model training run (2,000 steps, 4 seeds), the averaged model from `AveragedModel` ends at
 validation loss ≈ 9.0 versus ≈ 5.16 for an fp32 EMA of the same run (the trained model itself is at ≈ 4.89).
+The effect is also present in a common fine-tuning setup: torchtune's Qwen2.5-0.5B full fine-tune settings (pure bf16,
+`AdamW(fused=True)`, lr 2e-5), EMA decay 0.999, 600 steps, 12 seeds. There the bf16 `AveragedModel` ends 0.095 nats
+above an fp32 EMA of the same run (95% CI 0.088–0.101); timm 1.0.30's `ModelEmaV3` gives the same result. One
+caveat: both library EMAs copy the weights at their first update, while the fp32 EMA in this comparison starts one
+optimizer step earlier.
 
 A workaround is an fp32 copy with a per-parameter `avg_fn` (which does not go through the dtype grouping):
 `AveragedModel(copy.deepcopy(model).float(), avg_fn=lambda e, p, n: e.lerp(p.float(), 1 - decay))`.

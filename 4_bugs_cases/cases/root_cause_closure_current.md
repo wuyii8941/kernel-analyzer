@@ -8,6 +8,16 @@
 
 阴性控制已从活动问题调查中分离：`active_problem_groups` 保留全部活动证据，`final_root_cause_groups` 才是可以写入最终结果的根因闭合集合，`open_root_cause_groups` 只用于记录尚未完成的归因工作，`negative_controls` 只用于校准和显示测试的非阳性边界；完整兼容审计仍保留在 `rows`。因此本页的最终问题数量不把根因未闭合组或阴性控制计入。
 
+### 第二轮常见配置的三个机制（2026-10-12，单独的冻结协议，不计入上面的问题组）
+
+来源、平均 bias 与训练后果分开判断，口径与本页相同。协议、台账与逐项数值见 [1_experiments/tolerance_study](../../1_experiments/tolerance_study/README.md)。
+
+| 机制 | 数值来源 | 平均 bias | 训练后果 |
+|---|---|---|---|
+| A 低精度存储丢弃增量（B005、B009、B019；torchtune 默认的纯 bf16 AdamW） | bf16 存储：每步 91–94% 的参数增量没有写入；三种实现的数值相同，与实现无关 | 非零，拉向零（32 个独立运行） | 600 步验证损失 −0.113 nats（12 个种子，成立），方向取决于学习率；bf16 EMA +0.095（成立）；torchao 随机舍入等价 |
+| B RAdam 整流项（B012，默认 β₂，编译路径） | fp32 舍入的 β₂ 常数（−0.25%–−0.76%）与 fp32 运算（+0.1%–+0.22%），方向相反 | 非零（第 6–20 步） | 200 步无可测作用（等价，δ = 0.01 nats） |
+| C TF32 矩阵乘（B003、B006） | Triton TF32：误差能量的 75%–100% 是输出整体缩小约 3.5e-4；cuBLAS TF32 小一到两个数量级 | 非零（单层，32 个单位同号） | 无法判断：缩小到 Adam 更新时已被抵消，100 步短序列未执行 |
+
 ### 本轮去重增量与未计数候选
 
 上一轮已闭合的三个 Gemma-4 音频问题组继续保留：LightConv GLU 门控乘法物化 `gemma4_audio_lightconv_glu_product_materialization`、depthwise causal Conv1d backward 权重梯度累加 `gemma4_audio_lightconv_depthwise_conv_backward_accumulation`，以及音频下采样 Conv2d layer-1 的累加/物化 `gemma4_audio_subsampling_convolution_materialization`。本轮又闭合了同一真实音频语言图中 layer-0 attention-logit softcap 的独立边界 `gemma4_audio_attention_softcap_materialization`：16 个真实语音状态上只改变 softcap 的 BF16/FP64 求值，q_proj 写入 RMS 平均约 193.1%/215.3%，但确认半区方向区间跨零，因此只作根因闭合的固定集合总效应，不声称总体 signed bias。随后又闭合了 layer-0 attention probability 的 BF16 物化边界 `gemma4_audio_attention_softmax_probability_materialization`：只改变 softmax 概率在 value contraction 前是否写回 BF16，16 个真实语音状态的 q_proj 写入 RMS 约 1.77%，确认 aligned 区间严格为负；layer-1 重复区间跨零，因此该结果明确限定在 layer-0。与此同时，本轮新增并闭合了 GPT-Neo native GELU 的独立实现边界 `gptneo_gelu_native_fp32_materialization`，以及 Gemma 生成 Triton GELU 的联合 derivative/product-factor 中间物化边界：后者在 32 个自然状态上逐位复现 native/reference 写入，但自然总体 mean bias 仍另行判断。此前已加入的 DeBERTa c2p/p2c relative-attention 与 Bloom ALiBi attention 两组仍保留；它们分别代表不同的位置注意力数学边界，不与已有 RoPE、BERT QK、Qwen SDPA 或一般 MM 位置重复计数。新加入的 RWKV time-mix 组在同一 block、同一真实文本 bank 上只改变 `time_decay` 指数物化，且 decay-only 与 all-FP32 endpoint 完全一致而 value-only 不复现；本轮又在两个独立 32 状态真实文本库上闭合了 RWKV attention receptance sigmoid 的单变量 FP32 物化边界，确认半区均为负，形成区别于 time_decay 和 channel-mix 阴性筛查的新递归问题组。整体 Mamba fused recurrence 仍没有形成方向确认；`indexed_accumulation_reduction_order` 仅作为条件性算子级结果保留，不计入自然训练活动数。

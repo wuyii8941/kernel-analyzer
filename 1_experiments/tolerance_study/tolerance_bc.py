@@ -8,7 +8,8 @@ B (RAdam, fp32 parameters): implementations compiled (official recipe) and eager
 C (TF32 matrix multiplication): implementations triton_default, inductor_high, cublas_high and the controls
   triton_ieee, cublas_highest; references exact and cublas_highest (IEEE fp32).  Checks: fp32 assert_close defaults,
   PyTorch's TF32 convention (tf32_on_and_off(0.005): atol 5e-3 with the fp32 default rtol), 1 fp32 ulp.  Descriptive:
-  alignment <e, r> / <r, r> and mean(e) / rms(r).
+  alignment <e, r> / <r, r> and mean(e) / rms(r).  The descriptive frame quantities are the tool's
+  (``observation.output_unit``), not a copy.
 
     python tolerance_bc.py B --step 7 --seeds 4000-4031 --out results/B1/s7/tolerance.json
     python tolerance_bc.py C --layer 12 --mat q_proj --units 0-31 --out results/C1/l12_q_proj/tolerance.json
@@ -23,6 +24,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
+
+from kernel_analyzer.reference_eval.observation import output_unit
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -101,7 +104,7 @@ def group_b(a):
                     "value_strict": strict(k, r),
                     "increment_default": check(dk, dr, FP32),
                     "increment_rtol_only": check(dk, dr, dict(rtol=FP32["rtol"], atol=0)),
-                    "update_scale_ratio": float(np.dot(dk, dr) / max(np.dot(dr, dr), 1e-300))}
+                    "update_scale_ratio": output_unit(dk, dr)["scale_ratio"]}
         rows.append(row)
         print(seed, flush=True)
     return {"group": "B", "step": a.step, "seeds": [lo, hi], "checks": {"default": FP32, "strict": "1 fp32 ulp"},
@@ -130,12 +133,12 @@ def group_c(a):
                 if iname == rname:
                     continue
                 k = outs[iname]
-                e = k - r
+                fr = output_unit(k, r)
                 row["results"][f"{iname}|{rname}"] = {
                     "default": check(k, r, FP32), "tf32_convention": check(k, r, TF32_CONVENTION),
-                    "strict": strict(k, r), "alignment": float((e * r).sum() / max((r * r).sum(), 1e-300)),
-                    "mean_error_over_rms_reference": float(e.mean() / max(np.sqrt((r * r).mean()), 1e-300)),
-                    "relative_rms": float(np.sqrt((e * e).mean() / max((r * r).mean(), 1e-300)))}
+                    "strict": strict(k, r), "alignment": fr["alignment"],
+                    "mean_error_over_rms_reference": fr["mean_error_over_rms_reference"],
+                    "relative_rms": fr["relative_rms"]}
         rows.append(row)
         print(u, flush=True)
     return {"group": "C", "layer": a.layer, "mat": a.mat, "units": [lo, hi],

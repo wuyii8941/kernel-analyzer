@@ -17,6 +17,10 @@ frame the directions and the scale are taken in.
   Coordinates below the floor are counted, never used for a ratio (an update near zero gives an unstable ratio).
 
 The floor is declared before the data: an absolute value, or a factor times |x| (relative to the old value).
+
+``output_unit`` gives the same frame quantities without the increment's coordinate selection, for an output (or an
+increment) against a point reference: the per-unit descriptions that sit next to the direction rules R2 / R3 (it
+decides nothing; the decisions are the rules over independent units).
 """
 from __future__ import annotations
 
@@ -65,6 +69,28 @@ def increment_unit(k, r_lo, r_hi, old, ok, floor=None) -> dict:
            "error_energy_over_increment_energy": float(np.dot(resid[above], resid[above]) / mm) if mm > 0 else None,
            "mean_abs_reference_increment": float(np.abs(m[above]).mean()) if above.any() else None,
            "mean_abs_written_increment": float(np.abs(dk[above]).mean()) if above.any() else None}
+    return out
+
+
+def output_unit(k, r) -> dict:
+    """The frame quantities of one unit: the actual values k against a point reference r (an enclosure midpoint, a
+    specification or another implementation), e = k - r:
+      - relative_rms: sqrt(mean(e^2) / mean(r^2));
+      - alignment: <e, r> / <r, r>, the error's component along the reference (negative: the output scaled down);
+      - mean_error_over_rms_reference: mean(e) / rms(r), the fixed-direction counterpart;
+      - scale_ratio: <k, r> / <r, r> (for increments: the retention over every coordinate, without a floor);
+      - cosine: <k, r> / (|k| |r|);
+      - scaling_share: alignment^2 / relative_rms^2, the share of the error energy that is a uniform scaling of r."""
+    k, r = np.asarray(k, np.float64), np.asarray(r, np.float64)
+    e = k - r
+    rr = max((r * r).sum(), 1e-300)
+    kf, rf = k.ravel(), r.ravel()
+    out = {"relative_rms": float(np.sqrt((e * e).mean() / max((r * r).mean(), 1e-300))),
+           "alignment": float((e * r).sum() / rr),
+           "mean_error_over_rms_reference": float(e.mean() / max(np.sqrt((r * r).mean()), 1e-300)),
+           "scale_ratio": float(np.dot(kf, rf) / max(np.dot(rf, rf), 1e-300)),
+           "cosine": float(np.dot(kf, rf) / max(np.linalg.norm(kf) * np.linalg.norm(rf), 1e-300))}
+    out["scaling_share"] = out["alignment"] ** 2 / out["relative_rms"] ** 2 if out["relative_rms"] > 0 else None
     return out
 
 

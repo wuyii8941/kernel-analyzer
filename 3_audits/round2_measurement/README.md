@@ -19,3 +19,20 @@
 
 这些修复不改变单次启动的求值，也不改变 batch 1 的验收结论（全量测试与 batch 1 的测试全部通过）；`test_batch1_guarantees.py`
 中一处期望随「数值元素全部达标且另有集合目标」的类别调整而改为「达标」。
+
+## 容差研究中发现的局限（未修，限制结论范围）
+
+研究结果见 [1_experiments/tolerance_study](../../1_experiments/tolerance_study/README.md)。下面几项是在研究中看到的工具局限。
+它们都不改变研究的判定，写在研究页的相应位置与协议偏离里，在这里集中登记：
+
+| 局限 | 在研究中的表现 | 对结论的影响 |
+| --- | --- | --- |
+| ATen / cuBLAS 内核没有自动参照 | A 组 torchtune 默认的融合 AdamW、C 组 cuBLAS TF32 只能用黑箱模式比较，规格要手写 | 这两个最常用的实现上，工具的增量只有判据与观察位置，没有自动参照 |
+| 长内积的区间参照代价 | k = 4864 的 down_proj（每单位 128 × 896 个输出）在模式 A / B 下单个作业接近或超出 1 小时 CPU；第 2、12 层的 4 个 Triton 作业两次都超出预算 | 这两层的方向证据只有问题 1 基线的描述量与黑箱结果；协议偏离 D-5 |
+| 调用内部的精度开关（T2 的记录面） | 调用内部临时设 `'high'`、返回前恢复时，`precision_environment` 记录的是进入调用时的 `'highest'` | 只影响记录，被测内核实际用的精度不受影响（Inductor 输出与 Triton TF32 逐位相同）；协议偏离 D-7 |
+| 编译函数的来源追踪 | Inductor 作业的生产者追踪按 eager 重放，不产生 Triton 启动，来源全部记为 not aligned | 输出由 Triton 直接从输入写出，结论不依赖它 |
+| 单步的等价界限 | 本轮单步只预先声明了非零轴；IEEE 对照里零星的非零判定（量级在 fp32 舍入水平）不能写成等价 | 需要使用方事先声明 δ（审计材料账 M09） |
+
+研究结束后的代码统一（2026-10-12）：研究脚本里自己写的配对 t、TOST、Holm 与投影描述量，改为调用工具的 `analysis.unit_axes`、
+`analysis.holm_adjusted` 与 `observation.output_unit`，测试在 `2_tool/tests/test_reference_eval_equivalence.py` 与
+`test_observation_layer.py`；统一之后全量测试 1617 通过。重算核对写在研究协议的偏离 D-11（`results/evidence/unification_check.json`）。

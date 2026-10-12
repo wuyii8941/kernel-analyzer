@@ -56,6 +56,12 @@ Relative error of the parameter update against eager float64 (torch 2.10.0, RTX 
 
 The same code is on main (`torch/optim/radam.py`, `_single_tensor_radam` and `_multi_tensor_radam`).
 
+At the default beta2 = 0.999 the decision does not flip and the effect is small: in a full fine-tune of
+Qwen2.5-0.5B (fp32 parameters, bf16 autocast, lr 2e-5), the compiled step is 0.6% short at step 6, 0.15% at step 10
+and 0.02% at step 100. Over 200 steps (8 paired seeds) the validation loss of compiled against eager RAdam differs by
+0.0000 ± 0.0001 nats. So the default setting is not practically affected; the problem matters for beta2 >= 0.9995
+and for anyone relying on the first steps.
+
 ### Suggested fix
 
 `rho_inf`, `rho_t` and the rectification factor depend only on beta2 and the step count. Compute them in float64 (a

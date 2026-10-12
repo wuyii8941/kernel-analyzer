@@ -7,9 +7,9 @@
 
 | 部分 | 内容 | 入口 |
 | --- | --- | --- |
-| [1_experiments](1_experiments/) | 完整实验：DSL v2 开发评价（最新）、结构验收 v1.1（冻结运行，待计分）、通用能力轮与收束轮（general-v3.1）、本质错误一轮、盲测 v1 / v2 记录、独立规格 | [1_experiments/README.md](1_experiments/README.md) |
+| [1_experiments](1_experiments/) | 完整实验：第二轮常见配置下的容差盲点与 bias（最新）、第一批验收、DSL v2 开发评价、结构验收 v1.1（冻结运行，待计分）、通用能力轮与收束轮（general-v3.1）、本质错误一轮、盲测 v1 / v2 记录、独立规格 | [1_experiments/README.md](1_experiments/README.md) |
 | [2_tool](2_tool/) | 现有工具：源码、脚本、测试、示例、规则注册表与工具文档 | [2_tool/README.md](2_tool/README.md) |
-| [3_audits](3_audits/) | 完整审计：最新外部审计（基线 1aee15e）的发现与处理状态、此前审计的待决事项、收到的审计材料 | [3_audits/README.md](3_audits/README.md) |
+| [3_audits](3_audits/) | 完整审计：最新外部审计（基线 1aee15e）的发现与处理状态、第一批与第二轮的测量修复、此前审计的待决事项、收到的审计材料 | [3_audits/README.md](3_audits/README.md) |
 | [4_bugs_cases](4_bugs_cases/) | 已找 bug 与重要案例：问题登记 B001–B023、复现、上游草稿、案例结论与主张 | [4_bugs_cases/README.md](4_bugs_cases/README.md) |
 
 2026-10-09 整理前的全部内容（旧研究阶段的结果、脚本、测试与过程文档）都可从标签 `pre-reorg-20261009` 取回：

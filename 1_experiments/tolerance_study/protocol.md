@@ -142,3 +142,11 @@ B 组（RAdam 默认 β₂）与 C 组（TF32）的具体设计在各自数据�
   执行需要把整模型放进 max-autotune 编译的训练循环；C 组训练层面的结论记为无法判断。
 - D-10（看到结果之后发现，设计上的不对称，不是执行偏离）：`AveragedModel` 与 timm `ModelEmaV3` 在第一次更新时复制当前参数（θ₁），
   工作负载里的 fp32 EMA 从 θ₀ 开始按衰减更新；A-3 的 EMA 比较因此有一个优化步的起点差，结果照原样报告并注明，未补做对齐起点的运行。
+- D-11（研究结束之后，代码统一）：研究脚本里自己写的配对 t、TOST、Holm 与投影描述量，改为调用工具的 `analysis.unit_axes`、
+  `analysis.holm_adjusted` 与 `observation.output_unit`；冻结的统计量、单位与检验族不变。用统一后的代码重算核对，记录在
+  `results/evidence/unification_check.json`：
+  - 配对汇总（A23、B2、posthoc）：判定全部相同；数值相同，只有四个 TOST 单侧界差 1–2 ulp；另外多出工具的偏斜诊断。
+    这三个文件已换成重算版本，旧版本在 91f5819。
+  - 问题 1 基线：抽查 B 第 7 步与 C 第 12 层 q_proj，逐位相同。
+  - C-2：eager 变体在舍入内相同（相对 2e-13 以内）；编译变体两次运行之间不逐位相同（max-autotune 重新编译），汇总量在第三位
+    有效数字上变化，结论不变。C-2 保留 91f5819 的文件。

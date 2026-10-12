@@ -104,6 +104,10 @@ def main():
             s = json.loads(path.read_text())
             rows.append({"mechanism": mech, "item": name, "versions": VERSIONS, "source": str(path.relative_to(HERE)),
                          "result": {k: s[k] for k in s if k not in ("units", "per_unit", "eval_per_seed")}})
+    unify = RES / "evidence" / "unification_check.json"
+    if unify.exists():
+        rows.append({"mechanism": "A,B,C", "item": "rerun check after the code unification (deviation D-11)",
+                     "versions": VERSIONS, "source": str(unify.relative_to(HERE)), "result": json.loads(unify.read_text())})
     upstream = HERE / "results" / "upstream_tests.json"
     if upstream.exists():
         rows.append({"mechanism": "A,B", "item": "question 1: PyTorch v2.10.0 upstream tests", "versions": VERSIONS,

@@ -9,6 +9,7 @@ batches.  Short-sequence quantities (within a unit, over the captured coordinate
   weights) and vectors (biases, norm weights), reported apart.
 Training confirmation: validation loss at the last step, paired differences across seeds; nonzero axis (paired t,
 two-sided, alpha 0.05) and equivalence axis (TOST against delta = 0.01 nats, alpha 0.05), Holm over the declared family.
+The inference is the tool's (``analysis.unit_axes`` and ``analysis.holm_adjusted``), not a copy.
 
     python analyze_paired.py A --out results/A23/summary.json
     python analyze_paired.py B --out results/B2/summary.json
@@ -17,11 +18,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 from pathlib import Path
 
 import numpy as np
 import torch
+
+from kernel_analyzer.reference_eval import analysis as A
 
 ROOT = Path(__file__).resolve().parents[2]
 CAPTURE_TENSORS = [f"model.layers.{i}.{n}" for i in (0, 11, 23) for n in
@@ -43,31 +45,19 @@ def vec(cap, names, key="param", source="tensors"):
 
 
 def paired_axes(diffs, delta=DELTA, alpha=ALPHA):
-    from scipy import stats
-    d = np.asarray(diffs, np.float64)
-    n = d.size
-    m, sd = float(d.mean()), float(d.std(ddof=1))
-    se = sd / math.sqrt(n)
-    t = m / se if se > 0 else float("inf")
-    p = float(2 * stats.t.sf(abs(t), n - 1)) if se > 0 else 0.0
-    q = stats.t.ppf(1 - alpha, n - 1)
-    lo90, hi90 = m - q * se, m + q * se
-    q2 = stats.t.ppf(1 - alpha / 2, n - 1)
-    p_tost = max(float(stats.t.sf((m + delta) / se, n - 1)), float(stats.t.cdf((m - delta) / se, n - 1))) if se > 0 \
-        else (0.0 if abs(m) < delta else 1.0)
-    return {"n": n, "mean_difference": m, "sd": sd, "ci95": [m - q2 * se, m + q2 * se], "p_nonzero": p,
-            "nonzero": p < alpha, "tost_ci90": [lo90, hi90], "p_tost": p_tost, "equivalent_within_delta": p_tost < alpha,
-            "delta": delta}
-
-
-def holm(ps):
-    m = len(ps)
-    order = sorted(range(m), key=lambda i: ps[i])
-    adj, run = [1.0] * m, 0.0
-    for r, i in enumerate(order):
-        run = max(run, min(1.0, (m - r) * ps[i]))
-        adj[i] = run
-    return adj
+    """The frozen two axes on the paired differences, through the tool's per-unit inference (with exact values the
+    endpoint-conservative t test and TOST are the paired t test and TOST); field names as frozen in the protocol."""
+    ax = A.unit_axes(diffs, alpha, delta)
+    nz, eq = ax["nonzero"], ax["equivalence"]
+    if "mean_projection" not in nz or "p_value_tost" not in eq:
+        return {"n": len(diffs), "delta": delta, "unresolved": {"nonzero": nz, "equivalence": eq}}
+    return {"n": nz["n"], "mean_difference": nz["mean_projection"], "sd": nz["sd"],
+            "ci95": [nz["lower_bound_of_E_l"], nz["upper_bound_of_E_h"]],
+            "p_nonzero": nz["p_value_two_sided_conservative"], "nonzero": nz["verdict"] != "NOT_CONFIRMED",
+            "tost_ci90": [eq["lower_one_sided_bound_of_E_l"], eq["upper_one_sided_bound_of_E_h"]],
+            "p_tost": eq["p_value_tost"], "equivalent_within_delta": eq["verdict"] == "WITHIN_DELTA", "delta": delta,
+            "unit_skewness": nz["unit_skewness"], "t_approximation": nz["t_approximation"],
+            **({"robust": nz["robust"]} if "robust" in nz else {})}
 
 
 def group_a():
@@ -120,7 +110,7 @@ def group_a():
              "ema_timm_1_0_30_bf16 - ema_fp32": [r["eval_loss_ema_timm_1_0_30"] - r["eval_loss_ema_fp32"]
                                                  for r in eval_rows]}
     tc = {k: paired_axes(v) for k, v in comps.items()}
-    adj = holm([x["p_nonzero"] for x in tc.values()])
+    adj = A.holm_adjusted([x["p_nonzero"] for x in tc.values()])
     for (k, x), a_ in zip(tc.items(), adj):
         x["holm_adjusted_p_nonzero"] = a_
         x["nonzero_after_holm"] = a_ < ALPHA

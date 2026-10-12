@@ -30,6 +30,15 @@ but got dtype c10::BFloat16`）。文档没有提到 dtype。timm 的 `ModelEmaV
 - 发现过程：阶段 C 的影子状态单步测量（`pre-reorg-20261009:docs/directed_search_results_20261007.md`）中，bf16 EMA 的单步作用 γ̂ = −0.51、b̂ = 0.50，
   是 δ（0.05）的十倍以上，随后按预注册的深案例步骤复现。
 
+- 常见配置下的配对确认（第二轮，2026-10-12，[1_experiments/tolerance_study](../../1_experiments/tolerance_study/README.md) A 节）：
+  - 配置：torchtune 的 Qwen2.5-0.5B 全量微调设置（纯 bf16、`AdamW(fused=True)`、lr 2e-5），EMA 衰减 0.999，600 步，种子
+    3000–3011。三份 EMA 在同一次训练里并排更新：`AveragedModel`（bf16）、timm 1.0.30 `ModelEmaV3`（bf16）、fp32 EMA。
+  - 损失：bf16 EMA 的验证损失比 fp32 EMA 高 **+0.095 nats**（95% CI [0.088, 0.101]，Holm 后非零，成立）；timm 也是 +0.095。
+  - 位移：第 600 步两份 bf16 EMA 的累计位移只有 fp32 EMA 的 0.36（矩阵）与 0.42（向量）。
+  - 量级：比上面小模型 2,000 步的 3.86 小得多（步数少、学习率小，权重离开起点不远）。机制和方向相同。
+  - 不对称（事后发现，协议偏离 D-10）：两个库在第一次更新时直接复制当前参数（θ₁），fp32 EMA 从 θ₀ 开始按衰减更新，
+    起点差一个优化步。这一点没有单独测量。
+
 ## 上游状态
 
 检索（2026-10-07，GitHub API）：pytorch/pytorch 中没有关于 `AveragedModel` / `get_ema_multi_avg_fn` 与 bf16 精度的 issue；

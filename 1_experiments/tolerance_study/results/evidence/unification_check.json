@@ -1,0 +1,33 @@
+{
+ "what": "Code unification after the study (protocol deviation D-11): the paired inference (nonzero axis, TOST, Holm) and the per-unit projections (alignment, scale ratio, cosine, relative RMS) of the study scripts now call the tool (kernel_analyzer.reference_eval.analysis.unit_axes / holm_adjusted, observation.output_unit). Each affected result was recomputed with the unified code into .cache/round2/unify_check and compared field by field with the version committed in 91f5819.",
+ "paired_summaries": {
+  "files": [
+   "results/A23/summary.json",
+   "results/B2/summary.json",
+   "results/posthoc/summary.json"
+  ],
+  "decisions": "identical (nonzero, equivalence, Holm)",
+  "values": "identical except four TOST one-sided bounds (tost_ci90) that differ by 1-2 ulps (multiplication order)",
+  "new_fields": "the tool's skewness diagnostic (unit_skewness, t_approximation) and, where |skewness| >= 1, the bootstrap-t companion: pure_bf16 - fp32_master skewness 1.69, companion [-0.115, -0.108], verdict unchanged",
+  "action": "the three files replaced by the recomputed versions (previous versions at 91f5819)"
+ },
+ "question1_baselines": {
+  "rerun": [
+   "C l12_q_proj (tolerance_bc.py C)",
+   "B s7 (tolerance_bc.py B)"
+  ],
+  "result": "bitwise identical to the committed files except the run time",
+  "action": "committed files kept; the helper uses the same expressions, so the other strata are reproduced the same way"
+ },
+ "C2_downstream": {
+  "result": {
+   "eager_highest": "losses identical 8/8, other per-unit values within 1.7e-13 relative (summation order)",
+   "eager_high": "losses identical 8/8, other per-unit values within 1.5e-13 relative",
+   "compiled_high": "run-to-run variation of the max-autotune compile: losses differ up to 2.6e-4; summary loss -5.48e-4 vs -5.56e-4, logits alignment -4.17e-4 vs -4.18e-4, Adam update cosine (MLP) 0.9969 vs 0.9970",
+   "compiled_highest": "run-to-run variation at fp32-noise level (loss differences up to 1.2e-6)"
+  },
+  "conclusions": "unchanged (single-layer shrink reaches the logits; Adam one-step direction cosine about 0.997; loss difference indistinguishable from zero)",
+  "action": "committed file kept as produced at 91f5819; the compiled variants are not bitwise reproducible between runs (whether autotuning chose the same kernels was not checked)"
+ },
+ "tests": "python -m pytest -q 2_tool/tests: 1617 passed (two new tests for unit_axes and output_unit)"
+}

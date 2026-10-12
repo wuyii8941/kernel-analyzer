@@ -1,5 +1,6 @@
 """The equivalence axis of the decision layer (analysis.equivalence / add_equivalence)."""
 import numpy as np
+import pytest
 
 from kernel_analyzer.reference_eval.analysis import _t_approximation, assess_units, equivalence
 
@@ -53,3 +54,26 @@ def test_zero_variance_leaves_both_axes_unresolved():
     rec, _ = assess_units("z", e, e, ref, np.ones((units, d), bool), 32, ["R1", "R2", "R3"], run_detector=False,
                           equivalence_rel=1e-2)
     assert all(r["equivalence"]["verdict"] == "UNRESOLVED_SAMPLE" for r in rec["rules"])
+
+
+def test_unit_axes_is_the_paired_t_test_and_tost_on_exact_values():
+    from scipy import stats
+
+    from kernel_analyzer.reference_eval.analysis import unit_axes
+    d = -0.11 + 0.004 * np.random.default_rng(5).normal(size=12)
+    ax = unit_axes(d, 0.05, 0.01)
+    nz, eq = ax["nonzero"], ax["equivalence"]
+    t = stats.ttest_1samp(d, 0.0)
+    assert nz["verdict"] == "DETECTED_NEGATIVE"
+    assert nz["p_value_two_sided_conservative"] == pytest.approx(t.pvalue, rel=1e-12)
+    lo, hi = t.confidence_interval(0.95)
+    assert [nz["lower_bound_of_E_l"], nz["upper_bound_of_E_h"]] == pytest.approx([lo, hi], rel=1e-12)
+    se = d.std(ddof=1) / np.sqrt(d.size)
+    p_tost = max(stats.t.sf((d.mean() + 0.01) / se, d.size - 1), stats.t.cdf((d.mean() - 0.01) / se, d.size - 1))
+    assert eq["verdict"] == "NOT_SHOWN" and eq["p_value_tost"] == pytest.approx(p_tost, rel=1e-12)
+    small = 1e-4 + 1e-4 * np.random.default_rng(6).normal(size=8)
+    assert unit_axes(small, 0.05, 0.01)["equivalence"]["verdict"] == "WITHIN_DELTA"
+    assert "equivalence" not in unit_axes(small, 0.05)
+    # an all-equal sample says nothing about spread: both axes unresolved, never a detection or equivalence
+    same = unit_axes(np.full(8, 1e-3), 0.05, 0.01)
+    assert same["nonzero"]["verdict"] == "UNRESOLVED_SAMPLE" and same["equivalence"]["verdict"] == "UNRESOLVED_SAMPLE"

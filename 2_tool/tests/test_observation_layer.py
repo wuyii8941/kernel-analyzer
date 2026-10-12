@@ -134,3 +134,19 @@ def test_mode_b_decomposes_the_increment_frame():
     # decrements are numerical (rounding to bf16) and appear in the total too
     assert num["dropped_fraction"]["mean"] > 0.5 and dec["total"]["dropped_fraction"]["mean"] > 0.5
     assert dec["semantic"]["dropped"] == 0 and abs(dec["semantic"]["retention"]["mean"] - 1) < 1e-3, dec["semantic"]
+
+
+def test_output_unit_separates_uniform_scaling_from_the_rest_of_the_error():
+    from kernel_analyzer.reference_eval.observation import output_unit
+    rng = np.random.default_rng(7)
+    r = rng.normal(size=(64, 32))
+    s = output_unit((1 - 3.5e-4) * r, r)                      # a pure shrink
+    assert s["alignment"] == pytest.approx(-3.5e-4, rel=1e-9)
+    assert s["scale_ratio"] == pytest.approx(1 - 3.5e-4, rel=1e-12)
+    assert s["scaling_share"] == pytest.approx(1.0, rel=1e-9) and s["cosine"] == pytest.approx(1.0)
+    noise = rng.normal(size=r.shape)
+    noise -= (noise * r).sum() / (r * r).sum() * r            # orthogonal to r
+    o = output_unit(r + 1e-3 * noise, r)
+    assert abs(o["alignment"]) < 1e-15 and o["scaling_share"] < 1e-20
+    assert o["relative_rms"] == pytest.approx(1e-3 * np.sqrt((noise ** 2).mean() / (r ** 2).mean()), rel=1e-9)
+    assert output_unit(r, r)["scaling_share"] is None          # no error: no share

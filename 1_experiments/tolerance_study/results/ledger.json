@@ -17714,6 +17714,14 @@
       "p_tost": 1.0,
       "equivalent_within_delta": false,
       "delta": 0.01,
+      "unit_skewness": 1.688032786123982,
+      "t_approximation": "suspect: skewed per-unit projections (|skewness| >= 1); the t interval may under-cover",
+      "robust": {
+       "method": "bootstrap-t (1999 resamples, seed 0)",
+       "lower_bound_of_E_l": -0.11499293345354318,
+       "upper_bound_of_E_h": -0.10805096361847609,
+       "verdict": "DETECTED_NEGATIVE"
+      },
       "holm_adjusted_p_nonzero": 6.300037149463263e-17,
       "nonzero_after_holm": true
      },
@@ -17734,6 +17742,8 @@
       "p_tost": 4.408188476333295e-14,
       "equivalent_within_delta": true,
       "delta": 0.01,
+      "unit_skewness": -0.6662330435754557,
+      "t_approximation": "ok",
       "holm_adjusted_p_nonzero": 6.599068620945878e-08,
       "nonzero_after_holm": true
      },
@@ -17748,12 +17758,14 @@
       "p_nonzero": 2.9368935259902766e-12,
       "nonzero": true,
       "tost_ci90": [
-       0.08951489586748604,
-       0.10003897429836064
+       0.08951489586748605,
+       0.10003897429836063
       ],
       "p_tost": 0.9999999999950591,
       "equivalent_within_delta": false,
       "delta": 0.01,
+      "unit_skewness": -0.05630944967136584,
+      "t_approximation": "ok",
       "holm_adjusted_p_nonzero": 6.922193872857125e-12,
       "nonzero_after_holm": true
      },
@@ -17774,6 +17786,8 @@
       "p_tost": 0.9999999999961211,
       "equivalent_within_delta": false,
       "delta": 0.01,
+      "unit_skewness": -0.10399136054108478,
+      "t_approximation": "ok",
       "holm_adjusted_p_nonzero": 6.922193872857125e-12,
       "nonzero_after_holm": true
      }
@@ -18019,7 +18033,9 @@
       ],
       "p_tost": 4.277187214427295e-15,
       "equivalent_within_delta": true,
-      "delta": 0.01
+      "delta": 0.01,
+      "unit_skewness": 0.13642394546874373,
+      "t_approximation": "ok"
      }
     }
    }
@@ -19791,12 +19807,14 @@
       "p_nonzero": 0.80544883885768,
       "nonzero": false,
       "tost_ci90": [
-       -0.00010923538448509882,
-       0.00014333905569663717
+       -0.0001092353844850988,
+       0.00014333905569663714
       ],
       "p_tost": 7.806193455704835e-14,
       "equivalent_within_delta": true,
-      "delta": 0.01
+      "delta": 0.01,
+      "unit_skewness": 0.17016997591568636,
+      "t_approximation": "ok"
      }
     },
     "A_run_to_run": {
@@ -19992,6 +20010,54 @@
       "steps_31_50": 1.3245866418914374
      }
     }
+   }
+  },
+  {
+   "mechanism": "A,B,C",
+   "item": "rerun check after the code unification (deviation D-11)",
+   "versions": {
+    "torch": "2.10.0+cu128",
+    "triton": "3.6.0",
+    "transformers": "5.18.0 (latest_train env)",
+    "torchao": "0.16.0",
+    "timm": "1.0.30",
+    "device": "NVIDIA RTX A6000 (sm_86)",
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "data": "yahma/alpaca-cleaned"
+   },
+   "source": "results/evidence/unification_check.json",
+   "result": {
+    "what": "Code unification after the study (protocol deviation D-11): the paired inference (nonzero axis, TOST, Holm) and the per-unit projections (alignment, scale ratio, cosine, relative RMS) of the study scripts now call the tool (kernel_analyzer.reference_eval.analysis.unit_axes / holm_adjusted, observation.output_unit). Each affected result was recomputed with the unified code into .cache/round2/unify_check and compared field by field with the version committed in 91f5819.",
+    "paired_summaries": {
+     "files": [
+      "results/A23/summary.json",
+      "results/B2/summary.json",
+      "results/posthoc/summary.json"
+     ],
+     "decisions": "identical (nonzero, equivalence, Holm)",
+     "values": "identical except four TOST one-sided bounds (tost_ci90) that differ by 1-2 ulps (multiplication order)",
+     "new_fields": "the tool's skewness diagnostic (unit_skewness, t_approximation) and, where |skewness| >= 1, the bootstrap-t companion: pure_bf16 - fp32_master skewness 1.69, companion [-0.115, -0.108], verdict unchanged",
+     "action": "the three files replaced by the recomputed versions (previous versions at 91f5819)"
+    },
+    "question1_baselines": {
+     "rerun": [
+      "C l12_q_proj (tolerance_bc.py C)",
+      "B s7 (tolerance_bc.py B)"
+     ],
+     "result": "bitwise identical to the committed files except the run time",
+     "action": "committed files kept; the helper uses the same expressions, so the other strata are reproduced the same way"
+    },
+    "C2_downstream": {
+     "result": {
+      "eager_highest": "losses identical 8/8, other per-unit values within 1.7e-13 relative (summation order)",
+      "eager_high": "losses identical 8/8, other per-unit values within 1.5e-13 relative",
+      "compiled_high": "run-to-run variation of the max-autotune compile: losses differ up to 2.6e-4; summary loss -5.48e-4 vs -5.56e-4, logits alignment -4.17e-4 vs -4.18e-4, Adam update cosine (MLP) 0.9969 vs 0.9970",
+      "compiled_highest": "run-to-run variation at fp32-noise level (loss differences up to 1.2e-6)"
+     },
+     "conclusions": "unchanged (single-layer shrink reaches the logits; Adam one-step direction cosine about 0.997; loss difference indistinguishable from zero)",
+     "action": "committed file kept as produced at 91f5819; the compiled variants are not bitwise reproducible between runs (whether autotuning chose the same kernels was not checked)"
+    },
+    "tests": "python -m pytest -q 2_tool/tests: 1617 passed (two new tests for unit_axes and output_unit)"
    }
   },
   {
