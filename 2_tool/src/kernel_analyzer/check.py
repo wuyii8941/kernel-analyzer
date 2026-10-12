@@ -288,6 +288,20 @@ ANALYSIS_INTERVENTIONS = [
     "no precision switch (TF32, float32 matmul precision, reduced-precision reductions) is set by the analysis"]
 
 
+class _OutputSnapshot:
+    """A measured output as it was at the end of the measured call (T1: later calls -- the unmeasured producer trace,
+    repeated launches, the next unit -- can write the same buffers): its storage identity and a host copy of its storage
+    viewed with the output's dtype, offset, sizes and strides."""
+
+    def __init__(self, t):
+        from .reference_eval.storage_effects import _host_bytes
+        st = t.untyped_storage()
+        self.ptr, self.cdata = st.data_ptr(), st._cdata
+        host = _host_bytes(st)
+        self.view = torch.empty(0, dtype=t.dtype).set_(host.untyped_storage(), t.storage_offset(), tuple(t.shape),
+                                                       tuple(t.stride()))
+
+
 def _capture_bytes(launches) -> int:
     n = 0
     for l in launches:
@@ -316,7 +330,7 @@ def _trace_conflicts(launches, seq, prods) -> set:
 
 
 def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_rel=None, repeats=None,
-        magnitude_bound=None, alpha=0.05, producer_records=True, precision_level=1, captures=None):
+        magnitude_bound=None, alpha=0.05, producer_records=True, precision_level=1, captures=None, observe=None):
     """One case through mode A or B.  ``keep``: a dict that receives, per output and seed, the reference interval
     and K in the output's logical element order (for independent recomputation of K_R); ``equivalence_rel``: passed
     to the decision layer (the equivalence axis next to each nonzero verdict).
@@ -346,6 +360,11 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
 
     The analysis never changes the candidate's precision switches; they are recorded (``precision_environment``),
     with the analysis' own interventions (``analysis_interventions``).
+
+    ``observe``: {output: {"layer": "increment", "old": input path, "floor": {...}}} -- the observation layer of an
+    output (``reference_eval.observation``).  For the increment layer the old value is the input at ``old`` before the
+    call; the decision layer's reference-dependent directions follow the reference increment, and the per-unit
+    increment quantities (dropped updates, sign flips, retention, error energy) are reported under ``observation``.
 
     Proof status (audit F03): elements whose reference holds only under an unproven premise are reported apart
     (``complete_under_premise_fraction``) and are not ok for the statistics.  IR (audit F05): each launch is analysed
@@ -389,7 +408,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
     for seed in list(dev) + list(conf):
         if replay:
             cap = captures["seeds"][seed]
-            inp, snap, rec, outs = cap["inp"], cap["snap"], cap["rec"], cap["outs"]
+            inp, snap, rec, out_snaps = cap["inp"], cap["snap"], cap["rec"], cap["out_snaps"]
         else:
             t_phase = time.time()
             inp = case.inputs(seed)
@@ -404,6 +423,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             with rec:
                 outs = case.launch(inp)
                 torch.cuda.synchronize()
+            out_snaps = {name: _OutputSnapshot(o) for name, o in outs.items()}
             # the first seed's capture also pays any JIT compilation the case's setup did not warm up
             timing["capture_first_seed" if seed == list(dev)[0] else "capture"] += time.time() - t_phase
             if store:
@@ -411,7 +431,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                 if captures["bytes"] > CAPTURE_STORE_BYTES:
                     captures["seeds"], store, captures["overflow"] = None, False, True
                 else:
-                    cap = captures["seeds"][seed] = {"inp": inp, "snap": snap, "rec": rec, "outs": outs}
+                    cap = captures["seeds"][seed] = {"inp": inp, "snap": snap, "rec": rec, "out_snaps": out_snaps}
         if coverage is None:
             irs = [launch_ir(l) for l in rec.launches]   # one IR choice for coverage, atomics and evaluation
             coverage = [kernel_coverage(parse_ttir(text))["complete"] for _, text in irs]
@@ -483,8 +503,9 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                 reasons[key] = reasons.get(key, 0) + n
             for why in (r.aborted.values() if isinstance(r.aborted, dict) else r.aborted):
                 aborted[str(why)[:200]] = aborted.get(str(why)[:200], 0) + 1
-        for name, out in outs.items():
-            ptr = out.untyped_storage().data_ptr()
+        for name, osnap in out_snaps.items():
+            # values from the snapshot taken at the end of the measured call; identity from that moment too
+            ptr, out = osnap.ptr, osnap.view
             buf = seq.memory.get(ptr)
             if buf is not None and buf.written.any():
                 # an address identifies a storage only while that storage lives: bind the output to the recorded
@@ -495,7 +516,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                 if not getattr(rec, "keep_storages", False) or not ids or None in ids:
                     binding_unconfirmed.add(name)  # no binding claimed
                     continue
-                if out.untyped_storage()._cdata not in ids:
+                if osnap.cdata not in ids:
                     reused_address.add(name)       # another storage at a recorded address: not written by Triton
                     not_triton.add(name)
                     continue
@@ -507,7 +528,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                 continue
             m = buf.written
             idx = buf.global_indices()[m]
-            final = torch.empty(0, dtype=out.dtype, device=out.device).set_(out.untyped_storage()).reshape(-1)
+            final = torch.empty(0, dtype=out.dtype).set_(out.untyped_storage()).reshape(-1)
             final = final.detach().cpu()
             final = (final.float() if final.dtype in (torch.bfloat16,) or final.dtype.itemsize == 1 and final.is_floating_point()
                      else final).numpy()  # bf16 / fp8 -> float32 is exact
@@ -527,7 +548,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                 f_lo = f_hi = np.zeros(idx.size)
             k, r_lo = buf.actual_after[m], buf.lo[m].astype(np.float64)
             r_hi = buf.hi[m] if buf.hi is not None else r_lo  # integer buffers are exact
-            mixed_by_output.setdefault(name, set()).update(mixed_sources.get(out.untyped_storage().data_ptr(), []))
+            mixed_by_output.setdefault(name, set()).update(mixed_sources.get(ptr, []))
             n_lo, n_hi = residual_interval(k, r_lo, r_hi)
             s_lo, s_hi = iv.isub(r_lo, r_hi, f_lo, f_hi) if has_f else (None, None)
             # special values (NaN / +-inf) are excluded from the residuals; compare their classes separately
@@ -606,6 +627,16 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                 "resolved": frame(ok_e | special_agree, False), "inside": np.ones(nv, dtype=bool), "idx": pos,
                 "pos": pos, "shape": tuple(out.shape), "width": frame(r_hi - r_lo), "reasons": reasons,
                 "aborted": aborted, "premise": frame(under_premise, False), "atomic_written": frame(atomic_w, False)})
+            ob = (observe or {}).get(name)
+            if ob and ob.get("layer") == "increment":
+                from .reference_eval.observation import floor_of, increment_unit
+                old = snap.pre_call_values(ob["old"])
+                if old.size != nv:
+                    raise ValueError(f"observe.{name}.old = {ob['old']}: {old.size} elements, the output has {nv}")
+                row = per[name][-1]
+                row["old"] = old
+                row["increment"] = {"seed": seed, **increment_unit(row["k"], row["r_lo"], row["r_hi"], old, row["ok"],
+                                                                   floor_of(ob.get("floor"), old))}
         # repeated launches of the same input, outside the recorder: K only
         if r_exec is None:
             r_exec = int(repeats) if repeats is not None else (
@@ -707,6 +738,15 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                               "set_targets": sets}
         execution = _execution_status(rows, launch_info, r_exec)
         entry["execution"] = execution
+        ob = (observe or {}).get(name)
+        if ob and ob.get("layer") == "increment":
+            from .reference_eval.observation import summarize_increment
+            units = [p["increment"] for p in rows]
+            entry["observation"] = {"layer": "increment", "old": ob["old"], "floor": ob.get("floor"),
+                                    "directions": "R2 / R3 follow the reference increment (positive R3: the written "
+                                                  "increment is scaled down against it)",
+                                    "summary": summarize_increment(units), "per_unit": units}
+            kr = kr - np.stack([p["old"] for p in rows])     # the decision layer's reference frame: the increment
         for key, label in (("n", "e_num = K - K_R"), ("s", "e_sem = K_R - f"))[: 2 if mode == "B" else 1]:
             lo = np.stack([p[key][0] for p in rows])
             hi = np.stack([p[key][1] for p in rows])
@@ -860,20 +900,24 @@ def _within_input_mean_residual(rows):
     return np.stack(lo_u), np.stack(hi_u)
 
 
-def run_black_box(case, dev=DEV, conf=CONF, equivalence_rel=None):
+def run_black_box(case, dev=DEV, conf=CONF, equivalence_rel=None, observe=None, alpha=0.05, magnitude_bound=None):
     """Black-box mode (evaluation plan, work item C) for implementations without TTIR (NumPy, CUDA, cuBLAS): the
     specification is the only reference, so only the total K - f is measured, through the same decision layer.
-    No decomposition into e_num and e_sem; reported separately from the decomposed results."""
+    No decomposition into e_num and e_sem; reported separately from the decomposed results.  ``observe``: as in
+    ``run`` (the increment layer takes the old value from the inputs before the call).  The precision switches the
+    candidate runs under are recorded, never set."""
     timing = {"setup_compile_warmup": 0.0, "inputs": 0.0, "call": 0.0, "specification": 0.0, "statistics": 0.0}
     t_phase = time.time()
     case.setup()
     timing["setup_compile_warmup"] = time.time() - t_phase
-    rows, special = {}, {}
+    rows, special, incs = {}, {}, {}
+    precision_env = precision_environment()
     t0 = time.time()
     for seed in list(dev) + list(conf):
         t_phase = time.time()
         inp = case.inputs(seed)
         timing["inputs"] += time.time() - t_phase
+        snap = InputSnapshot(inp) if observe else None
         t_phase = time.time()
         outs = case.launch(inp)
         if torch.cuda.is_available():
@@ -895,8 +939,16 @@ def run_black_box(case, dev=DEV, conf=CONF, equivalence_rel=None):
             f_cls = np.where(np.isnan(f_lo), 1, np.where(f_lo == np.inf, 2, np.where(f_hi == -np.inf, 3, 0)))
             k_cls = np.where(np.isnan(k), 1, np.where(k == np.inf, 2, np.where(k == -np.inf, 3, 0)))
             sv["k_vs_f_class_mismatch"] += int((f_cls != k_cls).sum())
+            ob = (observe or {}).get(name)
+            ref_mid = np.where(f_fin, 0.5 * (f_lo + f_hi), 0.0)
+            if ob and ob.get("layer") == "increment":
+                from .reference_eval.observation import floor_of, increment_unit
+                old = snap.pre_call_values(ob["old"])
+                incs.setdefault(name, []).append({"seed": seed, **increment_unit(
+                    k, np.where(f_fin, f_lo, 0.0), np.where(f_fin, f_hi, 0.0), old, ok, floor_of(ob.get("floor"), old))})
+                ref_mid = ref_mid - old                  # directions follow the reference increment
             rows.setdefault(name, []).append((np.where(ok, lo, 0.0), np.where(ok, hi, 0.0),
-                                              np.where(f_fin, 0.5 * (f_lo + f_hi), 0.0), ok, tuple(np.shape(out))))
+                                              ref_mid, ok, tuple(np.shape(out))))
     n_dev = len(list(dev))
     report = {"case": case.name, "mode": "black-box", "implementation": case.implementation,
               "specification": case.specification, "spec_bound": case.spec_bound,
@@ -907,7 +959,8 @@ def run_black_box(case, dev=DEV, conf=CONF, equivalence_rel=None):
         lo, hi, fm, ok = (np.stack([x[i] for x in r]) for i in range(4))
         t_phase = time.time()
         rec, _ = assess_units(f"{name}: K - f (black box)", lo, hi, fm, ok, n_dev, RULES, alignment_reference=fm,
-                              unit_ids=list(dev) + list(conf), equivalence_rel=equivalence_rel)
+                              unit_ids=list(dev) + list(conf), equivalence_rel=equivalence_rel, alpha=alpha,
+                              magnitude_bound=magnitude_bound)
         timing["statistics"] += time.time() - t_phase
         mid = 0.5 * (lo + hi)
         if ok.any():
@@ -918,6 +971,15 @@ def run_black_box(case, dev=DEV, conf=CONF, equivalence_rel=None):
         report["outputs"][name] = {"elements_per_seed": int(ok.shape[1]), "shape": list(r[0][4]),
                                    "finite_fraction": float(ok.mean()), "total_black_box": rec,
                                    "special_values": special[name]}
+        if name in incs:
+            from .reference_eval.observation import summarize_increment
+            ob = observe[name]
+            report["outputs"][name]["observation"] = {
+                "layer": "increment", "old": ob["old"], "floor": ob.get("floor"),
+                "directions": "R2 / R3 follow the reference increment f - old (positive R3: the written increment is "
+                              "scaled down against it)",
+                "summary": summarize_increment(incs[name]), "per_unit": incs[name]}
+    report["precision_environment"] = precision_env
     report["timing_seconds"] = {k: round(v, 3) for k, v in timing.items()}
     return report
 

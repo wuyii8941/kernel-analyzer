@@ -97,12 +97,15 @@ RULES = [
     {"id": "T1", "family": "trace non-interference", "name": "the traced run does not change the measured runs",
      "obligation": "the unmeasured producer trace leaves compiled code and its caches untouched (force_eager stance; "
                    "without that API no trace is made), starts from the measured run's random state and restores the "
-                   "random state afterwards (no shift of later seeds' draws)",
-     "entry": ["kernel_analyzer.provenance:producer_records", "kernel_analyzer.provenance:rng_state"],
+                   "random state afterwards (no shift of later seeds' draws); the measured outputs are read from a snapshot taken at "
+                   "the end of the measured call, before any later call can write the same buffers",
+     "entry": ["kernel_analyzer.provenance:producer_records", "kernel_analyzer.provenance:rng_state",
+               "kernel_analyzer.check:_OutputSnapshot"],
      "independent_answer": "the recorded launches of every later seed (the compiled kernel is still launched); K of "
                            "every seed with and without the trace (an in-call random mask)",
      "tests": [f"{T_B1}::test_announced_compiled_inplace_write_keeps_the_composition",
-               f"{T_R2}::test_producer_trace_does_not_shift_the_rng_stream"],
+               f"{T_R2}::test_producer_trace_does_not_shift_the_rng_stream",
+               f"{T_R2}::test_measured_outputs_are_read_before_the_trace_can_overwrite_them"],
      "report": ["producer_trace_per_seed", "notes.ir_kinds"]},
     {"id": "T2", "family": "trace non-interference", "name": "the analysis does not change the candidate's precision",
      "obligation": "no precision switch (TF32, float32 matmul precision, reduced-precision reductions) is set by the "

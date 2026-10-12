@@ -118,12 +118,26 @@ def missing_items(decl: dict) -> list:
     if not isinstance(cmp_, dict):
         out.append("compare (mode and measured outputs)")
     else:
-        if cmp_.get("mode") not in ("A", "B"):
-            out.append("compare.mode (A or B)")
+        if cmp_.get("mode") not in ("A", "B", "black-box"):
+            out.append("compare.mode (A, B or black-box)")
         if not cmp_.get("measure"):
             out.append("compare.measure (output names)")
-        if cmp_.get("mode") == "B" and not cmp_.get("spec"):
-            out.append("compare.spec (mode B needs f)")
+        if cmp_.get("mode") in ("B", "black-box") and not cmp_.get("spec"):
+            out.append(f"compare.spec (mode {cmp_.get('mode')} needs f)")
+        obs = cmp_.get("observe")
+        if obs is not None:
+            from .reference_eval.observation import LAYERS
+            names = set(ins) if isinstance(ins, dict) else set()
+            if not isinstance(obs, dict):
+                out.append("compare.observe ({output: {layer, old, floor}})")
+            else:
+                for o, spec in obs.items():
+                    if o not in (cmp_.get("measure") or []):
+                        out.append(f"compare.observe.{o} (not a measured output)")
+                    elif not isinstance(spec, dict) or spec.get("layer") not in LAYERS:
+                        out.append(f"compare.observe.{o}.layer (one of {', '.join(LAYERS)})")
+                    elif spec.get("layer") == "increment" and spec.get("old") not in names:
+                        out.append(f"compare.observe.{o}.old (the input that holds the old value)")
     eq = decl.get("equivalence")
     if eq is not None and not (isinstance(eq, dict) and isinstance(eq.get("rel"), (int, float)) and eq["rel"] > 0):
         out.append("equivalence.rel (a positive relative bound delta)")
@@ -310,8 +324,9 @@ def query_of(decl: dict, exp: dict) -> dict:
     return {
         "comparison_target": {
             "mode": mode,
-            "quantity": "e_num = K - G_pi" if mode == "A" else
-                        f"e_num = K - G_pi and e_sem = G_pi - f (f: {cmp_.get('spec')})",
+            "quantity": "e_num = K - G_pi" if mode == "A" else (
+                f"K - f only (black box: f = {cmp_.get('spec')} is the only reference; no G_pi, no decomposition)"
+                if mode == "black-box" else f"e_num = K - G_pi and e_sem = G_pi - f (f: {cmp_.get('spec')})"),
             "K": "the call's outputs on the inputs it actually received",
             "G_pi": "the reference generated from the captured program under the numerical-difference policy pi "
                     "(real arithmetic, rc3 02 1); call-level only when every float buffer read is a declared input, "
@@ -323,6 +338,7 @@ def query_of(decl: dict, exp: dict) -> dict:
                        "SeedSequence of the seed and the sampling digest); state sources are called with the seed"},
         "observable": {
             "outputs": list(cmp_["measure"]),
+            "layers": {o: (cmp_.get("observe") or {}).get(o, {"layer": "output"}) for o in cmp_["measure"]},
             "projections": {r: RULE_DEFS[rule_base(r)]["definition"] for r in rules},
             "coordinate_set": "fixed on the development units: the elements whose reference is complete composed "
                               "(proved, finite, not conditional) in every development unit"},
@@ -638,6 +654,8 @@ REFINEMENT_CATEGORIES = {
     "pass failed": "a higher level ended without a result (error); the previous level stands",
     "no numerical enclosure": "an output has no complete finite element and no set target: nothing for a working "
                               "precision to refine (its failure classes say why the reference is missing)",
+    "not applicable": "black-box comparison: the specification is the only reference, there is no enclosure of K_R "
+                      "to refine",
 }
 
 
@@ -694,6 +712,10 @@ def run_level(exp: dict, level: dict) -> dict:
             prec -= 1
             break
         best = out
+        if out.get("mode") == "black-box":
+            category = "not applicable"
+            outcome = "not applicable: black-box comparison (K - f only), no reference enclosure to refine"
+            break
         evaluated = {n: o for n, o in out["outputs"].items() if o.get("status") == "evaluated"}
         per_output = {n: _output_refinement(o, frac) for n, o in evaluated.items()}
         kinds = set(per_output.values())
@@ -711,6 +733,10 @@ def run_level(exp: dict, level: dict) -> dict:
                       "precision_dependent_calls": out.get("precision_dependent_calls"),
                       "seconds": out.get("seconds")})
         refinable = [n for n, v in per_output.items() if v == "refinable"]
+        if not per_output:
+            category = "no numerical enclosure"
+            outcome = f"no numerical enclosure: no measured output was evaluated at level {prec}"
+            break
         if not refinable:
             sets = sorted(n for n, o in evaluated.items() if o["reference"].get("set_target_elements"))
             if kinds <= {"met"}:
@@ -758,7 +784,10 @@ def run_level(exp: dict, level: dict) -> dict:
 def _measure_pass(exp: dict, level: dict, precision_level: int = 1, captures=None) -> dict:
     call = resolve(exp["call"], exp["_base_dir"])
     measure_names = list(exp["compare"]["measure"])
-    spec_fn = resolve(exp["compare"]["spec"], exp["_base_dir"]) if exp["compare"]["mode"] == "B" else None
+    spec_fn = resolve(exp["compare"]["spec"], exp["_base_dir"]) if exp["compare"]["mode"] in ("B", "black-box") \
+        else None
+    black_box = exp["compare"]["mode"] == "black-box"
+    observe = exp["compare"].get("observe")
     budget = exp["budget"]
     dev, conf = unit_split(exp)
     seeds = dev + conf
@@ -817,9 +846,14 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1, captures=Non
     t0 = time.time()
     old = _alarm(budget["case_timeout"])
     try:
-        rep = check.run(case, dev=dev, conf=conf, keep=keep, magnitude_bound=exp.get("magnitude_bound"),
-                        alpha=exp["alpha"], equivalence_rel=(exp.get("equivalence") or {}).get("rel"),
-                        repeats=exp.get("repeats"), precision_level=precision_level, captures=captures)
+        if black_box:
+            rep = check.run_black_box(case, dev=dev, conf=conf, equivalence_rel=(exp.get("equivalence") or {}).get("rel"),
+                                      observe=observe, alpha=exp["alpha"], magnitude_bound=exp.get("magnitude_bound"))
+        else:
+            rep = check.run(case, dev=dev, conf=conf, keep=keep, magnitude_bound=exp.get("magnitude_bound"),
+                            alpha=exp["alpha"], equivalence_rel=(exp.get("equivalence") or {}).get("rel"),
+                            repeats=exp.get("repeats"), precision_level=precision_level, captures=captures,
+                            observe=observe)
     except _Timeout as exc:
         return {"level": level, "status": "over budget", "reason": str(exc), "failure_class": "over budget",
                 "seconds": round(time.time() - t0, 1)}
@@ -832,6 +866,8 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1, captures=Non
         signal.alarm(0)
         signal.signal(signal.SIGALRM, old)
     seconds = time.time() - t0
+    if black_box:
+        return _black_box_pass(exp, level, rep, case, measure_names, seconds, dev, conf)
     dtypes = getattr(case, "_last_dtypes", None) or store.get("dtypes") or {}
     store["dtypes"] = dtypes
     outputs = {}
@@ -865,6 +901,7 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1, captures=Non
                  "statistics": stats, "guarantee": o.get("guarantee"),
                  "proof_status": o.get("proof_status"), "execution": o.get("execution"),
                  "upstream_with_producer_record": recorded,
+                 "observation": o.get("observation"),
                  "mixed_non_triton_sources": o.get("depends_on_non_triton_intermediates") or [],
                  "not_established_reasons_seed0": o.get("not_established_reasons_seed0"),
                  "special_values": o.get("special_values")}
@@ -903,6 +940,34 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1, captures=Non
             "notes": notes, "outputs": outputs, "timing_seconds": rep.get("timing_seconds"),
             "seconds": round(seconds, 1), "failure_classes": sorted(set(failures)),
             "over_budget": seconds > float(budget["gpu_seconds"])}
+
+
+def _black_box_pass(exp, level, rep, case, measure_names, seconds, dev, conf) -> dict:
+    """Outputs of a black-box comparison (K - f only; no reference enclosure, no decomposition)."""
+    outputs, failures = {}, []
+    dtypes = getattr(case, "_last_dtypes", {}) or {}
+    for name in measure_names:
+        o = rep.get("outputs", {}).get(name)
+        if o is None:
+            outputs[name] = {"status": "not established", "reason": "no output", "failure_class": "binding"}
+            failures.append("binding")
+            continue
+        stats = class_statistics(o["total_black_box"], exp["rule_classes"], exp["alpha"],
+                                 equivalence_rel=(exp.get("equivalence") or {}).get("rel"))
+        entry = {"status": "evaluated (black box)", "dtype": dtypes.get(name, "float32"),
+                 "comparison": "K - f (the specification is the only reference; no K_R, no decomposition)",
+                 "statistics": stats, "scale": o["total_black_box"].get("scale"),
+                 "observation": o.get("observation"), "finite_fraction": o.get("finite_fraction"),
+                 "special_values": o.get("special_values")}
+        entry["failure_classes"] = sorted({"statistics insufficient"} if any(
+            v["summary"].startswith("cannot judge") for v in stats.values()) else set())
+        failures.extend(entry["failure_classes"])
+        outputs[name] = entry
+    return {"level": level, "status": "ok", "mode": "black-box", "precision_level": None,
+            "precision_environment": rep.get("precision_environment"),
+            "units": {"development": len(dev), "confirmation": len(conf)}, "outputs": outputs,
+            "timing_seconds": rep.get("timing_seconds"), "seconds": round(seconds, 1),
+            "failure_classes": sorted(set(failures)), "over_budget": seconds > float(exp["budget"]["gpu_seconds"])}
 
 
 def run(decl, out: Optional[str] = None) -> dict:

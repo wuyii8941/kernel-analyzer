@@ -405,6 +405,8 @@ class InputSnapshot:
         self.exact = {}        # ptr -> False when some input's coverage had to be approximated (no claim then)
         hosts = {}
         self.digest_map = self.digests_of(inp, hosts)
+        self.by_path = dict(_tensors(inp))
+        self._hosts = hosts
         for path, t in _tensors(inp):
             if not t.is_floating_point():
                 continue
@@ -425,6 +427,16 @@ class InputSnapshot:
 
     def ptrs(self) -> set:
         return set(self.storages)
+
+    def pre_call_values(self, path: str) -> np.ndarray:
+        """The input at ``path`` as it was before the call, flattened in its logical order (float64)."""
+        import torch
+        t = self.by_path[path]
+        host = self._hosts[t.untyped_storage().data_ptr()]
+        v = _host_view(t.detach(), host)
+        v = v.float() if v.dtype in (torch.bfloat16, torch.float16) or (v.element_size() == 1 and v.is_floating_point()) \
+            else v
+        return v.contiguous().reshape(-1).double().numpy()
 
     def declared_read(self, arg, read_runs: Optional[list]) -> tuple:
         """(declared input, reason) for a captured argument whose reference read ``read_runs`` (storage-relative

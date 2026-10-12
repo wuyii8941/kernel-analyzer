@@ -281,3 +281,71 @@ def dropout_then_affine(inp):
     """An in-call random mask (global RNG) before a kernel: the unmeasured trace must not shift the stream."""
     x = inp["x"]
     return {"y": _affine_of(x * (torch.rand_like(x) > 0.5))}
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Round 2: the increment observation layer (a low-precision state written in place).
+
+@triton.jit
+def _ema_state(v_ptr, g_ptr, n, beta, BLOCK: tl.constexpr):
+    offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
+    m = offs < n
+    v = tl.load(v_ptr + offs, mask=m).to(tl.float32)
+    g = tl.load(g_ptr + offs, mask=m).to(tl.float32)
+    tl.store(v_ptr + offs, (v * beta + (1.0 - beta) * g * g).to(v_ptr.dtype.element_ty), mask=m)
+
+
+def ema_state_inplace(inp):
+    """v <- beta v + (1 - beta) g^2 written in place in v's dtype (bf16: decrements below half an ulp are lost)."""
+    v, g = inp["v"], inp["g"]
+    _ema_state[(triton.cdiv(v.numel(), BLOCK),)](v, g, v.numel(), 0.999, BLOCK=BLOCK)
+    return {"v": v}
+
+
+def ema_state_aten(inp):
+    """The same update by ATen ops (no Triton: black-box comparison)."""
+    v, g = inp["v"], inp["g"]
+    v.mul_(0.999).addcmul_(g, g, value=1 - 0.999)
+    return {"v": v}
+
+
+def ema_state_spec(inp):
+    """f: the exact update in float64 from the received inputs, enclosed with an error budget 2^-40 |f|."""
+    import numpy as np
+    v = inp["v"].detach().double().cpu().numpy()
+    g = inp["g"].detach().double().cpu().numpy()
+    f = 0.999 * v + (1 - 0.999) * g * g
+    b = 2.0 ** -40 * np.abs(f)
+    return {"v": (f - b, f + b)}
+
+
+def small_grads(seed, shape, dtype):
+    """Gradients whose squares are small against the state (the decay dominates)."""
+    g = torch.Generator(device="cpu").manual_seed(int(seed))
+    return (torch.randn(tuple(shape), generator=g) * 1e-3).to(getattr(torch, dtype)).cuda()
+
+
+def unit_state(seed, shape, dtype):
+    g = torch.Generator(device="cpu").manual_seed(int(seed) + 7)
+    return (torch.rand(tuple(shape), generator=g) + 0.5).to(getattr(torch, dtype)).cuda()
+
+
+@triton.jit
+def _affine_c(x_ptr, y_ptr, n, c, BLOCK: tl.constexpr):
+    offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
+    m = offs < n
+    tl.store(y_ptr + offs, tl.load(x_ptr + offs, mask=m) * 3.0 + c, mask=m)
+
+
+_PERSISTENT = {}
+
+
+def persistent_buffer_call(inp):
+    """Writes into one persistent output buffer with a per-call constant (every call -- the unmeasured trace too --
+    overwrites the measured output with different values)."""
+    import audit_state
+    x = inp["x"]
+    y = _PERSISTENT.setdefault((x.numel(), x.dtype), torch.empty_like(x))
+    audit_state.CALLS["persistent"] = audit_state.CALLS.get("persistent", 0) + 1
+    _affine_c[(triton.cdiv(x.numel(), BLOCK),)](x, y, x.numel(), float(audit_state.CALLS["persistent"]), BLOCK=BLOCK)
+    return {"y": y}

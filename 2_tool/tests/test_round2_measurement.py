@@ -140,3 +140,12 @@ def test_refinement_is_refused_rather_than_re_executed_when_the_capture_store_ov
     r = measure.run_level({"resolution": {"ulp_fraction": 0.125, "max_level": 3}, "budget": {"gpu_seconds": 600}},
                           {})["refinement"]
     assert calls == [1] and r["category"] == "budget exhausted" and "capture store" in r["outcome"], (calls, r)
+
+
+@CUDA
+def test_measured_outputs_are_read_before_the_trace_can_overwrite_them(tmp_path):
+    """T1: a call that reuses its output buffer -- the unmeasured producer trace and the repeated launches overwrite
+    the measured output; the analysis reads the output as it was at the end of the measured call"""
+    lv = _run(tmp_path, "persistent_buffer_call", {"x": X12})
+    assert lv["notes"]["outputs_modified_after_last_triton_write"] == [], lv["notes"]
+    assert lv["outputs"]["y"]["status"] == "evaluated" and lv["outputs"]["y"]["reference"]["complete_rate"] == 1.0
