@@ -22,6 +22,7 @@ Variants (one mechanism changed at a time, protocol section 4):
                                     bf16 parameter update (states stay bf16, rounded to nearest)
                 radam_compiled / radam_eager   torch.optim.RAdam (default betas), compiled step / eager
     --param-dtype bf16|fp32
+    --autocast none|bf16            bf16 autocast of the forward (with fp32 parameters: the usual mixed precision; group B)
     --ema none|all                  "all": three EMAs of the weights (decay 0.999) side by side --
                                     torch.optim.swa_utils.AveragedModel(get_ema_multi_avg_fn(0.999)) in the model dtype,
                                     timm 1.0.30 ModelEmaV3(decay=0.999) in the model dtype (the released timm; installed
@@ -93,8 +94,15 @@ def batches(tok, examples, seed, batch_size):
         yield ids, lab, att
 
 
+AUTOCAST = [None]
+
+
 def token_loss_sum(model, ids, lab, att):
-    logits = model(input_ids=ids, attention_mask=att).logits.float()
+    if AUTOCAST[0] is not None:
+        with torch.autocast("cuda", dtype=AUTOCAST[0]):
+            logits = model(input_ids=ids, attention_mask=att).logits.float()
+    else:
+        logits = model(input_ids=ids, attention_mask=att).logits.float()
     shift, tgt = logits[:, :-1], lab[:, 1:]
     loss = torch.nn.functional.cross_entropy(shift.reshape(-1, shift.size(-1)), tgt.reshape(-1), ignore_index=-100,
                                              reduction="sum")
@@ -136,6 +144,7 @@ def main():
     ap.add_argument("--master", default="none", choices=("none", "fp32"))
     ap.add_argument("--ema", default="none")
     ap.add_argument("--lr", type=float, default=2e-5)
+    ap.add_argument("--autocast", default="none", choices=("none", "bf16"))
     ap.add_argument("--capture-steps", default="")
     ap.add_argument("--eval-steps", default="")
     ap.add_argument("--init", default="", help="resume from a saved state (parameters + optimizer states)")
@@ -146,6 +155,7 @@ def main():
 
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    AUTOCAST[0] = torch.bfloat16 if a.autocast == "bf16" else None
     hf_home = os.environ["HF_HOME"]
     tok = AutoTokenizer.from_pretrained(MODEL)
     pdtype = {"bf16": torch.bfloat16, "fp32": torch.float32}[a.param_dtype]
