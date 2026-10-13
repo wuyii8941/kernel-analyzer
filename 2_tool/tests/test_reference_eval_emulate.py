@@ -542,3 +542,114 @@ def test_locations_link_ttir_ops_to_ptx_and_sass():
     assert ptx_instructions_by_location(ptx)[("kern.py", 12, 7)] == ["mul.f32"]
     sass = '\t//## File "/x/kern.py", line 13\n        /*0010*/                   FADD R3, R1, R4 ;\n'
     assert sass_instructions_by_line(sass)[("kern.py", 13)] == ["FADD"]
+
+
+@cuda
+def test_lanes_without_a_declared_value_make_the_status_partial():
+    """An output with lanes the reference leaves without a value (out-of-range float-to-int: poison) is not bit
+    identical even when every emulated lane agrees (composition-study review: partial emulation was reported as
+    bit identical)."""
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def round_trip(x_ptr, y_ptr, B: tl.constexpr):
+        r = tl.arange(0, B)
+        tl.store(y_ptr + r, tl.load(x_ptr + r).to(tl.int32).to(tl.float32))
+
+    x = torch.linspace(-4, 4, 256, device="cuda")
+    x[::16] = 1e12                                      # outside int32: no declared value
+    launch = _capture(lambda: round_trip[(1,)](x, torch.empty_like(x), B=256))
+    r = verify(launch, ungrouped=[], swapped=[])
+    buf = r["buffers"]["y_ptr"]
+    assert buf["not_emulated"] == 16 and buf["mismatch"] == 0
+    assert r["status"] == "partial" and not r["bitwise_reproduced"]
+
+
+@cuda
+@pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float16, torch.float32])
+def test_low_precision_multiply_add_contraction(dtype):
+    """a * b - c * d on one source line: LLVM folds one product and gives the standalone multiply the first product's
+    column whichever it keeps, so the product choice is read from the PTX dataflow, not the location (f32 failed
+    before); a bf16 standalone product is fma.rn.bf16 x, y, -0 on sm_86 (Liger's rope at bf16, found by the corrected
+    composition corpus, failed before)."""
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def rot(a_ptr, b_ptr, c_ptr, d_ptr, y_ptr, B: tl.constexpr):
+        r = tl.arange(0, B)
+        a, b = tl.load(a_ptr + r), tl.load(b_ptr + r)
+        c, d = tl.load(c_ptr + r), tl.load(d_ptr + r)
+        tl.store(y_ptr + r, a * b - c * d)
+
+    g = torch.Generator(device="cuda").manual_seed(11)
+    xs = [torch.randn(1024, device="cuda", generator=g).to(dtype) for _ in range(4)]
+    launch = _capture(lambda: rot[(1,)](*xs, torch.empty_like(xs[0]), B=1024))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], r["buffers"]
+
+
+def test_ptx_dataflow_finds_bf16_products_and_their_operand_locations():
+    from kernel_analyzer.reference_eval.emulate import ptx_dataflow_multiplies
+    ptx = """
+	.loc	1 9 19
+	ld.global.b16 	%rs1, [%rd1];
+	.loc	1 9 39
+	ld.global.b16 	%rs2, [%rd2];
+	.loc	1 10 19
+	ld.global.b16 	%rs3, [%rd3];
+	.loc	1 10 39
+	ld.global.b16 	%rs4, [%rd4];
+	mov.b16 	%rs16, 0x8000;
+	.loc	1 11 28
+	fma.rn.bf16 	%rs5, %rs3, %rs4, %rs16;
+	neg.bf16 	%rs6, %rs5;
+	.loc	1 11 32
+	fma.rn.bf16 	%rs7, %rs1, %rs2, %rs6;
+	.file	1 "/x/k.py"
+"""
+    muls = ptx_dataflow_multiplies(ptx)
+    assert muls == [(frozenset({("k.py", 10, 19)}), frozenset({("k.py", 10, 39)}))]   # c * d, not the fused a * b
+
+
+@cuda
+@pytest.mark.parametrize("shape", [(4, 128), (8, 64)])
+def test_reduce_of_a_flattening_reshape_follows_the_source_registers(shape):
+    """tl.sum over tl.reshape(x2d, (n,), can_reorder=True): the values stay in the 2-D layout's registers, so the
+    combination order is that layout's (FlagGems group_norm at f32, found by the corrected composition corpus: the
+    1-D layout's order was used)."""
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def flat_sum(x_ptr, y_ptr, R: tl.constexpr, C: tl.constexpr):
+        r = tl.arange(0, R)[:, None] * C + tl.arange(0, C)[None, :]
+        x = tl.load(x_ptr + tl.program_id(0) * R * C + r)
+        tl.store(y_ptr + tl.program_id(0), tl.sum(tl.reshape(x, (R * C,), can_reorder=True), axis=0))
+
+    R, C = shape
+    x = torch.randn(32 * R * C, device="cuda", generator=torch.Generator(device="cuda").manual_seed(5))
+    launch = _capture(lambda: flat_sum[(32,)](x, torch.empty(32, device="cuda"), R=R, C=C))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], r["buffers"]
+
+
+@cuda
+def test_product_folded_into_a_reduce_through_a_flattening_reshape():
+    """tl.sum(tl.reshape(d * d, (n,), can_reorder=True)): the product stays in its register and LLVM folds it into
+    the first combine, as for a same-shape reshape (FlagGems group_norm's variance at f32)."""
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def flat_sq_sum(x_ptr, y_ptr, R: tl.constexpr, C: tl.constexpr):
+        r = tl.arange(0, R)[:, None] * C + tl.arange(0, C)[None, :]
+        x = tl.load(x_ptr + tl.program_id(0) * R * C + r)
+        d = x - 0.25
+        tl.store(y_ptr + tl.program_id(0), tl.sum(tl.reshape(d * d, (R * C,), can_reorder=True), axis=0))
+
+    x = torch.randn(32 * 512, device="cuda", generator=torch.Generator(device="cuda").manual_seed(6))
+    launch = _capture(lambda: flat_sq_sum[(32,)](x, torch.empty(32, device="cuda"), R=4, C=128))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], r["buffers"]

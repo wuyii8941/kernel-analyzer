@@ -1,12 +1,19 @@
 """Summary of the composition cells (RQ2): status per form, per primitive family, the cells that are not bit identical
-grouped by cause, and the not-established cells grouped by the emulator's reason."""
+grouped by cause, and the not-established / partial cells grouped by the emulator's reason.
+
+Statuses are recomputed from the stored element counts with the strict rule (cells.rescore): a launch is bit identical
+only when every written element was emulated and no program was aborted; the stored status of the first version
+counted partially emulated launches as bit identical."""
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
+
+from cells import rescore
 
 HERE = Path(__file__).resolve().parent
 
@@ -26,6 +33,8 @@ def reason_of(r) -> str:
             parts.add("emulator error: " + (x.get("error") or "")[:90])
         elif x.get("status") == "not_established":
             parts.add("no emulated element")
+        elif (x.get("elements") or {}).get("not_emulated"):
+            parts.add("written elements outside the emulated part")
     return "; ".join(sorted(parts)) or r.get("status", "?")
 
 
@@ -34,7 +43,10 @@ def main():
     ap.add_argument("--cells", required=True, help="jsonl from cells.py")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
-    rows = [json.loads(l) for l in Path(a.cells).read_text().splitlines() if l.strip()]
+    text = gzip.decompress(Path(a.cells).read_bytes()).decode() if a.cells.endswith(".gz") else Path(a.cells).read_text()
+    rows = [json.loads(l) for l in text.splitlines() if l.strip()]
+    stored = Counter(r["status"] for r in rows)
+    rows = [rescore(r) for r in rows]
     by_form = defaultdict(Counter)
     by_family = defaultdict(Counter)
     mism = defaultdict(list)
@@ -50,20 +62,21 @@ def main():
         if r["status"] in ("mismatch", "emulator error", "harness error", "launch error", "build error",
                            "child crashed (compiler abort)", "not compiled"):
             mism[(r["status"], r["pid"].split("|")[1])].append(f'{r["form"]} {r["param"]}')
-        elif r["status"] == "not established":
-            ne[reason_of(r)].append(r["pid"])
-    out = {"cells": len(rows), "status": dict(Counter(r["status"] for r in rows)), "elements": dict(elements),
+        elif r["status"] in ("not established", "partial"):
+            ne[f'{r["status"]}: {reason_of(r)}'].append(r["pid"])
+    out = {"cells": len(rows), "status": dict(Counter(r["status"] for r in rows)),
+           "status_stored_first_version": dict(stored), "elements": dict(elements),
            "by_form": {k: dict(v) for k, v in sorted(by_form.items(), key=lambda kv: int(kv[0][1:]))},
            "not_bit_identical": {f"{k[0]} | {k[1]}": {"cells": len(v), "forms": sorted(set(v))[:30]}
                                  for k, v in sorted(mism.items())},
-           "not_established_reasons": {k: {"cells": len(v), "primitives": sorted(set(v))[:12],
+           "not_established_or_partial_reasons": {k: {"cells": len(v), "primitives": sorted(set(v))[:12],
                                            "distinct_primitives": len(set(v))}
                                        for k, v in sorted(ne.items(), key=lambda kv: -len(kv[1]))}}
     Path(a.out).write_text(json.dumps(out, indent=1, ensure_ascii=False))
     print(json.dumps({k: out[k] for k in ("cells", "status", "elements")}, ensure_ascii=False))
     print("forms:", {k: v.get("bit identical", 0) for k, v in out["by_form"].items()})
-    print(len(out["not_bit_identical"]), "groups not bit identical;", len(out["not_established_reasons"]),
-          "not-established reasons")
+    print(len(out["not_bit_identical"]), "groups not bit identical;",
+          len(out["not_established_or_partial_reasons"]), "not-established / partial reasons")
 
 
 if __name__ == "__main__":

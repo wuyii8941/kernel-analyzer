@@ -58,22 +58,70 @@ def reduce_layouts(module, ttgir: str) -> dict:
         # A reshape with allow_reorder keeps every value in its register: the combination order is
         # the register order of the source layout.
         src = m.group(1).strip()
+        flat = None
         while True:
             rs = re.search(r"^\s*" + re.escape(src) + r"\s*=\s*tt\.reshape\s+(%[\w#]+)\s+allow_reorder[^:]*:\s*"
                            r"tensor<([\dx]+)x\w+,\s*(#[\w]+)>", ttgir, re.M)
-            if rs is None or len(rs.group(2).split("x")) != len(shape):
+            if rs is None:
+                break
+            src_shape = tuple(int(v) for v in rs.group(2).split("x") if v)
+            if len(src_shape) != len(shape):
+                # a flattening reshape into the reduced 1-D tensor: the values stay in the source layout's registers
+                if len(shape) == 1:
+                    flat = (src_shape, rs.group(3))
                 break
             src, layout = rs.group(1), rs.group(3)
-        found.append((int(m.group(2)), shape, layout))
+        found.append((int(m.group(2)), shape, layout, flat))
     reduces = [op for fn in module.funcs.values() for op in fn.walk() if op.name == "tt.reduce"]
     if len(reduces) != len(found):
         return {}
     out = {}
-    for op, (axis, shape, layout) in zip(reduces, found):
+    for op, (axis, shape, layout, flat) in zip(reduces, found):
+        if flat is not None:
+            params = flattened_params(layouts, *flat)
+            if params is not None:
+                out[op.node_id] = {"axis": axis, "shape": shape, "layout": flat[1], **params}
+                continue
         if layout in layouts:
             out[op.node_id] = {"axis": axis, "shape": shape, "layout": layout,
                                **_axis_params(layouts, layout, axis)}
     return out
+
+
+def flattened_params(layouts: dict, src_shape: tuple, name: str) -> Optional[dict]:
+    """1-D reduce parameters of a blocked-layout tensor flattened in its registers (allow_reorder reshape): every
+    thread combines all its registers in register order (sizePerThread dims in ``order``, then repetitions), then the
+    lanes and the warps.  ``perm[p]`` is the row-major source index of the value at position p of the 1-D model
+    (p = warp * R * T + lane * R + register).  None for other layouts or a replicated tensor."""
+    lay = layouts.get(name)
+    if lay is None or lay["kind"] != "blocked" or len(lay["sizePerThread"]) != len(src_shape):
+        return None
+    spt, tpw, wpc, order = lay["sizePerThread"], lay["threadsPerWarp"], lay["warpsPerCTA"], lay["order"]
+    tile = [s * t * w for s, t, w in zip(spt, tpw, wpc)]
+    if any(n % t for n, t in zip(src_shape, tile)):
+        return None
+    reps = [n // t for n, t in zip(src_shape, tile)]
+    idx = np.indices(src_shape).reshape(len(src_shape), -1)
+    lane = np.zeros(idx.shape[1], dtype=np.int64)
+    warp = np.zeros_like(lane)
+    reg_in = np.zeros_like(lane)
+    reg_rep = np.zeros_like(lane)
+    sl = sw = sj = sr = 1
+    for d in order:
+        x = idx[d]
+        rep, within = x // tile[d], x % tile[d]
+        w, l, j = within // (spt[d] * tpw[d]), (within % (spt[d] * tpw[d])) // spt[d], within % spt[d]
+        lane += l * sl
+        warp += w * sw
+        reg_in += j * sj
+        reg_rep += rep * sr
+        sl, sw, sj, sr = sl * tpw[d], sw * wpc[d], sj * spt[d], sr * reps[d]
+    R = sj * sr
+    reg = reg_in + sj * reg_rep
+    pos = warp * (R * sl) + lane * R + reg
+    perm = np.empty(idx.shape[1], dtype=np.int64)
+    perm[pos] = np.arange(idx.shape[1])
+    return {"spt": int(R), "tpw": int(sl), "wpc": int(sw), "perm": perm}
 
 
 def scan_layouts(module, ttgir: str) -> dict:

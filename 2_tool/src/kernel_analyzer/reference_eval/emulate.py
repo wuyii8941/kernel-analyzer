@@ -329,12 +329,76 @@ def ptx_instructions_by_location(ptx: str) -> dict:
     return out
 
 
+_NEG_ZERO = {"0x8000", "0x80008000", "0f80000000", "-0f00000000"}
+
+
+def ptx_dataflow_multiplies(ptx: str) -> list:
+    """The standalone floating-point multiplies of a PTX listing, each as the pair of source-location sets its two
+    multiplicands come from (the locations of the instructions that define them, through mov / cvt).  A multiply is
+    mul.* on a float type, or an fma whose addend is -0 (sm_86 has no bf16 multiply: x * y is fma.rn.bf16 x, y, -0)."""
+
+    files = {m.group(1): Path(m.group(2)).name
+             for m in re.finditer(r'^\s*\.file\s+(\d+)\s+"([^"]*)"', ptx, re.M)}
+    instrs, current = [], None
+    for line in ptx.splitlines():
+        s = line.split("//")[0].strip()
+        m = re.match(r"^\.loc\s+(\d+)\s+(\d+)\s+(\d+)", s)
+        if m:
+            current = (files.get(m.group(1)), int(m.group(2)), int(m.group(3)))
+            continue
+        if not s or s.startswith((".", "$", "{", "}")) or s.endswith(":"):
+            continue
+        if s.startswith("@"):
+            s = s.split(None, 1)[1] if len(s.split(None, 1)) > 1 else ""
+        parts = s.rstrip(";").split(None, 1)
+        if len(parts) < 2:
+            continue
+        args = [a.strip() for a in re.split(r",(?![^{]*\})", parts[1])]
+        instrs.append((current, parts[0], re.findall(r"%\w+", args[0]), args[1:]))
+    defs = {}
+    for loc, op, dsts, srcs in instrs:
+        for d in dsts:
+            defs[d] = (loc, op, srcs)
+
+    def origin(arg, depth=0) -> frozenset:
+        regs = re.findall(r"%\w+", arg)
+        out = set()
+        for r in regs:
+            d = defs.get(r)
+            if d is None or depth > 16:
+                continue
+            loc, op, srcs = d
+            if op.startswith(("mov.", "cvt.")):
+                for a in srcs:
+                    out |= origin(a, depth + 1)
+            elif loc is not None:
+                out.add(loc)
+        return frozenset(out)
+
+    def is_neg_zero(arg) -> bool:
+        if arg in _NEG_ZERO:
+            return True
+        d = defs.get(arg)
+        return d is not None and d[1].startswith("mov.") and len(d[2]) == 1 and d[2][0] in _NEG_ZERO
+
+    out = []
+    for loc, op, dsts, srcs in instrs:
+        is_mul = op.startswith("mul.") and re.search(r"\.(f32|f16|f16x2|bf16|bf16x2)$", op) is not None
+        is_mul |= op.startswith("fma.") and len(srcs) == 3 and is_neg_zero(srcs[2])
+        if is_mul and len(srcs) >= 2:
+            out.append((origin(srcs[0]), origin(srcs[1])))
+    return out
+
+
 def ptx_product_choices(module: TModule, ptx: str, plan: dict) -> dict:
     """For adds / subs with a product on both sides, read LLVM's choice from the PTX.
 
-    A product whose only use is this add and which still appears as a standalone multiply at its own
-    source location was not folded, so the other product was.  Returns node_id -> "swap" / "default";
-    nodes without conclusive evidence are left out."""
+    Dataflow evidence first: a standalone multiply whose multiplicands come from the source locations of one
+    product's operands is that product, not folded -- so the other one was (LLVM can give the standalone multiply
+    the first product's column whichever product it keeps, so the location alone can mislead).  Otherwise (operands
+    without distinct locations), location evidence: a product whose only use is this add and which still appears as
+    a standalone multiply at its own source location was not folded.  Returns node_id -> "swap" / "default"; nodes
+    without conclusive evidence are left out."""
 
     text = _module_text(module)
     locations = ttir_locations(text)
@@ -348,6 +412,28 @@ def ptx_product_choices(module: TModule, ptx: str, plan: dict) -> dict:
     uses = collections.Counter(v for o in ops for v in o.operands)
     loc_of = {o.node_id: op_location(o, locations, defining) for o in ops}
     shared = collections.Counter(loc_of[o.node_id] for o in ops if o.name == "arith.mulf")
+    producer = {r: o for o in ops for r in o.results}
+    multiplies = ptx_dataflow_multiplies(ptx)
+
+    def operand_locs(mul):
+        locs = []
+        for v in mul.operands:
+            o = producer.get(v)
+            while o is not None and o.name in LAYOUT_OPS:
+                o = producer.get(o.operands[0])
+            locs.append(None if o is None else loc_of.get(o.node_id))
+        return locs
+
+    def materialized_by_dataflow(mul, other) -> Optional[bool]:
+        mine, theirs = operand_locs(mul), operand_locs(other)
+        if None in mine or None in theirs or set(mine) == set(theirs):
+            return None
+        seen = False
+        for o1, o2 in multiplies:
+            src = o1 | o2
+            if all(l in src for l in mine) and not all(l in src for l in theirs):
+                seen = True
+        return seen
 
     def materialized(mul) -> Optional[bool]:
         loc = loc_of.get(mul.node_id)
@@ -358,6 +444,10 @@ def ptx_product_choices(module: TModule, ptx: str, plan: dict) -> dict:
     out = {}
     for node, (idx, mul, alt) in plan.items():
         if alt is None:
+            continue
+        d_def, d_alt = materialized_by_dataflow(mul, alt[1]), materialized_by_dataflow(alt[1], mul)
+        if d_def is not None and d_alt is not None and d_def != d_alt:
+            out[node] = "swap" if d_def else "default"
             continue
         default_kept, other_kept = materialized(mul), materialized(alt[1])
         if default_kept and other_kept is not True:
@@ -1003,6 +1093,8 @@ class GpuEmulator(KernelReferenceEvaluator):
         self.trace[(op.node_id, "reduce_tree_device_combine")] += 1
         ok = np.moveaxis(x.st == ST_OK, axis, -1)
         vals = np.moveaxis(np.where(x.st == ST_OK, x.lo, 0), axis, -1).astype(np.int64 if x.kind == "i" else np.float64)
+        if "perm" in lay:                       # a flattening reshape: the source layout's register order
+            vals = vals[..., lay["perm"]]
         res, divergent = self._reduce_tree(vals, lay, self._device_combine(inner, names, x.elem))
         bad = ~np.all(ok, axis=-1) | divergent
         if x.kind == "i":
@@ -1045,6 +1137,9 @@ class GpuEmulator(KernelReferenceEvaluator):
         if lay is None:
             return self._not_emulable(op, list(np.delete(np.array(x.shape), axis)), x.elem, [x], "reduce layout")
         vals = np.moveaxis(np.where(x.st == ST_OK, x.lo, 0.0), axis, -1)
+        perm = lay.get("perm")
+        if perm is not None:                    # a flattening reshape: the source layout's register order
+            vals = vals[..., perm]
         n = vals.shape[-1]
         spt = min(lay["spt"], n)
         tpw = min(lay["tpw"], max(1, n // spt))
@@ -1071,13 +1166,19 @@ class GpuEmulator(KernelReferenceEvaluator):
         # LLVM still folds it into the combine (composition study: Liger's group norm sums X * X this way)
         while (producer is not None and producer.name in ("tt.reshape", "ttg.convert_layout")
                and self._env.get(producer.operands[0]) is not None
-               and self._env[producer.operands[0]].shape == x.shape):
+               and (self._env[producer.operands[0]].shape == x.shape
+                    or (perm is not None
+                        and int(np.prod(self._env[producer.operands[0]].shape)) == int(np.prod(x.shape))))):
+            # a flattening reshape (allow_reorder) keeps the values in their registers as well
             producer = self._def.get(producer.operands[0])
         fused = (self.enable_fp_fusion and producer is not None and producer.name == "arith.mulf"
                  and self._block.get(id(producer)) == self._block.get(id(op)) and op.node_id not in self.exact_nodes)
         if fused:
-            fa, fb = (np.moveaxis(np.broadcast_to(np.where(self._env[v].st == ST_OK, self._env[v].lo, 0.0), x.shape),
-                                  axis, -1) for v in producer.operands)
+            pshape = tuple(producer.result_types[0].shape)
+            fa, fb = (np.moveaxis(np.broadcast_to(np.where(self._env[v].st == ST_OK, self._env[v].lo, 0.0),
+                                                  pshape).reshape(x.shape), axis, -1) for v in producer.operands)
+            if perm is not None:
+                fa, fb = fa[..., perm], fb[..., perm]
         self.trace[(op.node_id, "reduce_tree_fused" if fused else "reduce_tree")] += 1
         # thread partials: [..., warp, lane]
         idx = (np.arange(reps)[:, None, None, None] * tile + np.arange(wpc)[None, :, None, None] * (spt * tpw)
@@ -1336,8 +1437,10 @@ def verify(launch, oracle: Optional[HardwareOracle] = None, ungrouped=None, swap
     and the flipped choices are reported -- this fits the model to the same outputs it is checked
     against, so such a kernel needs held-out inputs before it counts as validated.
 
-    status: "bit_identical" (every emulated element has the device's bits; NaN only as a class),
-    "mismatch", or "not_established" (no emulated output, e.g. every program stopped at an atomic).
+    status: "bit_identical" (every written element is emulated and has the device's bits; NaN only as a class; no
+    program stopped), "partial" (every emulated element agrees but some written elements are not emulated or a
+    program stopped), "mismatch", or "not_established" (no emulated output, e.g. every program stopped at an
+    atomic).
     """
 
     frozen = ungrouped is not None or swapped is not None
@@ -1386,10 +1489,14 @@ def verify(launch, oracle: Optional[HardwareOracle] = None, ungrouped=None, swap
         totals.update(entry)
     if totals["emulated"] == 0:
         report["status"] = "not_established"
-    elif totals["mismatch"] == 0:
-        report["status"] = "bit_identical"
-    else:
+    elif totals["mismatch"]:
         report["status"] = "mismatch"
+    elif totals["not_emulated"] or result.aborted:
+        # every emulated element agrees, but some written elements have no emulated value (no declared value, a
+        # not-emulable node) or a program stopped: not a bitwise reproduction of the launch
+        report["status"] = "partial"
+    else:
+        report["status"] = "bit_identical"
     report["bitwise_reproduced"] = report["status"] == "bit_identical"
     report["fitted_to_output"] = bool(fitted_u or fitted_s)
     return report

@@ -70,6 +70,9 @@ class CapturedLaunch:
     # tensors the kernel reaches only through raw addresses (pointer tables + tt.int_to_ptr), registered by the
     # workload with TritonLaunchRecorder.register_implicit; captured like tensor operands, bound to no parameter
     implicit: list = field(default_factory=list)
+    # False: recorded by a recorder with execute=False -- the kernel did not run, the "after" copies are the operands
+    # before the launch (ex-ante analyses such as bias_predict)
+    executed: bool = True
 
     def ttir_params(self) -> list:
         """Arguments that are parameters of the TTIR function, in order."""
@@ -239,7 +242,8 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
 
     def __init__(self, select: Callable[[str, int], bool] = lambda name, index: True,
                  copy_tensors: bool = True, max_launches: Optional[int] = None,
-                 window: Optional[Callable] = None, keep_kernel: bool = True, keep_storages: bool = True):
+                 window: Optional[Callable] = None, keep_kernel: bool = True, keep_storages: bool = True,
+                 execute: bool = True):
         """``window(kernel_name, arg_name, tensor) -> element indices or None``.
 
         Returned indices are relative to the tensor's first element in its
@@ -248,9 +252,15 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
         ``keep_storages``: hold a reference to every storage a recorded launch touches until the recorder exits, so the
         caching allocator cannot hand a freed intermediate's address to another tensor inside the recorded region
         (an address then identifies one storage instance; ``storage_id`` makes the identity explicit).
+
+        ``execute=False``: no kernel runs while the recorder is active (every launch is skipped, recorded or not);
+        recorded launches keep their operands as they were before the launch (``CapturedLaunch.executed`` False).
+        For analyses that must not see device outputs; a workload whose later launches read earlier outputs then
+        sees unwritten buffers.
         """
 
         self.select = select
+        self.execute = execute
         self.copy_tensors = copy_tensors
         self.max_launches = max_launches
         self.window = window
@@ -298,9 +308,11 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
                 take = recorder.select(kernel.name, index) and (
                     recorder.max_launches is None or len(recorder.launches) < recorder.max_launches)
                 record = recorder._before(kernel, (gx, gy, gz), args, index) if take else None
-                result = real(gx, gy, gz, stream, function, packed, launch_md, enter, exit_, *args)
+                result = real(gx, gy, gz, stream, function, packed, launch_md, enter, exit_, *args) \
+                    if recorder.execute else None
                 if record is not None:
                     recorder._after(record, args)
+                    record.executed = recorder.execute
                     recorder.launches.append(record)
                 return result
 

@@ -1,0 +1,1616 @@
+[
+ {
+  "program": "p000",
+  "form": "loop",
+  "spec": {
+   "name": "p000",
+   "form": "loop",
+   "in_dtype": "f32",
+   "work_dtype": "f32",
+   "steps": [
+    "log",
+    "sin",
+    "rsqrt",
+    "sqrt"
+   ],
+   "has_w": false,
+   "dists": [
+    "normal",
+    "normal"
+   ],
+   "B": 1024,
+   "T": 64,
+   "grid": 4,
+   "acc_dtype": "bf16"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -6.838268169936721e-05,
+    "se_pred": 1.7020153742540583e-05,
+    "measured": 8.987170526188043e-06,
+    "se_meas": 5.820269211042553e-05,
+    "tolerance": 0.00018880385231504875,
+    "difference": 7.736985222555526e-05,
+    "z_like": 1.2758829635479914,
+    "rms_rel_pred": 0.000149761220642067,
+    "rms_rel_meas": 0.009122150981608682,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p001",
+  "form": "loop",
+  "spec": {
+   "name": "p001",
+   "form": "loop",
+   "in_dtype": "f16",
+   "work_dtype": "f32",
+   "steps": [
+    "to_f16",
+    "floor"
+   ],
+   "has_w": false,
+   "dists": [
+    "uniform01",
+    "wide"
+   ],
+   "B": 1024,
+   "T": 16,
+   "grid": 4,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 0.0,
+    "se_pred": 0.0,
+    "measured": 0.0,
+    "se_meas": 0.0,
+    "tolerance": 0.0,
+    "difference": 0.0,
+    "z_like": 0.0,
+    "rms_rel_pred": 0.0,
+    "rms_rel_meas": 0.0,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p002",
+  "form": "scan",
+  "spec": {
+   "name": "p002",
+   "form": "scan",
+   "in_dtype": "bf16",
+   "work_dtype": "f32",
+   "steps": [
+    "to_e5m2",
+    "step",
+    "tanh",
+    "to_bf16",
+    "relu"
+   ],
+   "has_w": false,
+   "dists": [
+    "uniform01",
+    "wide"
+   ],
+   "B": 1024,
+   "grid": 4,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 0.00023036876619612518,
+    "se_pred": 4.939862761464393e-05,
+    "measured": -0.024563447616423446,
+    "se_meas": 0.0009643371120340973,
+    "tolerance": 0.002919841428281612,
+    "difference": -0.02479381638261957,
+    "z_like": -25.67706858416746,
+    "rms_rel_pred": 4.2991711820824195e-08,
+    "rms_rel_meas": 0.02789971035526956,
+    "holds": false,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "无法判断",
+  "reason": "approx_discrete_inputs@tt.extern_elementwise@21 (4096 lanes); flip_risk_discontinuous:select@arith.select@20 (544 lanes); flip_risk_discontinuous:select@arith.select@20 (554 lanes); flip_risk_discontinuous:select@arith.select@20 (567 lanes); flip_risk_discontinuous:select@arith.select@20 (569 lanes); flip_risk_discontinuous:select@arith.select@20 (583 lanes)"
+ },
+ {
+  "program": "p003",
+  "form": "dot",
+  "spec": {
+   "name": "p003",
+   "form": "dot",
+   "in_dtype": "bf16",
+   "precision": "tf32",
+   "pre": "none",
+   "post": "sigmoid",
+   "dists": [
+    "uniform01",
+    "bf16valued"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 512,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -1.2684369933313632e-08,
+    "se_pred": 3.776296242866416e-09,
+    "measured": -1.2202808890776482e-08,
+    "se_meas": 3.18342591360627e-09,
+    "tolerance": 1.608775929417001e-08,
+    "difference": 4.815610425371505e-10,
+    "z_like": 0.09749994527382651,
+    "rms_rel_pred": 1.0127034844948987e-06,
+    "rms_rel_meas": 4.110783476944609e-06,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p004",
+  "form": "dot",
+  "spec": {
+   "name": "p004",
+   "form": "dot",
+   "in_dtype": "f16",
+   "precision": "tf32",
+   "pre": "none",
+   "post": "sigmoid",
+   "dists": [
+    "normal",
+    "normal"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 256,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -8.98027749448508e-09,
+    "se_pred": 1.1763462841017074e-09,
+    "measured": -1.0588974174302018e-08,
+    "se_meas": 8.507720098291383e-10,
+    "tolerance": 5.258673974023596e-09,
+    "difference": -1.6086966798169376e-09,
+    "z_like": -1.108101902092289,
+    "rms_rel_pred": 1.6385734354538262e-06,
+    "rms_rel_meas": 5.546302703210046e-06,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p005",
+  "form": "dot",
+  "spec": {
+   "name": "p005",
+   "form": "dot",
+   "in_dtype": "f32",
+   "precision": "ieee",
+   "pre": "relu",
+   "post": "none",
+   "dists": [
+    "normal",
+    "normal"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 512,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -4.804018191890814e-10,
+    "se_pred": 1.1213758541375372e-09,
+    "measured": 2.2414119282803277e-10,
+    "se_meas": 1.6505514563972158e-09,
+    "tolerance": 6.683387135800643e-09,
+    "difference": 7.045430120171141e-10,
+    "z_like": 0.3530754952929175,
+    "rms_rel_pred": 1.801401637799411e-05,
+    "rms_rel_meas": 0.00010193899313826985,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p006",
+  "form": "elementwise",
+  "spec": {
+   "name": "p006",
+   "form": "elementwise",
+   "in_dtype": "bf16",
+   "work_dtype": "bf16",
+   "steps": [
+    "relu_where",
+    "abs",
+    "scale",
+    "square",
+    "relu"
+   ],
+   "has_w": false,
+   "dists": [
+    "bf16valued",
+    "uniform01"
+   ],
+   "B": 1024,
+   "grid": 8,
+   "out_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 5.3158837805902076e-05,
+    "se_pred": 7.823357758849313e-05,
+    "measured": 7.14999213785796e-05,
+    "se_meas": 7.47648443873002e-05,
+    "tolerance": 0.00034071404455442557,
+    "difference": 1.834108357267752e-05,
+    "z_like": 0.1694889736637007,
+    "rms_rel_pred": 0.0023190616557576082,
+    "rms_rel_meas": 0.0026072316452998446,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p007",
+  "form": "elementwise",
+  "spec": {
+   "name": "p007",
+   "form": "elementwise",
+   "in_dtype": "f16",
+   "work_dtype": "f16",
+   "steps": [
+    "square",
+    "abs"
+   ],
+   "has_w": false,
+   "dists": [
+    "wide",
+    "wide"
+   ],
+   "B": 1024,
+   "grid": 8,
+   "out_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 1.5849829041458896e-05,
+    "se_pred": 4.314280202798945e-06,
+    "measured": 9.695833548921038e-06,
+    "se_meas": 4.041687608594216e-06,
+    "tolerance": 1.940397100171285e-05,
+    "difference": -6.153995492537858e-06,
+    "z_like": -1.0409849291648505,
+    "rms_rel_pred": 0.00020478527093423522,
+    "rms_rel_meas": 0.00020558784731285556,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p008",
+  "form": "reduce",
+  "spec": {
+   "name": "p008",
+   "form": "reduce",
+   "in_dtype": "bf16",
+   "work_dtype": "f32",
+   "steps": [
+    "sigmoid",
+    "to_bf16",
+    "sub_w",
+    "sigmoid"
+   ],
+   "has_w": true,
+   "dists": [
+    "wide",
+    "bf16valued"
+   ],
+   "R": 16,
+   "C": 256,
+   "grid": 8,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 1.9445703638580615e-06,
+    "se_pred": 7.956219269474256e-07,
+    "measured": 1.833745095668145e-06,
+    "se_meas": 7.632467783845482e-07,
+    "tolerance": 3.502186798214557e-06,
+    "difference": -1.1082526818991647e-07,
+    "z_like": -0.10051956705714617,
+    "rms_rel_pred": 8.853692956799042e-06,
+    "rms_rel_meas": 1.6090117007191445e-05,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p009",
+  "form": "dot",
+  "spec": {
+   "name": "p009",
+   "form": "dot",
+   "in_dtype": "bf16",
+   "precision": "tf32",
+   "pre": "none",
+   "post": "bias",
+   "dists": [
+    "uniform01",
+    "bf16valued"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 128,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -8.795928282820209e-08,
+    "se_pred": 1.4530773906107882e-09,
+    "measured": -8.339409563027383e-08,
+    "se_meas": 1.6830939726024206e-09,
+    "tolerance": 1.551309774883387e-08,
+    "difference": 4.565187197928258e-09,
+    "z_like": 2.0530940902289814,
+    "rms_rel_pred": 4.820574285448482e-06,
+    "rms_rel_meas": 2.6300272784585816e-05,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p010",
+  "form": "reduce",
+  "spec": {
+   "name": "p010",
+   "form": "reduce",
+   "in_dtype": "f32",
+   "work_dtype": "f32",
+   "steps": [
+    "relu",
+    "scale",
+    "floor",
+    "erf",
+    "square"
+   ],
+   "has_w": false,
+   "dists": [
+    "wide",
+    "wide"
+   ],
+   "R": 16,
+   "C": 256,
+   "grid": 8,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 7.483241407723509e-09,
+    "se_pred": 1.5707264452857264e-09,
+    "measured": 7.057513754706779e-09,
+    "se_meas": 2.003814123536048e-09,
+    "tolerance": 8.386524166485348e-09,
+    "difference": -4.2572765301672936e-10,
+    "z_like": -0.16720997632120577,
+    "rms_rel_pred": 2.9263733773835643e-08,
+    "rms_rel_meas": 4.225469228065916e-08,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p011",
+  "form": "dot",
+  "spec": {
+   "name": "p011",
+   "form": "dot",
+   "in_dtype": "f32",
+   "precision": "tf32",
+   "pre": "none",
+   "post": "none",
+   "dists": [
+    "normal",
+    "bf16valued"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 128,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -0.0003531387512374086,
+    "se_pred": 3.8978187191518643e-07,
+    "measured": -0.00035159998993834735,
+    "se_meas": 1.7523929239192404e-06,
+    "tolerance": 0.04846114914618446,
+    "difference": 1.538761299061265e-06,
+    "z_like": 0.8571441101512643,
+    "rms_rel_pred": 0.155596352165446,
+    "rms_rel_meas": 0.028881211813556473,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p012",
+  "form": "dot",
+  "spec": {
+   "name": "p012",
+   "form": "dot",
+   "in_dtype": "f32",
+   "precision": "tf32",
+   "pre": "none",
+   "post": "sigmoid",
+   "dists": [
+    "normal",
+    "uniform01"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 128,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -4.094672449923703e-05,
+    "se_pred": 1.0234071531072257e-06,
+    "measured": -4.049950858848637e-05,
+    "se_meas": 2.758423906468113e-06,
+    "tolerance": 1.5994206512162517e-05,
+    "difference": 4.4721591075066097e-07,
+    "z_like": 0.15200293836014056,
+    "rms_rel_pred": 0.0012395714727012786,
+    "rms_rel_meas": 0.0034579064956213996,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p013",
+  "form": "reduce",
+  "spec": {
+   "name": "p013",
+   "form": "reduce",
+   "in_dtype": "f32",
+   "work_dtype": "f32",
+   "steps": [
+    "floor",
+    "abs",
+    "floor"
+   ],
+   "has_w": false,
+   "dists": [
+    "normal",
+    "uniform01"
+   ],
+   "R": 16,
+   "C": 256,
+   "grid": 8,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 0.0,
+    "se_pred": 0.0,
+    "measured": 0.0,
+    "se_meas": 0.0,
+    "tolerance": 0.0,
+    "difference": 0.0,
+    "z_like": 0.0,
+    "rms_rel_pred": 0.0,
+    "rms_rel_meas": 0.0,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p014",
+  "form": "dot",
+  "spec": {
+   "name": "p014",
+   "form": "dot",
+   "in_dtype": "f32",
+   "precision": "tf32",
+   "pre": "scale",
+   "post": "bias",
+   "dists": [
+    "bf16valued",
+    "uniform01"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 256,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -0.0005297366682611346,
+    "se_pred": 3.36589204790777e-06,
+    "measured": -0.0005175884123760005,
+    "se_meas": 9.190729114944239e-06,
+    "tolerance": 0.021657345832934535,
+    "difference": 1.2148255885134174e-05,
+    "z_like": 1.2411779544616897,
+    "rms_rel_pred": 0.10386291233705115,
+    "rms_rel_meas": 0.07884604276903034,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p015",
+  "form": "dot",
+  "spec": {
+   "name": "p015",
+   "form": "dot",
+   "in_dtype": "f32",
+   "precision": "ieee",
+   "pre": "to_bf16",
+   "post": "bias",
+   "dists": [
+    "normal",
+    "bf16valued"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 128,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -2.697656985706607e-06,
+    "se_pred": 1.1089721250703293e-05,
+    "measured": -3.87681321470029e-06,
+    "se_meas": 1.179213984310094e-05,
+    "tolerance": 4.8841079218234554e-05,
+    "difference": -1.1791562289936833e-06,
+    "z_like": -0.07284344412064613,
+    "rms_rel_pred": 6.592003597239927e-05,
+    "rms_rel_meas": 0.3793212004681394,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p016",
+  "form": "dot",
+  "spec": {
+   "name": "p016",
+   "form": "dot",
+   "in_dtype": "bf16",
+   "precision": "tf32",
+   "pre": "none",
+   "post": "bias",
+   "dists": [
+    "uniform01",
+    "normal"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 256,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -1.8975737493891188e-07,
+    "se_pred": 4.89093228404289e-09,
+    "measured": -1.6625503709098646e-07,
+    "se_meas": 4.332679757897987e-09,
+    "tolerance": 3.956822072699131e-08,
+    "difference": 2.3502337847925428e-08,
+    "z_like": 3.5969221409964485,
+    "rms_rel_pred": 2.2253569559147206e-05,
+    "rms_rel_meas": 1.4103607535965265e-05,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p017",
+  "form": "elementwise",
+  "spec": {
+   "name": "p017",
+   "form": "elementwise",
+   "in_dtype": "f32",
+   "work_dtype": "bf16",
+   "steps": [
+    "abs",
+    "abs",
+    "leaky",
+    "leaky",
+    "leaky",
+    "relu_where"
+   ],
+   "has_w": true,
+   "dists": [
+    "normal",
+    "uniform01"
+   ],
+   "B": 1024,
+   "grid": 8,
+   "out_dtype": "bf16"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 2.4761406598379922e-06,
+    "se_pred": 8.775864213837045e-06,
+    "measured": 8.22787257484211e-06,
+    "se_meas": 1.5380246802765282e-05,
+    "tolerance": 6.436659894494675e-05,
+    "difference": 5.751731915004117e-06,
+    "z_like": 0.32481263668646637,
+    "rms_rel_pred": 0.002344722696069015,
+    "rms_rel_meas": 0.0016580329751783767,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p018",
+  "form": "elementwise",
+  "spec": {
+   "name": "p018",
+   "form": "elementwise",
+   "in_dtype": "bf16",
+   "work_dtype": "bf16",
+   "steps": [
+    "square",
+    "leaky",
+    "relu"
+   ],
+   "has_w": false,
+   "dists": [
+    "uniform01",
+    "bf16valued"
+   ],
+   "B": 1024,
+   "grid": 8,
+   "out_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 0.00010701761342788684,
+    "se_pred": 1.8357236928150043e-05,
+    "measured": 0.00010761629353632985,
+    "se_meas": 1.1203944300786446e-05,
+    "tolerance": 7.522035277023886e-05,
+    "difference": 5.986801084430162e-07,
+    "z_like": 0.027837562562856924,
+    "rms_rel_pred": 0.0,
+    "rms_rel_meas": 0.0016155763938339688,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p019",
+  "form": "elementwise",
+  "spec": {
+   "name": "p019",
+   "form": "elementwise",
+   "in_dtype": "f32",
+   "work_dtype": "f32",
+   "steps": [
+    "relu_where",
+    "sqrt"
+   ],
+   "has_w": false,
+   "dists": [
+    "uniform01",
+    "uniform01"
+   ],
+   "B": 1024,
+   "grid": 8,
+   "out_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -1.1989383701379223e-08,
+    "se_pred": 4.9661016383570304e-11,
+    "measured": -1.2651387979932277e-08,
+    "se_meas": 2.191769175843392e-10,
+    "tolerance": 1.8731377745075816e-09,
+    "difference": -6.620042785530539e-10,
+    "z_like": -2.945742198275028,
+    "rms_rel_pred": 2.854310498737744e-08,
+    "rms_rel_meas": 3.4543927609858125e-08,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p020",
+  "form": "loop",
+  "spec": {
+   "name": "p020",
+   "form": "loop",
+   "in_dtype": "f16",
+   "work_dtype": "f32",
+   "steps": [
+    "rsqrt",
+    "exp",
+    "step"
+   ],
+   "has_w": true,
+   "dists": [
+    "uniform01",
+    "bf16valued"
+   ],
+   "B": 1024,
+   "T": 16,
+   "grid": 4,
+   "acc_dtype": "bf16"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -0.000300816705885531,
+    "se_pred": 2.3422288534012414e-05,
+    "measured": -0.00030196164718312833,
+    "se_meas": 3.497411434231801e-05,
+    "tolerance": 0.0001564441285159774,
+    "difference": -1.144941297597337e-06,
+    "z_like": -0.027200495700748305,
+    "rms_rel_pred": 0.0002055104355218717,
+    "rms_rel_meas": 0.004130884612114242,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p021",
+  "form": "scan",
+  "spec": {
+   "name": "p021",
+   "form": "scan",
+   "in_dtype": "f32",
+   "work_dtype": "f32",
+   "steps": [
+    "exp",
+    "sqrt",
+    "erf",
+    "to_f16",
+    "relu",
+    "sin"
+   ],
+   "has_w": false,
+   "dists": [
+    "bf16valued",
+    "wide"
+   ],
+   "B": 1024,
+   "grid": 4,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -4.597036499179136e-06,
+    "se_pred": 9.460261131069411e-07,
+    "measured": -2.5877237360046277e-06,
+    "se_meas": 5.54182229326383e-07,
+    "tolerance": 3.7490612965312045e-06,
+    "difference": 2.0093127631745085e-06,
+    "z_like": 1.8326530416391855,
+    "rms_rel_pred": 9.24105618723315e-06,
+    "rms_rel_meas": 1.1102882601492649e-05,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p022",
+  "form": "loop",
+  "spec": {
+   "name": "p022",
+   "form": "loop",
+   "in_dtype": "f16",
+   "work_dtype": "f32",
+   "steps": [
+    "rsqrt",
+    "cos",
+    "sin"
+   ],
+   "has_w": true,
+   "dists": [
+    "uniform01",
+    "bf16valued"
+   ],
+   "B": 1024,
+   "T": 64,
+   "grid": 4,
+   "acc_dtype": "bf16"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -0.0007486253242706779,
+    "se_pred": 4.3714410921899144e-05,
+    "measured": -0.0006067479265252188,
+    "se_meas": 5.411897319799705e-05,
+    "tolerance": 0.00028367129634888574,
+    "difference": 0.00014187739774545907,
+    "z_like": 2.039383607544862,
+    "rms_rel_pred": 0.00022635224351845397,
+    "rms_rel_meas": 0.008217672966162664,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p023",
+  "form": "elementwise",
+  "spec": {
+   "name": "p023",
+   "form": "elementwise",
+   "in_dtype": "f16",
+   "work_dtype": "f16",
+   "steps": [
+    "relu",
+    "square",
+    "square",
+    "scale"
+   ],
+   "has_w": false,
+   "dists": [
+    "uniform01",
+    "bf16valued"
+   ],
+   "B": 1024,
+   "grid": 8,
+   "out_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -2.24959658993862e-09,
+    "se_pred": 2.0434044989365678e-10,
+    "measured": -2.443670486834404e-09,
+    "se_meas": 2.35911455561126e-10,
+    "tolerance": 1.1612748928656977e-09,
+    "difference": -1.9407389689578383e-10,
+    "z_like": -0.6218234006469224,
+    "rms_rel_pred": 2.8808178592732493e-08,
+    "rms_rel_meas": 3.043012603159911e-08,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p024",
+  "form": "loop",
+  "spec": {
+   "name": "p024",
+   "form": "loop",
+   "in_dtype": "f32",
+   "work_dtype": "bf16",
+   "steps": [
+    "scale",
+    "abs"
+   ],
+   "has_w": false,
+   "dists": [
+    "normal",
+    "uniform01"
+   ],
+   "B": 1024,
+   "T": 16,
+   "grid": 4,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -2.557309016738064e-05,
+    "se_pred": 6.1186132501366295e-06,
+    "measured": -3.465893405544971e-05,
+    "se_meas": 4.821689629018386e-06,
+    "tolerance": 2.697824871060722e-05,
+    "difference": -9.085843888069072e-06,
+    "z_like": -1.1663276953891266,
+    "rms_rel_pred": 0.0007247589022087089,
+    "rms_rel_meas": 0.0007219332284568013,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p025",
+  "form": "dot",
+  "spec": {
+   "name": "p025",
+   "form": "dot",
+   "in_dtype": "f32",
+   "precision": "ieee",
+   "pre": "relu",
+   "post": "none",
+   "dists": [
+    "bf16valued",
+    "normal"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 256,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 1.2338286531639899e-09,
+    "se_pred": 9.803822103759856e-10,
+    "measured": 1.5758540220197608e-09,
+    "se_meas": 1.3982259830508412e-09,
+    "tolerance": 1.710586015720161e-08,
+    "difference": 3.4202536885577094e-10,
+    "z_like": 0.20028608192516897,
+    "rms_rel_pred": 7.700462590849461e-05,
+    "rms_rel_meas": 1.565786643060969e-05,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p026",
+  "form": "dot",
+  "spec": {
+   "name": "p026",
+   "form": "dot",
+   "in_dtype": "f16",
+   "precision": "tf32",
+   "pre": "none",
+   "post": "bias",
+   "dists": [
+    "uniform01",
+    "uniform01"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 512,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -5.187504910869503e-06,
+    "se_pred": 6.346273267862409e-09,
+    "measured": -5.192536652695045e-06,
+    "se_meas": 2.6070676153870175e-09,
+    "tolerance": 5.393332655975552e-07,
+    "difference": -5.031741825541817e-09,
+    "z_like": -0.7333935549211026,
+    "rms_rel_pred": 1.8219840879304188e-07,
+    "rms_rel_meas": 5.196326292553257e-06,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p027",
+  "form": "scan",
+  "spec": {
+   "name": "p027",
+   "form": "scan",
+   "in_dtype": "f32",
+   "work_dtype": "f32",
+   "steps": [
+    "floor",
+    "to_f16"
+   ],
+   "has_w": true,
+   "dists": [
+    "uniform01",
+    "wide"
+   ],
+   "B": 1024,
+   "grid": 4,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 0.0,
+    "se_pred": 0.0,
+    "measured": 0.0,
+    "se_meas": 0.0,
+    "tolerance": 0.0,
+    "difference": 0.0,
+    "z_like": 0.0,
+    "rms_rel_pred": 0.0,
+    "rms_rel_meas": 0.0,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p028",
+  "form": "dot",
+  "spec": {
+   "name": "p028",
+   "form": "dot",
+   "in_dtype": "f32",
+   "precision": "tf32",
+   "pre": "none",
+   "post": "none",
+   "dists": [
+    "bf16valued",
+    "bf16valued"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 128,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -1.2077779140476722e-07,
+    "se_pred": 1.0441170533481002e-09,
+    "measured": -1.142627380449036e-07,
+    "se_meas": 7.339651589034467e-10,
+    "tolerance": 1.6179048815330345e-08,
+    "difference": 6.515053359863625e-09,
+    "z_like": 5.10472943609469,
+    "rms_rel_pred": 1.1671246243125775e-05,
+    "rms_rel_meas": 8.207781166448074e-06,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p029",
+  "form": "loop",
+  "spec": {
+   "name": "p029",
+   "form": "loop",
+   "in_dtype": "bf16",
+   "work_dtype": "f32",
+   "steps": [
+    "rsqrt",
+    "step",
+    "sin",
+    "rsqrt",
+    "clamp",
+    "exp"
+   ],
+   "has_w": true,
+   "dists": [
+    "bf16valued",
+    "bf16valued"
+   ],
+   "B": 1024,
+   "T": 16,
+   "grid": 4,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 4.98904727171509e-09,
+    "se_pred": 3.5094043190143116e-10,
+    "measured": 5.9980845598221285e-09,
+    "se_meas": 5.48779197620752e-10,
+    "tolerance": 2.4531029387735823e-09,
+    "difference": 1.0090372881070383e-09,
+    "z_like": 1.5490362925082477,
+    "rms_rel_pred": 6.246476603626564e-08,
+    "rms_rel_meas": 6.791031619268111e-08,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p030",
+  "form": "loop",
+  "spec": {
+   "name": "p030",
+   "form": "loop",
+   "in_dtype": "f32",
+   "work_dtype": "f32",
+   "steps": [
+    "square",
+    "rsqrt"
+   ],
+   "has_w": true,
+   "dists": [
+    "wide",
+    "normal"
+   ],
+   "B": 1024,
+   "T": 16,
+   "grid": 4,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -7.75236477880044e-09,
+    "se_pred": 2.7089024194054966e-10,
+    "measured": -5.976383871078643e-09,
+    "se_meas": 4.362702234889321e-10,
+    "tolerance": 2.3158307339726747e-09,
+    "difference": 1.7759809077217974e-09,
+    "z_like": 3.4583769880553454,
+    "rms_rel_pred": 4.3353194749186216e-08,
+    "rms_rel_meas": 6.3112996431846e-08,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p031",
+  "form": "loop",
+  "spec": {
+   "name": "p031",
+   "form": "loop",
+   "in_dtype": "f32",
+   "work_dtype": "f32",
+   "steps": [
+    "square",
+    "fma_w",
+    "sqrt",
+    "floor",
+    "rsqrt",
+    "sqrt"
+   ],
+   "has_w": true,
+   "dists": [
+    "normal",
+    "normal"
+   ],
+   "B": 1024,
+   "T": 16,
+   "grid": 4,
+   "acc_dtype": "f16"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 0.0004255894484669857,
+    "se_pred": 1.563927637807946e-06,
+    "measured": 0.00042333949836296305,
+    "se_meas": 3.123871941798895e-06,
+    "tolerance": 5.304159940732012e-05,
+    "difference": -2.2499501040226496e-06,
+    "z_like": -0.6440415102846517,
+    "rms_rel_pred": 3.3136642889788235e-05,
+    "rms_rel_meas": 0.000639099497045566,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "无法判断",
+  "reason": "approx_discrete_inputs@math.rsqrt@38 (65536 lanes); approx_discrete_inputs@math.sqrt@41 (65536 lanes); flip_risk_discontinuous:integer boundary@math.floor@34 (15 lanes); flip_risk_discontinuous:integer boundary@math.floor@34 (17 lanes); flip_risk_discontinuous:integer boundary@math.floor@34 (18 lanes); flip_risk_discontinuous:integer boundary@math.floor@34 (19 lanes); flip_risk_discontinuous:integ"
+ },
+ {
+  "program": "p032",
+  "form": "scan",
+  "spec": {
+   "name": "p032",
+   "form": "scan",
+   "in_dtype": "bf16",
+   "work_dtype": "f32",
+   "steps": [
+    "mul_w",
+    "sigmoid",
+    "to_f16"
+   ],
+   "has_w": true,
+   "dists": [
+    "wide",
+    "normal"
+   ],
+   "B": 1024,
+   "grid": 4,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 2.3394667984023778e-06,
+    "se_pred": 1.1923330236865986e-06,
+    "measured": -1.8207167576837046e-07,
+    "se_meas": 1.4355333750982163e-06,
+    "tolerance": 1644975.796388904,
+    "difference": -2.5215384741707482e-06,
+    "z_like": -1.3512179072618316,
+    "rms_rel_pred": 906.9111853933305,
+    "rms_rel_meas": 0.002617568941675173,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "无法判断",
+  "reason": "subnormal_or_nonfinite@arith.truncf@24 (306 of 40960 lanes); subnormal_or_nonfinite@arith.truncf@24 (307 of 40960 lanes); subnormal_or_nonfinite@arith.truncf@24 (314 of 40960 lanes); subnormal_or_nonfinite@arith.truncf@24 (323 of 40960 lanes); subnormal_or_nonfinite@arith.truncf@24 (333 of 40960 lanes); subnormal_or_nonfinite@arith.truncf@24 (335 of 40960 lanes)"
+ },
+ {
+  "program": "p033",
+  "form": "reduce",
+  "spec": {
+   "name": "p033",
+   "form": "reduce",
+   "in_dtype": "f32",
+   "work_dtype": "f32",
+   "steps": [
+    "div_w",
+    "to_bf16",
+    "to_bf16",
+    "rsqrt",
+    "square"
+   ],
+   "has_w": true,
+   "dists": [
+    "normal",
+    "wide"
+   ],
+   "R": 16,
+   "C": 256,
+   "grid": 8,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 2.3651687286138684e-06,
+    "se_pred": 1.7493969767807956e-06,
+    "measured": 2.2865523290884574e-06,
+    "se_meas": 1.8339275740096003e-06,
+    "tolerance": 7.840010884776204e-06,
+    "difference": -7.8616399525411e-08,
+    "z_like": -0.031018528884577137,
+    "rms_rel_pred": 3.005977882880538e-08,
+    "rms_rel_meas": 3.6294773173883975e-05,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p034",
+  "form": "elementwise",
+  "spec": {
+   "name": "p034",
+   "form": "elementwise",
+   "in_dtype": "bf16",
+   "work_dtype": "f32",
+   "steps": [
+    "scale",
+    "abs",
+    "rsqrt",
+    "erf",
+    "relu"
+   ],
+   "has_w": true,
+   "dists": [
+    "wide",
+    "uniform01"
+   ],
+   "B": 1024,
+   "grid": 8,
+   "out_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": 4.960856725442766e-10,
+    "se_pred": 6.870329303486493e-11,
+    "measured": 1.349501609540192e-09,
+    "se_meas": 1.1745506105475066e-10,
+    "tolerance": 4.5783002892247234e-10,
+    "difference": 8.534159369959155e-10,
+    "z_like": 6.271755384738416,
+    "rms_rel_pred": 3.717983101572672e-08,
+    "rms_rel_meas": 3.281609209960369e-08,
+    "holds": false,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "不成立"
+ },
+ {
+  "program": "p035",
+  "form": "elementwise",
+  "spec": {
+   "name": "p035",
+   "form": "elementwise",
+   "in_dtype": "bf16",
+   "work_dtype": "bf16",
+   "steps": [
+    "leaky",
+    "scale",
+    "relu",
+    "relu_where",
+    "leaky",
+    "relu"
+   ],
+   "has_w": false,
+   "dists": [
+    "uniform01",
+    "bf16valued"
+   ],
+   "B": 1024,
+   "grid": 8,
+   "out_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -3.3395003221660804e-06,
+    "se_pred": 5.5860510793707055e-06,
+    "measured": -2.0455173366906707e-05,
+    "se_meas": 8.85053372139935e-06,
+    "tolerance": 3.7126283187624267e-05,
+    "difference": -1.7115673044740628e-05,
+    "z_like": -1.6353688222877854,
+    "rms_rel_pred": 0.0016423323639568532,
+    "rms_rel_meas": 0.001664199602590955,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p036",
+  "form": "dot",
+  "spec": {
+   "name": "p036",
+   "form": "dot",
+   "in_dtype": "f16",
+   "precision": "tf32",
+   "pre": "none",
+   "post": "none",
+   "dists": [
+    "uniform01",
+    "normal"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 128,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -2.0320691077548015e-07,
+    "se_pred": 3.937442937024549e-09,
+    "measured": -2.064605352597749e-07,
+    "se_meas": 7.475367838599092e-09,
+    "tolerance": 4.803178630353493e-08,
+    "difference": -3.2536244842947634e-09,
+    "z_like": -0.385092641110399,
+    "rms_rel_pred": 3.438223579709095e-05,
+    "rms_rel_meas": 7.179376883817017e-05,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p037",
+  "form": "scan",
+  "spec": {
+   "name": "p037",
+   "form": "scan",
+   "in_dtype": "f32",
+   "work_dtype": "f32",
+   "steps": [
+    "to_bf16",
+    "to_e5m2",
+    "sigmoid",
+    "leaky"
+   ],
+   "has_w": true,
+   "dists": [
+    "bf16valued",
+    "wide"
+   ],
+   "B": 1024,
+   "grid": 4,
+   "acc_dtype": "f32"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -3.094102399873082e-05,
+    "se_pred": 0.00016600403101971154,
+    "measured": -6.999641431903006e-05,
+    "se_meas": 5.302438749179739e-05,
+    "tolerance": 0.0005258945575035305,
+    "difference": -3.9055390320299246e-05,
+    "z_like": -0.22411260322721624,
+    "rms_rel_pred": 4.107760782696581e-08,
+    "rms_rel_meas": 0.0018654461878749309,
+    "holds": true,
+    "null_holds": true
+   }
+  },
+  "null_verdict": "成立",
+  "verdict": "成立"
+ },
+ {
+  "program": "p038",
+  "form": "dot",
+  "spec": {
+   "name": "p038",
+   "form": "dot",
+   "in_dtype": "f32",
+   "precision": "tf32",
+   "pre": "none",
+   "post": "sigmoid",
+   "dists": [
+    "bf16valued",
+    "bf16valued"
+   ],
+   "M": 64,
+   "N": 64,
+   "K": 128,
+   "BK": 32,
+   "grid": 4
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -2.954623781391374e-09,
+    "se_pred": 3.135905349448857e-10,
+    "measured": -4.919804910919332e-09,
+    "se_meas": 3.807474782994027e-10,
+    "tolerance": 1.7757753916298913e-09,
+    "difference": -1.965181129527958e-09,
+    "z_like": -3.9840491636256217,
+    "rms_rel_pred": 5.129361754258915e-07,
+    "rms_rel_meas": 1.2490452492632752e-06,
+    "holds": false,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "不成立"
+ },
+ {
+  "program": "p039",
+  "form": "loop",
+  "spec": {
+   "name": "p039",
+   "form": "loop",
+   "in_dtype": "bf16",
+   "work_dtype": "f32",
+   "steps": [
+    "to_e5m2",
+    "to_bf16",
+    "to_f16",
+    "to_e5m2",
+    "mul_w",
+    "sqrt"
+   ],
+   "has_w": true,
+   "dists": [
+    "bf16valued",
+    "wide"
+   ],
+   "B": 1024,
+   "T": 16,
+   "grid": 4,
+   "acc_dtype": "bf16"
+  },
+  "outputs": {
+   "y_ptr": {
+    "predicted": -0.0009789316435740482,
+    "se_pred": 8.412492408479546e-05,
+    "measured": -0.0012895380093585257,
+    "se_meas": 6.981955502312126e-05,
+    "tolerance": 0.00042586566022133224,
+    "difference": -0.0003106063657844775,
+    "z_like": -2.841150124187723,
+    "rms_rel_pred": 9.5882495560918e-09,
+    "rms_rel_meas": 0.009629797724943314,
+    "holds": true,
+    "null_holds": false
+   }
+  },
+  "null_verdict": "不成立",
+  "verdict": "成立"
+ }
+]

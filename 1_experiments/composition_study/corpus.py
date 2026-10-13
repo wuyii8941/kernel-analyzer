@@ -117,45 +117,52 @@ def liger_calls(torch):
 
 
 def gems_calls(torch):
-    import torch.nn.functional as Fn
     calls = []
     for dt in (torch.float32, torch.float16, torch.bfloat16):
-        def x_(shape=(64, 512), dt=dt, pos=False):
-            g = torch.Generator(device="cuda").manual_seed(1)
-            v = torch.randn(*shape, device="cuda", generator=g)
-            return (v.abs() + 0.1 if pos else v).to(dt)
-        ops = {
-            "abs": lambda: torch.abs(x_()), "exp": lambda: torch.exp(x_()), "log": lambda: torch.log(x_(pos=True)),
-            "sin": lambda: torch.sin(x_()), "cos": lambda: torch.cos(x_()), "tanh": lambda: torch.tanh(x_()),
-            "sigmoid": lambda: torch.sigmoid(x_()), "gelu": lambda: Fn.gelu(x_()), "silu": lambda: Fn.silu(x_()),
-            "relu": lambda: torch.relu(x_()), "rsqrt": lambda: torch.rsqrt(x_(pos=True)),
-            "sqrt": lambda: torch.sqrt(x_(pos=True)), "erf": lambda: torch.erf(x_()),
-            "reciprocal": lambda: torch.reciprocal(x_(pos=True)), "neg": lambda: torch.neg(x_()),
-            "pow": lambda: torch.pow(x_(pos=True), 1.7), "div": lambda: x_() / x_(pos=True),
-            "add": lambda: x_() + x_(), "mul": lambda: x_() * x_(), "sub": lambda: x_() - x_(),
-            "where": lambda: torch.where(x_() > 0, x_(), x_() * 2), "clamp": lambda: torch.clamp(x_(), -0.5, 0.5),
-            "sum": lambda: x_().sum(dim=1), "mean": lambda: x_().mean(dim=1), "amax": lambda: x_().amax(dim=1),
-            "prod": lambda: x_((64, 16)).prod(dim=1), "argmax": lambda: x_().argmax(dim=1),
-            "var": lambda: x_().var(dim=1), "norm": lambda: torch.linalg.vector_norm(x_(), dim=1),
-            "softmax": lambda: torch.softmax(x_(), dim=1), "log_softmax": lambda: torch.log_softmax(x_(), dim=1),
-            "layer_norm": lambda: Fn.layer_norm(x_(), (512,)), "cumsum": lambda: torch.cumsum(x_(), dim=1),
-            "mm": lambda: x_((64, 128)) @ x_((128, 64)), "bmm": lambda: torch.bmm(x_((4, 32, 64)), x_((4, 64, 32))),
-            "addmm": lambda: torch.addmm(x_((64,)), x_((64, 128)), x_((128, 64))),
-            "cross_entropy": lambda: Fn.cross_entropy(x_((64, 100)).float(),
-                                                      torch.randint(0, 100, (64,), device="cuda")),
-            "gather": lambda: torch.gather(x_(), 1, torch.randint(0, 512, (64, 16), device="cuda")),
-            "index_select": lambda: torch.index_select(x_(), 0, torch.randint(0, 64, (32,), device="cuda")),
-            "sort": lambda: torch.sort(x_((16, 256)), dim=1), "topk": lambda: torch.topk(x_((16, 256)), 8, dim=1),
-            "embedding": lambda: Fn.embedding(torch.randint(0, 64, (32,), device="cuda"), x_()),
-            "masked_fill": lambda: x_().masked_fill(x_() > 1, 0.0), "max_dim": lambda: torch.max(x_(), dim=1),
-            "min": lambda: torch.min(x_()), "isnan": lambda: torch.isnan(x_()), "floor_divide":
-                lambda: torch.floor_divide(x_(), x_(pos=True)), "rms_norm": lambda: Fn.rms_norm(x_(), (512,)),
-            "group_norm": lambda: Fn.group_norm(x_((4, 32, 128)), 8), "dropout": lambda: Fn.dropout(x_(), 0.1, True),
-            "linspace": lambda: torch.linspace(0, 1, 1000, device="cuda", dtype=dt),
-        }
-        for name, fn in ops.items():
+        for name, fn in gems_ops(torch, dt).items():
             calls.append((f"gems.{name}.{str(dt).split('.')[-1]}", fn))
     return calls
+
+
+def gems_ops(torch, dt):
+    """The FlagGems calls at one dtype.  Built in their own scope so that every lambda binds this dtype's ``x_`` (the
+    first version defined them in the dtype loop: the lambdas looked ``x_`` and ``dt`` up when called, so all three
+    dtypes ran bf16)."""
+    import torch.nn.functional as Fn
+
+    def x_(shape=(64, 512), pos=False):
+        g = torch.Generator(device="cuda").manual_seed(1)
+        v = torch.randn(*shape, device="cuda", generator=g)
+        return (v.abs() + 0.1 if pos else v).to(dt)
+    return {
+        "abs": lambda: torch.abs(x_()), "exp": lambda: torch.exp(x_()), "log": lambda: torch.log(x_(pos=True)),
+        "sin": lambda: torch.sin(x_()), "cos": lambda: torch.cos(x_()), "tanh": lambda: torch.tanh(x_()),
+        "sigmoid": lambda: torch.sigmoid(x_()), "gelu": lambda: Fn.gelu(x_()), "silu": lambda: Fn.silu(x_()),
+        "relu": lambda: torch.relu(x_()), "rsqrt": lambda: torch.rsqrt(x_(pos=True)),
+        "sqrt": lambda: torch.sqrt(x_(pos=True)), "erf": lambda: torch.erf(x_()),
+        "reciprocal": lambda: torch.reciprocal(x_(pos=True)), "neg": lambda: torch.neg(x_()),
+        "pow": lambda: torch.pow(x_(pos=True), 1.7), "div": lambda: x_() / x_(pos=True),
+        "add": lambda: x_() + x_(), "mul": lambda: x_() * x_(), "sub": lambda: x_() - x_(),
+        "where": lambda: torch.where(x_() > 0, x_(), x_() * 2), "clamp": lambda: torch.clamp(x_(), -0.5, 0.5),
+        "sum": lambda: x_().sum(dim=1), "mean": lambda: x_().mean(dim=1), "amax": lambda: x_().amax(dim=1),
+        "prod": lambda: x_((64, 16)).prod(dim=1), "argmax": lambda: x_().argmax(dim=1),
+        "var": lambda: x_().var(dim=1), "norm": lambda: torch.linalg.vector_norm(x_(), dim=1),
+        "softmax": lambda: torch.softmax(x_(), dim=1), "log_softmax": lambda: torch.log_softmax(x_(), dim=1),
+        "layer_norm": lambda: Fn.layer_norm(x_(), (512,)), "cumsum": lambda: torch.cumsum(x_(), dim=1),
+        "mm": lambda: x_((64, 128)) @ x_((128, 64)), "bmm": lambda: torch.bmm(x_((4, 32, 64)), x_((4, 64, 32))),
+        "addmm": lambda: torch.addmm(x_((64,)), x_((64, 128)), x_((128, 64))),
+        "cross_entropy": lambda: Fn.cross_entropy(x_((64, 100)).float(),
+                                                  torch.randint(0, 100, (64,), device="cuda")),
+        "gather": lambda: torch.gather(x_(), 1, torch.randint(0, 512, (64, 16), device="cuda")),
+        "index_select": lambda: torch.index_select(x_(), 0, torch.randint(0, 64, (32,), device="cuda")),
+        "sort": lambda: torch.sort(x_((16, 256)), dim=1), "topk": lambda: torch.topk(x_((16, 256)), 8, dim=1),
+        "embedding": lambda: Fn.embedding(torch.randint(0, 64, (32,), device="cuda"), x_()),
+        "masked_fill": lambda: x_().masked_fill(x_() > 1, 0.0), "max_dim": lambda: torch.max(x_(), dim=1),
+        "min": lambda: torch.min(x_()), "isnan": lambda: torch.isnan(x_()), "floor_divide":
+            lambda: torch.floor_divide(x_(), x_(pos=True)), "rms_norm": lambda: Fn.rms_norm(x_(), (512,), torch.ones(512, device="cuda", dtype=dt)),
+        "group_norm": lambda: Fn.group_norm(x_((4, 32, 128)), 8), "dropout": lambda: Fn.dropout(x_(), 0.1, True),
+        "linspace": lambda: torch.linspace(0, 1, 1000, device="cuda", dtype=dt),
+    }
 
 
 GEMS_EXCLUDE = ["copy_", "fill.Scalar", "fill.Tensor", "fill_.Scalar", "fill_.Tensor", "zero", "zero_", "zeros",
@@ -170,7 +177,7 @@ def ttir_ops(text):
 
 
 def classify_launch(launch, catalog_pids, catalog_names):
-    """Primitives and forms of one launch; K1 = operations without a measured catalogued primitive."""
+    """Primitives and forms of one launch (K1 / K2 come from coverage.classify; the K1 here is by name only)."""
     ops = ttir_ops(launch.asm["ttir"])
     prims, forms, k1 = Counter(), Counter(), Counter()
     for op in ops:
@@ -213,11 +220,12 @@ def main():
     a = ap.parse_args()
     import torch
     import cells as CL
+    import coverage as CV
+    keys, cells_tab = CV.catalog_keys(), CV.cell_table()
     from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder
     cat = json.loads((HERE / "results/catalog.json").read_text())
     measured = {r["pid"] for r in cat["records"] if r.get("status") == "measured"}
     names = {r["op"] for r in cat["records"] if r.get("status") == "measured"}
-    seen_names = Counter()
     calls = []
     try:
         calls += liger_calls(torch)
@@ -235,7 +243,14 @@ def main():
         faulthandler.dump_traceback_later(900, exit=False)     # a stuck call shows where it waits
         if a.only and a.only not in name:
             continue
-        rec = TritonLaunchRecorder(select=lambda kname, idx: seen_names[kname] < 2)
+        per_call = Counter()
+
+        def take_first_two(kname, idx, per_call=per_call):
+            # at most two launches of each kernel per call (the first version counted across calls, so a kernel
+            # already seen at one dtype was not captured at the others)
+            per_call[kname] += 1
+            return per_call[kname] <= 2
+        rec = TritonLaunchRecorder(select=take_first_two)
         try:
             if name.startswith("gems.") and flag_gems is not None:
                 # the recorder copies operands with torch ops before each launch: routed through FlagGems they would
@@ -253,21 +268,24 @@ def main():
             print(name, "call failed", str(e)[:120], flush=True)
             continue
         for L in rec.launches:
-            seen_names[L.kernel_name] += 1
             h = hashlib.sha256(L.asm["ttir"].encode()).hexdigest()
             if h in by_hash:
                 by_hash[h]["calls"].append(name)
                 continue
             try:
-                prims, forms, k1 = classify_launch(L, measured, names)
+                prims, forms, _ = classify_launch(L, measured, names)
+                cov = CV.classify(L.asm["ttir"], keys, cells_tab)
             except Exception as e:
-                prims, forms, k1 = Counter(), Counter(), Counter({f"parse error: {type(e).__name__}": 1})
+                prims, forms = Counter(), Counter()
+                cov = {"k1": {f"parse error: {type(e).__name__}": 1}, "k1_name_only": {}, "k2": {}, "pairs": {},
+                       "k2_not_bit_identical": []}
             r = CL.compare_launch(L)
             entry = {"call": name, "calls": [name], "kernel": L.kernel_name, "ttir_sha256": h,
                      "status": r.get("status"), "elements": r.get("elements"), "not_emulable": r.get("not_emulable"),
                      "abort_reasons": r.get("abort_reasons"), "error": r.get("error"),
                      "forms": dict(forms), "primitives": {"|".join(map(str, k)): v for k, v in prims.items()},
-                     "k1_outside_catalog": dict(k1)}
+                     "k1_outside_catalog": cov["k1"], "k1_name_only": cov["k1_name_only"],
+                     "k2": cov["k2"], "k2_not_bit_identical": cov["k2_not_bit_identical"]}
             by_hash[h] = entry
             records.append(entry)
             print(name, L.kernel_name, entry["status"], (entry["elements"] or {}).get("bit_identical"),
@@ -279,17 +297,22 @@ def main():
     st = Counter(r["status"] for r in kernels)
     forms = Counter()
     prims = Counter()
-    k1 = Counter()
+    k1, k2 = Counter(), Counter()
     for r in kernels:
         forms.update({k: 1 for k in r["forms"]})
         prims.update({k: 1 for k in r["primitives"]})
         k1.update({k: 1 for k in r["k1_outside_catalog"]})
+        k2.update(r["k2"].values())
     el = Counter()
     for r in kernels:
         el.update(r.get("elements") or {})
     summary = {"calls": len(calls + gems), "distinct_kernels": len(kernels), "status": dict(st),
                "elements": dict(el), "kernels_with_form": dict(forms.most_common()),
                "kernels_with_primitive": dict(prims.most_common(80)), "k1_kernels": dict(k1),
+               "kernels_without_k1": sum(1 for r in kernels if not r["k1_outside_catalog"]),
+               "k2_pairs_by_status": dict(k2),
+               "kernels_all_pairs_bit_identical": sum(1 for r in kernels if not r["k1_outside_catalog"]
+                                                      and not r["k2_not_bit_identical"]),
                "call_failures": [r for r in records if r.get("status") == "call failed"]}
     Path(a.out).write_text(json.dumps({"summary": summary, "kernels": kernels}, indent=1, default=str,
                                       ensure_ascii=False))

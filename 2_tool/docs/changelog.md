@@ -19,6 +19,24 @@ v1.1 的计分只绑定运行 r20261008T2030。
   - 新测试只在 CPU 上求值编译产物（`triton.compile`，不启动），有竞争的 kernel 从不运行。
 - 注册表写到 `2_tool/data/rule_registry.json`（`2_tool/scripts/dsl_v2/build_rule_registry.py`）；`pre-reorg-20261009:results/general/` 下的 v3.1 注册表冻结不改。
 
+### 组合研究修订：组合偏差预测与审阅修正，2026-10-13
+
+见 [1_experiments/composition_study](../../1_experiments/composition_study/README.md) 第 11 节与
+[predictor_protocol.md](../../1_experiments/composition_study/predictor_protocol.md)。
+
+- **新模块 `reference_eval/bias_predict.py`**：不运行 kernel，按精确值求一遍启动，在每个舍入点注入局部契约（条件均值、
+  半宽、方差）并沿切向规则传播，给出每个输出元素的预测均值误差 δ、一阶最坏半径 R、噪声水平，以及对齐 ⟨δ, G⟩ / ⟨G, G⟩；
+  失效条件成立时给「无法判断」。契约表 `reference_eval/data/bias_contracts.json.gz` 由 `composition_study/contracts.py` 在设备上
+  单测近似原语得到。测试 `tests/test_reference_eval_bias_predict.py`（含张量核契约对逐位模型、e5m2 函数对设备、一次 tf32 dot
+  的事前预测对设备）。
+- **`capture.TritonLaunchRecorder(execute=False)`**：只记录启动、不运行 kernel（`CapturedLaunch.executed` 为假），供事前分析。
+- **`emulate.verify` 的状态**：新增 `partial`——仿真的元素全部一致，但有写出的元素没有仿真值或有程序中止；原来报
+  `bit_identical`（审阅指出组合研究的同一错误）。
+- **两个乘积相加时收缩哪一个**：先用 PTX 数据流证据（单独乘法的两个乘数来自哪个乘积的操作数）；bf16 的单独乘积在 sm_86 上
+  是 `fma.rn.bf16 x, y, -0`。原来只看源位置，同一行的两个乘积会选错（Liger rope）。
+- **展平 reshape 后的归约**：`tl.reshape(x2d, (n,), can_reorder=True)` 之后的求和按源二维布局的寄存器次序（`layouts.flattened_params`），
+  乘积穿过展平的 reshape 也并进第一个组合（FlagGems group_norm）。
+
 ### 组合研究：逐位仿真器的组合规则，2026-10-13
 
 见 [1_experiments/composition_study](../../1_experiments/composition_study/README.md)。原语 × 组合形式的全组合扫描在设备上检验

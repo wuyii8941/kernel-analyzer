@@ -159,17 +159,47 @@ def run_cell(prim, form, param, options, seed_text):
                                   for n, _, _ in cell.outputs)
     reports = [compare_launch(L) for L in R.launches]
     rec["launches"] = reports
-    sts = [r["status"] for r in reports]
-    if not reports:
-        rec["status"] = "not captured"
-    elif all(s == "bit_identical" for s in sts):
-        rec["status"] = "bit identical"
-    elif any(s == "mismatch" for s in sts):
-        rec["status"] = "mismatch"
-    elif any(s == "emulator error" for s in sts):
-        rec["status"] = "emulator error"
-    else:
-        rec["status"] = "not established"
+    rec["status"] = aggregate_status([r["status"] for r in reports])
+    return rec
+
+
+def cell_status(tot, aborted: int) -> str:
+    """Status of one launch from its element counts.  'bit_identical' only when every written element was emulated,
+    every emulated element agrees and no program was aborted; agreement on the emulated part alone is 'partial' (the
+    first version counted such launches as bit identical: 1,591 default cells)."""
+    if tot.get("emulated", 0) == 0:
+        return "not_established"
+    if tot.get("mismatch", 0):
+        return "mismatch"
+    if tot.get("not_emulated", 0) or aborted:
+        return "partial"
+    return "bit_identical"
+
+
+def aggregate_status(sts) -> str:
+    """Status of a cell from the statuses of its launches."""
+    if not sts:
+        return "not captured"
+    if all(s == "bit_identical" for s in sts):
+        return "bit identical"
+    if any(s == "mismatch" for s in sts):
+        return "mismatch"
+    if any(s == "emulator error" for s in sts):
+        return "emulator error"
+    if any(s in ("bit_identical", "partial") for s in sts):
+        return "partial"
+    return "not established"
+
+
+def rescore(rec: dict) -> dict:
+    """Recompute the launch and cell statuses of a stored record with the strict rule (records without launches keep
+    their build / compile / launch status)."""
+    if "launches" not in rec:
+        return rec
+    for L in rec["launches"]:
+        if "elements" in L:
+            L["status"] = cell_status(L["elements"], L.get("aborted_programs", 0))
+    rec["status"] = aggregate_status([L["status"] for L in rec["launches"]])
     return rec
 
 
@@ -192,6 +222,7 @@ def compare_launch(L) -> dict:
         tot["emulated"] += int(m["emulated"].sum())
         tot["bit_identical"] += int(m["bit_equal"].sum())
         tot["nan_both"] += int(m["nan_both"].sum())
+        tot["undefined"] += int((written & (o[3] == 4)).sum())                    # ST_UNDEF: no declared value
     for ptr, b in result.buffers.items():
         if b.kind not in ("i", "b") or not b.written.any():   # integer and boolean (i1 stored as bytes) buffers
             continue
@@ -201,6 +232,7 @@ def compare_launch(L) -> dict:
         tot["emulated"] += int(point.sum())
         tot["bit_identical"] += int((point & (b.lo == b.actual_after)).sum())
         tot["int_elements"] += int(w.sum())
+        tot["undefined"] += int((w & (b.st == 4)).sum())
     tot["mismatch"] = tot["emulated"] - tot["bit_identical"] - tot["nan_both"]
     tot["not_emulated"] = tot["written"] - tot["emulated"]
     nodes, not_em = Counter(), []
@@ -208,8 +240,12 @@ def compare_launch(L) -> dict:
         nodes[how.split(":")[0]] += 1
         if how.startswith("not_emulable"):
             not_em.append(f"{node} ({how.split(':', 1)[1]})")
-    status = ("not_established" if tot["emulated"] == 0 else ("bit_identical" if tot["mismatch"] == 0 else "mismatch"))
-    return {"status": status, "elements": dict(tot), "nodes": dict(nodes), "not_emulable": not_em[:4],
+    why = Counter()
+    for k, v in (result.reasons or {}).items():
+        if str(k).startswith("not_established:"):
+            why[re.sub(r"@\S+$", "", str(k)[len("not_established:"):])] += int(v) if isinstance(v, (int, np.integer)) else 1
+    return {"status": cell_status(tot, len(result.aborted)), "elements": dict(tot), "nodes": dict(nodes),
+            "not_established_reasons": dict(why.most_common(4)), "not_emulable": not_em[:4],
             "aborted_programs": len(result.aborted), "abort_reasons": sorted(set(result.aborted.values()))[:3],
             "contractions_from_sass": emu.sass_choices, "product_choices_from_ptx": emu.ptx_choices,
             "seconds": round(time.time() - t0, 2)}
