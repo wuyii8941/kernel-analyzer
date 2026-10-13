@@ -244,3 +244,28 @@ def test_fma_chain_carries_the_rounded_accumulator():
     a[0, :4] = [1.0, 2.0 ** -24, 2.0 ** -24, 2.0 ** -24]
     mu, _, _ = BP.fma_chain_contract(a, b, np.zeros((1, 1)))
     assert mu[0, 0] == -3 * 2.0 ** -24
+
+
+@cuda
+def test_dot_outside_the_contracts_names_its_types():
+    """An fp16-accumulator tensor-core dot is outside the contracts; the reason names the element types (it said
+    "dot (tf32, f16)", the input-precision attribute, which an fp16 dot carries by default)."""
+    pytest.importorskip("triton")
+    import triton
+    import triton.language as tl
+
+    from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder
+
+    @triton.jit
+    def dot_f16acc(a_ptr, b_ptr, c_ptr, M: tl.constexpr, N: tl.constexpr, K: tl.constexpr):
+        rm, rn, rk = tl.arange(0, M), tl.arange(0, N), tl.arange(0, K)
+        a = tl.load(a_ptr + rm[:, None] * K + rk[None, :])
+        b = tl.load(b_ptr + rk[:, None] * N + rn[None, :])
+        acc = tl.dot(a, b, tl.zeros((M, N), dtype=tl.float16), out_dtype=tl.float16)
+        tl.store(c_ptr + rm[:, None] * N + rn[None, :], acc)
+
+    a, b = torch.randn(64, 64, device="cuda").half(), torch.randn(64, 64, device="cuda").half()
+    with TritonLaunchRecorder(execute=False) as rec:
+        dot_f16acc[(1,)](a, b, torch.empty(64, 64, device="cuda").half(), M=64, N=64, K=64)
+    s = BP.summarize(BP.predict(rec.launches[0]))
+    assert s["status"] != "predicted" and any("f16 x f16 -> f16" in f for f in s["failures"]), s["failures"]

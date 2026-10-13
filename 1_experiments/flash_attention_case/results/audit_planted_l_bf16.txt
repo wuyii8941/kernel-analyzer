@@ -1,31 +1,59 @@
-══ 审查报告 ══
+══ _attn_fwd_l_bf16：输出 O 系统性偏大约 0.23%（不是噪声）；输出 M（logsumexp） 系统性偏小约 0.028%（不是噪声） ══
+
+O：系统性偏大约 0.23%（不是噪声）
+  · 常用容差检查：assert_close(atol=1e-2, rtol=0)（Triton 教程的测试） 会通过——这个偏差会被漏掉；allclose(rtol=1e-2, atol=1e-5)、assert_close 的 dtype 默认值 去掉这个偏差也通不过（随机误差已超出），说明不了它。
+  · 运行前预测偏大约 0.22%，实测偏大约 0.23%，一致。
+  · 各 program 的偏差差别大（−0.0081% 到 +0.41%）：抽查值不一定代表整个 kernel，要全量评估传 programs="all"。
+  · 公式与规格一致，问题出在数值实现。
+
+M（logsumexp）：系统性偏小约 0.028%（不是噪声）
+  · 常用容差检查（未给规格，对声明的程序）：allclose(rtol=1e-2, atol=1e-5) 会通过——这个偏差会被漏掉；assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）、assert_close 的 dtype 默认值 去掉这个偏差也通不过（随机误差已超出），说明不了它。
+  · 运行前预测偏小约 0.027%，实测偏小约 0.028%，一致。
+  · 各 program 的偏差在 −0.049% 到 +0.0026% 之间，差别在随机误差范围内。
+  · 未给规格：以上相对声明的程序；公式本身对不对，要给规格才能判断。
+
+原因
+  - planted_fwd.py:352  `l_i = (l_i * alpha + l_ij).to(tl.bfloat16).to(tl.float32)`
+      循环携带的量保留在窄类型里：增量不足一个 ulp 时被吞掉，长循环会停滞；贡献：O +0.23%，M（logsumexp） −0.028%
+  - 其他位点合计：O −0.00028%，M（logsumexp） <0.0001%，可忽略
+
+建议
+  1. 循环携带的窄类型累加（planted_fwd.py:352）
+     - 把循环里的累加量保持在 fp32，循环结束后再转换：多用寄存器，几乎不增加耗时
+     预测效果，改这一处：O +0.23% → <0.0001%；M（logsumexp） −0.028% → <0.0001%
+  （预测效果是模型内的反事实：这些位点不再引入误差时的偏差，在同一组 program 上算得；修改后再跑一次 audit 即可在 GPU 上核对。）
+
+数值偏差是否值得修，取决于它进入下游（例如训练）后会不会超过随机种子之间的波动；这需要下游测量，工具不判断。
+
+范围：Triton 3.6.0 / sm_86（锁定的下降规则），抽查 6/32 个 program（规则：各轴首尾 program，含序列末尾的边界块，另取中间 2 个）。
+
+──── 附录 ────
 【事前预测，kernel 未运行】已预测
-  M: 对齐 -0.000261（噪声标准误 9.2e-05），相对误差（能量加权）0.0021
-  desc_o: 对齐 +0.00186（噪声标准误 0.00017），相对误差（能量加权）0.017
+  M（logsumexp）: 对齐 -0.000274（噪声标准误 5.2e-05），相对误差（能量加权）0.002
+  O: 对齐 +0.00217（噪声标准误 9.3e-05），相对误差（能量加权）0.017
 【运行】下降规则逐位核对：bit_identical
-  M: K − G 对齐 -0.00027（标准误 8.9e-05）——未发现显著偏差，与事前预测一致
-      相对误差（能量加权）0.0015，最大 |K − G| 0.057（256 / 256 个元素）
-  desc_o: K − G 对齐 +0.002（标准误 0.00015）——有显著的系统偏差，与事前预测一致
-      相对误差（能量加权）0.012，最大 |K − G| 0.003（16384 / 16384 个元素）
-  desc_o: G − S（语义）-1.47e-08，K − S（合计）+0.002
-【M 的来源（偏差不显著，仅供参考）】各节点对对齐量的贡献（program [(0, 0, 0), (1, 0, 0)]；合计 -0.000264）
-  -0.00027  arith.truncf@125       planted_fwd.py:352   转到更窄的格式（舍入）
-  +5.72e-06  arith.addf@124         planted_fwd.py:352   乘加收缩成一次 fma（一次舍入）
-  -5.64e-08  tt.dot@81              planted_fwd.py:319   张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）
-  +4.78e-09  math.log2@131          planted_fwd.py:424   近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差
-  +1.58e-09  arith.addf@132         planted_fwd.py:424   在声明类型中就近舍入
-  +6.54e-10  arith.mulf@88          planted_fwd.py:326   在声明类型中就近舍入
-  +0  arith.mulf@33          planted_fwd.py:402   在声明类型中就近舍入
-  +0  arith.maxnumf@89       planted_fwd.py:326   在声明类型中就近舍入
-【desc_o 的来源】各节点对对齐量的贡献（program [(0, 0, 0), (1, 0, 0)]；合计 +0.00196）
-  +0.002  arith.truncf@125       planted_fwd.py:352   循环携带的量保留在窄类型里（低精度累加：增量不足一个 ulp 时被吞掉，长循环会停滞）
-  -4.34e-05  arith.addf@124         planted_fwd.py:352   乘加收缩成一次 fma（一次舍入）
-  +4.79e-06  arith.truncf@121       planted_fwd.py:347   转到更窄的格式（舍入）
-  -2.37e-06  tt.dot@122             planted_fwd.py:349   张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）
-  +2.35e-06  tt.dot@81              planted_fwd.py:319   张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）
-  +2.31e-06  arith.truncf@141       planted_fwd.py:428   转到更窄的格式（舍入）
-  -3.52e-07  arith.subf@94          planted_fwd.py:327   乘加收缩成一次 fma（一次舍入）
-  -1.59e-07  math.exp2@95           planted_fwd.py:328   近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差
-【发现】
-  - desc_o：循环携带的量保留在窄类型里（低精度累加：增量不足一个 ulp 时被吞掉，长循环会停滞）
-      改法：把循环里的累加量保持在 fp32，循环结束后再转换；该位点精确时对齐 +0.002 → -2.23e-06（模型内反事实）
+  M（logsumexp）: K − G 对齐 -0.000283（标准误 5.1e-05）——有显著的系统偏差；相对误差（能量加权）0.0015，最大 |K − G| 0.0558（768 / 768 个元素）
+  O: K − G 对齐 +0.0023（标准误 9.3e-05）——有显著的系统偏差；相对误差（能量加权）0.012，最大 |K − G| 0.0039（49152 / 49152 个元素）
+  O: G − S（语义）-1.43e-08，K − S（合计）+0.0023
+  M（logsumexp）: assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）（对声明的程序，atol 0.01, rtol 0）：不通过，最差比值 5.6；去掉系统分量后不通过
+  M（logsumexp）: allclose(rtol=1e-2, atol=1e-5)（对声明的程序，atol 1e-05, rtol 0.01）：通过，最差比值 0.48；去掉系统分量后通过
+  M（logsumexp）: assert_close 的 dtype 默认值（对声明的程序，atol 1e-05, rtol 1.3e-06）：不通过，最差比值 2.2e+03；去掉系统分量后不通过
+  O: assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）（对规格，atol 0.01, rtol 0）：通过，最差比值 0.39；去掉系统分量后通过
+  O: allclose(rtol=1e-2, atol=1e-5)（对规格，atol 1e-05, rtol 0.01）：不通过，最差比值 3.9；去掉系统分量后不通过
+  O: assert_close 的 dtype 默认值（对规格，atol 1e-05, rtol 0.001）：不通过，最差比值 34；去掉系统分量后不通过
+【M（logsumexp） 的各位点贡献】（6 个 program；仿真偏差 -0.000283，逐点贡献合计 -0.000283；不为零的前 5 个）
+  -0.000283  arith.truncf@125       planted_fwd.py:352   循环携带的量保留在窄类型里
+  -5.95e-08  tt.dot@81              planted_fwd.py:319   张量核 dot 的每组乘积与累加器向零截断
+  +3.06e-09  math.log2@131          planted_fwd.py:424   近似指令
+  +1.16e-09  arith.addf@132         planted_fwd.py:424   在声明类型中就近舍入
+  +8.57e-10  arith.mulf@88          planted_fwd.py:326   在声明类型中就近舍入
+【O 的各位点贡献】（6 个 program；仿真偏差 +0.0023，逐点贡献合计 +0.0023；不为零的前 8 个）
+  +0.0023  arith.truncf@125       planted_fwd.py:352   循环携带的量保留在窄类型里
+  -3.56e-06  tt.dot@122             planted_fwd.py:349   张量核 dot 的每组乘积与累加器向零截断
+  +1.38e-06  arith.truncf@121       planted_fwd.py:347   转到更窄的格式时舍入
+  -1.26e-06  arith.truncf@141       planted_fwd.py:428   转到更窄的格式时舍入
+  +9.18e-07  tt.dot@81              planted_fwd.py:319   张量核 dot 的每组乘积与累加器向零截断
+  -1.19e-07  arith.mulf@88          planted_fwd.py:326   在声明类型中就近舍入
+  -7.49e-08  math.exp2@95           planted_fwd.py:328   近似指令
+  -3.48e-08  arith.subf@94          planted_fwd.py:327   乘加收缩成一次 fma
+说明：对齐 = ⟨K − G, G⟩ / ⟨G, G⟩，K 为设备输出，G 为声明程序的精确值，S 为规格；负值即系统性偏小。贡献 = 仿真输出与「该位点精确」的仿真输出之差的对齐；位点之间有相互作用，相加只是近似。

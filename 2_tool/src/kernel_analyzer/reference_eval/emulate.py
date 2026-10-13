@@ -1231,7 +1231,7 @@ class GpuEmulator(KernelReferenceEvaluator):
         shape = np.broadcast_shapes(c.shape)
         tc = tensor_core.mma_format(a.elem, b.elem, c.elem, precision)
         if tc is None and not (a.elem == b.elem == c.elem == "f32" and precision.startswith("ieee")):
-            return self._not_emulable(op, list(shape), c.elem, [a, b, c], f"tensor-core dot ({precision}, {a.elem} x {b.elem} -> {c.elem})")
+            return self._not_emulable(op, list(shape), c.elem, [a, b, c], f"tensor-core dot {a.elem} x {b.elem} -> {c.elem} (inputPrecision {precision})")
         if op.node_id in self.exact_nodes:
             self.trace[(op.node_id, "exact")] += 1
             lo, hi = iv.idot(a.lo, a.hi, b.lo, b.hi)

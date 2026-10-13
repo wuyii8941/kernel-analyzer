@@ -28,7 +28,9 @@ CASES = {
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--case", required=True)
-    ap.add_argument("--programs", default="0,1")
+    ap.add_argument("--programs", default="",
+                    help="program indices, or 'all' (default: the tool's sample, incl. the last block)")
+    ap.add_argument("--suffix", default="")
     a = ap.parse_args()
     import importlib
 
@@ -51,11 +53,13 @@ def main():
         kernel[grid](sm_scale, M, Z, H, q, k, v, o, N_CTX=N, HEAD_DIM=D, BLOCK_M=block_m, BLOCK_N=block_n,
                      FP8_OUTPUT=False, STAGE=3 if causal else 1, warp_specialize=False, IS_HOPPER=False,
                      num_stages=2, num_warps=4)
-    progs = [(int(p) % grid[0], int(p) // grid[0], 0) for p in a.programs.split(",")]
-    rep = audit(launch, spec={"desc_o": lambda: spec_attention(q, k, v, sm_scale, causal)}, programs=progs)
+    progs = None if not a.programs else "all" if a.programs == "all" else \
+        [(int(p) % grid[0], int(p) // grid[0], 0) for p in a.programs.split(",")]
+    rep = audit(launch, spec={"desc_o": lambda: spec_attention(q, k, v, sm_scale, causal)}, programs=progs,
+                names={"desc_o": "O", "M": "M（logsumexp）"})
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / f"audit_{a.case}.txt").write_text(rep["text"])
-    (OUT / f"audit_{a.case}.json").write_text(json.dumps({k_: v_ for k_, v_ in rep.items() if k_ != "text"},
+    (OUT / f"audit_{a.case}{a.suffix}.txt").write_text(rep["text"])
+    (OUT / f"audit_{a.case}{a.suffix}.json").write_text(json.dumps({k_: v_ for k_, v_ in rep.items() if k_ != "text"},
                                                          indent=1, ensure_ascii=False, default=str))
     print(rep["text"])
 

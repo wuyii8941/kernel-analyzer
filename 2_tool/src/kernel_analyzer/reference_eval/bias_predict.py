@@ -820,7 +820,8 @@ class BiasPredictor(KernelReferenceEvaluator):
             return self._site(out, op, mma_contract(A, B, C, tc, a_bits, b_bits), f"mma_{tc}")
         if a.elem == b.elem == c.elem == "f32" and precision_attr.startswith("ieee"):
             return self._site(out, op, fma_chain_contract(A, B, C), "fma_chain")
-        raise ProgramAbort(f"{op.node_id}: bias contract: dot ({precision_attr}, {a.elem}) outside the contracts")
+        raise ProgramAbort(f"{op.node_id}: bias contract: dot {a.elem} x {b.elem} -> {c.elem} "
+                           f"(inputPrecision {precision_attr}) outside the contracts")
 
     def _op_atomic_rmw(self, op, args, env, state, kind_override=None):
         value = args[-1] if args else None

@@ -2,57 +2,57 @@
  "prediction": {
   "outputs": {
    "M": {
-    "elements": 256,
-    "written": 256,
-    "alignment": -0.00026140670355870896,
-    "alignment_noise_se": 9.214615861244189e-05,
-    "mean_ulp": -3211.9396314370597,
-    "rms_relative_error": 0.002109579531431938,
-    "energy_relative_error": 0.0021117133865112014,
+    "elements": 768,
+    "written": 768,
+    "alignment": -0.00027440031930478693,
+    "alignment_noise_se": 5.19009307765458e-05,
+    "mean_ulp": -3378.9192436810204,
+    "rms_relative_error": 0.0020384567349420375,
+    "energy_relative_error": 0.0020375525456394587,
     "share_large_relative": 0.0
    },
    "desc_o": {
-    "elements": 16384,
-    "written": 16384,
-    "alignment": 0.0018637470880544958,
-    "alignment_noise_se": 0.00016545408803870856,
-    "mean_ulp": -0.05610925456733403,
-    "rms_relative_error": 0.02538477995330605,
-    "energy_relative_error": 0.016936429863160563,
-    "share_large_relative": 0.00311279296875
+    "elements": 49152,
+    "written": 49152,
+    "alignment": 0.002168206052843624,
+    "alignment_noise_se": 9.336423922616521e-05,
+    "mean_ulp": 0.05904554411072194,
+    "rms_relative_error": 0.11990364562895449,
+    "energy_relative_error": 0.016529513540566514,
+    "share_large_relative": 0.00274658203125
    }
   },
   "failures": [],
   "status": "predicted",
   "sites": {
-   "rn": 2719746,
-   "mma_f16": 2621440,
-   "rn_fma_contracted": 557056,
-   "approx:math.exp2|f32": 557056,
-   "rn_add": 32768,
-   "rn_reduce_sum": 32768,
-   "rn_conversion": 606208,
-   "approx:math.log2|f32": 256,
-   "approx:arith.divf|f32": 16384
+   "rn": 8159238,
+   "mma_f16": 7864320,
+   "rn_fma_contracted": 1671168,
+   "approx:math.exp2|f32": 1671168,
+   "rn_add": 98304,
+   "rn_reduce_sum": 98304,
+   "rn_conversion": 1818624,
+   "approx:math.log2|f32": 768,
+   "approx:arith.divf|f32": 49152
   }
  },
  "verify": {
   "status": "bit_identical",
   "buffers": {
    "M": {
-    "written": 256,
-    "emulated": 256,
-    "bit_identical": 256,
-    "value_equal": 256,
+    "written": 768,
+    "emulated": 768,
+    "bit_identical": 768,
+    "value_equal": 768,
     "nan_both": 0,
     "not_emulated": 0,
     "mismatch": 0
    },
    "desc_o": {
-    "written": 16384,
-    "emulated": 16384,
-    "bit_identical": 16384,
-    "value_equal": 16384,
+    "written": 49152,
+    "emulated": 49152,
+    "bit_identical": 49152,
+    "value_equal": 49152,
     "nan_both": 0,
     "not_emulated": 0,
     "mismatch": 0
@@ -63,27 +63,151 @@
  },
  "measured": {
   "M": {
-   "elements": 256,
-   "written": 256,
-   "alignment": -0.00026991560140707753,
+   "elements": 768,
+   "written": 768,
+   "alignment": -0.0002829095572894016,
    "format_resolution": 5.960464477539063e-08,
-   "se": 8.900441221695392e-05,
-   "energy_relative": 0.0014500156625821654,
-   "max_abs": 0.05699410281859052,
-   "statistically_significant": false,
-   "significant": false,
+   "se": 5.1268834807423924e-05,
+   "energy_relative": 0.0014500116586182454,
+   "max_abs": 0.055782279014087166,
+   "per_program": [
+    [
+     [
+      0,
+      0,
+      0
+     ],
+     -0.00015146176460042302,
+     0.00012393493016988602
+    ],
+    [
+     [
+      0,
+      1,
+      0
+     ],
+     -0.00032021217782191193,
+     0.00011919986105334892
+    ],
+    [
+     [
+      5,
+      0,
+      0
+     ],
+     -0.00035869311995194973,
+     0.00012315922271514265
+    ],
+    [
+     [
+      10,
+      1,
+      0
+     ],
+     -0.00040272151195516824,
+     0.0001313593865860138
+    ],
+    [
+     [
+      15,
+      0,
+      0
+     ],
+     -0.0004905066400030094,
+     0.000122543135915138
+    ],
+    [
+     [
+      15,
+      1,
+      0
+     ],
+     2.5841849451433214e-05,
+     0.00012739071045360427
+    ]
+   ],
+   "statistically_significant": true,
+   "significant": true,
+   "program_range": [
+    -0.0004905066400030094,
+    2.5841849451433214e-05
+   ],
+   "programs_differ": false,
+   "predicted": -0.00027440031930478693,
    "prediction_agrees": true
   },
   "desc_o": {
-   "elements": 16384,
-   "written": 16384,
-   "alignment": 0.001997070137402819,
+   "elements": 49152,
+   "written": 49152,
+   "alignment": 0.002302844907979526,
    "format_resolution": 0.00048828125,
-   "se": 0.00015334182312888917,
-   "energy_relative": 0.011545022731075811,
-   "max_abs": 0.0030049783528177387,
+   "se": 9.348771861793699e-05,
+   "energy_relative": 0.011757658205246633,
+   "max_abs": 0.0038958676208048354,
+   "per_program": [
+    [
+     [
+      0,
+      0,
+      0
+     ],
+     0.0006931792668493059,
+     0.00021422794333038393
+    ],
+    [
+     [
+      0,
+      1,
+      0
+     ],
+     0.00254721537792328,
+     0.00021619835930086978
+    ],
+    [
+     [
+      5,
+      0,
+      0
+     ],
+     0.0027265990205701256,
+     0.00022810486469140224
+    ],
+    [
+     [
+      10,
+      1,
+      0
+     ],
+     0.00392097024684417,
+     0.00024478331017770193
+    ],
+    [
+     [
+      15,
+      0,
+      0
+     ],
+     0.004112226450441557,
+     0.00023445438729935975
+    ],
+    [
+     [
+      15,
+      1,
+      0
+     ],
+     -8.141637099765964e-05,
+     0.00022833380000253362
+    ]
+   ],
    "statistically_significant": true,
    "significant": true,
+   "program_range": [
+    -8.141637099765964e-05,
+    0.004112226450441557
+   ],
+   "programs_differ": true,
+   "predicted": 0.002168206052843624,
    "prediction_agrees": true
   }
  },
@@ -96,87 +220,112 @@
      0
     ],
     [
-     1,
      0,
+     1,
+     0
+    ],
+    [
+     5,
+     0,
+     0
+    ],
+    [
+     10,
+     1,
+     0
+    ],
+    [
+     15,
+     0,
+     0
+    ],
+    [
+     15,
+     1,
      0
     ]
    ],
-   "sum": -0.0002642197262914589,
-   "gross": 0.00027567056650024585,
+   "before": -0.00028290955728900593,
+   "sum": -0.00028293839502529535,
+   "gross": 0.00028294856128088087,
    "nodes": [
     {
      "node": "arith.truncf@125",
      "lowering": "ieee",
      "source": "planted_fwd.py:352",
-     "text": "%l_i_101 = arith.truncf %l_i_100 : tensor<128xf32> to tensor<128xbf16>",
-     "contribution": -0.0002698887939674825,
-     "mechanism": "转到更窄的格式（舍入）",
-     "fix": "影响要紧时一直保留宽类型，直到写出"
-    },
-    {
-     "node": "arith.addf@124",
-     "lowering": "fma_contraction",
-     "source": "planted_fwd.py:352",
-     "text": "%l_i_100 = arith.addf %l_i_99, %l_ij : tensor<128xf32>",
-     "contribution": 5.718403510971073e-06,
-     "mechanism": "乘加收缩成一次 fma（一次舍入）",
-     "fix": "不需要"
+     "code": "l_i = (l_i * alpha + l_ij).to(tl.bfloat16).to(tl.float32)",
+     "contribution": -0.0002828839648482319,
+     "tag": "loop",
+     "mechanism": "循环携带的量保留在窄类型里：增量不足一个 ulp 时被吞掉，长循环会停滞",
+     "fixes": [
+      [
+       "把循环里的累加量保持在 fp32，循环结束后再转换",
+       "多用寄存器，几乎不增加耗时"
+      ]
+     ]
     },
     {
      "node": "tt.dot@81",
      "lowering": "dot_tensor_core_f16",
      "source": "planted_fwd.py:319",
-     "text": "%qk = tt.dot %q_38, %k_70, %cst_6, inputPrecision = tf32 : tensor<128x64xf16> * tensor<64x16xf16> ->",
-     "contribution": -5.63524283698843e-08,
-     "mechanism": "张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
-     "fix": "通常可忽略；确有影响时分段累加到 fp32"
+     "code": "qk = tl.dot(q, k)",
+     "contribution": -5.951330485618276e-08,
+     "tag": "mma",
+     "mechanism": "张量核 dot 的每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
+     "fixes": [
+      [
+       "通常不需要处理；确有影响时分段累加到 fp32",
+       "多一次加法与寄存器"
+      ]
+     ]
     },
     {
      "node": "math.log2@131",
      "lowering": "oracle",
      "source": "planted_fwd.py:424",
-     "text": "%m_i_39 = math.log2 %offsetv_y#1 : tensor<128xf32>",
-     "contribution": 4.7783792381687935e-09,
-     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差",
-     "fix": "影响确实要紧时改用正确舍入的 libdevice 函数或 tl.math.div_rn"
+     "code": "m_i += tl.math.log2(l_i)",
+     "contribution": 3.0649426791606937e-09,
+     "tag": "approx",
+     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）带几分之一 ulp 的系统平均误差",
+     "fixes": [
+      [
+       "改用正确舍入的 libdevice 函数或 tl.math.div_rn",
+       "慢若干倍，通常只在影响要紧时值得"
+      ]
+     ]
     },
     {
      "node": "arith.addf@132",
      "lowering": "oracle_group",
      "source": "planted_fwd.py:424",
-     "text": "%m_i_40 = arith.addf %offsetv_y#2, %m_i_39 : tensor<128xf32>",
-     "contribution": 1.5839074600346343e-09,
+     "code": "m_i += tl.math.log2(l_i)",
+     "contribution": 1.160940059919119e-09,
+     "tag": "rn",
      "mechanism": "在声明类型中就近舍入",
-     "fix": "影响不大时不需要"
+     "fixes": [
+      [
+       "影响不大时不需要处理",
+       ""
+      ]
+     ]
     },
     {
      "node": "arith.mulf@88",
      "lowering": "ieee",
      "source": "planted_fwd.py:326",
-     "text": "%m_ij_72 = arith.mulf %m_ij, %m_ij_71 : tensor<128xf32>",
-     "contribution": 6.543067241247804e-10,
+     "code": "m_ij = tl.maximum(m_i, tl.max(qk, 1) * qk_scale)",
+     "contribution": 8.572450536757076e-10,
+     "tag": "rn",
      "mechanism": "在声明类型中就近舍入",
-     "fix": "影响不大时不需要"
-    },
-    {
-     "node": "arith.mulf@33",
-     "lowering": "ieee",
-     "source": "planted_fwd.py:402",
-     "text": "%qk_scale = arith.mulf %sm_scale, %cst_7 : f32",
-     "contribution": 0.0,
-     "mechanism": "在声明类型中就近舍入",
-     "fix": "影响不大时不需要"
-    },
-    {
-     "node": "arith.maxnumf@89",
-     "lowering": "ieee",
-     "source": "planted_fwd.py:326",
-     "text": "%m_ij_73 = arith.maxnumf %m_i_49, %m_ij_72 : tensor<128xf32>",
-     "contribution": 0.0,
-     "mechanism": "在声明类型中就近舍入",
-     "fix": "影响不大时不需要"
+     "fixes": [
+      [
+       "影响不大时不需要处理",
+       ""
+      ]
+     ]
     }
-   ]
+   ],
+   "rest": -5.443017706342724e-08
   },
   "desc_o": {
    "programs": [
@@ -186,108 +335,310 @@
      0
     ],
     [
-     1,
      0,
+     1,
+     0
+    ],
+    [
+     5,
+     0,
+     0
+    ],
+    [
+     10,
+     1,
+     0
+    ],
+    [
+     15,
+     0,
+     0
+    ],
+    [
+     15,
+     1,
      0
     ]
    ],
-   "sum": 0.0019621508491707127,
-   "gross": 0.0020553452758858165,
+   "before": 0.0023028449079795974,
+   "sum": 0.002300827267934829,
+   "gross": 0.002311023808039026,
    "nodes": [
     {
      "node": "arith.truncf@125",
      "lowering": "ieee",
      "source": "planted_fwd.py:352",
-     "text": "%l_i_101 = arith.truncf %l_i_100 : tensor<128xf32> to tensor<128xbf16>",
-     "contribution": 0.00199929660250384,
-     "mechanism": "循环携带的量保留在窄类型里（低精度累加：增量不足一个 ulp 时被吞掉，长循环会停滞）",
-     "fix": "把循环里的累加量保持在 fp32，循环结束后再转换"
-    },
-    {
-     "node": "arith.addf@124",
-     "lowering": "fma_contraction",
-     "source": "planted_fwd.py:352",
-     "text": "%l_i_100 = arith.addf %l_i_99, %l_ij : tensor<128xf32>",
-     "contribution": -4.341259833163084e-05,
-     "mechanism": "乘加收缩成一次 fma（一次舍入）",
-     "fix": "不需要"
-    },
-    {
-     "node": "arith.truncf@121",
-     "lowering": "ieee",
-     "source": "planted_fwd.py:347",
-     "text": "%p_97 = arith.truncf %p : tensor<128x16xf32> to tensor<128x16xf16>",
-     "contribution": 4.794821228914987e-06,
-     "mechanism": "转到更窄的格式（舍入）",
-     "fix": "影响要紧时一直保留宽类型，直到写出"
+     "code": "l_i = (l_i * alpha + l_ij).to(tl.bfloat16).to(tl.float32)",
+     "contribution": 0.002303630746405639,
+     "tag": "loop",
+     "mechanism": "循环携带的量保留在窄类型里：增量不足一个 ulp 时被吞掉，长循环会停滞",
+     "fixes": [
+      [
+       "把循环里的累加量保持在 fp32，循环结束后再转换",
+       "多用寄存器，几乎不增加耗时"
+      ]
+     ]
     },
     {
      "node": "tt.dot@122",
      "lowering": "dot_tensor_core_f16",
      "source": "planted_fwd.py:349",
-     "text": "%acc_98 = tt.dot %p_97, %v_96, %acc_82, inputPrecision = tf32 : tensor<128x16xf16> * tensor<16x64xf1",
-     "contribution": -2.372359026148418e-06,
-     "mechanism": "张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
-     "fix": "通常可忽略；确有影响时分段累加到 fp32"
+     "code": "acc = tl.dot(p, v, acc)",
+     "contribution": -3.5583128328627787e-06,
+     "tag": "mma",
+     "mechanism": "张量核 dot 的每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
+     "fixes": [
+      [
+       "通常不需要处理；确有影响时分段累加到 fp32",
+       "多一次加法与寄存器"
+      ]
+     ]
     },
     {
-     "node": "tt.dot@81",
-     "lowering": "dot_tensor_core_f16",
-     "source": "planted_fwd.py:319",
-     "text": "%qk = tt.dot %q_38, %k_70, %cst_6, inputPrecision = tf32 : tensor<128x64xf16> * tensor<64x16xf16> ->",
-     "contribution": 2.3471664426594264e-06,
-     "mechanism": "张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
-     "fix": "通常可忽略；确有影响时分段累加到 fp32"
+     "node": "arith.truncf@121",
+     "lowering": "ieee",
+     "source": "planted_fwd.py:347",
+     "code": "p = p.to(dtype)",
+     "contribution": 1.3751396761878009e-06,
+     "tag": "narrow",
+     "mechanism": "转到更窄的格式时舍入",
+     "fixes": [
+      [
+       "一直保留宽类型，直到写出",
+       "寄存器与带宽"
+      ]
+     ]
     },
     {
      "node": "arith.truncf@141",
      "lowering": "ieee",
      "source": "planted_fwd.py:428",
-     "text": "%0 = arith.truncf %acc_43 : tensor<128x64xf32> to tensor<128x64xf16>",
-     "contribution": 2.3094723528504225e-06,
-     "mechanism": "转到更窄的格式（舍入）",
-     "fix": "影响要紧时一直保留宽类型，直到写出"
+     "code": "desc_o.store([qo_offset_y, 0], acc.to(dtype))",
+     "contribution": -1.259301321137528e-06,
+     "tag": "narrow",
+     "mechanism": "转到更窄的格式时舍入",
+     "fixes": [
+      [
+       "一直保留宽类型，直到写出",
+       "寄存器与带宽"
+      ]
+     ]
     },
     {
-     "node": "arith.subf@94",
-     "lowering": "fma_contraction",
-     "source": "planted_fwd.py:327",
-     "text": "%qk_78 = arith.subf %qk_75, %qk_77 : tensor<128x16xf32>",
-     "contribution": -3.5245819224284167e-07,
-     "mechanism": "乘加收缩成一次 fma（一次舍入）",
-     "fix": "不需要"
+     "node": "tt.dot@81",
+     "lowering": "dot_tensor_core_f16",
+     "source": "planted_fwd.py:319",
+     "code": "qk = tl.dot(q, k)",
+     "contribution": 9.178740765514283e-07,
+     "tag": "mma",
+     "mechanism": "张量核 dot 的每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
+     "fixes": [
+      [
+       "通常不需要处理；确有影响时分段累加到 fp32",
+       "多一次加法与寄存器"
+      ]
+     ]
+    },
+    {
+     "node": "arith.mulf@88",
+     "lowering": "ieee",
+     "source": "planted_fwd.py:326",
+     "code": "m_ij = tl.maximum(m_i, tl.max(qk, 1) * qk_scale)",
+     "contribution": -1.1902836124747489e-07,
+     "tag": "rn",
+     "mechanism": "在声明类型中就近舍入",
+     "fixes": [
+      [
+       "影响不大时不需要处理",
+       ""
+      ]
+     ]
     },
     {
      "node": "math.exp2@95",
      "lowering": "oracle",
      "source": "planted_fwd.py:328",
-     "text": "%p = math.exp2 %qk_78 : tensor<128x16xf32>",
-     "contribution": -1.5904934213909563e-07,
-     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差",
-     "fix": "影响确实要紧时改用正确舍入的 libdevice 函数或 tl.math.div_rn"
+     "code": "p = tl.math.exp2(qk)",
+     "contribution": -7.485055880945711e-08,
+     "tag": "approx",
+     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）带几分之一 ulp 的系统平均误差",
+     "fixes": [
+      [
+       "改用正确舍入的 libdevice 函数或 tl.math.div_rn",
+       "慢若干倍，通常只在影响要紧时值得"
+      ]
+     ]
+    },
+    {
+     "node": "arith.subf@94",
+     "lowering": "fma_contraction",
+     "source": "planted_fwd.py:327",
+     "code": "qk = qk * qk_scale - m_ij[:, None]",
+     "contribution": -3.480621351285201e-08,
+     "tag": "fma",
+     "mechanism": "乘加收缩成一次 fma（一次舍入）",
+     "fixes": [
+      [
+       "不需要",
+       ""
+      ]
+     ]
     }
-   ]
+   ],
+   "rest": -2.8034784708096423e-06
   }
  },
  "spec": {
   "desc_o": {
-   "semantic_alignment": -1.4667185477475337e-08,
-   "total_alignment": 0.0019970554339443893,
-   "max_abs_semantic": 4.407374867843039e-09
+   "semantic_alignment": -1.4302469990101337e-08,
+   "total_alignment": 0.002302830571930055,
+   "max_abs_semantic": 7.767566395644465e-09
   }
  },
- "findings": [
+ "findings": [],
+ "fix_groups": [
   {
-   "output": "desc_o",
-   "node": "arith.truncf@125",
-   "lowering": "ieee",
-   "source": "planted_fwd.py:352",
-   "text": "%l_i_101 = arith.truncf %l_i_100 : tensor<128xf32> to tensor<128xbf16>",
-   "contribution": 0.00199929660250384,
-   "mechanism": "循环携带的量保留在窄类型里（低精度累加：增量不足一个 ulp 时被吞掉，长循环会停滞）",
-   "fix": "把循环里的累加量保持在 fp32，循环结束后再转换",
-   "counterfactual": "该位点精确时对齐 +0.002 → -2.23e-06（模型内反事实）"
+   "tag": "loop",
+   "mechanism": "循环携带的量保留在窄类型里：增量不足一个 ulp 时被吞掉，长循环会停滞",
+   "fixes": [
+    [
+     "把循环里的累加量保持在 fp32，循环结束后再转换",
+     "多用寄存器，几乎不增加耗时"
+    ]
+   ],
+   "sites": [
+    {
+     "node": "arith.truncf@125",
+     "source": "planted_fwd.py:352",
+     "code": "l_i = (l_i * alpha + l_ij).to(tl.bfloat16).to(tl.float32)"
+    }
+   ],
+   "outputs": {
+    "M": {
+     "before": -0.00028290955728900593,
+     "after_all": -2.5592440774024547e-08,
+     "contribution": {
+      "arith.truncf@125": -0.0002828839648482319
+     },
+     "after_each": {
+      "arith.truncf@125": -2.5592440774024547e-08
+     },
+     "combined_emulated": true
+    },
+    "desc_o": {
+     "before": 0.0023028449079795974,
+     "after_all": -7.8583842604181e-07,
+     "contribution": {
+      "arith.truncf@125": 0.002303630746405639
+     },
+     "after_each": {
+      "arith.truncf@125": -7.8583842604181e-07
+     },
+     "combined_emulated": true
+    }
+   }
   }
  ],
- "cannot_decide": []
+ "tolerance_checks": {
+  "M": [
+   {
+    "check": "assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）",
+    "atol": 0.01,
+    "rtol": 0.0,
+    "passes": false,
+    "worst_ratio": 5.578227901408717,
+    "passes_without_bias": false,
+    "against": "声明的程序"
+   },
+   {
+    "check": "allclose(rtol=1e-2, atol=1e-5)",
+    "atol": 1e-05,
+    "rtol": 0.01,
+    "passes": true,
+    "worst_ratio": 0.4803122609280924,
+    "passes_without_bias": true,
+    "against": "声明的程序"
+   },
+   {
+    "check": "assert_close 的 dtype 默认值",
+    "atol": 1e-05,
+    "rtol": 1.3e-06,
+    "passes": false,
+    "worst_ratio": 2222.7045206679604,
+    "passes_without_bias": false,
+    "against": "声明的程序"
+   }
+  ],
+  "desc_o": [
+   {
+    "check": "assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）",
+    "atol": 0.01,
+    "rtol": 0.0,
+    "passes": true,
+    "worst_ratio": 0.3895866226557382,
+    "passes_without_bias": true,
+    "against": "规格"
+   },
+   {
+    "check": "allclose(rtol=1e-2, atol=1e-5)",
+    "atol": 1e-05,
+    "rtol": 0.01,
+    "passes": false,
+    "worst_ratio": 3.90253402958244,
+    "passes_without_bias": false,
+    "against": "规格"
+   },
+   {
+    "check": "assert_close 的 dtype 默认值",
+    "atol": 1e-05,
+    "rtol": 0.001,
+    "passes": false,
+    "worst_ratio": 34.37033269132225,
+    "passes_without_bias": false,
+    "against": "规格"
+   }
+  ]
+ },
+ "cannot_decide": [],
+ "names": {
+  "desc_o": "O",
+  "M": "M（logsumexp）"
+ },
+ "scope": {
+  "programs": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    1,
+    0
+   ],
+   [
+    5,
+    0,
+    0
+   ],
+   [
+    10,
+    1,
+    0
+   ],
+   [
+    15,
+    0,
+    0
+   ],
+   [
+    15,
+    1,
+    0
+   ]
+  ],
+  "rule": "抽查 6/32 个 program（规则：各轴首尾 program，含序列末尾的边界块，另取中间 2 个）",
+  "kernel": "_attn_fwd_l_bf16",
+  "target": "Triton 3.6.0 / sm_86（锁定的下降规则）"
+ }
 }
