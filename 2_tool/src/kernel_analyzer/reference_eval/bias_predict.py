@@ -46,7 +46,8 @@ Failure conditions (the prediction for the launch is "无法判断" when any app
 * no contract for an operation (no catalogued lowering, no table entry, no tangent rule) -- the program aborts;
 * a discontinuous threshold may flip: a compare whose margin is within R of its operands feeding a select whose
   branches differ by more than R, a float-to-int conversion or floor / ceil / round within R of a jump;
-* the first-order model leaves its range: R / |G| > 2^-4 on more than 1% of an output's elements;
+* the first-order model leaves its range: the predicted total error (mean plus a noise draw) exceeds 2^-4 of |G| on
+  more than 1% of an output's elements;
 * subnormal or non-finite values at rounding sites (FTZ, overflow) on more than 0.1% of a site's lanes;
 * a float atomic fold (the fold order is not modelled for prediction);
 * an approximate primitive outside its characterized cells on more than 1% of its lanes, or evaluated at fewer than
@@ -495,7 +496,10 @@ class BiasPredictor(KernelReferenceEvaluator):
             mid = mid + sd * self._rng.choice((-1.0, 1.0), size=out.shape)
         else:
             mid = mid + np.where(ok, np.broadcast_to(mu, out.shape), 0.0)
-            rad = rad + np.where(ok, np.broadcast_to(half, out.shape), 0.0)
+        # the radius in both passes: downstream sites read "the operands are exact" from it (v1 carried it only in
+        # the mean pass, so the noise pass took every operand as exact and dropped the variance of the sites that
+        # use the rounding relation -- the noise, and with it the second-order allowance, came out too small)
+        rad = rad + np.where(ok, np.broadcast_to(half, out.shape), 0.0)
         out.d = (mid - rad, mid + rad)
         n = int(ok.sum())
         self.sites[kind] += n
@@ -891,8 +895,8 @@ def predict(launch, contracts: Optional[ContractTable] = None, programs: Optiona
 
 def summarize(pred: dict, max_relative=LARGE_RELATIVE) -> dict:
     """Per output: predicted alignment <delta, G> / <G, G> and its noise (the standard error a measurement of the same
-    elements would have under the first-order model), the mean delta in output ulps, the typical relative error; and
-    the failure conditions that apply (status "无法判断" when any does)."""
+    elements would have under the first-order model), the mean delta in output ulps, the RMS of the predicted total
+    relative error (mean plus noise draw); and the failure conditions that apply (status "无法判断" when any does)."""
     out = {}
     for name, o in pred["outputs"].items():
         ok = o["ok"]
@@ -900,7 +904,9 @@ def summarize(pred: dict, max_relative=LARGE_RELATIVE) -> dict:
         gg = float((g * g).sum())
         u = ulp_of(g, o["elem"])
         nz = g != 0
-        rel_sd = np.abs(nd[nz]) / np.abs(g[nz])
+        # the predicted total error of each element: its mean (delta, which varies element by element, e.g. a
+        # deterministic conversion of exact data) plus one draw of its noise (v1 used the noise draw alone)
+        rel_sd = np.abs(dl[nz] + nd[nz]) / np.abs(g[nz])
         out[name] = {"elements": int(ok.sum()), "written": int(o["written"].sum()),
                      "alignment": float((dl * g).sum() / gg) if gg > 0 else 0.0,
                      "alignment_noise_se": float(np.sqrt(((nd * g) ** 2).sum()) / gg) if gg > 0 else 0.0,

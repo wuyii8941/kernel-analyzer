@@ -180,3 +180,31 @@ def test_e5m2_software_conversion_matches_the_device():
         ok = np.abs(xd) <= 57344
         model = BP.e5m2_software(xd, dt == torch.float32)
         assert np.array_equal(model[ok], y.double().cpu().numpy()[ok])
+
+
+@cuda
+def test_noise_pass_carries_operand_exactness():
+    """A rounding chain fed by a rounded value: the noise pass must keep the variance of the later sites (v1 took
+    every operand as exact in the noise pass and predicted almost no noise for an e5m2 chain)."""
+    pytest.importorskip("triton")
+    import triton
+    import triton.language as tl
+
+    from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder
+
+    @triton.jit
+    def chain(x_ptr, y_ptr, B: tl.constexpr):
+        r = tl.arange(0, B)
+        v = tl.load(x_ptr + r) * 1.1
+        v = v.to(tl.float8e5).to(tl.float32)
+        tl.store(y_ptr + r, tl.sqrt(tl.abs(v) + 1.0))
+
+    x = torch.randn(4096, device="cuda", generator=torch.Generator(device="cuda").manual_seed(9))
+    y = torch.empty_like(x)
+    with TritonLaunchRecorder(execute=False) as rec:
+        chain[(1,)](x, y, B=4096)
+    s = BP.summarize(BP.predict(rec.launches[0]))
+    chain[(1,)](x, y, B=4096)
+    g = np.sqrt(np.abs(x.double().cpu().numpy() * 1.1) + 1.0)
+    measured = np.sqrt(np.mean(((y.double().cpu().numpy() - g) / g) ** 2))
+    assert 0.5 < s["outputs"]["y_ptr"]["rms_relative_error"] / measured < 2.0
