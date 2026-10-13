@@ -208,3 +208,39 @@ def test_noise_pass_carries_operand_exactness():
     g = np.sqrt(np.abs(x.double().cpu().numpy() * 1.1) + 1.0)
     measured = np.sqrt(np.mean(((y.double().cpu().numpy() - g) / g) ** 2))
     assert 0.5 < s["outputs"]["y_ptr"]["rms_relative_error"] / measured < 2.0
+
+
+@cuda
+def test_approximate_function_underflowing_to_zero_is_determined():
+    """exp2 of a masked logit (x - 1e6, the causal mask of flash attention) underflows to 0 in f32: the residual is
+    determined, not outside the characterized cells (the tutorial's causal attention abstained before)."""
+    pytest.importorskip("triton")
+    import triton
+    import triton.language as tl
+
+    from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder
+
+    @triton.jit
+    def masked_exp2(x_ptr, y_ptr, B: tl.constexpr):
+        r = tl.arange(0, B)
+        x = tl.load(x_ptr + r)
+        tl.store(y_ptr + r, tl.math.exp2(x + tl.where(r % 2 == 0, 0.0, -1.0e6)))
+
+    x = torch.randn(4096, device="cuda", generator=torch.Generator(device="cuda").manual_seed(10))
+    y = torch.empty_like(x)
+    with TritonLaunchRecorder(execute=False) as rec:
+        masked_exp2[(1,)](x, y, B=4096)
+    s = BP.summarize(BP.predict(rec.launches[0]))
+    assert s["status"] == "predicted", s["failures"]
+
+
+def test_fma_chain_carries_the_rounded_accumulator():
+    """1 + 2^-24 + 2^-24 + 2^-24 as an fp32 fma chain: each increment is a tie that rounds to even and is lost, so the
+    device result is 1 and the error -3 * 2^-24.  The contract must follow the rounded accumulator, not the exact
+    prefix (it predicted -1 * 2^-24; external review of c415b62)."""
+    K = 128
+    a = np.zeros((1, K))
+    b = np.ones((K, 1))
+    a[0, :4] = [1.0, 2.0 ** -24, 2.0 ** -24, 2.0 ** -24]
+    mu, _, _ = BP.fma_chain_contract(a, b, np.zeros((1, 1)))
+    assert mu[0, 0] == -3 * 2.0 ** -24

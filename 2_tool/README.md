@@ -15,6 +15,7 @@
 | 解析与映射 | `reference_eval/ttir_parser.py`、`ttir_mapping.py`、`rule_registry.py` | IR 解析；每个操作的规则（支持 / 声明前提 / 未建立 / 拒绝），注册表 [data/rule_registry.json](data/rule_registry.json)（Triton 3.6.0 回归 profile），报告 [pre-reorg-20261009:docs/rule_registry_report.md](docs/rule_registry_report.md) |
 | 求值 | `reference_eval/ttir_eval.py`、`intervals.py`、`numbers.py`、`layouts.py`、`ptx_bits.py` | 区间语义（SumK / DotK、MPFR / Arb 初等函数）、控制流、原子与执行有效性、共享存储、NVIDIA / AMD 目标操作、位级 inline PTX |
 | 核内定位 | `reference_eval/emulate.py`、`tensor_core.py`、`scan_order.py` | 逐位模拟与逐节点精确替换（锁定 3.6.0 / sm_86 的下降规则；张量核 dot 与一维扫描的组合规则、FTZ、f64 精确求值见组合研究） |
+| 偏差预测与审查 | `reference_eval/bias_predict.py`、`audit.py` | 不运行 kernel 的组合偏差预测（局部契约 + 切向传播，契约表 `data/bias_contracts.json.gz`）；审查入口 `audit(launch, spec=...)`：预测、逐位核对、逐节点归因、规格对比、改法（案例见 1_experiments/flash_attention_case） |
 | 统计 | `reference_eval/analysis.py`、`detect.py`、`sensitivity.py`、`update_layer.py`、`observation.py` | 方向规则 R1 / R5（固定均值）、R2 / R3（对齐），类内 Holm，契约 v3 的「无法判断」规则（`kernel_analyzer/contract_v3.py`）；有界路线类内 Holm，非零 / 等价两轴分报；观察层（输出 / 增量）与每单位的描述量（`observation.output_unit`：相对 RMS、对齐、保留比例、整体缩放的能量份额）；每个独立单位只有一个确定值时（配对训练的差）用同一推断（`analysis.unit_axes`）。实验脚本调用这些函数，不另写统计 |
 | 入口 | `2_tool/src/kernel_analyzer/measure.py`（统一入口）、`check.py`（绑定入口）、`cli.py`（安装后的 `kernel-analyzer-measure` / `kernel-analyzer-analyze`） | 声明调用、输入来源、比较方式与预算，工具展开其余部分（含固定的 bias 查询 `query`） |
 | 组合规则 | `reference_eval/storage_effects.py`（来源 / 内存效果）、`composition_rules.py`（登记） | 存储身份与生命周期、真实覆盖、内容不是来源、跨启动沿用、生产者格；精度相关规则与停止类别；查询固定、有界路线族保证、两个判定轴 |
@@ -60,7 +61,7 @@ $PY -m pytest -q 2_tool/tests                          # 测试：不得改写�
 
 | 路径 | 内容 |
 | --- | --- |
-| `2_tool/src/kernel_analyzer` | `measure.py`、`check.py`、`provenance.py` 与 `reference_eval/`（共 22 个模块，含证书 `certificates.py`、`lock_certificate.py`） |
+| `2_tool/src/kernel_analyzer` | `measure.py`、`check.py`、`provenance.py` 与 `reference_eval/`（共 24 个模块，含证书 `certificates.py`、`lock_certificate.py`） |
 | `scripts/` | `measure.py`、`run_reference_analysis.py`、`enumerate_ttir_registry.py`；`dsl_v2/`（W0 清单、捕获插件、注册表与契约生成、两层对照、AMD 阶段）；`acceptance/`（结构验收 v1.1 适配器）；`essential/contract_v3.py`、`common.py`；`general/acceptance_run.py`（冻结检查）；`reference_eval_kernels.py`、`mutation_kernels.py`（测试用 kernel） |
 | `tests/` | 52 个测试文件与 `data/`（官方 TTGIR fixture、TTIR 语料、反例）；`test_audit_findings.py` 是外部审计 F01–F07 的回归 |
 | `data/rule_registry.json` | 规则注册表（3.6.0 回归 profile；冻结的 general-v3.1 注册表在 1_experiments/general_round_v3_1） |

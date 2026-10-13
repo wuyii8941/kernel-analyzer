@@ -653,3 +653,81 @@ def test_product_folded_into_a_reduce_through_a_flattening_reshape():
     launch = _capture(lambda: flat_sq_sum[(32,)](x, torch.empty(32, device="cuda"), R=4, C=128))
     r = verify(launch, ungrouped=[], swapped=[])
     assert r["bitwise_reproduced"], r["buffers"]
+
+
+@cuda
+@pytest.mark.parametrize("dtype,shape,warps", [(torch.float16, (128, 64, 64), 4), (torch.bfloat16, (64, 64, 32), 4),
+                                               (torch.float16, (64, 128, 64), 8)])
+def test_reduce_over_a_dot_output_follows_the_mma_layout(dtype, shape, warps):
+    """tl.sum / tl.max along the rows of a tl.dot result: the tensor is in the tensor-core accumulator layout
+    (nvidia_mma v2), not a blocked one -- each thread holds two adjacent columns of every 8-column tile, the four lanes
+    of a row group share the row (flash attention's softmax, found by the composition study's first tool case)."""
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def dot_rowsum(a_ptr, b_ptr, s_ptr, m_ptr, M: tl.constexpr, N: tl.constexpr, K: tl.constexpr):
+        rm, rn, rk = tl.arange(0, M), tl.arange(0, N), tl.arange(0, K)
+        a = tl.load(a_ptr + rm[:, None] * K + rk[None, :])
+        b = tl.load(b_ptr + rk[:, None] * N + rn[None, :])
+        c = tl.dot(a, b)
+        tl.store(s_ptr + rm, tl.sum(c, 1))
+        tl.store(m_ptr + rm, tl.max(c, 1))
+
+    M, N, K = shape
+    g = torch.Generator(device="cuda").manual_seed(12)
+    a = torch.randn(M, K, device="cuda", generator=g).to(dtype)
+    b = torch.randn(K, N, device="cuda", generator=g).to(dtype)
+    launch = _capture(lambda: dot_rowsum[(1,)](a, b, torch.empty(M, device="cuda"), torch.empty(M, device="cuda"),
+                                               M=M, N=N, K=K, num_warps=warps))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["bitwise_reproduced"], (r["buffers"], r["not_emulable_nodes"])
+
+
+@cuda
+def test_tensor_core_dot_is_a_localization_candidate():
+    """rounding_nodes lists every lowering that rounds, including the rules added later (tensor-core dot, scan order,
+    device-combine reductions, ...): a tf32 dot must be found as the source of its own truncation (the audit of a tf32
+    flash attention missed it)."""
+    import triton
+    import triton.language as tl
+
+    from kernel_analyzer.reference_eval.emulate import rounding_nodes
+
+    @triton.jit
+    def dot_k(a_ptr, b_ptr, c_ptr, M: tl.constexpr, N: tl.constexpr, K: tl.constexpr):
+        rm, rn, rk = tl.arange(0, M), tl.arange(0, N), tl.arange(0, K)
+        a = tl.load(a_ptr + rm[:, None] * K + rk[None, :])
+        b = tl.load(b_ptr + rk[:, None] * N + rn[None, :])
+        tl.store(c_ptr + rm[:, None] * N + rn[None, :], tl.dot(a, b))
+
+    g = torch.Generator(device="cuda").manual_seed(13)
+    a, b = torch.randn(64, 128, device="cuda", generator=g), torch.randn(128, 64, device="cuda", generator=g)
+    launch = _capture(lambda: dot_k[(1,)](a, b, torch.empty(64, 64, device="cuda"), M=64, N=64, K=128))
+    _, emu = emulate(launch, ungrouped=[], swapped=[])
+    assert any(n.startswith("tt.dot") for n in rounding_nodes(emu))
+    rows = localize(launch, ungrouped=[], swapped=[])["nodes"]
+    top = max(rows, key=lambda r: abs(r["buffers"]["c_ptr"]["mean_relative"]))
+    assert top["node"].startswith("tt.dot")
+
+
+@cuda
+def test_dot_outside_the_rules_names_its_types():
+    """A tensor-core dot with an fp16 accumulator is outside the rules; the reason names the element types (it said
+    "tensor-core dot (tf32)", the input-precision attribute, for an fp16 dot)."""
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def dot_f16acc(a_ptr, b_ptr, c_ptr, M: tl.constexpr, N: tl.constexpr, K: tl.constexpr):
+        rm, rn, rk = tl.arange(0, M), tl.arange(0, N), tl.arange(0, K)
+        a = tl.load(a_ptr + rm[:, None] * K + rk[None, :])
+        b = tl.load(b_ptr + rk[:, None] * N + rn[None, :])
+        acc = tl.dot(a, b, tl.zeros((M, N), dtype=tl.float16), out_dtype=tl.float16)
+        tl.store(c_ptr + rm[:, None] * N + rn[None, :], acc)
+
+    a, b = torch.randn(64, 64, device="cuda").half(), torch.randn(64, 64, device="cuda").half()
+    launch = _capture(lambda: dot_f16acc[(1,)](a, b, torch.empty(64, 64, device="cuda").half(), M=64, N=64, K=64))
+    r = verify(launch, ungrouped=[], swapped=[])
+    assert r["status"] == "not_established"
+    assert any("f16 x f16 -> f16" in n for n in r["not_emulable_nodes"]), r["not_emulable_nodes"]

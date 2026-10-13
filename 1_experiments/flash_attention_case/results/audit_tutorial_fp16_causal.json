@@ -1,0 +1,281 @@
+{
+ "prediction": {
+  "outputs": {
+   "M": {
+    "elements": 256,
+    "written": 256,
+    "alignment": -3.262176653995115e-08,
+    "alignment_noise_se": 1.8924434449687794e-09,
+    "mean_ulp": -0.42438832967386053,
+    "rms_relative_error": 5.420967292689295e-08,
+    "energy_relative_error": 5.298200541180204e-08,
+    "share_large_relative": 0.0
+   },
+   "desc_o": {
+    "elements": 16384,
+    "written": 16384,
+    "alignment": 6.194849118251265e-06,
+    "alignment_noise_se": 6.140839930416624e-06,
+    "mean_ulp": -0.017844526188041346,
+    "rms_relative_error": 0.05088929288718519,
+    "energy_relative_error": 0.0003421329356222515,
+    "share_large_relative": 0.00311279296875
+   }
+  },
+  "failures": [],
+  "status": "predicted",
+  "sites": {
+   "rn": 100098,
+   "mma_f16": 98304,
+   "rn_fma_contracted": 49920,
+   "rn_add": 33536,
+   "approx:math.exp2|f32": 49920,
+   "rn_reduce_sum": 768,
+   "rn_conversion": 65536,
+   "approx:math.log2|f32": 256,
+   "approx:arith.divf|f32": 16384
+  }
+ },
+ "verify": {
+  "status": "bit_identical",
+  "buffers": {
+   "M": {
+    "written": 256,
+    "emulated": 256,
+    "bit_identical": 256,
+    "value_equal": 256,
+    "nan_both": 0,
+    "not_emulated": 0,
+    "mismatch": 0
+   },
+   "desc_o": {
+    "written": 16384,
+    "emulated": 16384,
+    "bit_identical": 16384,
+    "value_equal": 16384,
+    "nan_both": 0,
+    "not_emulated": 0,
+    "mismatch": 0
+   }
+  },
+  "not_emulable_nodes": [],
+  "abort_reasons": []
+ },
+ "measured": {
+  "M": {
+   "elements": 256,
+   "written": 256,
+   "alignment": -3.330611269198327e-08,
+   "format_resolution": 5.960464477539063e-08,
+   "se": 2.438116968957857e-09,
+   "energy_relative": 4.933134603447367e-08,
+   "max_abs": 8.968853748569927e-07,
+   "statistically_significant": true,
+   "significant": false,
+   "prediction_agrees": true
+  },
+  "desc_o": {
+   "elements": 16384,
+   "written": 16384,
+   "alignment": 6.104830981769104e-06,
+   "format_resolution": 0.00048828125,
+   "se": 7.319243640619172e-06,
+   "energy_relative": 0.0002464350257838028,
+   "max_abs": 0.0009831134619275872,
+   "statistically_significant": false,
+   "significant": false,
+   "prediction_agrees": true
+  }
+ },
+ "attribution": {
+  "M": {
+   "programs": [
+    [
+     0,
+     0,
+     0
+    ],
+    [
+     1,
+     0,
+     0
+    ]
+   ],
+   "sum": -2.3907210028932774e-08,
+   "gross": 4.890425605974335e-08,
+   "nodes": [
+    {
+     "node": "tt.dot@152",
+     "lowering": "dot_tensor_core_f16",
+     "source": "tutorial_fwd.py:36",
+     "text": "%qk = tt.dot %q_38, %k_69, %cst_7, inputPrecision = tf32 : tensor<128x64xf16> * tensor<64x64xf16> ->",
+     "contribution": -1.3652914979720957e-08,
+     "mechanism": "张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
+     "fix": "通常可忽略；确有影响时分段累加到 fp32"
+    },
+    {
+     "node": "tt.dot@80",
+     "lowering": "dot_tensor_core_f16",
+     "source": "tutorial_fwd.py:36",
+     "text": "%qk = tt.dot %q_38, %k_69, %cst_7, inputPrecision = tf32 : tensor<128x64xf16> * tensor<64x64xf16> ->",
+     "contribution": -7.799554122179868e-09,
+     "mechanism": "张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
+     "fix": "通常可忽略；确有影响时分段累加到 fp32"
+    },
+    {
+     "node": "math.exp2@173",
+     "lowering": "oracle",
+     "source": "tutorial_fwd.py:45",
+     "text": "%p = math.exp2 %qk_83 : tensor<128x64xf32>",
+     "contribution": -5.890335155455141e-09,
+     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差",
+     "fix": "影响确实要紧时改用正确舍入的 libdevice 函数或 tl.math.div_rn"
+    },
+    {
+     "node": "arith.addf@202",
+     "lowering": "fma_contraction",
+     "source": "tutorial_fwd.py:69",
+     "text": "%l_i_105 = arith.addf %l_i_104, %l_ij : tensor<128xf32>",
+     "contribution": 4.122185347121974e-09,
+     "mechanism": "乘加收缩成一次 fma（一次舍入）",
+     "fix": "不需要"
+    },
+    {
+     "node": "math.exp2@94",
+     "lowering": "oracle",
+     "source": "tutorial_fwd.py:45",
+     "text": "%p = math.exp2 %qk_77 : tensor<128x64xf32>",
+     "contribution": -3.8268686835861216e-09,
+     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差",
+     "fix": "影响确实要紧时改用正确舍入的 libdevice 函数或 tl.math.div_rn"
+    },
+    {
+     "node": "arith.addf@163",
+     "lowering": "fma_contraction",
+     "source": "tutorial_fwd.py:39",
+     "text": "%qk_79 = arith.addf %qk_77, %qk_78 : tensor<128x64xf32>",
+     "contribution": -2.397445692685422e-09,
+     "mechanism": "乘加收缩成一次 fma（一次舍入）",
+     "fix": "不需要"
+    },
+    {
+     "node": "tt.reduce@176",
+     "lowering": "reduce_tree",
+     "source": "",
+     "text": "%l_ij = \"tt.reduce\"(%p) <{axis = 1 : i32}> ({",
+     "contribution": 1.816297662711352e-09,
+     "mechanism": "按布局次序求和（每次组合就近舍入）",
+     "fix": "影响要紧时在更宽的类型里累加"
+    },
+    {
+     "node": "arith.mulf@87",
+     "lowering": "ieee",
+     "source": "tutorial_fwd.py:43",
+     "text": "%m_ij_71 = arith.mulf %m_ij, %m_ij_70 : tensor<128xf32>",
+     "contribution": 1.758645927267327e-09,
+     "mechanism": "在声明类型中就近舍入",
+     "fix": "影响不大时不需要"
+    }
+   ]
+  },
+  "desc_o": {
+   "programs": [
+    [
+     0,
+     0,
+     0
+    ],
+    [
+     1,
+     0,
+     0
+    ]
+   ],
+   "sum": 1.5513116244260303e-05,
+   "gross": 1.5654008969547052e-05,
+   "nodes": [
+    {
+     "node": "arith.truncf@199",
+     "lowering": "ieee",
+     "source": "tutorial_fwd.py:64",
+     "text": "%p_102 = arith.truncf %p : tensor<128x64xf32> to tensor<128x64xf16>",
+     "contribution": 1.1003632565621114e-05,
+     "mechanism": "转到更窄的格式（舍入）",
+     "fix": "影响要紧时一直保留宽类型，直到写出"
+    },
+    {
+     "node": "arith.truncf@217",
+     "lowering": "ieee",
+     "source": "tutorial_fwd.py:153",
+     "text": "%3 = arith.truncf %acc_43 : tensor<128x64xf32> to tensor<128x64xf16>",
+     "contribution": 4.296926878162176e-06,
+     "mechanism": "转到更窄的格式（舍入）",
+     "fix": "影响要紧时一直保留宽类型，直到写出"
+    },
+    {
+     "node": "arith.truncf@120",
+     "lowering": "ieee",
+     "source": "tutorial_fwd.py:64",
+     "text": "%p_96 = arith.truncf %p : tensor<128x64xf32> to tensor<128x64xf16>",
+     "contribution": 1.2903303351866205e-07,
+     "mechanism": "转到更窄的格式（舍入）",
+     "fix": "影响要紧时一直保留宽类型，直到写出"
+    },
+    {
+     "node": "tt.dot@152",
+     "lowering": "dot_tensor_core_f16",
+     "source": "tutorial_fwd.py:36",
+     "text": "%qk = tt.dot %q_38, %k_69, %cst_7, inputPrecision = tf32 : tensor<128x64xf16> * tensor<64x64xf16> ->",
+     "contribution": 1.2082878198695948e-07,
+     "mechanism": "张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
+     "fix": "通常可忽略；确有影响时分段累加到 fp32"
+    },
+    {
+     "node": "tt.dot@200",
+     "lowering": "dot_tensor_core_f16",
+     "source": "tutorial_fwd.py:66",
+     "text": "%acc_103 = tt.dot %p_102, %v_101, %acc_87, inputPrecision = tf32 : tensor<128x64xf16> * tensor<64x64",
+     "contribution": -4.143299623439513e-08,
+     "mechanism": "张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
+     "fix": "通常可忽略；确有影响时分段累加到 fp32"
+    },
+    {
+     "node": "arith.subf@172",
+     "lowering": "ieee",
+     "source": "tutorial_fwd.py:41",
+     "text": "%qk_83 = arith.subf %qk_79, %qk_82 : tensor<128x64xf32>",
+     "contribution": 1.5887037425366712e-08,
+     "mechanism": "在声明类型中就近舍入",
+     "fix": "影响不大时不需要"
+    },
+    {
+     "node": "arith.addf@163",
+     "lowering": "fma_contraction",
+     "source": "tutorial_fwd.py:39",
+     "text": "%qk_79 = arith.addf %qk_77, %qk_78 : tensor<128x64xf32>",
+     "contribution": 1.5885709846680546e-08,
+     "mechanism": "乘加收缩成一次 fma（一次舍入）",
+     "fix": "不需要"
+    },
+    {
+     "node": "tt.dot@80",
+     "lowering": "dot_tensor_core_f16",
+     "source": "tutorial_fwd.py:36",
+     "text": "%qk = tt.dot %q_38, %k_69, %cst_7, inputPrecision = tf32 : tensor<128x64xf16> * tensor<64x64xf16> ->",
+     "contribution": -1.2629655952771834e-08,
+     "mechanism": "张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
+     "fix": "通常可忽略；确有影响时分段累加到 fp32"
+    }
+   ]
+  }
+ },
+ "spec": {
+  "desc_o": {
+   "semantic_alignment": -6.992453483395021e-09,
+   "total_alignment": 6.097838422950865e-06,
+   "max_abs_semantic": 1.919669989636219e-08
+  }
+ },
+ "findings": [],
+ "cannot_decide": []
+}

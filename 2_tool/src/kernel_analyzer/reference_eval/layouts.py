@@ -8,8 +8,9 @@ Used by the reference evaluator for two kinds of evidence that TTIR does not car
 * which threads hold each element of a loaded or stored tensor (``access_layouts``, ``element_threads``), for the
   thread-level conflict check between a store and a later load in one program.
 
-Only blocked and slice layouts are modelled; anything else is reported as unknown and the caller treats the
-evidence as missing (never as a proof either way).
+Blocked and slice layouts are modelled; for reductions also the tensor-core accumulator layout (nvidia_mma v2) and
+linear layouts.  Anything else is reported as unknown and the caller treats the evidence as missing (never as a
+proof either way).
 """
 from __future__ import annotations
 
@@ -31,7 +32,85 @@ def parse_layouts(ttgir: str) -> dict:
     for m in re.finditer(r"^(#[\w]+)\s*=\s*#ttg\.slice<\{dim\s*=\s*(\d+)\s*:\s*i32,\s*parent\s*=\s*(#[\w]+)\}>", ttgir,
                          re.M):
         layouts[m.group(1)] = {"kind": "slice", "dim": int(m.group(2)), "parent": m.group(3)}
+    for m in re.finditer(r"^(#[\w]+)\s*=\s*#ttg\.nvidia_mma<\{([^}]*)\}>", ttgir, re.M):
+        body = m.group(2)
+        major = re.search(r"versionMajor\s*=\s*(\d+)", body)
+        wpc = re.search(r"warpsPerCTA\s*=\s*" + _LIST, body)
+        instr = re.search(r"instrShape\s*=\s*" + _LIST, body)
+        if major and wpc and instr:
+            layouts[m.group(1)] = {"kind": "mma", "version": int(major.group(1)),
+                                   "warpsPerCTA": [int(v) for v in wpc.group(1).split(",") if v.strip()],
+                                   "instrShape": [int(v) for v in instr.group(1).split(",") if v.strip()]}
+    for m in re.finditer(r"^(#[\w]+)\s*=\s*#ttg\.linear<\{(.*)\}>\s*$", ttgir, re.M):
+        bases = {}
+        for key in ("register", "lane", "warp", "block"):
+            mm = re.search(key + r"\s*=\s*\[((?:\[[^\]]*\],?\s*)*)\]", m.group(2))
+            bases[key] = [tuple(int(x) for x in b.split(",") if x.strip())
+                          for b in re.findall(r"\[([^\[\]]*)\]", mm.group(1))] if mm else []
+        layouts[m.group(1)] = {"kind": "linear", **bases}
     return layouts
+
+
+def linear_bases(layouts: dict, name: str, shape: tuple) -> Optional[tuple]:
+    """(register, lane, warp) bases -- the coordinate offset each index bit selects -- of a linear or tensor-core
+    accumulator (nvidia_mma v2) layout over ``shape``; None for other layouts or a replicated tensor.
+
+    nvidia_mma v2 (sm_80 / sm_86, mma.sync m16n8): in a 16 x 8 tile, register bit 0 -> column + 1, bit 1 -> row + 8;
+    lane bits -> column + 2, + 4, row + 1, + 2, + 4; warps along warpsPerCTA (dim 1 fastest); the CTA tile then repeats
+    over the shape, columns first (each repetition a further register bit)."""
+    lay = layouts.get(name)
+    if lay is None or len(shape) != 2:
+        return None
+    if lay["kind"] == "linear":
+        if lay.get("block"):
+            return None
+        reg, lane, warp = lay["register"], lay["lane"], lay["warp"]
+    elif lay["kind"] == "mma" and lay["version"] == 2 and lay["instrShape"] == [16, 8]:
+        reg = [(0, 1), (8, 0)]
+        lane = [(0, 2), (0, 4), (1, 0), (2, 0), (4, 0)]
+        wm, wn = lay["warpsPerCTA"]
+        warp = [(0, 8 * (1 << i)) for i in range(int(np.log2(wn)))] + \
+               [(16 * (1 << i), 0) for i in range(int(np.log2(wm)))]
+        tile = (16 * wm, 8 * wn)
+        if shape[0] % tile[0] or shape[1] % tile[1]:
+            return None
+        reg = reg + [(0, tile[1] * (1 << i)) for i in range(int(np.log2(shape[1] // tile[1])))] + \
+            [(tile[0] * (1 << i), 0) for i in range(int(np.log2(shape[0] // tile[0])))]
+    else:
+        return None
+    if any(b == (0, 0) for b in reg + lane + warp) or 2 ** len(reg + lane + warp) != shape[0] * shape[1]:
+        return None                                       # broadcast / replicated: not modelled
+    return reg, lane, warp
+
+
+def linear_axis_params(bases: tuple, shape: tuple, axis: int) -> Optional[dict]:
+    """Reduce parameters of a linear layout along ``axis``: every thread combines its registers along the axis in
+    register order, then the lanes along the axis (butterfly, highest lane bit first), then the warps.  ``perm[p]`` is
+    the axis index of position p = warp * R * T + lane * R + register of the 1-D model.  None when a basis mixes the
+    axis with the other dimension (the order would then depend on the row)."""
+    reg, lane, warp = bases
+    other = 1 - axis
+    groups = []
+    for bs in (reg, lane, warp):
+        along = [b for b in bs if b[axis] != 0]
+        if any(b[axis] != 0 and b[other] != 0 for b in bs):
+            return None
+        groups.append(along)
+    R, T, W = (1 << len(g) for g in groups)
+    n = shape[axis]
+    if R * T * W != n:
+        return None
+    perm = np.empty(n, dtype=np.int64)
+    for w in range(W):
+        for l in range(T):
+            for r in range(R):
+                idx = 0
+                for bits, bs in ((r, groups[0]), (l, groups[1]), (w, groups[2])):
+                    for i, b in enumerate(bs):
+                        if bits >> i & 1:
+                            idx ^= b[axis]
+                perm[w * R * T + l * R + r] = idx
+    return {"spt": R, "tpw": T, "wpc": W, "perm": perm}
 
 
 def _axis_params(layouts: dict, name: str, axis: int) -> dict:
@@ -82,9 +161,18 @@ def reduce_layouts(module, ttgir: str) -> dict:
             if params is not None:
                 out[op.node_id] = {"axis": axis, "shape": shape, "layout": flat[1], **params}
                 continue
+        if layout in layouts and layouts[layout]["kind"] in ("mma", "linear"):
+            bases = linear_bases(layouts, layout, shape)
+            params = linear_axis_params(bases, shape, axis) if bases is not None else None
+            if params is not None:
+                out[op.node_id] = {"axis": axis, "shape": shape, "layout": layout, **params}
+            continue
         if layout in layouts:
-            out[op.node_id] = {"axis": axis, "shape": shape, "layout": layout,
-                               **_axis_params(layouts, layout, axis)}
+            try:
+                params = _axis_params(layouts, layout, axis)
+            except KeyError:                              # a slice of a layout that is not blocked: not modelled
+                continue
+            out[op.node_id] = {"axis": axis, "shape": shape, "layout": layout, **params}
     return out
 
 

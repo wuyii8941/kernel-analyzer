@@ -215,8 +215,10 @@ def mma_contract(a, b, c, fmt, a_bits=None, b_bits=None):
     # through the chain as its granularity, which a sum of short products keeps coarse
     g_acc = np.where(acc == 0, big, expo(acc) - 23)
     set_acc = np.zeros(shape, dtype=bool)
+    dev_shift = np.zeros(shape)                      # mean error the chain has accumulated so far
     for s0 in range(0, K, G):
         P = a[..., :, s0:s0 + G, None] * b[..., None, s0:s0 + G, :]
+        acc_exact, acc = acc, acc + dev_shift         # the accumulator as the device holds it
         pe = ea[..., :, s0:s0 + G, None] + eb[..., None, s0:s0 + G, :]
         pg = la[..., :, s0:s0 + G, None] + lb[..., None, s0:s0 + G, :]
         e_acc = expo(acc)
@@ -252,12 +254,14 @@ def mma_contract(a, b, c, fmt, a_bits=None, b_bits=None):
         fin_h = np.where(d >= 1, np.ldexp(0.5, u_e), 0.0)
         fin_v = np.where(d >= 1, np.ldexp(1.0, 2 * u_e) / 12, 0.0)
         any_nz = nz.any(axis=-2)
-        mu = mu + np.where(any_nz, term_mu.sum(axis=-2) + fin_mu, 0.0)
+        step_mu = np.where(any_nz, term_mu.sum(axis=-2) + fin_mu, 0.0)
+        mu = mu + step_mu
+        dev_shift = dev_shift + step_mu
         half = half + np.where(any_nz, term_h.sum(axis=-2) + fin_h, 0.0)
         var = var + np.where(any_nz, term_v.sum(axis=-2) + fin_v, 0.0)
         g_acc = np.where(any_nz, np.where(d >= 1, u_e, g_S), g_acc)
         set_acc = np.where(any_nz, np.where(d >= 1, False, set_S), set_acc)
-        acc = acc + P.sum(axis=-2)
+        acc = acc_exact + P.sum(axis=-2)
     return mu, half, var
 
 
@@ -269,7 +273,9 @@ def fma_chain_contract(a, b, c):
     mu, half, var = np.zeros(acc.shape), np.zeros(acc.shape), np.zeros(acc.shape)
     for k in range(a.shape[-1]):
         prod = a[..., :, k][..., :, None] * b[..., k, :][..., None, :]
-        m, h, v = add_contract(acc, prod, "f32", a_grid=True, b_grid=False)
+        # the accumulator as the device holds it: the exact prefix plus the mean error predicted so far (with the
+        # exact prefix, increments lost to rounding were counted again at the next step)
+        m, h, v = add_contract(acc + mu, prod, "f32", a_grid=True, b_grid=False)
         mu, half, var = mu + m, half + h, var + v
         acc = acc + prod
     return mu, half, var
@@ -648,6 +654,14 @@ class BiasPredictor(KernelReferenceEvaluator):
             raise ProgramAbort(f"{op.node_id}: bias contract: no contract for {key}")
         mu, half, var, outside = got
         ok = out.st == ST_OK
+        if out_elem in iv.FLOAT_FORMATS:
+            # an exact result below the normal range (exp2 of a masked logit underflows to 0): the approximate
+            # instruction returns zero (FTZ) -- a determined residual of at most the smallest normal, not a cell
+            tiny = np.abs(out.lo) < np.ldexp(1.0, iv.FLOAT_FORMATS[out_elem][1])
+            mu = np.where(tiny, -out.lo, mu)
+            half = np.where(tiny, 0.0, half)
+            var = np.where(tiny, 0.0, var)
+            outside = outside & ~tiny
         if (outside & ok).any():
             self.flags[f"approx_outside_cells@{op.node_id}"] += int((outside & ok).sum())
         # a few fixed operating points (e.g. after floor): a cell mean does not speak for them
@@ -912,6 +926,8 @@ def summarize(pred: dict, max_relative=LARGE_RELATIVE) -> dict:
                      "alignment_noise_se": float(np.sqrt(((nd * g) ** 2).sum()) / gg) if gg > 0 else 0.0,
                      "mean_ulp": float(np.mean(dl / u)) if dl.size else 0.0,
                      "rms_relative_error": float(np.sqrt(np.mean(rel_sd ** 2))) if nz.any() else 0.0,
+                     # energy-weighted: ||predicted error|| / ||G|| (not inflated by outputs near zero)
+                     "energy_relative_error": float(np.sqrt(((dl + nd) ** 2).sum() / gg)) if gg > 0 else 0.0,
                      "share_large_relative": float(np.mean(rel_sd > max_relative)) if nz.any() else 0.0}
     failures = []
     if pred["aborted_programs"]:

@@ -1,0 +1,20 @@
+══ 审查报告 ══
+【事前预测，kernel 未运行】无法判断
+【运行】下降规则逐位核对：partial
+  M: K − G 对齐 -2.78e-08（标准误 2.1e-09）——统计上显著，但小于输出格式的单位舍入 6e-08，可忽略
+      相对误差（能量加权）4.4e-08，最大 |K − G| 1.1e-06（256 / 256 个元素）
+  desc_o: K − G 对齐 -1.54e-05（标准误 2.1e-05）——未发现显著偏差
+      相对误差（能量加权）0.0017，最大 |K − G| 0.000712（16384 / 16384 个元素）
+  desc_o: G − S（语义）-1.42e-08，K − S（合计）-1.54e-05
+【M 的来源（偏差不显著，仅供参考）】各节点对对齐量的贡献（program [(0, 0, 0), (1, 0, 0)]；合计 -2.91e-08）
+  -1.74e-08  tt.dot@78              planted_fwd.py:456   张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）
+  -8.34e-09  math.exp2@92           planted_fwd.py:465   近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差
+  -5.94e-09  math.exp2@94           planted_fwd.py:467   近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差
+  +3.83e-09  arith.addf@123         planted_fwd.py:489   乘加收缩成一次 fma（一次舍入）
+  +2.46e-09  math.log2@128          planted_fwd.py:561   近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差
+  -1.36e-09  arith.mulf@85          planted_fwd.py:463   在声明类型中就近舍入
+  -1.04e-09  arith.subf@91          planted_fwd.py:464   乘加收缩成一次 fma（一次舍入）
+  -1.03e-09  tt.reduce@95                                按布局次序求和（每次组合就近舍入）
+【无法判断】
+  - 预测：aborted: tt.dot@121: bias contract: dot (tf32, f16) outside the contracts
+  - 逐位核对：partial ['tt.dot@121 (tensor-core dot (tf32, f16 x f16 -> f16))'] []

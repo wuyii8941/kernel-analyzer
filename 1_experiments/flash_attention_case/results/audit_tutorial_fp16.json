@@ -1,0 +1,281 @@
+{
+ "prediction": {
+  "outputs": {
+   "M": {
+    "elements": 256,
+    "written": 256,
+    "alignment": -2.4109597707950693e-08,
+    "alignment_noise_se": 1.5639308678574049e-09,
+    "mean_ulp": -0.2704811909601667,
+    "rms_relative_error": 4.728028021344349e-08,
+    "energy_relative_error": 4.7329619182257855e-08,
+    "share_large_relative": 0.0
+   },
+   "desc_o": {
+    "elements": 16384,
+    "written": 16384,
+    "alignment": 1.2334182978349904e-06,
+    "alignment_noise_se": 3.2438252168979267e-06,
+    "mean_ulp": 0.023109481591432997,
+    "rms_relative_error": 0.01528756383232571,
+    "energy_relative_error": 0.00040019396044575436,
+    "share_large_relative": 0.00244140625
+   }
+  },
+  "failures": [],
+  "status": "predicted",
+  "sites": {
+   "rn": 536578,
+   "mma_f16": 524288,
+   "rn_fma_contracted": 266240,
+   "approx:math.exp2|f32": 266240,
+   "rn_add": 4096,
+   "rn_reduce_sum": 4096,
+   "rn_conversion": 278528,
+   "approx:math.log2|f32": 256,
+   "approx:arith.divf|f32": 16384
+  }
+ },
+ "verify": {
+  "status": "bit_identical",
+  "buffers": {
+   "M": {
+    "written": 256,
+    "emulated": 256,
+    "bit_identical": 256,
+    "value_equal": 256,
+    "nan_both": 0,
+    "not_emulated": 0,
+    "mismatch": 0
+   },
+   "desc_o": {
+    "written": 16384,
+    "emulated": 16384,
+    "bit_identical": 16384,
+    "value_equal": 16384,
+    "nan_both": 0,
+    "not_emulated": 0,
+    "mismatch": 0
+   }
+  },
+  "not_emulable_nodes": [],
+  "abort_reasons": []
+ },
+ "measured": {
+  "M": {
+   "elements": 256,
+   "written": 256,
+   "alignment": -2.7798631195511947e-08,
+   "format_resolution": 5.960464477539063e-08,
+   "se": 2.141202768676634e-09,
+   "energy_relative": 4.402666560860558e-08,
+   "max_abs": 1.1039404625989846e-06,
+   "statistically_significant": true,
+   "significant": false,
+   "prediction_agrees": true
+  },
+  "desc_o": {
+   "elements": 16384,
+   "written": 16384,
+   "alignment": 1.0382079343920753e-06,
+   "format_resolution": 0.00048828125,
+   "se": 3.1928110268027667e-06,
+   "energy_relative": 0.0002811038234902056,
+   "max_abs": 7.817828876816035e-05,
+   "statistically_significant": false,
+   "significant": false,
+   "prediction_agrees": true
+  }
+ },
+ "attribution": {
+  "M": {
+   "programs": [
+    [
+     0,
+     0,
+     0
+    ],
+    [
+     1,
+     0,
+     0
+    ]
+   ],
+   "sum": -2.912549501219516e-08,
+   "gross": 4.170656623832808e-08,
+   "nodes": [
+    {
+     "node": "tt.dot@78",
+     "lowering": "dot_tensor_core_f16",
+     "source": "tutorial_fwd.py:36",
+     "text": "%qk = tt.dot %q_38, %k_67, %cst_6, inputPrecision = tf32 : tensor<128x64xf16> * tensor<64x64xf16> ->",
+     "contribution": -1.742965225247569e-08,
+     "mechanism": "张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
+     "fix": "通常可忽略；确有影响时分段累加到 fp32"
+    },
+    {
+     "node": "math.exp2@92",
+     "lowering": "oracle",
+     "source": "tutorial_fwd.py:45",
+     "text": "%p = math.exp2 %qk_75 : tensor<128x64xf32>",
+     "contribution": -8.339400274199328e-09,
+     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差",
+     "fix": "影响确实要紧时改用正确舍入的 libdevice 函数或 tl.math.div_rn"
+    },
+    {
+     "node": "math.exp2@94",
+     "lowering": "oracle",
+     "source": "tutorial_fwd.py:47",
+     "text": "%alpha_76 = math.exp2 %alpha : tensor<128xf32>",
+     "contribution": -5.938396435765641e-09,
+     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差",
+     "fix": "影响确实要紧时改用正确舍入的 libdevice 函数或 tl.math.div_rn"
+    },
+    {
+     "node": "arith.addf@121",
+     "lowering": "fma_contraction",
+     "source": "tutorial_fwd.py:69",
+     "text": "%l_i_97 = arith.addf %l_i_96, %l_ij : tensor<128xf32>",
+     "contribution": 3.834826268259812e-09,
+     "mechanism": "乘加收缩成一次 fma（一次舍入）",
+     "fix": "不需要"
+    },
+    {
+     "node": "math.log2@126",
+     "lowering": "oracle",
+     "source": "tutorial_fwd.py:149",
+     "text": "%m_i_39 = math.log2 %offsetv_y#1 : tensor<128xf32>",
+     "contribution": 2.455709344806643e-09,
+     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差",
+     "fix": "影响确实要紧时改用正确舍入的 libdevice 函数或 tl.math.div_rn"
+    },
+    {
+     "node": "arith.mulf@85",
+     "lowering": "ieee",
+     "source": "tutorial_fwd.py:43",
+     "text": "%m_ij_69 = arith.mulf %m_ij, %m_ij_68 : tensor<128xf32>",
+     "contribution": -1.364115760274658e-09,
+     "mechanism": "在声明类型中就近舍入",
+     "fix": "影响不大时不需要"
+    },
+    {
+     "node": "arith.subf@91",
+     "lowering": "fma_contraction",
+     "source": "tutorial_fwd.py:44",
+     "text": "%qk_75 = arith.subf %qk_72, %qk_74 : tensor<128x64xf32>",
+     "contribution": -1.036297045604055e-09,
+     "mechanism": "乘加收缩成一次 fma（一次舍入）",
+     "fix": "不需要"
+    },
+    {
+     "node": "tt.reduce@95",
+     "lowering": "reduce_tree",
+     "source": "",
+     "text": "%l_ij = \"tt.reduce\"(%p) <{axis = 1 : i32}> ({",
+     "contribution": -1.0346578516342146e-09,
+     "mechanism": "按布局次序求和（每次组合就近舍入）",
+     "fix": "影响要紧时在更宽的类型里累加"
+    }
+   ]
+  },
+  "desc_o": {
+   "programs": [
+    [
+     0,
+     0,
+     0
+    ],
+    [
+     1,
+     0,
+     0
+    ]
+   ],
+   "sum": 4.175280282792639e-06,
+   "gross": 6.677044364444159e-06,
+   "nodes": [
+    {
+     "node": "arith.truncf@118",
+     "lowering": "ieee",
+     "source": "tutorial_fwd.py:64",
+     "text": "%p_94 = arith.truncf %p : tensor<128x64xf32> to tensor<128x64xf16>",
+     "contribution": 3.619738035429898e-06,
+     "mechanism": "转到更窄的格式（舍入）",
+     "fix": "影响要紧时一直保留宽类型，直到写出"
+    },
+    {
+     "node": "arith.truncf@136",
+     "lowering": "ieee",
+     "source": "tutorial_fwd.py:153",
+     "text": "%0 = arith.truncf %acc_42 : tensor<128x64xf32> to tensor<128x64xf16>",
+     "contribution": 1.6778480822835045e-06,
+     "mechanism": "转到更窄的格式（舍入）",
+     "fix": "影响要紧时一直保留宽类型，直到写出"
+    },
+    {
+     "node": "arith.subf@91",
+     "lowering": "fma_contraction",
+     "source": "tutorial_fwd.py:44",
+     "text": "%qk_75 = arith.subf %qk_72, %qk_74 : tensor<128x64xf32>",
+     "contribution": -3.9792913843394733e-07,
+     "mechanism": "乘加收缩成一次 fma（一次舍入）",
+     "fix": "不需要"
+    },
+    {
+     "node": "tt.dot@119",
+     "lowering": "dot_tensor_core_f16",
+     "source": "tutorial_fwd.py:66",
+     "text": "%acc_95 = tt.dot %p_94, %v_93, %acc_79, inputPrecision = tf32 : tensor<128x64xf16> * tensor<64x64xf1",
+     "contribution": -3.728336936234557e-07,
+     "mechanism": "张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
+     "fix": "通常可忽略；确有影响时分段累加到 fp32"
+    },
+    {
+     "node": "tt.dot@78",
+     "lowering": "dot_tensor_core_f16",
+     "source": "tutorial_fwd.py:36",
+     "text": "%qk = tt.dot %q_38, %k_67, %cst_6, inputPrecision = tf32 : tensor<128x64xf16> * tensor<64x64xf16> ->",
+     "contribution": -2.8931591082069926e-07,
+     "mechanism": "张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
+     "fix": "通常可忽略；确有影响时分段累加到 fp32"
+    },
+    {
+     "node": "arith.mulf@85",
+     "lowering": "ieee",
+     "source": "tutorial_fwd.py:43",
+     "text": "%m_ij_69 = arith.mulf %m_ij, %m_ij_68 : tensor<128xf32>",
+     "contribution": -1.8838295247710826e-07,
+     "mechanism": "在声明类型中就近舍入",
+     "fix": "影响不大时不需要"
+    },
+    {
+     "node": "math.exp2@92",
+     "lowering": "oracle",
+     "source": "tutorial_fwd.py:45",
+     "text": "%p = math.exp2 %qk_75 : tensor<128x64xf32>",
+     "contribution": 1.106140292702963e-07,
+     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差",
+     "fix": "影响确实要紧时改用正确舍入的 libdevice 函数或 tl.math.div_rn"
+    },
+    {
+     "node": "tt.reduce@95",
+     "lowering": "reduce_tree",
+     "source": "",
+     "text": "%l_ij = \"tt.reduce\"(%p) <{axis = 1 : i32}> ({",
+     "contribution": 1.0027893690990918e-08,
+     "mechanism": "按布局次序求和（每次组合就近舍入）",
+     "fix": "影响要紧时在更宽的类型里累加"
+    }
+   ]
+  }
+ },
+ "spec": {
+  "desc_o": {
+   "semantic_alignment": -1.420115182699126e-08,
+   "total_alignment": 1.0240067888435617e-06,
+   "max_abs_semantic": 7.410315888689567e-09
+  }
+ },
+ "findings": [],
+ "cannot_decide": []
+}

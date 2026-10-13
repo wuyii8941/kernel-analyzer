@@ -1,0 +1,28 @@
+══ 审查报告 ══
+【事前预测，kernel 未运行】已预测
+  M: 对齐 -2.41e-08（噪声标准误 1.6e-09），相对误差（能量加权）4.7e-08
+  desc_o: 对齐 +1.23e-06（噪声标准误 3.2e-06），相对误差（能量加权）0.0004
+【运行】下降规则逐位核对：bit_identical
+  M: K − G 对齐 -2.78e-08（标准误 2.1e-09）——统计上显著，但小于输出格式的单位舍入 6e-08，可忽略，与事前预测一致
+      相对误差（能量加权）4.4e-08，最大 |K − G| 1.1e-06（256 / 256 个元素）
+  desc_o: K − G 对齐 +1.04e-06（标准误 3.2e-06）——未发现显著偏差，与事前预测一致
+      相对误差（能量加权）0.00028，最大 |K − G| 7.82e-05（16384 / 16384 个元素）
+  desc_o: G − S（语义）-1.42e-08，K − S（合计）+1.02e-06
+【M 的来源（偏差不显著，仅供参考）】各节点对对齐量的贡献（program [(0, 0, 0), (1, 0, 0)]；合计 -2.91e-08）
+  -1.74e-08  tt.dot@78              tutorial_fwd.py:36   张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）
+  -8.34e-09  math.exp2@92           tutorial_fwd.py:45   近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差
+  -5.94e-09  math.exp2@94           tutorial_fwd.py:47   近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差
+  +3.83e-09  arith.addf@121         tutorial_fwd.py:69   乘加收缩成一次 fma（一次舍入）
+  +2.46e-09  math.log2@126          tutorial_fwd.py:149  近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差
+  -1.36e-09  arith.mulf@85          tutorial_fwd.py:43   在声明类型中就近舍入
+  -1.04e-09  arith.subf@91          tutorial_fwd.py:44   乘加收缩成一次 fma（一次舍入）
+  -1.03e-09  tt.reduce@95                                按布局次序求和（每次组合就近舍入）
+【desc_o 的来源（偏差不显著，仅供参考）】各节点对对齐量的贡献（program [(0, 0, 0), (1, 0, 0)]；合计 +4.18e-06）
+  +3.62e-06  arith.truncf@118       tutorial_fwd.py:64   转到更窄的格式（舍入）
+  +1.68e-06  arith.truncf@136       tutorial_fwd.py:153  转到更窄的格式（舍入）
+  -3.98e-07  arith.subf@91          tutorial_fwd.py:44   乘加收缩成一次 fma（一次舍入）
+  -3.73e-07  tt.dot@119             tutorial_fwd.py:66   张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）
+  -2.89e-07  tt.dot@78              tutorial_fwd.py:36   张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）
+  -1.88e-07  arith.mulf@85          tutorial_fwd.py:43   在声明类型中就近舍入
+  +1.11e-07  math.exp2@92           tutorial_fwd.py:45   近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差
+  +1e-08  tt.reduce@95                                按布局次序求和（每次组合就近舍入）

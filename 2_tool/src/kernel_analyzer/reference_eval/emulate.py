@@ -1231,7 +1231,7 @@ class GpuEmulator(KernelReferenceEvaluator):
         shape = np.broadcast_shapes(c.shape)
         tc = tensor_core.mma_format(a.elem, b.elem, c.elem, precision)
         if tc is None and not (a.elem == b.elem == c.elem == "f32" and precision.startswith("ieee")):
-            return self._not_emulable(op, list(shape), c.elem, [a, b, c], f"tensor-core dot ({precision})")
+            return self._not_emulable(op, list(shape), c.elem, [a, b, c], f"tensor-core dot ({precision}, {a.elem} x {b.elem} -> {c.elem})")
         if op.node_id in self.exact_nodes:
             self.trace[(op.node_id, "exact")] += 1
             lo, hi = iv.idot(a.lo, a.hi, b.lo, b.hi)
@@ -1507,9 +1507,11 @@ def rounding_nodes(emu: GpuEmulator) -> list:
 
     seen = []
     for (node, how) in emu.trace:
-        if how in ("ieee", "oracle", "oracle_group", "fma_contraction", "reduce_tree", "reduce_tree_fused",
-                   "dot_fma_chain") \
-                and node not in seen:
+        rounds = (how in ("ieee", "oracle", "oracle_group", "fma_contraction", "ftz", "int_to_float_exact")
+                  or how.startswith(("reduce_tree", "dot_", "scan_order")) or how.endswith("_exact"))
+        # not candidates: nodes already exact, a product folded into an fma (no rounding of its own), a device
+        # evaluation without declared semantics (no exact value to substitute), an order-free scan (exact)
+        if rounds and how != "scan_order_free" and node not in seen:
             seen.append(node)
     return seen
 

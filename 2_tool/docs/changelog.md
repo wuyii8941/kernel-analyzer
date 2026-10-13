@@ -19,6 +19,23 @@ v1.1 的计分只绑定运行 r20261008T2030。
   - 新测试只在 CPU 上求值编译产物（`triton.compile`，不启动），有竞争的 kernel 从不运行。
 - 注册表写到 `2_tool/data/rule_registry.json`（`2_tool/scripts/dsl_v2/build_rule_registry.py`）；`pre-reorg-20261009:results/general/` 下的 v3.1 注册表冻结不改。
 
+### 审查入口与第一个完整案例（Triton 教程 flash attention），2026-10-13
+
+见 [1_experiments/flash_attention_case](../../1_experiments/flash_attention_case/README.md)。每处先写修复前失败的测试：
+
+- **新模块 `reference_eval/audit.py`**：`audit(launch, spec=...)` 一次完成事前预测（kernel 不运行）、逐位核对、精确参照、
+  逐节点归因（每个舍入节点精确替换后对输出对齐量的贡献，带源码行与机制）、规格对比（G − S），按输出给出显著性（统计显著
+  且超过输出格式的单位舍入）、事前预测与实测是否一致、改法与模型内反事实，以及「无法判断」的原因。测试
+  `tests/test_reference_eval_audit.py`。
+- **对 `tl.dot` 输出的归约**（`layouts.py`）：张量核累加器布局 nvidia_mma v2 与 `#ttg.linear` 布局的组合次序
+  （`linear_bases`、`linear_axis_params`）；原来只认 blocked / slice，flash attention 的 softmax 一个元素也仿真不了。
+- **`emulate.rounding_nodes`** 列入所有舍入的下降方式（张量核 dot、扫描次序、设备组合的归约与扫描、整数转浮点、libdevice
+  精确求值、FTZ）；原来只列早期几种，归因看不到张量核 dot。
+- **不在规则内的 dot** 的提示写出元素类型（原来对 fp16 累加器的 dot 报「tensor-core dot (tf32)」）。
+- **`bias_predict`**：近似函数结果低于正规数范围时按冲零确定（原来 causal mask 的 exp2 被当作契约表格外而放弃）；fp32 fma 链
+  与张量核契约用设备值估计推进累加器（外部审阅的反例 1 + 3×2⁻²⁴）；摘要增加能量加权的相对误差。预测器的这些修改发生在
+  组合研究的 v1 / v2 冻结之后，v1 / v2 的结果对应提交 bd84c02 / 0f1e465 中的文件（SHA-256 见两份协议）。
+
 ### 组合研究修订：组合偏差预测与审阅修正，2026-10-13
 
 见 [1_experiments/composition_study](../../1_experiments/composition_study/README.md) 第 10 节与

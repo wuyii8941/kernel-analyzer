@@ -1,0 +1,31 @@
+══ 审查报告 ══
+【事前预测，kernel 未运行】已预测
+  M: 对齐 -0.000261（噪声标准误 9.2e-05），相对误差（能量加权）0.0021
+  desc_o: 对齐 +0.00186（噪声标准误 0.00017），相对误差（能量加权）0.017
+【运行】下降规则逐位核对：bit_identical
+  M: K − G 对齐 -0.00027（标准误 8.9e-05）——未发现显著偏差，与事前预测一致
+      相对误差（能量加权）0.0015，最大 |K − G| 0.057（256 / 256 个元素）
+  desc_o: K − G 对齐 +0.002（标准误 0.00015）——有显著的系统偏差，与事前预测一致
+      相对误差（能量加权）0.012，最大 |K − G| 0.003（16384 / 16384 个元素）
+  desc_o: G − S（语义）-1.47e-08，K − S（合计）+0.002
+【M 的来源（偏差不显著，仅供参考）】各节点对对齐量的贡献（program [(0, 0, 0), (1, 0, 0)]；合计 -0.000264）
+  -0.00027  arith.truncf@125       planted_fwd.py:352   转到更窄的格式（舍入）
+  +5.72e-06  arith.addf@124         planted_fwd.py:352   乘加收缩成一次 fma（一次舍入）
+  -5.64e-08  tt.dot@81              planted_fwd.py:319   张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）
+  +4.78e-09  math.log2@131          planted_fwd.py:424   近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差
+  +1.58e-09  arith.addf@132         planted_fwd.py:424   在声明类型中就近舍入
+  +6.54e-10  arith.mulf@88          planted_fwd.py:326   在声明类型中就近舍入
+  +0  arith.mulf@33          planted_fwd.py:402   在声明类型中就近舍入
+  +0  arith.maxnumf@89       planted_fwd.py:326   在声明类型中就近舍入
+【desc_o 的来源】各节点对对齐量的贡献（program [(0, 0, 0), (1, 0, 0)]；合计 +0.00196）
+  +0.002  arith.truncf@125       planted_fwd.py:352   循环携带的量保留在窄类型里（低精度累加：增量不足一个 ulp 时被吞掉，长循环会停滞）
+  -4.34e-05  arith.addf@124         planted_fwd.py:352   乘加收缩成一次 fma（一次舍入）
+  +4.79e-06  arith.truncf@121       planted_fwd.py:347   转到更窄的格式（舍入）
+  -2.37e-06  tt.dot@122             planted_fwd.py:349   张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）
+  +2.35e-06  tt.dot@81              planted_fwd.py:319   张量核 dot：每组乘积与累加器向零截断（随 K 增长的小的系统收缩）
+  +2.31e-06  arith.truncf@141       planted_fwd.py:428   转到更窄的格式（舍入）
+  -3.52e-07  arith.subf@94          planted_fwd.py:327   乘加收缩成一次 fma（一次舍入）
+  -1.59e-07  math.exp2@95           planted_fwd.py:328   近似指令（ex2.approx / lg2.approx / div.full …）：几分之一 ulp 的系统平均误差
+【发现】
+  - desc_o：循环携带的量保留在窄类型里（低精度累加：增量不足一个 ulp 时被吞掉，长循环会停滞）
+      改法：把循环里的累加量保持在 fp32，循环结束后再转换；该位点精确时对齐 +0.002 → -2.23e-06（模型内反事实）

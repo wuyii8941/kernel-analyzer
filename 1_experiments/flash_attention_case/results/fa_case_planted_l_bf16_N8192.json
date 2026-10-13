@@ -1,0 +1,286 @@
+{
+ "case": "planted_l_bf16",
+ "dtype": "float16",
+ "shape": [
+  1,
+  2,
+  8192,
+  64
+ ],
+ "causal": false,
+ "blocks": [
+  128,
+  16
+ ],
+ "programs": [
+  [
+   0,
+   0,
+   0
+  ]
+ ],
+ "timing": {
+  "predict_s": 167.2,
+  "verify_s": 13.2,
+  "localize_s": 241.7,
+  "reference_s": 39.2
+ },
+ "prediction": {
+  "outputs": {
+   "M": {
+    "elements": 128,
+    "written": 128,
+    "alignment": -0.013895380912815685,
+    "alignment_noise_se": 0.0002047180531049006,
+    "mean_ulp": -199879.95587528934,
+    "rms_relative_error": 0.015671747625710993,
+    "share_large_relative": 0.0
+   },
+   "desc_o": {
+    "elements": 8192,
+    "written": 8192,
+    "alignment": 0.13019904844894284,
+    "alignment_noise_se": 0.00045435448235452266,
+    "mean_ulp": -4.079944317985278,
+    "rms_relative_error": 0.6092406440131952,
+    "share_large_relative": 0.84228515625
+   }
+  },
+  "failures": [
+   "large relative error in desc_o (0.842 of elements)"
+  ],
+  "status": "无法判断",
+  "sites": {
+   "rn": 5439489,
+   "mma_f16": 5242880,
+   "rn_fma_contracted": 1114112,
+   "approx:math.exp2|f32": 1114112,
+   "rn_add": 65536,
+   "rn_reduce_sum": 65536,
+   "rn_conversion": 1187840,
+   "approx:math.log2|f32": 128,
+   "approx:arith.divf|f32": 8192
+  },
+  "per_output_delta_rms": {
+   "M": 0.20971085974227874,
+   "desc_o": 0.0024967171654843518
+  }
+ },
+ "verify": {
+  "status": "bit_identical",
+  "buffers": {
+   "M": {
+    "written": 128,
+    "emulated": 128,
+    "bit_identical": 128,
+    "value_equal": 128,
+    "nan_both": 0,
+    "not_emulated": 0,
+    "mismatch": 0
+   },
+   "desc_o": {
+    "written": 8192,
+    "emulated": 8192,
+    "bit_identical": 8192,
+    "value_equal": 8192,
+    "nan_both": 0,
+    "not_emulated": 0,
+    "mismatch": 0
+   }
+  },
+  "not_emulable_nodes": [],
+  "abort_reasons": [],
+  "lowering_choices": {
+   "frozen": true,
+   "approximate_then_add_pairs": 1,
+   "two_product_adds": 0,
+   "product_choices_from_ptx": {},
+   "contractions_from_sass": {},
+   "uncontracted": [],
+   "swapped": [],
+   "uncontracted_from_output": [],
+   "swapped_from_output": []
+  }
+ },
+ "attribution": [
+  {
+   "node": "arith.mulf@33",
+   "lowering": "ieee",
+   "text": "%qk_scale = arith.mulf %sm_scale, %cst_7 : f32",
+   "o_ptr": {
+    "mean": 0.0,
+    "mean_abs": 0.0,
+    "mean_relative": 0.0
+   }
+  },
+  {
+   "node": "arith.mulf@88",
+   "lowering": "ieee",
+   "text": "%m_ij_72 = arith.mulf %m_ij, %m_ij_71 : tensor<128xf32>",
+   "o_ptr": {
+    "mean": 1.3504177331924438e-08,
+    "mean_abs": 6.666232366114855e-08,
+    "mean_relative": 2.3501082431010677e-06
+   }
+  },
+  {
+   "node": "arith.maxnumf@89",
+   "lowering": "ieee",
+   "text": "%m_ij_73 = arith.maxnumf %m_i_49, %m_ij_72 : tensor<128xf32>",
+   "o_ptr": {
+    "mean": 0.0,
+    "mean_abs": 0.0,
+    "mean_relative": 0.0
+   }
+  },
+  {
+   "node": "arith.subf@94",
+   "lowering": "fma_contraction",
+   "text": "%qk_78 = arith.subf %qk_75, %qk_77 : tensor<128x16xf32>",
+   "o_ptr": {
+    "mean": -1.9783328752964735e-08,
+    "mean_abs": 5.280162440612912e-08,
+    "mean_relative": 4.135161070818686e-06
+   }
+  },
+  {
+   "node": "math.exp2@95",
+   "lowering": "oracle",
+   "text": "%p = math.exp2 %qk_78 : tensor<128x16xf32>",
+   "o_ptr": {
+    "mean": 8.512870408594608e-10,
+    "mean_abs": 4.711182555183768e-08,
+    "mean_relative": -8.007819978385996e-07
+   }
+  },
+  {
+   "node": "arith.subf@96",
+   "lowering": "ieee",
+   "text": "%alpha = arith.subf %m_i_49, %m_ij_73 : tensor<128xf32>",
+   "o_ptr": {
+    "mean": 0.0,
+    "mean_abs": 0.0,
+    "mean_relative": 0.0
+   }
+  },
+  {
+   "node": "math.exp2@97",
+   "lowering": "oracle",
+   "text": "%alpha_79 = math.exp2 %alpha : tensor<128xf32>",
+   "o_ptr": {
+    "mean": 1.5279510989785194e-10,
+    "mean_abs": 7.930793799459934e-10,
+    "mean_relative": 2.995348226623089e-07
+   }
+  },
+  {
+   "node": "tt.reduce@98",
+   "lowering": "reduce_tree",
+   "text": "%l_ij = \"tt.reduce\"(%p) <{axis = 1 : i32}> ({",
+   "o_ptr": {
+    "mean": 0.0,
+    "mean_abs": 0.0,
+    "mean_relative": 0.0
+   }
+  },
+  {
+   "node": "arith.mulf@105",
+   "lowering": "ieee",
+   "text": "%acc_82 = arith.mulf %acc_47, %acc_81 : tensor<128x64xf32>",
+   "o_ptr": {
+    "mean": 2.1827872842550278e-10,
+    "mean_abs": 2.473825588822365e-10,
+    "mean_relative": -1.5362119643023643e-08
+   }
+  },
+  {
+   "node": "arith.truncf@121",
+   "lowering": "ieee",
+   "text": "%p_97 = arith.truncf %p : tensor<128x16xf32> to tensor<128x16xf16>",
+   "o_ptr": {
+    "mean": -5.4933479987084866e-08,
+    "mean_abs": 3.388355253264308e-06,
+    "mean_relative": 0.00019547034321194324
+   }
+  },
+  {
+   "node": "arith.addf@124",
+   "lowering": "fma_contraction",
+   "text": "%l_i_100 = arith.addf %l_i_99, %l_ij : tensor<128xf32>",
+   "o_ptr": {
+    "mean": -1.4246325008571148e-07,
+    "mean_abs": 1.2737291399389505e-06,
+    "mean_relative": -1.2013553097020422e-05
+   }
+  },
+  {
+   "node": "arith.truncf@125",
+   "lowering": "ieee",
+   "text": "%l_i_101 = arith.truncf %l_i_100 : tensor<128xf32> to tensor<128xbf16>",
+   "o_ptr": {
+    "mean": -0.00011562527652131394,
+    "mean_abs": 0.002168230123061221,
+    "mean_relative": 0.13212657119042898
+   }
+  },
+  {
+   "node": "arith.extf@126",
+   "lowering": "ieee",
+   "text": "%l_i_102 = arith.extf %l_i_101 : tensor<128xbf16> to tensor<128xf32>",
+   "o_ptr": {
+    "mean": 0.0,
+    "mean_abs": 0.0,
+    "mean_relative": 0.0
+   }
+  },
+  {
+   "node": "math.log2@131",
+   "lowering": "oracle",
+   "text": "%m_i_39 = math.log2 %offsetv_y#1 : tensor<128xf32>",
+   "o_ptr": {
+    "mean": 0.0,
+    "mean_abs": 0.0,
+    "mean_relative": 0.0
+   }
+  },
+  {
+   "node": "arith.addf@132",
+   "lowering": "oracle_group",
+   "text": "%m_i_40 = arith.addf %offsetv_y#2, %m_i_39 : tensor<128xf32>",
+   "o_ptr": {
+    "mean": 0.0,
+    "mean_abs": 0.0,
+    "mean_relative": 0.0
+   }
+  },
+  {
+   "node": "arith.divf@135",
+   "lowering": "oracle",
+   "text": "%acc_43 = arith.divf %offsetv_y#0, %acc_42 : tensor<128x64xf32>",
+   "o_ptr": {
+    "mean": 0.0,
+    "mean_abs": 0.0,
+    "mean_relative": 0.0
+   }
+  },
+  {
+   "node": "arith.truncf@141",
+   "lowering": "ieee",
+   "text": "%0 = arith.truncf %acc_43 : tensor<128x64xf32> to tensor<128x64xf16>",
+   "o_ptr": {
+    "mean": 1.527255377720138e-08,
+    "mean_abs": 2.8488275977123223e-06,
+    "mean_relative": 8.605762600830625e-07
+   }
+  }
+ ],
+ "measured": {
+  "elements": 8192,
+  "written": 8192,
+  "alignment_K_vs_G": 0.15491996839388888,
+  "alignment_G_vs_S": -1.53238819649966e-08,
+  "alignment_K_vs_S": 0.15491995069761824,
+  "rms_rel_K_vs_G": 0.5513686079489653,
+  "max_abs_K_vs_S": 0.015955400932466647
+ }
+}
