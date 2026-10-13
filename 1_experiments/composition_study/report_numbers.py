@@ -79,14 +79,42 @@ def main():
         "cells_options": cells(R / "cells_options.jsonl.gz"),
         "partial_recheck": partial_reasons(R / "cells_partial_recheck.jsonl.gz"),
         "corpus": corpus(R / "corpus.json"),
-        "validation_heldout": validation(R / "predictor_heldout_verdicts.json"),
-        "validation_development": validation(R / "predictor_dev_verdicts.json"),
+        "validation_heldout_v1": validation(R / "predictor_heldout_verdicts.json"),
+        "validation_heldout_v2": validation(R / "predictor_heldout2_verdicts.json"),
+        "validation_development_dev0": validation(R / "predictor_dev_verdicts.json"),
+        "validation_development_dev1": validation(R / "predictor_dev1_verdicts.json"),
     }
+    for key in ("validation_heldout_v1", "validation_heldout_v2"):
+        V = json.loads((R / ("predictor_heldout_verdicts.json" if key.endswith("v1")
+                             else "predictor_heldout2_verdicts.json")).read_text())
+        strict = Counter()
+        for v in V:
+            if v["verdict"] == "成立":
+                ok = all(abs(o["difference"]) <= 3 * (o["se_pred"] ** 2 + o["se_meas"] ** 2) ** 0.5
+                         + 0.1 * abs(o["predicted"]) for o in v["outputs"].values())
+                strict["holds without the second-order term" if ok else "holds only with it"] += 1
+        numbers[key]["post_hoc_strict_tolerance"] = dict(strict)
     tf = R / "tf32_modification_verdicts.json"
     if tf.exists():
         d = json.loads(tf.read_text())
-        numbers["tf32_modification"] = {"verdict": dict(Counter((v["variant"], v["verdict"]) for v in d["verdicts"])),
-                                        "effects": d["effects"]}
+        P = [json.loads(l) for l in (R / "tf32_modification_predictions.jsonl").read_text().splitlines() if l.strip()]
+        M = [json.loads(l) for l in (R / "tf32_modification_measurements.jsonl").read_text().splitlines() if l.strip()]
+        strict = Counter()
+        for v in d["verdicts"]:
+            key = (v["variant"], v["layer"], v["matrix"])
+            p = [r["c_ptr"]["alignment"] for r in P if (r["variant"], r["layer"], r["matrix"]) == key]
+            m = [r["tiles"] for r in M if (r["variant"], r["layer"], r["matrix"]) == key]
+
+            def se(x):
+                mu = sum(x) / len(x)
+                return (sum((a - mu) ** 2 for a in x) / (len(x) - 1)) ** 0.5 / len(x) ** 0.5
+            se_m = max(se([r["alignment"] for r in m]), sum(r["se_iid"] ** 2 for r in m) ** 0.5 / len(m))
+            tol = 3 * (se(p) ** 2 + se_m ** 2) ** 0.5 + 0.1 * abs(sum(p) / len(p))
+            ok = abs(sum(r["alignment"] for r in m) / len(m) - sum(p) / len(p)) <= tol
+            strict[f"{v['variant']} {'成立' if ok else '不成立'}"] += 1
+        numbers["tf32_modification"] = {"verdict": dict(Counter(f"{v['variant']} {v['verdict']}"
+                                                                for v in d["verdicts"])),
+                                        "post_hoc_strict_tolerance": dict(strict), "effects": d["effects"]}
     (R / "numbers.json").write_text(json.dumps(numbers, indent=1, ensure_ascii=False, default=str))
     print(json.dumps(numbers, indent=1, ensure_ascii=False, default=str)[:6000])
 

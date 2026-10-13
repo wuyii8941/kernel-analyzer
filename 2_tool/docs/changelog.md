@@ -21,7 +21,7 @@ v1.1 的计分只绑定运行 r20261008T2030。
 
 ### 组合研究修订：组合偏差预测与审阅修正，2026-10-13
 
-见 [1_experiments/composition_study](../../1_experiments/composition_study/README.md) 第 11 节与
+见 [1_experiments/composition_study](../../1_experiments/composition_study/README.md) 第 10 节与
 [predictor_protocol.md](../../1_experiments/composition_study/predictor_protocol.md)。
 
 - **新模块 `reference_eval/bias_predict.py`**：不运行 kernel，按精确值求一遍启动，在每个舍入点注入局部契约（条件均值、

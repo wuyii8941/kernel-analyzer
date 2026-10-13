@@ -1,0 +1,447 @@
+{
+ "cells_default": {
+  "cells": 17687,
+  "status": {
+   "bit identical": 12074,
+   "partial": 1591,
+   "not established": 235,
+   "not applicable": 3777,
+   "not compiled": 10
+  },
+  "elements": {
+   "written": 11282094,
+   "emulated": 10969390,
+   "bit_identical": 10846873,
+   "nan_both": 122517,
+   "mismatch": 0,
+   "not_emulated": 312704,
+   "int_elements": 5534634
+  }
+ },
+ "cells_options": {
+  "cells": 2065,
+  "status": {
+   "bit identical": 1845,
+   "partial": 194,
+   "mismatch": 1,
+   "not compiled": 6,
+   "not established": 19
+  },
+  "elements": {
+   "written": 883284,
+   "emulated": 852738,
+   "bit_identical": 822858,
+   "nan_both": 29814,
+   "mismatch": 66,
+   "not_emulated": 30546,
+   "int_elements": 407394
+  }
+ },
+ "partial_recheck": {
+  "cells": 1786,
+  "status": {
+   "partial": 1785,
+   "mismatch": 1
+  },
+  "cells_by_category": {
+   "partial: reduce / scan overflow": 38,
+   "partial: no declared value": 1747,
+   "mismatch: no declared value": 1
+  },
+  "cells_by_reason": {
+   "partial-sum overflow in a reduce / scan (outside the model, no reason recorded)": 38,
+   "integer division by zero or INT_MIN / -1 (undefined behavior)": 289,
+   "float-to-int conversion is discontinuous or out of range": 797,
+   "integer division by zero (undefined behavior)": 204,
+   "shift amount outside the width (poison)": 442,
+   "domain of div": 16
+  }
+ },
+ "corpus": {
+  "calls": 179,
+  "distinct_kernels": 231,
+  "status": {
+   "bit_identical": 213,
+   "not_established": 11,
+   "mismatch": 7
+  },
+  "elements": {
+   "written": 73245927,
+   "emulated": 73114855,
+   "bit_identical": 73113239,
+   "nan_both": 0,
+   "undefined": 0,
+   "mismatch": 1616,
+   "not_emulated": 131072,
+   "int_elements": 67439488
+  },
+  "kernels_without_k1": 79,
+  "k2_pairs_by_status": {
+   "bit identical": 2244,
+   "partial": 207,
+   "not established": 8,
+   "no cell": 45
+  },
+  "kernels_all_pairs_bit_identical": 28,
+  "k1_kernels": {
+   "arith.andi||i1|i1": 135,
+   "arith.extui||i1|i32": 14,
+   "arith.uitofp||i1|f32": 9,
+   "arith.extui||i1|i8": 9,
+   "arith.ori||i1|i1": 9,
+   "arith.xori||i1|i1": 5,
+   "arith.extui||i1|i64": 3
+  },
+  "mismatch_kernels": [
+   [
+    "gems.sort.bfloat16",
+    "sweep"
+   ],
+   [
+    "gems.sort.float16",
+    "sweep"
+   ],
+   [
+    "gems.sort.float32",
+    "sweep"
+   ],
+   [
+    "liger.sparsemax.float32",
+    "_sparsemax_backward_kernel"
+   ]
+  ],
+  "not_established_kernels": [
+   [
+    "gems.cross_entropy.float32",
+    "nll_loss_forward_kernel",
+    "not_emulable:atomic@tt.atomic_rmw@49"
+   ],
+   [
+    "gems.sort.bfloat16",
+    "compute_global_hist_kernel",
+    "not_emulable:atomic@tt.atomic_rmw@69"
+   ],
+   [
+    "gems.sort.float16",
+    "compute_global_hist_kernel",
+    "not_emulable:atomic@tt.atomic_rmw@69"
+   ],
+   [
+    "gems.sort.float32",
+    "compute_global_hist_kernel",
+    "not_emulable:atomic@tt.atomic_rmw@68"
+   ],
+   [
+    "gems.var.bfloat16",
+    "var_welford_kernel",
+    "tt.reduce@56: a generic combine region is not emulated bitwi"
+   ],
+   [
+    "gems.var.float16",
+    "var_welford_kernel",
+    "tt.reduce@56: a generic combine region is not emulated bitwi"
+   ],
+   [
+    "gems.var.float32",
+    "var_welford_kernel",
+    "tt.reduce@54: a generic combine region is not emulated bitwi"
+   ],
+   [
+    "liger.group_norm.bfloat16",
+    "_group_norm_backward_kernel",
+    "not_emulable:atomic@tt.atomic_rmw@82"
+   ],
+   [
+    "liger.group_norm.float32",
+    "_group_norm_backward_kernel",
+    "not_emulable:atomic@tt.atomic_rmw@77"
+   ],
+   [
+    "liger.layer_norm.bfloat16",
+    "_layer_norm_backward_kernel",
+    "not_emulable:atomic@tt.atomic_rmw@68"
+   ],
+   [
+    "liger.layer_norm.float32",
+    "_layer_norm_backward_kernel",
+    "not_emulable:atomic@tt.atomic_rmw@62"
+   ]
+  ],
+  "call_failures": [
+   "gems.floor_divide.float16",
+   "gems.floor_divide.bfloat16"
+  ]
+ },
+ "validation_heldout_v1": {
+  "programs": 60,
+  "verdict": {
+   "成立": 51,
+   "无法判断": 7,
+   "不成立": 2
+  },
+  "null_verdict": {
+   "不成立": 24,
+   "成立": 36
+  },
+  "verdict_x_null": {
+   "成立 / null 不成立": 19,
+   "成立 / null 成立": 32,
+   "无法判断 / null 成立": 4,
+   "不成立 / null 不成立": 2,
+   "无法判断 / null 不成立": 3
+  },
+  "by_form": {
+   "dot": {
+    "成立": 17,
+    "不成立": 1
+   },
+   "loop": {
+    "成立": 6,
+    "无法判断": 3
+   },
+   "scan": {
+    "成立": 10,
+    "无法判断": 1
+   },
+   "elementwise": {
+    "不成立": 1,
+    "成立": 12,
+    "无法判断": 3
+   },
+   "reduce": {
+    "成立": 6
+   }
+  },
+  "post_hoc_strict_tolerance": {
+   "holds without the second-order term": 51
+  }
+ },
+ "validation_heldout_v2": {
+  "programs": 60,
+  "verdict": {
+   "无法判断": 14,
+   "成立": 44,
+   "不成立": 2
+  },
+  "null_verdict": {
+   "成立": 39,
+   "不成立": 21
+  },
+  "verdict_x_null": {
+   "无法判断 / null 成立": 8,
+   "无法判断 / null 不成立": 6,
+   "成立 / null 不成立": 14,
+   "成立 / null 成立": 30,
+   "不成立 / null 不成立": 1,
+   "不成立 / null 成立": 1
+  },
+  "by_form": {
+   "elementwise": {
+    "无法判断": 5,
+    "成立": 9,
+    "不成立": 1
+   },
+   "reduce": {
+    "无法判断": 2,
+    "成立": 9,
+    "不成立": 1
+   },
+   "dot": {
+    "成立": 14,
+    "无法判断": 1
+   },
+   "scan": {
+    "成立": 6,
+    "无法判断": 3
+   },
+   "loop": {
+    "成立": 6,
+    "无法判断": 3
+   }
+  },
+  "post_hoc_strict_tolerance": {
+   "holds without the second-order term": 44
+  }
+ },
+ "validation_development_dev0": {
+  "programs": 40,
+  "verdict": {
+   "成立": 35,
+   "无法判断": 3,
+   "不成立": 2
+  },
+  "null_verdict": {
+   "成立": 17,
+   "不成立": 23
+  },
+  "verdict_x_null": {
+   "成立 / null 成立": 16,
+   "无法判断 / null 不成立": 2,
+   "成立 / null 不成立": 19,
+   "无法判断 / null 成立": 1,
+   "不成立 / null 不成立": 2
+  },
+  "by_form": {
+   "loop": {
+    "成立": 8,
+    "无法判断": 1
+   },
+   "scan": {
+    "无法判断": 2,
+    "成立": 3
+   },
+   "dot": {
+    "成立": 13,
+    "不成立": 1
+   },
+   "elementwise": {
+    "成立": 7,
+    "不成立": 1
+   },
+   "reduce": {
+    "成立": 4
+   }
+  }
+ },
+ "validation_development_dev1": {
+  "programs": 40,
+  "verdict": {
+   "成立": 30,
+   "不成立": 6,
+   "无法判断": 4
+  },
+  "null_verdict": {
+   "成立": 18,
+   "不成立": 22
+  },
+  "verdict_x_null": {
+   "成立 / null 成立": 17,
+   "不成立 / null 不成立": 6,
+   "无法判断 / null 不成立": 3,
+   "成立 / null 不成立": 13,
+   "无法判断 / null 成立": 1
+  },
+  "by_form": {
+   "scan": {
+    "成立": 3
+   },
+   "reduce": {
+    "不成立": 1,
+    "成立": 5,
+    "无法判断": 1
+   },
+   "elementwise": {
+    "无法判断": 3,
+    "不成立": 2,
+    "成立": 8
+   },
+   "dot": {
+    "成立": 14,
+    "不成立": 1
+   },
+   "loop": {
+    "不成立": 2
+   }
+  }
+ },
+ "tf32_modification": {
+  "verdict": {
+   "V0 成立": 6,
+   "V1 成立": 6,
+   "V2 成立": 6,
+   "V3 成立": 6
+  },
+  "post_hoc_strict_tolerance": {
+   "V0 成立": 6,
+   "V1 成立": 6,
+   "V2 成立": 6,
+   "V3 成立": 6
+  },
+  "effects": [
+   {
+    "change": "V0->V1",
+    "layer": 2,
+    "matrix": "q_proj",
+    "predicted": 0.00034831044192939125,
+    "measured": 0.0003530543309444222
+   },
+   {
+    "change": "V0->V1",
+    "layer": 2,
+    "matrix": "down_proj",
+    "predicted": 0.0003050777156280632,
+    "measured": 0.0002884681756648637
+   },
+   {
+    "change": "V0->V1",
+    "layer": 12,
+    "matrix": "q_proj",
+    "predicted": 0.0003541808046597107,
+    "measured": 0.00035805573230813175
+   },
+   {
+    "change": "V0->V1",
+    "layer": 12,
+    "matrix": "down_proj",
+    "predicted": 0.0003522028340769559,
+    "measured": 0.0003559783950658699
+   },
+   {
+    "change": "V0->V1",
+    "layer": 22,
+    "matrix": "q_proj",
+    "predicted": 0.00035043007351241153,
+    "measured": 0.00035720735951600893
+   },
+   {
+    "change": "V0->V1",
+    "layer": 22,
+    "matrix": "down_proj",
+    "predicted": 0.0003511508023795424,
+    "measured": 0.0003499030841999461
+   },
+   {
+    "change": "V2->V3",
+    "layer": 2,
+    "matrix": "q_proj",
+    "predicted": 0.0006999131080088531,
+    "measured": 0.0006993664514881071
+   },
+   {
+    "change": "V2->V3",
+    "layer": 2,
+    "matrix": "down_proj",
+    "predicted": 0.0006574100050573787,
+    "measured": 0.0006536076917700275
+   },
+   {
+    "change": "V2->V3",
+    "layer": 12,
+    "matrix": "q_proj",
+    "predicted": 0.0007068183050350798,
+    "measured": 0.0007105350293178515
+   },
+   {
+    "change": "V2->V3",
+    "layer": 12,
+    "matrix": "down_proj",
+    "predicted": 0.0007055226523725819,
+    "measured": 0.0007127766656595011
+   },
+   {
+    "change": "V2->V3",
+    "layer": 22,
+    "matrix": "q_proj",
+    "predicted": 0.0007043912006764002,
+    "measured": 0.0007109613473337622
+   },
+   {
+    "change": "V2->V3",
+    "layer": 22,
+    "matrix": "down_proj",
+    "predicted": 0.0007027283747665704,
+    "measured": 0.0006939040461630808
+   }
+  ]
+ }
+}
