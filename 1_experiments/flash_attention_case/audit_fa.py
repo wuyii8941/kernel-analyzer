@@ -30,6 +30,7 @@ def main():
     ap.add_argument("--case", required=True)
     ap.add_argument("--programs", default="",
                     help="program indices, or 'all' (default: the tool's sample, incl. the last block)")
+    ap.add_argument("--N", type=int, default=0, help="sequence length (default: the case's)")
     ap.add_argument("--suffix", default="")
     a = ap.parse_args()
     import importlib
@@ -37,9 +38,10 @@ def main():
     import torch
     import triton
 
-    from fa_case import make_inputs, spec_attention
+    from fa_inputs import make_inputs, spec_attention
     from kernel_analyzer.reference_eval.audit import audit
     mod_name, dtype, N, block_n, causal = CASES[a.case]
+    N = a.N or N
     kernel = getattr(importlib.import_module(mod_name.split(".")[0]), mod_name.split(".")[1])
     Z, H, D, block_m = 1, 2, 64, 128
     sm_scale = 1.0 / math.sqrt(D)

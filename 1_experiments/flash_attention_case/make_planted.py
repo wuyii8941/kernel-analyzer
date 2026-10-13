@@ -24,22 +24,6 @@ EDITS = {
                  ("        acc = tl.dot(p, v, acc)\n", "        acc = tl.dot(p, v, acc, out_dtype=tl.float16)\n")],
 }
 
-TAIL = '''
-
-def cases(run_case, a, progs):
-    """Case name -> thunk (fa_case.py)."""
-    return {
-        "planted_tf32": lambda: run_case("planted_tf32", _attn_fwd_tf32, "float32", 1, 2, a.N, 64, False, 128, 64,
-                                         progs),
-        "planted_scale": lambda: run_case("planted_scale", _attn_fwd_scale, "float16", 1, 2, a.N, 64, False, 128, 64,
-                                          progs),
-        "planted_l_bf16": lambda: run_case("planted_l_bf16", _attn_fwd_l_bf16, "float16", 1, 2, a.N, 64, False, 128,
-                                           16, progs),
-        "planted_acc_fp16": lambda: run_case("planted_acc_fp16", _attn_fwd_acc_fp16, "float16", 1, 2, a.N, 64, False,
-                                             128, 64, progs),
-    }
-'''
-
 
 def main():
     src = (HERE / "tutorial_fwd.py").read_text()
@@ -59,7 +43,7 @@ def main():
         f = f.replace("def _attn_fwd(sm_scale", f"def _attn_fwd_{name}(sm_scale").replace(
             "= _attn_fwd_inner(", f"= _attn_fwd_inner_{name}(")
         out += [f"# ---- variant {name}\n", i, f]
-    (HERE / "planted_fwd.py").write_text("".join(out).rstrip() + "\n" + TAIL)
+    (HERE / "planted_fwd.py").write_text("".join(out).rstrip() + "\n")
 
 
 if __name__ == "__main__":

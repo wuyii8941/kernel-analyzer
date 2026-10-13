@@ -30,7 +30,7 @@ def main():
     import torch
     import triton
 
-    from fa_case import make_inputs
+    from fa_inputs import make_inputs
     from kernel_analyzer.reference_eval import bias_predict as BP
     from kernel_analyzer.reference_eval import intervals as iv
     from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder

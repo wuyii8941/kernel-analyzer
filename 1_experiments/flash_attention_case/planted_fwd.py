@@ -563,17 +563,3 @@ def _attn_fwd_acc_fp16(sm_scale, M,  #
     m_ptrs = M + off_hz * N_CTX + offs_m
     tl.store(m_ptrs, m_i)
     desc_o.store([qo_offset_y, 0], acc.to(dtype))
-
-
-def cases(run_case, a, progs):
-    """Case name -> thunk (fa_case.py)."""
-    return {
-        "planted_tf32": lambda: run_case("planted_tf32", _attn_fwd_tf32, "float32", 1, 2, a.N, 64, False, 128, 64,
-                                         progs),
-        "planted_scale": lambda: run_case("planted_scale", _attn_fwd_scale, "float16", 1, 2, a.N, 64, False, 128, 64,
-                                          progs),
-        "planted_l_bf16": lambda: run_case("planted_l_bf16", _attn_fwd_l_bf16, "float16", 1, 2, a.N, 64, False, 128,
-                                           16, progs),
-        "planted_acc_fp16": lambda: run_case("planted_acc_fp16", _attn_fwd_acc_fp16, "float16", 1, 2, a.N, 64, False,
-                                             128, 64, progs),
-    }

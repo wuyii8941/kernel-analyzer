@@ -31,8 +31,10 @@
   - 输入为标准正态，Z=1、H=2、head_dim 64；N = 1024（l_bf16 为 2048、BLOCK_N 16）。
   - program 按工具的默认抽样：各轴首尾 program（含序列末尾的边界块）另加中间两个，16 个中抽 6 个（l_bf16 32 个中抽 6 个）；
     归因用同一组 program。
-- 报告在 `results/audit_*.txt`（由同目录 `.json` 经 `audit.render` 生成）。各 program 分别测得的偏差在
-  `results/per_program.json`（`per_program.py`）。
+- 输入与规格的构造在 `fa_inputs.py`。
+- 报告在 `results/audit_*.txt`，数据在同名 `.json`：
+  - `audit_planted_l_bf16_all.*` 是全部 32 个 program 的审查，`audit_planted_l_bf16_N8192.*` 是 N = 8192 的强停滞；
+  - 各 program 分别测得的偏差在 `results/per_program.json`（`per_program.py`）。
 
 ## 结果
 
@@ -60,9 +62,16 @@
   - 32 个 program 逐个测得的偏差：首尾两个 program 是 +0.069% 与 −0.008%，其余在 +0.16% … +0.47% 之间；
   - 全部 32 个合起来是 +0.29%，抽样的 6 个是 +0.23%；
   - 报告据此提示「各 program 的偏差差别大，抽查值不一定代表整个 kernel，要全量评估传 `programs="all"`」；
+  - 用 `programs="all"` 跑的整次审查（`results/audit_planted_l_bf16_all.*`）：
+    - 实测 +0.291%（标准误 0.0039%），事前预测 +0.278%，逐位全部相同；
+    - 归因到 `:352` 的贡献 +0.291%，改后（模型内）−0.0002%；M 为 −0.036%，改后 <0.0001%；
+    - 这次运行早于容差检查的三分类，报告里的容差一句还是旧写法；
   - tf32 的 16 个 program 在 −0.151% … −0.136% 之间，全部与抽样都是 −0.142% / −0.143%。
-- **l_bf16 在 N = 8192 时停滞很强**（实测对齐 +0.155）。预测器报「无法判断：84% 的元素预测相对误差超过 2⁻⁴」，原因写明；
-  若照算，它给出 +0.13。
+- **l_bf16 在 N = 8192 时停滞很强**（`results/audit_planted_l_bf16_N8192.*`，program 0）：
+  - 实测 O 偏大 +15.5%（标准误 0.29%），M 偏小 −1.5%，逐位全部相同；
+  - 事前预测报「无法判断：84% 的元素预测相对误差超过 2⁻⁴」（照算是 +13%）；
+  - 预测放弃不影响审查：归因仍给出 `:352` 贡献 +15%，改后（模型内）−0.0001%；
+  - 教程自带的 `atol=1e-2` 测试在这里会因为偏差报错。
 
 ## 报告
 
@@ -178,5 +187,6 @@ for c in tutorial_fp16 tutorial_fp16_causal planted_tf32 planted_scale planted_l
   $PY audit_fa.py --case $c; done                                                # 报告：.cache/flash_attention_case/
 for p in 0 1 2 3 4 5 6 7; do $PY per_program.py --case planted_l_bf16 --part $p --parts 8; done   # 各 program 的偏差
 $PY per_program.py --case planted_tf32
-$PY fa_case.py --case planted_l_bf16 --N 8192 --programs 0 --suffix _N8192     # 强停滞：预测器放弃
+$PY audit_fa.py --case planted_l_bf16 --programs all --suffix _all             # 全部 32 个 program
+$PY audit_fa.py --case planted_l_bf16 --N 8192 --programs 0 --suffix _N8192     # 强停滞：预测器放弃
 ```

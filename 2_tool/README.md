@@ -50,6 +50,8 @@ $PY -m pytest -q 2_tool/tests                          # 测试：不得改写�
 - **调用级来源**：非 Triton 上游只有在不计入测量的轨迹运行证明它只由声明输入的复制或精确常数产生时才算调用级；值相等不算。
 - **已知局限**：工作精度（三级）只作用于求和型规则，端点是 float64；按 program 批处理未实现；声明 M 时报告逐规则有界路线，没有族级控制；
   多把锁、嵌套锁等同步模式没有证书。
+- **审查入口（`audit.py`）的局限**（详见 [docs/audit_status.md](docs/audit_status.md)）：只审查调用里的第一个 kernel；归因每个位点一次完整仿真、
+  不缓存、只限精度；`spec=` 不用规格库的输入契约；执行有效性与 inf / NaN 源头不进报告。
 - **第二轮实测的局限**（[1_experiments/tolerance_study](../1_experiments/tolerance_study/README.md)）：
   - 常见机制里最常用的实现（融合 AdamW、cuBLAS TF32）是 ATen 内核，只能黑箱比较。
   - k = 4864 的 fp32 矩阵乘，每单位一个 128 × 896 的输出，在模式 A / B 下单个作业接近或超出 1 小时 CPU 预算（区间参照逐元素求值）。
@@ -66,7 +68,7 @@ $PY -m pytest -q 2_tool/tests                          # 测试：不得改写�
 | `tests/` | 52 个测试文件与 `data/`（官方 TTGIR fixture、TTIR 语料、反例）；`test_audit_findings.py` 是外部审计 F01–F07 的回归 |
 | `data/rule_registry.json` | 规则注册表（3.6.0 回归 profile；冻结的 general-v3.1 注册表在 1_experiments/general_round_v3_1） |
 | `examples/` | 统一入口声明与绑定文件示例 |
-| `docs/` | [binding_guide.md](docs/binding_guide.md)、[environments.md](docs/environments.md)、[resource_policy.md](docs/resource_policy.md)、[changelog.md](docs/changelog.md)（工具版本变更）、[rule_registry_report.md](docs/rule_registry_report.md) |
+| `docs/` | [binding_guide.md](docs/binding_guide.md)、[environments.md](docs/environments.md)、[resource_policy.md](docs/resource_policy.md)、[changelog.md](docs/changelog.md)（工具版本变更）、[audit_status.md](docs/audit_status.md)（审查入口的阶段状态、不足与下一步）、[rule_registry_report.md](docs/rule_registry_report.md) |
 
 ## 环境
 
