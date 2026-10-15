@@ -84,8 +84,9 @@ def one(spec: dict) -> dict:
     run_patched(spec["unit"], [[spec["line"], spec["old"], spec["new"]]], out)
     L2 = load_launch(out)
     G, G2 = _exact(L, progs), _exact(L2, progs)
+    shift = json.loads((out / "patch.json").read_text())["line_shift"]
     row = {"id": spec["id"], "kind": spec["kind"], "unit": spec["unit"], "edit": [spec["line"], spec["old"], spec["new"]],
-           "outputs": {}}
+           "planted_line_in_patched_module": spec["line"] - shift, "outputs": {}}
     for name, b in G.items():
         b2 = G2.get(name)
         if b2 is None:

@@ -34,7 +34,7 @@ def _module_text(path: Path, name: str, edits) -> str:
         start -= 1
     header = lines[:start - 1] if start > 0 else lines[:d]
     body = lines[d:]
-    return "\n".join(header + ["@triton.jit"] + body) + "\n"
+    return "\n".join(header + ["@triton.jit"] + body) + "\n", d - len(header) - 1   # line shift of the body
 
 
 def run_patched(unit_dir, edits, out_dir) -> Path:
@@ -43,7 +43,7 @@ def run_patched(unit_dir, edits, out_dir) -> Path:
     from kernel_analyzer.reference_eval.capture import TritonLaunchRecorder, load_launch, save_launch
 
     L = load_launch(Path(unit_dir))
-    text = _module_text(kernel_file(L), L.kernel_name, edits)
+    text, shift = _module_text(kernel_file(L), L.kernel_name, edits)
     digest = hashlib.sha256(text.encode()).hexdigest()[:16]
     mod_path = HERE / "patched" / f"{L.kernel_name[:80]}_{digest}.py"
     mod_path.parent.mkdir(parents=True, exist_ok=True)
@@ -54,8 +54,10 @@ def run_patched(unit_dir, edits, out_dir) -> Path:
     fn = getattr(mod, L.kernel_name)
     info = json.loads((Path(unit_dir) / "launch.json").read_text())["src_info"]
     constexprs = {info["arg_names"][k[0] if isinstance(k, list) else k]: v for k, v in info["constants"]}
-    storages, call = {}, []
+    storages, call = {}, {}       # every argument by name: a specialised argument (e.g. xnumel == 1) is not positional
     for arg in L.args:
+        if arg.name in constexprs or arg.constexpr:
+            continue
         if arg.kind == "tensor":
             if arg.storage_ptr not in storages:
                 storages[arg.storage_ptr] = arg.before.to("cuda").clone()
@@ -64,20 +66,19 @@ def run_patched(unit_dir, edits, out_dir) -> Path:
             offset = (arg.data_ptr - arg.storage_ptr) // arg.element_size
             numel = raw.numel() // arg.element_size
             flat = torch.empty(0, dtype=dtype, device="cuda").set_(raw.untyped_storage(), 0, (numel,))
-            call.append(flat.as_strided(arg.shape, arg.stride, offset))
-        elif arg.constexpr or arg.name in constexprs:
-            continue
+            call[arg.name] = flat.as_strided(arg.shape, arg.stride, offset)
         elif arg.kind in ("int", "float", "bool"):
-            call.append(arg.value)
+            call[arg.name] = arg.value
         elif arg.kind == "none":
-            call.append(None)
+            call[arg.name] = None
     opts = {k: L.metadata[k] for k in ("num_warps", "num_stages") if k in L.metadata}
     with TritonLaunchRecorder() as R:
-        fn[tuple(L.grid)](*call, **constexprs, **opts)
+        fn[tuple(L.grid)](**call, **constexprs, **opts)
         torch.cuda.synchronize()
     out = Path(out_dir)
     save_launch(R.launches[0], out)
-    (out / "patch.json").write_text(json.dumps({"from": str(unit_dir), "edits": edits, "module": str(mod_path)}))
+    (out / "patch.json").write_text(json.dumps({"from": str(unit_dir), "edits": edits, "module": str(mod_path),
+                                                "line_shift": shift}))
     return out
 
 

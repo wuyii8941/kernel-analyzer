@@ -623,6 +623,11 @@ def _f64_ieee(name: str, args: list, mode: str = "rtne", fmt: str = "f64") -> TV
     return _ftv(fmt, out, out.copy(), out_st, _merge_cond(*args), _merge_reasons(*args))
 
 
+def _all_plus_zero(v: TV) -> bool:
+    return (v.kind == "f" and bool(np.all(v.st == ST_OK)) and bool(np.all(v.lo == 0))
+            and not bool(np.any(np.signbit(v.lo))) and (v.hi is None or bool(np.all(v.hi == 0))))
+
+
 def _flush_subnormal(v: TV) -> TV:
     """Values below the fp32 normal range to zero of the same sign (both enclosure endpoints)."""
 
@@ -755,6 +760,27 @@ class GpuEmulator(KernelReferenceEvaluator):
             idx, mul = self.fusion[node]
             a, b = (self._env[v] for v in mul.operands)
             c = args[1 - idx]
+            if op.name == "arith.addf" and node not in self.exact_nodes:
+                # An accumulator that starts at +0 (Inductor's reductions): LLVM folds 0 + x*x to x*x -- a square is
+                # never -0 -- and the unrounded square stays in a register.  Consumers that do not contract see
+                # RN(x*x) (the value kept here); a later add or the reduction can fuse the square (raw_square).
+                if mul.operands[0] == mul.operands[1] and _all_plus_zero(c):
+                    self.trace[(node, "folded_zero_add")] += 1
+                    sq = self._env[mul.results[0]]
+                    out = TV(sq.kind, sq.elem, sq.lo.copy(), None if sq.hi is None else sq.hi.copy(), None,
+                             sq.st.copy(), sq.cond.copy(), sq.reasons)
+                    out.raw_square = a
+                    return out
+                # The other operand is such an unrounded square and stands on the left: LLVM fuses that product and
+                # rounds this one (the left one of two single-use products).
+                raw = getattr(c, "raw_square", None)
+                if raw is not None and idx == 1:
+                    self.trace[(node, "fma_contraction_raw_square")] += 1
+                    fused = TOp("math.fma", op.results, op.result_types, ["%x", "%x", mul.results[0]], op.attrs,
+                                [], op.line, op.text, op.operand_types)
+                    rn_product = self._env[mul.results[0]]
+                    return _zero_sign(super()._float_op("fma", fused, [raw, raw, rn_product], out_elem), "fma",
+                                      [raw, raw, rn_product])
             if op.name == "arith.subf":
                 if idx == 0:  # a*b - c
                     c = TV("f", c.elem, -c.hi, -c.lo, None, c.st, c.cond, c.reasons)
@@ -802,6 +828,14 @@ class GpuEmulator(KernelReferenceEvaluator):
             out = _zero_sign(out, name, args, LIBDEVICE_ROUNDING.get(symbol, "rtne"))
         if ftz:
             out = _flush_subnormal(out)
+        return out
+
+    def _op_select(self, op, args, env, state):
+        out = self._elementwise("select", op, args)
+        raw = getattr(args[1], "raw_square", None)
+        c = args[0]
+        if raw is not None and np.all(c.st == ST_OK) and np.all(c.lo == 1):   # every lane takes the unrounded square
+            out.raw_square = raw
         return out
 
     def _is_oracle(self, op) -> bool:
@@ -1171,14 +1205,38 @@ class GpuEmulator(KernelReferenceEvaluator):
                         and int(np.prod(self._env[producer.operands[0]].shape)) == int(np.prod(x.shape))))):
             # a flattening reshape (allow_reorder) keeps the values in their registers as well
             producer = self._def.get(producer.operands[0])
+        # sum(where(c, x*y, 0)) with c the same along the reduced axis (Inductor's row mask): LLVM moves the select
+        # after the in-thread partial sum, so the products are still contracted into it; masked rows give 0
+        hoisted_cond = None
+        if (producer is not None and producer.name == "arith.select" and self.enable_fp_fusion
+                and op.node_id not in self.exact_nodes):
+            c_tv, f_tv = self._env.get(producer.operands[0]), self._env.get(producer.operands[2])
+            if c_tv is not None and f_tv is not None and np.all(c_tv.st == ST_OK) and _all_plus_zero(f_tv):
+                cv = np.moveaxis(np.broadcast_to(c_tv.lo, x.shape), axis, -1)
+                if np.all(cv == cv[..., :1]):
+                    hoisted_cond = cv[..., 0] == 1
+                    producer = self._def.get(producer.operands[1])
+                    while (producer is not None and producer.name in ("tt.broadcast", "tt.reshape", "ttg.convert_layout")
+                           and self._env.get(producer.operands[0]) is not None
+                           and int(np.prod(self._env[producer.operands[0]].shape)) == int(np.prod(x.shape))):
+                        producer = self._def.get(producer.operands[0])
         fused = (self.enable_fp_fusion and producer is not None and producer.name == "arith.mulf"
                  and self._block.get(id(producer)) == self._block.get(id(op)) and op.node_id not in self.exact_nodes)
+        if hoisted_cond is not None and not fused:
+            hoisted_cond = None                 # no product behind the select: the plain path, as before
+        raw = getattr(x, "raw_square", None) if (self.enable_fp_fusion and op.node_id not in self.exact_nodes) else None
         if fused:
             pshape = tuple(producer.result_types[0].shape)
             fa, fb = (np.moveaxis(np.broadcast_to(np.where(self._env[v].st == ST_OK, self._env[v].lo, 0.0),
                                                   pshape).reshape(x.shape), axis, -1) for v in producer.operands)
             if perm is not None:
                 fa, fb = fa[..., perm], fb[..., perm]
+        elif raw is not None:   # the operand holds unrounded squares (folded 0 + x*x of a loop that ran once)
+            fused = True
+            fa = np.moveaxis(np.broadcast_to(np.where(raw.st == ST_OK, raw.lo, 0.0), x.shape), axis, -1)
+            if perm is not None:
+                fa = fa[..., perm]
+            fb = fa
         self.trace[(op.node_id, "reduce_tree_fused" if fused else "reduce_tree")] += 1
         # thread partials: [..., warp, lane]
         idx = (np.arange(reps)[:, None, None, None] * tile + np.arange(wpc)[None, :, None, None] * (spt * tpw)
@@ -1219,6 +1277,9 @@ class GpuEmulator(KernelReferenceEvaluator):
             divergent = np.any(lanes != lanes[..., :1], axis=-1) & ~np.isnan(res)
             if first_raw and tpw == 1:
                 divergent[:] = False
+        if hoisted_cond is not None:
+            res = np.where(hoisted_cond, res, 0.0)
+            divergent = divergent & hoisted_cond
         bad = np.any(np.moveaxis(x.st != ST_OK, axis, -1), axis=-1) | np.isnan(res) | divergent
         st = np.where(bad, ST_NE, ST_OK).astype(np.int8)
         res = np.where(bad, 0.0, res)
