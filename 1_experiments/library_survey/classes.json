@@ -1,0 +1,2136 @@
+{
+ "A": {
+  "name": "线性注意力与状态递推",
+  "families": [
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Common chunk state passing (chunk_fwd_h / chunk_bwd_dh)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Common chunk output forward (chunk_fwd_o)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Common chunk backward helpers (dq/dk/dw/dg, dv, dv_local)",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Common chunk_h parallel/split variants (unreferenced)",
+    "kernels": 6,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Common fused_recurrent gated linear attention (fwd+bwd)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Common fused_chunk scalar-gated linear attention (fwd+bwd)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "[Ascend] common chunk h/o (fwd+bwd)",
+    "kernels": 10,
+    "sm86": "no"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "GLA chunk forward (intra-chunk A, output o)",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "GLA chunk backward",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "[Ascend] GLA chunk (fwd+bwd)",
+    "kernels": 9,
+    "sm86": "no"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Simple GLA parallel (quadratic form, fwd+bwd)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "[Ascend] Simple GLA fused_recurrent & parallel",
+    "kernels": 3,
+    "sm86": "no"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Based parallel (fwd+bwd)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Based fused_chunk (fwd+bwd)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "ReBased parallel (fwd+bwd)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "HGRN fused_recurrent (fwd+bwd)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "HGRN chunk (fwd+bwd)",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "ABC chunk forward",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "ABC chunk backward",
+    "kernels": 8,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "GSA chunk (k-pass kernels, fwd+bwd)",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "GSA fused_recurrent single-step inference",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "RWKV4 fused_recurrent WKV (fwd+bwd)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "RWKV6 chunk forward (cumsum, intra-chunk A)",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "RWKV6 chunk backward",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "RWKV6 fused_recurrent (fwd+bwd)",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "TTT-Linear chunk forward",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "TTT-Linear chunk backward",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "TTT-Linear fused_chunk (fwd+bwd)",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Log-linear attention chunk forward",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Log-linear attention chunk backward",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Delta-rule chunk state recurrence h (fwd h/v_new/ht, bwd dh/dh0/dv) [shared by DeltaNet, GDN, Comba, PGDN, KDA, GDN2, PKDA]",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Context-parallel / intra-card CP state pre-process + merge (S_ext, M affine chain) for delta-rule chunk h",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "DeltaNet fused_recurrent forward+backward",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "DeltaNet chunk WY representation (recompute_w_u fwd, prepare_wy_repr bwd)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "DeltaNet parallel forward (materialised attention, head-first) [broken/dead]",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Gated DeltaNet chunk intra-chunk WY (fused kkt+solve_tril, recompute_w_u fwd, prepare_wy_repr bwd)",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Gated DeltaNet fused_recurrent forward (inference; supports g, gk, gv gates)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Gated DeltaProduct chunk forward (h over interleaved Householder steps, o) + unused bwd dhu",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Comba chunk WY (p·k^T kkt with exclusive decay, recompute_w_u fwd, prepare_wy_repr bwd)",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Comba fused_recurrent forward",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Gated Oja rule chunk forward (v v^T kkt with per-V gate, WY, h, o)",
+    "kernels": 7,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Gated Oja rule chunk backward",
+    "kernels": 7,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Gated Oja rule fused_recurrent forward",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "MesaNet chunk forward (h_kk/h_kv states, chunked CG solve, output)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "MesaNet chunk backward (adjoint CG solve, intra-chunk dH_kk/dH_kv)",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "MesaNet decoding one step",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Preconditioned Gated DeltaNet chunk (asymmetric precond kkt fwd, precond WY bwd)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Preconditioned Gated DeltaNet fused_recurrent forward",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "[Ascend] delta-rule chunk state recurrence h fwd/bwd (common)",
+    "kernels": 3,
+    "sm86": "no"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "[Ascend] GDN WY representation (recompute_w_u fwd, split prepare_wy_repr bwd)",
+    "kernels": 7,
+    "sm86": "no"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "KDA chunk forward (intra Aqk/Akk + fused solve_tril, WY w/u)",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "KDA chunk backward",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "KDA fused_recurrent forward (inference/decoding)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Preconditioned KDA chunk forward (intra + solve, WY)",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Preconditioned KDA chunk backward",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Preconditioned KDA fused_recurrent forward (inference)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "GDN2 (Gated DeltaNet-2) chunk forward (intra + solve, WY)",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "GDN2 chunk backward",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "GDN2 fused_recurrent forward (inference)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "DPLR (generalized delta rule) chunk forward (A, WY, h, o)",
+    "kernels": 8,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "DPLR chunk backward",
+    "kernels": 8,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "DPLR fused_recurrent forward (inference)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "IPLR (identity-plus-low-rank delta rule) chunk forward",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "IPLR fused_recurrent forward+backward",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "RWKV7 fused_mul_recurrent forward (kk/a parameterised DPLR)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "[Ascend] KDA chunk forward (intra/solve, token-parallel, WY)",
+    "kernels": 5,
+    "sm86": "no"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "[Ascend] KDA chunk backward",
+    "kernels": 6,
+    "sm86": "no"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "[Ascend] KDA fused_recurrent forward",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "[Ascend] GDN2 chunk forward (intra/solve)",
+    "kernels": 4,
+    "sm86": "no"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "[Ascend] GDN2 chunk backward (WY)",
+    "kernels": 3,
+    "sm86": "no"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "[Ascend] GDN2 fused_recurrent forward",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "DeltaFormer u-recurrence forward (chunked softmax-weighted delta)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "DeltaFormer backward",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "PaTH attention forward (intra-chunk preprocess + parallel inter-chunk)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "PaTH key-cache preparation for decoding",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "PaTH attention backward",
+    "kernels": 8,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "CyFA chunk forward (point write + fused readout)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "CyFA chunk backward",
+    "kernels": 6,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "CyFA fused recurrent inference / single-token decode",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "ATK preconditioner forward (chunked elementwise k^2 accumulator)",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "ATK preconditioner backward",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "gated_delta_rule_chunk_prefill",
+    "kernels": 9,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "gated_delta_rule_recurrent_decode",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "kda_kimi_delta_attention",
+    "kernels": 6,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "causal_conv1d_state_update",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "Lightning Attention",
+    "family": "lightning attention-2 with per-head exponential decay (chunk-loop variant)",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "Lightning Attention",
+    "family": "lightning attention-2 with decay, fully-parallel variant",
+    "kernels": 8,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "gdn_fused_proj_causal_conv1d_update",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "xpu_gdn_chunk_intermediates",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "lightning_linear_attention_decay",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "seg_la_segmented_linear_attention",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "inkling_sconv_causal_conv_with_cache",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "gdn_chunked_prefill",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "kda_chunked_prefill",
+    "kernels": 7,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "gated_delta_rule_recurrent_fwd",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "gdn_kda_packed_decode",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "gdn_kda_spec_verify_recurrent",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "replayssm_ring_decode_fold",
+    "kernels": 8,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "causal_conv1d",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "lfm2_short_conv",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "mamba_selective_state_update",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "mamba2_ssd_chunk_scan",
+    "kernels": 6,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "sana_wm_bidirectional_gdn_chunkwise",
+    "kernels": 5,
+    "sm86": "yes"
+   }
+  ]
+ },
+ "B": {
+  "name": "分页 / 变长 KV 注意力",
+  "families": [
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "Wall attention cached decode (pre-rescaled KV cache)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "kernl",
+    "family": "experimental llama: flash attention with start_position, fp16 KV",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "prefill_paged_extend_attention",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "paged_decode_attention_mha_gqa",
+    "kernels": 15,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "quantized_kv_paged_decode_attention",
+    "kernels": 7,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "mla_paged_decode_attention",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "mla_prefill_attention",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "mla_fp8_kv_attention",
+    "kernels": 3,
+    "sm86": "no"
+   },
+   {
+    "library": "lightllm",
+    "family": "prefill_attention_image_bidirectional",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "alibi_attention",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "varlen_flash_attention_prefill",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "paged_decode_attention",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "paged_decode_attention_quant_kv",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "SageAttention (Triton parts)",
+    "family": "INT8-QK / FP16-PV attention on pre-quantised inputs, non-causal, optional mask + LSE (dense)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "SageAttention (Triton parts)",
+    "family": "INT8-QK / FP16-PV attention on pre-quantised inputs, causal (dense)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "SageAttention (Triton parts)",
+    "family": "INT8-QK / FP16-PV attention on pre-quantised inputs, varlen (causal and non-causal)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "triton_decode_attention_paged",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "triton_extend_attention_paged_prefix",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dense_varlen_prefill_attention",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "spec_verify_splitkv_attention",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "rocm_mla_decode_fused_rope",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "aiter_unified_attention_3d_mtp",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "swa_mla_fallback_gather_and_mask",
+    "kernels": 2,
+    "sm86": "yes"
+   }
+  ]
+ },
+ "C": {
+  "name": "稀疏注意力、索引器与 KV 压缩",
+  "families": [
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "NSA compressed-block attention forward",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "NSA compressed-block attention backward",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "NSA top-k block selection",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "NSA selected-block attention forward",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-linear-attention (fla)",
+    "family": "NSA selected-block attention backward",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "dsa_fp8_paged_mqa_logits",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "lightllm",
+    "family": "flashmla_fp8_kv_cache_quant",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "lightllm",
+    "family": "glm5_kpool_compress",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "lightllm",
+    "family": "glm5_expand_topk",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "nsa_indexer_ks_ke",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "bitonic_topk_varlen",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "dsv4_sparse_index_builders",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "dsv4_window_pack_fp8",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "dsv4_flatten_kv",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "dsv4_kv_compressor",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "dsv4_fill_compressed_kv_fp8",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "dsa_indexer_qk_prep_fp8",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "dsa_indexer_k_cache_flatten",
+    "kernels": 1,
+    "sm86": "unknown"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "dsa_fp8_index_logits",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "flashmla_sm120_sparse_decode_fp8",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_fused_qk_norm_rope_fp8_paged_store",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "dsa_kpool_compress_fp8_write",
+    "kernels": 4,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "dsa_kpool_bookkeeping",
+    "kernels": 7,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "minicpm_sparse_compress_k",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "minimax_gluon_prefill_layout",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "qsa_sparse_gqa_attention",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "qsa_kv_gather_and_metadata",
+    "kernels": 9,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_fp4_indexer_quantize_and_index_k_cache",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_hip_flydsl_fp4_qk_pack",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_rope_tail_fp4_fake_quant",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_fp4_index_logits",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_indexer_topk_finalize",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_compressed_attn_metadata",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_compressor_softmax_pool_hip",
+    "kernels": 7,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_compress_norm_rope_inplace_hip",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv41_c2_decode_pair_pool",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_v4_kv_cache_quant_store_dequant",
+    "kernels": 6,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_unified_kv_sparse_attention_with_sink",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_swapab_decode_combine_sink_inverse_rope",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_sparse_prefill_swa_topk_index_combine",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_hip_fp4_indexer_schedule",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsa_fp8_kv_cache_pack_quant_dequant",
+    "kernels": 7,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "dsa_sparse_mla_attention_fwd",
+    "kernels": 8,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsa_kpool_fused_metadata",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "minimax_sparse_indexer_block_score",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "minimax_sparse_block_topk_select",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "minimax_sparse_indexer_context_parallel",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "minimax_sparse_topk_attention",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_fused_gather_dequant_sparse_decode",
+    "kernels": 7,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "qwen38_qsa_packed_decode",
+    "kernels": 1,
+    "sm86": "unknown"
+   },
+   {
+    "library": "sglang",
+    "family": "sla_block_sparse_attention_fwd",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "vsa_h3_block_sparse_attention_fwd",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_fp8_paged_store",
+    "kernels": 2,
+    "sm86": "no"
+   }
+  ]
+ },
+ "E": {
+  "name": "KV cache 写入、读出与 KV 量化",
+  "families": [
+   {
+    "library": "lightllm",
+    "family": "int8_int4_kv_cache_quant",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "mla_kv_fp8_quant_copy",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "lightllm",
+    "family": "destindex_copy_kv_fp8_quant",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "fill_paged_kv_cache",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "fill_paged_kv_cache_int_turbo_quant",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "fill_paged_kv_cache_fp8_per_tensor",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "fill_paged_kv_cache_blocked_fp8",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "flatten_paged_kv_cache",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "flatten_paged_kv_cache_int_turbo_dequant",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "flatten_paged_kv_cache_fp8_per_tensor",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "flatten_mla_fp8_kv_cache",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "mxfp8_paged_kv_store",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "kv_cache_fp8_scaled_write",
+    "kernels": 2,
+    "sm86": "unknown"
+   }
+  ]
+ },
+ "F": {
+  "name": "量化格式与量化 / 反量化",
+  "families": [
+   {
+    "library": "applied-ai",
+    "family": "fp8_groupwise_quant_1x128",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "gemlite",
+    "family": "act_quant_per_token (int8/fp8 absmax per row)",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "gemlite",
+    "family": "act_quant_per_block (int8/fp8, 1x128 groups)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "gemlite",
+    "family": "act_quant_mxfp8 (e4m3 + E8M0, group 32)",
+    "kernels": 4,
+    "sm86": "no"
+   },
+   {
+    "library": "gemlite",
+    "family": "act_quant_mxfp4 (e2m1 packed + E8M0, group 32)",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "gemlite",
+    "family": "act_quant_nvfp4 (e2m1 packed + e4m3 scale, group 16, global meta scale)",
+    "kernels": 5,
+    "sm86": "no"
+   },
+   {
+    "library": "kernl",
+    "family": "experimental llama: FP8 (e5m2 bit-pattern) weight / KV variants (USE_FP8=True)",
+    "kernels": 4,
+    "sm86": "no"
+   },
+   {
+    "library": "kernl",
+    "family": "experimental fp8 <-> fp16 conversion kernels",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "lightllm",
+    "family": "moe_silu_mul_fp8_group_quant_masked",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "lightllm",
+    "family": "fp8_activation_group_quant",
+    "kernels": 3,
+    "sm86": "no"
+   },
+   {
+    "library": "lightllm",
+    "family": "fp8_weight_quant",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "lightllm",
+    "family": "fp8_q_per_head_quant",
+    "kernels": 3,
+    "sm86": "no"
+   },
+   {
+    "library": "lightllm",
+    "family": "hadamard_fp8_ue8m0_quant",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "dsv4_swiglu_quant_fp8",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "per_token_quant",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "rms_norm_dynamic_quant",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "blocked_fp8_activation_quant",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "SageAttention (Triton parts)",
+    "family": "per-block INT8 quantisation of Q and K (dense)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "SageAttention (Triton parts)",
+    "family": "per-block INT8 quantisation of Q and K (varlen)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "SageAttention (Triton parts)",
+    "family": "per-thread INT8 quantisation of Q and K (for CUDA mma attention kernels)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "mla_kv_pack_fp8_quant",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "situ_mul_fp8_group_quant",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "fp8_fa_sm120_qkv_prepare",
+    "kernels": 3,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "fp8_per_token_group_act_quant_model_local",
+    "kernels": 3,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "moe_act_quant_fp8",
+    "kernels": 6,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "moe_fp8_requant",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "mxfp4_upscale_decode",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "fp8_rowwise_quant",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "aiter_per_tensor_fp8_quant",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "swiglu_limit_fp8grid_hip",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "attn_output_sigmoid_gate",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsv4_wo_a_mxfp8_epilogue",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "rmsnorm_mxfp8_epilogue",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "per_token_group_quant_8bit",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "int8_activation_quant",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "per_tensor_dynamic_fp8_mla",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "mxfp8_quantize",
+    "kernels": 4,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "mxfp8_fused_producers",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "rmsnorm_fp8grid_fake_quant_hip",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "quantize to MX (mxfp4/mxfp8 with E8M0 scales; NVFP4 with E4M3 scales)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "dequantize from MX (mxfp4/mxfp8 values, E8M0 or E4M3 scales)",
+    "kernels": 1,
+    "sm86": "yes"
+   }
+  ]
+ },
+ "G": {
+  "name": "量化与低比特 GEMM",
+  "families": [
+   {
+    "library": "applied-ai",
+    "family": "gptq_w4a16_dequant_gemm",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "DeepSpeed",
+    "family": "fp8_weight_only_gemm (DeepSpeed FP_Quantize 8-bit weights x bf16/fp16 activations)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "gemlite",
+    "family": "int_dequant_matmul (A16Wn / A8Wn / A8W8, grouped or channel/block scaled)",
+    "kernels": 6,
+    "sm86": "yes"
+   },
+   {
+    "library": "gemlite",
+    "family": "mx_scaled_matmul (MXFP8/MXFP4/NVFP4 via tl.dot_scaled)",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "gemlite",
+    "family": "mx_dequant_gemv (software-dequant MX GEMV)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "gemlite",
+    "family": "bitplane_lowbit_gemm (experimental A16W3 / A16W5)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "w8a8_linear",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "awq_w4a16_linear",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "blocked_fp8_gemm",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "blocked_fp8_gemm_gluon_hopper",
+    "kernels": 3,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "bf16_batched_gemm_fp8grid_gfx95",
+    "kernels": 3,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "awq_int4",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "mxfp8_shuffled_gemm_gfx950",
+    "kernels": 1,
+    "sm86": "no"
+   }
+  ]
+ },
+ "H": {
+  "name": "MoE：路由、排序对齐、分组 GEMM、EP 分发",
+  "families": [
+   {
+    "library": "applied-ai",
+    "family": "gptq_w4a16_fused_moe_gemm",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "fused_moe_grouped_gemm",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "moe_softmax_topk_routing",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "moe_grouped_topk_routing",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "eplb_redundant_expert_remap",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "moe_route_sort_metadata",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "moe_grouped_gemm_w8a8",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "moe_grouped_gemm_blocked_fp8",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "moe_grouped_gemm_fp8_x_fp4_v4",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "moe_grouped_gemm_w4a16_compressed_tensors",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "ep_token_scatter",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "ep_token_scatter_fp8",
+    "kernels": 2,
+    "sm86": "unknown"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "moe_router_noaux_tc",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "musa_moe_topk_gating",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "moe_lora_virtual_expert_expand",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "llada2_block_expert_routing",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "fused_moe_triton_gemm",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "fused_moe_wna16_gemm",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "moe_atomic_dispatch_scatter",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "moe_align_block_size_small",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "aiter_moe_sorting_small_mxfp8",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "mxfp8_grouped_moe_gemm_gfx950",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "fused_router_gate_topk",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "rocm_router_gate_sqrtsoftplus",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "softcap_router_gemm_topk",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "waterfill_shared_expert_expand",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "group_limited_topk_routing",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "subblock_sparse_router_approx_topk",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "grouped_fp8_quant_moe_layouts",
+    "kernels": 2,
+    "sm86": "no"
+   },
+   {
+    "library": "sglang",
+    "family": "aot_ref_moe_align_block_size",
+    "kernels": 4,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "lora_moe_grouped_gemm",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "matmul_ogs MoE GEMM, non-persistent (gather/scatter/ragged/MX/flex)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "matmul_ogs MoE GEMM, persistent TMA",
+    "kernels": 1,
+    "sm86": "no"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "masked/scaled reduction over one axis (split-K reducer, MoE combine)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "reduce backward",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "top-k routing (sorted top-k + optional softmax + bitmatrix)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "top-k backward (softmax gradient scattered to selected experts)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "expert-parallel token dispatch/combine over symmetric memory",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "ragged segment pad/unpad to block-aligned rows",
+    "kernels": 2,
+    "sm86": "yes"
+   }
+  ]
+ },
+ "K": {
+  "name": "块稀疏矩阵乘",
+  "families": [
+   {
+    "library": "stk",
+    "family": "block_sparse_matmul_sdd (dense x dense -> BCSR-sparse output on given topology)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "stk",
+    "family": "block_sparse_matmul_dsd (BCSR-sparse x dense -> dense)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "stk",
+    "family": "block_sparse_matmul_dds (dense x BCSR-sparse -> dense)",
+    "kernels": 1,
+    "sm86": "yes"
+   }
+  ]
+ },
+ "I": {
+  "name": "采样、投机解码、哈希与水印",
+  "families": [
+   {
+    "library": "lightllm",
+    "family": "sampling_penalties",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "sampling.murmur_hash32",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "sampling.textseal_watermark_select",
+    "kernels": 7,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "sampling.textseal_context_state",
+    "kernels": 6,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "spec.eagle_tree_build_and_greedy_verify",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "spec.chain_rejection_sampling",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "spec.selector_walk",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "spec.lilicorr_topk_lse",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "spec.dspark_schedule_verify_lens",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "engram_ngram_hash",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "qwen4_ple_ngram_hash",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "gpu_tensor_hash",
+    "kernels": 2,
+    "sm86": "yes"
+   }
+  ]
+ },
+ "J": {
+  "name": "布局、元数据与调度",
+  "families": [
+   {
+    "library": "lightllm",
+    "family": "flashinfer_mla_decode_plan",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dcp_kv_index_builders",
+    "kernels": 5,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "decode_num_kv_splits_heuristic",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "vattn_asm_mtp_verify_segment_plan",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "dsa_cp_interleave_q_split",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "spec.align_evict_mask_to_page_size",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "spec.draft_decode_kv_indices",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "reduce row scheduler (active-input counts + heavy-first row order)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "bitmatrix metadata (col-sorted / row-sorted nonzero indices)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "ragged tensor metadata (slice/block offsets, packed block schedule)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "ragged tensor metadata remap (drop/renumber slices)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "Hopper MXFP4 value swizzle (MMA tile permutation + fp4 bit interleave)",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "Hopper MX scale swizzle",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "Blackwell MX scale swizzle (weights and activations, batched or ragged)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "Blackwell MXFP4 value repack (K-packed <-> N-packed)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "Blackwell MX4 shuffled weight layout conversion",
+    "kernels": 1,
+    "sm86": "yes"
+   }
+  ]
+ },
+ "M": {
+  "name": "RoPE 与位置编码变体",
+  "families": [
+   {
+    "library": "kernl",
+    "family": "experimental llama: rotary embedding (RoPE, interleaved pairs)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "kernl",
+    "family": "experimental llama: fused rmsnorm + matmul (+ RoPE epilogue), fp16 weights",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "kernl",
+    "family": "experimental llama: fused rmsnorm + QKV projection + RoPE on q,k, fp16",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "mrope_position_ids",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "lightllm",
+    "family": "neo_mrope_position_ids",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "fused_qk_rope_reshape_and_cache",
+    "kernels": 1,
+    "sm86": "yes"
+   }
+  ]
+ },
+ "L": {
+  "name": "LoRA",
+  "families": [
+   {
+    "library": "sglang",
+    "family": "lora_dense_sgmm",
+    "kernels": 10,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "lora_mla_kv_b_absorbed",
+    "kernels": 4,
+    "sm86": "yes"
+   }
+  ]
+ },
+ "O": {
+  "name": "其他",
+  "families": [
+   {
+    "library": "lightllm",
+    "family": "mhc_pre_norm",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "mhc_sinkhorn_coefficients",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "mhc_boundary_hip",
+    "kernels": 3,
+    "sm86": "no"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "SwiGLU (GPT-OSS variant, interleaved gate/linear, clamp limit, flexpoint)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "FPSan embed/unembed (gluon)",
+    "kernels": 1,
+    "sm86": "unknown"
+   }
+  ]
+ },
+ "R": {
+  "name": "随机",
+  "families": [
+   {
+    "library": "attorch",
+    "family": "activation forward with fused dropout (dropout=True)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "attorch",
+    "family": "activation backward with fused dropout (dropout=True)",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "attorch",
+    "family": "dropout forward",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "attorch",
+    "family": "dropout backward",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "flash-attention (Triton code)",
+    "family": "fused LayerNorm / RMSNorm with dropout (dropout_p > 0)",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "LMDeploy",
+    "family": "multinomial_sampling_sorted",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "simulated_balanced_routing",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "cache_consistency_random_jitter",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "spec.markov_sample_step",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "spec.simulated_bonus_sample",
+    "kernels": 2,
+    "sm86": "yes"
+   },
+   {
+    "library": "sglang",
+    "family": "flash_attn_fused_add_norm_fwd",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "trident",
+    "family": "dropout forward",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "trident",
+    "family": "dropout backward",
+    "kernels": 1,
+    "sm86": "yes"
+   },
+   {
+    "library": "trident",
+    "family": "attention with dropout (dropout_p>0, forward+backward)",
+    "kernels": 3,
+    "sm86": "yes"
+   },
+   {
+    "library": "OpenAI triton_kernels (python/triton_kernels in triton-lang/triton)",
+    "family": "random block signs (Philox)",
+    "kernels": 1,
+    "sm86": "yes"
+   }
+  ]
+ }
+}
