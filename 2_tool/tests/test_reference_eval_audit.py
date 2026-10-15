@@ -113,3 +113,58 @@ def test_tolerance_checks_tell_the_bias_from_the_random_error():
     assert not tight["passes"] and tight["passes_without_bias"]
     assert not noisy["passes"] and not noisy["passes_without_bias"]
     assert "loose 会通过" in rep["text"] and "tight 会因为它报错" in rep["text"] and "noisy 去掉这个偏差也通不过" in rep["text"]
+
+
+@triton.jit
+def _leaky_k(x_ptr, y_ptr, B: tl.constexpr):
+    r = tl.arange(0, B)
+    x = tl.load(x_ptr + r)
+    tl.store(y_ptr + r, tl.where(x > 0, x, 0.01 * x))
+
+
+@cuda
+def test_reference_check_finds_an_error_orthogonal_to_the_reference():
+    """A relu written as leaky relu: G - S is nonzero only where S = 0, so the alignment <G - S, S> / <S, S> is exactly 0;
+    the element-wise check finds every negative input."""
+    x = torch.randn(4096, device="cuda", generator=torch.Generator(device="cuda").manual_seed(18))
+    y = torch.empty_like(x)
+    rep = audit(lambda: _leaky_k[(1,)](x, y, B=4096), spec={"y_ptr": lambda: x.double().clamp(min=0)}, predict=False,
+                reference="relu（torch，float64）")
+    s = rep["spec"]["y_ptr"]
+    assert s["semantic_alignment"] == 0
+    assert s["verdict"] == "不一致" and s["exceeding"] == int((x < 0).sum()) and s["compared"] == 4096
+    assert s["exceeding_by_program"] == [[[0, 0, 0], int((x < 0).sum())]]
+    assert any(f["kind"] == "semantic" for f in rep["findings"])
+    assert "与参照程序不一致" in rep["text"].splitlines()[0] and "relu（torch，float64）" in rep["text"]
+    assert "assert_close 的 dtype 默认值 不通过" in rep["text"] and "随机误差已超出" not in rep["text"]
+
+
+@cuda
+def test_reference_check_leaves_out_where_the_reference_is_undefined():
+    x = torch.randn(4096, device="cuda", generator=torch.Generator(device="cuda").manual_seed(19))
+    y = torch.empty_like(x)
+    nan = torch.tensor(float("nan"), dtype=torch.float64, device="cuda")
+    rep = audit(lambda: _scale_k[(1,)](x, y, B=4096), predict=False,
+                spec={"y_ptr": lambda: torch.where(x < -1, nan, x.abs().double() * 2)})
+    s, undefined = rep["spec"]["y_ptr"], int((x < -1).sum())
+    assert undefined > 0 and s["undefined"] == undefined and s["compared"] == 4096 - undefined
+    assert s["verdict"] == "未发现差异" and s["exceeding"] == 0 and s["semantic_alignment"] == 0
+    assert rep["tolerance_checks"]["y_ptr"][0]["passes"] and not rep["findings"]
+    assert f"参照程序在 {undefined} 个元素上没有定义" in rep["text"]
+
+
+@triton.jit
+def _sqrt_k(x_ptr, y_ptr, B: tl.constexpr):
+    r = tl.arange(0, B)
+    tl.store(y_ptr + r, tl.sqrt_rn(tl.load(x_ptr + r)))
+
+
+@cuda
+def test_reference_check_counts_non_finite_kernel_outputs():
+    """sqrt without the abs of the reference: NaN where x < 0, the reference is finite there."""
+    x = torch.randn(4096, device="cuda", generator=torch.Generator(device="cuda").manual_seed(20))
+    y = torch.empty_like(x)
+    rep = audit(lambda: _sqrt_k[(1,)](x, y, B=4096), spec={"y_ptr": lambda: x.abs().double().sqrt()}, predict=False)
+    s = rep["spec"]["y_ptr"]
+    assert s["kernel_non_finite"] == int((x < 0).sum()) and s["exceeding"] == 0 and s["verdict"] == "不一致"
+    assert "kernel 输出不是有限值" in rep["text"]

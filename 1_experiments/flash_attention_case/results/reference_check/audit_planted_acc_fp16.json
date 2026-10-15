@@ -1,0 +1,491 @@
+{
+ "prediction": {
+  "outputs": {},
+  "failures": [
+   "aborted: tt.dot@121: bias contract: dot f16 x f16 -> f16 (inputPrecision tf32) outside the contracts"
+  ],
+  "status": "无法判断",
+  "sites": {
+   "rn": 99846,
+   "mma_f16": 49152,
+   "rn_fma_contracted": 49152,
+   "approx:math.exp2|f32": 49920,
+   "rn_add": 0,
+   "rn_reduce_sum": 768,
+   "rn_conversion": 147456
+  }
+ },
+ "verify": {
+  "status": "partial",
+  "buffers": {
+   "M": {
+    "written": 768,
+    "emulated": 768,
+    "bit_identical": 768,
+    "value_equal": 768,
+    "nan_both": 0,
+    "not_emulated": 0,
+    "mismatch": 0
+   },
+   "desc_o": {
+    "written": 49152,
+    "emulated": 0,
+    "bit_identical": 0,
+    "value_equal": 0,
+    "nan_both": 0,
+    "not_emulated": 49152,
+    "mismatch": 0
+   }
+  },
+  "not_emulable_nodes": [
+   "tt.dot@121 (tensor-core dot f16 x f16 -> f16 (inputPrecision tf32))"
+  ],
+  "abort_reasons": []
+ },
+ "measured": {
+  "M": {
+   "elements": 768,
+   "written": 768,
+   "alignment": -2.796436301906873e-08,
+   "format_resolution": 5.960464477539063e-08,
+   "se": 1.2351653766673812e-09,
+   "energy_relative": 4.411959102539223e-08,
+   "max_abs": 1.369628673586476e-06,
+   "per_program": [
+    [
+     [
+      0,
+      0,
+      0
+     ],
+     -2.7511353540211274e-08,
+     3.0352525462895344e-09
+    ],
+    [
+     [
+      0,
+      1,
+      0
+     ],
+     -2.986648262864905e-08,
+     2.9212480559459085e-09
+    ],
+    [
+     [
+      2,
+      0,
+      0
+     ],
+     -2.6995380162148063e-08,
+     2.9915741264191614e-09
+    ],
+    [
+     [
+      5,
+      1,
+      0
+     ],
+     -2.5324067446497484e-08,
+     3.0613496724027346e-09
+    ],
+    [
+     [
+      7,
+      0,
+      0
+     ],
+     -2.9431092141280493e-08,
+     3.0714768337635253e-09
+    ],
+    [
+     [
+      7,
+      1,
+      0
+     ],
+     -2.8680801003512728e-08,
+     3.051162722114878e-09
+    ]
+   ],
+   "statistically_significant": true,
+   "significant": false,
+   "program_range": [
+    -2.986648262864905e-08,
+    -2.5324067446497484e-08
+   ],
+   "programs_differ": false
+  },
+  "desc_o": {
+   "elements": 49152,
+   "written": 49152,
+   "alignment": 8.900943619638686e-06,
+   "format_resolution": 0.00048828125,
+   "se": 1.1824856627085568e-05,
+   "energy_relative": 0.0016892389420999922,
+   "max_abs": 0.0008933803366338866,
+   "per_program": [
+    [
+     [
+      0,
+      0,
+      0
+     ],
+     -6.3001799655410985e-06,
+     3.091176874641239e-05
+    ],
+    [
+     [
+      0,
+      1,
+      0
+     ],
+     8.96931476216995e-06,
+     3.0104148663342543e-05
+    ],
+    [
+     [
+      2,
+      0,
+      0
+     ],
+     2.5582634645574283e-05,
+     2.7275700074492133e-05
+    ],
+    [
+     [
+      5,
+      1,
+      0
+     ],
+     -1.618707571100415e-05,
+     2.95473821797965e-05
+    ],
+    [
+     [
+      7,
+      0,
+      0
+     ],
+     5.747035219309312e-06,
+     2.771197058467624e-05
+    ],
+    [
+     [
+      7,
+      1,
+      0
+     ],
+     3.89281970751796e-05,
+     2.759663331824695e-05
+    ]
+   ],
+   "statistically_significant": false,
+   "significant": false,
+   "program_range": [
+    -1.618707571100415e-05,
+    3.89281970751796e-05
+   ],
+   "programs_differ": false
+  }
+ },
+ "attribution": {
+  "M": {
+   "programs": [
+    [
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     1,
+     0
+    ],
+    [
+     2,
+     0,
+     0
+    ],
+    [
+     5,
+     1,
+     0
+    ],
+    [
+     7,
+     0,
+     0
+    ],
+    [
+     7,
+     1,
+     0
+    ]
+   ],
+   "before": -2.796436298958571e-08,
+   "sum": -2.832999488155868e-08,
+   "gross": 3.4401096290794255e-08,
+   "nodes": [
+    {
+     "node": "tt.dot@78",
+     "lowering": "dot_tensor_core_f16",
+     "source": "planted_fwd.py:456",
+     "code": "qk = tl.dot(q, k)",
+     "contribution": -1.5245393815013985e-08,
+     "tag": "mma",
+     "mechanism": "张量核 dot 的每组乘积与累加器向零截断（随 K 增长的小的系统收缩）",
+     "fixes": [
+      [
+       "通常不需要处理；确有影响时分段累加到 fp32",
+       "多一次加法与寄存器"
+      ]
+     ]
+    },
+    {
+     "node": "math.exp2@92",
+     "lowering": "oracle",
+     "source": "planted_fwd.py:465",
+     "code": "p = tl.math.exp2(qk)",
+     "contribution": -6.481569316635522e-09,
+     "tag": "approx",
+     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）带几分之一 ulp 的系统平均误差",
+     "fixes": [
+      [
+       "改用正确舍入的 libdevice 函数或 tl.math.div_rn",
+       "慢若干倍，通常只在影响要紧时值得"
+      ]
+     ]
+    },
+    {
+     "node": "math.exp2@94",
+     "lowering": "oracle",
+     "source": "planted_fwd.py:467",
+     "code": "alpha = tl.math.exp2(m_i - m_ij)",
+     "contribution": -6.3735933798450876e-09,
+     "tag": "approx",
+     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）带几分之一 ulp 的系统平均误差",
+     "fixes": [
+      [
+       "改用正确舍入的 libdevice 函数或 tl.math.div_rn",
+       "慢若干倍，通常只在影响要紧时值得"
+      ]
+     ]
+    },
+    {
+     "node": "arith.mulf@85",
+     "lowering": "ieee",
+     "source": "planted_fwd.py:463",
+     "code": "m_ij = tl.maximum(m_i, tl.max(qk, 1) * qk_scale)",
+     "contribution": -2.8829779425157985e-09,
+     "tag": "rn",
+     "mechanism": "在声明类型中就近舍入",
+     "fixes": [
+      [
+       "影响不大时不需要处理",
+       ""
+      ]
+     ]
+    },
+    {
+     "node": "math.log2@128",
+     "lowering": "oracle",
+     "source": "planted_fwd.py:561",
+     "code": "m_i += tl.math.log2(l_i)",
+     "contribution": 1.3867515926964058e-09,
+     "tag": "approx",
+     "mechanism": "近似指令（ex2.approx / lg2.approx / div.full …）带几分之一 ulp 的系统平均误差",
+     "fixes": [
+      [
+       "改用正确舍入的 libdevice 函数或 tl.math.div_rn",
+       "慢若干倍，通常只在影响要紧时值得"
+      ]
+     ]
+    },
+    {
+     "node": "arith.addf@123",
+     "lowering": "fma_contraction",
+     "source": "planted_fwd.py:489",
+     "code": "l_i = l_i * alpha + l_ij",
+     "contribution": 1.0686711113480095e-09,
+     "tag": "fma",
+     "mechanism": "乘加收缩成一次 fma（一次舍入）",
+     "fixes": [
+      [
+       "不需要",
+       ""
+      ]
+     ]
+    },
+    {
+     "node": "tt.reduce@95",
+     "lowering": "reduce_tree",
+     "source": "",
+     "code": "",
+     "contribution": 5.801280005733729e-10,
+     "tag": "sum",
+     "mechanism": "按布局次序求和，每次组合就近舍入",
+     "fixes": [
+      [
+       "在更宽的类型里累加",
+       "寄存器与带宽"
+      ]
+     ]
+    },
+    {
+     "node": "arith.subf@91",
+     "lowering": "fma_contraction",
+     "source": "planted_fwd.py:464",
+     "code": "qk = qk * qk_scale - m_ij[:, None]",
+     "contribution": -2.336069935610979e-10,
+     "tag": "fma",
+     "mechanism": "乘加收缩成一次 fma（一次舍入）",
+     "fixes": [
+      [
+       "不需要",
+       ""
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ "spec": {
+  "desc_o": {
+   "threshold": 0.00048828125,
+   "compared": 49152,
+   "undefined": 0,
+   "kernel_non_finite": 0,
+   "out_of_range": 0,
+   "exceeding": 0,
+   "exceeding_by_program": [],
+   "max_relative": 9.51239332993969e-08,
+   "semantic_alignment": -1.4115817077328908e-08,
+   "total_alignment": 8.886827685622157e-06,
+   "max_abs_semantic": 8.18409481850857e-09,
+   "verdict": "未发现差异"
+  },
+  "M": {
+   "threshold": 1e-06,
+   "compared": 768,
+   "undefined": 0,
+   "kernel_non_finite": 0,
+   "out_of_range": 0,
+   "exceeding": 0,
+   "exceeding_by_program": [],
+   "max_relative": 2.935777693545293e-09,
+   "semantic_alignment": -1.7886476784304614e-09,
+   "total_alignment": -2.9753010648438448e-08,
+   "max_abs_semantic": 3.300578832465817e-08,
+   "verdict": "未发现差异"
+  }
+ },
+ "findings": [],
+ "fix_groups": [],
+ "tolerance_checks": {
+  "M": [
+   {
+    "check": "assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）",
+    "atol": 0.01,
+    "rtol": 0.0,
+    "passes": true,
+    "worst_ratio": 0.0001388648110278723,
+    "passes_without_bias": true,
+    "against": "参照程序"
+   },
+   {
+    "check": "allclose(rtol=1e-2, atol=1e-5)",
+    "atol": 1e-05,
+    "rtol": 0.01,
+    "passes": true,
+    "worst_ratio": 1.292978802272038e-05,
+    "passes_without_bias": true,
+    "against": "参照程序"
+   },
+   {
+    "check": "assert_close 的 dtype 默认值",
+    "atol": 1e-05,
+    "rtol": 1.3e-06,
+    "passes": true,
+    "worst_ratio": 0.057955510143119615,
+    "passes_without_bias": true,
+    "against": "参照程序"
+   }
+  ],
+  "desc_o": [
+   {
+    "check": "assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）",
+    "atol": 0.01,
+    "rtol": 0.0,
+    "passes": true,
+    "worst_ratio": 0.08933841146783889,
+    "passes_without_bias": true,
+    "against": "参照程序"
+   },
+   {
+    "check": "allclose(rtol=1e-2, atol=1e-5)",
+    "atol": 1e-05,
+    "rtol": 0.01,
+    "passes": false,
+    "worst_ratio": 24.45115865122298,
+    "passes_without_bias": false,
+    "against": "参照程序"
+   },
+   {
+    "check": "assert_close 的 dtype 默认值",
+    "atol": 1e-05,
+    "rtol": 0.001,
+    "passes": false,
+    "worst_ratio": 33.83284621635873,
+    "passes_without_bias": false,
+    "against": "参照程序"
+   }
+  ]
+ },
+ "cannot_decide": [
+  "预测：aborted: tt.dot@121: bias contract: dot f16 x f16 -> f16 (inputPrecision tf32) outside the contracts",
+  "逐位核对：partial ['tt.dot@121 (tensor-core dot f16 x f16 -> f16 (inputPrecision tf32))'] []"
+ ],
+ "names": {
+  "desc_o": "O",
+  "M": "M（logsumexp）"
+ },
+ "reference": "O：torch.nn.functional.scaled_dot_product_attention；M：logsumexp(q kᵀ · sm_scale) / ln 2（教程以 2 为底存 M）",
+ "scope": {
+  "programs": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    1,
+    0
+   ],
+   [
+    2,
+    0,
+    0
+   ],
+   [
+    5,
+    1,
+    0
+   ],
+   [
+    7,
+    0,
+    0
+   ],
+   [
+    7,
+    1,
+    0
+   ]
+  ],
+  "rule": "抽查 6/16 个 program（规则：各轴首尾 program，含序列末尾的边界块，另取中间 2 个）",
+  "kernel": "_attn_fwd_acc_fp16",
+  "target": "Triton 3.6.0 / sm_86（锁定的下降规则）"
+ },
+ "reference_crosscheck_max_abs": 3.3306690738754696e-16
+}

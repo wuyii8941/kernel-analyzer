@@ -1,0 +1,43 @@
+══ _attn_fwd：未发现需要处理的系统偏差 ══
+O：未发现显著偏差（实测 +0.00012%，噪声标准误 0.00019%）；运行前预测偏大约 0.00012%，实测偏大约 0.00012%，一致。
+  · 与参照程序：未发现差异（G − S 最大相对差 9.5e-08，阈值 0.00049）。
+M（logsumexp）：统计上可辨（<0.0001%），但小于输出格式的单位舍入，可忽略；运行前预测约为 0（<0.0001%），实测约为 0（<0.0001%），一致。
+  · 与参照程序：未发现差异（G − S 最大相对差 2.9e-09，阈值 1e-06）。
+
+范围：Triton 3.6.0 / sm_86（锁定的下降规则），抽查 6/16 个 program（规则：各轴首尾 program，含序列末尾的边界块，另取中间 2 个）。
+参照程序：O：torch.nn.functional.scaled_dot_product_attention；M：logsumexp(q kᵀ · sm_scale) / ln 2（教程以 2 为底存 M）；在 kernel 实际收到的输入上以 float64 计算。
+
+──── 附录 ────
+【事前预测，kernel 未运行】已预测
+  M（logsumexp）: 对齐 -2.5e-08（噪声标准误 8.9e-10），相对误差（能量加权）5e-08
+  O: 对齐 +1.19e-06（噪声标准误 1.9e-06），相对误差（能量加权）0.0004
+【运行】下降规则逐位核对：bit_identical
+  M（logsumexp）: K − G 对齐 -2.8e-08（标准误 1.2e-09）——统计上显著，但小于输出格式的单位舍入 6e-08，可忽略；相对误差（能量加权）4.4e-08，最大 |K − G| 1.37e-06（768 / 768 个元素）
+  O: K − G 对齐 +1.23e-06（标准误 1.9e-06）——未发现显著偏差；相对误差（能量加权）0.00028，最大 |K − G| 7.88e-05（49152 / 49152 个元素）
+  O: G − S（语义）对齐 -1.41e-08，最大相对差 9.5e-08（阈值 0.00049，超出 0 / 49152 个元素；参照无定义 0，kernel 非有限 0，参照超出输出格式范围 0）——未发现差异；K − S（合计）对齐 +1.22e-06
+  M（logsumexp）: G − S（语义）对齐 -1.79e-09，最大相对差 2.9e-09（阈值 1e-06，超出 0 / 768 个元素；参照无定义 0，kernel 非有限 0，参照超出输出格式范围 0）——未发现差异；K − S（合计）对齐 -2.98e-08
+  M（logsumexp）: assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）（对参照程序，atol 0.01, rtol 0）：通过，最差比值 0.00014；去掉系统分量后通过
+  M（logsumexp）: allclose(rtol=1e-2, atol=1e-5)（对参照程序，atol 1e-05, rtol 0.01）：通过，最差比值 1.3e-05；去掉系统分量后通过
+  M（logsumexp）: assert_close 的 dtype 默认值（对参照程序，atol 1e-05, rtol 1.3e-06）：通过，最差比值 0.058；去掉系统分量后通过
+  O: assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）（对参照程序，atol 0.01, rtol 0）：通过，最差比值 0.0079；去掉系统分量后通过
+  O: allclose(rtol=1e-2, atol=1e-5)（对参照程序，atol 1e-05, rtol 0.01）：不通过，最差比值 2.4；去掉系统分量后不通过
+  O: assert_close 的 dtype 默认值（对参照程序，atol 1e-05, rtol 0.001）：不通过，最差比值 2.8；去掉系统分量后不通过
+【M（logsumexp） 的各位点贡献】（6 个 program；仿真偏差 -2.8e-08，逐点贡献合计 -2.83e-08；不为零的前 8 个）
+  -1.52e-08  tt.dot@78              tutorial_fwd.py:36   张量核 dot 的每组乘积与累加器向零截断
+  -6.48e-09  math.exp2@92           tutorial_fwd.py:45   近似指令
+  -6.37e-09  math.exp2@94           tutorial_fwd.py:47   近似指令
+  -2.88e-09  arith.mulf@85          tutorial_fwd.py:43   在声明类型中就近舍入
+  +1.39e-09  math.log2@126          tutorial_fwd.py:149  近似指令
+  +1.07e-09  arith.addf@121         tutorial_fwd.py:69   乘加收缩成一次 fma
+  +5.8e-10  tt.reduce@95                                按布局次序求和
+  -2.34e-10  arith.subf@91          tutorial_fwd.py:44   乘加收缩成一次 fma
+【O 的各位点贡献】（6 个 program；仿真偏差 +1.23e-06，逐点贡献合计 +2.11e-06；不为零的前 8 个）
+  +3.9e-06  arith.truncf@118       tutorial_fwd.py:64   转到更窄的格式时舍入
+  -1.63e-06  tt.dot@119             tutorial_fwd.py:66   张量核 dot 的每组乘积与累加器向零截断
+  -2.31e-07  tt.dot@78              tutorial_fwd.py:36   张量核 dot 的每组乘积与累加器向零截断
+  -1.68e-07  arith.subf@91          tutorial_fwd.py:44   乘加收缩成一次 fma
+  +1.53e-07  arith.truncf@136       tutorial_fwd.py:153  转到更窄的格式时舍入
+  -1.48e-07  arith.mulf@85          tutorial_fwd.py:43   在声明类型中就近舍入
+  +7.77e-08  math.exp2@92           tutorial_fwd.py:45   近似指令
+  +7.1e-08  arith.addf@121         tutorial_fwd.py:69   乘加收缩成一次 fma
+说明：对齐 = ⟨K − G, G⟩ / ⟨G, G⟩，K 为设备输出，G 为声明程序的精确值，S 为参照程序的 float64 值；负值即系统性偏小。贡献 = 仿真输出与「该位点精确」的仿真输出之差的对齐；位点之间有相互作用，相加只是近似。

@@ -1,0 +1,71 @@
+══ _attn_fwd_tf32：输出 O 系统性偏小约 0.14%（不是噪声）；输出 M（logsumexp） 系统性偏小约 0.0095%（不是噪声） ══
+
+O：系统性偏小约 0.14%（不是噪声）
+  · 与参照程序：未发现差异（G − S 最大相对差 9.5e-08，阈值 1e-06）。
+  · 常用容差检查：assert_close(atol=1e-2, rtol=0)（Triton 教程的测试） 会通过——这个偏差会被漏掉；allclose(rtol=1e-2, atol=1e-5)、assert_close 的 dtype 默认值 去掉这个偏差也通不过（随机误差已超出），说明不了它。
+  · 运行前预测偏小约 0.14%，实测偏小约 0.14%，一致。
+  · 各 program 的偏差在 −0.15% 到 −0.14% 之间，差别在随机误差范围内。
+  · 与参照程序一致，问题出在数值实现。
+
+M（logsumexp）：系统性偏小约 0.0095%（不是噪声）
+  · 与参照程序：未发现差异（G − S 最大相对差 2.9e-09，阈值 1e-06）。
+  · 常用容差检查：assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）、allclose(rtol=1e-2, atol=1e-5) 会通过——这个偏差会被漏掉；assert_close 的 dtype 默认值 去掉这个偏差也通不过（随机误差已超出），说明不了它。
+  · 运行前预测偏小约 0.0094%，实测偏小约 0.0095%，一致。
+  · 各 program 的偏差在 −0.0098% 到 −0.0092% 之间，差别在随机误差范围内。
+  · 与参照程序一致，问题出在数值实现。
+
+原因
+  - planted_fwd.py:45  `qk = tl.dot(q, k)`
+      tf32 张量核 dot 把两个操作数向零截断到 11 位（每个操作数约 −0.035% 的系统收缩），累加也向零截断；贡献：O −0.075%，M（logsumexp） −0.0095%
+  - planted_fwd.py:75  `acc = tl.dot(p, v, acc)`
+      tf32 张量核 dot 把两个操作数向零截断到 11 位（每个操作数约 −0.035% 的系统收缩），累加也向零截断；贡献：O −0.067%
+  - 其他位点合计：O +0.00078%，M（logsumexp） <0.0001%，可忽略
+
+建议
+  1. tf32 张量核 dot 的操作数截断（planted_fwd.py:45、planted_fwd.py:75）
+     - 各处在 tl.dot 前把操作数用 cvt.rna.tf32.f32 就近取到 tf32：保留张量核，几乎不增加耗时；剩下张量核累加的截断（约 1e-5 量级）
+     - 各处改用 input_precision="ieee"：同样消除偏差，但不再用张量核，通常慢数倍
+     预测效果，全部 2 处都改：O −0.14% → <0.0001%；M（logsumexp） −0.0095% → <0.0001%
+       只改 planted_fwd.py:45：O → −0.068%；M（logsumexp） → <0.0001%
+       只改 planted_fwd.py:75：O → −0.075%；M（logsumexp） → −0.0095%
+  （预测效果是模型内的反事实：这些位点不再引入误差时的偏差，在同一组 program 上算得；修改后再跑一次 audit 即可在 GPU 上核对。）
+
+数值偏差是否值得修，取决于它进入下游（例如训练）后会不会超过随机种子之间的波动；这需要下游测量，工具不判断。
+
+范围：Triton 3.6.0 / sm_86（锁定的下降规则），抽查 6/16 个 program（规则：各轴首尾 program，含序列末尾的边界块，另取中间 2 个）。
+参照程序：O：torch.nn.functional.scaled_dot_product_attention；M：logsumexp(q kᵀ · sm_scale) / ln 2（教程以 2 为底存 M）；在 kernel 实际收到的输入上以 float64 计算。
+
+──── 附录 ────
+【事前预测，kernel 未运行】已预测
+  M（logsumexp）: 对齐 -9.45e-05（噪声标准误 8e-08），相对误差（能量加权）9.6e-05
+  O: 对齐 -0.00138（噪声标准误 2.1e-06），相对误差（能量加权）0.0016
+【运行】下降规则逐位核对：bit_identical
+  M（logsumexp）: K − G 对齐 -9.46e-05（标准误 7.3e-07）——有显著的系统偏差；相对误差（能量加权）9.6e-05，最大 |K − G| 0.0018（768 / 768 个元素）
+  O: K − G 对齐 -0.00143（标准误 1.1e-05）——有显著的系统偏差；相对误差（能量加权）0.0016，最大 |K − G| 0.000555（49152 / 49152 个元素）
+  O: G − S（语义）对齐 -1.41e-08，最大相对差 9.5e-08（阈值 1e-06，超出 0 / 49152 个元素；参照无定义 0，kernel 非有限 0，参照超出输出格式范围 0）——未发现差异；K − S（合计）对齐 -0.00143
+  M（logsumexp）: G − S（语义）对齐 -1.79e-09，最大相对差 2.9e-09（阈值 1e-06，超出 0 / 768 个元素；参照无定义 0，kernel 非有限 0，参照超出输出格式范围 0）——未发现差异；K − S（合计）对齐 -9.46e-05
+  M（logsumexp）: assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）（对参照程序，atol 0.01, rtol 0）：通过，最差比值 0.18；去掉系统分量后通过
+  M（logsumexp）: allclose(rtol=1e-2, atol=1e-5)（对参照程序，atol 1e-05, rtol 0.01）：通过，最差比值 0.016；去掉系统分量后通过
+  M（logsumexp）: assert_close 的 dtype 默认值（对参照程序，atol 1e-05, rtol 1.3e-06）：不通过，最差比值 74；去掉系统分量后不通过
+  O: assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）（对参照程序，atol 0.01, rtol 0）：通过，最差比值 0.056；去掉系统分量后通过
+  O: allclose(rtol=1e-2, atol=1e-5)（对参照程序，atol 1e-05, rtol 0.01）：不通过，最差比值 13；去掉系统分量后不通过
+  O: assert_close 的 dtype 默认值（对参照程序，atol 1e-05, rtol 1.3e-06）：不通过，最差比值 54；去掉系统分量后不通过
+【M（logsumexp） 的各位点贡献】（6 个 program；仿真偏差 -9.46e-05，逐点贡献合计 -9.46e-05；不为零的前 8 个）
+  -9.46e-05  tt.dot@77              planted_fwd.py:45    tf32 张量核 dot 把两个操作数向零截断到 11 位
+  -7.39e-09  math.exp2@91           planted_fwd.py:54    近似指令
+  -7.06e-09  math.exp2@93           planted_fwd.py:56    近似指令
+  -4.24e-09  arith.mulf@84          planted_fwd.py:52    在声明类型中就近舍入
+  -1.57e-09  math.log2@124          planted_fwd.py:150   近似指令
+  -1.45e-09  arith.addf@119         planted_fwd.py:78    乘加收缩成一次 fma
+  -8.92e-10  arith.addf@125         planted_fwd.py:150   在声明类型中就近舍入
+  +5.98e-10  tt.reduce@94                                按布局次序求和
+【O 的各位点贡献】（6 个 program；仿真偏差 -0.00143，逐点贡献合计 -0.00142；不为零的前 8 个）
+  -0.00075  tt.dot@77              planted_fwd.py:45    tf32 张量核 dot 把两个操作数向零截断到 11 位
+  -0.000675  tt.dot@117             planted_fwd.py:75    tf32 张量核 dot 把两个操作数向零截断到 11 位
+  +2.74e-05  math.exp2@91           planted_fwd.py:54    近似指令
+  -1.97e-05  arith.mulf@84          planted_fwd.py:52    在声明类型中就近舍入
+  +7.35e-08  arith.subf@90          planted_fwd.py:53    乘加收缩成一次 fma
+  +1.33e-08  arith.mulf@101         planted_fwd.py:67    在声明类型中就近舍入
+  +9.76e-09  math.exp2@93           planted_fwd.py:56    近似指令
+  +2.65e-09  arith.divf@128         planted_fwd.py:151   近似指令
+说明：对齐 = ⟨K − G, G⟩ / ⟨G, G⟩，K 为设备输出，G 为声明程序的精确值，S 为参照程序的 float64 值；负值即系统性偏小。贡献 = 仿真输出与「该位点精确」的仿真输出之差的对齐；位点之间有相互作用，相加只是近似。

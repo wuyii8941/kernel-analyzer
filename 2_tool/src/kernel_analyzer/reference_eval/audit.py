@@ -1,7 +1,8 @@
 """Audit of one Triton kernel launch: how far its outputs deviate, where the deviation comes from, how to fix it, what
 cannot be told.
 
-    report = audit(lambda: my_kernel[grid](...), spec={"o_ptr": lambda: reference_tensor}, names={"o_ptr": "O"})
+    report = audit(lambda: my_kernel[grid](...), spec={"o_ptr": lambda: reference_tensor}, names={"o_ptr": "O"},
+                   reference="the torch operation the kernel replaces, float64")
     print(report["text"])
 
 The report starts with a summary for the kernel's author (in plain terms: which output is biased by how many percent,
@@ -18,9 +19,11 @@ Steps (each with the locked lowering rules of Triton 3.6.0 / sm_86):
 3. attribution: every rounding / approximating node of the emulation made exact in turn; its contribution to the
    alignment of each output is K_emulated - K_(node exact), on the same inputs (contributions of different nodes
    interact, so they add up only approximately);
-4. the specification, if given: the semantic deviation G - S (constants, formula) and the total K - S; common
-   tolerance checks evaluated on K against S (or G), and on K without its systematic component (whether a failing
-   check is failed by the bias or by the random error alone);
+4. the reference program, if given (S: its values in float64 on the kernel's inputs, e.g. the torch operation the
+   kernel replaces): G - S element by element (G has no rounding of the kernel in it, so any difference beyond the
+   threshold comes from the formula, a constant or a mask), where the reference is undefined, where the kernel gives
+   a non-finite value; the total K - S; common tolerance checks evaluated on K against S (or G), and on K without its
+   systematic component (whether a failing check is failed by the bias or by the random error alone);
 5. findings: the mechanism of each large contribution, fixes with their cost, and the deviation the model gives when
    one site or every site of the mechanism is exact (a counterfactual of the model, not a run of a modified kernel).
 """
@@ -91,7 +94,9 @@ def _se(e, g) -> float:
 
 
 def _pct(a: float) -> str:
-    return f"{abs(a) * 100:.2g}%" if abs(a) >= 1e-6 else "<0.0001%"
+    if abs(a) < 1e-6:
+        return "<0.0001%"
+    return f"{abs(a) * 100:.2g}%" if abs(a) < 10 else f"{abs(a) * 100:.0f}%"
 
 
 def _spct(a: float) -> str:
@@ -150,13 +155,78 @@ def _sources(ttir: str) -> dict:
     return out
 
 
+def _compare_reference(buf, ok, g, h, k, S, programs, resolution) -> dict:
+    """G - S element by element on the evaluated elements (rules registered in
+    1_experiments/flash_attention_case/reference_check_registration.md): an element exceeds when |G - S| - h >
+    theta max(|S|, rms S), theta = max(1e-6, unit roundoff of the output format); NaN / inf in S is undefined and left
+    out; a non-finite kernel output where S is finite and within the output format counts as a disagreement."""
+    theta = max(1e-6, resolution)
+    s_all = S[buf.global_indices()]
+    s = s_all[ok]
+    fin = np.isfinite(s)
+    g_, h_, k_, s_ = g[fin], h[fin], k[fin], s[fin]
+    bad = buf.written & (buf.actual_after_st != ST_OK)            # NaN / inf stored by the kernel (decode_storage)
+    sb = s_all[bad]
+    fmt_max = iv.max_finite(buf.elem) if buf.elem in iv.FLOAT_FORMATS else np.inf
+    with np.errstate(all="ignore"):
+        rms = float(np.sqrt(np.mean(s_ * s_))) if s_.size else 0.0
+        scale = np.maximum(np.abs(s_), rms)
+        excess = np.abs(g_ - s_) - h_
+        over = excess > theta * scale
+        rel = np.where(scale > 0, excess / scale, np.where(excess > 0, np.inf, 0.0))
+    w = np.asarray(buf.writer)[ok][fin][over]
+    by_program = sorted(([list(programs[j]), int((w == j).sum())] for j in np.unique(w[w >= 0])), key=lambda r: -r[1])
+    out = {"threshold": theta, "compared": int(fin.sum()), "undefined": int((~fin).sum() + (~np.isfinite(sb)).sum()),
+           "kernel_non_finite": int((np.isfinite(sb) & (np.abs(sb) <= fmt_max)).sum()),
+           "out_of_range": int((np.isfinite(sb) & (np.abs(sb) > fmt_max)).sum()),
+           "exceeding": int(over.sum()), "exceeding_by_program": by_program,
+           "max_relative": float(max(rel.max(), 0.0)) if rel.size else float("nan"),
+           "semantic_alignment": _alignment(g_ - s_, s_), "total_alignment": _alignment(k_ - s_, s_),
+           "max_abs_semantic": float(np.max(np.abs(g_ - s_))) if s_.size else float("nan"), "_values": s}
+    a = out["semantic_alignment"]
+    if out["exceeding"] or out["kernel_non_finite"] or (np.isfinite(a) and abs(a) > theta):
+        out["verdict"] = "不一致"
+    elif out["compared"] == 0:
+        out["verdict"] = "无法判断"
+    else:
+        out["verdict"] = "未发现差异"
+    return out
+
+
+def _semantic_text(s: dict) -> str:
+    parts = []
+    if s["exceeding"]:
+        where = "、".join(f"program ({', '.join(map(str, p))}) {n}" for p, n in s["exceeding_by_program"][:3])
+        more = " 等" if len(s["exceeding_by_program"]) > 3 else ""
+        parts.append(f"{s['exceeding']}/{s['compared']} 个元素与参照程序的差超出阈值（最大相对差 {s['max_relative']:.2g}，"
+                     f"阈值 {s['threshold']:.2g}；所在：{where}{more}）")
+    if abs(s["semantic_alignment"]) > s["threshold"]:
+        parts.append(f"整体{'偏小' if s['semantic_alignment'] < 0 else '偏大'}约 {_pct(s['semantic_alignment'])}")
+    if s["kernel_non_finite"]:
+        parts.append(f"{s['kernel_non_finite']} 个元素 kernel 输出不是有限值，参照程序是有限值")
+    return "；".join(parts) + "。按声明的程序精确计算就是这样，数值舍入解释不了；核对常数、公式与 mask"
+
+
+def _ref_summary(s: dict) -> str:
+    parts = []
+    if abs(s["total_alignment"]) >= s["threshold"]:
+        parts.append(f"整体{'偏小' if s['total_alignment'] < 0 else '偏大'}约 {_pct(s['total_alignment'])}")
+    if s["exceeding"]:
+        parts.append(f"{s['exceeding']}/{s['compared']} 个元素超出阈值")
+    if s["kernel_non_finite"]:
+        parts.append(f"{s['kernel_non_finite']} 个元素输出不是有限值")
+    return "，".join(parts)
+
+
 def audit(launch: Callable[[], None], spec: Optional[dict] = None, programs: Optional[list] = None,
           names: Optional[dict] = None, attribution_programs: Optional[int] = None, top: int = 8, predict: bool = True,
-          tolerance: Optional[float] = None, tolerance_checks: Optional[list] = None) -> dict:
+          tolerance: Optional[float] = None, tolerance_checks: Optional[list] = None,
+          reference: Optional[str] = None) -> dict:
     """Audit the first Triton launch made by ``launch()``.
 
-    spec: {kernel argument name: callable returning the expected values of that tensor (float64, same number of
-    elements)}.  names: {kernel argument name: name to show}.  programs: the program ids (x, y, z) to evaluate
+    spec: {kernel argument name: callable returning the values of a reference program for that tensor (float64,
+    same number of elements; NaN / inf where the reference is undefined)}.  reference: what the reference program is,
+    shown in the report.  names: {kernel argument name: name to show}.  programs: the program ids (x, y, z) to evaluate
     (default: sample_programs; "all": every program).  attribution_programs: evaluate the attribution on this many of them (the first ones and
     the last; default all -- the deviation before and after a fix then refers to the measured elements).  tolerance: an alignment below which a deviation does not matter to the caller
     (default: the unit roundoff of the output format -- a bias it cannot resolve is not a defect of the kernel).
@@ -167,7 +237,7 @@ def audit(launch: Callable[[], None], spec: Optional[dict] = None, programs: Opt
     from .capture import TritonLaunchRecorder
     names = names or {}
     rep = {"prediction": None, "verify": None, "measured": {}, "attribution": {}, "spec": {}, "findings": [],
-           "fix_groups": [], "tolerance_checks": {}, "cannot_decide": [], "names": names}
+           "fix_groups": [], "tolerance_checks": {}, "cannot_decide": [], "names": names, "reference": reference}
     # 1. prediction, kernel not run
     with TritonLaunchRecorder(execute=False) as R:
         launch()
@@ -206,12 +276,13 @@ def audit(launch: Callable[[], None], spec: Optional[dict] = None, programs: Opt
         res = ev.evaluate(L, programs=programs)
     finally:
         iv.elementary_bounds = original
-    G, idx, K_of, elem_of = {}, {}, {}, {}
+    G, H, idx, K_of, elem_of = {}, {}, {}, {}, {}
     for buf in res.buffers.values():
         if buf.kind != "f" or not buf.written.any():
             continue
         ok = buf.written & (buf.st == ST_OK) & (buf.actual_after_st == 0) & np.isfinite(buf.actual_after)
         G[buf.name] = g = 0.5 * (buf.lo[ok] + buf.hi[ok])
+        H[buf.name] = 0.5 * (buf.hi[ok] - buf.lo[ok])
         idx[buf.name], K_of[buf.name], elem_of[buf.name] = ok, buf.actual_after[ok], buf.elem
         gg = float((g * g).sum())
         e = K_of[buf.name] - g
@@ -224,33 +295,33 @@ def audit(launch: Callable[[], None], spec: Optional[dict] = None, programs: Opt
         w = np.asarray(buf.writer)[ok]                  # index into programs of the program that wrote each element
         rep["measured"][buf.name]["per_program"] = [
             [list(programs[j]), _alignment(e[w == j], g[w == j]), _se(e[w == j], g[w == j])] for j in np.unique(w[w >= 0])]
-    # 3. specification and tolerance checks
+    # 3. reference program and tolerance checks
     for name, fn in (spec or {}).items():
         if name not in G:
-            rep["cannot_decide"].append(f"规格 {name}：没有这个名字的已求值输出")
+            rep["cannot_decide"].append(f"参照程序 {name}：没有这个名字的已求值输出")
             continue
         val = fn()
         S = np.asarray(val.double().cpu().numpy() if hasattr(val, "double") else val, dtype=np.float64).reshape(-1)
         buf = next(b for b in res.buffers.values() if b.name == name)
-        s = S[buf.global_indices()[idx[name]]]
-        rep["spec"][name] = {"semantic_alignment": _alignment(G[name] - s, s),
-                             "total_alignment": _alignment(K_of[name] - s, s),
-                             "max_abs_semantic": float(np.max(np.abs(G[name] - s)))}
-        rep["spec"][name]["_values"] = s
+        rep["spec"][name] = _compare_reference(buf, idx[name], G[name], H[name], K_of[name], S, programs,
+                                               rep["measured"][name]["format_resolution"])
     for name in G:
         # each check on K, and on K without its systematic component (K - a ref, a the alignment of K - ref): a check
-        # that fails either way is failed by the random error and says nothing about the bias
+        # that fails either way is failed by the random error and says nothing about the bias; only where the
+        # reference is defined
         ref = rep["spec"].get(name, {}).get("_values", G[name])
-        k0 = K_of[name] - _alignment(K_of[name] - ref, ref) * ref
+        use = np.isfinite(ref)
+        ref, k_ = ref[use], K_of[name][use]
+        k0 = k_ - _alignment(k_ - ref, ref) * ref
         checks = []
         for label, atol, rtol in (tolerance_checks or TOLERANCE_CHECKS):
             if atol is None:
                 atol, rtol = _ASSERT_CLOSE.get(elem_of[name], (1e-5, 1.3e-6))
-            excess = np.abs(K_of[name] - ref) / (atol + rtol * np.abs(ref))
+            excess = np.abs(k_ - ref) / (atol + rtol * np.abs(ref))
             checks.append({"check": label, "atol": atol, "rtol": rtol, "passes": bool(np.all(excess <= 1)),
                            "worst_ratio": float(excess.max()) if excess.size else 0.0,
                            "passes_without_bias": bool(np.all(np.abs(k0 - ref) <= atol + rtol * np.abs(ref))),
-                           "against": "规格" if name in rep["spec"] else "声明的程序"})
+                           "against": "参照程序" if name in rep["spec"] else "声明的程序"})
         rep["tolerance_checks"][name] = checks
     for s in rep["spec"].values():
         s.pop("_values", None)
@@ -384,12 +455,26 @@ def audit(launch: Callable[[], None], spec: Optional[dict] = None, programs: Opt
             rep["findings"].append({"output": name, "kind": "cancel",
                                     "text": f"贡献相消：各位点贡献的绝对值之和 {_pct(a['gross'])}，净和 {_pct(a['sum'])}"})
     for name, s_ in rep["spec"].items():
-        if abs(s_["semantic_alignment"]) > max(1e-6, rep["measured"][name]["format_resolution"]):
-            rep["findings"].append({"output": name, "kind": "semantic",
-                                    "text": f"按声明的程序精确计算，结果就{'偏小' if s_['semantic_alignment'] < 0 else '偏大'}"
-                                            f"约 {_pct(s_['semantic_alignment'])}，数值舍入解释不了；核对常数、公式与 mask"})
+        if s_["verdict"] == "不一致":
+            rep["findings"].append({"output": name, "kind": "semantic", "text": _semantic_text(s_)})
     rep["text"] = render(rep)
     return rep
+
+
+def _ref_lines(s: Optional[dict], verdict: bool = True) -> list:
+    """The reference comparison of an output under its summary line."""
+    if not s:
+        return []
+    out = []
+    if verdict and s["verdict"] == "未发现差异":
+        out.append(f"  · 与参照程序：未发现差异（G − S 最大相对差 {s['max_relative']:.2g}，阈值 {s['threshold']:.2g}）。")
+    elif verdict and s["verdict"] == "无法判断":
+        out.append("  · 与参照程序：无法判断（没有可比较的元素）。")
+    if s["undefined"]:
+        out.append(f"  · 参照程序在 {s['undefined']} 个元素上没有定义（不是有限值），这些元素不比较。")
+    if s["out_of_range"]:
+        out.append(f"  · {s['out_of_range']} 个元素的参照值超出输出格式的范围，kernel 输出不是有限值，不算不一致。")
+    return out
 
 
 def _show(rep, name):
@@ -425,7 +510,7 @@ def render(rep: dict) -> str:
     head = []
     for n in order:
         if n in sem:
-            head.append(f"输出 {_show(rep, n)} 比规格{size(spec[n]['total_alignment'])}（公式或常数与规格不一致）")
+            head.append(f"输出 {_show(rep, n)} 与参照程序不一致（{_ref_summary(spec[n])}）")
         elif n in sig:
             head.append(f"输出 {_show(rep, n)} 系统性{size(meas[n]['alignment'])}（不是噪声）")
     if head:
@@ -449,25 +534,33 @@ def render(rep: dict) -> str:
             else:
                 state = f"未发现显著偏差（实测 {_spct(m['alignment'])}，噪声标准误 {_pct(m['se'])}）"
             out.append(f"{name}：{state}{'；' + pred if pred else ''}。")
+            out += _ref_lines(spec.get(n))
             continue
         out.append("")
         if n in sem:
-            out.append(f"{name}：比规格{size(spec[n]['total_alignment'])}——来自公式或常数，不是数值误差")
-            out.append(f"  · {sem[n]}（工具不能定位到具体的常数）。")
+            out.append(f"{name}：与参照程序不一致——来自公式、常数或 mask，不是数值误差")
+            out.append(f"  · {sem[n]}（工具不能定位到具体的行）。")
         else:
             out.append(f"{name}：系统性{size(m['alignment'])}（不是噪声）")
+        out += _ref_lines(spec.get(n), verdict=n not in sem)
         checks = rep["tolerance_checks"].get(n, [])
         if checks:
             ok_ = [c["check"] for c in checks if c["passes"]]
             caught = [c["check"] for c in checks if not c["passes"] and c.get("passes_without_bias")]
             noisy = [c["check"] for c in checks if not c["passes"] and not c.get("passes_without_bias")]
-            against = "" if n in spec else "（未给规格，对声明的程序）"
+            against = "" if n in spec else "（未给参照程序，对声明的程序）"
             parts = []
-            if ok_:
+            if n in sem:            # the bias / random-error split is about a systematic K - a S, not a disagreement
+                ok_, caught, noisy = ok_, [], caught + noisy
+                if ok_:
+                    parts.append(f"{'、'.join(ok_)} 会通过——这处不一致会被漏掉")
+                if noisy:
+                    parts.append(f"{'、'.join(noisy)} 不通过")
+            elif ok_:
                 parts.append(f"{'、'.join(ok_)} 会通过——这个偏差会被漏掉")
             if caught:
                 parts.append(f"{'、'.join(caught)} 会因为它报错")
-            if noisy:
+            if noisy and n not in sem:
                 parts.append(f"{'、'.join(noisy)} 去掉这个偏差也通不过（随机误差已超出），说明不了它")
             out.append(f"  · 常用容差检查{against}：{'；'.join(parts)}。")
         if pred:
@@ -481,8 +574,8 @@ def render(rep: dict) -> str:
             else:
                 out.append(f"  · 各 program 的偏差在 {_spct(lo)} 到 {_spct(hi)} 之间，差别在随机误差范围内。")
         if n in sig and n not in sem:
-            out.append("  · 公式与规格一致，问题出在数值实现。" if n in spec else
-                       "  · 未给规格：以上相对声明的程序；公式本身对不对，要给规格才能判断。")
+            out.append("  · 与参照程序一致，问题出在数值实现。" if n in spec else
+                       "  · 未给参照程序：以上相对声明的程序；公式本身对不对，要给参照程序才能判断。")
 
     # causes per source line, fixes per mechanism
     groups = rep["fix_groups"]
@@ -522,9 +615,12 @@ def render(rep: dict) -> str:
         out.append("数值偏差是否值得修，取决于它进入下游（例如训练）后会不会超过随机种子之间的波动；这需要下游测量，工具不判断。")
     if sem:
         out.append("")
-        out.append("公式或常数与规格不一致的偏差应当修正（除非规格本身写错）。")
+        out.append("与参照程序不一致的地方应当核对：要么 kernel 的公式、常数或 mask 错了，要么参照程序不是这个 kernel "
+                   "想要的语义（例如约定不同）。")
     out.append("")
     out.append(f"范围：{rep['scope']['target']}，{rep['scope']['rule']}。")
+    if spec:
+        out.append(f"参照程序：{rep.get('reference') or '调用方提供，未注明'}；在 kernel 实际收到的输入上以 float64 计算。")
     if rep["cannot_decide"]:
         out.append("无法判断：")
         out += [f"  - {c}" for c in rep["cannot_decide"]]
@@ -548,7 +644,10 @@ def render(rep: dict) -> str:
                    f"相对误差（能量加权）{m['energy_relative']:.2g}，最大 |K − G| {m['max_abs']:.3g}"
                    f"（{m['elements']} / {m['written']} 个元素）")
     for n, s_ in spec.items():
-        out.append(f"  {_show(rep, n)}: G − S（语义）{s_['semantic_alignment']:+.3g}，K − S（合计）{s_['total_alignment']:+.3g}")
+        out.append(f"  {_show(rep, n)}: G − S（语义）对齐 {s_['semantic_alignment']:+.3g}，最大相对差 {s_['max_relative']:.2g}"
+                   f"（阈值 {s_['threshold']:.2g}，超出 {s_['exceeding']} / {s_['compared']} 个元素；参照无定义 "
+                   f"{s_['undefined']}，kernel 非有限 {s_['kernel_non_finite']}，参照超出输出格式范围 {s_['out_of_range']}）"
+                   f"——{s_['verdict']}；K − S（合计）对齐 {s_['total_alignment']:+.3g}")
     for n, checks in rep["tolerance_checks"].items():
         for c in checks:
             out.append(f"  {_show(rep, n)}: {c['check']}（对{c['against']}，atol {c['atol']:g}, rtol {c['rtol']:g}）："
@@ -562,6 +661,6 @@ def render(rep: dict) -> str:
     for f in rep["findings"]:
         if f["kind"] == "cancel":
             out.append(f"  {_show(rep, f['output'])}：{f['text']}")
-    out.append("说明：对齐 = ⟨K − G, G⟩ / ⟨G, G⟩，K 为设备输出，G 为声明程序的精确值，S 为规格；负值即系统性偏小。"
+    out.append("说明：对齐 = ⟨K − G, G⟩ / ⟨G, G⟩，K 为设备输出，G 为声明程序的精确值，S 为参照程序的 float64 值；负值即系统性偏小。"
                "贡献 = 仿真输出与「该位点精确」的仿真输出之差的对齐；位点之间有相互作用，相加只是近似。")
     return "\n".join(out)

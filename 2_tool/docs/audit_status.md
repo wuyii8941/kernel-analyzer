@@ -8,13 +8,14 @@
 一次调用审查入口，对这次启动自动完成下面各项：
 
 ```python
-audit(lambda: kernel[grid](...), spec=..., names=..., programs=None | "all" | [...])
+audit(lambda: kernel[grid](...), spec=..., reference=..., names=..., programs=None | "all" | [...])
 ```
 
 - 事前预测（kernel 不运行，可选）；
 - 逐位核对：仿真器在 CPU 上按锁定的下降规则重算，与设备输出逐位比较；
 - 精确参照 G（声明程序的精确值），实测偏差 K − G，显著性（统计显著且超过输出格式的单位舍入）；
-- 给了规格时：语义偏差 G − S；
+- 给了参照程序时（通常是 kernel 替换掉的 torch 运算，float64）：逐元素比较 G − S，报告一致 / 不一致 / 无法判断、超出的元素数与
+  所在 program；参照程序无定义的元素与 kernel 的非有限输出分开计数；
 - 常用容差检查分三类：会通过（偏差被漏掉）、因为偏差而报错、去掉系统分量也通不过（随机误差已超出）；
 - 归因：每个舍入位点逐个设为精确、各仿真一次，得到贡献，对到源码行与机制；
 - 改法：按机制给出改法与代价，以及「只改一处」「全部都改」的模型内效果（后者一次同时仿真算得）；
@@ -30,6 +31,7 @@ audit(lambda: kernel[grid](...), spec=..., names=..., programs=None | "all" | [.
 | Triton 教程 flash attention 与 4 种植入缺陷 | 教程逐位复现、无显著偏差；tf32、scale、l_bf16 被找到并定位到源码行，事前预测与实测一致；acc_fp16 与 N = 8192 的强停滞如实放弃 | [flash_attention_case](../../1_experiments/flash_attention_case/README.md) |
 | l_bf16 全部 32 个 program | 全 kernel +0.29%，事前预测 +0.28%；首尾两个 program 偏差远小于其余（抽 6 个得 +0.23%） | 同上 |
 | l_bf16，N = 8192（强停滞） | 实测 +15.5%，逐位相同；事前预测放弃，归因与改法照常给出 | 同上 |
+| 与参照程序的比较（flash attention 7 例，含新植入的 mask 错误） | 登记的 5 项全部成立：数值缺陷都未判为不一致，scale 与 mask 错误的 O、M 都判不一致 | [flash_attention_case](../../1_experiments/flash_attention_case/README.md) 第三轮 |
 | 两个留出集（各 60 个随机程序） | 事前预测成立 51 / 44、不成立 2 / 2、无法判断 7 / 14 | [composition_study](../../1_experiments/composition_study/README.md) 第 10 节 |
 | 真实修改：TF32（Qwen 6 层，24 组） | 全部成立；第 2 层 down_proj 少预测 4–6×10⁻⁵ | 同上 |
 | 库里的真实 kernel（Liger、FlagGems 231 个） | 逐位相同 213、未建立 11、有不一致 7（只做了逐位核对，没有做预测与归因） | 同上第 6 节 |
@@ -62,7 +64,8 @@ audit(lambda: kernel[grid](...), spec=..., names=..., programs=None | "all" | [.
 1. **参照有隐含前提**：
    - 规格（[5_specification](../../5_specification/README.md)，v2.4）31 个角色中只有 3 个有审阅过的合同，且尚未启用；
      有一批条目按记忆书写、原文未核对（见其 `docs/status.md` 第 2 节）；
-   - 审查的 `spec=` 只收一个 torch 函数，没有用规格库的输入契约，约定差异（如整行被 mask）可能被误报为语义错误；
+   - 审查的参照程序由调用方给出（通常是被替换的 torch 运算）。参照程序无定义的元素已单独计数、不再误报；
+     但「不一致」是 kernel 错还是约定不同（例如全部被忽略时返回 0 还是 NaN），仍要人判断；
    - G 绑定 Triton 3.6.0 / sm_86 的下降行为，逐位相同只是测过输入上的证据。
 2. **归因结果可用，但计算不可复用、成本高、只限精度**：
    - 每次从头逐位点重算，灵敏度不保存；
@@ -84,11 +87,10 @@ audit(lambda: kernel[grid](...), spec=..., names=..., programs=None | "all" | [.
      Embedding 的 padding_idx / max_norm；
    - 抓 PyTorch 2.10 文档原文，逐条附 URL、版本与原文片段；
    - 与规格不符的交审阅方，执行方不改规格语义。
-2. 审查接入规格库：
-   - `spec` 可引用规格库的家族与读法；
-   - 输入先分五类：合法有定义、文档未规定、实数目标无定义、不合法、规格未建立；
-   - 报告「符合读法 X / 都不符合 / 落在无定义区域」；
-   - 用户自带的 torch 参照标为「实现参照，不是独立规格」。
+2. 审查与参照程序的比较（2026-10-15 完成简化版）：
+   - 参照程序就是 kernel 替换掉的 torch 运算，在 kernel 实际收到的输入上以 float64 计算；规格库不再是审查的前提；
+   - 逐元素判断、参照无定义、kernel 非有限输出、报告写明参照程序，已实现并在 flash attention 上按登记验收；
+   - 下一步：在没测过的算子库上批量使用，没有 torch 对应的 kernel 列表交用户定义参照程序。
 3. 前提清单进报告：
    - 本次结论依赖的下降规则中哪些来自实测；
    - 未证明前提（scan 结合、CAS 串行化）；

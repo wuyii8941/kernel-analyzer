@@ -5,6 +5,7 @@ line-level edit of the verbatim source (so the rest of the kernel is the tutoria
   scale     qk_scale *= 1.44 instead of 1.44269504 (semantic bias: the declared program is not the specification)
   l_bf16    the softmax denominator l_i kept in bf16 across iterations (low-precision accumulation)
   acc_fp16  the output accumulator in fp16 (a tensor-core fp16 accumulator: outside the lowering rules)
+  mask_diag the causal mask of the diagonal block with > instead of >= (a query does not see its own key; semantic)
 """
 from __future__ import annotations
 
@@ -22,6 +23,8 @@ EDITS = {
                  ("    acc = acc / l_i[:, None]\n", "    acc = acc.to(tl.float32) / l_i[:, None]\n"),
                  ("            acc = acc * alpha[:, None]\n", "            acc = (acc * alpha[:, None]).to(tl.float16)\n"),
                  ("        acc = tl.dot(p, v, acc)\n", "        acc = tl.dot(p, v, acc, out_dtype=tl.float16)\n")],
+    "mask_diag": [("            mask = offs_m[:, None] >= (start_n + offs_n[None, :])\n",
+                   "            mask = offs_m[:, None] > (start_n + offs_n[None, :])\n")],
 }
 
 

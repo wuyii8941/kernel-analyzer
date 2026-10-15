@@ -20,19 +20,22 @@
 | scale | `qk_scale *= 1.44`（应为 1.44269504） | 语义 bias：声明的程序不是规格 |
 | l_bf16 | softmax 分母 `l_i` 在循环里保留为 bf16 | 低精度累加 |
 | acc_fp16 | 输出累加器用 fp16 | 张量核 fp16 累加器，不在下降规则内 |
+| mask_diag | causal 对角块的屏蔽 `>=` 写成 `>`，每个 query 看不到自己（第三轮新增） | 语义错误：mask |
 
 - 用法（`audit_fa.py`）：一次调用
 
   ```python
-  audit(launch, spec={"desc_o": lambda: reference}, names={"desc_o": "O", "M": "M（logsumexp）"})
+  audit(launch, spec={"desc_o": lambda: reference_o(...), "M": lambda: reference_m(...)},
+        names={"desc_o": "O", "M": "M（logsumexp）"}, reference=REFERENCE)
   ```
 
-  其中 `launch` 运行 kernel，规格是 torch 的 float64 注意力。
+  其中 `launch` 运行 kernel。参照程序（第三轮起）：O 用 kernel 替换掉的 torch 运算 `scaled_dot_product_attention`，
+  M 用以 2 为底的 logsumexp，都在 float64 下计算。前两轮用的是 `spec_attention`（torch 的 float64 注意力），只给 O。
   - 输入为标准正态，Z=1、H=2、head_dim 64；N = 1024（l_bf16 为 2048、BLOCK_N 16）。
   - program 按工具的默认抽样：各轴首尾 program（含序列末尾的边界块）另加中间两个，16 个中抽 6 个（l_bf16 32 个中抽 6 个）；
     归因用同一组 program。
-- 输入与规格的构造在 `fa_inputs.py`。
-- 报告在 `results/audit_*.txt`，数据在同名 `.json`：
+- 输入与参照程序的构造在 `fa_inputs.py`。
+- 报告在 `results/audit_*.txt`，数据在同名 `.json`（前两轮）；第三轮的 7 个报告在 `results/reference_check/`：
   - `audit_planted_l_bf16_all.*` 是全部 32 个 program 的审查，`audit_planted_l_bf16_N8192.*` 是 N = 8192 的强停滞；
   - 各 program 分别测得的偏差在 `results/per_program.json`（`per_program.py`）。
 
@@ -153,6 +156,34 @@ scale 的报告标题是「输出 O 比规格偏小约 0.2%（公式或常数与
 - **放弃时的标题**：acc_fp16 原来的标题是「未发现需要处理的系统偏差」；现在写明事前预测与逐位核对没完成。
 - **下游**：只写「是否值得修取决于下游」，工具不判断；公式或常数与规格不一致时写「应当修正」。
 
+## 第三轮：与参照程序的比较（2026-10-15）
+
+问题是：kernel 除去舍入以外，算的和参照程序是不是同一个函数。G 已经去掉了 kernel 的全部舍入，所以正确的 kernel 的 G − S
+只剩参照程序自身的 float64 舍入和常数的舍入；真正的语义错误要大得多，float64 的参照程序足够。审查入口改了四处
+（`2_tool/src/kernel_analyzer/reference_eval/audit.py`）：
+
+- 逐元素判断：元素超出 ⇔ |G − S| − 区间半宽 > θ · max(|S|, rms S)，θ = max(1e-6, 输出格式的单位舍入)，报告超出的元素数与所在
+  program。原来只看对齐度 ⟨G − S, S⟩ / ⟨S, S⟩，和 S 不相关的错误会漏掉（单元测试：relu 写成 leaky relu，对齐度恰为 0）；
+- 参照程序不是有限值的元素记为「参照无定义」，不比较，容差检查也排除（原来对齐度变成 NaN，什么也不报）；
+- kernel 输出不是有限值而参照程序是有限值，计入不一致；
+- 报告写明参照程序是什么，用词「参照程序」。
+
+判定规则和下面的验收在实现前登记（[reference_check_registration.md](reference_check_registration.md)，提交 4e61cc4），
+修复前先写了三个失败的单元测试。
+
+| 案例 | O | M | 登记的预期 | 结果 |
+|---|---|---|---|---|
+| 教程、教程 causal、tf32、l_bf16、acc_fp16 | 未发现差异（最大相对差 7.7e-8 至 9.9e-8，阈值 4.9e-4；tf32 为 fp32 输出，阈值 1e-6） | 未发现差异（最大相对差 ≤ 4.3e-9） | 都未发现差异 | 成立 |
+| scale | 不一致：40741/49152 个元素超出，整体偏小 0.2% | 不一致：768/768 | 都不一致 | 成立 |
+| mask_diag | 不一致：45234/49152 个元素超出，整体偏小 14% | 不一致：768/768 | 都不一致 | 成立 |
+
+另外两项核对：
+- K − G 部分不受影响：6 个旧案例 O 的实测对齐与前两轮记录逐位相同（相对差 0），登记要求 < 1e-9，成立；
+- 两种 O 参照互相核对：`scaled_dot_product_attention` 与 `spec_attention` 的最大绝对差 ≤ 5.6e-16，登记要求 < 1e-12，成立。
+
+正确的 kernel 也有 1e-7 量级的 G − S：教程把 log2(e) 写成 fp32 常数 1.44269504，G 按 kernel 写下的常数精确计算。
+它小于阈值，报告只给大小，不判不一致。
+
 ## 能说什么
 
 - 对教程 flash attention 及植入的三类缺陷（数值截断、语义常数、低精度累加），工具在一次调用里给出了正确的判断、来源行、
@@ -167,7 +198,8 @@ scale 的报告标题是「输出 O 比规格偏小约 0.2%（公式或常数与
   （标准正态）。只做了前向，没有做反向；反向用原子累加 dQ 时会报「无法判断」。
 - 用时：N = 1024 时 6 个 program 的一次审查约 4～7 分钟，包括预测、逐位核对和每个舍入节点一次归因仿真（6 个审查同时
   在 3～4 块 GPU 上跑，仿真主要占 CPU）；l_bf16（N = 2048、BLOCK_N 16）约 17 分钟。大规模输入需要抽样。
-- 语义偏差（G − S）只能说「公式或常数不一致」，不能定位到具体的常数或行。
+- 与参照程序不一致时，只能给出超出的元素数和所在 program，不能定位到具体的常数或行。
+- 参照程序是调用方给的（这里是 torch 的 SDPA）。「不一致」只说明 kernel 与它不同，是 kernel 错还是约定不同，要人来判断。
 - 改法是按机制的规则给出的，不会自动改写源码；「贡献」由逐点替换得到，不同位点之间有相互作用，相加只是近似（「全部都改」
   的效果是一次仿真算的，不受此影响）。
 - 理论层（契约定义、组合定理与余项界）仍未写出，显著性判断与容差是经验的（见 `../composition_study/README.md` 10.4 节与外部
@@ -183,8 +215,8 @@ export HOME=/data1/tzh/kernel-analyzer/.cache XDG_CACHE_HOME=/data1/tzh/kernel-a
        PYTHONPATH=/data1/tzh/kernel-analyzer/2_tool/src KA_CACHE_DIR=/data1/tzh/kernel-analyzer/.cache/composition_study/ka
 PY=/data1/tzh/envs/ka_main/bin/python; cd 1_experiments/flash_attention_case
 $PY make_planted.py
-for c in tutorial_fp16 tutorial_fp16_causal planted_tf32 planted_scale planted_l_bf16 planted_acc_fp16; do
-  $PY audit_fa.py --case $c; done                                                # 报告：.cache/flash_attention_case/
+for c in tutorial_fp16 tutorial_fp16_causal planted_tf32 planted_scale planted_l_bf16 planted_acc_fp16 planted_mask_diag; do
+  $PY audit_fa.py --case $c --suffix _refcheck; done                             # 第三轮；报告：.cache/flash_attention_case/
 for p in 0 1 2 3 4 5 6 7; do $PY per_program.py --case planted_l_bf16 --part $p --parts 8; done   # 各 program 的偏差
 $PY per_program.py --case planted_tf32
 $PY audit_fa.py --case planted_l_bf16 --programs all --suffix _all             # 全部 32 个 program

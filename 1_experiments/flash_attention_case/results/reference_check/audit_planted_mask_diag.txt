@@ -1,0 +1,51 @@
+══ _attn_fwd_mask_diag：输出 M（logsumexp） 与参照程序不一致（整体偏小约 2463%，768/768 个元素超出阈值）；输出 O 与参照程序不一致（整体偏小约 14%，45234/49152 个元素超出阈值） ══
+
+M（logsumexp）：与参照程序不一致——来自公式、常数或 mask，不是数值误差
+  · 768/768 个元素与参照程序的差超出阈值（最大相对差 1.1e+05，阈值 1e-06；所在：program (0, 0, 0) 128、program (0, 1, 0) 128、program (2, 0, 0) 128 等）；整体偏小约 2463%。按声明的程序精确计算就是这样，数值舍入解释不了；核对常数、公式与 mask（工具不能定位到具体的行）。
+  · 常用容差检查：assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）、allclose(rtol=1e-2, atol=1e-5)、assert_close 的 dtype 默认值 不通过。
+  · 数值误差部分：运行前预测约为 0（<0.0001%），实测约为 0（<0.0001%），一致，可忽略。
+
+O：与参照程序不一致——来自公式、常数或 mask，不是数值误差
+  · 45234/49152 个元素与参照程序的差超出阈值（最大相对差 14，阈值 0.00049；所在：program (0, 1, 0) 8092、program (0, 0, 0) 8089、program (2, 0, 0) 7725 等）；整体偏小约 14%。按声明的程序精确计算就是这样，数值舍入解释不了；核对常数、公式与 mask（工具不能定位到具体的行）。
+  · 常用容差检查：assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）、allclose(rtol=1e-2, atol=1e-5)、assert_close 的 dtype 默认值 不通过。
+  · 数值误差部分：运行前预测偏小约 0.00024%，实测偏小约 0.00022%，一致，可忽略。
+
+与参照程序不一致的地方应当核对：要么 kernel 的公式、常数或 mask 错了，要么参照程序不是这个 kernel 想要的语义（例如约定不同）。
+
+范围：Triton 3.6.0 / sm_86（锁定的下降规则），抽查 6/16 个 program（规则：各轴首尾 program，含序列末尾的边界块，另取中间 2 个）。
+参照程序：O：torch.nn.functional.scaled_dot_product_attention；M：logsumexp(q kᵀ · sm_scale) / ln 2（教程以 2 为底存 M）；在 kernel 实际收到的输入上以 float64 计算。
+
+──── 附录 ────
+【事前预测，kernel 未运行】已预测
+  M（logsumexp）: 对齐 +4.69e-09（噪声标准误 1.1e-08），相对误差（能量加权）2e-08
+  O: 对齐 -2.41e-06（噪声标准误 4.5e-06），相对误差（能量加权）0.00069
+【运行】下降规则逐位核对：bit_identical
+  M（logsumexp）: K − G 对齐 +4.69e-09（标准误 4.4e-09）——未发现显著偏差；相对误差（能量加权）6.2e-09，最大 |K − G| 0.00874（768 / 768 个元素）
+  O: K − G 对齐 -2.23e-06（标准误 4.5e-06）——未发现显著偏差；相对误差（能量加权）0.0005，最大 |K − G| 0.00418（49152 / 49152 个元素）
+  O: G − S（语义）对齐 -0.144，最大相对差 14（阈值 0.00049，超出 45234 / 49152 个元素；参照无定义 0，kernel 非有限 0，参照超出输出格式范围 0）——不一致；K − S（合计）对齐 -0.144
+  M（logsumexp）: G − S（语义）对齐 -24.6，最大相对差 1.1e+05（阈值 1e-06，超出 768 / 768 个元素；参照无定义 0，kernel 非有限 0，参照超出输出格式范围 0）——不一致；K − S（合计）对齐 -24.6
+  M（logsumexp）: assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）（对参照程序，atol 0.01, rtol 0）：不通过，最差比值 1e+08；去掉系统分量后不通过
+  M（logsumexp）: allclose(rtol=1e-2, atol=1e-5)（对参照程序，atol 1e-05, rtol 0.01）：不通过，最差比值 3.6e+08；去掉系统分量后不通过
+  M（logsumexp）: assert_close 的 dtype 默认值（对参照程序，atol 1e-05, rtol 1.3e-06）：不通过，最差比值 9.6e+10；去掉系统分量后不通过
+  O: assert_close(atol=1e-2, rtol=0)（Triton 教程的测试）（对参照程序，atol 0.01, rtol 0）：不通过，最差比值 2.8e+02；去掉系统分量后不通过
+  O: allclose(rtol=1e-2, atol=1e-5)（对参照程序，atol 1e-05, rtol 0.01）：不通过，最差比值 1.2e+04；去掉系统分量后不通过
+  O: assert_close 的 dtype 默认值（对参照程序，atol 1e-05, rtol 0.001）：不通过，最差比值 5.1e+04；去掉系统分量后不通过
+【M（logsumexp） 的各位点贡献】（6 个 program；仿真偏差 +4.69e-09，逐点贡献合计 +7.76e-09；不为零的前 8 个）
+  +7.76e-09  arith.addf@208         planted_fwd.py:698   在声明类型中就近舍入
+  -3.63e-16  tt.dot@80              planted_fwd.py:593   张量核 dot 的每组乘积与累加器向零截断
+  -1.73e-16  tt.dot@152             planted_fwd.py:593   张量核 dot 的每组乘积与累加器向零截断
+  -1.41e-16  math.exp2@94           planted_fwd.py:602   近似指令
+  -1.27e-16  math.exp2@96           planted_fwd.py:604   近似指令
+  +9.61e-17  arith.addf@202         planted_fwd.py:626   乘加收缩成一次 fma
+  -4.25e-17  math.exp2@173          planted_fwd.py:602   近似指令
+  +3.52e-17  math.log2@207          planted_fwd.py:698   近似指令
+【O 的各位点贡献】（6 个 program；仿真偏差 -2.23e-06，逐点贡献合计 -4.97e-06；不为零的前 8 个）
+  -1.03e-05  arith.truncf@199       planted_fwd.py:621   转到更窄的格式时舍入
+  +3.4e-06  arith.addf@163         planted_fwd.py:596   乘加收缩成一次 fma
+  +8.57e-07  arith.truncf@217       planted_fwd.py:702   转到更窄的格式时舍入
+  +5.87e-07  arith.truncf@120       planted_fwd.py:621   转到更窄的格式时舍入
+  +1.78e-07  math.exp2@173          planted_fwd.py:602   近似指令
+  +1.75e-07  tt.reduce@176                               按布局次序求和
+  +1.57e-07  arith.divf@211         planted_fwd.py:699   近似指令
+  +1.41e-07  arith.subf@172         planted_fwd.py:598   在声明类型中就近舍入
+说明：对齐 = ⟨K − G, G⟩ / ⟨G, G⟩，K 为设备输出，G 为声明程序的精确值，S 为参照程序的 float64 值；负值即系统性偏小。贡献 = 仿真输出与「该位点精确」的仿真输出之差的对齐；位点之间有相互作用，相加只是近似。

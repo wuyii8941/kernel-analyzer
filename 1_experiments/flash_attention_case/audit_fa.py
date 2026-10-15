@@ -1,5 +1,5 @@
 """The tool as a user would call it: one audit() per flash attention variant (tutorial and planted defects), with the
-float64 attention of torch as the specification.  Reports: .cache/flash_attention_case/audit_<case>.{txt,json}"""
+reference programs of fa_inputs (torch scaled_dot_product_attention for O, the base-2 logsumexp for M, float64).  Reports: .cache/flash_attention_case/audit_<case>.{txt,json}"""
 from __future__ import annotations
 
 import argparse
@@ -22,7 +22,9 @@ CASES = {
     "planted_scale": ("planted_fwd._attn_fwd_scale", "float16", 1024, 64, False),
     "planted_l_bf16": ("planted_fwd._attn_fwd_l_bf16", "float16", 2048, 16, False),
     "planted_acc_fp16": ("planted_fwd._attn_fwd_acc_fp16", "float16", 1024, 64, False),
+    "planted_mask_diag": ("planted_fwd._attn_fwd_mask_diag", "float16", 1024, 64, True),
 }
+REFERENCE = "O：torch.nn.functional.scaled_dot_product_attention；M：logsumexp(q kᵀ · sm_scale) / ln 2（教程以 2 为底存 M）"
 
 
 def main():
@@ -38,7 +40,7 @@ def main():
     import torch
     import triton
 
-    from fa_inputs import make_inputs, spec_attention
+    from fa_inputs import make_inputs, reference_m, reference_o, spec_attention
     from kernel_analyzer.reference_eval.audit import audit
     mod_name, dtype, N, block_n, causal = CASES[a.case]
     N = a.N or N
@@ -57,8 +59,12 @@ def main():
                      num_stages=2, num_warps=4)
     progs = None if not a.programs else "all" if a.programs == "all" else \
         [(int(p) % grid[0], int(p) // grid[0], 0) for p in a.programs.split(",")]
-    rep = audit(launch, spec={"desc_o": lambda: spec_attention(q, k, v, sm_scale, causal)}, programs=progs,
-                names={"desc_o": "O", "M": "M（logsumexp）"})
+    rep = audit(launch, spec={"desc_o": lambda: reference_o(q, k, v, sm_scale, causal),
+                              "M": lambda: reference_m(q, k, sm_scale, causal)}, programs=progs,
+                names={"desc_o": "O", "M": "M（logsumexp）"}, reference=REFERENCE)
+    # the two references for O against each other (registration: max |difference| < 1e-12)
+    rep["reference_crosscheck_max_abs"] = float((reference_o(q, k, v, sm_scale, causal)
+                                                 - spec_attention(q, k, v, sm_scale, causal)).abs().max())
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"audit_{a.case}{a.suffix}.txt").write_text(rep["text"])
     (OUT / f"audit_{a.case}{a.suffix}.json").write_text(json.dumps({k_: v_ for k_, v_ in rep.items() if k_ != "text"},
