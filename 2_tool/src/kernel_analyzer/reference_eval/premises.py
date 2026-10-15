@@ -133,8 +133,9 @@ class TextbookEmulator(E.GpuEmulator):
 
 
 def textbook_emulate(launch, premises: Iterable[str] = PREMISES, oracle: Optional[E.HardwareOracle] = None,
-                     programs: Optional[list] = None):
-    """emulate.emulate with the given premises replaced by their textbook counterparts; returns (result, emulator)."""
+                     programs: Optional[list] = None, exact_nodes=(), substitution: str = "mid"):
+    """emulate.emulate with the given premises replaced by their textbook counterparts; returns (result, emulator).
+    ``exact_nodes`` / ``substitution`` as in emulate.emulate (a counterfactual on top of the premises)."""
     from .ttir_parser import parse_ttir
 
     module = parse_ttir(launch.asm["ttir"])
@@ -145,6 +146,7 @@ def textbook_emulate(launch, premises: Iterable[str] = PREMISES, oracle: Optiona
     emu = TextbookEmulator(module, launch.asm["ttgir"], premises=premises,
                            enable_fp_fusion=bool(launch.metadata.get("enable_fp_fusion", True)), oracle=oracle,
                            ptx=launch.asm.get("ptx"), sass=E.launch_sass(launch),
-                           enable_reflect_ftz=bool(launch.metadata.get("enable_reflect_ftz", True)))
+                           enable_reflect_ftz=bool(launch.metadata.get("enable_reflect_ftz", True)),
+                           exact_nodes=exact_nodes, substitution=substitution)
     result = emu.evaluate(launch, programs=programs)
     return result, emu
