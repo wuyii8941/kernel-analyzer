@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import multiprocessing as mp
 import os
 import time
 import traceback
@@ -120,39 +119,48 @@ def analyze(unit: str) -> dict:
     return row
 
 
-def _worker(args):
-    unit, gpu = args
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
-    try:
-        return analyze(unit)
-    except Exception as e:
-        return {"unit": unit, "error": f"{type(e).__name__}: {str(e)[:200]}", "trace": traceback.format_exc()[-800:]}
-
-
 def main():
+    """Each unit in its own subprocess (killed at the timeout); results written as they complete."""
+    import subprocess
+    import sys
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     ap = argparse.ArgumentParser()
     ap.add_argument("out")
-    ap.add_argument("units", nargs="+")
+    ap.add_argument("units", nargs="*")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--gpus", default="0,1,2,3")
     ap.add_argument("--timeout", type=float, default=1800)
+    ap.add_argument("--single", action="store_true", help="analyse units[0] and print one JSON line (internal)")
     a = ap.parse_args()
+    if a.single:
+        try:
+            print(json.dumps(analyze(a.units[0]), default=str))
+        except Exception as e:
+            print(json.dumps({"unit": a.units[0], "error": f"{type(e).__name__}: {str(e)[:200]}",
+                              "trace": traceback.format_exc()[-800:]}))
+        return
     gpus = a.gpus.split(",")
     done = set()
     if Path(a.out).exists():
         done = {json.loads(l)["unit"] for l in open(a.out) if l.strip()}
     todo = [u for u in a.units if u not in done]
-    ctx = mp.get_context("spawn")
-    with open(a.out, "a") as f:
-        with ctx.Pool(a.workers, maxtasksperchild=1) as pool:
-            pending = {u: pool.apply_async(_worker, ((u, gpus[i % len(gpus)]),)) for i, u in enumerate(todo)}
-            for u, r in pending.items():
-                try:
-                    row = r.get(timeout=a.timeout)
-                except mp.TimeoutError:
-                    row = {"unit": u, "error": f"timeout after {a.timeout} s"}
-                f.write(json.dumps(row, default=str) + "\n")
-                f.flush()
+
+    def run(i, u):
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES=gpus[i % len(gpus)])
+        try:
+            p = subprocess.run([sys.executable, __file__, "-", u, "--single"], env=env, capture_output=True, text=True,
+                               timeout=a.timeout)
+            lines = [l for l in p.stdout.splitlines() if l.startswith("{")]
+            return json.loads(lines[-1]) if lines else {"unit": u, "error": f"no output (rc {p.returncode})",
+                                                        "trace": p.stderr[-800:]}
+        except subprocess.TimeoutExpired:
+            return {"unit": u, "error": f"timeout after {a.timeout} s"}
+
+    with open(a.out, "a") as f, ThreadPoolExecutor(a.workers) as ex:
+        for fut in as_completed([ex.submit(run, i, u) for i, u in enumerate(todo)]):
+            f.write(json.dumps(fut.result(), default=str) + "\n")
+            f.flush()
 
 
 if __name__ == "__main__":

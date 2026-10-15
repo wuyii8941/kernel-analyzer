@@ -34,6 +34,9 @@ def kernel_type(name: str) -> str:
     return "other"
 
 
+SINGLES = []
+
+
 def records(path):
     out, units = [], []
     for line in open(path):
@@ -48,6 +51,11 @@ def records(path):
             if "truth" not in o:
                 continue
             a, se = o["truth"]
+            if o["n"] < 2:          # deviation D3: one element has no statistics; listed separately
+                single = {"unit": r["unit"], "model": model, "config": config, "kernel": r["kernel"], "output": name,
+                          "elem": o["elem"], "truth": a, **{m: (o.get(m) or [None])[0] for m in METHODS if m != "A0"}}
+                SINGLES.append(single)
+                continue
             rec = {"unit": r["unit"], "model": model, "config": config, "kernel": r["kernel"],
                    "ktype": kernel_type(r["kernel"]), "output": name, "elem": o["elem"], "n": o["n"],
                    "bitwise": r["verify"] == "bit_identical", "a": a, "se": se, "truth": cls(a, se),
@@ -166,7 +174,8 @@ def main():
          "by_config_elem": table(primary, lambda r: (r["config"], r["elem"])),
          "by_ktype": table(primary, lambda r: r["ktype"]),
          "by_model": table(primary, lambda r: r["model"]),
-         "above_resolution": table(primary, lambda r: r["above_resolution"])}
+         "above_resolution": table(primary, lambda r: r["above_resolution"]),
+         "single_element_outputs": SINGLES}
     text = json.dumps(s, indent=1)
     if a.out:
         Path(a.out).write_text(text)
