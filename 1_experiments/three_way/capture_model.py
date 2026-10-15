@@ -42,6 +42,8 @@ for cls, k in ((AutoModelForCausalLM, "causal"), (AutoModelForMaskedLM, "masked"
         break
     except (ValueError, KeyError):
         continue
+else:
+    raise SystemExit(f"no CausalLM / MaskedLM / Seq2SeqLM class for model type {cfg.model_type}")
 model = model.cuda().train()
 tok = AutoTokenizer.from_pretrained(a.model_dir)
 text = Path(__file__).with_name("data").joinpath("wikitext103_validation.txt").read_text()
@@ -81,6 +83,7 @@ for i, L in enumerate(R.launches):
 manifest = {"model_dir": a.model_dir, "config": a.config, "layers": a.layers, "tokens": int(ids.shape[1]),
             "kind": kind, "launches_in_step": R.launch_count, "distinct_kernels": len(R.launches),
             "saved": saved, "skipped": skipped, "compile_s": round(t_compile, 1),
-            "torch": torch.__version__, "ids_sha256": hashlib.sha256(ids.cpu().numpy().tobytes()).hexdigest()}
+            "torch": torch.__version__, "transformers": __import__("transformers").__version__,
+            "triton": __import__("triton").__version__, "ids_sha256": hashlib.sha256(ids.cpu().numpy().tobytes()).hexdigest()}
 (out / "manifest.json").write_text(json.dumps(manifest, indent=1))
 print(json.dumps({k: v for k, v in manifest.items() if k not in ("saved", "skipped")}), len(saved), "saved", len(skipped), "skipped")

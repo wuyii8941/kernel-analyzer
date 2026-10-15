@@ -1,0 +1,98 @@
+[
+ {
+  "id": "S1_eps_llama_rmsnorm",
+  "unit": "capture/meta-llama__Llama-3.2-3B/fp32tf32/008_triton_red_fused__unsafe_view_add_mean_mul_pow_rsqrt_8",
+  "kind": "semantic",
+  "line": 46,
+  "old": "1e-05",
+  "new": "1e-04"
+ },
+ {
+  "id": "S2_eps_gptneo_layernorm",
+  "unit": "capture/EleutherAI__gpt-neo-125m/fp32tf32/000_triton_red_fused_add_arange_embedding_native_layer_norm_native_layer_norm_backward_unsqueeze_0",
+  "kind": "semantic",
+  "line": 79,
+  "old": "1e-05",
+  "new": "1e-04"
+ },
+ {
+  "id": "S3_divisor_olmoe_rmsnorm",
+  "unit": "capture/allenai__OLMoE-1B-7B-0125/fp32tf32/003_triton_red_fused_add_mean_mul_pow_rsqrt_0",
+  "kind": "semantic",
+  "line": 42,
+  "old": "2048.0",
+  "new": "2047.0"
+ },
+ {
+  "id": "S4_divisor_gemma3_rmsnorm",
+  "unit": "capture/google__gemma-3-4b-pt/fp32tf32/004_triton_per_fused__unsafe_view_add_mean_pow_rsqrt_transpose_view_4",
+  "kind": "semantic",
+  "line": 41,
+  "old": "256.0",
+  "new": "255.0"
+ },
+ {
+  "id": "S5_rope_neg_llama",
+  "unit": "capture/meta-llama__Llama-3.2-3B/fp32tf32/004_triton_poi_fused__unsafe_view_add_bmm_cat_cos_mul_neg_sin_slice_transpose_unsqueeze_view_4",
+  "kind": "semantic",
+  "line": 39,
+  "old": "-tmp11",
+  "new": "tmp11"
+ },
+ {
+  "id": "S6_rope_neg_gemma3",
+  "unit": "capture/google__gemma-3-4b-pt/fp32tf32/006_triton_poi_fused__unsafe_view_add_bmm_cat_cos_mul_neg_sin_slice_transpose_unsqueeze_view_6",
+  "kind": "semantic",
+  "line": 54,
+  "old": "-tmp22",
+  "new": "tmp22"
+ },
+ {
+  "id": "S7_silu_no_sigmoid_qwen3",
+  "unit": "capture/Qwen__Qwen3-1.7B/fp32tf32/010_triton_poi_fused__unsafe_view_mul_silu_10",
+  "kind": "semantic",
+  "line": 26,
+  "old": "tl.sigmoid(tmp0)",
+  "new": "(tmp0 * 0.0 + 1.0)"
+ },
+ {
+  "id": "C1_ce_merge_subtractions_gptneo",
+  "unit": "capture/EleutherAI__gpt-neo-125m/fp32tf32/018_triton_per_fused__log_softmax__unsafe_view_nll_loss_forward_prepare_softmax_online_slice_sub_triu_view_18",
+  "kind": "control",
+  "line": 50,
+  "old": "tmp16 - tmp17",
+  "new": "tmp14 - (tmp15 + tmp17)"
+ },
+ {
+  "id": "C2_mean_reciprocal_llama",
+  "unit": "capture/meta-llama__Llama-3.2-3B/fp32tf32/008_triton_red_fused__unsafe_view_add_mean_mul_pow_rsqrt_8",
+  "kind": "control",
+  "line": 45,
+  "old": "(tmp5 / tmp7)",
+  "new": "(tmp5 * (1.0 / tmp7))"
+ },
+ {
+  "id": "N1_bf16_mean_llama_rmsnorm",
+  "unit": "capture/meta-llama__Llama-3.2-3B/fp32tf32/008_triton_red_fused__unsafe_view_add_mean_mul_pow_rsqrt_8",
+  "kind": "numeric",
+  "line": 45,
+  "old": "(tmp5 / tmp7)",
+  "new": "(tmp5 / tmp7).to(tl.bfloat16).to(tl.float32)"
+ },
+ {
+  "id": "N2_bf16_softmax_bloom",
+  "unit": "capture/bigscience__bloom-560m/fp32tf32/006_triton_per_fused__softmax_add_arange_eq_exp_expand_full_gt_masked_fill_mul_ones_prepare_softmax_online_sub_triu_unsq",
+  "kind": "numeric",
+  "line": 63,
+  "old": "(tmp30 / tmp28)",
+  "new": "(tmp30 / tmp28).to(tl.bfloat16).to(tl.float32)"
+ },
+ {
+  "id": "N3_bf16_silu_product_qwen3",
+  "unit": "capture/Qwen__Qwen3-1.7B/fp32tf32/010_triton_poi_fused__unsafe_view_mul_silu_10",
+  "kind": "numeric",
+  "line": 27,
+  "old": "tmp0 * tmp1",
+  "new": "(tmp0 * tmp1).to(tl.bfloat16).to(tl.float32)"
+ }
+]
