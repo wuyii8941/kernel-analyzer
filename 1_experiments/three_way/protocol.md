@@ -180,3 +180,11 @@ B 的总量测量按定义正确（它就是测量），不设判定；只记录
     - 已完成的单元中，凡是按新规则选出的 program 不同的，全部重跑（29 个，含中途停止的）；
     - 植入中受影响的 S2 重跑；
     - 并行进程由 28 降为 20。
+- **D5（2026-10-16，捕获进行中）**：模型加载的三处调整。
+  - 9 个模型在 `/data1/tzh/models` 下只有配置、没有权重：pythia-410m、roberta-base、opt-350m、bert-base-uncased、
+    electra-small、gpt2、Qwen2.5-0.5B、falcon-rw-1b、TinyLlama。经代理从 Hugging Face 下载到 `.cache/models/`，
+    优先 safetensors；只有 `.bin` 的（opt-350m、electra-small、falcon-rw-1b）由 transformers 以 weights_only 方式加载。
+  - gemma-4 与 Ministral-3 需要 transformers 5，改在 latest_train 环境（torch 2.10、Triton 3.6.0、transformers 5.18）中捕获。
+    这两个是图文模型，按 `AutoModelForImageTextToText` 加载，只输入文本。
+  - gemma-4 的逐层嵌入表大小随层数变化，截到 2 层后权重形状对不上，所以保留全部层。
+  - 仍然失败的照实列出，不替换：Qwen3-VL-Reranker（视觉语言重排模型）、RWKV-4（分词器需要执行模型自带的代码）。

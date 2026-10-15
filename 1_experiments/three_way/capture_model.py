@@ -27,15 +27,23 @@ TritonLaunchRecorder.install_hook()
 out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
 cfg = AutoConfig.from_pretrained(a.model_dir)
 text_cfg = getattr(cfg, "text_config", None) or cfg
-for key in ("num_hidden_layers", "n_layer", "num_layers", "num_decoder_layers", "n_layers"):
-    if isinstance(getattr(text_cfg, key, None), int):
-        setattr(text_cfg, key, min(getattr(text_cfg, key), a.layers))
+KEEP_ALL_LAYERS = ("gemma4",)      # deviation D5: per-layer embedding tables are sized by the layer count
+if cfg.model_type not in KEEP_ALL_LAYERS:
+    for key in ("num_hidden_layers", "n_layer", "num_layers", "num_decoder_layers", "n_layers"):
+        if isinstance(getattr(text_cfg, key, None), int):
+            setattr(text_cfg, key, min(getattr(text_cfg, key), a.layers))
 dtype = torch.bfloat16 if a.config == "bf16" else torch.float32
 if a.config == "fp32tf32":
     torch.backends.cuda.matmul.allow_tf32 = True
     ic.max_autotune_gemm_backends = "TRITON"
 kind = "causal"
-for cls, k in ((AutoModelForCausalLM, "causal"), (AutoModelForMaskedLM, "masked"), (AutoModelForSeq2SeqLM, "seq2seq")):
+CLASSES = [(AutoModelForCausalLM, "causal"), (AutoModelForMaskedLM, "masked"), (AutoModelForSeq2SeqLM, "seq2seq")]
+try:   # multimodal checkpoints (Mistral3, Gemma4): the image-text model run on text only
+    from transformers import AutoModelForImageTextToText
+    CLASSES.append((AutoModelForImageTextToText, "image_text_on_text"))
+except ImportError:
+    pass
+for cls, k in CLASSES:
     try:
         model = cls.from_pretrained(a.model_dir, config=cfg, dtype=dtype)
         kind = k
@@ -80,7 +88,8 @@ for i, L in enumerate(R.launches):
         continue
     save_launch(L, out / name)
     saved.append({"dir": name, "kernel": L.kernel_name, "mb": round(size, 1)})
-manifest = {"model_dir": a.model_dir, "config": a.config, "layers": a.layers, "tokens": int(ids.shape[1]),
+manifest = {"model_dir": a.model_dir, "config": a.config,
+            "layers": "all" if cfg.model_type in KEEP_ALL_LAYERS else a.layers, "tokens": int(ids.shape[1]),
             "kind": kind, "launches_in_step": R.launch_count, "distinct_kernels": len(R.launches),
             "saved": saved, "skipped": skipped, "compile_s": round(t_compile, 1),
             "torch": torch.__version__, "transformers": __import__("transformers").__version__,
