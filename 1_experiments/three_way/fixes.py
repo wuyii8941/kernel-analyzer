@@ -27,7 +27,7 @@ def _align(vals, g, ok):
 def one(unit: str, output: str) -> dict:
     import numpy as np
 
-    from analyze_units import _per_program_elements, analyze, select_programs
+    from analyze_units import analyze, programs_for
     from kernel_analyzer.reference_eval import bias_predict as BP
     from kernel_analyzer.reference_eval import emulate as E
     from kernel_analyzer.reference_eval import intervals as iv
@@ -38,7 +38,7 @@ def one(unit: str, output: str) -> dict:
     from patch_replay import fix_edit, run_patched, source_line
 
     L = load_launch(Path(unit))
-    progs = select_programs(L.grid, _per_program_elements(L))
+    progs = programs_for(L)
     module = parse_ttir(L.asm["ttir"])
     module.source_text = L.asm["ttir"]
     ev = KernelReferenceEvaluator(module, mode=NumericMode.NUMERICAL_DIFFERENCE, ttgir=L.asm["ttgir"])

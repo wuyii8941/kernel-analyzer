@@ -71,7 +71,7 @@ def _attribution_line(L, progs, output, textbook: bool):
 def one(spec: dict) -> dict:
     import numpy as np
 
-    from analyze_units import _per_program_elements, select_programs
+    from analyze_units import programs_for
     from kernel_analyzer.reference_eval.audit import _alignment, _se
     from kernel_analyzer.reference_eval import intervals as iv
     from kernel_analyzer.reference_eval.capture import load_launch
@@ -79,7 +79,7 @@ def one(spec: dict) -> dict:
     from patch_replay import run_patched
 
     L = load_launch(Path(spec["unit"]))
-    progs = select_programs(L.grid, _per_program_elements(L))
+    progs = programs_for(L)
     out = HERE / "plants" / spec["id"]
     run_patched(spec["unit"], [[spec["line"], spec["old"], spec["new"]]], out)
     L2 = load_launch(out)

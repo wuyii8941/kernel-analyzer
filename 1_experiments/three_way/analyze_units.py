@@ -14,13 +14,17 @@ from pathlib import Path
 
 ELEMENT_BUDGET = 32768
 MAX_PROGRAMS = 256
+INPUT_BUDGET = 1 << 23          # deviation D4: input elements read by the selected programs
 
 
-def select_programs(grid, per_program: int) -> list:
-    """Evenly spaced programs incl. the first and the last, until ELEMENT_BUDGET elements or MAX_PROGRAMS."""
+def select_programs(grid, per_program: int, input_per_program: int = 0) -> list:
+    """Evenly spaced programs incl. the first and the last, until ELEMENT_BUDGET elements or MAX_PROGRAMS, and (D4)
+    at most INPUT_BUDGET input elements read; at least 2 programs."""
     gx, gy, gz = (int(g) for g in grid)
     allp = [(x, y, z) for z in range(gz) for y in range(gy) for x in range(gx)]
     want = min(len(allp), MAX_PROGRAMS, max(2, -(-ELEMENT_BUDGET // max(per_program, 1))))
+    if input_per_program > 0:
+        want = min(want, max(2, INPUT_BUDGET // input_per_program))
     if want >= len(allp):
         return allp
     idx = sorted({round(i * (len(allp) - 1) / (want - 1)) for i in range(want)})
@@ -38,6 +42,18 @@ def _per_program_elements(L) -> int:
     return max(1, numel // max(total, 1))
 
 
+def _input_per_program(L) -> int:
+    """Input elements one program reads, estimated as all non-output tensor elements over the number of programs."""
+    import numpy as np
+    total = int(np.prod([int(g) for g in L.grid]))
+    ins = [a for a in L.args if a.kind == "tensor" and "out" not in (a.name or "")]
+    return sum(int(np.prod(a.shape)) if a.shape else 1 for a in ins) // max(total, 1)
+
+
+def programs_for(L) -> list:
+    return select_programs(L.grid, _per_program_elements(L), _input_per_program(L))
+
+
 def analyze(unit: str) -> dict:
     import numpy as np
 
@@ -52,7 +68,7 @@ def analyze(unit: str) -> dict:
 
     t0 = time.time()
     L = load_launch(Path(unit))
-    progs = select_programs(L.grid, _per_program_elements(L))
+    progs = programs_for(L)
     row = {"unit": unit, "kernel": L.kernel_name, "grid": [int(g) for g in L.grid], "programs": len(progs),
            "programs_total": int(np.prod(L.grid))}
     v = E.verify(L, ungrouped=[], swapped=[], programs=progs)
