@@ -1,0 +1,802 @@
+{
+ "log": [
+  {
+   "role": "CE",
+   "rule": "D2 定义域与无关输入",
+   "statement": "被忽略行的 logits 不进入损失与梯度",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "CE",
+   "rule": "D2 定义域与无关输入",
+   "statement": "全部忽略且 reduction=mean：未定义（NaN）",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "INDEXREDUCE",
+   "rule": "D2 定义域与无关输入",
+   "statement": "include_self=False：被写入位置的原值无关",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "ATTN",
+   "rule": "D2 定义域与无关输入",
+   "statement": "被 mask 的 key/value 的值无关",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "CAST",
+   "rule": "D2 定义域与无关输入",
+   "statement": "窄格式可表示的值经宽格式往返不变",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "CAST",
+   "rule": "D2 定义域与无关输入",
+   "statement": "任意在范围内的值往返不变",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "1/3 is in range but not representable"
+  },
+  {
+   "role": "CAST",
+   "rule": "D2 定义域与无关输入",
+   "statement": "定向舍入溢出给出同号最大有限值（IEEE 754）",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "AVGPOOL",
+   "rule": "D3 微分（伴随恒等式 ⟨J u, v⟩ = ⟨u, Jᵀ v⟩）",
+   "statement": "⟨avg_pool(x), g⟩ = ⟨x, avg_pool_backward(g)⟩（线性算子的伴随）",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "MATMUL",
+   "rule": "D3 微分（伴随恒等式 ⟨J u, v⟩ = ⟨u, Jᵀ v⟩）",
+   "statement": "线性层的伴随恒等式",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "SOFTMAX",
+   "rule": "D3 微分（伴随恒等式 ⟨J u, v⟩ = ⟨u, Jᵀ v⟩）",
+   "statement": "softmax 的 Jacobian 为 diag(p) − ppᵀ",
+   "method": "symbolic",
+   "status": "holds",
+   "witness": "n=3"
+  },
+  {
+   "role": "SOFTMAX",
+   "rule": "D3 微分（伴随恒等式 ⟨J u, v⟩ = ⟨u, Jᵀ v⟩）",
+   "statement": "⟨f(x), g⟩ = ⟨x, Jᵀg⟩ 对 softmax",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "nonlinear f: the identity holds only for linear operators (v1 R23 was wrong)"
+  },
+  {
+   "role": "SOFTMAX",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "softmax(x + c·1) = softmax(x)",
+   "method": "symbolic",
+   "status": "holds",
+   "witness": "n=3, sympy simplify"
+  },
+  {
+   "role": "SOFTMAX",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "logsumexp(x + c·1) = logsumexp(x) + c（等变，不是不变）",
+   "method": "symbolic",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "CE",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "CE(x + c_n·1) = CE(x) 逐行平移",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "CE",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "类别置换：损失不变",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "NORM_LN",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "LN(x + b) = LN(x)（任意 eps）",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "NORM_LN",
+   "rule": "D5 线性与齐次",
+   "statement": "LN(a·x) = sign(a)·LN(x)，eps > 0",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "x=[1,3,7], a=2, eps=1/100"
+  },
+  {
+   "role": "NORM_LN",
+   "rule": "D5 线性与齐次",
+   "statement": "LN(a·x) = sign(a)·LN(x)，eps = 0",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "NORM_RMS",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "RMSNorm(x + b) = RMSNorm(x)",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "x=[1,0], b=1: [√2,0] vs [2√(2/5),√(2/5)]"
+  },
+  {
+   "role": "NORM_RMS",
+   "rule": "D5 线性与齐次",
+   "statement": "RMSNorm(a·x) = sign(a)·RMSNorm(x)，eps = 0",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "ROPE",
+   "rule": "D6 守恒（和式恒等）",
+   "statement": "‖rope(x, m)‖² = ‖x‖²",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "ROPE",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "⟨rope(q,m), rope(k,n)⟩ 只依赖 m − n",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "ATTN",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "查询行置换 ⇒ 输出行同置换",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "MATMUL",
+   "rule": "D5 线性与齐次",
+   "statement": "(sA)B = s(AB)",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "AVGPOOL",
+   "rule": "D5 线性与齐次",
+   "statement": "avg_pool(2x) = 2·avg_pool(x)",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "SCHED",
+   "rule": "D5 线性与齐次",
+   "statement": "cosine(2·base, 0) = 2·cosine(base, 0)（对 base_lr 线性）",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "CLIP",
+   "rule": "D5 线性与齐次",
+   "statement": "clip(2g) = 2·clip(g)（齐次）",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "g=[3,4], max_norm=1: clip(2g) ≈ clip(g) (both land on the unit vector), so 2·clip(g) ≠ clip(2g)"
+  },
+  {
+   "role": "INDEXREDUCE",
+   "rule": "D5 线性与齐次",
+   "statement": "index_add 对 source 线性",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "ACCUM",
+   "rule": "D5 线性与齐次",
+   "statement": "window_loss 对逐 token 损失线性",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "MAXPOOL",
+   "rule": "D5 线性与齐次",
+   "statement": "max_pool(a·x) = a·max_pool(x)，a > 0（正齐次，不是线性）",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "MAXPOOL",
+   "rule": "D5 线性与齐次",
+   "statement": "max_pool(−x) = −max_pool(x)（线性）",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "max(−x) = −min(x)"
+  },
+  {
+   "role": "SOFTMAX",
+   "rule": "D6 守恒（和式恒等）",
+   "statement": "Σ_k softmax_k = 1",
+   "method": "symbolic",
+   "status": "holds",
+   "witness": "n=3"
+  },
+  {
+   "role": "CE",
+   "rule": "D3 微分（伴随恒等式 ⟨J u, v⟩ = ⟨u, Jᵀ v⟩）",
+   "statement": "∂l/∂x_k = p_k Σa − a_k 等于 −Σ a log softmax 的导数",
+   "method": "symbolic",
+   "status": "holds",
+   "witness": "n=3"
+  },
+  {
+   "role": "CE",
+   "rule": "D6 守恒（和式恒等）",
+   "statement": "Σ_k ∂l/∂x_k = 0",
+   "method": "symbolic",
+   "status": "holds",
+   "witness": "n=3"
+  },
+  {
+   "role": "INDEXREDUCE",
+   "rule": "D6 守恒（和式恒等）",
+   "statement": "Σ index_add = Σ self + α Σ source",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "INDEXREDUCE",
+   "rule": "D6 守恒（和式恒等）",
+   "statement": "Σ scatter_reduce(sum) = Σ self + Σ src，include_self=False",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "self=[10], src=[2] -> 2"
+  },
+  {
+   "role": "MOE",
+   "rule": "D6 守恒（和式恒等）",
+   "statement": "重归一的合并权重和为一",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "MOE",
+   "rule": "D6 守恒（和式恒等）",
+   "statement": "未重归一的 top-k 权重和为一",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "raw top-2 of softmax([1,1/2,-1]) sums to < 1"
+  },
+  {
+   "role": "MOE",
+   "rule": "D8 状态递推",
+   "statement": "并列 + 容量 1：允许的联合轨迹恰为 {(1,0),(1,3),(3,0),(3,1)}",
+   "method": "exact",
+   "status": "holds",
+   "witness": "[(Fraction(1, 1), Fraction(0, 1)), (Fraction(1, 1), Fraction(3, 1)), (Fraction(3, 1), Fraction(0, 1)), (Fraction(3, 1), Fraction(1, 1))]"
+  },
+  {
+   "role": "ATTN",
+   "rule": "D6 守恒（和式恒等）",
+   "statement": "注意力权重行和为一",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "PACK",
+   "rule": "D2 定义域与无关输入",
+   "statement": "打包后跨文档权重恒为零",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "SOFTMAX",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "Σ 的折叠次序无关",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "SOFTMAX",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "在线 logsumexp 合并等于整体",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "CE",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "reduction=sum：拆批后相加等于整体",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "BN",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "训练模式拆批后拼接等于整体",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "batch statistics depend on the whole batch"
+  },
+  {
+   "role": "ACCUM",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "微批重划分不改变窗口损失",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "ACCUM",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "「均值的均值」在长度不等时等于窗口损失",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "[[1,2,3],[4]]"
+  },
+  {
+   "role": "ADAM",
+   "rule": "D8 状态递推",
+   "statement": "零梯度：m ← β₁m，v ← β₂v（decoupled 或 wd=0）",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "ADAM",
+   "rule": "D8 状态递推",
+   "statement": "零梯度：m ← β₁m，coupled weight decay",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "m = (1-β₁)·wd·θ = 1/100 ≠ 0: the rule needs zero EFFECTIVE gradient"
+  },
+  {
+   "role": "SGD",
+   "rule": "D8 状态递推",
+   "statement": "maximize 与 weight decay 的次序（文档：先取负再衰减）",
+   "method": "exact",
+   "status": "holds",
+   "witness": "θ=1,g=0,lr=wd=1/10 -> 99/100"
+  },
+  {
+   "role": "BN",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "通道置换（同时置换 γ、β 与 running 状态）⇒ 输出与状态同置换",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "BN",
+   "rule": "D8 状态递推",
+   "statement": "momentum=None：累计平均，第一批后计数为 1、running_mean 为批均值",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "EMA",
+   "rule": "D8 状态递推",
+   "statement": "SWA 经 n 次更新等于算术平均（对 n 归纳）",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "EMA",
+   "rule": "D8 状态递推",
+   "statement": "EMA 展开式 a_n = d^(n−1)p_1 + Σ(1−d)d^(n−k)p_k",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "EMA",
+   "rule": "D5 线性与齐次",
+   "statement": "EMA 对（旧状态, 当前参数）线性：同乘 2 结果乘 2",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "EMA",
+   "rule": "D8 状态递推",
+   "statement": "源参数恒定时 EMA 停在源值（不动点）",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "KVCACHE",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "decode（连续 cache）逐位置等于因果 prefill",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "KVCACHE",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "decode（分页 cache）逐位置等于因果 prefill",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "KVCACHE",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "decode（连续 cache，RoPE 绝对位置）逐位置等于因果 prefill",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "KVCACHE",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "decode（分页 cache，RoPE 绝对位置）逐位置等于因果 prefill",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "KVCACHE",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "缓存的 key 按位置 0 旋转时 decode 仍等于 prefill",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "RoPE position must be the absolute position"
+  },
+  {
+   "role": "KVCOMP",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "平移 S（步长）个位置：压缩输出平移一个窗口（等变）",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "KVCOMP",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "平移 1 个位置：存在某种对应使输出不变",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "窗口成员改变：相位依赖是结构性的，属于 f_alg − f_task 一栏"
+  },
+  {
+   "role": "KVCOMP",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "窗口内置换不变（参数在偏移间共享）",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "KVCOMP",
+   "rule": "D4 对称（平移、置换）",
+   "statement": "窗口内置换不变（参数按偏移编号）",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "按偏移编号的参数打破窗口内对称"
+  },
+  {
+   "role": "KVCOMP",
+   "rule": "D5 线性与齐次",
+   "statement": "均匀聚合对输入线性",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "SPARSE",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "路径等价：spmm(COO, B) = dense(COO)·B（重复下标求和）",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "SPARSE",
+   "rule": "D7 分解（次序、分块、拆批）",
+   "statement": "coalesce 不改变稠密值",
+   "method": "exact",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "STATEIO",
+   "rule": "D8 状态递推",
+   "statement": "路径等价：保存、加载后继续等于直接继续（Adam）",
+   "method": "enclosure",
+   "status": "holds",
+   "witness": ""
+  },
+  {
+   "role": "STATEIO",
+   "rule": "D8 状态递推",
+   "statement": "加载时遗漏步数计数器仍等于直接继续",
+   "method": "counterexample",
+   "status": "fails",
+   "witness": "偏差修正依赖 t"
+  }
+ ],
+ "grid": {
+  "CE": {
+   "F1": "成立 2",
+   "F2": "成立 2",
+   "F3": "未推导",
+   "F4": "成立 1",
+   "F5": "成立 1",
+   "F6": "成立 1",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "SOFTMAX": {
+   "F1": "成立 2",
+   "F2": "未推导",
+   "F3": "未推导",
+   "F4": "成立 1",
+   "F5": "成立 2",
+   "F6": "成立 1，不成立 1",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "NORM_LN": {
+   "F1": "成立 1",
+   "F2": "未推导",
+   "F3": "成立 1，不成立 1",
+   "F4": "未推导",
+   "F5": "未推导",
+   "F6": "未推导",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "NORM_RMS": {
+   "F1": "成立 0，不成立 1",
+   "F2": "未推导",
+   "F3": "成立 1",
+   "F4": "未推导",
+   "F5": "未推导",
+   "F6": "未推导",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "BN": {
+   "F1": "成立 1",
+   "F2": "未推导",
+   "F3": "未推导",
+   "F4": "未推导",
+   "F5": "成立 0，不成立 1",
+   "F6": "未推导",
+   "F7": "成立 1"
+  },
+  "MATMUL": {
+   "F1": "未推导",
+   "F2": "未推导",
+   "F3": "成立 1",
+   "F4": "未推导",
+   "F5": "未推导",
+   "F6": "成立 1",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "AVGPOOL": {
+   "F1": "未推导",
+   "F2": "未推导",
+   "F3": "成立 1",
+   "F4": "未推导",
+   "F5": "未推导",
+   "F6": "成立 1",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "INDEXREDUCE": {
+   "F1": "当前模板不支持（不是数学排除）",
+   "F2": "成立 1",
+   "F3": "成立 1",
+   "F4": "成立 1，不成立 1",
+   "F5": "未推导",
+   "F6": "未推导",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "ACCUM": {
+   "F1": "当前模板不支持（不是数学排除）",
+   "F2": "未推导",
+   "F3": "成立 1",
+   "F4": "未推导",
+   "F5": "成立 1，不成立 1",
+   "F6": "当前模板不支持（不是数学排除）",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "ADAM": {
+   "F1": "当前模板不支持（不是数学排除）",
+   "F2": "未推导",
+   "F3": "未推导",
+   "F4": "当前模板不支持（不是数学排除）",
+   "F5": "当前模板不支持（不是数学排除）",
+   "F6": "当前模板不支持（不是数学排除）",
+   "F7": "成立 1，不成立 1"
+  },
+  "SGD": {
+   "F1": "当前模板不支持（不是数学排除）",
+   "F2": "未推导",
+   "F3": "未推导",
+   "F4": "当前模板不支持（不是数学排除）",
+   "F5": "当前模板不支持（不是数学排除）",
+   "F6": "当前模板不支持（不是数学排除）",
+   "F7": "成立 1"
+  },
+  "CLIP": {
+   "F1": "当前模板不支持（不是数学排除）",
+   "F2": "未推导",
+   "F3": "成立 0，不成立 1",
+   "F4": "未推导",
+   "F5": "未推导",
+   "F6": "当前模板不支持（不是数学排除）",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "SCHED": {
+   "F1": "当前模板不支持（不是数学排除）",
+   "F2": "未推导",
+   "F3": "成立 1",
+   "F4": "当前模板不支持（不是数学排除）",
+   "F5": "当前模板不支持（不是数学排除）",
+   "F6": "当前模板不支持（不是数学排除）",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "ATTN": {
+   "F1": "成立 1",
+   "F2": "成立 1",
+   "F3": "未推导",
+   "F4": "成立 1",
+   "F5": "未推导",
+   "F6": "未推导",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "ROPE": {
+   "F1": "成立 1",
+   "F2": "未推导",
+   "F3": "未推导",
+   "F4": "成立 1",
+   "F5": "当前模板不支持（不是数学排除）",
+   "F6": "未推导",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "MAXPOOL": {
+   "F1": "未推导",
+   "F2": "未推导",
+   "F3": "成立 1，不成立 1",
+   "F4": "未推导",
+   "F5": "未推导",
+   "F6": "未推导",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "MOE": {
+   "F1": "未推导",
+   "F2": "未推导",
+   "F3": "未推导",
+   "F4": "成立 1，不成立 1",
+   "F5": "未推导",
+   "F6": "未推导",
+   "F7": "成立 1"
+  },
+  "CAST": {
+   "F1": "未推导",
+   "F2": "成立 2，不成立 1",
+   "F3": "未推导",
+   "F4": "当前模板不支持（不是数学排除）",
+   "F5": "当前模板不支持（不是数学排除）",
+   "F6": "当前模板不支持（不是数学排除）",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "PACK": {
+   "F1": "未推导",
+   "F2": "成立 1",
+   "F3": "未推导",
+   "F4": "未推导",
+   "F5": "未推导",
+   "F6": "未推导",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "EMA": {
+   "F1": "当前模板不支持（不是数学排除）",
+   "F2": "未推导",
+   "F3": "成立 1",
+   "F4": "当前模板不支持（不是数学排除）",
+   "F5": "当前模板不支持（不是数学排除）",
+   "F6": "当前模板不支持（不是数学排除）",
+   "F7": "成立 3"
+  },
+  "KVCACHE": {
+   "F1": "未推导",
+   "F2": "未推导",
+   "F3": "未推导",
+   "F4": "未推导",
+   "F5": "成立 4，不成立 1",
+   "F6": "当前模板不支持（不是数学排除）",
+   "F7": "未推导"
+  },
+  "KVCOMP": {
+   "F1": "成立 2，不成立 2",
+   "F2": "未推导",
+   "F3": "成立 1",
+   "F4": "未推导",
+   "F5": "未推导",
+   "F6": "当前模板不支持（不是数学排除）",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "SPARSE": {
+   "F1": "未推导",
+   "F2": "未推导",
+   "F3": "未推导",
+   "F4": "未推导",
+   "F5": "成立 2",
+   "F6": "当前模板不支持（不是数学排除）",
+   "F7": "当前模板不支持（不是数学排除）"
+  },
+  "STATEIO": {
+   "F1": "当前模板不支持（不是数学排除）",
+   "F2": "未推导",
+   "F3": "未推导",
+   "F4": "当前模板不支持（不是数学排除）",
+   "F5": "当前模板不支持（不是数学排除）",
+   "F6": "当前模板不支持（不是数学排除）",
+   "F7": "成立 1，不成立 1"
+  }
+ },
+ "summary": {
+  "checks": 70,
+  "holds": 55,
+  "fails": 15,
+  "unproven": 0,
+  "by_method": {
+   "exact": 29,
+   "enclosure": 20,
+   "counterexample": 15,
+   "symbolic": 6
+  },
+  "roles": 24,
+  "rules": 7,
+  "grid_cells": 168,
+  "cells": {
+   "有结果": 46,
+   "未推导": 73,
+   "模板不支持": 49
+  }
+ }
+}

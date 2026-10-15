@@ -1,0 +1,385 @@
+schema_version: '1.1'
+id: ADAMW
+role: ADAM
+title: Dense AdamW state transition, PyTorch 2.10 mathematical profile
+review:
+  status: reviewed_for_implementation
+  date: '2026-10-15'
+  reviewer: ChatGPT review of uploaded contract draft
+  input_package_sha256: a9a2a9123c2f39f5f76d1c82d61d70869bc0ec8236cce16d978f9556293d15a3
+  scope: Contract content and explicit profiles, not all-domain oracle certification
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires:
+  - source_profile_matched
+  - input_contract_validated
+  - all_required_outputs_bound
+  - reference_semantics_and_guarantees_validated
+  - no_unresolved_contradiction
+  - contract_and_implementation_hashes_bound
+profiles:
+  base:
+    meaning: One step, dense vector, maximize=False, amsgrad=False; arbitrary supplied finite rational pre-state.
+    must_match:
+      maximize: false
+      amsgrad: false
+      decoupled: true
+    task_choice_required: false
+outputs:
+  theta:
+    shape: '[d]'
+    guarantee: rigorous_enclosure
+  m:
+    shape: '[d]'
+    guarantee: exact
+  v:
+    shape: '[d]'
+    guarantee: exact
+  t:
+    shape: scalar integer
+    guarantee: exact
+comparison:
+  input_binding: All arithmetic values are the exactly received rational values; published decimal constants are
+    a separate interface query, not silently substituted.
+  quality: No default semantic tolerance is inferred from these examples. Numerical resolution and application delta
+    are separate declarations.
+  test_evidence: Exact rational equality or certified relation when available; numerical enclosure compatibility
+    is not a proof of equality.
+  error_handling: No dropped outputs, silently truncated lists, coerced counts, or exceptions converted by message
+    text.
+decisions: []
+clauses:
+- id: AW.C1
+  basis:
+  - PAW.DECAY
+  statement: theta_decay_i = theta_old_i * (1-lr*weight_decay); adaptive step then subtracted from this value
+  observes:
+  - theta
+  evidence_kind: definition
+- id: AW.C2
+  basis:
+  - PAW.MOMENTS
+  - PAW.DECAY
+  statement: m_new_i=beta1*m_old_i+(1-beta1)*g_i; v_new_i=beta2*v_old_i+(1-beta2)*g_i**2; no weight decay contribution
+    in g
+  observes:
+  - m
+  - v
+  evidence_kind: definition
+- id: AW.C3
+  basis:
+  - PAW.CORRECTION
+  statement: t_new=t_old+1; m_hat=m_new/(1-beta1**t_new), v_hat=v_new/(1-beta2**t_new)
+  observes:
+  - theta
+  - t
+  evidence_kind: definition
+- id: AW.C4
+  basis:
+  - PAW.UPDATE
+  statement: theta_new_i=theta_decay_i-lr*m_hat_i/(sqrt(v_hat_i)+eps)
+  observes:
+  - theta
+  evidence_kind: definition
+- id: AW.C5
+  basis:
+  - PAW.NONE
+  statement: gradient=None leaves theta,m,v,t unchanged; gradient=0 still executes the transition
+  observes:
+  - theta
+  - m
+  - v
+  - t
+  evidence_kind: definition
+examples:
+- id: AW.E1
+  profile: base
+  clauses:
+  - AW.C1
+  - AW.C2
+  - AW.C3
+  - AW.C4
+  input:
+    state: &id001
+      theta:
+      - 1
+      m:
+      - 0
+      v:
+      - 0
+      t: 0
+    gradient:
+    - 2
+    lr: 1/10
+    beta1: 9/10
+    beta2: 99/100
+    eps: 0
+    weight_decay: 1/10
+    maximize: false
+    amsgrad: false
+  expected:
+    outcome: value
+    fields:
+      theta:
+      - 89/100
+      m:
+      - 1/5
+      v:
+      - 1/25
+      t: 1
+- id: AW.E2
+  profile: base
+  clauses:
+  - AW.C4
+  input:
+    state: *id001
+    gradient:
+    - 2
+    lr: 1/10
+    beta1: 9/10
+    beta2: 99/100
+    eps: 1/10
+    weight_decay: 1/10
+    maximize: false
+    amsgrad: false
+  expected:
+    outcome: value
+    fields:
+      theta:
+      - 1879/2100
+      m:
+      - 1/5
+      v:
+      - 1/25
+      t: 1
+- id: AW.E3
+  profile: base
+  clauses:
+  - AW.C1
+  - AW.C2
+  - AW.C3
+  - AW.C4
+  input:
+    state:
+      theta:
+      - 1
+      m:
+      - 1
+      v:
+      - 2
+      t: 1
+    gradient:
+    - -2
+    lr: 1/10
+    beta1: 1/2
+    beta2: 1/2
+    eps: 0
+    weight_decay: 1/10
+    maximize: false
+    amsgrad: false
+  expected:
+    outcome: value
+    fields:
+      theta:
+      - 307/300
+      m:
+      - -1/2
+      v:
+      - 3
+      t: 2
+  note: Nonzero warm state; current parameter differs from reset-state evaluation.
+- id: AW.E4
+  profile: base
+  clauses:
+  - AW.C5
+  input:
+    state:
+      theta:
+      - 1
+      m:
+      - 1
+      v:
+      - 2
+      t: 1
+    gradient: null
+    lr: 1/10
+    beta1: 9/10
+    beta2: 99/100
+    eps: 0
+    weight_decay: 1/10
+    maximize: false
+    amsgrad: false
+  expected:
+    outcome: value
+    fields:
+      theta:
+      - 1
+      m:
+      - 1
+      v:
+      - 2
+      t: 1
+- id: AW.E5
+  profile: base
+  clauses:
+  - AW.C2
+  - AW.C3
+  - AW.C5
+  input:
+    state:
+      theta:
+      - 1
+      m:
+      - 1
+      v:
+      - 2
+      t: 1
+    gradient:
+    - 0
+    lr: 1/10
+    beta1: 1/2
+    beta2: 1/2
+    eps: 0
+    weight_decay: 1/10
+    maximize: false
+    amsgrad: false
+  expected:
+    outcome: value
+    fields:
+      theta:
+      - 99/100-sqrt(3)/30
+      m:
+      - 1/2
+      v:
+      - 1
+      t: 2
+- id: AW.E6
+  profile: base
+  clauses:
+  - AW.C4
+  input:
+    state: *id001
+    gradient:
+    - 0
+    lr: 1/10
+    beta1: 9/10
+    beta2: 99/100
+    eps: 0
+    weight_decay: 1/10
+    maximize: false
+    amsgrad: false
+  expected:
+    outcome: domain_undefined
+- id: AW.N1
+  profile: base
+  clauses:
+  - AW.C2
+  input:
+    state: *id001
+    gradient:
+    - 1
+    - 2
+    lr: 1/10
+    beta1: 9/10
+    beta2: 99/100
+    eps: 0
+    weight_decay: 1/10
+    maximize: false
+    amsgrad: false
+  expected:
+    outcome: invalid_input
+- id: AW.N2
+  profile: base
+  clauses:
+  - AW.C3
+  input:
+    state: *id001
+    gradient:
+    - 2
+    lr: 1/10
+    beta1: 9/10
+    beta2: 99/100
+    eps: 0
+    weight_decay: 1/10
+    maximize: false
+    amsgrad: true
+  expected:
+    outcome: unsupported
+signature:
+  inputs:
+  - gradient [d] or None
+  - lr
+  - beta1
+  - beta2
+  - eps
+  - weight_decay
+  pre_state:
+  - theta [d]
+  - m [d]
+  - v [d]
+  - t nonnegative integer
+  post_state:
+  - theta [d]
+  - m [d]
+  - v [d]
+  - t
+  observation_unit: one parameter tensor, one optimizer step; explicit step sequence is composition, not g-vector-as-time
+domain:
+  valid:
+  - d >= 1; theta,m,v,gradient have equal dimensions when gradient is not None
+  - finite rational theta,m,v and hyperparameters; each v_i >= 0
+  - t is a nonnegative integer, not bool; 0 <= beta1,beta2 < 1
+  - lr,weight_decay,eps >= 0
+  domain_undefined:
+  - gradient is not None and at least one sqrt(v_new_i/(1-beta2**(t+1))) + eps == 0
+  unsupported:
+  - amsgrad=True
+  - maximize=True for this pilot
+  - sparse gradients
+  - differentiating through the optimizer
+  - unverified interval-valued external prestate
+  invalid_input:
+  - wrong shapes
+  - negative second moment
+  - nonintegral or negative step counter
+  - NaN/Inf in this finite-real profile
+  - hyperparameters outside the stated range
+mutation_requirements:
+- id: AW.M1
+  misreading: decay updated rather than old theta
+  witnesses:
+  - AW.E1
+  - AW.E3
+- id: AW.M2
+  misreading: coupled L2 rather than AdamW
+  witnesses:
+  - AW.E1
+- id: AW.M3
+  misreading: omit bias correction or use t_old
+  witnesses:
+  - AW.E2
+  - AW.E3
+- id: AW.M4
+  misreading: eps inside sqrt
+  witnesses:
+  - AW.E2
+- id: AW.M5
+  misreading: ignore supplied warm state
+  witnesses:
+  - AW.E3
+- id: AW.M6
+  misreading: theta correct but post-state not returned or corrupted
+  witnesses:
+  - AW.E1
+  - AW.E3
+- id: AW.M7
+  misreading: None treated as zero gradient
+  witnesses:
+  - AW.E4
+  - AW.E5
+nonclaims:
+- No automatic coverage of coupled Adam under the ADAMW contract; map this as a profile under the existing ADAM
+  role.
+- No device rounding or actual parameter writeback certification merely from this ideal-state contract.
+- A rejected mutant witnesses a particular error; killing all listed mutants does not prove completeness.

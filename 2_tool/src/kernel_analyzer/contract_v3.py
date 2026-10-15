@@ -1,4 +1,4 @@
-"""Numeric contract v3 (specs/phase2/numeric_contract_v3.md; parameters in docs/protocol_closure_v3_20261008.md section 2).
+"""Numeric contract v3 (5_specification/specification_v2/algorithm_specs/phase2/numeric_contract_v3.md; parameters in docs/protocol_closure_v3_20261008.md section 2).
 
 Part of the package (it was ``scripts/essential/contract_v3.py``, imported through a repository path at run time; that
 file now re-exports this module).

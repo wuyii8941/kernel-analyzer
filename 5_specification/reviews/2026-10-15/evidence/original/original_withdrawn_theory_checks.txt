@@ -1,0 +1,16 @@
+== 1. GPT counterexample: f(x+y)=f(x)+f(y)+2xy, f(-x)=f(x) => f=x^2
+ a) f(0) solves [0]
+ b) f(x) = [x**2]
+ c) x^2 satisfies: True True
+== 2. equivariance relations are closed under scaling: lambda*f passes every check f(Tx)=T'f(x)
+ 2*softmax: shift residual 1.6653345369377348e-16  perm residual 1.1102230246251565e-16  sum-to-one residual 1.0000000000000004
+ softmax(2x): shift residual 1.1102230246251565e-16  perm residual 0.0  sum-to-one residual 0.0
+== 3. group averaging: mean bias along w under an exchangeable vs a skewed input distribution
+ exchangeable inputs: E<w,e> = -0.00015  (se 0.00016); prediction from relations alone: (1/n)E[1'e] + residual term = +0.00000 + 0
+ skewed inputs:       E<w,e> = +0.14503  (se 0.00018); relations still report zero residuals: sum 6.9e-16
+== 4. decomposition with K=3,G=2,f_alg=1,f_task=0: all three terms nonzero
+ e_num, e_sem, e_design = 1 1 1  total 3
+== 5. mean test vs elementwise tolerance: +-0.02 errors, tau=0.01
+ all |e_i|>tau: True  mean: 0.0
+
+STDERR:

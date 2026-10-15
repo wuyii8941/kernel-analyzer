@@ -1,0 +1,38 @@
+id: CE
+title: cross entropy, class-index and probability targets
+status_of_contract: draft-for-review          # becomes "reviewed" only after a review pass that did not write the code
+sources:
+  S1:
+    doc: torch.nn.CrossEntropyLoss / torch.nn.functional.cross_entropy
+    url: https://docs.pytorch.org/docs/main/generated/torch.nn.CrossEntropyLoss.html
+    version: main 2.16.0a0, fetched 2026-10-07
+    quotes:
+      D1: "l_n = - w_{y_n} log( exp(x_{n,y_n}) / sum_c exp(x_{n,c}) ) * 1{y_n != ignore_index}"
+      D2: "'mean': sum_n l_n / sum_n w_{y_n} 1{y_n != ignore_index};  'sum': sum_n l_n"
+      D5: "Specifies a target value that is ignored and does not contribute to the input gradient"
+      D6: "The targets become a mixture of the original ground truth and a uniform distribution"
+signature:
+  inputs: logits x[N][C] (finite rationals), target y[N] (class index or ignore_index), weight w[C] (optional), label_smoothing eps, reduction
+  outputs: loss (scalar for mean/sum, vector for none); gradient d loss / d x
+  state: none
+domain: "C >= 2; 0 <= eps <= 1; every y_n in [0, C) or equal to ignore_index; w has length C"
+clauses:
+  CE.C1: {statement: "row loss without smoothing is -w_{y_n} * log softmax(x_n)_{y_n}", basis: S1.D1, guarantee: rigorous_enclosure}
+  CE.C2: {statement: "rows with y_n == ignore_index contribute 0 to the sum and 0 to the mean denominator", basis: S1.D1+S1.D2+S1.D5, guarantee: exact}
+  CE.C3: {statement: "mean divides by sum_n w_{y_n} over non-ignored rows (not by N, not by the count of rows)", basis: S1.D2, guarantee: exact}
+  CE.C4: {statement: "label smoothing target q = (1-eps)*onehot(y) + eps/C, row loss -sum_c a_c log p_c with a_c = w_c q_c", basis: "S1.D6 + decision CE-A1 (reading R_A)", guarantee: rigorous_enclosure}
+  CE.C5: {statement: "reduction=mean with zero denominator is undefined; sum and none are 0 when every row is ignored", basis: "decision CE-A3", guarantee: allowed_set}
+readings:
+  CE-A1: {main: R_A, alternatives: [R_B], note: "weights with smoothing: per-class w_c (R_A) or target-class w_{y_n} (R_B); a candidate must follow one reading on all inputs"}
+examples:                     # expected values derived from the clauses by hand, never from the code
+  E1: {clauses: [CE.C1], input: {logits: [[0, 0]], target: [0], reduction: sum}, expected: "log(2)"}
+  E2: {clauses: [CE.C1], input: {logits: [[0, 1]], target: [1], reduction: sum}, expected: "log(1+e) - 1"}
+  E3: {clauses: [CE.C2, CE.C3], input: {logits: [[0, 0], [0, 0], [1, 0]], target: [0, 1, -100], weight: [1, 3], reduction: mean}, expected: "log(2)"}
+  E4: {clauses: [CE.C4], input: {logits: [[0, 1]], target: [0], label_smoothing: "1/2", reduction: sum}, expected: "log(1+e) - 1/4"}
+  E5: {clauses: [CE.C4], input: {logits: [[0, 1]], target: [0], weight: [1, 3], label_smoothing: "1/2", reduction: sum}, expected: "3/2*log(1+e) - 3/4", readings: {R_B: "log(1+e) - 1/4"}}
+  E6: {clauses: [CE.C5], input: {logits: [[0, 0]], target: [-100], reduction: mean}, expected: undefined}
+mutants:                      # plausible misreadings; each must be rejected by at least one example
+  M1: {clauses: [CE.C3], misreading: "mean divides by the number of all rows, ignored ones included"}
+  M2: {clauses: [CE.C3], misreading: "mean divides by the number of non-ignored rows, ignoring class weights"}
+  M3: {clauses: [CE.C4], misreading: "smoothing puts eps/(C-1) on the other classes and 1-eps on the target"}
+  M4: {clauses: [CE.C2], misreading: "ignored rows are dropped from the sum but still counted in the mean denominator"}

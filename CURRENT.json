@@ -1,12 +1,13 @@
 {
   "schema": "kernel-analyzer-current-index-v2",
-  "updated": "2026-10-13",
-  "note": "The single current index. The repository has four parts; each keeps only the latest, most complete version. Everything removed in the 2026-10-09 reorganization is recoverable from tag pre-reorg-20261009 (git show pre-reorg-20261009:<old path>).",
+  "updated": "2026-10-15",
+  "note": "The single current index. The repository has five parts; each keeps only the latest, most complete version. Everything removed in the 2026-10-09 reorganization is recoverable from tag pre-reorg-20261009 (git show pre-reorg-20261009:<old path>).",
   "parts": {
     "experiments": "1_experiments/README.md",
     "tool": "2_tool/README.md",
     "audits": "3_audits/README.md",
-    "bugs_cases": "4_bugs_cases/README.md"
+    "bugs_cases": "4_bugs_cases/README.md",
+    "specification": "5_specification/README.md"
   },
   "history_tag": "pre-reorg-20261009",
   "release": {
@@ -32,7 +33,11 @@
     "flash_attention_case": "1_experiments/flash_attention_case/README.md (first tool case: the Triton 3.6.0 tutorial flash attention forward and four planted defects audited with reference_eval/audit.py -- tf32 truncation, a semantic constant, a bf16 loop accumulator found, located to source lines, predicted ex ante consistently with the measurement; an fp16 accumulator and strong stagnation reported as 'cannot be decided'. Tool defects fixed test-first: reductions over dot outputs (MMA layout), underflowing approximate functions, localization candidates missing tensor-core dots, dot reason text, fma-chain state propagation, the audit entry and report. Second round after a developer-perspective review: plain-language summary per output, tolerance checks split into passes / fails because of the bias / fails on the random error alone (none of three common checks resolves the 0.1-0.3% biases), fix costs, the effect of fixing every site from one emulation, sampling incl. the boundary block and the spread between programs; defect fixed: attribution and measurement on different programs)"
   },
   "versions": {
-    "tool": {"value": "4.0", "where": "2_tool/src/kernel_analyzer/check.py TOOL_VERSION", "changelog": "2_tool/docs/changelog.md"},
+    "tool": {
+      "value": "4.0",
+      "where": "2_tool/src/kernel_analyzer/check.py TOOL_VERSION",
+      "changelog": "2_tool/docs/changelog.md"
+    },
     "rule_registry": "2_tool/data/rule_registry.json (Triton 3.6.0 regression profile); frozen general-v3.1 registry: 1_experiments/general_round_v3_1/results/rule_registry.json",
     "op_registry": "2_tool/src/kernel_analyzer/reference_eval/data/ttir_op_registry.json (Triton 3.6.0)"
   },
@@ -54,5 +59,11 @@
   },
   "pending_user_decisions": "push of 32efd84, e57625a and the stage consolidation commit to dsl-v2; whether the audit entry skips the ex-ante prediction by default (2_tool/docs/audit_status.md section 6)",
   "external_materials_pending": "3_audits/README.md section 3 (M01-M12)",
-  "test_policy": "tests must not modify or rewrite tracked files (2_tool/tests/conftest.py guard); outputs go to tmp_path"
+  "test_policy": "tests must not modify or rewrite tracked files (2_tool/tests/conftest.py guard); outputs go to tmp_path",
+  "specification": {
+    "home": "5_specification/README.md",
+    "status": "moved on 2026-10-15 out of the former spec folder of 1_experiments and replaced by v2.4 (31 roles with executable references; 222 tests pass; 5_specification/run_checks.py). Contract layer: CE, ADAMW, RANKMEAN reviewed_for_implementation (review 2026-10-15, 5_specification/reviews/2026-10-15/REVIEW.md); adapters and checker not implemented, runtime activations 0; the other 28 roles have no contract. The audit entry does not use the contracts yet.",
+    "known_issues": "5_specification/docs/status.md section 2",
+    "decisions": "5_specification/docs/status.md section 3"
+  }
 }

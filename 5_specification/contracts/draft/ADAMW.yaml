@@ -1,0 +1,34 @@
+id: ADAMW
+title: torch.optim.AdamW, one step (state transition)
+status_of_contract: draft-for-review
+sources:
+  S1:
+    doc: torch.optim.AdamW, algorithm box
+    url: https://docs.pytorch.org/docs/stable/generated/torch.optim.AdamW.html
+    version: to be pinned at review
+    quotes:
+      A1: "theta_t <- theta_{t-1} - gamma * lambda * theta_{t-1}"
+      A2: "m_t <- beta1 m_{t-1} + (1 - beta1) g_t ;  v_t <- beta2 v_{t-1} + (1 - beta2) g_t^2"
+      A3: "m_hat_t <- m_t / (1 - beta1^t) ;  v_hat_t <- v_t / (1 - beta2^t)"
+      A4: "theta_t <- theta_t - gamma * m_hat_t / (sqrt(v_hat_t) + eps)"
+signature:
+  inputs: gradient g (rational), hyperparameters lr, beta1, beta2, eps, weight_decay
+  pre_state: theta_{t-1}, m_{t-1}, v_{t-1}, step count t-1
+  outputs: none
+  post_state: theta_t, m_t, v_t, t
+domain: "0 <= beta1, beta2 < 1; eps >= 0; lr >= 0; weight_decay >= 0; theta and g of equal length"
+clauses:
+  AW.C1: {statement: "decay uses the OLD parameter: theta' = theta_{t-1} (1 - lr * wd), applied before the Adam update", basis: S1.A1, guarantee: exact}
+  AW.C2: {statement: "moments use the raw gradient (no weight-decay term added to g)", basis: S1.A2, guarantee: exact}
+  AW.C3: {statement: "bias correction divides by (1 - beta^t) with t already incremented to the current step", basis: S1.A3, guarantee: exact}
+  AW.C4: {statement: "update is lr * m_hat / (sqrt(v_hat) + eps): eps outside the square root", basis: S1.A4, guarantee: rigorous_enclosure}
+examples:
+  E1: {clauses: [AW.C1, AW.C2, AW.C3, AW.C4], input: {theta: 1, g: [2], lr: "1/10", beta1: "9/10", beta2: "99/100", eps: 0, wd: "1/10"}, expected: "89/100"}
+  E2: {clauses: [AW.C3], input: {theta: 1, g: [2], lr: "1/10", beta1: "9/10", beta2: "999/1000", eps: 0, wd: "1/10"}, expected: "89/100"}
+  E3: {clauses: [AW.C4], input: {theta: 1, g: [2], lr: "1/10", beta1: "9/10", beta2: "99/100", eps: "1/10", wd: "1/10"}, expected: "1879/2100"}
+  E4: {clauses: [AW.C2, AW.C3], input: {theta: 1, g: [2, 0], lr: "1/10", beta1: "9/10", beta2: "99/100", eps: 0, wd: "1/10"}, expected: "(89/100)*(99/100) - (1/10)*(18/19)/sqrt(396/199)"}
+mutants:
+  M1: {clauses: [AW.C1], misreading: "decay applied to the parameter after the Adam update"}
+  M2: {clauses: [AW.C1, AW.C2], misreading: "coupled L2: wd * theta added to the gradient, no decoupled decay (that is Adam, not AdamW)"}
+  M3: {clauses: [AW.C3], misreading: "no bias correction"}
+  M4: {clauses: [AW.C4], misreading: "eps inside the square root"}

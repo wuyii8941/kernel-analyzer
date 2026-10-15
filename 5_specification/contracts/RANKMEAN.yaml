@@ -1,0 +1,286 @@
+schema_version: '1.1'
+id: RANKMEAN
+role: RANKMEAN
+title: Equal-valid-token objective over declared participants
+review:
+  status: reviewed_for_implementation
+  date: '2026-10-15'
+  reviewer: ChatGPT review of uploaded contract draft
+  input_package_sha256: a9a2a9123c2f39f5f76d1c82d61d70869bc0ec8236cce16d978f9556293d15a3
+  scope: Contract content and explicit profiles, not all-domain oracle certification
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires:
+  - source_profile_matched
+  - input_contract_validated
+  - all_required_outputs_bound
+  - reference_semantics_and_guarantees_validated
+  - no_unresolved_contradiction
+  - contract_and_implementation_hashes_bound
+profiles:
+  base:
+    meaning: 'One declared task: L=sum per-rank token loss sums / sum valid-token counts.'
+    task_choice_required: true
+outputs:
+  loss:
+    shape: scalar
+    guarantee: exact
+comparison:
+  input_binding: All arithmetic values are the exactly received rational values; published decimal constants are
+    a separate interface query, not silently substituted.
+  quality: No default semantic tolerance is inferred from these examples. Numerical resolution and application delta
+    are separate declarations.
+  test_evidence: Exact rational equality or certified relation when available; numerical enclosure compatibility
+    is not a proof of equality.
+  error_handling: No dropped outputs, silently truncated lists, coerced counts, or exceptions converted by message
+    text.
+decisions:
+- id: RM.TASK
+  status: needs_binding
+  statement: Task owner selects equal-valid-token normalization. HF article is supporting motivation only. No default
+    verdict against a sequence-averaged task.
+  basis:
+  - HF.TOKEN_MEAN
+- id: RM.ZERO
+  status: reviewed
+  statement: No valid tokens means the finite-real average is undefined; do not demand any specific NaN/zero device
+    convention.
+  basis:
+  - RM.TASK
+clauses:
+- id: RM.C1
+  basis:
+  - RM.TASK
+  statement: N=sum_r n_r; if N>0, L=(sum_r S_r)/N
+  observes:
+  - loss
+  evidence_kind: definition
+- id: RM.C2
+  basis:
+  - RM.ZERO
+  statement: N=0 yields domain_undefined; an individual empty rank contributes exact zero to numerator and denominator
+  observes:
+  - loss
+  evidence_kind: definition
+- id: RM.C3
+  basis:
+  - RM.TASK
+  statement: Participant and contribution provenance is required; permutations or repartitions preserve L only when
+    sums, counts and membership are transformed consistently
+  observes:
+  - loss
+  evidence_kind: derived
+examples:
+- id: RM.E1
+  profile: base
+  clauses:
+  - RM.C1
+  input:
+    S:
+    - 6
+    - 4
+    n:
+    - 3
+    - 1
+    participant_ids:
+    - r0
+    - r1
+  expected:
+    outcome: value
+    fields:
+      loss: 5/2
+- id: RM.E2
+  profile: base
+  clauses:
+  - RM.C1
+  input:
+    S:
+    - 6
+    - 2
+    n:
+    - 3
+    - 1
+    participant_ids:
+    - r0
+    - r1
+  expected:
+    outcome: value
+    fields:
+      loss: 2
+  note: 'Equal local means: mean-of-means coincides. Keep as normal control; do not require mutant failure.'
+- id: RM.E3
+  profile: base
+  clauses:
+  - RM.C2
+  input:
+    S:
+    - 0
+    - 0
+    n:
+    - 0
+    - 0
+    participant_ids:
+    - r0
+    - r1
+  expected:
+    outcome: domain_undefined
+- id: RM.E4
+  profile: base
+  clauses:
+  - RM.C1
+  - RM.C2
+  input:
+    S:
+    - 0
+    - 4
+    n:
+    - 0
+    - 1
+    participant_ids:
+    - r0
+    - r1
+  expected:
+    outcome: value
+    fields:
+      loss: 4
+- id: RM.E5
+  profile: base
+  clauses:
+  - RM.C1
+  - RM.C3
+  input:
+    S:
+    - 4
+    - 6
+    n:
+    - 1
+    - 3
+    participant_ids:
+    - r0
+    - r1
+  expected:
+    outcome: value
+    fields:
+      loss: 5/2
+- id: RM.N1
+  profile: base
+  clauses:
+  - RM.C1
+  input:
+    S:
+    - 6
+    - 4
+    n:
+    - 3
+    - 1
+    - 1
+    participant_ids:
+    - r0
+    - r1
+  expected:
+    outcome: invalid_input
+- id: RM.N2
+  profile: base
+  clauses:
+  - RM.C1
+  input:
+    S:
+    - 6
+    - 4
+    n:
+    - 39/10
+    - 1
+    participant_ids:
+    - r0
+    - r1
+  expected:
+    outcome: invalid_input
+- id: RM.N3
+  profile: base
+  clauses:
+  - RM.C1
+  input:
+    S:
+    - 6
+    - 4
+    n:
+    - -1
+    - 2
+    participant_ids:
+    - r0
+    - r1
+  expected:
+    outcome: invalid_input
+- id: RM.N4
+  profile: base
+  clauses:
+  - RM.C2
+  input:
+    S:
+    - 6
+    - 4
+    n:
+    - 0
+    - 1
+    participant_ids:
+    - r0
+    - r1
+  expected:
+    outcome: invalid_input
+signature:
+  inputs:
+  - 'S [R]: sums of per-token losses, not means'
+  - 'n [R]: exact nonnegative integer token counts'
+  - participant IDs [R], or an immutable binding record establishing them
+  pre_state: []
+  post_state: []
+  observation_unit: aggregation only; not an entire distributed training-step equivalence claim
+domain:
+  valid:
+  - R>=1; len(S)==len(n)==len(participant_ids); IDs unique
+  - S finite rational; n integral and nonnegative (do not cast floats to int)
+  - n_r=0 implies S_r=0
+  - same valid-token set, equal token objective weights, and each contribution counted once, established by binding
+    or declared as an unverified precondition
+  domain_undefined:
+  - sum(n)==0, with all S zero
+  invalid_input:
+  - shape mismatch
+  - negative or fractional counts
+  - nonzero S paired with zero n
+  - duplicate participant IDs
+  unsupported:
+  - sequence-equal objectives
+  - weighted means normalized by weight mass rather than token count
+  - changing token membership or per-token losses across compared partitions
+mutation_requirements:
+- id: RM.M1
+  misreading: mean of rank-local means
+  witnesses:
+  - RM.E1
+- id: RM.M2
+  misreading: sum rank-local means
+  witnesses:
+  - RM.E1
+  - RM.E2
+- id: RM.M3
+  misreading: divide by rank or sequence count
+  witnesses:
+  - RM.E1
+- id: RM.M4
+  misreading: silently cast fractional n to int
+  witnesses:
+  - RM.N2
+- id: RM.M5
+  misreading: ignore mismatched count array
+  witnesses:
+  - RM.N1
+composition_binding:
+- A local CE mean is not S_r. Use its loss sum or undo the exact declared local normalization with provenance.
+- PyTorch class-weighted CE mean uses weight mass, not token count; choose the intended denominator explicitly.
+- This contract neither validates NCCL semantics nor proves BatchNorm/microbatch equivalence.
+nonclaims:
+- Task-selection still required per runtime use, independent of code correctness.
+- Empty/unsupported/invalid are distinct outcomes; no finiteness filtering or drop-rank policy may be introduced
+  silently.

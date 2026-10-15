@@ -1,4 +1,4 @@
-"""The single current index (CURRENT.json) and the documents of the four parts: every path the index names exists, every
+"""The single current index (CURRENT.json) and the documents of the five parts: every path the index names exists, every
 relative markdown link in the repository's own documents resolves, the versions agree, and the release fields match the
 git tag."""
 from __future__ import annotations
@@ -10,9 +10,12 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 CUR = json.loads((REPO / "CURRENT.json").read_text())
-PARTS = ("1_experiments", "2_tool", "3_audits", "4_bugs_cases")
+PARTS = ("1_experiments", "2_tool", "3_audits", "4_bugs_cases", "5_specification")
 # received external originals keep their own internal links
-EXTERNAL = ("3_audits/received/", "1_experiments/dsl_v2/design_rc3/", "1_experiments/specs/", "/blind_records/")
+EXTERNAL = ("3_audits/received/", "1_experiments/dsl_v2/design_rc3/", "/blind_records/",
+            "5_specification/specification_v2/", "5_specification/evidence/", "5_specification/contracts/draft/",
+            "5_specification/reviews/2026-10-15/input_package/", "5_specification/docs/METHOD.md",
+            "5_specification/docs/CONTRACT_PROTOCOL.md")
 
 
 def _strings(obj):
@@ -32,14 +35,14 @@ def test_every_path_in_the_current_index_exists():
     assert not missing, missing
 
 
-def test_the_four_parts_and_root_files_exist():
+def test_the_parts_and_root_files_exist():
     for part in PARTS:
         assert (REPO / part / "README.md").is_file(), part
     for name in ("README.md", "CURRENT.json", "CLAUDE.md", "AGENTS.md", "pyproject.toml"):
         assert (REPO / name).is_file(), name
     stale = [d for d in ("docs", "results", "scripts", "src", "tests", "specs", "bugs", "examples", "archive")
              if subprocess.run(["git", "ls-files", "--", d], cwd=REPO, capture_output=True, text=True).stdout.strip()]
-    assert not stale, f"tracked files outside the four parts: {stale}"
+    assert not stale, f"tracked files outside the parts: {stale}"
 
 
 def test_relative_links_resolve():

@@ -1,0 +1,27 @@
+id: RANKMEAN
+title: token-averaged loss over data-parallel ranks (task contract)
+status_of_contract: draft-for-review
+sources:
+  T1:
+    doc: task definition of the training objective (every valid token has equal weight); consistent with the HF fix for gradient accumulation
+    url: https://huggingface.co/blog/gradient_accumulation
+    version: task contract v1 (to be confirmed by the task owner)
+    quotes:
+      Q1: "total loss across all batches divided by the total number of all non padding tokens"
+signature:
+  inputs: per-rank loss sums S_r and valid-token counts n_r, r = 1..R (participants and token weights fixed by the task)
+  outputs: L
+  state: none
+domain: "n_r >= 0 integers; at least one rank has n_r > 0, otherwise L is undefined"
+preconditions_for_partition_invariance: "same set of valid tokens, same per-token weights, same per-token losses; no batch-dependent statistics (BatchNorm) inside the loss"
+clauses:
+  RM.C1: {statement: "L = sum_r S_r / sum_r n_r", basis: T1.Q1, guarantee: exact}
+  RM.C2: {statement: "sum_r n_r = 0: undefined", basis: "decision (no valid token)", guarantee: allowed_set}
+examples:
+  E1: {clauses: [RM.C1], input: {S: [6, 4], n: [3, 1]}, expected: "5/2"}
+  E2: {clauses: [RM.C1], input: {S: [6, 2], n: [3, 1]}, expected: "2", note: "equal per-rank means: mean-of-means coincides, cannot distinguish M1"}
+  E3: {clauses: [RM.C2], input: {S: [0, 0], n: [0, 0]}, expected: undefined}
+mutants:
+  M1: {clauses: [RM.C1], misreading: "average of per-rank token means (DDP gradient averaging of rank-local token means)"}
+  M2: {clauses: [RM.C1], misreading: "sum of per-rank means (no division by the number of ranks)"}
+  M3: {clauses: [RM.C1], misreading: "divide the total by the number of sequences instead of tokens (counts given per rank as n_r tokens over 1 sequence each)"}

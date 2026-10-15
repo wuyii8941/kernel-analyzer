@@ -1,0 +1,25 @@
+id: ROLE                          # 与 catalogue 中的角色名一致
+title: 一句话说明
+status_of_contract: draft-for-review
+sources:
+  S1:
+    doc: 文档或标准名称
+    url: 链接
+    version: 版本与抓取日期
+    quotes:
+      D1: "逐字引用"
+signature:
+  inputs: 输入及其类型
+  pre_state: 前态（无状态写 none）
+  outputs: 输出
+  post_state: 后态（无状态写 none）
+domain: "合法输入域；越界时规格拒绝"
+preconditions: "等价或不变性成立所需的前提（没有则删去本字段）"
+clauses:
+  ROLE.C1: {statement: "数学条款", basis: S1.D1, guarantee: exact}          # exact / rigorous_enclosure / allowed_set / declared_approximation
+readings:
+  ROLE-A1: {main: R_A, alternatives: [R_B], note: "依据与差别"}
+examples:
+  E1: {clauses: [ROLE.C1], input: {}, expected: "闭式或有理数，或 undefined", readings: {R_B: "该读法下的期望值"}}
+mutants:
+  M1: {clauses: [ROLE.C1], misreading: "一句话描述误读"}

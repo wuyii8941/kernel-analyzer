@@ -20,7 +20,8 @@
 
 ## 实验输入
 
-- [specs/](specs/)：审阅方交付的独立任务规格（第一阶段 v0.4、第二阶段包 v0.2），模式 B 与本质错误一轮、收束轮使用。
+- 独立任务规格已移到 [5_specification](../5_specification/README.md)（2026-10-15，换成 v2.4）。模式 B 与本质错误一轮、收束轮用的是当时的
+  第一阶段 v0.4 与第二阶段包，可用 `git show ff5e449:1_experiments/specs/<路径>` 取回。
 - DSL v2 的设计依据：[dsl_v2/design_rc3/](dsl_v2/design_rc3/)（rc3 正式版副本，SHA-256 8050903f…6faf）。
 - 冻结验收的运行记录压缩为一个文件
   [structure_acceptance_v1_1/structure_v1_1_rc1_r20261008T2030.tar.gz](structure_acceptance_v1_1/structure_v1_1_rc1_r20261008T2030.tar.gz)

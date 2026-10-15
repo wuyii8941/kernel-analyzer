@@ -1,0 +1,95 @@
+{
+  "wrong_exact_value": "established",
+  "reversed_interval": "established",
+  "rank_domain": [
+    {
+      "input": {
+        "S": [
+          6,
+          4
+        ],
+        "n": [
+          3.9,
+          1
+        ]
+      },
+      "result": "(mpf('2.5'), mpf('2.5'))"
+    },
+    {
+      "input": {
+        "S": [
+          6,
+          4
+        ],
+        "n": [
+          3,
+          1,
+          1
+        ]
+      },
+      "result": "(mpf('2.0'), mpf('2.0'))"
+    },
+    {
+      "input": {
+        "S": [
+          6,
+          4
+        ],
+        "n": [
+          -1,
+          2
+        ]
+      },
+      "result": "(mpf('10.0'), mpf('10.0'))"
+    },
+    {
+      "input": {
+        "S": [
+          6,
+          4
+        ],
+        "n": [
+          0,
+          1
+        ]
+      },
+      "result": "(mpf('10.0'), mpf('10.0'))"
+    }
+  ],
+  "adam_ignored_prestate": {
+    "cold": "(mpf('0.88999999999999999999999999999999999999999999999999999999999900000000000000000000023'), mpf('0.89000000000000000000000000000000000000000000000000000000000100000000000000000000045'))",
+    "warm": "(mpf('0.88999999999999999999999999999999999999999999999999999999999900000000000000000000023'), mpf('0.89000000000000000000000000000000000000000000000000000000000100000000000000000000045'))",
+    "same": true
+  },
+  "ce_declared_interface": [
+    {
+      "input": "{'logits': [[0, 1]], 'target': [1], 'reduction': 'none'}",
+      "exception": "ValueError: could not convert string to float: '[[0.313261687518222834048995494967855641915280085670348374719050, 0.313261687518222834048995494967855641915280085670348374719074]]'"
+    },
+    {
+      "input": "{'logits': [[0, 1]], 'target': [[Fraction(1, 4), Fraction(3, 4)]], 'reduction': 'sum'}",
+      "exception": "SpecInputError: class-index targets must be integers"
+    }
+  ],
+  "zero_ce_gradient_still_passes": {
+    "mutated_calls": 6,
+    "ce_all_five_established": true
+  },
+  "contradiction_exit": {
+    "returncode": 0,
+    "has_contradiction": true
+  },
+  "unresolved_source": {
+    "returncode": 0,
+    "accepted": true
+  },
+  "wrong_reading": {
+    "returncode": 0,
+    "reading_failed": true,
+    "ce_c4_still_established": true
+  },
+  "masked_test_failure": {
+    "returncode": 0,
+    "saw_injected_failure": true
+  }
+}
