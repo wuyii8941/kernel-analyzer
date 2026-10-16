@@ -147,7 +147,7 @@ def as_ten(x, like=None):
 
 def _elem(x, d):
     if d in FLOAT:
-        return x if isinstance(x, R) else R(x)
+        return x if isinstance(x, R) else R(int(x)) if isinstance(x, bool) else R(x)
     if d in BOOL:
         return bool(x) if not isinstance(x, R) else (not x.same(0))
     if isinstance(x, R):
@@ -1460,6 +1460,40 @@ def convolution(x, w, bias, stride, padding, dilation, transposed, output_paddin
     return Ten(out, x.dtype)
 
 
+def convolution_backward(g, x, w, bias_sizes, stride, padding, dilation, transposed, output_padding, groups,
+                         output_mask=(True, True, True)):
+    """aten.convolution_backward: (grad_input, grad_weight, grad_bias) of the non-transposed convolution, the VJP of the
+    cross-correlation defined above (entries not requested in output_mask are None)."""
+    if transposed:
+        raise Unsupported("transposed convolution")
+    g, x, w = _floatify(g), _floatify(x), _floatify(w)
+    nsp = x.a.ndim - 2
+    stride, padding, dilation = ([v] * nsp if isinstance(v, int) else list(v) for v in (stride, padding, dilation))
+    N, Cin = x.a.shape[:2]
+    Cout, cpg = w.a.shape[:2]
+    ksz = w.a.shape[2:]
+    osz = g.a.shape[2:]
+    opg = Cout // groups
+    xp = constant_pad_nd(x, [p for pd in reversed(padding) for p in (pd, pd)], 0).a
+    gin = np.full(xp.shape, R(0), dtype=object)
+    gw = np.full(w.a.shape, R(0), dtype=object)
+    gb = np.full((Cout,), R(0), dtype=object)
+    for n in range(N):
+        for co in range(Cout):
+            grp = co // opg
+            for o in np.ndindex(*osz):
+                gv = g.a[(n, co) + o]
+                gb[co] = gb[co] + gv
+                for ci in range(cpg):
+                    for k in np.ndindex(*ksz):
+                        pos = tuple(o[d] * stride[d] + k[d] * dilation[d] for d in range(nsp))
+                        gin[(n, grp * cpg + ci) + pos] = gin[(n, grp * cpg + ci) + pos] + gv * w.a[(co, ci) + k]
+                        gw[(co, ci) + k] = gw[(co, ci) + k] + gv * xp[(n, grp * cpg + ci) + pos]
+    crop = tuple([slice(None), slice(None)] + [slice(padding[d], padding[d] + x.a.shape[2 + d]) for d in range(nsp)])
+    out = [Ten(gin[crop], x.dtype), Ten(gw, w.dtype), Ten(gb, w.dtype)]
+    return [o if m else None for o, m in zip(out, output_mask)]
+
+
 # ------------------------------------------------------------------ activations (ACT contract)
 def gelu(a, approximate="none"):
     """torch.nn.GELU: x * Phi(x) with Phi(x) = (1 + erf(x / sqrt 2)) / 2; approximate='tanh':
@@ -1539,9 +1573,54 @@ def inductor_lookup_seed(seeds, i):
     return Ten(np.array(s.a[i], dtype=object), s.dtype)
 
 
-def inductor_random(*args, **kw):
-    raise Unsupported("the random stream is implementation-defined: the RANDOM contract conditions on the kernel's own "
-                      "random numbers, which the binding supplies as an input")
+def inductor_random(size, seed=None, mode="rand", values=None):
+    """prims.inductor_random, conditioned: the random stream is implementation-defined, so the value is the kernel's own
+    random tensor, supplied by the binding as `values` (checked for shape and, for 'rand', the range [0, 1))."""
+    if values is None:
+        raise Unsupported("inductor_random needs the kernel's own random values (conditioning)")
+    v = _floatify(values)
+    if list(v.shape) != list(size):
+        raise Invalid(f"conditioning values have shape {v.shape}, expected {list(size)}")
+    if mode == "rand":
+        for x in v.a.reshape(-1):
+            if not (R(0) <= x < R(1)):
+                raise Invalid("a 'rand' value outside [0, 1)")
+    elif mode != "randn":
+        raise Invalid(f"inductor_random mode {mode!r}")
+    return v
+
+
+def native_dropout(x, p, train=True, keep=None):
+    """aten.native_dropout conditioned on the kernel's keep mask: (x * keep / (1 - p), keep); p = 1 gives zeros and an
+    all-False mask; train False or p = 0 gives (x, all True) -- the torch 2.10 decomposition."""
+    x = _floatify(x)
+    p = Fraction(p) if not isinstance(p, R) else p.v
+    if not 0 <= p <= 1:
+        raise Invalid("dropout probability outside [0, 1]")
+    if not train or p == 0:
+        return [x, full(x.shape, True, "b8")]
+    if p == 1:
+        return [zeros_like(x), full(x.shape, False, "b8")]
+    if keep is None:
+        raise Unsupported("dropout needs the kernel's own keep mask (conditioning)")
+    k = as_ten(keep)
+    if k.dtype not in BOOL or list(k.shape) != list(x.shape):
+        raise Invalid("keep mask must be boolean with the input's shape")
+    return [mul(mul(x, k), R(1) / R(1 - p)), k]
+
+
+def dropout(x, p=0.5, train=True, keep=None):
+    return native_dropout(x, p, train, keep)[0]
+
+
+def native_dropout_backward(grad, mask, scale):
+    """grad * mask * scale (torch 2.10 decomposition)."""
+    return mul(mul(_floatify(grad), convert_element_type(as_ten(mask), _floatify(grad).dtype)), scale)
+
+
+def keep_from_uniform(u, p):
+    """The decomposition's mask rule: keep where the uniform value exceeds p."""
+    return gt(u, p)
 
 
 # ------------------------------------------------------------------ dispatch by ATen name (graph fragments)
@@ -1580,10 +1659,12 @@ OPS = {
     "aten._softmax_backward_data": softmax_backward_data, "aten._log_softmax_backward_data": log_softmax_backward_data,
     "prims.prepare_softmax_online": prepare_softmax_online,
     "aten.mm": mm, "aten.bmm": bmm, "aten.matmul": matmul, "aten.addmm": addmm, "aten.baddbmm": baddbmm,
-    "aten.convolution": convolution, "aten.linear": linear, "vjp.aten.mm": vjp_mm, "vjp.aten.bmm": vjp_bmm,
+    "aten.convolution": convolution, "aten.convolution_backward": convolution_backward, "aten.linear": linear, "vjp.aten.mm": vjp_mm, "vjp.aten.bmm": vjp_bmm,
     "vjp.aten.matmul": vjp_matmul, "vjp.aten.linear": vjp_linear, "vjp.aten.addmm": vjp_addmm,
     "aten.gelu": gelu, "aten.gelu_backward": gelu_backward, "aten.silu": silu, "aten.silu_backward": silu_backward,
     "aten.threshold_backward": threshold_backward, "aten.tanh_backward": tanh_backward,
     "aten.sigmoid_backward": sigmoid_backward, "aten.softplus": softplus, "aten.softplus_backward": softplus_backward,
     "prims.inductor_lookup_seed": inductor_lookup_seed, "prims.inductor_random": inductor_random,
+    "aten.native_dropout": native_dropout, "aten.dropout": dropout, "aten.native_dropout_backward": native_dropout_backward,
+    "keep_from_uniform": keep_from_uniform,
 }

@@ -1,0 +1,86 @@
+schema_version: '1.2'
+id: CONV
+role: CONV
+title: Convolution (aten.convolution, non-transposed, 1-D to 3-D) and its backward (aten.convolution_backward)
+review:
+  status: drafted
+  author: Claude (spec v3 author), 2026-10-16
+  date: '2026-10-16'
+  scope: Real-number values of the documented cross-correlation and its VJP; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [aten.convolution, aten.convolution_backward]
+profiles:
+  real:
+    meaning: Exact cross-correlation with zero padding on both sides, stride, dilation and groups (padding_mode zeros);
+      the backward returns (grad_input, grad_weight, grad_bias) as the VJP against an explicit upstream gradient.
+    task_choice_required: false
+outputs:
+  out:
+    shape: (N, C_out, L_out...) for the forward; a list of three gradients for the backward
+    guarantee: exact
+comparison:
+  input_binding: Tensor values are the exact values received.
+  quality: Exact equality.
+  test_evidence: Exact equality.
+  error_handling: Channel counts not divisible by groups and mismatched shapes are invalid_input.
+decisions:
+- id: CV.VJP
+  status: drafted
+  statement: 'convolution_backward is the VJP of the defined cross-correlation: grad_input[n, c, p] = sum over (co, o, k)
+    with p = o * stride + k * dilation - padding of g[n, co, o] * w[co, c, k] (within the channel''s group); grad_weight[co,
+    c, k] = sum over (n, o) of g[n, co, o] * x_padded[n, c, o * stride + k * dilation]; grad_bias[co] = sum over (n, o) of
+    g[n, co, o].'
+  basis: [T_CONV1D.DEF, T_CONV2D.DEF]
+clauses:
+- {id: CV.C1, basis: [T_CONV1D.DEF, T_CONV2D.DEF], statement: 'out = bias + sum_k w * x (valid cross-correlation of the
+    zero-padded input) with stride and dilation', observes: [out], evidence_kind: definition}
+- {id: CV.C2, basis: [T_CONV1D.DEF], statement: 'groups: each output channel sees only the input channels of its group',
+  observes: [out], evidence_kind: definition}
+- {id: CV.C3, basis: [CV.VJP], statement: convolution_backward per CV.VJP, observes: [out], evidence_kind: derived}
+examples:
+- {id: CV.E1, profile: real, clauses: [CV.C1], input: {op: aten.convolution, args: [{t: f32, v: [[[1, 2, 3, 4]]]}, {t: f32, v: [
+          [[1, -1]]]}, null, [1], [0], [1], false, [0], 1]}, expected: {outcome: value, fields: {out: [[[-1, -1, -1]]]}}}
+- {id: CV.E2, profile: real, clauses: [CV.C1], input: {op: aten.convolution, args: [{t: f32, v: [[[1, 2, 3, 4]]]}, {t: f32, v: [
+          [[1, -1]]]}, {t: f32, v: [10]}, [1], [1], [1], false, [0], 1]}, expected: {outcome: value, fields: {out: [[[9, 9, 9, 9,
+            14]]]}}}
+- {id: CV.E3, profile: real, clauses: [CV.C1], input: {op: aten.convolution, args: [{t: f32, v: [[[1, 2, 3, 4, 5]]]}, {t: f32,
+        v: [[[1, 1]]]}, null, [2], [0], [2], false, [0], 1]}, expected: {outcome: value, fields: {out: [[[4, 8]]]}}}
+- {id: CV.E4, profile: real, clauses: [CV.C2], input: {op: aten.convolution, args: [{t: f32, v: [[[1, 2], [3, 4]]]}, {t: f32, v: [
+          [[2]], [[3]]]}, null, [1], [0], [1], false, [0], 2]}, expected: {outcome: value, fields: {out: [[[2, 4], [9, 12]]]}}}
+- {id: CV.E5, profile: real, clauses: [CV.C1], input: {op: aten.convolution, args: [{t: f32, v: [[[[1, 2], [3, 4]]]]}, {t: f32,
+        v: [[[[1, 0], [0, 1]]]]}, null, [1, 1], [0, 0], [1, 1], false, [0, 0], 1]}, expected: {outcome: value, fields: {out: [[[[
+              5]]]]}}}
+- {id: CV.E6, profile: real, clauses: [CV.C1, CV.C2], input: {op: aten.convolution, args: [{t: f32, v: [[[1, 2, 3]]]}, {t: f32,
+        v: [[[1, 1]]]}, null, [1], [1], [1], false, [0], 1]}, expected: {outcome: value, fields: {out: [[[1, 3, 5, 3]]]}}, note: The
+    depthwise causal pattern (padding K - 1); the trailing output is removed by a later slice in such models.}
+- {id: CV.E7, profile: real, clauses: [CV.C3], input: {op: aten.convolution_backward, args: [{t: f32, v: [[[1, 1, 1]]]}, {t: f32,
+        v: [[[1, 2, 3, 4]]]}, {t: f32, v: [[[1, -1]]]}, [1], [1], [0], [1], false, [0], 1]}, expected: {outcome: value, fields: {
+      out: [[[[1, 0, 0, -1]]], [[[6, 9]]], [3]]}}}
+- {id: CV.E8, profile: real, clauses: [CV.C3], input: {op: aten.convolution_backward, args: [{t: f32, v: [[[1, 1, 1, 1, 1]]]}, {
+        t: f32, v: [[[1, 2, 3, 4]]]}, {t: f32, v: [[[1, -1]]]}, [1], [1], [1], [1], false, [0], 1]}, expected: {outcome: value,
+    fields: {out: [[[[0, 0, 0, 0]]], [[[10, 10]]], [5]]}}}
+- {id: CV.E9, profile: real, clauses: [CV.C2], input: {op: aten.convolution, args: [{t: f32, v: [[[1, 2], [3, 4], [5, 6]]]}, {t: f32,
+        v: [[[1]], [[1]]]}, null, [1], [0], [1], false, [0], 2]}, expected: {outcome: invalid_input}}
+signature:
+  inputs: ['aten.convolution(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups)',
+    'aten.convolution_backward(grad_output, input, weight, bias_sizes, stride, padding, dilation, transposed, output_padding, groups)']
+  pre_state: []
+  post_state: []
+  observation_unit: the convolution output or its three gradients
+domain:
+  valid: [exact values; channels divisible by groups; non-negative padding]
+  invalid_input: [channel counts not matching groups, shape mismatches]
+  unsupported: [transposed convolution, non-zero padding modes]
+mutation_requirements:
+- {id: CV.M1, misreading: true convolution (flipped kernel) instead of cross-correlation, witnesses: [CV.E1]}
+- {id: CV.M2, misreading: padding applied on the left only, witnesses: [CV.E2]}
+- {id: CV.M3, misreading: dilation ignored, witnesses: [CV.E3]}
+- {id: CV.M4, misreading: groups ignored (every output channel sums all input channels), witnesses: [CV.E4]}
+- {id: CV.M5, misreading: bias gradient not summed over output positions (first position only), witnesses: [CV.E7]}
+nonclaims:
+- TF32 or reduced-precision convolution arithmetic is numerical (K - G).
+changes: []

@@ -974,7 +974,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.Tensor.index_put_ (items refined per contract)"
+      "DEF": "Tensor.index_put_(indices, values, accumulate=False): puts values at the positions given by the index tensors; with accumulate=True the values are added to self.",
+      "DUP": "If accumulate is False, the behavior is undefined if indices contain duplicate elements."
     },
     "snapshot": "sources/T_INDEX_PUT.txt.gz",
     "snapshot_sha256": "89de29e8b6f95bd6d9511bee375e0d2be77e433afced9c1bb5954e67b5724cec",
@@ -988,7 +989,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.gather (items refined per contract)"
+      "DEF": "out[i][j][k] = input[index[i][j][k]][j][k] (dim 0; analogous for other dims); out has the shape of index; index.size(d) <= input.size(d) for d != dim; no broadcasting."
     },
     "snapshot": "sources/T_GATHER.txt.gz",
     "snapshot_sha256": "a76d0c8a5101e34961c78272e6357a20830fb8147022e7d5b61faebf091f663e",
@@ -1002,7 +1003,9 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.Tensor.scatter_ (items refined per contract)"
+      "DEF": "self[index[i][j][k]][j][k] = src[i][j][k] (dim 0; analogous for other dims), the reverse of gather; index values in [0, self.size(dim) - 1].",
+      "DUP": "When indices are not unique the behavior is non-deterministic: one of the values from src is picked arbitrarily.",
+      "REDUCE": "reduce='add' / 'multiply' combines src into self at the indices instead of writing."
     },
     "snapshot": "sources/T_SCATTER.txt.gz",
     "snapshot_sha256": "10f70e36516cfcad99c2da25c190185c377eacc5793f908b40ad2310b065cf12",
@@ -1016,7 +1019,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.Tensor.scatter_add_ (items refined per contract)"
+      "DEF": "self[index[i][j][k]][j][k] += src[i][j][k] (dim 0; analogous for other dims); an empty index returns the original tensor."
     },
     "snapshot": "sources/T_SCATTER_ADD.txt.gz",
     "snapshot_sha256": "a04d894b091b1a200d8232615043c4ae93012ea8252846154b5bdf57097a6767",
@@ -1030,7 +1033,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.index_select (items refined per contract)"
+      "DEF": "indexes input along dim with the entries of a 1-D index; the dim-th dimension has the length of index, the others are unchanged."
     },
     "snapshot": "sources/T_INDEX_SELECT.txt.gz",
     "snapshot_sha256": "ebb600ef2e84f833028519ffb9bbeffc846c6e1a9764d243e2827bd3eba67ad8",
@@ -1044,7 +1047,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.Tensor.index_add_ (items refined per contract)"
+      "DEF": "self[index[i], :, :] += alpha * src[i, :, :] (dim 0; analogous for other dims); the dim-th dimension of source equals len(index)."
     },
     "snapshot": "sources/T_INDEX_ADD.txt.gz",
     "snapshot_sha256": "8e2945b3d9173841a19d500d4cffd27c1eb7a5f344bacff9cd9c4b972c98a0f5",
@@ -1058,7 +1061,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.functional.embedding (items refined per contract)"
+      "DEF": "a lookup table: the output is the rows of weight given by the indices of input.",
+      "PADDING": "padding_idx entries do not contribute to the gradient (the padding row is not updated)."
     },
     "snapshot": "sources/T_EMBEDDING_F.txt.gz",
     "snapshot_sha256": "0e44430cc218da90aace3a6f36aa6af1bd8875618dddd2491cbbdc83e35ca8dc",
@@ -1072,7 +1076,9 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.Embedding (items refined per contract)"
+      "PADDING": "padding_idx: the entries at padding_idx do not contribute to the gradient.",
+      "FREQ": "scale_grad_by_freq: gradients are scaled by the inverse of the frequency of the words in the mini-batch.",
+      "MAX_NORM": "max_norm: each embedding vector with norm larger than max_norm is renormalized to have norm max_norm (weight modified in place)."
     },
     "snapshot": "sources/T_EMBEDDING.txt.gz",
     "snapshot_sha256": "0293860a4c10d2b07d3ec519cb36739f7405c3cd4cff8d7ed95ffcc59fdfcdab",
@@ -1086,7 +1092,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.sum (items refined per contract)"
+      "DEF": "the sum of all elements, or over dim (keepdim keeps size-1 dims); dtype casts the input before the operation."
     },
     "snapshot": "sources/T_SUM.txt.gz",
     "snapshot_sha256": "c9372491e11d8a6035d40d1297729636a65938c7866d29ab250746656f6d9ddb",
@@ -1100,7 +1106,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.mean (items refined per contract)"
+      "DEF": "the mean of all elements, or over dim; floating input (or dtype).",
+      "EMPTY": "for an empty input torch.mean returns nan: the mean over an empty set is undefined."
     },
     "snapshot": "sources/T_MEAN.txt.gz",
     "snapshot_sha256": "735fcba6057797ad7015e7a6c66adbee7f443b1f4469c99cfd20ace386363d33",
@@ -1114,7 +1121,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.prod (items refined per contract)"
+      "DEF": "the product of all elements, or over dim."
     },
     "snapshot": "sources/T_PROD.txt.gz",
     "snapshot_sha256": "11525248146fe4d3005bff2f93772fe832c2245ad33beabef89e24dc9b3eb87b",
@@ -1128,7 +1135,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.amax (items refined per contract)"
+      "DEF": "the maximum of each slice over the given dimension(s).",
+      "GRAD": "amax/amin evenly distribute gradients between equal values; max/min over all dimensions evenly distribute, over one specified axis only the indexed element receives the gradient."
     },
     "snapshot": "sources/T_AMAX.txt.gz",
     "snapshot_sha256": "a93f83be0f0478191b691dea81bf8d91277f06f99b3c62caa206b569570b4cb6",
@@ -1142,7 +1150,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.amin (items refined per contract)"
+      "DEF": "the minimum of each slice over the given dimension(s); gradients distributed as for amax."
     },
     "snapshot": "sources/T_AMIN.txt.gz",
     "snapshot_sha256": "359ca964a3e9adcae666591aa28c8a6b32703d674131ef75b33890c5015eb183",
@@ -1156,7 +1164,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.argmax (items refined per contract)"
+      "DEF": "the indices of the maximum values; if there are multiple maximal values the indices of the first maximal value are returned."
     },
     "snapshot": "sources/T_ARGMAX.txt.gz",
     "snapshot_sha256": "e794401e10bb720ef25f527965edbd2c25bfc72bf1da703d247e48c2904003cb",
@@ -1170,7 +1178,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.argmin (items refined per contract)"
+      "DEF": "the indices of the minimum values; if there are multiple minimal values the indices of the first minimal value are returned."
     },
     "snapshot": "sources/T_ARGMIN.txt.gz",
     "snapshot_sha256": "19f4b3f71d6f92475991bf1899d0693ec773e2ff0db5862273a7d402ecd39b7b",
@@ -1184,7 +1192,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.max (items refined per contract)"
+      "DIM": "max(input, dim) returns (values, indices): the maximum of each row along dim and the index location of each maximum; the indices of the first maximal value are returned."
     },
     "snapshot": "sources/T_MAX.txt.gz",
     "snapshot_sha256": "75da88bd03cd265f64d8ef1d57a9dddb6e54bac848eb54f486e93e3a087431bb",
@@ -1198,7 +1206,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.min (items refined per contract)"
+      "DIM": "min(input, dim) returns (values, indices): the minimum of each row along dim and the index of the first minimal value."
     },
     "snapshot": "sources/T_MIN.txt.gz",
     "snapshot_sha256": "47aea121bb48948cc55d715c377dda0fef67fce232bfe5e81ff4c4b407d8e2d6",
@@ -1212,7 +1220,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.var (items refined per contract)"
+      "DEF": "sigma^2 = 1/max(0, N - delta_N) * sum_i (x_i - mean)^2 over dim; correction delta_N defaults to 1 (Bessel)."
     },
     "snapshot": "sources/T_VAR.txt.gz",
     "snapshot_sha256": "27970f1bfc74f2263a4cbdf3426c2f3fc71a7fea7b962e7b3661ead3017cf2c3",
@@ -1226,7 +1234,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.var_mean (items refined per contract)"
+      "DEF": "returns the variance (same definition as torch.var) and the mean over dim."
     },
     "snapshot": "sources/T_VAR_MEAN.txt.gz",
     "snapshot_sha256": "896fc3e1f4f56f3959eeb674661d1ffcb6969ab3fd15c5eb5cc55f62c8e33cbf",
@@ -1240,7 +1248,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.std (items refined per contract)"
+      "DEF": "the standard deviation: square root of the variance with the same correction convention."
     },
     "snapshot": "sources/T_STD.txt.gz",
     "snapshot_sha256": "e1178dea5194535d3c4a8a77a58fb588924443c3773e1a3338ad32203ee56721",
@@ -1254,7 +1262,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.cumsum (items refined per contract)"
+      "DEF": "cumulative sum along dim: y_i = x_1 + ... + x_i."
     },
     "snapshot": "sources/T_CUMSUM.txt.gz",
     "snapshot_sha256": "8b29d497fc833ce085db37eba415d2d450d7a49237eb4688ad1d96eeadbd5e0d",
@@ -1268,7 +1276,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.logsumexp (items refined per contract)"
+      "DEF": "logsumexp(x)_i = log sum_j exp(x_ij) along dim."
     },
     "snapshot": "sources/T_LOGSUMEXP.txt.gz",
     "snapshot_sha256": "562741ad625e7856e70fe5174e1a55778100a78b6ed260dfc2db655caba48741",
@@ -1282,7 +1290,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.norm (items refined per contract)"
+      "DEF": "vector norm of order p: sum(abs(x)**p)**(1/p) over the flattened dims; 'fro' equals p=2; inf is the largest absolute value."
     },
     "snapshot": "sources/T_NORM.txt.gz",
     "snapshot_sha256": "b747462aab326719d626e5f97c025f0875a82adea2008a2b74679721531ce010",
@@ -1296,7 +1304,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.functional.softmax (items refined per contract)"
+      "DEF": "Softmax(x_i) = exp(x_i) / sum_j exp(x_j), applied along dim (every slice along dim sums to 1)."
     },
     "snapshot": "sources/T_SOFTMAX.txt.gz",
     "snapshot_sha256": "02a3db8669ea992f0cec70923806419c423345734981cff73bec755c02075c8e",
@@ -1310,7 +1318,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.functional.log_softmax (items refined per contract)"
+      "DEF": "log(softmax(x)) along dim, mathematically equivalent and computed for numerical stability."
     },
     "snapshot": "sources/T_LOG_SOFTMAX.txt.gz",
     "snapshot_sha256": "d6d11811e0e5c175460086b08998389971391cacef6ddca493d1e334a63c6b76",
@@ -1324,7 +1332,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.mm (items refined per contract)"
+      "DEF": "matrix product: input (n x m) @ mat2 (m x p) gives (n x p); no broadcasting."
     },
     "snapshot": "sources/T_MM.txt.gz",
     "snapshot_sha256": "09679ff748d76f7a5f294583212a2c322308084b7fa632d288224b976ee0aa5d",
@@ -1338,7 +1346,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.bmm (items refined per contract)"
+      "DEF": "batch matrix product: (b x n x m) @ (b x m x p) gives (b x n x p), out_i = input_i @ mat2_i; same number of matrices."
     },
     "snapshot": "sources/T_BMM.txt.gz",
     "snapshot_sha256": "44f4d1ec6fd387c9b7686c73e7eaf3670547f780666bcccfa0e2b0545131072f",
@@ -1352,7 +1360,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.matmul (items refined per contract)"
+      "DEF": "matmul by dimensionality: 1-D operands get a prepended / appended 1 removed after the product; for N > 2 a batched product whose batch dimensions broadcast."
     },
     "snapshot": "sources/T_MATMUL.txt.gz",
     "snapshot_sha256": "87c1e5b7933a19e9576ee7bef05ac25d279ab741399d0b334b72c5b17b439a51",
@@ -1366,7 +1374,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.addmm (items refined per contract)"
+      "DEF": "out = beta * input + alpha * (mat1 @ mat2); input broadcastable to (n x p).",
+      "BETA0": "If beta is 0, the content of input is ignored, and nan and inf in it are not propagated."
     },
     "snapshot": "sources/T_ADDMM.txt.gz",
     "snapshot_sha256": "ad354d56c7ec518b73df62e3ad94eee75697112fe4b22d2bbf3e08827327b695",
@@ -1380,7 +1389,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.baddbmm (items refined per contract)"
+      "DEF": "out_i = beta * input_i + alpha * (batch1_i @ batch2_i); input broadcastable; beta 0 ignores input."
     },
     "snapshot": "sources/T_BADDBMM.txt.gz",
     "snapshot_sha256": "80d9fea56d4e21d49ded162eeb763757664bfe690235d795eeeb37aec33918b4",
@@ -1394,7 +1403,9 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.functional.linear (items refined per contract)"
+      "PAGE": "Documentation of torch.nn.functional.linear (items refined per contract)",
+      "DEF": "linear(input, weight, bias=None) applies y = x A^T + b.",
+      "SHAPE": "Input (*, in_features); weight (out_features, in_features) or (in_features); bias (out_features) or (); output (*, out_features) or (*)."
     },
     "snapshot": "sources/T_LINEAR.txt.gz",
     "snapshot_sha256": "542c12e216b22a50369e76957ff74b802af24976d80c03de85dc7e901e2a4a42",
@@ -1408,7 +1419,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.Conv1d (items refined per contract)"
+      "DEF": "out(N_i, C_out_j) = bias(C_out_j) + sum_k weight(C_out_j, k) * input(N_i, k), * the valid cross-correlation; stride, zero padding on both sides, dilation (spacing of kernel points), groups (in and out channels divisible by groups; each group sees its share of input channels)."
     },
     "snapshot": "sources/T_CONV1D.txt.gz",
     "snapshot_sha256": "4389298857c65580795cfc44e6e11c77f0fdcc67d81965b13c3acddb759be8a6",
@@ -1422,7 +1433,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.Conv2d (items refined per contract)"
+      "DEF": "the 2-D analogue: out(N_i, C_out_j) = bias(C_out_j) + sum_k weight(C_out_j, k) * input(N_i, k) with 2-D cross-correlation, stride, padding, dilation and groups."
     },
     "snapshot": "sources/T_CONV2D.txt.gz",
     "snapshot_sha256": "3eacf3d59daa7a0e4c76c33c06cc84a1655e0c3a1c4d205afb432edac820075f",
@@ -1436,7 +1447,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.ReLU (items refined per contract)"
+      "PAGE": "Documentation of torch.nn.ReLU (items refined per contract)",
+      "DEF": "ReLU(x) = (x)^+ = max(0, x), applied element-wise; input of any shape, output of the same shape."
     },
     "snapshot": "sources/T_RELU.txt.gz",
     "snapshot_sha256": "ec4dc4106641b58e329880baa779854d3333c2b54683a72dfc05b731aa2ef0f0",
@@ -1450,7 +1462,9 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.GELU (items refined per contract)"
+      "PAGE": "Documentation of torch.nn.GELU (items refined per contract)",
+      "DEF": "GELU(x) = x * Phi(x), Phi the cumulative distribution function of the Gaussian distribution; approximate is 'none' | 'tanh', default 'none'.",
+      "TANH": "When approximate is 'tanh': GELU(x) = 0.5 * x * (1 + Tanh(sqrt(2 / pi) * (x + 0.044715 * x^3)))."
     },
     "snapshot": "sources/T_GELU.txt.gz",
     "snapshot_sha256": "acd49796878694c893e648e8aa8dedaad84f9b73a72e3e732f60b6b47f15dd53",
@@ -1464,7 +1478,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.SiLU (items refined per contract)"
+      "PAGE": "Documentation of torch.nn.SiLU (items refined per contract)",
+      "DEF": "silu(x) = x * sigma(x), where sigma(x) is the logistic sigmoid; element-wise, output of the input's shape."
     },
     "snapshot": "sources/T_SILU.txt.gz",
     "snapshot_sha256": "1fcbbec71daa646d9c9766f523c038ebe06db7155b57ca2854dcea2300ac4018",
@@ -1478,7 +1493,9 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.Softplus (items refined per contract)"
+      "PAGE": "Documentation of torch.nn.Softplus (items refined per contract)",
+      "DEF": "Softplus(x) = 1/beta * log(1 + exp(beta * x)), element-wise; parameters beta (default 1) and threshold (default 20).",
+      "THRESH": "For numerical stability the implementation reverts to the linear function when input * beta > threshold; threshold: values above this revert to a linear function."
     },
     "snapshot": "sources/T_SOFTPLUS.txt.gz",
     "snapshot_sha256": "df6d1aaefbb23860397ac056b6489b20b8ac1f20cc472f366c72ff27b458e128",
@@ -1492,7 +1509,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.Dropout (items refined per contract)"
+      "DEF": "during training each element is zeroed with probability p, independently, from a Bernoulli distribution; outputs are scaled by 1/(1-p) during training; in evaluation the module is the identity."
     },
     "snapshot": "sources/T_DROPOUT.txt.gz",
     "snapshot_sha256": "80d90edd20d032ae658677ca50d669d464653776432fb6b8e98bb788001d0553",
@@ -1506,7 +1523,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.functional.dropout (items refined per contract)"
+      "DEF": "functional dropout: zeroes elements with probability p using Bernoulli samples when training=True (see Dropout)."
     },
     "snapshot": "sources/T_DROPOUT_F.txt.gz",
     "snapshot_sha256": "46de81b0247abc7fd7a376f84a0a47a233ca854d81b25e03c65f2e827ef49c7e",
@@ -1575,7 +1592,7 @@
     "kind": "torch_source",
     "items": {
       "FMA": "fma(a, b, c) -> (a * b) + c without rounding after the multiplication.",
-      "PSO": "prepare_softmax_online(a, dim) -> (Tensor, Tensor): prepares the softmax by computing the max and the sum (eager_prepare_softmax).",
+      "PSO": "prepare_softmax_online(a, dim) = eager_prepare_softmax: (amax(x, dim, keepdim=True), sum(exp(x - amax), dim, keepdim=True)).",
       "SEED": "inductor_lookup_seed(Tensor seeds, int index) -> Tensor: the seed at the given index.",
       "RANDOM": "inductor_random(SymInt[] size, Tensor seed, str mode) -> Tensor: random numbers ('rand' or 'randn') from the seed.",
       "PAGE": "definitions in torch/_inductor/inductor_prims.py"
@@ -1592,6 +1609,11 @@
     "items": {
       "LIFT": "aten.detach, aten.lift and aten.lift_fresh decompose to an alias of the input (no change of values).",
       "SLICE_SCATTER": "slice_scatter decomposition: input with src written at the slice.",
+      "SAFE_SOFTMAX": "aten._safe_softmax: softmax(self, dim), except that rows in which every element equals -inf give zeros.",
+      "SOFTMAX_BWD": "aten._softmax_backward_data(grad, output, dim): grad*output - output * sum(grad*output, dim, keepdim).",
+      "LOG_SOFTMAX_BWD": "aten._log_softmax_backward_data(grad, output, dim): grad - exp(output) * sum(grad, dim, keepdim).",
+      "DROPOUT": "native_dropout(input, p, train): for train and p != 0: p == 1 gives (zeros, all-False mask); otherwise bool_mask = rand_like(input) > p, result = bool_mask * input * (1/(1-p)); otherwise (input, all-True mask).",
+      "DROPOUT_BWD": "native_dropout_backward(grad, mask, scale) = grad * (mask * scale).",
       "PAGE": "definitions in torch/_decomp/decompositions.py"
     },
     "snapshot": "sources/TS_DECOMP.py.gz",
@@ -1718,7 +1740,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "torch.take_along_dim"
+      "DEF": "selects values from input at the 1-dimensional indices along dim (like numpy take_along_axis); with dim None input is flattened."
     },
     "snapshot": "sources/T_TAKE_ALONG_DIM.txt.gz",
     "snapshot_sha256": "73903d7dc668a57c4e475bbeb5fb35e34d13fd3dafc3eff042de1221980d6437",
@@ -1751,5 +1773,1741 @@
       "E5M2": "Section 4: E5M2 follows IEEE 754 conventions with infinities; the largest finite value is 57344.",
       "CONVERT": "Section 5: conversion to OFP8 rounds to nearest even; overflow without saturation gives NaN for E4M3 and infinity for E5M2."
     }
+  },
+  "T_LAYERNORM": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.LayerNorm.html",
+    "title": "PyTorch 2.10 torch.nn.LayerNorm",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.LayerNorm"
+    },
+    "snapshot": "sources/T_LAYERNORM.txt.gz",
+    "snapshot_sha256": "455341e6806507f1310040078e6d90932c6cd59a5a392607df0998c395ff3dc3",
+    "raw_html_sha256": "fe878c6d98e6e303300f6ba6357ab62f359b449bdec07e9fbe06884e70e5eca9",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_LAYERNORM_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.layer_norm.html",
+    "title": "PyTorch 2.10 torch.nn.functional.layer_norm",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.functional.layer_norm"
+    },
+    "snapshot": "sources/T_LAYERNORM_F.txt.gz",
+    "snapshot_sha256": "09049275b2f442ac96d4f1935330c9400aa09704efee8a54e97b6e3c640159bd",
+    "raw_html_sha256": "20cbdac1a9471c02e886980fe80c9a3fa2e169dc2eae2ccff6d3275140915f01",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_RMSNORM": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.RMSNorm.html",
+    "title": "PyTorch 2.10 torch.nn.RMSNorm",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.RMSNorm"
+    },
+    "snapshot": "sources/T_RMSNORM.txt.gz",
+    "snapshot_sha256": "f8a899490b12e680d77b2aec6780b212a98d0624cd989ea779b03c63560570f9",
+    "raw_html_sha256": "0e50cba8f524667043a1b7b6654b0bcfa9d18b3d86a44c1d36bae9dee249b18f",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_RMSNORM_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.rms_norm.html",
+    "title": "PyTorch 2.10 torch.nn.functional.rms_norm",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.functional.rms_norm"
+    },
+    "snapshot": "sources/T_RMSNORM_F.txt.gz",
+    "snapshot_sha256": "4689991fd0185e7b3ea15a640c9509821a7d8f878a4a67de90428b90f3b507b0",
+    "raw_html_sha256": "4ec9509773b50bd8677e2931754ac18cd0c6b8a28f3c67ebe7e7f0e62bd64a7f",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_GROUPNORM": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.GroupNorm.html",
+    "title": "PyTorch 2.10 torch.nn.GroupNorm",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.GroupNorm"
+    },
+    "snapshot": "sources/T_GROUPNORM.txt.gz",
+    "snapshot_sha256": "58e4b676c88b17e2971ef75bc6bb442560d85dbaf5064c906419829d55a4431e",
+    "raw_html_sha256": "262ce4aafeae0127a35d30458144d4ff7a28cd6c62fa7da2fc41be8473394120",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_GROUPNORM_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.group_norm.html",
+    "title": "PyTorch 2.10 torch.nn.functional.group_norm",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.functional.group_norm"
+    },
+    "snapshot": "sources/T_GROUPNORM_F.txt.gz",
+    "snapshot_sha256": "1e6ca9100e3c478a10fdae91e5f7732577349fa58feb7ed84e473650584a64dd",
+    "raw_html_sha256": "3ca9898a24535f1b72af46e8d06eb5c88d55e7379f54f8edbdbfa4a733bc7d63",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_BATCHNORM1D": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.BatchNorm1d.html",
+    "title": "PyTorch 2.10 torch.nn.BatchNorm1d",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.BatchNorm1d"
+    },
+    "snapshot": "sources/T_BATCHNORM1D.txt.gz",
+    "snapshot_sha256": "198277a899d7c6554ef7f46bd6a8c446679f4344b43b39ede251fe3960cfa086",
+    "raw_html_sha256": "38e7edb4310ff029bdb154219419b6754953f1025986bb0430570df459583203",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_CE_LOSS": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.CrossEntropyLoss.html",
+    "title": "PyTorch 2.10 torch.nn.CrossEntropyLoss",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.CrossEntropyLoss (PyTorch 2.10).",
+      "LOGITS": "The input is expected to contain the unnormalized logits for each class; input has size (C) unbatched, (minibatch, C), or (minibatch, C, d_1, ..., d_K) with K >= 1 for the K-dimensional case.",
+      "INDEX": "Class-index target, reduction 'none': l_n = - w_{y_n} log( exp(x_{n,y_n}) / sum_{c=1}^C exp(x_{n,c}) ) * 1{y_n != ignore_index}, where N spans the minibatch dimension as well as d_1, ..., d_k for the K-dimensional case.",
+      "REDUCE_INDEX": "Class-index target: reduction 'mean' is sum_n l_n / sum_n ( w_{y_n} * 1{y_n != ignore_index} ); 'sum' is sum_n l_n (default 'mean').",
+      "PROB": "Probability target, reduction 'none': l_n = - sum_{c=1}^C w_c log( exp(x_{n,c}) / sum_{i=1}^C exp(x_{n,i}) ) y_{n,c}, N spanning the minibatch dimension and d_1, ..., d_k; 'mean' is sum_n l_n / N; 'sum' is sum_n l_n.",
+      "SMOOTH": "label_smoothing: a float in [0.0, 1.0]; the targets become a mixture of the original ground truth and a uniform distribution as described in Rethinking the Inception Architecture for Computer Vision; 0.0 means no smoothing.",
+      "IGNORE": "ignore_index: a target value that is ignored and does not contribute to the input gradient; only applicable when the target contains class indices; the index may not necessarily be in the class range.",
+      "WEIGHT": "weight: optional 1D tensor of size C, a manual rescaling weight given to each class.",
+      "SHAPE": "Target with class indices has shape (), (N) or (N, d_1, ..., d_K), each value in [0, C); target with class probabilities has the same shape as the input and each value should be between [0, 1]; output for reduction 'none' has shape (), (N) or (N, d_1, ..., d_K), otherwise a scalar.",
+      "PROB_VALID": "Note: probability targets should be soft labels (entries in [0, 1], each distribution summing to 1); PyTorch does not validate the range or the sum, it is the user's responsibility, and arbitrary values may yield misleading loss values; the page's own correct example builds the target as torch.randn(3, 5).softmax(dim=1)."
+    },
+    "snapshot": "sources/T_CE_LOSS.txt.gz",
+    "snapshot_sha256": "23af59a53c3defaa9188b0b9da58a39e40ddeeb469a439edfd8b6075a0688e39",
+    "raw_html_sha256": "7a72593d4a695ca44e5715a8745d4040f9ee900ca7a7299c52448380d8fd1dd5",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_BATCHNORM2D": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.BatchNorm2d.html",
+    "title": "PyTorch 2.10 torch.nn.BatchNorm2d",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.BatchNorm2d"
+    },
+    "snapshot": "sources/T_BATCHNORM2D.txt.gz",
+    "snapshot_sha256": "a3f98013af8acab334765fb3fa67d6d0091ab95dcbe7eadd811d00203db6cfd5",
+    "raw_html_sha256": "9823526018b0c83db7ddabdcfbc629c6687ce016b63ba52b97eca32f0d021c57",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_BATCHNORM_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.batch_norm.html",
+    "title": "PyTorch 2.10 torch.nn.functional.batch_norm",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.functional.batch_norm"
+    },
+    "snapshot": "sources/T_BATCHNORM_F.txt.gz",
+    "snapshot_sha256": "9e64e2cba1c930e8ea0f1090638cab6e4ce1acbd2b34020fda2abc9bb95609eb",
+    "raw_html_sha256": "e56124530f33edcba16654218302bca77fdab7e3d4515ee53e20995667341901",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "NORM_LIGER_RMS": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/rms_norm.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/rms_norm.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger RMSNorm ops"
+    },
+    "snapshot": "sources/NORM_LIGER_RMS.txt.gz",
+    "snapshot_sha256": "bcfb98406686f272e4618eae5e577624d35c68d9ddcb90dd5b0480857bdee0c6",
+    "raw_html_sha256": "1759600f3a4a7f164c233f3d0a83d7eaaadb45f9d168b0caa2824029507311e1",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_CE_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.cross_entropy.html",
+    "title": "PyTorch 2.10 torch.nn.functional.cross_entropy",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.functional.cross_entropy (PyTorch 2.10).",
+      "DEFER": "Computes the cross entropy loss between input logits and target; 'See CrossEntropyLoss for details.'",
+      "MEAN_TEXT": "Parameter text: reduction 'mean': the sum of the output will be divided by the number of elements in the output; 'sum': the output will be summed; 'none': no reduction.",
+      "SHAPE": "Input (C), (N, C) or (N, C, d_1, ..., d_K) with K >= 1; class-index target (), (N) or (N, d_1, ..., d_K) with values in [0, C); probability target same shape as the input, values between [0, 1]."
+    },
+    "snapshot": "sources/T_CE_F.txt.gz",
+    "snapshot_sha256": "f12e9a322f4902cad8297f3821a563ebe6b66e07ef1b5147d8e256b1335641c6",
+    "raw_html_sha256": "6da718bb9d354383e39b4c6ce8946dc0565cf206df8de446cbc04dd3d6d4c047",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "NORM_LIGER_LN": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/layer_norm.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/layer_norm.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger LayerNorm ops"
+    },
+    "snapshot": "sources/NORM_LIGER_LN.txt.gz",
+    "snapshot_sha256": "39cac5316e2d0f026ac7127b36bbcf63ec8a1203f3ff9ebd2de20cd15f5b36b5",
+    "raw_html_sha256": "7f1f97ab641dfdb0e3c5df5a4309807fcc7192936197a10ef3ab70cad6d857fd",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "CE_LIGER_CE": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/cross_entropy.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/cross_entropy.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger-Kernel v0.7.0 cross-entropy kernel and autograd function (reference program).",
+      "DEFAULTS": "LigerCrossEntropyFunction.forward(_input, target, weight, ignore_index=-100, lse_square_scale=0.0, label_smoothing=0.0, reduction='mean', softcap=None, return_z_loss=False, return_token_accuracy=False); _input (BT, V), target (BT).",
+      "IGNORE": "A row whose target equals ignore_index gets an all-zero gradient row and no loss.",
+      "WSMOOTH": "With label_smoothing > 0 and eps = label_smoothing / V the row loss is (1 - label_smoothing) * w_y * (lse - x_y) + (sum_c -eps * x_c * w_c + eps * lse * sum_c w_c) (weighted) or (1 - label_smoothing)(lse - x_y) + (sum_c -eps x_c + label_smoothing * lse) (unweighted), i.e. coefficient (1 - label_smoothing) w_y on the target class plus eps * w_c on every class.",
+      "MEAN": "reduction 'mean' divides by n_non_ignore (no weight) or by sum_non_ignore_weight = sum of weight[target] over non-ignored rows (weight given); 'sum' and 'none' do not divide.",
+      "GRAD": "Gradient (weighted): (1 - label_smoothing) w_y (softmax_c - [c = y]) + eps (-w_c + softmax_c * sum_c w_c), divided by sum_non_ignore_weight for 'mean'; unweighted: softmax_c - eps - (1 - label_smoothing)[c = y], divided by n_non_ignore for 'mean'.",
+      "EXTRAS": "lse_square_scale adds z_loss = lse_square_scale * lse^2 (divided by n_non_ignore for 'mean'); softcap replaces logits by softcap * tanh(x / softcap); both default off.",
+      "BACKWARD": "cross_entropy_backward: if grad_output equals 1.0 the gradient is kept; if grad_output.ndim > 0 (reduction 'none') the gradient rows are multiplied by grad_output.unsqueeze(1); otherwise by the scalar via element_mul_kernel."
+    },
+    "snapshot": "sources/CE_LIGER_CE.txt.gz",
+    "snapshot_sha256": "78046bd64e9ed75897e65a7119c78bd269ee5826bae38516e787e08a96ee2abf",
+    "raw_html_sha256": "0e75c5459f5318dd529c4a3cc4604514f2cd41a7a7f1a2d534f2757a6f8b6cae",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "NORM_LIGER_GN": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/group_norm.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/group_norm.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger GroupNorm ops"
+    },
+    "snapshot": "sources/NORM_LIGER_GN.txt.gz",
+    "snapshot_sha256": "518656b4ba9d920808c54be475baf64badc873f87d7d62720ba7037c46fe4e9d",
+    "raw_html_sha256": "ec1a9820fe7e1d009dbc728c26503a8c242860a6636edb280fdf9e5e5779ab39",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "CE_LIGER_FLCE": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/fused_linear_cross_entropy.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/fused_linear_cross_entropy.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger-Kernel v0.7.0 fused linear cross entropy (reference program).",
+      "DEF": "fused_linear_cross_entropy_forward computes logits_chunk = _input_chunk @ weight.t() (+ bias when given) and applies liger_cross_entropy_kernel with batch totals n_non_ignore and sum_non_ignore_ce_weight; grad_input = grad_logits @ weight; grad_weight += grad_logits.t() @ _input; grad_bias += grad_logits.sum(dim=0).",
+      "PARAMS": "LigerFusedLinearCrossEntropyFunction.forward(_input (B*T, H), weight (V, H), target (B*T), bias=None, ce_weight=None, ignore_index=-100, lse_square_scale=0.0, label_smoothing=0.0, reduction='mean', softcap=None, return_z_loss=False, accum_dtype=None, use_token_scaling=False, return_token_accuracy=False).",
+      "NONE": "reduction 'none' returns the per-token losses loss_1d; 'sum' and 'mean' return torch.sum(loss_1d) (the mean scaling is inside the kernel).",
+      "BACKWARD": "fused_linear_cross_entropy_backward: unless grad_output equals 1.0, grad_input, grad_weight and grad_bias are multiplied in place by element_mul_kernel(..., grad_output, ...).",
+      "TOKEN_SCALING": "use_token_scaling multiplies each token's loss (and gradient) by its detached predicted probability of the target class."
+    },
+    "snapshot": "sources/CE_LIGER_FLCE.txt.gz",
+    "snapshot_sha256": "de7db4f3e6dacf58cb4f4e08d374fa4e967c7d3ffd26a54ee6b2009cc6b5b334",
+    "raw_html_sha256": "d60c76aa58eb7bd3d573ceb58a49c59cd0860be3f7e43db0d5c73fc8c0cef68c",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "CE_LIGER_FLCE_MOD": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/transformers/fused_linear_cross_entropy.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/transformers/fused_linear_cross_entropy.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger-Kernel v0.7.0 LigerFusedLinearCrossEntropyLoss module (reference program).",
+      "MODULE": "LigerFusedLinearCrossEntropyLoss(ce_weight=None, ignore_index=-100, lse_square_scale=0.0, label_smoothing=0.0, reduction='mean', softcap=None, return_z_loss=False, accum_dtype=None, use_token_scaling=False, return_token_accuracy=False); asserts 0 <= label_smoothing <= 1, reduction in {'mean', 'sum', 'none'}, softcap None or > 0; forward(lin_weight, _input, target, bias=None)."
+    },
+    "snapshot": "sources/CE_LIGER_FLCE_MOD.txt.gz",
+    "snapshot_sha256": "afdc8aa6db627d8bff2d8ae620231f2cebfd87c3ba536fc99753ebfc1d343357",
+    "raw_html_sha256": "5a71ae47fae32163b45c753255a933faab08466d36f0e2b38b5bdacaf98f7db8",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "NORM_HF_QWEN3NEXT": {
+    "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/models/qwen3_next/modeling_qwen3_next.py",
+    "title": "transformers v4.57.3 models/qwen3_next/modeling_qwen3_next.py",
+    "kind": "reference_program",
+    "version": "v4.57.3",
+    "items": {
+      "PAGE": "Qwen3-Next modeling code"
+    },
+    "snapshot": "sources/NORM_HF_QWEN3NEXT.txt.gz",
+    "snapshot_sha256": "315ba8d399b5e67438c9682c3c5f398949ce63283cbfc3ceaf1409eba90d9543",
+    "raw_html_sha256": "6b8c88865fffca49feadd1e7d2df079986e196f90e71bc09841f8852840518f9",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "NORM_HF_GEMMA": {
+    "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/models/gemma/modeling_gemma.py",
+    "title": "transformers v4.57.3 models/gemma/modeling_gemma.py",
+    "kind": "reference_program",
+    "version": "v4.57.3",
+    "items": {
+      "PAGE": "Gemma modeling code"
+    },
+    "snapshot": "sources/NORM_HF_GEMMA.txt.gz",
+    "snapshot_sha256": "20313dbd1e62d29d0aa86fc7652cf6f397cf9a76a9fdf8131628c97be4a59252",
+    "raw_html_sha256": "cc6c0165dab74e28a4f5674b813ceaafa9c48acf155da4a9e26925c352aa6e89",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "ACT_AUTOGRAD": {
+    "url": "https://docs.pytorch.org/docs/2.10/notes/autograd.html",
+    "title": "PyTorch 2.10 Autograd mechanics (notes)",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Autograd mechanics notes (items refined after reading)",
+      "NONDIFF": "Gradients for non-differentiable functions (relu or sqrt at 0 named as examples): rules applied in order -- differentiable: use the gradient; locally convex: use the sub-gradient of minimum norm; locally concave: the super-gradient of minimum norm; defined: by continuity (inf possible); undefined: arbitrary value."
+    },
+    "snapshot": "sources/ACT_AUTOGRAD.txt.gz",
+    "snapshot_sha256": "2d0da1198ae2a0633254361e2c6fdc5f6a868159d49254ce3e189469119436d0",
+    "raw_html_sha256": "845fa0dfe2cdb32a4a9e9a5150afad60f38d1af52ae4f397b89ad321a01ef034",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_RELU_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.relu.html",
+    "title": "PyTorch 2.10 torch.nn.functional.relu",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.functional.relu",
+      "DEF": "torch.nn.functional.relu(input, inplace=False) applies the rectified linear unit function element-wise; see ReLU for details."
+    },
+    "snapshot": "sources/T_RELU_F.txt.gz",
+    "snapshot_sha256": "1d8c0b9f43b0e3f1039a2de7922daa0f45e40ff9224dfad0ab38fce2aaff775d",
+    "raw_html_sha256": "a6e784fa1b23f82a38674f85f56cd13175cf57435fcd61b493dcfb93d25db57d",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_GELU_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.gelu.html",
+    "title": "PyTorch 2.10 torch.nn.functional.gelu",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.functional.gelu",
+      "DEF": "gelu(input, approximate='none'): with approximate 'none' applies GELU(x) = x * Phi(x) element-wise, Phi the Gaussian CDF.",
+      "TANH": "With approximate 'tanh': GELU(x) = 0.5 * x * (1 + Tanh(sqrt(2 / pi) * (x + 0.044715 * x^3)))."
+    },
+    "snapshot": "sources/T_GELU_F.txt.gz",
+    "snapshot_sha256": "6761231bcc324f7bcdf3db218723b59689db468658e39114f8277c6aeea05174",
+    "raw_html_sha256": "b785f154885d4c35ee75008a7fd70d2277089c33e8bbf7a287dc78a7d644eb8a",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_SILU_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.silu.html",
+    "title": "PyTorch 2.10 torch.nn.functional.silu",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.functional.silu",
+      "DEF": "silu(input) applies silu(x) = x * sigma(x) element-wise, sigma the logistic sigmoid (also known as swish)."
+    },
+    "snapshot": "sources/T_SILU_F.txt.gz",
+    "snapshot_sha256": "787854fd5e29b27e1d758c300fa457ddca4bbd47ec9c08a7abbceec03ed89a81",
+    "raw_html_sha256": "f058ed90ec2cedabc6dd783c979ab75ace0ef7f9d0eac12fb2a7d8dcf42921ae",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_SOFTPLUS_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.softplus.html",
+    "title": "PyTorch 2.10 torch.nn.functional.softplus",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.functional.softplus",
+      "DEF": "softplus(input, beta=1, threshold=20) applies Softplus(x) = 1/beta * log(1 + exp(beta * x)) element-wise.",
+      "THRESH": "For numerical stability the implementation reverts to the linear function when input * beta > threshold."
+    },
+    "snapshot": "sources/T_SOFTPLUS_F.txt.gz",
+    "snapshot_sha256": "e0c41ac204986cc74ba59adb857c66e77915a6acb5fb278a59ec626b1c25827b",
+    "raw_html_sha256": "e791d29fbb02c4e2658d5316ca3e04011ee11c3c77b715d0b07fb161a035904f",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "ACT_GLU_ABS": {
+    "url": "https://arxiv.org/abs/2002.05202",
+    "title": "Shazeer 2020, GLU Variants Improve Transformer (arXiv:2002.05202, abstract page)",
+    "kind": "paper",
+    "version": "arXiv:2002.05202v1",
+    "items": {
+      "PAGE": "Abstract page: Gated Linear Units are the component-wise product of two linear projections, one first passed through a sigmoid; variants use other nonlinear (or linear) functions in place of the sigmoid."
+    },
+    "snapshot": "sources/ACT_GLU_ABS.txt.gz",
+    "snapshot_sha256": "f54cb7d64dd61e8a0c65cf2eae1ceabcd1240f61d7bf211a1aab40fc50d366d3",
+    "raw_html_sha256": "bba8c093e0ba52f96002f3594ff04a2f94169edeb49306125b56cb9c43554f3d",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "ACT_GLU_FULL": {
+    "url": "https://ar5iv.labs.arxiv.org/html/2002.05202",
+    "title": "Shazeer 2020, GLU Variants Improve Transformer (arXiv:2002.05202, ar5iv full text)",
+    "kind": "paper",
+    "version": "arXiv:2002.05202 (ar5iv rendering)",
+    "items": {
+      "PAGE": "full text",
+      "GLU": "GLU(x,W,V,b,c) = sigma(xW+b) (x) (xV+c); GEGLU(x,W,V,b,c) = GELU(xW+b) (x) (xV+c); SwiGLU(x,W,V,b,c,beta) = Swish_beta(xW+b) (x) (xV+c), (x) the component-wise product; FFN_SwiGLU uses Swish_1.",
+      "ACTS": "GELU(x) = x Phi(x) [Hendrycks and Gimpel]; Swish_beta(x) = x sigma(beta x) [Ramachandran et al.]."
+    },
+    "snapshot": "sources/ACT_GLU_FULL.txt.gz",
+    "snapshot_sha256": "0af45831e3d674330f4f4bb4d016c2daf78bf4b53613810c0a1a2226d257f99a",
+    "raw_html_sha256": "54d6e4f552c74d53a591733c16553cd48e1f761859f3e172d7be1661c9829ae5",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "ACT_LIGER_SWIGLU": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/swiglu.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/swiglu.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "LigerSiLUMulFunction source",
+      "FWD": "LigerSiLUMulFunction.forward(a, b): c = silu(a) * b with silu(x) = x * sigmoid(x), row by row over the last dimension (a, b viewed as (-1, n_cols)).",
+      "BWD": "backward(dc): db = dc * silu(a); da = dc * (silu(a) * (1 - sigmoid(a)) + sigmoid(a)) * b."
+    },
+    "snapshot": "sources/ACT_LIGER_SWIGLU.txt.gz",
+    "snapshot_sha256": "40772bbd687186ea1af1c2b6c1ee78e1165fb39c662ecf1dab2c7ed1f352632a",
+    "raw_html_sha256": "0fb9dde2efcb227c2c2113420dd63bee5aa74f3f3e5b9749ae9100b7ccc43bf0",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "ACT_LIGER_GEGLU": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/geglu.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/geglu.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "LigerGELUMulFunction source",
+      "FWD": "LigerGELUMulFunction.forward(a, b): c = geglu_a * b with geglu_a = 0.5 * a * (1 + tanh(sqrt(2/pi) * (a + 0.044715 * a^3))): the tanh form of GELU (kernel _geglu_tanh_forward_kernel); no erf form.",
+      "BWD": "backward(dc): db = dc * geglu_a; da = dc * b * (0.5 * (1 + tanh(z)) + 0.5 * a * (1 - tanh(z)^2) * sqrt(2/pi) * (1 + 3 * 0.044715 * a^2)), z = sqrt(2/pi) * (a + 0.044715 * a^3)."
+    },
+    "snapshot": "sources/ACT_LIGER_GEGLU.txt.gz",
+    "snapshot_sha256": "6165bf9cd561ad4eb455830fe0977a48d6055ead0c70b129e82ce8dd9ff462c9",
+    "raw_html_sha256": "fabb8c0020ec147d58b006a4e811af67492d2c622b044eb2185d1d03247cd945",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "ACT_DECOMP": {
+    "title": "torch 2.10 source torch/_decomp/decompositions.py (activation backward decompositions)",
+    "kind": "torch_source",
+    "items": {
+      "PAGE": "activation backward decompositions",
+      "THRESHOLD_BWD": "threshold_backward(grad_output, self, threshold) = where(self <= threshold, 0, grad_output).",
+      "GELU_BWD": "gelu_backward(grad, self, approximate): 'tanh': grad * (0.5 (1 + tanh(inner)) + 0.5 x (1 - tanh(inner)^2) kBeta (1 + 3 kKappa x^2)), inner = kBeta (x + kKappa x^3), kBeta = sqrt(2) * 2/sqrt(pi) * 0.5, kKappa = 0.044715; otherwise grad * (cdf + x pdf), cdf = 0.5 (1 + erf(x / sqrt 2)), pdf = (2/sqrt(pi)) (1/sqrt 2) 0.5 exp(-x^2/2).",
+      "SILU_BWD": "silu_backward(grad_output, self) = grad_output * sigmoid * (1 + self * (1 - sigmoid)), sigmoid = 1 / (1 + exp(-self)).",
+      "SOFTPLUS_BWD": "softplus_backward(out_grad, x, beta, threshold) = where(x * beta > threshold, out_grad, out_grad * z / (z + 1)), z = exp(x * beta).",
+      "TANH_BWD": "tanh_backward(out_grad, y) = out_grad * (1 - y * y), y the forward output.",
+      "SIGMOID_BWD": "sigmoid_backward(out_grad, y) = out_grad * y * (1 - y), y the forward output."
+    },
+    "snapshot": "sources/ACT_DECOMP.py.gz",
+    "snapshot_sha256": "a875d0d31e5bd13afd0f3e53ac8da7171c530dc01871da5e30391baaba716cc2",
+    "path": "torch/_decomp/decompositions.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-16"
+  },
+  "T_AVGPOOL1D": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.AvgPool1d.html",
+    "title": "PyTorch 2.10 torch.nn.AvgPool1d",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "DEF": "Simplest case: out(N_i, C_j, l) = (1/k) * sum_{m=0}^{k-1} input(N_i, C_j, stride*l + m).",
+      "ZERO_PAD": "If padding is non-zero, the input is implicitly zero-padded on both sides for padding number of points.",
+      "CEIL": "Note: when ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding or the input; sliding windows that would start in the right padded region are ignored.",
+      "PAD_BOUND": "Note: pad should be at most half of effective kernel size.",
+      "PARAMS": "kernel_size, stride, padding can each be an int or a one-element tuple; stride defaults to kernel_size.",
+      "CIP": "count_include_pad: when True, will include the zero-padding in the averaging calculation.",
+      "SHAPE": "L_out = floor((L_in + 2*padding - kernel_size)/stride + 1); ceil_mode: use ceil instead of floor; if ceil_mode and (L_out - 1)*stride >= L_in + padding the last window is skipped (it would start in the right padded region), reducing L_out by one.",
+      "EXAMPLE": "Example: AvgPool1d(3, stride=2) on [1,2,3,4,5,6,7] gives [2,4,6]."
+    },
+    "snapshot": "sources/T_AVGPOOL1D.txt.gz",
+    "snapshot_sha256": "2a280696f999573fc2fb4bee163a71ce52e57542b26868a5d8cfb8cd8169e7c3",
+    "raw_html_sha256": "ef1c6d0287023916b1b02483017f7809bf305483dfbddf1d7e1e8ab79a105b39",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_KLDIV": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.KLDivLoss.html",
+    "title": "PyTorch 2.10 torch.nn.KLDivLoss",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.KLDivLoss (items refined after reading)"
+    },
+    "snapshot": "sources/T_KLDIV.txt.gz",
+    "snapshot_sha256": "faea520c444ca253c37a9349e37ec7f95a36f3383878cb9144fb2272fdadf121",
+    "raw_html_sha256": "20d687d6de34bbda7c7e425828d394d0cfc20fbd1393e21f50a433d38e6c4ba4",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_KLDIV_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.kl_div.html",
+    "title": "PyTorch 2.10 torch.nn.functional.kl_div",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.functional.kl_div (items refined after reading)"
+    },
+    "snapshot": "sources/T_KLDIV_F.txt.gz",
+    "snapshot_sha256": "ed56a32b645ebc56aac826dcb44487edb439a3f67f159a51b5f13b6c965cb43a",
+    "raw_html_sha256": "2b48cb2caab53440475ca3bee908ca5f86ddc153b6c7a87b63b0931b5928fd5d",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "DIV_LIGER_KLDIV": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/kl_div.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/kl_div.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger KL divergence kernel source"
+    },
+    "snapshot": "sources/DIV_LIGER_KLDIV.txt.gz",
+    "snapshot_sha256": "4a7a86727c62bae7bcc3415423e2c35566ffbef5a456d875b7b52f4d97045a26",
+    "raw_html_sha256": "31965bede00f317972758555e2e2fd693cad5c591d41da7e8e6883c3db42d298",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "DIV_LIGER_KLDIV_MOD": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/transformers/kl_div.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/transformers/kl_div.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger KL divergence module"
+    },
+    "snapshot": "sources/DIV_LIGER_KLDIV_MOD.txt.gz",
+    "snapshot_sha256": "7ac82a5e6824163d8243fa2157448e5bd1e398a4db0f35db6e1d605498cf284e",
+    "raw_html_sha256": "f78551e2eba3fb6759093127c0592cbc38be2e9a2bae90791e0998b500999f0d",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "DIV_LIGER_JSD": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/jsd.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/jsd.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger JSD kernel source"
+    },
+    "snapshot": "sources/DIV_LIGER_JSD.txt.gz",
+    "snapshot_sha256": "6d70a9be89233d3beb37d5de1988f91845ef7b8ae78cd08dd64e27e98e045ee6",
+    "raw_html_sha256": "a271e9e53dcc6ef25a573e55ba9ed6c3a110a7f1d369979ac938c993a16040c6",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "DIV_LIGER_JSD_MOD": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/transformers/jsd.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/transformers/jsd.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger JSD module docstring"
+    },
+    "snapshot": "sources/DIV_LIGER_JSD_MOD.txt.gz",
+    "snapshot_sha256": "955551130e51352d3779fa6a45f213e14a3062692e3a6daaf8b9e1533aabbcdb",
+    "raw_html_sha256": "fca94e5fc61c74e354d2dab46c8443439543070b72c26dd1a3e166966234d6a9",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "DIV_LIGER_TVD": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/tvd.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/tvd.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger TVD kernel source"
+    },
+    "snapshot": "sources/DIV_LIGER_TVD.txt.gz",
+    "snapshot_sha256": "2884b5197855657314ce3f5e52a73105e9e8795eb78f9a4ff5b3e2113017ddcb",
+    "raw_html_sha256": "14726d2d023de628ea820f54b5a1e93008d20a23f107a09db8fc0f31c1b17a57",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "DIV_LIGER_SPARSEMAX": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/sparsemax.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/sparsemax.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger sparsemax kernel source"
+    },
+    "snapshot": "sources/DIV_LIGER_SPARSEMAX.txt.gz",
+    "snapshot_sha256": "214fbda4d8c856db233640a6e1d6a4b3938349e9f04f6a1a93f4c9c8ba1a1073",
+    "raw_html_sha256": "01e59ed718241c91442964e3dafbbfd218fb2f3b46be3a97029b3e413a426345",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "DIV_LIGER_DYT": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/dyt.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/dyt.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger DyT kernel source"
+    },
+    "snapshot": "sources/DIV_LIGER_DYT.txt.gz",
+    "snapshot_sha256": "d6cfacbd70746cecf57fef9035338ff6e57752397caf53cff0d2313d116f612c",
+    "raw_html_sha256": "3968d8e89e9d1c57639b625916ebe41d23a58d9aba98bdd786b759490d8250bc",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "DIV_LIGER_DYT_MOD": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/transformers/dyt.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/transformers/dyt.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger DyT module"
+    },
+    "snapshot": "sources/DIV_LIGER_DYT_MOD.txt.gz",
+    "snapshot_sha256": "92cbdcb816939824c9b7f487941b8d57e4973c13b224e2a01b8fd5d34f0086ab",
+    "raw_html_sha256": "46783e319412a6b9c619616da6660ab7b3085f6eaf15461bab9aee3383231fe5",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "DIV_SPARSEMAX_ABS": {
+    "url": "https://arxiv.org/abs/1602.02068",
+    "title": "Martins and Astudillo 2016, From Softmax to Sparsemax (arXiv abstract page)",
+    "kind": "paper",
+    "items": {
+      "PAGE": "abstract"
+    },
+    "snapshot": "sources/DIV_SPARSEMAX_ABS.txt.gz",
+    "snapshot_sha256": "ab05509b314cb38c6a1c6bf32301d6eeb3d66b045541fe1ea246a88d1d7ed587",
+    "raw_html_sha256": "950d270a8ca0f06334be0b3ea1cdc3c73dfcf2e2ddef0c63299a1cf41d42867a",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "DIV_SPARSEMAX_PAPER": {
+    "url": "https://ar5iv.labs.arxiv.org/html/1602.02068",
+    "title": "Martins and Astudillo 2016, From Softmax to Sparsemax (ar5iv HTML rendering of arXiv 1602.02068)",
+    "kind": "paper",
+    "items": {
+      "PAGE": "full text"
+    },
+    "snapshot": "sources/DIV_SPARSEMAX_PAPER.txt.gz",
+    "snapshot_sha256": "37839bc9c64c0928ae799c3ad8e9b55bf6d54fbe1731930c0d0b291c47d1a650",
+    "raw_html_sha256": "5ef80aa520cafc59ccad83137f07d30145e0c4477017948d92bfc3b51bfca650",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "DIV_DYT_ABS": {
+    "url": "https://arxiv.org/abs/2503.10622",
+    "title": "Zhu et al. 2025, Transformers without Normalization (arXiv abstract page)",
+    "kind": "paper",
+    "items": {
+      "PAGE": "abstract"
+    },
+    "snapshot": "sources/DIV_DYT_ABS.txt.gz",
+    "snapshot_sha256": "9df32c4204ed83f9421381e8a6df27a0c2f7940e1f549d62f8f4edd9b29f2405",
+    "raw_html_sha256": "3999c2c1256ef1fae2975a303c16da19ced4b7d06eadff06dc861d2fb35c585d",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "DIV_DYT_PAPER": {
+    "url": "https://arxiv.org/html/2503.10622v2",
+    "title": "Zhu et al. 2025, Transformers without Normalization (arXiv HTML, v2)",
+    "kind": "paper",
+    "version": "v2",
+    "items": {
+      "PAGE": "full text"
+    },
+    "snapshot": "sources/DIV_DYT_PAPER.txt.gz",
+    "snapshot_sha256": "596963ce6f4991eb78666c665467bcac4ad1b0350abd52d65a325b3a3f02de6e",
+    "raw_html_sha256": "2bfd5799a214f0417fe3cd7fa629bbbcb065af1c3c9eb0c975989d48276fbfd8",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_AVGPOOL2D": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.AvgPool2d.html",
+    "title": "PyTorch 2.10 torch.nn.AvgPool2d",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "DEF": "Simplest case: out(N_i, C_j, h, w) = 1/(kH*kW) * sum_{m<kH} sum_{n<kW} input(N_i, C_j, stride[0]*h + m, stride[1]*w + n); implicit zero padding on both sides.",
+      "PARAMS": "kernel_size, stride, padding: a single int or a single-element tuple (same value for height and width) or a tuple of two ints; stride defaults to kernel_size.",
+      "DIVISOR": "divisor_override: if specified, it will be used as divisor, otherwise size of the pooling region will be used.",
+      "SHAPE": "H_out = floor((H_in + 2*padding[0] - kernel_size[0])/stride[0] + 1) (same for W); with ceil_mode the last window is skipped if (H_out - 1)*stride[0] >= H_in + padding[0] (it would start in the bottom padded region)."
+    },
+    "snapshot": "sources/T_AVGPOOL2D.txt.gz",
+    "snapshot_sha256": "ca9aafc0d5e306e79eb04a347059486bbc91c4b0bff10f9836a65a2f1c49c597",
+    "raw_html_sha256": "2e80220e3f28c7ebe88aefd6dfca9b6db2fe10f94c9b9aa94644f131b557d727",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_AVGPOOL3D": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.AvgPool3d.html",
+    "title": "PyTorch 2.10 torch.nn.AvgPool3d",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "DEF": "Simplest case: out(N_i, C_j, d, h, w) = sum over the kD x kH x kW window of input(stride[0]*d + k, stride[1]*h + m, stride[2]*w + n) / (kD*kH*kW); implicit zero padding on all three sides; same ceil_mode note and pad bound as the 1d/2d pages.",
+      "DIVISOR": "divisor_override: if specified, it will be used as divisor, otherwise kernel_size will be used.",
+      "SHAPE": "D_out, H_out, W_out = floor((D_in + 2*padding - kernel_size)/stride + 1) per dimension; with ceil_mode the last window is skipped if (D_out - 1)*stride >= D_in + padding (it would start in the padded region); same for H and W."
+    },
+    "snapshot": "sources/T_AVGPOOL3D.txt.gz",
+    "snapshot_sha256": "323b34115a8d41a43b055b91370fb4cfd85f15ee5243190e04eed28f839235c3",
+    "raw_html_sha256": "f3980a517b65a5c9654b976e9a9898d9d7d104bab417fbb1671a86f6ddcc2e03",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_MAXPOOL1D": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.MaxPool1d.html",
+    "title": "PyTorch 2.10 torch.nn.MaxPool1d",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "DEF": "Simplest case: out(N_i, C_j, k) = max_{m=0..kernel_size-1} input(N_i, C_j, stride*k + m).",
+      "NEG_INF_PAD": "If padding is non-zero, the input is implicitly padded with negative infinity on both sides for padding number of points.",
+      "DILATION": "dilation is the stride between the elements within the sliding window.",
+      "CEIL": "Note: when ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding or the input; sliding windows that would start in the right padded region are ignored.",
+      "PARAMS": "kernel_size > 0, stride > 0 (default kernel_size), padding >= 0 and <= kernel_size / 2, dilation > 0; return_indices: if True, will return the argmax along with the max values.",
+      "CEIL_PARAM": "ceil_mode: if True, will use ceil instead of floor to compute the output shape; this ensures that every element in the input tensor is covered by a sliding window.",
+      "SHAPE": "ceil_mode=False: L_out = floor((L_in + 2*padding - dilation*(kernel_size - 1) - 1)/stride) + 1.",
+      "SHAPE_CEIL": "ceil_mode=True (as written on this page): L_out = ceil((L_in + 2*padding - dilation*(kernel_size - 1) - 1 + (stride - 1))/stride) + 1, then L_out = L_out - 1 when (L_out - 1)*stride >= L_in + padding, to ensure that the last pooling starts inside the image."
+    },
+    "snapshot": "sources/T_MAXPOOL1D.txt.gz",
+    "snapshot_sha256": "98714851a4f383b599f3bec5850dfd731cd0145cb22286f1e4c8d28fcfb7a1c4",
+    "raw_html_sha256": "955f0d81cc8423c077b6c2fd1a30f223215a9a0329d934d14e94f3032ed59992",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_MAXPOOL2D": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.MaxPool2d.html",
+    "title": "PyTorch 2.10 torch.nn.MaxPool2d",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "DEF": "Simplest case: out(N_i, C_j, h, w) = max over m < kH, n < kW of input(stride[0]*h + m, stride[1]*w + n); implicit negative-infinity padding on both sides; dilation controls the spacing between the kernel points; same ceil_mode note.",
+      "PARAMS": "kernel_size, stride, padding, dilation: a single int (same value for height and width) or a tuple of two ints; ceil_mode: when True, will use ceil instead of floor to compute the output shape.",
+      "RETURN_INDICES": "return_indices: if True, will return the max indices along with the outputs (useful for MaxUnpool2d).",
+      "SHAPE": "H_out = floor((H_in + 2*padding[0] - dilation[0]*(kernel_size[0] - 1) - 1)/stride[0] + 1); same for W."
+    },
+    "snapshot": "sources/T_MAXPOOL2D.txt.gz",
+    "snapshot_sha256": "59030e69a1e210e0a9144497d44e27f105217a93bb9fcb125eef53d2db8bfc09",
+    "raw_html_sha256": "acd10f64bc630c119fe90d6c0a0af32a9ea7c8f45e153a1ca64cec66a28d0591",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_MAXPOOL3D": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.MaxPool3d.html",
+    "title": "PyTorch 2.10 torch.nn.MaxPool3d",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "DEF": "Simplest case: out(N_i, C_j, d, h, w) = max over the kD x kH x kW window of input(stride[0]*d + k, stride[1]*h + m, stride[2]*w + n); implicit negative-infinity padding on all sides; dilation controls the spacing between the kernel points; ceil_mode uses ceil instead of floor; same ceil_mode note."
+    },
+    "snapshot": "sources/T_MAXPOOL3D.txt.gz",
+    "snapshot_sha256": "26139f3938463dcddfb2b57ddf20049ee76816bafefefb8805bdbe8c02d26afe",
+    "raw_html_sha256": "7ea09892402be39624520aa7fa001349d271a5327b93956f783b427b38c2a3f0",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_F_AVG_POOL1D": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.avg_pool1d.html",
+    "title": "PyTorch 2.10 torch.nn.functional.avg_pool1d",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PARAMS": "avg_pool1d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True): no divisor_override parameter; padding should be at most half of effective kernel size ((kernelSize - 1)*dilation + 1)/2."
+    },
+    "snapshot": "sources/T_F_AVG_POOL1D.txt.gz",
+    "snapshot_sha256": "92997d49bd00c8047f2b485deaf2cc7de0da6c42c9f15279bd1da2897adeedab",
+    "raw_html_sha256": "367f537082f79d96a00ade84e592e0998551fa72fb6bf8da79b76def1e50d0f5",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_F_AVG_POOL2D": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.avg_pool2d.html",
+    "title": "PyTorch 2.10 torch.nn.functional.avg_pool2d",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "DIVISOR": "divisor_override: if specified, it will be used as divisor, otherwise size of the pooling region will be used. kernel_size, stride, padding: a single number, a single-element tuple or a tuple."
+    },
+    "snapshot": "sources/T_F_AVG_POOL2D.txt.gz",
+    "snapshot_sha256": "0e385ca6018d6c076f7cc6f65b586babad0d47a49d683e3aa0eb43a0c0a69dbc",
+    "raw_html_sha256": "3a2764175076d303b6a321d44f9f53369bc24e7d4e1c6e779c7c87b356daa32c",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_F_MAX_POOL2D": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.max_pool2d.html",
+    "title": "PyTorch 2.10 torch.nn.functional.max_pool2d",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "CEIL_PARAM": "ceil_mode: if True, will use ceil instead of floor to compute the output shape; this ensures that every element in the input tensor is covered by a sliding window. padding: implicit negative infinity padding, must be >= 0 and <= kernel_size / 2; return_indices returns the argmax along with the max values."
+    },
+    "snapshot": "sources/T_F_MAX_POOL2D.txt.gz",
+    "snapshot_sha256": "b63359533dc5e5aea45b97a5481dffe74e2bd1ea1f62dd29ea01312c998ee7f7",
+    "raw_html_sha256": "8ea82fd37ec72a22e6d0128f50af1ee3de980009c5a85ff3d780ccdec7a9f1ff",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_ADAPTIVE_MAXPOOL1D": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.AdaptiveMaxPool1d.html",
+    "title": "PyTorch 2.10 torch.nn.AdaptiveMaxPool1d",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "SHAPE": "AdaptiveMaxPool1d(output_size): the output size is L_out = output_size for any input size; the number of output features equals the number of input planes; return_indices returns the indices. The page gives no formula for the pooling windows."
+    },
+    "snapshot": "sources/T_ADAPTIVE_MAXPOOL1D.txt.gz",
+    "snapshot_sha256": "1537507fa241c3a460e61bd83752fdd3667652bce8126dbbc36fe5c16909a7a6",
+    "raw_html_sha256": "077ba356b110569119eef8568297c8ef50d2a81424582f4ef655c2c9fb707fe1",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_AUTOGRAD_NOTES": {
+    "url": "https://docs.pytorch.org/docs/2.10/notes/autograd.html",
+    "title": "PyTorch 2.10 Autograd mechanics",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "RULES": "Gradients for non-differentiable functions, rules applied in order: (1) if differentiable, use the gradient; (2) if convex (at least locally), use the sub-gradient of minimum norm; (3) if concave, the super-gradient of minimum norm; (4) if the function is defined, define the gradient at the current point by continuity (inf possible), and if multiple values are possible pick one arbitrarily; (5) if the function is not defined (sqrt(-1), log(-1), most functions when the input is NaN) the value used as the gradient is arbitrary (most functions use NaN)."
+    },
+    "snapshot": "sources/T_AUTOGRAD_NOTES.txt.gz",
+    "snapshot_sha256": "2d0da1198ae2a0633254361e2c6fdc5f6a868159d49254ce3e189469119436d0",
+    "raw_html_sha256": "0d2e513cf44007108f0f53754004602a650d90dd88540aaec40a81c6c178be94",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_INDEX_REDUCE": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.Tensor.index_reduce_.html",
+    "title": "PyTorch 2.10 torch.Tensor.index_reduce_",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "index_reduce_ page"
+    },
+    "snapshot": "sources/T_INDEX_REDUCE.txt.gz",
+    "snapshot_sha256": "8c5d954708945785e531267678a6bddede1fd1ce656f4ccf583d9186906a1c6a",
+    "raw_html_sha256": "877d29d197cc0c56d9bd57dfcb7212a282a197c9cdd60a7883e07a3c8ef92b6e",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_SCATTER_REDUCE": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.Tensor.scatter_reduce_.html",
+    "title": "PyTorch 2.10 torch.Tensor.scatter_reduce_",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "scatter_reduce_ page"
+    },
+    "snapshot": "sources/T_SCATTER_REDUCE.txt.gz",
+    "snapshot_sha256": "fb5127a8124919c0947d33c3d96a99c301ad8cde61041dbfc90e5f168e51ffbf",
+    "raw_html_sha256": "d27e6515791d41ead838df77436cadfe90d6aeab94f82d01e58f6906df30aaa1",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_SCATTER_REDUCE_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.scatter_reduce.html",
+    "title": "PyTorch 2.10 torch.scatter_reduce",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "scatter_reduce page"
+    },
+    "snapshot": "sources/T_SCATTER_REDUCE_F.txt.gz",
+    "snapshot_sha256": "7ced9447f4fefabc1901f66ec3160ed08bd1f6468dc1d6585a5fac5a794afaec",
+    "raw_html_sha256": "50936841428bee4d7193318f891bc602fae788f606f0b01979fdd904d8c9edc3",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_COSINE_LR": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html",
+    "title": "PyTorch 2.10 CosineAnnealingLR",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "CosineAnnealingLR page"
+    },
+    "snapshot": "sources/T_COSINE_LR.txt.gz",
+    "snapshot_sha256": "14a6bf51e84e1468793b7ebf9e4fe7e47e2801ac7cf5c4b782cad11d706bbf74",
+    "raw_html_sha256": "9e107a30d44d730816d9ac01ff7d0569b6a5b7fb0d7b44b9cb1774c1598a32ca",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_LINEAR_LR": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.optim.lr_scheduler.LinearLR.html",
+    "title": "PyTorch 2.10 LinearLR",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "LinearLR page"
+    },
+    "snapshot": "sources/T_LINEAR_LR.txt.gz",
+    "snapshot_sha256": "16c1644ca4d421117a1cffa5bdebbdc72c82d3523e26288f0ca5be8595ea4587",
+    "raw_html_sha256": "9ca71d9f4c97971fc4ee9287bc1ea1cd4316b9d4b458addb196041c6eea3bcbc",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_ONECYCLE_LR": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.optim.lr_scheduler.OneCycleLR.html",
+    "title": "PyTorch 2.10 OneCycleLR",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "OneCycleLR page"
+    },
+    "snapshot": "sources/T_ONECYCLE_LR.txt.gz",
+    "snapshot_sha256": "5164535869eb0d80714d5ed50a0450c74cda8d9380e23701e310ff15600ee83f",
+    "raw_html_sha256": "4db51d2526aae386ae50a2698dedcd14d4ecab2881984f7bc670daf61cadb8c0",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_LAMBDA_LR": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.optim.lr_scheduler.LambdaLR.html",
+    "title": "PyTorch 2.10 LambdaLR",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "LambdaLR page"
+    },
+    "snapshot": "sources/T_LAMBDA_LR.txt.gz",
+    "snapshot_sha256": "e3510408a353f4be06b89269e90a419cf20fd84231e2789ec8fcd11b8473098e",
+    "raw_html_sha256": "8697c115d267f5acb3448e989ceabac7bade71278e623953521a94b6cd33ff53",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_OPTIM": {
+    "url": "https://docs.pytorch.org/docs/2.10/optim.html",
+    "title": "PyTorch 2.10 torch.optim",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "torch.optim page"
+    },
+    "snapshot": "sources/T_OPTIM.txt.gz",
+    "snapshot_sha256": "0793b07a69178dbc87f335fd0b0071390782307fc91d5398fde45d70182167d3",
+    "raw_html_sha256": "6e5334df682ebc523fd68522f02dc07cca81c9d45ec55e2cd07bf5bec06fb640",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_CLIP_NORM": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.utils.clip_grad_norm_.html",
+    "title": "PyTorch 2.10 torch.nn.utils.clip_grad_norm_",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "clip_grad_norm_ page"
+    },
+    "snapshot": "sources/T_CLIP_NORM.txt.gz",
+    "snapshot_sha256": "883c4a77a98f1d51332c2dc5069d65d633d761b4ca9f26dd727da3e9411f4ea6",
+    "raw_html_sha256": "cb13fc6f91e91179d9dd620cbd433d3fed7afac4e63bb1affdd787a79f9ed51f",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_CLIP_VALUE": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.utils.clip_grad_value_.html",
+    "title": "PyTorch 2.10 torch.nn.utils.clip_grad_value_",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "clip_grad_value_ page"
+    },
+    "snapshot": "sources/T_CLIP_VALUE.txt.gz",
+    "snapshot_sha256": "729c37df341b936b7107f7a52af1431a60bb39c17faa8646263ed9b6f6a9e124",
+    "raw_html_sha256": "585d12ec05e24bd990f7eeb877ce12a24535d97ce5acff88c3dd42a840c6e35a",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_GET_TOTAL_NORM": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.utils.get_total_norm.html",
+    "title": "PyTorch 2.10 torch.nn.utils.get_total_norm",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "get_total_norm page"
+    },
+    "snapshot": "sources/T_GET_TOTAL_NORM.txt.gz",
+    "snapshot_sha256": "04d8a19e80248d32577ce42f22af644d209b79a37aed456562713d20a0acbf8f",
+    "raw_html_sha256": "745b1c1300ade2033d25e581c217ce2c99aafbad7feffb742571cdd0f48491e9",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_CLIP_WITH_NORM": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.utils.clip_grads_with_norm_.html",
+    "title": "PyTorch 2.10 torch.nn.utils.clip_grads_with_norm_",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "clip_grads_with_norm_ page"
+    },
+    "snapshot": "sources/T_CLIP_WITH_NORM.txt.gz",
+    "snapshot_sha256": "1b9a6066a07e6963230a0be30bd6e80e92068fd6d48867fa644ae2e20bd0b4c3",
+    "raw_html_sha256": "b36fc09d4e0113c49b2a3b9026350c38d578aa992f298717db3a888545b20f21",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_VECTOR_NORM": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.linalg.vector_norm.html",
+    "title": "PyTorch 2.10 torch.linalg.vector_norm",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "vector_norm page"
+    },
+    "snapshot": "sources/T_VECTOR_NORM.txt.gz",
+    "snapshot_sha256": "05a16d9608e51a05ccca2208b98b3fec1d2dda9c50a40b443efa87e41a864434",
+    "raw_html_sha256": "e7d5d8539d93fb33eea8f4da5fdd36976dc27e92df8607c8a5941caa2563c304",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_AMP": {
+    "url": "https://docs.pytorch.org/docs/2.10/amp.html",
+    "title": "PyTorch 2.10 Automatic Mixed Precision package (torch.amp)",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "amp page"
+    },
+    "snapshot": "sources/T_AMP.txt.gz",
+    "snapshot_sha256": "cd5a77a0b378789a4e5922c713a2d1596bc33d08c3b88ff7fd1fbed1fd91425b",
+    "raw_html_sha256": "a92f5992d5e4604ff17ec5f126a7df84d33a33ffcf1d2814fa02776e19fbd835",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_AMP_EXAMPLES": {
+    "url": "https://docs.pytorch.org/docs/2.10/notes/amp_examples.html",
+    "title": "PyTorch 2.10 Automatic Mixed Precision examples",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "amp examples"
+    },
+    "snapshot": "sources/T_AMP_EXAMPLES.txt.gz",
+    "snapshot_sha256": "30194e57eb43c7db9d452114fbd33bbafe8b20082867996cb12bf7e7610cf677",
+    "raw_html_sha256": "1b7576f866cf31b1c6e58a556e9bfedcc35811a47dd552c6d08a78848d4cb74b",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_CHECKPOINT": {
+    "url": "https://docs.pytorch.org/docs/2.10/checkpoint.html",
+    "title": "PyTorch 2.10 torch.utils.checkpoint",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "checkpoint page"
+    },
+    "snapshot": "sources/T_CHECKPOINT.txt.gz",
+    "snapshot_sha256": "05374b0d047f1acaa22a23ffc69264cc105c0b6481cd17d86b3d0b4ed93944c6",
+    "raw_html_sha256": "88be6be1c17ab17129edeee0ef56d69253560f65f43a77e6c739554e5d8acb9d",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "HF_SCHED_DOC": {
+    "url": "https://huggingface.co/docs/transformers/v4.57.3/en/main_classes/optimizer_schedules",
+    "title": "transformers 4.57.3 Optimization (schedules)",
+    "kind": "versioned_document",
+    "version": "transformers 4.57.3",
+    "items": {
+      "PAGE": "HF schedules page"
+    },
+    "snapshot": "sources/HF_SCHED_DOC.txt.gz",
+    "snapshot_sha256": "b90eeb22964a50b64d9c97e7d95208b263d4c49b3e4a81dd8b53aa8623a4062c",
+    "raw_html_sha256": "97f329691831f7df789e4f72d811a6f02cf3487ebc135c46bb9cd422371d1afa",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "HF_LLAMA_DOC": {
+    "url": "https://huggingface.co/docs/transformers/v4.57.3/en/model_doc/llama",
+    "title": "transformers 4.57.3 LLaMA model documentation",
+    "kind": "versioned_document",
+    "version": "transformers 4.57.3",
+    "items": {
+      "PAGE": "HF llama page"
+    },
+    "snapshot": "sources/HF_LLAMA_DOC.txt.gz",
+    "snapshot_sha256": "241926054a796c4578c04fa7fa22bcd0f05b65ccd3da401996e49a335042b21d",
+    "raw_html_sha256": "6e2ede465241d66d29b6cd7337409103fcf65c753399e67e7e728362bd8e6be0",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "HF_MODEL_DOC": {
+    "url": "https://huggingface.co/docs/transformers/v4.57.3/en/main_classes/model",
+    "title": "transformers 4.57.3 Models (PreTrainedModel)",
+    "kind": "versioned_document",
+    "version": "transformers 4.57.3",
+    "items": {
+      "PAGE": "HF model page"
+    },
+    "snapshot": "sources/HF_MODEL_DOC.txt.gz",
+    "snapshot_sha256": "810f5d364942220e6c9dd4786608941174cd84d4e389af0ac49b7774c45f641c",
+    "raw_html_sha256": "f8a3a0a235f0cc62ae9dc439baa043a52717dbf72f06ac3cfd7c6802302479c9",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "TS_LR_SCHEDULER": {
+    "title": "torch 2.10 source torch/optim/lr_scheduler.py",
+    "kind": "reference_program",
+    "items": {
+      "PAGE": "lr_scheduler source"
+    },
+    "snapshot": "sources/TS_LR_SCHEDULER.py.gz",
+    "snapshot_sha256": "e5618b99182cb3fcbf6155e5b6f00fd471a0933272db098c375bdb90a64b2084",
+    "path": "torch/optim/lr_scheduler.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-16"
+  },
+  "TS_CLIP_GRAD": {
+    "title": "torch 2.10 source torch/nn/utils/clip_grad.py",
+    "kind": "reference_program",
+    "items": {
+      "PAGE": "clip_grad source"
+    },
+    "snapshot": "sources/TS_CLIP_GRAD.py.gz",
+    "snapshot_sha256": "56e8e0d4edc7c0532262d069a48557523ba69176fdab70afe1aeae87baa7cf8d",
+    "path": "torch/nn/utils/clip_grad.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-16"
+  },
+  "TS_GRAD_SCALER": {
+    "title": "torch 2.10 source torch/amp/grad_scaler.py",
+    "kind": "reference_program",
+    "items": {
+      "PAGE": "grad_scaler source"
+    },
+    "snapshot": "sources/TS_GRAD_SCALER.py.gz",
+    "snapshot_sha256": "bff7b16e0840863f0f4d97c52258176e745d30ae38a017d367e1a4377c74ad54",
+    "path": "torch/amp/grad_scaler.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-16"
+  },
+  "TS_CHECKPOINT": {
+    "title": "torch 2.10 source torch/utils/checkpoint.py",
+    "kind": "reference_program",
+    "items": {
+      "PAGE": "checkpoint source"
+    },
+    "snapshot": "sources/TS_CHECKPOINT.py.gz",
+    "snapshot_sha256": "b6ac0745d58fc891f0f741b433e4fdd59efb1e9fe991c6b3f2b8fc460f7d5d7a",
+    "path": "torch/utils/checkpoint.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-16"
+  },
+  "TS_INDUCTOR_LOWERING": {
+    "title": "torch 2.10 source torch/_inductor/lowering.py",
+    "kind": "reference_program",
+    "items": {
+      "ADAPTIVE_BINS": "adaptive_max_pool2d lowering: window of output index i along a dimension is [start, end) with start_index = floor(i*in/out) and end_index = floor(((i+1)*in + out - 1)/out); the window maximum is taken with -inf for positions outside the input (pad_adaptive_loader)."
+    },
+    "snapshot": "sources/TS_INDUCTOR_LOWERING.py.gz",
+    "snapshot_sha256": "c262bd5a8261fb4bee254670563754f76321fc2bbfd276941d5e2545dc9dc5cc",
+    "path": "torch/_inductor/lowering.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-16"
+  },
+  "PH1_DECISIONS": {
+    "title": "Phase-1 reviewed ambiguity decisions (2026-10-07)",
+    "kind": "reviewed_decision",
+    "version": "2026-10-07",
+    "items": {
+      "POOL_A1": "POOL-A1 (reviewed 2026-10-07): main analysis uses R2 - the default divisor for count_include_pad=True is the size of the intersection of the window with the explicit padding domain; False counts only real inputs; an explicit divisor_override takes precedence. R1 (fixed kernel size) is kept as the tail reading for comparison; the 2.10 AvgPool3d text still calls the default divisor kernel_size (tension); a difference caused only by the overhang divisor is not by itself a confirmed bug. Example: [1,2,3,4], k=3, s=2, p=0, ceil_mode: R2 gives 7/2, R1 gives 7/3.",
+      "POOL_A2": "POOL-A2: for finite windows with an actual maximum, the forward index must belong to the set of tied maximisers; first or last is not imposed. Strict ordinary-derivative scoring is limited to a unique maximum; at ties a set check applies: g_i = v*alpha_i with alpha zero outside the tie set, nonnegative on it and summing to 1. Single-member routing and even splitting are not judged against each other; (2,-1) is not legal. Only if a task additionally declares that backward uses the returned indices is the routing checked per call.",
+      "POOL_A3": "POOL-A3: R_prop is the project's NaN diagnostic profile; only NaNs that actually participate in the current window propagate. Undocumented NaN behaviour does not enter the main correctness rate; R_ignore may be listed separately and is not an error merely for not propagating. All-NaN and geometrically empty windows are recorded separately.",
+      "POOL_A5": "POOL-A5: when a window samples no real input, by the negative-infinity padding the output is -inf and the argmax set over real inputs is empty; the returned index is not required to belong to the empty set; there is no gradient routing to real inputs. An empty set caused by NaN filtering is a different case.",
+      "IDX_A3": "IDX-A3: R_prop is the project's NaN diagnostic profile for amax/amin, applied only to values that actually take part in the reduction (with include_self=False the old self does not take part; positions not updated stay unchanged).",
+      "IDX_A4": "IDX-A4: tie routing differences of amax/amin backward are kept, not judged by a unique vector; exact derivative scoring is limited to a unique extremum; at ties the support must lie in the extremum set, coefficients nonnegative and summing to the upstream (1 for upstream 1); a more specific API clause, where it exists, is adopted.",
+      "ACC_A1": "ACC-A1: if the whole accumulation window has no valid token the token-average target is undefined (skip/zero/NaN conventions are recorded, not judged as math bugs); an individual empty micro-batch with a positive window total keeps the target defined, contributing 0; global sum over global count, never the mean of micro-batch means."
+    },
+    "snapshot": "sources/PH1_DECISIONS.md.gz",
+    "snapshot_sha256": "b86c8d43fe26602226b4e786d0fdc79855fb2b972139f832339f0afe83bf5d95",
+    "path": "5_specification/specification_v2/algorithm_specs/phase1/decisions_reviewed.md",
+    "retrieved": "2026-10-16"
+  },
+  "PH1_AMBIGUITIES": {
+    "title": "Phase-1 ambiguity list v0.4 with reviewed decisions",
+    "kind": "reviewed_decision",
+    "version": "v0.4 (2026-10-07)",
+    "items": {
+      "POOL_A0": "POOL-A0: AvgPool1d and AvgPool3d documentation each give formula, padding, ceil window start and per-dimension correction, so the basic rules have a basis for every dimensionality; the only tension is the AvgPool3d divisor_override text calling the default divisor kernel_size.",
+      "POOL_A4": "POOL-A4: the exact MaxPool2d formula omits dilation although dilation is a parameter; the spec uses position s*o - p + d*m.",
+      "IDX_A1": "IDX-A1: reduce='mean' with include_self=False: mean has no identity; the spec averages over the contributions only (only reading).",
+      "IDX_A2": "IDX-A2: reduce='mean' with include_self=True: the only reading consistent with 'the values in the self tensor are included in the reduction' is (self + sum)/(1 + k); (self + sum)/k is not a mean (constants not preserved) and is kept only as a labelled error variant.",
+      "IDX_A5": "IDX-A5: integer dtypes for mean (floor vs trunc) are not covered in phase 1; only floating inputs.",
+      "IDX_A6": "IDX-A6: older index_reduce_ documentation described index as 'indices of source to select from', the stable text as 'indices of self to accumulate into'; the spec follows the latter.",
+      "ACC_E1": "ACC-E1: averaging micro-batch means is not a reading but a labelled error variant; it coincides with the correct value when all micro-batches have equal token counts, so most tests miss it."
+    },
+    "snapshot": "sources/PH1_AMBIGUITIES.md.gz",
+    "snapshot_sha256": "1c7bfad93ff823be85f4cbd9669fd3566d5ba5d22238dbf669cb5cadf6d431b1",
+    "path": "5_specification/specification_v2/algorithm_specs/phase1/ambiguities.md",
+    "retrieved": "2026-10-16"
+  },
+  "HF_SCHED_SRC": {
+    "url": "https://github.com/huggingface/transformers/blob/v4.57.3/src/transformers/optimization.py",
+    "title": "transformers 4.57.3 source src/transformers/optimization.py (installed wheel, liger env)",
+    "kind": "reference_program",
+    "version": "transformers 4.57.3",
+    "items": {
+      "PAGE": "HF optimization source"
+    },
+    "snapshot": "sources/HF_SCHED_SRC.py.gz",
+    "snapshot_sha256": "41b08ffb29c2691626b225ed389a694cc8e61480818214a35f215b5c39167bfb",
+    "path": ".cache/spec_v3/e2_scratch/hf_src/optimization.py",
+    "retrieved": "2026-10-16"
+  },
+  "HF_LOSS_SRC": {
+    "url": "https://github.com/huggingface/transformers/blob/v4.57.3/src/transformers/loss/loss_utils.py",
+    "title": "transformers 4.57.3 source src/transformers/loss/loss_utils.py (installed wheel, liger env)",
+    "kind": "reference_program",
+    "version": "transformers 4.57.3",
+    "items": {
+      "PAGE": "HF loss source"
+    },
+    "snapshot": "sources/HF_LOSS_SRC.py.gz",
+    "snapshot_sha256": "fa65f18b3167f45989d7a8ba86432a41d322338f9789cc89b08d5d7f20f110b7",
+    "path": ".cache/spec_v3/e2_scratch/hf_src/loss_utils.py",
+    "retrieved": "2026-10-16"
+  },
+  "NORM_TS_REFS": {
+    "title": "torch 2.10 source torch/_refs/__init__.py (normalisation references)",
+    "kind": "torch_source",
+    "items": {
+      "PAGE": "definitions in torch/_refs/__init__.py"
+    },
+    "snapshot": "sources/NORM_TS_REFS.py.gz",
+    "snapshot_sha256": "a836e8894a4a6fce7f566d2e69ee8e42690698e703814d6085914bc0920d4462",
+    "path": "torch/_refs/__init__.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-16"
+  },
+  "NORM_TS_DECOMP": {
+    "title": "torch 2.10 source torch/_decomp/decompositions.py (normalisation decompositions)",
+    "kind": "torch_source",
+    "items": {
+      "PAGE": "definitions in torch/_decomp/decompositions.py"
+    },
+    "snapshot": "sources/NORM_TS_DECOMP.py.gz",
+    "snapshot_sha256": "a875d0d31e5bd13afd0f3e53ac8da7171c530dc01871da5e30391baaba716cc2",
+    "path": "torch/_decomp/decompositions.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-16"
+  },
+  "NORM_TS_BNMOD": {
+    "title": "torch 2.10 source torch/nn/modules/batchnorm.py",
+    "kind": "torch_source",
+    "items": {
+      "PAGE": "definitions in torch/nn/modules/batchnorm.py"
+    },
+    "snapshot": "sources/NORM_TS_BNMOD.py.gz",
+    "snapshot_sha256": "09e38e56307039473d55d527cc0027c334b704db0b1dce32e1a2933d7f259f89",
+    "path": "torch/nn/modules/batchnorm.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-16"
+  },
+  "NORM_TS_FUNC": {
+    "title": "torch 2.10 source torch/nn/functional.py",
+    "kind": "torch_source",
+    "items": {
+      "PAGE": "definitions in torch/nn/functional.py"
+    },
+    "snapshot": "sources/NORM_TS_FUNC.py.gz",
+    "snapshot_sha256": "f6335e443ce93ddf21ecf9d94bbb4d4a4d92e128c5bfb59826f35495c9c28703",
+    "path": "torch/nn/functional.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-16"
+  },
+  "CE_LIGER_UTILS": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/utils.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/utils.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "PAGE": "Liger-Kernel v0.7.0 ops utilities (reference program).",
+      "ELEMENT_MUL": "element_mul_kernel(X_ptr, X_stride, grad_output_ptr, n_cols, BLOCK_SIZE) loads one value grad_output = tl.load(grad_output_ptr) and multiplies every element of each row of X by it."
+    },
+    "snapshot": "sources/CE_LIGER_UTILS.txt.gz",
+    "snapshot_sha256": "5971c4c47c7efe499f27245d0c556c06e067a4726ef84079d7453d0f703e2700",
+    "raw_html_sha256": "f7457c3f412565e05ab610e19882a6ff9d3a361aecaf5a233b4a91979dff4e7d",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-16"
+  },
+  "T_SDPA": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.scaled_dot_product_attention.html",
+    "title": "PyTorch 2.10 torch.nn.functional.scaled_dot_product_attention",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "SIGNATURE": "scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None, enable_gqa=False); query (N,...,Hq,L,E), key (N,...,H,S,E), value (N,...,H,S,Ev); output (N,...,Hq,L,Ev).",
+      "SCALE": "scale_factor = 1/sqrt(query.size(-1)) if scale is None else scale; the scaling factor is applied prior to softmax (default 1/sqrt(E)).",
+      "REFERENCE": "Efficient implementation equivalent to: attn_weight = query @ key.transpose(-2,-1) * scale_factor; attn_weight += attn_bias; attn_weight = softmax(attn_weight, dim=-1); dropout(attn_weight, dropout_p); return attn_weight @ value.",
+      "BOOL_MASK": "A boolean attn_mask where a value of True indicates that the element should take part in attention (the reference fills attn_bias with -inf where attn_mask is False).",
+      "FLOAT_MASK": "A float attn_mask of the same type as query, key, value is added to the attention score.",
+      "MASK_SHAPE": "attn_mask shape must be broadcastable to the shape of the attention weights (N,...,L,S).",
+      "CAUSAL": "is_causal: the attention masking is a lower triangular matrix when the mask is square and has the form of the upper-left causal bias when non-square (reference: ones(L, S).tril(diagonal=0), -inf elsewhere).",
+      "EXCLUSIVE": "An error is thrown if both attn_mask and is_causal are set.",
+      "GQA": "enable_gqa: key and value are repeat_interleave'd by query.size(-3)//key.size(-3) along dim -3; constraints: number_of_heads_query % number_of_heads_key_value == 0 and number_of_heads_key == number_of_heads_value.",
+      "DROPOUT": "The function always applies dropout according to dropout_p; pass 0.0 to disable it."
+    },
+    "snapshot": "sources/T_SDPA.txt.gz",
+    "snapshot_sha256": "5bbe64d1f5d4e0d416dc0a57979459237664e973f5bfc7dc7ae585709ba216cc",
+    "raw_html_sha256": "52727ad0b9d6447ec157138013e974997790df7fcc54a6fedc27a5dea748911e",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_CAUSAL_UL": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.attention.bias.causal_upper_left.html",
+    "title": "PyTorch 2.10 torch.nn.attention.bias.causal_upper_left",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "UL": "causal_upper_left: torch.tril(torch.ones(size, dtype=torch.bool)), inclusive values aligned to the upper left corner; equivalent to is_causal=True of scaled_dot_product_attention; for shape (3,4) the rows are [1,0,0,0], [1,1,0,0], [1,1,1,0]."
+    },
+    "snapshot": "sources/T_CAUSAL_UL.txt.gz",
+    "snapshot_sha256": "9eff2d952f5f4a181debe82a9ac21ac67d2f4c7c33c48faaa6e50de749c7380b",
+    "raw_html_sha256": "5bc3282e979fb06a3b711da0c336f0057530f25f8eac8fad4ae17365d545332e",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_CAUSAL_LR": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.attention.bias.causal_lower_right.html",
+    "title": "PyTorch 2.10 torch.nn.attention.bias.causal_lower_right",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "LR": "causal_lower_right: torch.tril(torch.ones(size, dtype=torch.bool), diagonal=size[1] - size[0]), inclusive values aligned to the lower right corner; for shape (3,4) the rows are [1,1,0,0], [1,1,1,0], [1,1,1,1]."
+    },
+    "snapshot": "sources/T_CAUSAL_LR.txt.gz",
+    "snapshot_sha256": "9dc3fd3a409e5859769aea52d2b076dbc95b27d5c83d9404c08d3556ff6dce9a",
+    "raw_html_sha256": "b8b6d805f7c45042ea67000fa63eb71d408467fd80a8c8d8996cc4fdafc74b4c",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_FLEX": {
+    "url": "https://docs.pytorch.org/docs/2.10/nn.attention.flex_attention.html",
+    "title": "PyTorch 2.10 torch.nn.attention.flex_attention",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "SCORE_MOD": "flex_attention implements scaled dot product attention with a user score_mod(score, batch, head, q_idx, k_idx) applied after the attention scores have been calculated.",
+      "SCALE": "scale: scaling factor applied prior to softmax; default 1/sqrt(E).",
+      "GQA": "enable_gqa broadcasts key/value heads to query heads; query (B,Hq,L,E), key (B,Hkv,S,E), value (B,Hkv,S,Ev); output (B,Hq,L,Ev).",
+      "MASK_MOD": "create_block_mask(mask_mod, ...): mask_mod(b, h, q_idx, kv_idx) returns True where attention is allowed and False where it is masked out; the example causal_mask returns q_idx >= kv_idx.",
+      "LSE": "return_lse / AuxRequest(lse=True) returns the log-sum-exp of the attention scores, shape (B,Hq,L)."
+    },
+    "snapshot": "sources/T_FLEX.txt.gz",
+    "snapshot_sha256": "cdf0f57dc54cdffda84707fa7f4e847c7e11ee07a3a9bad93dcee6cba42312ba",
+    "raw_html_sha256": "9a914d8de68bb185d91d2e9d739941c3527e056fff945e1995630215da37c09e",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_EMBEDDING_BAG_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.embedding_bag.html",
+    "title": "PyTorch 2.10 torch.nn.functional.embedding_bag",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "DEF": "embedding_bag computes sums, means or maxes of bags of embeddings (mode 'sum', 'mean' or 'max'; default 'mean').",
+      "OFFSETS": "1D input with offsets: offsets gives the starting index position of each bag in input; 2D input (B, N) is B bags of length N and offsets must be None; include_last_offset: offsets has size number of bags + 1 and its last element is the end of the last bag (CSR format).",
+      "EMPTY": "Empty bags (i.e., having 0-length) will have returned vectors filled by zeros.",
+      "PSW": "per_sample_weights: float weights of exactly the same shape as input (all weights taken as 1 when None).",
+      "PADDING": "padding_idx: entries at padding_idx do not contribute to the gradient, and the embedding vector at padding_idx is excluded from the reduction; example: a bag consisting only of padding_idx entries gives zeros with mode='sum'.",
+      "MAX_OPTS": "scale_grad_by_freq and sparse are not supported when mode='max'.",
+      "MAX_NORM": "max_norm: each embedding vector with norm larger than max_norm is renormalized to have norm max_norm (weight modified in place)."
+    },
+    "snapshot": "sources/T_EMBEDDING_BAG_F.txt.gz",
+    "snapshot_sha256": "09b0d572d003d5fbd8d35826b9eb80bb3046c9854e2ac5cbdf71945592702f5e",
+    "raw_html_sha256": "0866855515cc80811bf90f9501a5d1be216cc9c95d44e3bc889fa5968af95e77",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_EMBEDDING_BAG": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.EmbeddingBag.html",
+    "title": "PyTorch 2.10 torch.nn.EmbeddingBag",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "EQUIV": "For bags of constant length, no per_sample_weights, no indices equal to padding_idx and 2D inputs, mode='sum' is equivalent to Embedding followed by torch.sum(dim=1), mode='mean' to torch.mean(dim=1), mode='max' to torch.max(dim=1).",
+      "PSW": "per_sample_weights scale the output of the Embedding before the weighted reduction; with per_sample_weights the only supported mode is 'sum', which computes a weighted sum.",
+      "MODES": "'sum' computes the weighted sum taking per_sample_weights into consideration, 'mean' computes the average of the values in the bag, 'max' computes the max value over each bag.",
+      "PADDING": "padding_idx entries do not contribute to the gradient and the embedding vector at padding_idx is excluded from the reduction."
+    },
+    "snapshot": "sources/T_EMBEDDING_BAG.txt.gz",
+    "snapshot_sha256": "96654da1486e795e960a38591a8b44d1499adb88c4f4c7fa11be9893f05a6dce",
+    "raw_html_sha256": "b7ee77347d9ce7b4d4205db74e08ee18fc6f67d7b36dfe54b38b496930954c10",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "TS_FUNCTIONAL_EMB": {
+    "title": "torch 2.10 source torch/nn/functional.py (embedding, embedding_bag)",
+    "kind": "torch_source",
+    "items": {
+      "EMB_RENORM": "embedding: if max_norm is not None, _no_grad_embedding_renorm_(weight, input, max_norm, norm_type) (equivalent to embedding_renorm_ under torch.no_grad()) runs before torch.embedding(weight, input, padding_idx, scale_grad_by_freq, sparse).",
+      "EMB_PADDING": "embedding: a positive padding_idx must be < weight.size(0); a negative one must be >= -weight.size(0) and is replaced by weight.size(0) + padding_idx; None becomes -1.",
+      "BAG_CHECKS": "embedding_bag: per_sample_weights must have the size of input; mode must be sum, mean or max; mode max raises for scale_grad_by_freq; per_sample_weights is only supported for mode='sum'; with max_norm, _no_grad_embedding_renorm_(weight, input, ...) runs first."
+    },
+    "snapshot": "sources/TS_FUNCTIONAL_EMB.py.gz",
+    "snapshot_sha256": "f6335e443ce93ddf21ecf9d94bbb4d4a4d92e128c5bfb59826f35495c9c28703",
+    "path": "torch/nn/functional.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "TS_FLEX_HOP": {
+    "title": "torch 2.10 source torch/_higher_order_ops/flex_attention.py (eager math reference)",
+    "kind": "torch_source",
+    "items": {
+      "MATH": "math_attention (eager implementation): key and value repeat_interleave'd over heads for GQA; scores = query @ key^T, then scores * scale; post_mod_scores = score_mod(scores, b, h, m, n) where mask_mod(b, h, m, n) is True and -inf elsewhere; output = _safe_softmax(post_mod_scores, dim=-1) @ value.",
+      "LSE_MASKED": "logsumexp of post_mod_scores, set to -inf for fully masked rows, is returned divided by log(2) because the kernel works in ln2 space and the top-level op converts back."
+    },
+    "snapshot": "sources/TS_FLEX_HOP.py.gz",
+    "snapshot_sha256": "e067cca425d9967a6eb4e688caa516b9ebeecaeb0a3e51d6465c1a58abfdd672",
+    "path": "torch/_higher_order_ops/flex_attention.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "TS_FLEX_API": {
+    "title": "torch 2.10 source torch/nn/attention/flex_attention.py",
+    "kind": "torch_source",
+    "items": {
+      "LSE": "flex_attention returns lse_scaled = lse * ln2 (ln2 = math.log(2.0)) of the internal log-sum-exp, i.e. the returned lse is in natural log units."
+    },
+    "snapshot": "sources/TS_FLEX_API.py.gz",
+    "snapshot_sha256": "2593c5330e85cebd17fa6c4b1efa0c5c5a1857d5f862f46783184a27b30e32a9",
+    "path": "torch/nn/attention/flex_attention.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "TS_ATTN_CPP": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/transformers/attention.cpp",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/transformers/attention.cpp",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "SAFE_SOFTMAX": "_safe_softmax(self, dim): out = softmax(self, dim); rows in which every element is -inf (isneginf, all along dim) are set to 0.",
+      "MATH": "_scaled_dot_product_attention_math: with is_causal the mask is ones(L, S).tril() (explicit attn_mask not allowed); with enable_gqa key/value are repeat_interleave'd by Hq/H along dim -3; attn = (scaled q) @ (scaled k)^T plus the mask; attn = _safe_softmax(attn, -1); output attn @ value."
+    },
+    "snapshot": "sources/TS_ATTN_CPP.cpp.gz",
+    "snapshot_sha256": "373f4068ebf414c738c3cde70025d7e7faa667891573cbbf562b04f3af19e1bb",
+    "path": ".cache/spec_v3/d1_scratch/dl/attention.cpp",
+    "retrieved": "2026-10-17"
+  },
+  "TS_EMBEDDING_CPP": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/Embedding.cpp",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/Embedding.cpp",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "FORWARD": "embedding: weight.index_select(0, indices) reshaped to the index shape followed by the embedding dimension.",
+      "RENORM": "embedding_renorm_cpu_: for each distinct index, norm = row.norm(norm_type); if norm > max_norm, row *= max_norm / (norm + 1e-7).",
+      "DENSE_BWD": "embedding_dense_backward_cpu: grad_weight[k] += grad[i] * scale for every position i whose index k != padding_idx; scale = 1/counts[k] (number of occurrences of k in indices) when scale_grad_by_freq, else 1."
+    },
+    "snapshot": "sources/TS_EMBEDDING_CPP.cpp.gz",
+    "snapshot_sha256": "ee962b129fccc1e48d96a24fccca65c0d34d99243509bc71088e0cfd487fb59a",
+    "path": ".cache/spec_v3/d1_scratch/dl/Embedding.cpp",
+    "retrieved": "2026-10-17"
+  },
+  "TS_EMBEDDINGBAG_CPP": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/EmbeddingBag.cpp",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/EmbeddingBag.cpp",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "OFFSETS": "offsets[0] has to be 0 (the first sequence in the mini-batch starts at position 0).",
+      "MAX": "mode max (CPU): indices are visited in bag order; padding_idx entries are skipped (bag_size decremented); an element replaces the current value when it is the first of the bag or strictly greater (weight_item > current_item), and max_indices records its word index.",
+      "MEAN": "mode mean multiplies the bag sum by 1 / bag_size (bag_size excluding padding entries)."
+    },
+    "snapshot": "sources/TS_EMBEDDINGBAG_CPP.cpp.gz",
+    "snapshot_sha256": "cf7aedfab290559cc823ed8641083dcaacdf308bff18588f1757f584771588b7",
+    "path": ".cache/spec_v3/d1_scratch/dl/EmbeddingBag.cpp",
+    "retrieved": "2026-10-17"
+  },
+  "FA_IFACE": {
+    "url": "https://raw.githubusercontent.com/Dao-AILab/flash-attention/v2.8.3/flash_attn/flash_attn_interface.py",
+    "title": "FlashAttention v2.8.3 flash_attn/flash_attn_interface.py (docstrings)",
+    "kind": "reference_program",
+    "version": "v2.8.3",
+    "items": {
+      "CAUSAL_BR": "If causal=True, the causal mask is aligned to the bottom right corner of the attention matrix: seqlen_q=2, seqlen_k=5 gives rows 1 1 1 1 0 / 1 1 1 1 1; seqlen_q=5, seqlen_k=2 gives rows 0 0 / 0 0 / 0 0 / 1 0 / 1 1.",
+      "EMPTY_ROW": "If the row of the mask is all zero, the output will be zero.",
+      "WINDOW": "If window_size != (-1, -1), query at position i attends only to keys in [i + seqlen_k - seqlen_q - window_size[0], i + seqlen_k - seqlen_q + window_size[1]] inclusive; -1 means infinite context window.",
+      "GQA": "MQA/GQA: the number of heads in Q must be divisible by the number of heads in KV; with 6 Q heads and 2 KV heads, Q heads 0, 1, 2 attend KV head 0 and Q heads 3, 4, 5 attend KV head 1.",
+      "VARLEN": "flash_attn_varlen_func: cu_seqlens_q / cu_seqlens_k of shape (batch_size + 1,) are the cumulative sequence lengths of the sequences in the batch, used to index into the packed q and kv.",
+      "SOFTCAP": "softcap: float; anything > 0 activates softcapping attention.",
+      "SCALE": "softmax_scale: the scaling of QK^T before applying softmax; default 1 / sqrt(headdim).",
+      "LSE": "softmax_lse: the logsumexp of each row of the matrix QK^T * scaling (the log of the softmax normalization factor)."
+    },
+    "snapshot": "sources/FA_IFACE.py.gz",
+    "snapshot_sha256": "e8da8127f7ebf5c5aeb7f35b316ff96394a70553378f125717ea174af912db13",
+    "path": ".cache/spec_v3/d1_scratch/dl/fa_iface_v2.8.3.py",
+    "retrieved": "2026-10-17"
+  },
+  "TRITON_TUT06": {
+    "url": "https://raw.githubusercontent.com/triton-lang/triton/v3.6.0/python/tutorials/06-fused-attention.py",
+    "title": "Triton v3.6.0 python/tutorials/06-fused-attention.py",
+    "kind": "reference_program",
+    "version": "v3.6.0",
+    "items": {
+      "FWD": "attention(q, k, v, causal, sm_scale): the forward kernel uses qk_scale = sm_scale * 1.44269504 (1/log(2)) with exp2, writes o = acc / l_i and M = m_i + log2(l_i) per query row.",
+      "CAUSAL": "causal=True: blocks on the diagonal are masked with offs_m >= start_n + offs_n (query i attends keys j <= i); query and key share the length N_CTX.",
+      "BWD": "backward computes dq, dk, dv from q, k, v, o, do and M; the test is parametrized with causal=[True] only, with the comment 'FIXME: Non-causal tests do not pass at the moment.'",
+      "TEST_REF": "test reference: p = q @ k^T * sm_scale, -inf where tril(ones(N_CTX, N_CTX)) == 0 when causal, softmax, then p @ v."
+    },
+    "snapshot": "sources/TRITON_TUT06.py.gz",
+    "snapshot_sha256": "e37baf3097ca95fdae90ec5412279a7f86da503059747cd8cd996fadd45b88c8",
+    "path": ".cache/spec_v3/d1_scratch/dl/tut06.py",
+    "retrieved": "2026-10-17"
+  },
+  "VLLM_UA": {
+    "url": "https://raw.githubusercontent.com/vllm-project/vllm/51eeb0c/vllm/v1/attention/ops/triton_unified_attention.py",
+    "title": "vLLM main 51eeb0c vllm/v1/attention/ops/triton_unified_attention.py",
+    "kind": "reference_program",
+    "version": "51eeb0c (2026-10-05; same code in v0.24.0-v0.31.0 per 4_bugs_cases B013)",
+    "items": {
+      "SIGNATURE": "unified_attention(q, k, v, out, cu_seqlens_q, max_seqlen_q, seqused_k, max_seqlen_k, softmax_scale, causal, window_size, block_table, softcap, ...); q is (num_tokens, num_query_heads, head_size), k and v are the paged caches.",
+      "BLOCK_TABLE": "key/value of position seq_offset of a sequence are read at physical block block_table[seq, seq_offset // BLOCK_SIZE], slot seq_offset % BLOCK_SIZE, kv head kv_head_idx.",
+      "POSITIONS": "context_len = seq_len - cur_batch_query_len; query_abs_pos = context_len + query_pos (the query tokens are the last query_len positions of the sequence).",
+      "GQA": "query head = kv_head_idx * num_queries_per_kv + offs_m % num_queries_per_kv with num_queries_per_kv = num_query_heads // num_kv_heads.",
+      "ORDER": "S = softmax_scale * (Q K); softcap applied when softcap > 0; then S = -inf outside the query and KV masks; then the online softmax.",
+      "WINDOW_ARG": "the kernel receives SLIDING_WINDOW = 1 + window_size[0]; window_size[1] is not passed.",
+      "V_MASK": "with SLIDING_WINDOW, V rows are zeroed unless dist < SLIDING_WINDOW (causal) or (dist < SLIDING_WINDOW) & (dist > -SLIDING_WINDOW) (non-causal), dist = context_len + qpos_lo - seq_offset with qpos_lo the first query position of the query block."
+    },
+    "snapshot": "sources/VLLM_UA.py.gz",
+    "snapshot_sha256": "d714e6217b9dba1bb41148778e748badb9971d9cdf33b3984196283b5618e338",
+    "path": ".cache/spec_v3/d1_scratch/dl/vllm_ua.py",
+    "retrieved": "2026-10-17"
+  },
+  "VLLM_HELPERS": {
+    "url": "https://raw.githubusercontent.com/vllm-project/vllm/51eeb0c/vllm/v1/attention/ops/triton_attention_helpers.py",
+    "title": "vLLM main 51eeb0c vllm/v1/attention/ops/triton_attention_helpers.py",
+    "kind": "reference_program",
+    "version": "51eeb0c",
+    "items": {
+      "KV_MASK": "compute_kv_seq_mask: causal: key position <= query_abs_pos; non-causal: key position < seq_len; sliding window: (query_abs_pos - key) < SLIDING_WINDOW and, when not causal, also (key - query_abs_pos) < SLIDING_WINDOW.",
+      "SOFTCAP": "apply_softcap(S, x) = x * tanh(S / x), computed as x * (1 - 2 / (exp(2 S / x) + 1))."
+    },
+    "snapshot": "sources/VLLM_HELPERS.py.gz",
+    "snapshot_sha256": "d134f1919807183f54a3a57499703da44ab2127d033aff3c1509a3274f37a5f7",
+    "path": ".cache/spec_v3/d1_scratch/dl/vllm_helpers.py",
+    "retrieved": "2026-10-17"
+  },
+  "HF_LLAMA": {
+    "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/models/llama/modeling_llama.py",
+    "title": "transformers v4.57.3 models/llama/modeling_llama.py",
+    "kind": "reference_program",
+    "version": "v4.57.3",
+    "items": {
+      "ROTATE_HALF": "rotate_half(x) = cat(-x2, x1) with x1 = x[..., :d/2] and x2 = x[..., d/2:].",
+      "APPLY": "apply_rotary_pos_emb: q_embed = q * cos + rotate_half(q) * sin (same for k).",
+      "TABLES": "LlamaRotaryEmbedding: freqs = inv_freq times position_ids; emb = cat(freqs, freqs); cos = emb.cos() * attention_scaling, sin = emb.sin() * attention_scaling.",
+      "REPEAT_KV": "repeat_kv is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep) from key/value heads to attention heads."
+    },
+    "snapshot": "sources/HF_LLAMA.py.gz",
+    "snapshot_sha256": "f4dcfcb9468579f94fce84ea5740d69a8c7934df936070aff863375447ddcabb",
+    "path": ".cache/spec_v3/d1_scratch/dl/hf_llama.py",
+    "retrieved": "2026-10-17"
+  },
+  "HF_ROPE_UTILS": {
+    "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/modeling_rope_utils.py",
+    "title": "transformers v4.57.3 modeling_rope_utils.py",
+    "kind": "reference_program",
+    "version": "v4.57.3",
+    "items": {
+      "DEFAULT": "_compute_default_rope_parameters: dim = int(head_dim * partial_rotary_factor); inv_freq = 1 / (base ** (arange(0, dim, 2) / dim)); attention_factor = 1.0.",
+      "LINEAR": "_compute_linear_scaling_rope_parameters: the default inv_freq divided by rope_scaling['factor'] (noted as equivalent to scaling the position ids)."
+    },
+    "snapshot": "sources/HF_ROPE_UTILS.py.gz",
+    "snapshot_sha256": "55cc0c8cb76f592ab178b4662adcbdf4ad5012bb0b4249c0a96603141f18e9ac",
+    "path": ".cache/spec_v3/d1_scratch/dl/hf_rope_utils.py",
+    "retrieved": "2026-10-17"
+  },
+  "HF_PHI3": {
+    "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/models/phi3/modeling_phi3.py",
+    "title": "transformers v4.57.3 models/phi3/modeling_phi3.py",
+    "kind": "reference_program",
+    "version": "v4.57.3",
+    "items": {
+      "PARTIAL": "apply_rotary_pos_emb: rotary_dim = cos.shape[-1]; q_rot = q[..., :rotary_dim], q_pass = q[..., rotary_dim:]; q_embed = cat(q_rot * cos + rotate_half(q_rot) * sin, q_pass)."
+    },
+    "snapshot": "sources/HF_PHI3.py.gz",
+    "snapshot_sha256": "2b242b7d45a968747f0edbc73a55a2824673d0dc0e073981b11a32cd73f35c0f",
+    "path": ".cache/spec_v3/d1_scratch/dl/hf_phi3.py",
+    "retrieved": "2026-10-17"
+  },
+  "HF_GPT_OSS": {
+    "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/models/gpt_oss/modeling_gpt_oss.py",
+    "title": "transformers v4.57.3 models/gpt_oss/modeling_gpt_oss.py",
+    "kind": "reference_program",
+    "version": "v4.57.3",
+    "items": {
+      "HALF": "the rotary embedding returns emb = freqs (not duplicated); _apply_rotary_emb: first_half, second_half = chunk(x, 2); first_ = first_half * cos - second_half * sin; second_ = second_half * cos + first_half * sin; cat(first_, second_)."
+    },
+    "snapshot": "sources/HF_GPT_OSS.py.gz",
+    "snapshot_sha256": "f04b8e6360f793307b033c671dfaee90b4be295d3e1e306c632a09410bf311e1",
+    "path": ".cache/spec_v3/d1_scratch/dl/hf_gpt_oss.py",
+    "retrieved": "2026-10-17"
+  },
+  "HF_GPTJ": {
+    "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/models/gptj/modeling_gptj.py",
+    "title": "transformers v4.57.3 models/gptj/modeling_gptj.py",
+    "kind": "reference_program",
+    "version": "v4.57.3",
+    "items": {
+      "EVERY_TWO": "rotate_every_two maps the pairs (x[2i], x[2i+1]) to (-x[2i+1], x[2i]); apply_rotary_pos_emb repeat_interleaves sin and cos by 2 and returns x * cos + rotate_every_two(x) * sin; inv_freq = 1 / (10000 ** (arange(0, dim, 2) / dim))."
+    },
+    "snapshot": "sources/HF_GPTJ.py.gz",
+    "snapshot_sha256": "2fea54b39fba964e2c7516bbd66e20eff3296c06fe540405d0020dd8e5b8264b",
+    "path": ".cache/spec_v3/d1_scratch/dl/hf_gptj.py",
+    "retrieved": "2026-10-17"
+  },
+  "HF_MIXTRAL": {
+    "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/models/mixtral/modeling_mixtral.py",
+    "title": "transformers v4.57.3 models/mixtral/modeling_mixtral.py",
+    "kind": "reference_program",
+    "version": "v4.57.3",
+    "items": {
+      "ROUTER": "MixtralSparseMoeBlock: routing_weights = softmax(router_logits, dim=1); routing_weights, selected_experts = topk(routing_weights, top_k); routing_weights /= routing_weights.sum(-1, keepdim=True).",
+      "AUX": "load_balancing_loss_func (Switch Transformer eqs. 4-6): expert_mask = one_hot(top-k selected experts); tokens_per_expert = mean over tokens of expert_mask (per top-k slot and expert); router_prob_per_expert = mean over tokens of the softmax probabilities; loss = num_experts * sum(tokens_per_expert * router_prob_per_expert)."
+    },
+    "snapshot": "sources/HF_MIXTRAL.py.gz",
+    "snapshot_sha256": "a616c2acb940c92cefe4c722f75858d4dad5ba2af89ab0a860404e88527e041e",
+    "path": ".cache/spec_v3/d1_scratch/dl/hf_mixtral.py",
+    "retrieved": "2026-10-17"
+  },
+  "HF_GEMMA2": {
+    "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/models/gemma2/modeling_gemma2.py",
+    "title": "transformers v4.57.3 models/gemma2/modeling_gemma2.py",
+    "kind": "reference_program",
+    "version": "v4.57.3",
+    "items": {
+      "SOFTCAP": "eager_attention_forward: attn_weights = q @ k^T * scaling; with softcap, attn_weights = tanh(attn_weights / softcap) * softcap; then the attention mask is added and softmax applied."
+    },
+    "snapshot": "sources/HF_GEMMA2.py.gz",
+    "snapshot_sha256": "fa77bf171148bb47ba4a53ebca02f4e6cdcdcda15ea2e23aea4a296539bd203c",
+    "path": ".cache/spec_v3/d1_scratch/dl/hf_gemma2.py",
+    "retrieved": "2026-10-17"
+  },
+  "HF_COLLATOR": {
+    "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/data/data_collator.py",
+    "title": "transformers v4.57.3 data/data_collator.py",
+    "kind": "reference_program",
+    "version": "v4.57.3",
+    "items": {
+      "FLATTEN": "DataCollatorWithFlattening concatenates the mini batch into one sequence; position_ids += list(range(len(input_ids))) per example (restarting at 0); optional cu_seq_lens (cumulative lengths) and seq_idx (index of the sequence of each token)."
+    },
+    "snapshot": "sources/HF_COLLATOR.py.gz",
+    "snapshot_sha256": "2167d896fddc33a28642a19e686cde74b7f48088f2115530effbbf5bad3984f4",
+    "path": ".cache/spec_v3/d1_scratch/dl/hf_collator.py",
+    "retrieved": "2026-10-17"
+  },
+  "LIGER_ROPE": {
+    "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/rope.py",
+    "title": "Liger-Kernel v0.7.0 src/liger_kernel/ops/rope.py",
+    "kind": "reference_program",
+    "version": "v0.7.0",
+    "items": {
+      "HF": "LigerRopeFunction implements the HuggingFace Llama & Mistral version of RoPE; q (bsz, n_q_head, seq_len, head_dim), k (bsz, n_kv_head, seq_len, head_dim), cos and sin (1 or bsz, seq_len, head_dim).",
+      "LEFT_HALF": "the kernel loads only the left half of cos and sin (offsets < head_dim / 2) because 'the right half is just a clone of the left half'; y1 = x1 * cos - x2 * sin, y2 = x2 * cos + x1 * sin with x1, x2 the two halves of the head.",
+      "BWD": "backward pass: dx1 = dy1 * cos + dy2 * sin, dx2 = dy2 * cos - dy1 * sin."
+    },
+    "snapshot": "sources/LIGER_ROPE.py.gz",
+    "snapshot_sha256": "bfeec91d1aeffb9226a113a4a4a7e5df45b0588e2a4dadad025ef341e0789a5e",
+    "path": ".cache/spec_v3/d1_scratch/dl/liger_rope.py",
+    "retrieved": "2026-10-17"
+  },
+  "ROFORMER": {
+    "url": "https://ar5iv.labs.arxiv.org/html/2104.09864",
+    "title": "Su et al., RoFormer: Enhanced Transformer with Rotary Position Embedding (arXiv:2104.09864, ar5iv HTML rendering)",
+    "kind": "paper",
+    "items": {
+      "ROTARY": "eq. (15): the rotary matrix R^d_{Theta,m} is block diagonal with 2x2 blocks [[cos m theta_i, -sin m theta_i], [sin m theta_i, cos m theta_i]] acting on (x_{2i-1}, x_{2i}), i = 1..d/2.",
+      "THETA": "Theta = {theta_i = 10000^{-2(i-1)/d}, i in [1, 2, ..., d/2]}.",
+      "RELATIVE": "eq. (16): q_m^T k_n = (R_m W_q x_m)^T (R_n W_k x_n) = x^T W_q R_{n-m} W_k x_n with R_{n-m} = R_m^T R_n; R is orthogonal.",
+      "EFFICIENT": "eq. (34): R x = x (elementwise) (cos m theta_1, cos m theta_1, cos m theta_2, cos m theta_2, ...) + (-x_2, x_1, -x_4, x_3, ...) (elementwise) (sin m theta_1, sin m theta_1, ...)."
+    },
+    "snapshot": "sources/ROFORMER.txt.gz",
+    "snapshot_sha256": "1ee4b5118e389ba5447ddb9f24701cb44f9071532f9c5182e2cecb254a25f67e",
+    "raw_html_sha256": "cfec27d698ce4881a97dca168a867d55778be33ca40ec88cf0de9d197c96d102",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "SWITCH": {
+    "url": "https://ar5iv.labs.arxiv.org/html/2101.03961",
+    "title": "Fedus, Zoph, Shazeer, Switch Transformers (arXiv:2101.03961, ar5iv HTML rendering)",
+    "kind": "paper",
+    "items": {
+      "ROUTER": "eq. (1): router logits h(x) = W_r x are normalized by a softmax over the N experts, gate value p_i(x) = e^{h(x)_i} / sum_j e^{h(x)_j}.",
+      "COMBINE": "eq. (2): y = sum over the selected top-k set T of p_i(x) E_i(x); the Switch layer routes to a single expert (k = 1).",
+      "CAPACITY": "expert capacity = (tokens per batch / number of experts) x capacity factor; tokens routed to an expert beyond its capacity are dropped: computation is skipped and the representation is passed to the next layer through the residual connection.",
+      "AUX": "eq. (4) loss = alpha * N * sum_i f_i * P_i; eq. (5) f_i = (1/T) sum_x 1{argmax p(x) = i}, the fraction of tokens dispatched to expert i; eq. (6) P_i = (1/T) sum_x p_i(x).",
+      "CODE": "appendix router code: top-1 expert_index and expert_gate; aux_loss = load_balance_loss(router_probs, expert_mask) computed from the top-1 mask before capacity masking; position_in_expert = cumsum of expert_mask over the tokens; expert_mask kept only where position_in_expert is less than expert_capacity; the gate of masked tokens is zeroed."
+    },
+    "snapshot": "sources/SWITCH.txt.gz",
+    "snapshot_sha256": "ab22ddccfa5875a4aff3166475f34a208032c55acc1f5225629664ffcea85fa5",
+    "raw_html_sha256": "e9cec95e4c27443632d478f7edc412bdb6077b137c020fe485d161c57c384bdf",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "MIXTRAL": {
+    "url": "https://arxiv.org/html/2401.04088v1",
+    "title": "Jiang et al., Mixtral of Experts (arXiv:2401.04088v1, HTML)",
+    "kind": "paper",
+    "items": {
+      "GATE": "G(x) := Softmax(TopK(x W_g)) with TopK(l)_i = l_i if l_i is among the top-K logits and -inf otherwise; y = sum_i G(x)_i E_i(x); Mixtral uses K = 2 (y = sum_i Softmax(Top2(x W_g))_i SwiGLU_i(x))."
+    },
+    "snapshot": "sources/MIXTRAL.txt.gz",
+    "snapshot_sha256": "910a1eccadcd8997621fc9d18540c3cad53207c8d1b81d68aba783bc1feb4503",
+    "raw_html_sha256": "9f3a55b554c6216cb9fbdce3f9b3e7b3ddad44b97ce1326e8c23f753e74fba02",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "GEMMA2": {
+    "url": "https://arxiv.org/html/2408.00118v3",
+    "title": "Gemma Team, Gemma 2 (arXiv:2408.00118v3, HTML)",
+    "kind": "paper",
+    "items": {
+      "SOFTCAP": "logit soft-capping: logits <- soft_cap * tanh(logits / soft_cap), in each attention layer (soft_cap 50.0) and the final layer (30.0)."
+    },
+    "snapshot": "sources/GEMMA2.txt.gz",
+    "snapshot_sha256": "9c808d161539161266dbf1b318eeae56203cf61433834e32ca628977965147fe",
+    "raw_html_sha256": "edf02da95042f31636db6ac629b9716d47f8c04fcc9d9b6d1561bf37c10a16a7",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_FX": {
+    "url": "https://docs.pytorch.org/docs/2.10/fx.html",
+    "title": "PyTorch 2.10 torch.fx",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "NODES": "an FX Graph's inputs are placeholder nodes; call_function applies a free function (the target) to args and kwargs following the Python calling convention and assigns the result to the node's name; the output node returns the value(s) in its args; Graph.lint checks that nodes appear in topological order."
+    },
+    "snapshot": "sources/T_FX.txt.gz",
+    "snapshot_sha256": "342f8bd877358e5fc5438f6e9cfebda7cfb7cfb302d5d61c0a71535cfcf02c69",
+    "raw_html_sha256": "2e0054af9783ca3573f247c40b1a478ccfbb37e68354ea69db67edc11982b1c7",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "TS_INDUCTOR_CONFIG": {
+    "title": "torch 2.10 source torch/_inductor/config.py",
+    "kind": "torch_source",
+    "items": {
+      "EMULATE_CASTS": "emulate_precision_casts (default False): PyTorch eager computes bf16 / fp16 by upcasting inputs to fp32 and downcasting after; when two low-precision operators are fused, Inductor elides the downcast-upcast pairs between them unless this knob is set.",
+      "PAGE": "torch/_inductor/config.py"
+    },
+    "snapshot": "sources/TS_INDUCTOR_CONFIG.py.gz",
+    "snapshot_sha256": "35742623dd7b4b523940a68f0eccd2f68286cc624fe355286ce3783d878aee9c",
+    "path": "torch/_inductor/config.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
   }
 }

@@ -1,0 +1,106 @@
+schema_version: '1.2'
+id: GRAPH
+role: PROGRAM
+title: An ATen graph (a program or a compiled kernel's graph fragment) as the composition of the base contracts
+review:
+  status: drafted
+  author: Claude (spec v3 author), 2026-10-16
+  date: '2026-10-16'
+  scope: Composition semantics of FX / ATen graphs whose operations are covered by the base contracts; awaiting a review
+    by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [graph]
+profiles:
+  eager:
+    meaning: Nodes are evaluated in topological order, each operation by the base contract that covers it (ARITH MATHFN
+      LOGIC CAST LAYOUT INDEX REDUCE SOFTMAX MATMUL CONV RANDOM); every conversion in the graph rounds as CAST says, as
+      the program is written.
+    task_choice_required: false
+outputs:
+  out:
+    shape: the list of the graph's output values
+    kind: discrete
+    guarantee: rigorous_enclosure
+readings:
+  inductor_default:
+    meaning: Diagnostic reading of Inductor's default emulate_precision_casts = False, under which a floating-point
+      conversion between fused operations is elided (no rounding at intermediate float casts; casts of outputs still
+      round). It explains compiled-versus-eager differences; it is not the program's own semantics.
+    basis: [TS_INDUCTOR_CONFIG.EMULATE_CASTS]
+comparison:
+  input_binding: Input tensors are the exact values received.
+  quality: As the base contracts (no tolerance).
+  test_evidence: Exact equality or containment of exact expected values in the reference enclosures.
+  error_handling: An undefined value makes only the nodes that use it undefined; an output that depends on it is
+    domain_undefined. An operation outside the base contracts is unsupported.
+decisions:
+- id: GR.IDENTITY
+  status: drafted
+  statement: The f of a graph is the program's own computation as written (identity of the source - reference program);
+    comparing a compiled kernel with it checks the lowering, not the intent of the model's author. The task-level
+    contracts (NORM, ATTN, CE, ...) check intent where a role contract exists.
+  basis: [T_FX.NODES]
+- id: GR.POISON
+  status: drafted
+  statement: A node whose real value is undefined poisons only the nodes that read it; outputs that do not depend on it
+    keep their values. Alternative (one undefined node makes the whole graph undefined) rejected because FX evaluation is
+    per node.
+  basis: [T_FX.NODES]
+clauses:
+- {id: GR.C1, basis: [T_FX.NODES, GR.IDENTITY], statement: 'nodes are evaluated in order: placeholders are inputs, each
+    call_function applies its operation (base-contract semantics) to its arguments, the outputs are returned',
+  observes: [out], evidence_kind: definition}
+- {id: GR.C2, basis: [T_FX.NODES, GR.POISON], statement: undefined values poison only their consumers, observes: [out],
+  evidence_kind: definition}
+- {id: GR.C3, basis: [T_FX.NODES], statement: 'operator.getitem selects one result of a multi-result operation', observes: [out],
+  evidence_kind: definition}
+- {id: GR.C4, basis: [T_FX.NODES, GR.IDENTITY], statement: 'conversions inside the graph round as written (profile eager)',
+  observes: [out], evidence_kind: definition}
+examples:
+- {id: GR.E1, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [1, 2]}}, nodes: [{name: a, op: aten.mul,
+          args: [{ref: x}, 2]}, {name: b, op: aten.add, args: [{ref: a}, 1]}], outputs: [b]}}, expected: {outcome: value, fields: {
+      out: [[3, 5]]}}}
+- {id: GR.E2, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [[3, 4]]}}, nodes: [{name: p, op: aten.pow,
+          args: [{ref: x}, 2]}, {name: m, op: aten.mean, args: [{ref: p}, [-1], true]}, {name: e, op: aten.add, args: [{ref: m},
+            0]}, {name: r, op: aten.rsqrt, args: [{ref: e}]}, {name: y, op: aten.mul, args: [{ref: x}, {ref: r}]}], outputs: [y]}},
+  expected: {outcome: value, fields: {out: [[[3*sqrt(2)/5, 4*sqrt(2)/5]]]}}, note: An RMSNorm fragment without weight; mean
+    of squares 25/2, rsqrt sqrt(2)/5.}
+- {id: GR.E3, profile: eager, clauses: [GR.C4], input: {graph: {inputs: {x: {t: f32, v: ['1/3']}}, nodes: [{name: c1, op: prims.convert_element_type,
+          args: [{ref: x}, bf16]}, {name: c2, op: prims.convert_element_type, args: [{ref: c1}, f32]}, {name: y, op: aten.mul,
+          args: [{ref: c2}, 3]}], outputs: [y]}}, expected: {outcome: value, fields: {out: [['513/512']]}}, readings: {inductor_default: {
+      outcome: value, fields: {out: [[1]]}}}, note: 'bf16(1/3) = 171/512; times 3 = 513/512. With the casts elided: 1/3 * 3 = 1.'}
+- {id: GR.E4, profile: eager, clauses: [GR.C2], input: {graph: {inputs: {x: {t: f32, v: [-1]}, y: {t: f32, v: [3]}}, nodes: [{name: l,
+          op: aten.log, args: [{ref: x}]}, {name: z, op: aten.mul, args: [{ref: y}, 2]}], outputs: [z]}}, expected: {outcome: value,
+    fields: {out: [[6]]}}}
+- {id: GR.E5, profile: eager, clauses: [GR.C2], input: {graph: {inputs: {x: {t: f32, v: [-1]}}, nodes: [{name: l, op: aten.log,
+          args: [{ref: x}]}, {name: z, op: aten.mul, args: [{ref: l}, 0]}], outputs: [z]}}, expected: {outcome: domain_undefined}}
+- {id: GR.E6, profile: eager, clauses: [GR.C3], input: {graph: {inputs: {x: {t: f32, v: [[1, 3]]}}, nodes: [{name: vm, op: aten.var_mean,
+          args: [{ref: x}, [1]], kwargs: {correction: 0, keepdim: true}}, {name: v, op: operator.getitem, args: [{ref: vm}, 0]},
+        {name: m, op: operator.getitem, args: [{ref: vm}, 1]}, {name: s, op: aten.sub, args: [{ref: m}, {ref: v}]}], outputs: [s]}},
+  expected: {outcome: value, fields: {out: [[[1]]]}}, note: 'variance 1, mean 2; mean - var = 1.'}
+- {id: GR.E7, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [1]}}, nodes: [{name: a, op: aten.mul, args: [
+            {ref: w}, 2]}], outputs: [a]}}, expected: {outcome: invalid_input}, note: A reference to a value that is not defined
+    earlier.}
+signature:
+  inputs: ['graph: {inputs: {name: tensor}, nodes: [{name, op, args, kwargs}], outputs: [names]}']
+  pre_state: []
+  post_state: []
+  observation_unit: the graph's output values
+domain:
+  valid: [graphs in topological order whose operations are covered by the base contracts]
+  domain_undefined: [an output that depends on an undefined real value]
+  invalid_input: [references to unknown or later values, duplicate node names]
+  unsupported: [operations not covered by a base contract]
+mutation_requirements:
+- {id: GR.M1, misreading: conversions in the graph ignored under the eager profile, witnesses: [GR.E3]}
+- {id: GR.M2, misreading: any undefined node makes every output undefined, witnesses: [GR.E4]}
+- {id: GR.M3, misreading: getitem indexes from the end, witnesses: [GR.E6]}
+- {id: GR.M4, misreading: node arguments evaluated in reverse order (operands swapped for binary operations), witnesses: [
+    GR.E6]}
+nonclaims:
+- A graph's f checks lowering fidelity of a compiled kernel, not the model author's intent (GR.IDENTITY).
+changes: []

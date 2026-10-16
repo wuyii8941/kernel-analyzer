@@ -29,6 +29,14 @@ from kernel_spec import registry, schema  # noqa: E402
 from kernel_spec.num import evaluate  # noqa: E402
 
 
+def safe_compare(res, expected, outputs):
+    """compare_result that turns any exception of the comparison itself into a structure error for this example."""
+    try:
+        return C.compare_result(res, expected, outputs)
+    except Exception as e:  # noqa: BLE001
+        return C.STRUCTURE, [("", C.STRUCTURE, f"comparison failed: {type(e).__name__}: {str(e)[:120]}")]
+
+
 def killed(mres, expected, outputs):
     if mres.outcome == "implementation_error":
         return False, f"not applicable: {mres.note[:80]}"
@@ -36,13 +44,19 @@ def killed(mres, expected, outputs):
         return mres.outcome != expected["outcome"], f"outcome {mres.outcome}"
     if mres.outcome != "value":
         return True, f"outcome {mres.outcome}"
-    v, checks = C.compare_result(mres, expected, outputs)
+    v, checks = safe_compare(mres, expected, outputs)
     bad = [f"{p}: {d}" for p, vv, d in checks if vv in (C.CONTRADICTION, C.STRUCTURE)]
     return v in (C.CONTRADICTION, C.STRUCTURE), (bad[0] if bad else v)[:120]
 
 
 def check_contract(path: Path, sources: dict, adapters: Path) -> dict:
-    data = yaml.safe_load(path.read_text())
+    try:
+        data = yaml.safe_load(path.read_text())
+        if not isinstance(data, dict):
+            raise ValueError("not a mapping")
+    except (yaml.YAMLError, ValueError) as e:
+        return {"id": path.stem, "path": str(path), "structure": [f"unreadable YAML: {str(e)[:200]}"], "examples": [],
+                "readings": [], "mutations": [], "clauses": {}, "verdict": C.STRUCTURE, "review_status": None}
     rep = {"id": data.get("id", path.stem), "path": str(path), "structure": schema.validate(data, sources),
            "examples": [], "readings": [], "mutations": [], "clauses": {}, "verdict": None,
            "review_status": (data.get("review") or {}).get("status")}
@@ -63,7 +77,7 @@ def check_contract(path: Path, sources: dict, adapters: Path) -> dict:
     by_id = {e["id"]: e for e in data["examples"]}
     for e in data["examples"]:
         res = evaluate(A.reference, e["profile"], e["input"])
-        v, checks = C.compare_result(res, e["expected"], outputs)
+        v, checks = safe_compare(res, e["expected"], outputs)
         rep["examples"].append({"id": e["id"], "verdict": v, "outcome": res.outcome,
                                 "detail": [f"{p}: {d}" for p, vv, d in checks if vv != C.CONSISTENT][:3]
                                 or [checks[0][2] if checks else ""]})
@@ -73,7 +87,7 @@ def check_contract(path: Path, sources: dict, adapters: Path) -> dict:
                 rep["readings"].append({"id": f"{e['id']}[{rid}]", "verdict": C.STRUCTURE, "detail": ["not implemented"]})
                 continue
             rres = evaluate(fn, e["profile"], e["input"])
-            rv, rchecks = C.compare_result(rres, block, outputs)
+            rv, rchecks = safe_compare(rres, block, outputs)
             rep["readings"].append({"id": f"{e['id']}[{rid}]", "verdict": rv,
                                     "detail": [f"{p}: {d}" for p, vv, d in rchecks if vv != C.CONSISTENT][:3]})
     for m in data["mutation_requirements"]:
@@ -146,7 +160,7 @@ def main(argv=None):
     print("\nProblems:" if problems else "\nNo problems.")
     for p in problems:
         print(f"- {p}")
-    data = {r["id"]: yaml.safe_load(Path(r["path"]).read_text()) for r in reps}
+    data = {r["id"]: yaml.safe_load(Path(r["path"]).read_text()) for r in reps if not r["structure"]}
     print("\nSources used by each contract:")
     for r in reps:
         if not r["structure"]:
