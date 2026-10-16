@@ -380,13 +380,13 @@ def _p(k, n, ci=None):
 CLASS_NAMES = {"matmul": "矩阵乘（全部是 tf32 模板）", "reduction": "归约", "scan": "扫描（`tt.scan`）",
                "elementwise": "逐元素", "elementwise (mamba)": "　其中 mamba", "elementwise (other models)": "　其中其余模型",
                "all but matmul": "矩阵乘以外合计"}
-METHOD = {"A0": "A0 概率模型", "A-exec": "A 教科书前提的精确执行", "C-model": "C 事前预测器", "C-exec": "C 真实前提的精确执行"}
+METHOD = {"A0": "A0 概率模型", "A-exec": "A 替代执行假设下的重放", "C-model": "C 事前预测器", "C-exec": "C 仿真器（真实执行假设）"}
 
 
 def tables(path):
     r = json.load(open(path))
     out = ["### 主表与聚类区间（P2）", "", "括号内是 95% 区间：按单元（一次 kernel 启动）重抽 / 按模型重抽。", "",
-           "| 方法 | 有显著偏差：符号对 | 按模型 | 符号与大小都对 | 无显著偏差：误报 | 按模型 |", "|---|---|---|---|---|---|"]
+           "| 方法 | 有显著偏差：符号对 | 按模型 | 符号与大小都对 | 未显著：报出显著 | 按模型 |", "|---|---|---|---|---|---|"]
     for m in ("A0", "A-exec", "C-model", "C-exec"):
         u, g = r["main"][m]["by_unit"], r["main"][m]["by_model"]
         out.append(f"| {METHOD[m]} | {_p(u['sign_agree'], u['sig_n'], u['sign'])} | {100 * g['sign'][1]:.0f}–{100 * g['sign'][2]:.0f} | "
@@ -397,7 +397,7 @@ def tables(path):
             f"按单元 {100 * h['by_unit']['ci95'][0]:.0f}–{100 * h['by_unit']['ci95'][1]:.0f}，"
             f"按模型 {100 * h['by_model']['ci95'][0]:.0f}–{100 * h['by_model']['ci95'][1]:.0f}。"]
     out += ["", "### 按 kernel 结构分层（P1）", "",
-            "| 类别 | 输出 | A 符号对 | C 预测器符号对 | C 预测器误报 | A 误报 |", "|---|---|---|---|---|---|"]
+            "| 类别 | 输出 | A 符号对 | C 预测器符号对 | C 预测器：未显著上报出 | A：未显著上报出 |", "|---|---|---|---|---|---|"]
     for k, v in r["classes"].items():
         if k.startswith("equal"):
             continue
@@ -414,7 +414,7 @@ def tables(path):
             f"{sig['n_tests']} 个输出各自检验。按登记的 3·se，真值无偏差时期望约 {sig['expected_false_at_3se']:.1f} 个输出被误判为显著。"
             f"Bonferroni 的门槛是 |a|/se > {sig['bonferroni_z']:.2f}；Benjamini–Hochberg 的门槛是 {sig['bh_z']:.2f}"
             "（真信号多，BH 比 3·se 宽）。真值与各方法用同一门槛重新分类：", "",
-            "| 门槛 | 显著输出 | A 符号对 | C 预测器符号对 | C 预测器误报 |", "|---|---|---|---|---|"]
+            "| 门槛 | 显著输出 | A 符号对 | C 预测器符号对 | C 预测器：未显著上报出 |", "|---|---|---|---|---|"]
     labels = {"3se (registered)": "3·se（登记）", "Benjamini-Hochberg": "Benjamini–Hochberg（q = 0.05）",
               "Bonferroni": "Bonferroni（α = 0.05）"}
     for name, v in r["sensitivity"].items():
@@ -457,7 +457,7 @@ def tables(path):
         out += ["", "### D1：仿真器修补前后（P4）", "",
                 f"用修补前的仿真器重跑 {d['rerun_units']} 个含归约的单元（出错 {len(d['rerun_errors'])} 个）：逐位核对状态变化的 "
                 f"{len(d['verify_changed'])} 个，任一方法的数值变化的 {d['units_with_changed_values']} 个。", "",
-                "| 方法 | 修补前：符号对 | 修补前：误报 | 修补后：符号对 | 修补后：误报 |", "|---|---|---|---|---|"]
+                "| 方法 | 修补前：符号对 | 修补前：未显著上报出 | 修补后：符号对 | 修补后：未显著上报出 |", "|---|---|---|---|---|"]
         for m in ("A-exec", "C-model", "C-exec"):
             b, a = d["primary_before_fix"][m], r["main"][m]["by_unit"]
             out.append(f"| {METHOD[m]} | {_p(b['sign_agree'], b['sig_n'])} | {_p(b['null_false_signal'], b['null_n'])} | "
@@ -477,7 +477,7 @@ def tables(path):
                 f"{c['model_faster_than_exec']}/{c['units'] - c['errors']}。"]
     d7 = r["D7"]
     out += ["", f"### D7：补上漏掉的 {d7['missed_units']} 个单元之前与之后", "",
-            "| 方法 | 补之前：符号对 | 补之前：误报 | 补之后：符号对 | 补之后：误报 |", "|---|---|---|---|---|"]
+            "| 方法 | 补之前：符号对 | 补之前：未显著上报出 | 补之后：符号对 | 补之后：未显著上报出 |", "|---|---|---|---|---|"]
     for m in ("A-exec", "C-model"):
         b, a = d7["without_missed"][m], r["main"][m]["by_unit"]
         out.append(f"| {METHOD[m]} | {_p(b['sign_agree'], b['sig_n'])} | {_p(b['null_false_signal'], b['null_n'])} | "

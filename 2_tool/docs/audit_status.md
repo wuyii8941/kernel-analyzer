@@ -32,7 +32,7 @@ audit(lambda: kernel[grid](...), spec=..., reference=..., names=..., programs=No
 | l_bf16 全部 32 个 program | 全 kernel +0.29%，事前预测 +0.28%；首尾两个 program 偏差远小于其余（抽 6 个得 +0.23%） | 同上 |
 | l_bf16，N = 8192（强停滞） | 实测 +15.5%，逐位相同；事前预测放弃，归因与改法照常给出 | 同上 |
 | 与参照程序的比较（flash attention 7 例，含新植入的 mask 错误） | 登记的 5 项全部成立：数值缺陷都未判为不一致，scale 与 mask 错误的 O、M 都判不一致 | [flash_attention_case](../../1_experiments/flash_attention_case/README.md) 第三轮 |
-| 三方对照：教科书前提、高精度重算与本工具（23 个模型、2120 个 Inductor kernel） | 644 个有显著偏差的输出上：教科书前提的精确执行符号对 19%，事前预测器 95%，真实前提的精确执行 100%；预测器误报 13.7%（H2 不成立）；236 处真实改法，改后偏差的预测 94% 一致 | [three_way](../../1_experiments/three_way/README.md) |
+| 三方对照：执行假设、高精度重算与本工具（23 个模型、2120 个 Inductor kernel） | 执行假设消融：符号正确率 19%（仿真器逐位一致 1896/2120）；631 处真实改写，改法效果的预测 98% 一致（tf32 以外 87%）；事前预测器符号 95%、矩阵乘以外 62%，未显著输出上报出 13.7%（H2 不成立）；D1 修补在 5 个单元上套用过头（已知缺口） | [three_way](../../1_experiments/three_way/README.md) |
 | 两个留出集（各 60 个随机程序） | 事前预测成立 51 / 44、不成立 2 / 2、无法判断 7 / 14 | [composition_study](../../1_experiments/composition_study/README.md) 第 10 节 |
 | 真实修改：TF32（Qwen 6 层，24 组） | 全部成立；第 2 层 down_proj 少预测 4–6×10⁻⁵ | 同上 |
 | 库里的真实 kernel（Liger、FlagGems 231 个） | 逐位相同 213、未建立 11、有不一致 7（只做了逐位核对，没有做预测与归因） | 同上第 6 节 |
