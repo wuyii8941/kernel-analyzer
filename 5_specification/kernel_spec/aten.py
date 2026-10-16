@@ -888,6 +888,16 @@ def index_add(a, dim, idx, src, alpha=1):
     return Ten(out, a.dtype)
 
 
+def vjp_gather(g, a, dim, idx):
+    """d gather: the upstream gradient added back at the gathered positions (repeated indices accumulate)."""
+    return scatter_add(zeros_like(_floatify(a)), dim, idx, _floatify(g))
+
+
+def vjp_index_select(g, a, dim, idx):
+    """d index_select: the upstream slices added back at the selected indices (repeated indices accumulate)."""
+    return index_add(zeros_like(_floatify(a)), dim, idx, _floatify(g))
+
+
 def embedding(weight, indices, padding_idx=-1, **kw):
     return index_select(weight, 0, indices) if as_ten(indices).a.ndim <= 1 else \
         Ten(np.stack([index_select(weight, 0, Ten(row, "i64")).a for row in as_ten(indices).a]), as_ten(weight).dtype)
@@ -1654,6 +1664,7 @@ OPS = {
     "aten.index": index, "aten.index_put": index_put, "aten.index_put_": index_put, "aten.gather": gather,
     "aten.scatter": scatter, "aten.scatter_add": scatter_add, "aten.index_select": index_select,
     "aten.index_add": index_add, "aten.embedding": embedding, "aten.embedding_dense_backward": embedding_dense_backward,
+    "vjp.aten.gather": vjp_gather, "vjp.aten.index_select": vjp_index_select,
     "aten.sum": sum_, "aten.mean": mean, "aten.prod": prod, "aten.amax": amax, "aten.amin": amin, "aten.argmax": argmax,
     "aten.argmin": argmin, "aten.max": max_dim, "aten.min": min_dim, "aten.var": var, "aten.var_mean": var_mean,
     "aten.std": std, "aten.cumsum": cumsum, "aten.logsumexp": logsumexp, "aten.norm": norm,

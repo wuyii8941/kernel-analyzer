@@ -70,6 +70,10 @@ def _m(**ops):
     return make_reference(COVERS, extra=ops)
 
 
+def _gather_grad_overwrite(g, a, dim, idx):
+    return _scatter_last_wins(A.zeros_like(A._floatify(a)), dim, idx, src=g)
+
+
 READINGS = {"pick_one": _m(**{"aten.index_put": _pick_one, "aten.index_put_": _pick_one})}
 MUTANTS = {
     "IX.M1": _m(**{"aten.gather": _gather_other_axis}),
@@ -79,4 +83,5 @@ MUTANTS = {
     "IX.M5": _m(**{"aten.embedding_dense_backward": _emb_bwd_no_freq}),
     "IX.M6": _m(**{"aten.index_add": _index_add_no_alpha}),
     "IX.M7": _m(**{"aten.scatter": _scatter_last_wins}),
+    "IX.M8": _m(**{"vjp.aten.gather": _gather_grad_overwrite}),
 }
