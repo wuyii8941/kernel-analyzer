@@ -121,12 +121,12 @@ def required_checks(tmp):
               counted()),
         Check("合同", "审阅方的例子对照（22 例、58 个标量）",
               [HERE / "tools/check_witnesses.py", "--source-root", HERE, "--output", tmp / "witness.json"], HERE,
-              lambda rc, out, t: ((rc == 0 and same_json(t / "witness.json", REVIEW / "reviewed_witness_checks.json")),
-                                  "与审阅方的结果一致")),
+              lambda rc, out, t: ((ok := rc == 0 and same_json(t / "witness.json", REVIEW / "reviewed_witness_checks.json")),
+                                  "与审阅方的结果一致" if ok else "")),
         # 4 evidence (does not decide clause status)
         Check("证据", "v1 误读重建（SGD、BN）", [HERE / "evidence/historical_misreadings/meaning_relations.py"], HERE,
-              lambda rc, out, t: (rc == 0 and out.count("relation holds: True") == 2
-                                  and out.count("relation holds: False") == 2, "正确版本满足关系，v1 版本被抓到")),
+              lambda rc, out, t: ((ok := rc == 0 and out.count("relation holds: True") == 2
+                                   and out.count("relation holds: False") == 2), "正确版本满足关系，v1 版本被抓到" if ok else "")),
         Check("证据", "THEORY 撤回部分的核对", [HERE / "evidence/theory_checks/checks.py"], HERE),
         Check("证据", "Liger CE 声明公式对照", [HERE / "evidence/declared_semantics/liger_ce_crosscheck.py"], HERE),
     ]

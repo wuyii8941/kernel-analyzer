@@ -102,7 +102,8 @@ def source_status(data, sources):
     used = {b.split(".")[0] for node in [*data.get("clauses", []), *data.get("decisions", [])]
             for b in node.get("basis", []) if b.split(".")[0] in sources}
     return {s: ("snapshot " + sources[s]["snapshot_sha256"][:12]) if sources[s].get("snapshot_sha256")
-            else "no snapshot" for s in sorted(used)}
+            else ("standard, " + sources[s]["edition"]) if registry.frozen_source(sources[s]) else "no snapshot"
+            for s in sorted(used)}
 
 
 def main(argv=None):
@@ -112,13 +113,17 @@ def main(argv=None):
     ap.add_argument("--sources", type=Path, default=registry.SOURCES)
     ap.add_argument("--json", type=Path)
     ap.add_argument("--lock", action="store_true")
+    ap.add_argument("--only", nargs="*", help="check only these contract IDs (no --lock with --only)")
     a = ap.parse_args(argv)
+    if a.only and a.lock:
+        print("--lock needs the full set of contracts")
+        return 1
     try:
         sources = json.loads(a.sources.read_text())
     except (OSError, ValueError) as e:
         print(f"cannot read sources: {e}")
         return 1
-    paths = sorted(a.contracts.glob("*.yaml"))
+    paths = sorted(p for p in a.contracts.glob("*.yaml") if not a.only or p.stem in a.only)
     if not paths:
         print(f"no contracts in {a.contracts}: an empty run is not a success")
         return 1

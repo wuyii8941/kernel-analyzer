@@ -32,6 +32,10 @@ def _canon(x):
         return x
     if isinstance(x, (int, Fraction)):
         return Fraction(x)
+    if type(x).__name__ == "R":
+        x = x.v
+        if isinstance(x, str):
+            return x
     if isinstance(x, str):
         v = expr.parse(x)
         if isinstance(v, IV):
@@ -47,6 +51,13 @@ def _scalar(ref, exp, guarantee, path):
         E = expr.parse(exp)
     except expr.ExpressionError as err:
         return [(path, STRUCTURE, f"expected value: {err}")]
+    if hasattr(ref, "v") and type(ref).__name__ == "R":
+        ref = ref.v
+    if isinstance(E, str) or isinstance(ref, str):
+        if not (isinstance(E, str) and isinstance(ref, str)):
+            return [(path, CONTRADICTION if not isinstance(E, bool) and not isinstance(ref, bool) else STRUCTURE,
+                     f"infinity against a finite value ({ref!r} vs {exp!r})")]
+        return [(path, CONSISTENT if ref == E else CONTRADICTION, f"{ref} vs {E}")]
     if isinstance(E, bool) or isinstance(ref, bool):
         if type(ref) is not type(E):
             return [(path, STRUCTURE, f"boolean against non-boolean ({ref!r} vs {exp!r})")]

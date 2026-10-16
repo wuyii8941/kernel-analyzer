@@ -44,6 +44,11 @@ def contract_paths() -> list[Path]:
     return sorted(CONTRACTS.glob("*.yaml"))
 
 
+def frozen_source(entry: dict) -> bool:
+    """An archived snapshot with its hash, or a published standard cited by edition and section (not archivable)."""
+    return bool(entry.get("snapshot_sha256")) or (entry.get("kind") == "standard" and bool(entry.get("edition")))
+
+
 def load_lock() -> dict:
     return json.loads(LOCK.read_text()) if LOCK.is_file() else {}
 
@@ -101,7 +106,7 @@ def activation(c: Contract, profile: str, task_bindings=None, allow_draft=False,
     sources = load_sources()
     used = {b.split(".")[0] for node in [*c.data.get("clauses", []), *c.data.get("decisions", [])]
             for b in node.get("basis", [])}
-    unfrozen = sorted(s for s in used if s in sources and not sources[s].get("snapshot_sha256"))
+    unfrozen = sorted(s for s in used if s in sources and not frozen_source(sources[s]))
     if unfrozen:
         reasons.append(f"sources without an archived snapshot: {', '.join(unfrozen)}")
     entry = lock.get(c.id)

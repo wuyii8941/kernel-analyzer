@@ -48,7 +48,7 @@ EXPECTED_PREC = 512
 
 
 def parse(text):
-    """Return a Fraction (exact), a bool, or an IV enclosure. Formulas are enclosed at 512 bits, twice the precision of
+    """Return a Fraction (exact), a bool, an infinity ("+inf" / "-inf"), or an IV enclosure. Formulas are enclosed at 512 bits, twice the precision of
     the references, so that a correct reference enclosure contains the expected enclosure."""
     saved = iv.prec
     iv.prec = EXPECTED_PREC
@@ -58,9 +58,14 @@ def parse(text):
         iv.prec = saved
 
 
+INFINITIES = {"inf": "+inf", "+inf": "+inf", "-inf": "-inf"}
+
+
 def _parse(text):
     if isinstance(text, bool):
         return text
+    if isinstance(text, str) and text.strip() in INFINITIES:
+        return INFINITIES[text.strip()]
     if isinstance(text, int):
         return Fraction(text)
     if not isinstance(text, str):
