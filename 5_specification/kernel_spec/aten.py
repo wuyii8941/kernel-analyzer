@@ -1385,6 +1385,11 @@ def sum_to_shape(g, shape):
     return g
 
 
+def mm_plus_mm(mat1, mat2, mat3, mat4):
+    """Inductor's lowering of aten.add(aten.mm(mat1, mat2), aten.mm(mat3, mat4)) (fx_passes/post_grad.py)."""
+    return add(mm(mat1, mat2), mm(mat3, mat4))
+
+
 def vjp_mm(g, a, b):
     """d(A @ B): dA = G B^T, dB = A^T G."""
     return [mm(g, t(b)), mm(t(a), g)]
@@ -1659,7 +1664,8 @@ OPS = {
     "aten._softmax_backward_data": softmax_backward_data, "aten._log_softmax_backward_data": log_softmax_backward_data,
     "prims.prepare_softmax_online": prepare_softmax_online,
     "aten.mm": mm, "aten.bmm": bmm, "aten.matmul": matmul, "aten.addmm": addmm, "aten.baddbmm": baddbmm,
-    "aten.convolution": convolution, "aten.convolution_backward": convolution_backward, "aten.linear": linear, "vjp.aten.mm": vjp_mm, "vjp.aten.bmm": vjp_bmm,
+    "aten.convolution": convolution, "aten.convolution_backward": convolution_backward, "aten.linear": linear,
+    "inductor.mm_plus_mm": mm_plus_mm, "vjp.aten.mm": vjp_mm, "vjp.aten.bmm": vjp_bmm,
     "vjp.aten.matmul": vjp_matmul, "vjp.aten.linear": vjp_linear, "vjp.aten.addmm": vjp_addmm,
     "aten.gelu": gelu, "aten.gelu_backward": gelu_backward, "aten.silu": silu, "aten.silu_backward": silu_backward,
     "aten.threshold_backward": threshold_backward, "aten.tanh_backward": tanh_backward,

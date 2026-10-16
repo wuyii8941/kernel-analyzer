@@ -12,8 +12,8 @@ activation:
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
     reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
-covers: [aten.mm, aten.bmm, aten.matmul, aten.addmm, aten.baddbmm, aten.linear, vjp.aten.mm, vjp.aten.bmm, vjp.aten.matmul,
-  vjp.aten.linear, vjp.aten.addmm]
+covers: [aten.mm, aten.bmm, aten.matmul, aten.addmm, aten.baddbmm, aten.linear, inductor.mm_plus_mm, vjp.aten.mm, vjp.aten.bmm,
+  vjp.aten.matmul, vjp.aten.linear, vjp.aten.addmm]
 profiles:
   real:
     meaning: Exact real matrix products (sums of products, no rounding, any accumulation order); gradients are the VJPs
@@ -52,6 +52,8 @@ clauses:
     beta = 0 ignores input', observes: [out], evidence_kind: definition}
 - {id: MM.C4, basis: [T_LINEAR.DEF], statement: 'linear = x W^T + b over the last dim of x', observes: [out], evidence_kind: definition}
 - {id: MM.C5, basis: [MM.VJP], statement: VJPs of mm / bmm / matmul / linear / addmm per MM.VJP, observes: [out], evidence_kind: derived}
+- {id: MM.C6, basis: [TS_POST_GRAD.MM_PLUS_MM, T_MM.DEF], statement: 'inductor.mm_plus_mm(mat1, mat2, mat3, mat4) = mat1 @ mat2
+    + mat3 @ mat4 (the pattern it replaces)', observes: [out], evidence_kind: definition}
 examples:
 - {id: MM.E1, profile: real, clauses: [MM.C1], input: {op: aten.mm, args: [{t: f32, v: [[1, 2], [3, 4]]}, {t: f32, v: [[5], [6]]}]},
   expected: {outcome: value, fields: {out: [[17], [39]]}}}
@@ -90,6 +92,9 @@ examples:
 - {id: MM.E16, profile: real, clauses: [MM.C5, MM.C3], input: {op: vjp.aten.addmm, args: [{t: f32, v: [[1, 1], [1, 1]]}, {t: f32,
         v: [1, 1]}, {t: f32, v: [[1, 0], [0, 1]]}, {t: f32, v: [[2, 0], [0, 2]]}], kwargs: {beta: 2}}, expected: {outcome: value,
     fields: {out: [[4, 4], [[2, 2], [2, 2]], [[1, 1], [1, 1]]]}}}
+- {id: MM.E17, profile: real, clauses: [MM.C6], input: {op: inductor.mm_plus_mm, kwargs: {mat1: {t: f32, v: [[1, 2]]}, mat2: {
+        t: f32, v: [[1], [1]]}, mat3: {t: f32, v: [[3, 0]]}, mat4: {t: f32, v: [[2], [5]]}}}, expected: {outcome: value, fields: {
+      out: [[9]]}}}
 signature:
   inputs: ['op: one of the covered names', 'args as in ATen; vjp ops take (upstream, operands...)']
   pre_state: []
@@ -108,4 +113,6 @@ mutation_requirements:
 - {id: MM.M6, misreading: addmm ignores alpha, witnesses: [MM.E8]}
 nonclaims:
 - TF32, bf16 tensor-core products and accumulation order are numerical (K - G); the TF32 finding B006 is numerical.
-changes: []
+changes:
+- {date: '2026-10-17', change: 'added inductor.mm_plus_mm (clause MM.C6, example MM.E17)', trigger: 'operation found in four
+    three_way graph fragments by the static binding; source TS_POST_GRAD'}

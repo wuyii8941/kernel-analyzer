@@ -1780,7 +1780,11 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.LayerNorm"
+      "PAGE": "Documentation of torch.nn.LayerNorm",
+      "DEF": "y = (x - E[x]) / sqrt(Var[x] + eps) * gamma + beta; mean and standard deviation over the last D dimensions, D the dimension of normalized_shape (normalized_shape (3, 5): input.mean((-2, -1))).",
+      "VAR": "The variance is calculated via the biased estimator, equivalent to torch.var(input, correction=0).",
+      "AFFINE": "gamma and beta are learnable per-element affine parameters of shape normalized_shape if elementwise_affine is True (bias only if bias=True); eps is added to the denominator, default 1e-5.",
+      "STATS": "Statistics are computed from the input data in both training and evaluation modes."
     },
     "snapshot": "sources/T_LAYERNORM.txt.gz",
     "snapshot_sha256": "455341e6806507f1310040078e6d90932c6cd59a5a392607df0998c395ff3dc3",
@@ -1794,7 +1798,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.functional.layer_norm"
+      "PAGE": "Documentation of torch.nn.functional.layer_norm",
+      "DEF": "layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05): layer normalization over the last certain number of dimensions; see LayerNorm."
     },
     "snapshot": "sources/T_LAYERNORM_F.txt.gz",
     "snapshot_sha256": "09049275b2f442ac96d4f1935330c9400aa09704efee8a54e97b6e3c640159bd",
@@ -1808,7 +1813,10 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.RMSNorm"
+      "PAGE": "Documentation of torch.nn.RMSNorm",
+      "DEF": "y_i = x_i / RMS(x) * gamma_i, RMS(x) = sqrt(eps + (1/n) sum_i x_i^2); the RMS is taken over the last D dimensions, D the dimension of normalized_shape.",
+      "EPS": "eps (float | None): a value added to the denominator for numerical stability; default torch.finfo(x.dtype).eps.",
+      "AFFINE": "elementwise_affine: learnable per-element weight (initialised to ones); no bias parameter."
     },
     "snapshot": "sources/T_RMSNORM.txt.gz",
     "snapshot_sha256": "f8a899490b12e680d77b2aec6780b212a98d0624cd989ea779b03c63560570f9",
@@ -1822,7 +1830,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.functional.rms_norm"
+      "PAGE": "Documentation of torch.nn.functional.rms_norm",
+      "DEF": "rms_norm(input, normalized_shape, weight=None, eps=None): root mean square layer normalization; see RMSNorm."
     },
     "snapshot": "sources/T_RMSNORM_F.txt.gz",
     "snapshot_sha256": "4689991fd0185e7b3ea15a640c9509821a7d8f878a4a67de90428b90f3b507b0",
@@ -1836,7 +1845,10 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.GroupNorm"
+      "PAGE": "Documentation of torch.nn.GroupNorm",
+      "DEF": "y = (x - E[x]) / sqrt(Var[x] + eps) * gamma + beta; the input channels are separated into num_groups groups of num_channels / num_groups channels (num_channels divisible by num_groups); mean and standard deviation separately over each group; gamma, beta per-channel vectors of size num_channels (affine).",
+      "VAR": "The variance is calculated via the biased estimator, equivalent to torch.var(input, correction=0); statistics from the input in training and evaluation.",
+      "SHAPE": "Input (N, C, *), C = num_channels; output of the same shape; GroupNorm(6, 6) is equivalent with InstanceNorm, GroupNorm(1, 6) with LayerNorm."
     },
     "snapshot": "sources/T_GROUPNORM.txt.gz",
     "snapshot_sha256": "58e4b676c88b17e2971ef75bc6bb442560d85dbaf5064c906419829d55a4431e",
@@ -1850,7 +1862,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.functional.group_norm"
+      "PAGE": "Documentation of torch.nn.functional.group_norm",
+      "DEF": "group_norm(input, num_groups, weight=None, bias=None, eps=1e-05); see GroupNorm."
     },
     "snapshot": "sources/T_GROUPNORM_F.txt.gz",
     "snapshot_sha256": "1e6ca9100e3c478a10fdae91e5f7732577349fa58feb7ed84e473650584a64dd",
@@ -1901,7 +1914,11 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.BatchNorm2d"
+      "PAGE": "Documentation of torch.nn.BatchNorm2d",
+      "DEF": "y = (x - E[x]) / sqrt(Var[x] + eps) * gamma + beta; mean and standard deviation per channel over the mini-batch ((N, H, W) slices); gamma, beta of size C.",
+      "VAR": "At train time the standard deviation is calculated via the biased estimator, torch.var(input, correction=0); the value stored in the moving average is calculated via the unbiased estimator, torch.var(input, correction=1).",
+      "RUNNING": "During training the layer keeps running estimates of mean and variance, used for normalization during evaluation; default momentum 0.1; track_running_stats=False: no running estimates, batch statistics in evaluation as well.",
+      "MOMENTUM": "Update rule x_new = (1 - momentum) * x_hat + momentum * x_t, x_hat the estimated statistic, x_t the new observed value; momentum None: cumulative moving average (simple average)."
     },
     "snapshot": "sources/T_BATCHNORM2D.txt.gz",
     "snapshot_sha256": "a3f98013af8acab334765fb3fa67d6d0091ab95dcbe7eadd811d00203db6cfd5",
@@ -1915,7 +1932,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.functional.batch_norm"
+      "PAGE": "Documentation of torch.nn.functional.batch_norm",
+      "DEF": "batch_norm(input, running_mean, running_var, weight=None, bias=None, training=False, momentum=0.1, eps=1e-05): batch normalization for each channel across a batch; see BatchNorm1d/2d/3d."
     },
     "snapshot": "sources/T_BATCHNORM_F.txt.gz",
     "snapshot_sha256": "9e64e2cba1c930e8ea0f1090638cab6e4ce1acbd2b34020fda2abc9bb95609eb",
@@ -1929,7 +1947,10 @@
     "kind": "reference_program",
     "version": "v0.7.0",
     "items": {
-      "PAGE": "Liger RMSNorm ops"
+      "PAGE": "Liger RMSNorm source",
+      "DEF": "y_i = (x_i / RMS) * (offset + w_i) with rstd = rsqrt(mean(x^2) + eps) per row; LigerRMSNormFunction.forward(X, W, eps, offset=0.0, casting_mode='llama', in_place=True, row_mode=None).",
+      "OFFSET": "Some models shift the weight by a constant offset; Gemma uses offset 1.0, giving (X / RMS(X)) * (W + 1.0).",
+      "CAST": "casting_mode llama: only rstd computed in fp32 and x*rstd cast back before the weight; gemma: everything in fp32, output cast back; none: no casting."
     },
     "snapshot": "sources/NORM_LIGER_RMS.txt.gz",
     "snapshot_sha256": "bcfb98406686f272e4618eae5e577624d35c68d9ddcb90dd5b0480857bdee0c6",
@@ -1960,7 +1981,8 @@
     "kind": "reference_program",
     "version": "v0.7.0",
     "items": {
-      "PAGE": "Liger LayerNorm ops"
+      "PAGE": "Liger LayerNorm source",
+      "DEF": "mean = sum(x)/n, var = sum((x - mean)^2)/n, rstd = rsqrt(var + eps), Y = (X - mean) * rstd * W + B per row; LigerLayerNormFunction.forward(X, W, B, eps)."
     },
     "snapshot": "sources/NORM_LIGER_LN.txt.gz",
     "snapshot_sha256": "39cac5316e2d0f026ac7127b36bbcf63ec8a1203f3ff9ebd2de20cd15f5b36b5",
@@ -1995,7 +2017,8 @@
     "kind": "reference_program",
     "version": "v0.7.0",
     "items": {
-      "PAGE": "Liger GroupNorm ops"
+      "PAGE": "Liger GroupNorm source",
+      "DEF": "X viewed as (batch, num_groups, -1) (contiguous blocks of num_channels/num_groups channels); variance = E[X^2] - E[X]^2 per group; rstd = rsqrt(variance + eps); Y = (X - m) * rstd * W[c] + B[c] with per-channel W, B."
     },
     "snapshot": "sources/NORM_LIGER_GN.txt.gz",
     "snapshot_sha256": "518656b4ba9d920808c54be475baf64badc873f87d7d62720ba7037c46fe4e9d",
@@ -2043,7 +2066,8 @@
     "kind": "reference_program",
     "version": "v4.57.3",
     "items": {
-      "PAGE": "Qwen3-Next modeling code"
+      "PAGE": "HF transformers v4.57.3 Qwen3-Next modeling source",
+      "OFFSET": "Qwen3NextRMSNorm: weight initialised to zeros; output = x * rsqrt(mean(x^2, -1) + eps) computed in float32, times (1.0 + weight), then cast to the input dtype."
     },
     "snapshot": "sources/NORM_HF_QWEN3NEXT.txt.gz",
     "snapshot_sha256": "315ba8d399b5e67438c9682c3c5f398949ce63283cbfc3ceaf1409eba90d9543",
@@ -2057,7 +2081,8 @@
     "kind": "reference_program",
     "version": "v4.57.3",
     "items": {
-      "PAGE": "Gemma modeling code"
+      "PAGE": "HF transformers v4.57.3 Gemma modeling source",
+      "OFFSET": "GemmaRMSNorm: weight initialised to zeros; output = x * rsqrt(mean(x^2, -1) + eps) in float32, times (1.0 + weight), then cast to the input dtype."
     },
     "snapshot": "sources/NORM_HF_GEMMA.txt.gz",
     "snapshot_sha256": "20313dbd1e62d29d0aa86fc7652cf6f397cf9a76a9fdf8131628c97be4a59252",
@@ -2597,7 +2622,12 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "index_reduce_ page"
+      "DEF": "index_reduce_(dim, index, source, reduce, *, include_self=True): accumulate the elements of source into self by accumulating to the indices in the order given in index using the reduction reduce; e.g. dim 0, index[i] == j, prod, include_self: the ith row of source is multiplied by the jth row of self; for a 3-D tensor self[index[i], :, :] *= src[i, :, :] (dim 0), analogous for dims 1, 2.",
+      "INCLUDE_SELF": "If include_self is True the values in the self tensor are included in the reduction, otherwise rows in the self tensor that are accumulated to are treated as if they were filled with the reduction identities.",
+      "SHAPE": "The dim-th dimension of source must have the same size as the length of index (which must be a vector), and all other dimensions must match self, or an error will be raised. Only floating point tensors are supported.",
+      "INDEX_PARAM": "Parameter text: index - indices of source to select from (int64 or int32).",
+      "REDUCES": "reduce: the reduction operation to apply ('prod', 'mean', 'amax', 'amin').",
+      "EXAMPLE": "Example: x = 5x3 filled with 2, t = [[1,2,3],[4,5,6],[7,8,9],[10,11,12]], index [0,4,2,0], prod: rows [20,44,72], [2,2,2], [14,16,18], [2,2,2], [8,10,12]; with include_self=False: [10,22,36], [2,2,2], [7,8,9], [2,2,2], [4,5,6]."
     },
     "snapshot": "sources/T_INDEX_REDUCE.txt.gz",
     "snapshot_sha256": "8c5d954708945785e531267678a6bddede1fd1ce656f4ccf583d9186906a1c6a",
@@ -2611,7 +2641,11 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "scatter_reduce_ page"
+      "DEF": "scatter_reduce_(dim, index, src, reduce, *, include_self=True): reduces all values from src to the indices specified in index in self using the reduction reduce ('sum', 'prod', 'mean', 'amax', 'amin'); each src value is reduced to the self index given by its own index for dimensions != dim and by the corresponding value in index for dimension = dim; e.g. self[index[i][j][k]][j][k] += src[i][j][k] for dim 0 (sum).",
+      "INCLUDE_SELF": "If include_self is True, the values in the self tensor are included in the reduction.",
+      "SHAPE": "self, index and src have the same number of dimensions; index.size(d) <= src.size(d) for all d, index.size(d) <= self.size(d) for d != dim; index and src do not broadcast.",
+      "BACKWARD": "Note: the backward pass is implemented only for src.shape == index.shape.",
+      "EXAMPLE": "Example: src [1,2,3,4,5,6], index [0,1,0,1,2,1], input [1,2,3,4]: sum -> [5,14,8,4]; sum, include_self=False -> [4,12,5,4]; input2 [5,4,3,2]: amax -> [5,6,5,2]; amax, include_self=False -> [3,6,5,2]."
     },
     "snapshot": "sources/T_SCATTER_REDUCE.txt.gz",
     "snapshot_sha256": "fb5127a8124919c0947d33c3d96a99c301ad8cde61041dbfc90e5f168e51ffbf",
@@ -2625,7 +2659,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "scatter_reduce page"
+      "DEF": "torch.scatter_reduce(input, dim, index, src, reduce, *, include_self=True) is the out-of-place version of Tensor.scatter_reduce_."
     },
     "snapshot": "sources/T_SCATTER_REDUCE_F.txt.gz",
     "snapshot_sha256": "7ced9447f4fefabc1901f66ec3160ed08bd1f6468dc1d6585a5fac5a794afaec",
@@ -2983,7 +3017,9 @@
     "title": "torch 2.10 source torch/_refs/__init__.py (normalisation references)",
     "kind": "torch_source",
     "items": {
-      "PAGE": "definitions in torch/_refs/__init__.py"
+      "PAGE": "definitions in torch/_refs/__init__.py",
+      "NORMALIZE": "_normalize(a, norm_dims, eps): biased var_mean over norm_dims (unbiased=False), rstd = rsqrt(biased_var + eps), out = (a - mean) * rstd; native_layer_norm returns (out, mean, rstd).",
+      "GROUP": "native_group_norm: input reshaped to [N, num_groups, num_channels // num_groups, flattened_inner] and biased var_mean over the last two axes; rstd = rsqrt(var + eps); per-channel weight and bias; returns (out, mean, rstd) with mean, rstd of shape (N, num_groups)."
     },
     "snapshot": "sources/NORM_TS_REFS.py.gz",
     "snapshot_sha256": "a836e8894a4a6fce7f566d2e69ee8e42690698e703814d6085914bc0920d4462",
@@ -2995,7 +3031,9 @@
     "title": "torch 2.10 source torch/_decomp/decompositions.py (normalisation decompositions)",
     "kind": "torch_source",
     "items": {
-      "PAGE": "definitions in torch/_decomp/decompositions.py"
+      "PAGE": "definitions in torch/_decomp/decompositions.py",
+      "LN_BWD": "native_layer_norm_backward(grad_out, input, normalized_shape, mean, rstd, weight, bias, output_mask): x_hat = (x - mean) rstd; g = grad_out * weight (or grad_out); d_input = rstd / N * (N g - sum(g) - x_hat sum(g x_hat)) over the inner dims; d_weight = sum over outer dims of grad_out * x_hat; d_bias = sum over outer dims of grad_out.",
+      "BN_HELPER": "native_batch_norm_helper: training - biased var_mean over dims [0, 2, ...], rstd = rsqrt(var + eps), new_running_mean = momentum * mean + (1 - momentum) * running_mean, new_running_var = momentum * var * n / (n - 1) + (1 - momentum) * running_var, n = numel / C; eval - running statistics, invstd = 1 / sqrt(running_var + eps); output * weight + bias."
     },
     "snapshot": "sources/NORM_TS_DECOMP.py.gz",
     "snapshot_sha256": "a875d0d31e5bd13afd0f3e53ac8da7171c530dc01871da5e30391baaba716cc2",
@@ -3007,7 +3045,8 @@
     "title": "torch 2.10 source torch/nn/modules/batchnorm.py",
     "kind": "torch_source",
     "items": {
-      "PAGE": "definitions in torch/nn/modules/batchnorm.py"
+      "PAGE": "definitions in torch/nn/modules/batchnorm.py",
+      "MOMENTUM_NONE": "_BatchNorm.forward: in training with tracked statistics num_batches_tracked += 1; momentum None uses exponential_average_factor = 1 / num_batches_tracked (cumulative moving average), otherwise momentum; batch statistics are used in training, and in eval only when the running buffers are None."
     },
     "snapshot": "sources/NORM_TS_BNMOD.py.gz",
     "snapshot_sha256": "09e38e56307039473d55d527cc0027c334b704db0b1dce32e1a2933d7f259f89",
@@ -3507,6 +3546,19 @@
     "snapshot": "sources/TS_INDUCTOR_CONFIG.py.gz",
     "snapshot_sha256": "35742623dd7b4b523940a68f0eccd2f68286cc624fe355286ce3783d878aee9c",
     "path": "torch/_inductor/config.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "TS_POST_GRAD": {
+    "title": "torch 2.10 source torch/_inductor/fx_passes/post_grad.py",
+    "kind": "torch_source",
+    "items": {
+      "MM_PLUS_MM": "lowering pattern: aten.add(aten.mm(mat1, mat2), aten.mm(mat3, mat4)) is replaced by mm_plus_mm(mat1, mat2, mat3, mat4) (tuned_mm_plus_mm) when the inner and outer sizes match.",
+      "PAGE": "torch/_inductor/fx_passes/post_grad.py"
+    },
+    "snapshot": "sources/TS_POST_GRAD.py.gz",
+    "snapshot_sha256": "f2efdc2cfd03ceadcec5c73e78aa9f713cccb45eb702007388ce0bc4badb12a3",
+    "path": "torch/_inductor/fx_passes/post_grad.py",
     "torch_version": "2.10.0+cu128",
     "retrieved": "2026-10-17"
   }
