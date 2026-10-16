@@ -1,0 +1,111 @@
+schema_version: '1.2'
+id: MATMUL
+role: MATMUL
+title: Matrix products (mm, bmm, matmul with broadcasting, addmm, baddbmm, linear) and their vector-Jacobian products
+review:
+  status: drafted
+  author: Claude (spec v3 author), 2026-10-16
+  date: '2026-10-16'
+  scope: Real-number values and gradients of the documented products; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [aten.mm, aten.bmm, aten.matmul, aten.addmm, aten.baddbmm, aten.linear, vjp.aten.mm, vjp.aten.bmm, vjp.aten.matmul,
+  vjp.aten.linear, vjp.aten.addmm]
+profiles:
+  real:
+    meaning: Exact real matrix products (sums of products, no rounding, any accumulation order); gradients are the VJPs
+      against an explicit upstream gradient, with broadcast dimensions summed back to each operand's shape.
+    task_choice_required: false
+outputs:
+  out:
+    shape: per operation; vjp ops return the list of operand gradients (None for an absent bias)
+    guarantee: exact
+comparison:
+  input_binding: Tensor values are the exact values received.
+  quality: Exact equality.
+  test_evidence: Exact equality (products of rationals are rational).
+  error_handling: Shape mismatches are invalid_input. Input precision modes (TF32, bf16 products) are numerical, not part of
+    the target.
+decisions:
+- id: MM.PRECISION
+  status: drafted
+  statement: allow_tf32 / input_precision / out_dtype choose how a device computes the product; the task value is the
+    exact product of the received operands (MATMUL role of specification_v2, 'TF32 supported' on the linear page refers to
+    the computation).
+  basis: [T_MM.DEF, T_LINEAR.DEF]
+- id: MM.VJP
+  status: drafted
+  statement: 'Gradients of the products are the VJPs: d(A B) gives dA = G B^T and dB = A^T G; for matmul the batch
+    dimensions of each gradient are summed back to the operand''s shape (it was broadcast); for linear dx = G W, dW = sum
+    over leading dims of G^T x, db = the sum of G over the leading dims; for addmm d input = beta * G summed to input''s
+    shape.'
+  basis: [T_MM.DEF, T_MATMUL.DEF, T_LINEAR.DEF, T_ADDMM.DEF]
+clauses:
+- {id: MM.C1, basis: [T_MM.DEF, T_BMM.DEF, MM.PRECISION], statement: 'mm: (n x m) @ (m x p); bmm per batch; no broadcasting;
+    m = 0 gives zeros', observes: [out], evidence_kind: definition}
+- {id: MM.C2, basis: [T_MATMUL.DEF], statement: 'matmul: 1-D promotion and removal, batch dimensions broadcast', observes: [out],
+  evidence_kind: definition}
+- {id: MM.C3, basis: [T_ADDMM.DEF, T_ADDMM.BETA0, T_BADDBMM.DEF], statement: 'addmm / baddbmm = beta input + alpha product;
+    beta = 0 ignores input', observes: [out], evidence_kind: definition}
+- {id: MM.C4, basis: [T_LINEAR.DEF], statement: 'linear = x W^T + b over the last dim of x', observes: [out], evidence_kind: definition}
+- {id: MM.C5, basis: [MM.VJP], statement: VJPs of mm / bmm / matmul / linear / addmm per MM.VJP, observes: [out], evidence_kind: derived}
+examples:
+- {id: MM.E1, profile: real, clauses: [MM.C1], input: {op: aten.mm, args: [{t: f32, v: [[1, 2], [3, 4]]}, {t: f32, v: [[5], [6]]}]},
+  expected: {outcome: value, fields: {out: [[17], [39]]}}}
+- {id: MM.E2, profile: real, clauses: [MM.C1], input: {op: aten.mm, args: [{t: f32, v: [], shape: [2, 0]}, {t: f32, v: [], shape: [
+          0, 3]}]}, expected: {outcome: value, fields: {out: [[0, 0, 0], [0, 0, 0]]}}}
+- {id: MM.E3, profile: real, clauses: [MM.C1], input: {op: aten.bmm, args: [{t: f32, v: [[[1, 2]], [[3, 4]]]}, {t: f32, v: [[[1],
+            [0]], [[0], [1]]]}]}, expected: {outcome: value, fields: {out: [[[1]], [[4]]]}}}
+- {id: MM.E4, profile: real, clauses: [MM.C1], input: {op: aten.mm, args: [{t: f32, v: [[1, 2]]}, {t: f32, v: [[1, 2]]}]}, expected: {
+    outcome: invalid_input}}
+- {id: MM.E5, profile: real, clauses: [MM.C2], input: {op: aten.matmul, args: [{t: f32, v: [[[1, 2]], [[3, 4]]]}, {t: f32, v: [
+          [1], [1]]}]}, expected: {outcome: value, fields: {out: [[[3]], [[7]]]}}, note: Batch (2,1,2) @ (2,1); the matrix
+    broadcasts over the batch.}
+- {id: MM.E6, profile: real, clauses: [MM.C2], input: {op: aten.matmul, args: [{t: f32, v: [1, 2]}, {t: f32, v: [3, 4]}]}, expected: {
+    outcome: value, fields: {out: 11}}}
+- {id: MM.E7, profile: real, clauses: [MM.C2], input: {op: aten.matmul, args: [{t: f32, v: [1, 2]}, {t: f32, v: [[1, 2], [3, 4]]}]},
+  expected: {outcome: value, fields: {out: [7, 10]}}}
+- {id: MM.E8, profile: real, clauses: [MM.C3], input: {op: aten.addmm, args: [{t: f32, v: [10, 20]}, {t: f32, v: [[1, 2], [3,
+          4]]}, {t: f32, v: [[1, 0], [0, 1]]}], kwargs: {beta: 2, alpha: 3}}, expected: {outcome: value, fields: {out: [[23, 46],
+        [29, 52]]}}}
+- {id: MM.E9, profile: real, clauses: [MM.C3], input: {op: aten.addmm, args: [{t: f32, v: [[inf]]}, {t: f32, v: [[2]]}, {t: f32,
+        v: [[3]]}], kwargs: {beta: 0}}, expected: {outcome: value, fields: {out: [[6]]}}}
+- {id: MM.E10, profile: real, clauses: [MM.C3], input: {op: aten.baddbmm, args: [{t: f32, v: [[[1]]]}, {t: f32, v: [[[2]]]}, {t: f32,
+        v: [[[3]]]}]}, expected: {outcome: value, fields: {out: [[[7]]]}}}
+- {id: MM.E11, profile: real, clauses: [MM.C4], input: {op: aten.linear, args: [{t: f32, v: [[1, 2]]}, {t: f32, v: [[1, 1], [2,
+          0]]}, {t: f32, v: [10, 20]}]}, expected: {outcome: value, fields: {out: [[13, 22]]}}}
+- {id: MM.E12, profile: real, clauses: [MM.C4], input: {op: aten.linear, args: [{t: f32, v: [[[1, 2]], [[3, 4]]]}, {t: f32, v: [
+          [1, 1]]}]}, expected: {outcome: value, fields: {out: [[[3]], [[7]]]}}}
+- {id: MM.E13, profile: real, clauses: [MM.C5], input: {op: vjp.aten.mm, args: [{t: f32, v: [[5]]}, {t: f32, v: [[1, 2]]}, {t: f32,
+        v: [[3], [4]]}]}, expected: {outcome: value, fields: {out: [[[15, 20]], [[5], [10]]]}}}
+- {id: MM.E14, profile: real, clauses: [MM.C5], input: {op: vjp.aten.linear, args: [{t: f32, v: [[1], [2]]}, {t: f32, v: [[1, 2],
+          [3, 4]]}, {t: f32, v: [[1, 1]]}, {t: f32, v: [0]}]}, expected: {outcome: value, fields: {out: [[[1, 1], [2, 2]], [[7,
+            10]], [3]]}}}
+- {id: MM.E15, profile: real, clauses: [MM.C5, MM.C2], input: {op: vjp.aten.matmul, args: [{t: f32, v: [[[1]], [[1]]]}, {t: f32,
+        v: [[[1, 2]], [[3, 4]]]}, {t: f32, v: [[1], [1]]}]}, expected: {outcome: value, fields: {out: [[[[1, 1]], [[1, 1]]], [[4],
+          [6]]]}}}
+- {id: MM.E16, profile: real, clauses: [MM.C5, MM.C3], input: {op: vjp.aten.addmm, args: [{t: f32, v: [[1, 1], [1, 1]]}, {t: f32,
+        v: [1, 1]}, {t: f32, v: [[1, 0], [0, 1]]}, {t: f32, v: [[2, 0], [0, 2]]}], kwargs: {beta: 2}}, expected: {outcome: value,
+    fields: {out: [[4, 4], [[2, 2], [2, 2]], [[1, 1], [1, 1]]]}}}
+signature:
+  inputs: ['op: one of the covered names', 'args as in ATen; vjp ops take (upstream, operands...)']
+  pre_state: []
+  post_state: []
+  observation_unit: the product or the operand gradients
+domain:
+  valid: [exact real values (finite; addmm with beta = 0 ignores the input, also when it holds infinities)]
+  invalid_input: [inner dimensions that do not match, non-broadcastable batch dimensions, wrong ranks for mm / bmm]
+  unsupported: [sparse layouts]
+mutation_requirements:
+- {id: MM.M1, misreading: linear computes x W instead of x W^T, witnesses: [MM.E11]}
+- {id: MM.M2, misreading: addmm adds the input even when beta = 0, witnesses: [MM.E9]}
+- {id: MM.M3, misreading: matmul gradient keeps the broadcast batch dimension, witnesses: [MM.E15]}
+- {id: MM.M4, misreading: mm gradient dB = G A (wrong orientation), witnesses: [MM.E13]}
+- {id: MM.M5, misreading: linear bias gradient not summed over the leading dims, witnesses: [MM.E14]}
+- {id: MM.M6, misreading: addmm ignores alpha, witnesses: [MM.E8]}
+nonclaims:
+- TF32, bf16 tensor-core products and accumulation order are numerical (K - G); the TF32 finding B006 is numerical.
+changes: []

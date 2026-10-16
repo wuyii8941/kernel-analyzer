@@ -1,0 +1,167 @@
+schema_version: '1.2'
+id: REDUCE
+role: REDUCE
+title: Reductions (sum, mean, prod, amax, amin, argmax, argmin, max / min along a dim, var, std, var_mean, cumsum,
+  logsumexp, norm) and their vector-Jacobian products
+review:
+  status: drafted
+  author: Claude (spec v3 author), 2026-10-16
+  date: '2026-10-16'
+  scope: Real-number values and gradients of the documented reductions; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [aten.sum, aten.mean, aten.prod, aten.amax, aten.amin, aten.argmax, aten.argmin, aten.max, aten.min, aten.var,
+  aten.std, aten.var_mean, aten.cumsum, aten.logsumexp, aten.norm, vjp.aten.sum, vjp.aten.mean, vjp.aten.prod,
+  vjp.aten.amax, vjp.aten.amin, vjp.aten.max, vjp.aten.min, vjp.aten.var, vjp.aten.std, vjp.aten.logsumexp,
+  vjp.aten.cumsum, vjp.aten.norm]
+profiles:
+  real:
+    meaning: Exact real reductions over the given dims (keepdim keeps size-1 dims); gradients are the VJP of the
+      documented function against an explicit upstream gradient (ops named vjp.<op>, arguments (upstream, input,
+      op arguments)), with the documented conventions at ties and kinks.
+    task_choice_required: false
+outputs:
+  out:
+    shape: per operation; max / min along a dim and var_mean return two tensors
+    kind: discrete
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Tensor values are the exact values received.
+  quality: No tolerance; exact where rational.
+  test_evidence: Exact equality or containment in the reference enclosure.
+  error_handling: Documented undefined values are domain_undefined; documented errors are invalid_input.
+decisions:
+- id: RD.EMPTY
+  status: drafted
+  statement: 'Over an empty set: sum = 0 and prod = 1 (identities of + and *), mean undefined (documented), var / std
+    undefined (N - correction <= 0), logsumexp = -inf (log of an empty sum of exponentials, log 0), amax / amin /
+    argmax / argmin invalid (torch raises), cumsum of an empty dimension is empty.'
+  basis: [T_SUM.DEF, T_PROD.DEF, T_MEAN.EMPTY, T_VAR.DEF, T_LOGSUMEXP.DEF, T_AMAX.DEF]
+- id: RD.INF
+  status: drafted
+  statement: Infinite elements follow the real limits (sum with -inf is -inf, amax ignores -inf against finite values,
+    logsumexp of a row of -inf is -inf); +inf together with -inf in a sum is domain_undefined.
+  basis: [T_SUM.DEF, T_LOGSUMEXP.DEF]
+- id: RD.VJP
+  status: drafted
+  statement: 'Gradients are the VJP of the defined function. At ties the documented conventions apply: amax / amin
+    and full max / min split the upstream gradient evenly among equal extreme values; max / min along one dim give
+    it to the returned (first) index. d prod / d x_i is the product of the other elements (exact with zeros).
+    d ||x||_2 at x = 0 is 0 (a subgradient; PyTorch does not document it; alternative: undefined).'
+  basis: [T_AMAX.GRAD, T_MAX.DIM, T_ARGMAX.DEF, T_PROD.DEF, T_NORM.DEF]
+clauses:
+- {id: RD.C1, basis: [T_SUM.DEF, T_MEAN.DEF, T_MEAN.EMPTY, RD.EMPTY, RD.INF], statement: 'sum and mean over dims; empty
+    sum 0, empty mean undefined', observes: [out], evidence_kind: definition}
+- {id: RD.C2, basis: [T_PROD.DEF, RD.EMPTY], statement: product over dims; empty product 1, observes: [out], evidence_kind: definition}
+- {id: RD.C3, basis: [T_AMAX.DEF, T_AMIN.DEF, RD.EMPTY], statement: 'amax / amin over dims; empty invalid', observes: [out],
+  evidence_kind: definition}
+- {id: RD.C4, basis: [T_ARGMAX.DEF, T_ARGMIN.DEF, T_MAX.DIM, T_MIN.DIM], statement: 'argmax / argmin and max / min along a
+    dim return the first extreme index', observes: [out], evidence_kind: definition}
+- {id: RD.C5, basis: [T_VAR.DEF, T_STD.DEF, T_VAR_MEAN.DEF], statement: 'var = sum (x - mean)^2 / (N - correction),
+    undefined when N - correction <= 0; std = sqrt(var); var_mean returns (var, mean)', observes: [out], evidence_kind: definition}
+- {id: RD.C6, basis: [T_CUMSUM.DEF], statement: 'cumsum: y_i = x_1 + ... + x_i along dim', observes: [out], evidence_kind: definition}
+- {id: RD.C7, basis: [T_LOGSUMEXP.DEF, RD.EMPTY, RD.INF], statement: 'logsumexp = log sum exp along dim; rows of -inf and
+    empty rows give -inf', observes: [out], evidence_kind: definition}
+- {id: RD.C8, basis: [T_NORM.DEF], statement: 'norm of order p: (sum |x|^p)^(1/p); p = inf is max |x|', observes: [out],
+  evidence_kind: definition}
+- {id: RD.C9, basis: [RD.VJP, T_SUM.DEF, T_MEAN.DEF, T_PROD.DEF], statement: 'VJPs of sum (broadcast), mean (broadcast /
+    N) and prod (product of the other elements)', observes: [out], evidence_kind: derived}
+- {id: RD.C10, basis: [RD.VJP, T_AMAX.GRAD, T_MAX.DIM], statement: 'VJPs of amax / amin (even split among ties) and max /
+    min along a dim (to the returned index)', observes: [out], evidence_kind: derived}
+- {id: RD.C11, basis: [RD.VJP, T_VAR.DEF, T_STD.DEF], statement: 'VJP of var: 2 (x - mean) / (N - correction); of std:
+    (x - mean) / ((N - correction) std)', observes: [out], evidence_kind: derived}
+- {id: RD.C12, basis: [RD.VJP, T_LOGSUMEXP.DEF, T_CUMSUM.DEF, T_NORM.DEF], statement: 'VJP of logsumexp: softmax; of
+    cumsum: reverse cumulative sum; of the 2-norm: x / ||x|| (0 at x = 0)', observes: [out], evidence_kind: derived}
+examples:
+- {id: RD.E1, profile: real, clauses: [RD.C1], input: {op: aten.sum, args: [{t: f32, v: [[1, 2], [3, 4]]}, [1]]}, expected: {
+    outcome: value, fields: {out: [3, 7]}}}
+- {id: RD.E2, profile: real, clauses: [RD.C1], input: {op: aten.sum, args: [{t: f32, v: [[1, 2], [3, 4]]}, [1], true]}, expected: {
+    outcome: value, fields: {out: [[3], [7]]}}}
+- {id: RD.E3, profile: real, clauses: [RD.C1], input: {op: aten.sum, args: [{t: f32, v: [[], []]}, [1]]}, expected: {outcome: value,
+    fields: {out: [0, 0]}}}
+- {id: RD.E4, profile: real, clauses: [RD.C1], input: {op: aten.sum, args: [{t: f32, v: [1, -inf]}]}, expected: {outcome: value,
+    fields: {out: -inf}}}
+- {id: RD.E5, profile: real, clauses: [RD.C1], input: {op: aten.sum, args: [{t: f32, v: [inf, -inf]}]}, expected: {outcome: domain_undefined}}
+- {id: RD.E6, profile: real, clauses: [RD.C1], input: {op: aten.mean, args: [{t: f32, v: [[1, 2], [3, 5]]}, [1]]}, expected: {
+    outcome: value, fields: {out: ['3/2', 4]}}}
+- {id: RD.E7, profile: real, clauses: [RD.C1], input: {op: aten.mean, args: [{t: f32, v: [[], []]}, [1]]}, expected: {outcome: domain_undefined}}
+- {id: RD.E8, profile: real, clauses: [RD.C2], input: {op: aten.prod, args: [{t: f32, v: [[2, 3], [0, 5]]}, 1]}, expected: {
+    outcome: value, fields: {out: [6, 0]}}}
+- {id: RD.E9, profile: real, clauses: [RD.C2], input: {op: aten.prod, args: [{t: f32, v: [[], []]}, 1]}, expected: {outcome: value,
+    fields: {out: [1, 1]}}}
+- {id: RD.E10, profile: real, clauses: [RD.C3], input: {op: aten.amax, args: [{t: f32, v: [[1, 3], [-inf, 2]]}, [1]]}, expected: {
+    outcome: value, fields: {out: [3, 2]}}}
+- {id: RD.E11, profile: real, clauses: [RD.C3], input: {op: aten.amin, args: [{t: f32, v: [[], []]}, [1]]}, expected: {outcome: invalid_input}}
+- {id: RD.E12, profile: real, clauses: [RD.C4], input: {op: aten.argmax, args: [{t: f32, v: [[1, 3, 3]]}, 1]}, expected: {outcome: value,
+    fields: {out: [1]}}}
+- {id: RD.E13, profile: real, clauses: [RD.C4], input: {op: aten.max, args: [{t: f32, v: [[1, 3, 3], [5, 4, 5]]}, 1]}, expected: {
+    outcome: value, fields: {out: [[3, 5], [1, 0]]}}}
+- {id: RD.E14, profile: real, clauses: [RD.C4], input: {op: aten.min, args: [{t: f32, v: [[2, 1, 1]]}, 1]}, expected: {outcome: value,
+    fields: {out: [[1], [1]]}}}
+- {id: RD.E15, profile: real, clauses: [RD.C5], input: {op: aten.var, args: [{t: f32, v: [1, 2, 3, 4]}]}, expected: {outcome: value,
+    fields: {out: '5/3'}}}
+- {id: RD.E16, profile: real, clauses: [RD.C5], input: {op: aten.var, args: [{t: f32, v: [1, 2, 3, 4]}], kwargs: {correction: 0}},
+  expected: {outcome: value, fields: {out: '5/4'}}}
+- {id: RD.E17, profile: real, clauses: [RD.C5], input: {op: aten.var, args: [{t: f32, v: [5]}]}, expected: {outcome: domain_undefined}}
+- {id: RD.E18, profile: real, clauses: [RD.C5], input: {op: aten.std, args: [{t: f32, v: [1, 3]}]}, expected: {outcome: value,
+    fields: {out: sqrt(2)}}}
+- {id: RD.E19, profile: real, clauses: [RD.C5], input: {op: aten.var_mean, args: [{t: f32, v: [[1, 2], [3, 7]]}, [1]], kwargs: {
+      correction: 0}}, expected: {outcome: value, fields: {out: [['1/4', 4], ['3/2', 5]]}}}
+- {id: RD.E20, profile: real, clauses: [RD.C6], input: {op: aten.cumsum, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, 1]}, expected: {
+    outcome: value, fields: {out: [[1, 3, 6], [4, 9, 15]]}}}
+- {id: RD.E21, profile: real, clauses: [RD.C7], input: {op: aten.logsumexp, args: [{t: f32, v: [[0, 0], [0, -inf], [-inf, -inf]]},
+      1]}, expected: {outcome: value, fields: {out: [log(2), 0, -inf]}}}
+- {id: RD.E22, profile: real, clauses: [RD.C7], input: {op: aten.logsumexp, args: [{t: f32, v: [[], []]}, 1]}, expected: {outcome: value,
+    fields: {out: [-inf, -inf]}}}
+- {id: RD.E23, profile: real, clauses: [RD.C8], input: {op: aten.norm, args: [{t: f32, v: [3, -4]}]}, expected: {outcome: value,
+    fields: {out: 5}}}
+- {id: RD.E24, profile: real, clauses: [RD.C8], input: {op: aten.norm, args: [{t: f32, v: [3, -4]}, 1]}, expected: {outcome: value,
+    fields: {out: 7}}}
+- {id: RD.E25, profile: real, clauses: [RD.C9], input: {op: vjp.aten.sum, args: [{t: f32, v: [1, 2]}, {t: f32, v: [[5, 6], [7,
+          8]]}, [1]]}, expected: {outcome: value, fields: {out: [[1, 1], [2, 2]]}}}
+- {id: RD.E26, profile: real, clauses: [RD.C9], input: {op: vjp.aten.mean, args: [{t: f32, v: [1, 2]}, {t: f32, v: [[5, 6], [7,
+          8]]}, [1]]}, expected: {outcome: value, fields: {out: [['1/2', '1/2'], [1, 1]]}}}
+- {id: RD.E27, profile: real, clauses: [RD.C9], input: {op: vjp.aten.prod, args: [{t: f32, v: [1, 1, 1]}, {t: f32, v: [[2, 3,
+          4], [2, 0, 4], [0, 0, 4]]}, 1]}, expected: {outcome: value, fields: {out: [[12, 8, 6], [0, 8, 0], [0, 0, 0]]}}}
+- {id: RD.E28, profile: real, clauses: [RD.C10], input: {op: vjp.aten.amax, args: [{t: f32, v: [1]}, {t: f32, v: [[1, 3, 3]]},
+      [1]]}, expected: {outcome: value, fields: {out: [[0, '1/2', '1/2']]}}}
+- {id: RD.E29, profile: real, clauses: [RD.C10], input: {op: vjp.aten.max, args: [{t: f32, v: [1]}, {t: f32, v: [[1, 3, 3]]},
+      1]}, expected: {outcome: value, fields: {out: [[0, 1, 0]]}}}
+- {id: RD.E30, profile: real, clauses: [RD.C11], input: {op: vjp.aten.var, args: [{t: f32, v: 1}, {t: f32, v: [1, 2, 3, 4]}]},
+  expected: {outcome: value, fields: {out: [-1, '-1/3', '1/3', 1]}}}
+- {id: RD.E31, profile: real, clauses: [RD.C11], input: {op: vjp.aten.std, args: [{t: f32, v: 1}, {t: f32, v: [1, 3]}]}, expected: {
+    outcome: value, fields: {out: [-1/sqrt(2), 1/sqrt(2)]}}}
+- {id: RD.E32, profile: real, clauses: [RD.C12], input: {op: vjp.aten.logsumexp, args: [{t: f32, v: [1]}, {t: f32, v: [[0, 0]]},
+      1]}, expected: {outcome: value, fields: {out: [['1/2', '1/2']]}}}
+- {id: RD.E33, profile: real, clauses: [RD.C12], input: {op: vjp.aten.cumsum, args: [{t: f32, v: [1, 1, 1]}, {t: f32, v: [5, 6,
+          7]}, 0]}, expected: {outcome: value, fields: {out: [3, 2, 1]}}}
+- {id: RD.E34, profile: real, clauses: [RD.C12], input: {op: vjp.aten.norm, args: [{t: f32, v: 1}, {t: f32, v: [3, 4]}]}, expected: {
+    outcome: value, fields: {out: ['3/5', '4/5']}}}
+- {id: RD.E35, profile: real, clauses: [RD.C12], input: {op: vjp.aten.norm, args: [{t: f32, v: 1}, {t: f32, v: [0, 0]}]}, expected: {
+    outcome: value, fields: {out: [0, 0]}}}
+signature:
+  inputs: ['op: one of the covered names', 'args: (input, dim, keepdim, ...) as in ATen; vjp ops take (upstream, input, op arguments)']
+  pre_state: []
+  post_state: []
+  observation_unit: the reduction result or the input gradient
+domain:
+  valid: [exact values and +-inf; dims within range]
+  domain_undefined: [empty mean, var / std with N - correction <= 0, +inf and -inf in one sum]
+  invalid_input: [amax / amin / argmax / argmin of an empty set, dims out of range]
+  unsupported: [nuclear norm, logsumexp gradient over several dims]
+mutation_requirements:
+- {id: RD.M1, misreading: var divides by N regardless of correction, witnesses: [RD.E15]}
+- {id: RD.M2, misreading: argmax returns the last maximal index, witnesses: [RD.E12]}
+- {id: RD.M3, misreading: amax gradient goes entirely to the first maximal element, witnesses: [RD.E28]}
+- {id: RD.M4, misreading: max-along-dim gradient split evenly among ties, witnesses: [RD.E29]}
+- {id: RD.M5, misreading: prod gradient computed as prod / x_i (division by zero for zero elements), witnesses: [RD.E27]}
+- {id: RD.M6, misreading: mean of an empty set is 0, witnesses: [RD.E7]}
+- {id: RD.M7, misreading: cumsum gradient is the forward cumulative sum, witnesses: [RD.E33]}
+- {id: RD.M8, misreading: logsumexp of an all -inf row undefined (computed as max + log sum exp(x - max) with -inf - -inf),
+  witnesses: [RD.E21]}
+nonclaims:
+- Accumulation order and precision of device reductions are numerical (K - G).
+changes: []

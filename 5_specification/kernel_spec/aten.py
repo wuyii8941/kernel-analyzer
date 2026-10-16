@@ -690,9 +690,19 @@ def narrow(a, dim, start, length):
     return slice_(a, dim, start, start + length)
 
 
-def take_along_dim(a, idx, dim):
-    return gather(a, dim, expand(idx, list(np.broadcast_shapes(as_ten(idx).shape, as_ten(a).shape)))
-                  if as_ten(idx).a.ndim == as_ten(a).a.ndim else idx)
+def take_along_dim(a, idx, dim=None):
+    """torch.take_along_dim (numpy take_along_axis): indices broadcast against input in every dimension except dim;
+    with dim None the input is flattened."""
+    a, idx = as_ten(a), as_ten(idx)
+    if dim is None:
+        return gather(view(a, [-1]), 0, view(idx, [-1]))
+    dim = dim % a.a.ndim
+    if idx.a.ndim != a.a.ndim:
+        raise Invalid("take_along_dim: input and indices must have the same number of dimensions")
+    other = [max(a.shape[d], idx.shape[d]) if d != dim else None for d in range(a.a.ndim)]
+    ishape = [idx.shape[d] if d == dim else other[d] for d in range(a.a.ndim)]
+    ashape = [a.shape[d] if d == dim else other[d] for d in range(a.a.ndim)]
+    return gather(expand(a, ashape), dim, expand(idx, ishape))
 
 
 def floor_divide(a, b):
@@ -748,9 +758,10 @@ def index(a, indices):
     return Ten(a.a[tuple(idx)], a.dtype)
 
 
-def index_put(a, indices, values, accumulate=False):
-    """aten.index_put: with accumulate, duplicates add (exactly, order irrelevant); without, a position written
-    more than once may hold any of the written values (documented as undefined) -> an allowed set."""
+def index_put(a, indices, values, accumulate=False, pick_one=False):
+    """aten.index_put: with accumulate, duplicates add (exactly, order irrelevant); without, duplicate indices are
+    documented as undefined (Undefined). pick_one=True is the diagnostic reading in which such a position holds one
+    of the written values (an allowed set), as scatter documents for itself."""
     a, values = as_ten(a), as_ten(values)
     out = a.a.copy()
     idx = []
@@ -780,6 +791,8 @@ def index_put(a, indices, values, accumulate=False):
             out[p] = s
         elif len(vs) == 1:
             out[p] = vs[0]
+        elif not pick_one:
+            raise Undefined("index_put with duplicate indices and accumulate=False is undefined (torch docs)")
         else:
             uniq = []
             for v in vs:
@@ -1151,6 +1164,142 @@ def prepare_softmax_online(a, dim):
     return m, sum_(exp(sub(a, m)), dim, keepdim=True)
 
 
+# ------------------------------------------------------------------ vector-Jacobian products of the reductions (REDUCE contract)
+def _bcast_back(g, x, dim, keepdim):
+    """The upstream gradient of a reduction, broadcast back to the input's shape."""
+    g, x = as_ten(g), as_ten(x)
+    axes = _axes(x, dim)
+    if not keepdim:
+        for ax in axes:
+            g = unsqueeze(g, ax)
+    return expand(g, list(x.shape))
+
+
+def vjp_sum(g, x, dim=None, keepdim=False):
+    return _bcast_back(_floatify(g), x, dim, keepdim)
+
+
+def vjp_mean(g, x, dim=None, keepdim=False):
+    x = as_ten(x)
+    n = 1
+    for ax in _axes(x, dim):
+        n *= x.shape[ax]
+    if n == 0:
+        raise Undefined("mean of an empty reduction")
+    return div(_bcast_back(_floatify(g), x, dim, keepdim), n)
+
+
+def vjp_prod(g, x, dim=None, keepdim=False):
+    """d prod / d x_i = product of the other elements (exact also when some x_j are zero)."""
+    x = _floatify(x)
+    gb = _bcast_back(_floatify(g), x, dim, keepdim)
+    axes = _axes(x, dim)
+    rest = [i for i in range(x.a.ndim) if i not in axes]
+    out = np.empty(x.shape, dtype=object)
+    for lead in np.ndindex(*[x.shape[i] for i in rest]) if rest else [()]:
+        idxs = []
+        for red in np.ndindex(*[x.shape[i] for i in axes]):
+            full_ = [0] * x.a.ndim
+            for k, i in enumerate(rest):
+                full_[i] = lead[k]
+            for k, i in enumerate(axes):
+                full_[i] = red[k]
+            idxs.append(tuple(full_))
+        for j in idxs:
+            p_ = R(1)
+            for k in idxs:
+                if k != j:
+                    p_ = p_ * x.a[k]
+            out[j] = gb.a[j] * p_
+    return Ten(out, x.dtype)
+
+
+def _vjp_extreme(g, x, dim, keepdim, pick):
+    """amax / amin and full max / min: the upstream gradient is split evenly among the elements equal to the extreme."""
+    x = _floatify(x)
+    m = pick(x, dim, keepdim=True)
+    ties = eq(x, expand(m, list(x.shape)))
+    count = sum_(convert_element_type(ties, x.dtype), dim, keepdim=True)
+    gb = _bcast_back(_floatify(g), x, dim, keepdim)
+    return where(ties, div(gb, expand(count, list(x.shape))), as_ten(0, x))
+
+
+def vjp_amax(g, x, dim=None, keepdim=False):
+    return _vjp_extreme(g, x, dim, keepdim, amax)
+
+
+def vjp_amin(g, x, dim=None, keepdim=False):
+    return _vjp_extreme(g, x, dim, keepdim, amin)
+
+
+def vjp_max_dim(g, x, dim, keepdim=False):
+    """max / min along one dim: only the returned (first maximal) index receives the gradient."""
+    x = _floatify(x)
+    idx = argmax(x, dim, keepdim=True)
+    gb = _floatify(g) if keepdim else unsqueeze(_floatify(g), dim)
+    return scatter(zeros_like(x), dim, idx, src=gb)
+
+
+def vjp_min_dim(g, x, dim, keepdim=False):
+    x = _floatify(x)
+    idx = argmin(x, dim, keepdim=True)
+    gb = _floatify(g) if keepdim else unsqueeze(_floatify(g), dim)
+    return scatter(zeros_like(x), dim, idx, src=gb)
+
+
+def vjp_var(g, x, dim=None, correction=1, keepdim=False):
+    x = _floatify(x)
+    n = 1
+    for ax in _axes(x, dim):
+        n *= x.shape[ax]
+    if n - correction <= 0:
+        raise Undefined("variance with non-positive degrees of freedom")
+    m = mean(x, dim, keepdim=True)
+    gb = _bcast_back(_floatify(g), x, dim, keepdim)
+    return mul(gb, div(mul(sub(x, expand(m, list(x.shape))), 2), n - correction))
+
+
+def vjp_std(g, x, dim=None, correction=1, keepdim=False):
+    x = _floatify(x)
+    sd = std(x, dim, correction, keepdim=True)
+    gb = _bcast_back(_floatify(g), x, dim, keepdim)
+    n = 1
+    for ax in _axes(x, dim):
+        n *= x.shape[ax]
+    m = mean(x, dim, keepdim=True)
+    return div(mul(gb, sub(x, expand(m, list(x.shape)))), mul(expand(sd, list(x.shape)), n - correction))
+
+
+def vjp_logsumexp(g, x, dim, keepdim=False):
+    x = _floatify(x)
+    gb = _bcast_back(_floatify(g), x, dim, keepdim)
+    dims = _axes(x, dim)
+    if len(dims) != 1:
+        raise Unsupported("logsumexp gradient over several dimensions")
+    return mul(gb, softmax(x, dims[0]))
+
+
+def vjp_cumsum(g, x, dim):
+    """d cumsum: the reverse cumulative sum of the upstream gradient."""
+    g = _floatify(g)
+    dim = dim % g.a.ndim
+    flipped = Ten(np.flip(g.a, dim), g.dtype)
+    return Ten(np.flip(cumsum(flipped, dim).a, dim), g.dtype)
+
+
+def vjp_norm(g, x, p=2, dim=None, keepdim=False):
+    """d ||x||_2 = x / ||x|| (0 where the norm is 0, decision RD.NORM0); d ||x||_1 = sign(x)."""
+    x = _floatify(x)
+    gb = _bcast_back(_floatify(g), x, dim, keepdim)
+    if p == 1:
+        return mul(gb, sign(x))
+    if p != 2:
+        raise Unsupported(f"norm gradient for p={p}")
+    nrm = expand(norm(x, 2, dim, keepdim=True), list(x.shape))
+    safe = where(eq(nrm, 0), as_ten(1, nrm), nrm)
+    return where(eq(nrm, 0), as_ten(0, x), mul(gb, div(x, safe)))
+
+
 # ------------------------------------------------------------------ matrix products (MATMUL / CONV contracts)
 def _dot(xs, ys):
     s = R(0)
@@ -1216,6 +1365,69 @@ def baddbmm(c, a, b, beta=1, alpha=1):
     p = bmm(a, b)
     p = mul(p, alpha) if alpha != 1 else p
     return p if beta == 0 else add(mul(c, beta) if beta != 1 else c, p)
+
+
+def linear(x, w, b=None):
+    """torch.nn.functional.linear: y = x W^T + b over the last dimension of x."""
+    y = matmul(x, t(w))
+    return y if b is None else add(y, b)
+
+
+def sum_to_shape(g, shape):
+    """Sum a broadcast gradient back to the shape of the operand it came from."""
+    g = as_ten(g)
+    shape = list(shape)
+    while g.a.ndim > len(shape):
+        g = sum_(g, [0])
+    for d, n in enumerate(shape):
+        if n == 1 and g.shape[d] != 1:
+            g = sum_(g, [d], keepdim=True)
+    return g
+
+
+def vjp_mm(g, a, b):
+    """d(A @ B): dA = G B^T, dB = A^T G."""
+    return [mm(g, t(b)), mm(t(a), g)]
+
+
+def vjp_bmm(g, a, b):
+    return [bmm(g, transpose(b, 1, 2)), bmm(transpose(a, 1, 2), g)]
+
+
+def vjp_matmul(g, a, b):
+    """d matmul with broadcasting: the batch dimensions of each operand's gradient are summed back to its shape."""
+    a, b, g = _floatify(a), _floatify(b), _floatify(g)
+    if a.a.ndim == 1 or b.a.ndim == 1:
+        A2 = unsqueeze(a, 0) if a.a.ndim == 1 else a
+        B2 = unsqueeze(b, -1) if b.a.ndim == 1 else b
+        G2 = g
+        if a.a.ndim == 1:
+            G2 = unsqueeze(G2, -2)
+        if b.a.ndim == 1:
+            G2 = unsqueeze(G2, -1)
+        da, db = vjp_matmul(G2, A2, B2)
+        return [view(da, list(a.shape)) if a.a.ndim == 1 else da, view(db, list(b.shape)) if b.a.ndim == 1 else db]
+    da = matmul(g, transpose(b, -1, -2))
+    db = matmul(transpose(a, -1, -2), g)
+    return [sum_to_shape(da, a.shape), sum_to_shape(db, b.shape)]
+
+
+def vjp_linear(g, x, w, b=None):
+    """d linear: dx = G W, dW = sum over the leading dims of G^T x, db = sum of G over the leading dims."""
+    g, x, w = _floatify(g), _floatify(x), _floatify(w)
+    dx = matmul(g, w)
+    g2 = view(g, [-1, g.shape[-1]])
+    x2 = view(x, [-1, x.shape[-1]])
+    dw = mm(t(g2), x2)
+    db = None if b is None else sum_(g2, [0])
+    return [dx, dw, db]
+
+
+def vjp_addmm(g, c, a, b, beta=1, alpha=1):
+    g = _floatify(g)
+    dc = mul(sum_to_shape(g, as_ten(c).shape), beta)
+    da, db = vjp_mm(mul(g, alpha), a, b)
+    return [dc, da, db]
 
 
 def convolution(x, w, bias, stride, padding, dilation, transposed, output_padding, groups):
@@ -1361,11 +1573,15 @@ OPS = {
     "aten.sum": sum_, "aten.mean": mean, "aten.prod": prod, "aten.amax": amax, "aten.amin": amin, "aten.argmax": argmax,
     "aten.argmin": argmin, "aten.max": max_dim, "aten.min": min_dim, "aten.var": var, "aten.var_mean": var_mean,
     "aten.std": std, "aten.cumsum": cumsum, "aten.logsumexp": logsumexp, "aten.norm": norm,
+    "vjp.aten.sum": vjp_sum, "vjp.aten.mean": vjp_mean, "vjp.aten.prod": vjp_prod, "vjp.aten.amax": vjp_amax,
+    "vjp.aten.amin": vjp_amin, "vjp.aten.max": vjp_max_dim, "vjp.aten.min": vjp_min_dim, "vjp.aten.var": vjp_var,
+    "vjp.aten.std": vjp_std, "vjp.aten.logsumexp": vjp_logsumexp, "vjp.aten.cumsum": vjp_cumsum, "vjp.aten.norm": vjp_norm,
     "aten._softmax": softmax, "aten._safe_softmax": safe_softmax, "aten._log_softmax": log_softmax,
     "aten._softmax_backward_data": softmax_backward_data, "aten._log_softmax_backward_data": log_softmax_backward_data,
     "prims.prepare_softmax_online": prepare_softmax_online,
     "aten.mm": mm, "aten.bmm": bmm, "aten.matmul": matmul, "aten.addmm": addmm, "aten.baddbmm": baddbmm,
-    "aten.convolution": convolution,
+    "aten.convolution": convolution, "aten.linear": linear, "vjp.aten.mm": vjp_mm, "vjp.aten.bmm": vjp_bmm,
+    "vjp.aten.matmul": vjp_matmul, "vjp.aten.linear": vjp_linear, "vjp.aten.addmm": vjp_addmm,
     "aten.gelu": gelu, "aten.gelu_backward": gelu_backward, "aten.silu": silu, "aten.silu_backward": silu_backward,
     "aten.threshold_backward": threshold_backward, "aten.tanh_backward": tanh_backward,
     "aten.sigmoid_backward": sigmoid_backward, "aten.softplus": softplus, "aten.softplus_backward": softplus_backward,

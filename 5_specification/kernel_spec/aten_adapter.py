@@ -2,7 +2,8 @@
 REDUCE, SOFTMAX, MATMUL, CONV, ACT, RANDOM).
 
 Example inputs: {"op": "aten.add", "args": [...], "kwargs": {...}} where a tensor argument is written
-{"t": "f32", "v": nested list} (values: integers, "p/q" strings, "inf" / "-inf", booleans), a list of tensors is a
+{"t": "f32", "v": nested list} (values: integers, "p/q" strings, "inf" / "-inf", booleans; an optional "shape" reshapes
+the values, needed for empty tensors such as shape [0, 3]), a list of tensors is a
 list of such objects, and other arguments are plain YAML values ("p/q" strings become exact rationals).
 The output field `out` is the operation's result as nested lists; operations with several results give a list.
 """
@@ -17,7 +18,8 @@ from .real import NEG, POS, R
 
 def decode(x):
     if isinstance(x, dict) and "t" in x and "v" in x:
-        return A.tensor(_vals(x["v"], x["t"]), x["t"])
+        t = A.tensor(_vals(x["v"], x["t"]), x["t"])
+        return A.view(t, x["shape"]) if "shape" in x else t
     if isinstance(x, dict) and "dtype" in x and len(x) == 1:
         return A.dt(x["dtype"])
     if isinstance(x, list):
