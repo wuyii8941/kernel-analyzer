@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import multiprocessing as mp
+import os
 import random
 import sys
 from pathlib import Path
@@ -38,6 +39,17 @@ def _worker(args):
 
     from fixes import one
     rank, unit, output, gpu = args
+    # a second driver may run the same order from the other end: each rank is claimed once (atomic create)
+    out_file = os.environ.get("KA_D8_OUT")
+    if out_file and os.path.exists(out_file) and any(
+            json.loads(l).get("D8_rank") == rank and "skipped" not in json.loads(l) for l in open(out_file) if l.strip()):
+        return {"D8_rank": rank, "unit": unit, "output": output, "skipped": "already done"}
+    claims = HERE / "fixes_D8_claims"
+    claims.mkdir(exist_ok=True)
+    try:
+        os.close(os.open(claims / f"{rank}", os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+    except FileExistsError:
+        return {"D8_rank": rank, "unit": unit, "output": output, "skipped": "claimed by another driver"}
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
     u = Path(unit)
     out = HERE / "fixes_D8" / u.parent.parent.name / u.parent.name / f"{u.name}__{output}"
@@ -67,6 +79,7 @@ def main():
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--gpus", default="0,1,2,3")
     ap.add_argument("--recheck", action="store_true", help="rerun the main-run rows that may have shared a directory")
+    ap.add_argument("--reverse-from", type=int, help="a second driver: ranks from this one down to 0")
     a = ap.parse_args()
     if a.recheck:
         todo = [(-1 - i, t) for i, t in enumerate(recheck(a.fixes))]
@@ -74,12 +87,17 @@ def main():
         todo = list(enumerate(order(a.units, a.fixes)))
     done = set()
     if Path(a.out).exists():
-        done = {json.loads(l)["D8_rank"] for l in open(a.out) if l.strip()}
+        done = {json.loads(l)["D8_rank"] for l in open(a.out) if l.strip() and "skipped" not in json.loads(l)}
     gpus = a.gpus.split(",")
     jobs = [(i, u, o, gpus[i % len(gpus)]) for i, (u, o) in todo if i not in done]
+    if a.reverse_from is not None:
+        jobs = [j for j in reversed(jobs) if j[0] <= a.reverse_from]
+    os.environ["KA_D8_OUT"] = str(Path(a.out).resolve())
     ctx = mp.get_context("spawn")
     with open(a.out, "a") as f, ctx.Pool(a.workers, maxtasksperchild=1) as pool:
         for row in pool.imap_unordered(_worker, jobs):
+            if "skipped" in row:
+                continue
             f.write(json.dumps(row, default=str) + "\n")
             f.flush()
 
