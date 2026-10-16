@@ -14,7 +14,7 @@ activation:
     reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
 covers: [aten.add, aten.sub, aten.rsub, aten.mul, aten.div, aten.neg, aten.reciprocal, aten.abs, aten.sign, aten.pow,
   prims.fma, aten.floor, aten.ceil, aten.clamp, aten.clamp_min, aten.clamp_max, aten.maximum, aten.minimum, aten.where,
-  aten.masked_fill]
+  aten.masked_fill, aten.floor_divide]
 profiles:
   real:
     meaning: Values are exact reals (rationals, with +inf / -inf only where an operation has that limit); integer
@@ -53,8 +53,9 @@ clauses:
 - {id: AR.C3, basis: [T_MUL.DEF], statement: mul(a, b) = a*b, observes: [out], evidence_kind: definition}
 - {id: AR.C4, basis: [T_DIV.TRUE], statement: 'div(a, b) = a/b; integer operands are promoted (true division); b = 0 is
     domain_undefined', observes: [out], evidence_kind: definition}
-- {id: AR.C5, basis: [T_DIV.TRUNC, T_DIV.FLOOR], statement: 'div(..., trunc) rounds the quotient toward zero; div(...,
-    floor) rounds it down; an integer division by zero is invalid input', observes: [out], evidence_kind: definition}
+- {id: AR.C5, basis: [T_DIV.TRUNC, T_DIV.FLOOR, T_FLOOR_DIVIDE.DEF], statement: 'div(..., trunc) rounds the quotient toward
+    zero; div(..., floor) and floor_divide round it down; an integer division by zero is invalid input', observes: [out],
+  evidence_kind: definition}
 - {id: AR.C6, basis: [T_NEG.DEF, T_RECIP.DEF, T_ABS.DEF, T_SIGN.DEF], statement: 'neg = -x; reciprocal = 1/x (x = 0
     undefined); abs = |x|; sign = -1, 0 or 1', observes: [out], evidence_kind: definition}
 - {id: AR.C7, basis: [T_POW.DEF, AR.ZERO_POW, AR.NEG_BASE], statement: 'pow(x, y) = x**y; integer exponents exact;
@@ -88,6 +89,8 @@ examples:
   expected: {outcome: value, fields: {out: [3, -3]}}}
 - {id: AR.E8, profile: real, clauses: [AR.C5], input: {op: aten.div, args: [{t: i64, v: [7, -7]}, 2], kwargs: {rounding_mode: floor}},
   expected: {outcome: value, fields: {out: [3, -4]}}}
+- {id: AR.E34, profile: real, clauses: [AR.C5], input: {op: aten.floor_divide, args: [{t: f32, v: [7, -7, '1/2']}, 2]},
+  expected: {outcome: value, fields: {out: [3, -4, 0]}}}
 - {id: AR.E9, profile: real, clauses: [AR.C4, AR.C13], input: {op: aten.div, args: [{t: f32, v: [1]}, {t: f32, v: [0]}]},
   expected: {outcome: domain_undefined}}
 - {id: AR.E10, profile: real, clauses: [AR.C5], input: {op: aten.div, args: [{t: i64, v: [1]}, {t: i64, v: [0]}], kwargs: {
@@ -161,4 +164,6 @@ mutation_requirements:
 nonclaims:
 - Floating-point rounding of a device kernel is the numerical question (K - G); this contract states the real target.
 - NaN-propagation behaviour of the device is not a real-number property and is not judged here.
-changes: []
+changes:
+- {date: '2026-10-16', change: 'added aten.floor_divide (FlagGems corpus) to covers, clause AR.C5 and example AR.E34',
+  trigger: 'operator found in the frozen inventory (composition corpus gems.floor_divide), source T_FLOOR_DIVIDE'}

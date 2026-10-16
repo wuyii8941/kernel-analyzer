@@ -1,0 +1,177 @@
+schema_version: '1.2'
+id: LAYOUT
+role: ATEN_LAYOUT
+title: Views, reshapes, joins, splits, padding, scatters into slices, copies and creation (ATen operations)
+review:
+  status: drafted
+  author: Claude (spec v3 author), 2026-10-16
+  date: '2026-10-16'
+  scope: Values and shapes of the documented operations (aliasing and storage are not values); awaiting a review by
+    someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [aten.view, aten.reshape, aten._unsafe_view, aten.permute, aten.transpose, aten.t, aten.expand, aten.unsqueeze,
+  aten.squeeze, aten.select, aten.slice, aten.narrow, aten.cat, aten.stack, aten.split, aten.split_with_sizes,
+  aten.constant_pad_nd, aten.select_scatter, aten.slice_scatter, aten.clone, aten.copy, aten.lift_fresh_copy,
+  aten.lift_fresh, aten.alias, aten.full, aten.zeros, aten.ones, aten.full_like, aten.zeros_like, aten.new_zeros,
+  aten.scalar_tensor, aten.arange, prims.iota, aten.linspace, aten.triu, aten.tril, aten.fill]
+profiles:
+  real:
+    meaning: The logical values of the result. Views and copies are the same values; element order of view / reshape
+      is row-major over the logical shape; created values are exact (arange, linspace and iota values are start + i *
+      step as reals).
+    task_choice_required: false
+outputs:
+  out:
+    shape: per operation; split returns a list of tensors
+    kind: discrete
+    guarantee: exact
+comparison:
+  input_binding: Tensor values are the exact values received.
+  quality: Exact equality of values and shapes.
+  test_evidence: Exact equality.
+  error_handling: Shape violations (incompatible view, out-of-range index or dimension) are invalid_input.
+decisions:
+- id: LY.ROW_MAJOR
+  status: drafted
+  statement: view, _unsafe_view and reshape keep the logical element order of the input, read in row-major order;
+    whether the result aliases storage is not a value and is not judged.
+  basis: [T_VIEW.DEF, T_RESHAPE.DEF]
+- id: LY.CREATION_REAL
+  status: drafted
+  statement: arange, linspace and iota values are the exact reals start + i * step (resp. start + i (end - start)/(steps -
+    1)); the floating-point rounding the arange page warns about is a numerical effect (K - G), not part of the target.
+  basis: [T_ARANGE.DEF, T_ARANGE.ROUNDING, T_LINSPACE.DEF, TS_PRIMS.IOTA]
+- id: LY.SLICE
+  status: drafted
+  statement: aten.slice(x, dim, start, end, step) follows Python slicing (negative indices from the end, out-of-range
+    bounds clamped, step > 0); aten.narrow requires the range to lie inside the dimension.
+  basis: [T_TENSOR_INDEXING.SLICE, T_NARROW.DEF]
+clauses:
+- {id: LY.C1, basis: [T_VIEW.DEF, T_RESHAPE.DEF, LY.ROW_MAJOR], statement: 'view / reshape / _unsafe_view: same elements,
+    new shape, row-major order, one size may be -1', observes: [out], evidence_kind: definition}
+- {id: LY.C2, basis: [T_PERMUTE.DEF, T_TRANSPOSE.DEF, T_T.DEF], statement: 'permute: out[i_dims[0], ...] reorders axes;
+    transpose swaps two axes; t transposes <= 2-D and leaves 0-D / 1-D unchanged', observes: [out], evidence_kind: definition}
+- {id: LY.C3, basis: [T_EXPAND.DEF], statement: 'expand repeats singleton dimensions; -1 keeps a size; new dimensions are
+    prepended', observes: [out], evidence_kind: definition}
+- {id: LY.C4, basis: [T_UNSQUEEZE.DEF, T_SQUEEZE.DEF], statement: 'unsqueeze inserts a size-1 dimension; squeeze removes
+    size-1 dimensions (only the given ones when dim is given)', observes: [out], evidence_kind: definition}
+- {id: LY.C5, basis: [T_SELECT.DEF, T_NARROW.DEF, LY.SLICE], statement: 'select removes dim at index (negative from the end);
+    slice / narrow take a range', observes: [out], evidence_kind: definition}
+- {id: LY.C6, basis: [T_CAT.DEF, T_STACK.DEF, T_SPLIT.DEF], statement: 'cat joins along dim (1-D empty tensors skipped);
+    stack joins along a new dim; split into chunks (last smaller) or listed sizes', observes: [out], evidence_kind: definition}
+- {id: LY.C7, basis: [T_PAD.DEF, TS_REFS.CONSTANT_PAD], statement: 'constant_pad_nd pads from the last dimension backwards;
+    negative pads crop', observes: [out], evidence_kind: definition}
+- {id: LY.C8, basis: [T_SELECT_SCATTER.DEF, T_SLICE_SCATTER.DEF, TS_DECOMP.SLICE_SCATTER], statement: 'select_scatter /
+    slice_scatter return input with src written at the index / slice', observes: [out], evidence_kind: definition}
+- {id: LY.C9, basis: [T_CLONE.DEF, TS_DECOMP.LIFT], statement: 'clone, copy, lift_fresh(_copy), alias leave values unchanged;
+    copy(dst, src) gives src broadcast to dst''s shape (converted to dst''s dtype per CAST)', observes: [out],
+  evidence_kind: definition}
+- {id: LY.C10, basis: [T_FULL.DEF, T_ZEROS.DEF, T_ONES.DEF, T_FULL_LIKE.DEF, TS_REFS.SCALAR_TENSOR], statement: 'full /
+    zeros / ones / *_like / new_zeros / scalar_tensor / fill create constant tensors', observes: [out], evidence_kind: definition}
+- {id: LY.C11, basis: [T_ARANGE.DEF, T_LINSPACE.DEF, TS_PRIMS.IOTA, LY.CREATION_REAL], statement: 'arange = [start, end) with
+    step; linspace = steps values from start to end inclusive; iota = start + i * step', observes: [out], evidence_kind: definition}
+- {id: LY.C12, basis: [T_TRIU.DEF, T_TRIL.DEF], statement: 'triu keeps j - i >= diagonal; tril keeps j - i <= diagonal;
+    other elements 0', observes: [out], evidence_kind: definition}
+examples:
+- {id: LY.E1, profile: real, clauses: [LY.C1], input: {op: aten.view, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, [3, 2]]},
+  expected: {outcome: value, fields: {out: [[1, 2], [3, 4], [5, 6]]}}}
+- {id: LY.E2, profile: real, clauses: [LY.C1], input: {op: aten.reshape, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, [2, -1,
+        1]]}, expected: {outcome: value, fields: {out: [[[1], [2], [3]], [[4], [5], [6]]]}}}
+- {id: LY.E3, profile: real, clauses: [LY.C1], input: {op: aten.view, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, [4]]},
+  expected: {outcome: invalid_input}}
+- {id: LY.E4, profile: real, clauses: [LY.C2], input: {op: aten.permute, args: [{t: f32, v: [[[1, 2, 3]], [[4, 5, 6]]]}, [2,
+        0, 1]]}, expected: {outcome: value, fields: {out: [[[1], [4]], [[2], [5]], [[3], [6]]]}}, note: 'Input shape (2,1,3);
+    out[k][i][j] = x[i][j][k], shape (3,2,1).'}
+- {id: LY.E5, profile: real, clauses: [LY.C2], input: {op: aten.transpose, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, 0, 1]},
+  expected: {outcome: value, fields: {out: [[1, 4], [2, 5], [3, 6]]}}}
+- {id: LY.E6, profile: real, clauses: [LY.C2], input: {op: aten.t, args: [{t: f32, v: [1, 2]}]}, expected: {outcome: value,
+    fields: {out: [1, 2]}}}
+- {id: LY.E7, profile: real, clauses: [LY.C3], input: {op: aten.expand, args: [{t: f32, v: [[1], [2]]}, [2, 3]]}, expected: {
+    outcome: value, fields: {out: [[1, 1, 1], [2, 2, 2]]}}}
+- {id: LY.E8, profile: real, clauses: [LY.C3], input: {op: aten.expand, args: [{t: f32, v: [1, 2]}, [2, -1]]}, expected: {
+    outcome: value, fields: {out: [[1, 2], [1, 2]]}}}
+- {id: LY.E9, profile: real, clauses: [LY.C4], input: {op: aten.unsqueeze, args: [{t: f32, v: [1, 2]}, -1]}, expected: {
+    outcome: value, fields: {out: [[1], [2]]}}}
+- {id: LY.E10, profile: real, clauses: [LY.C4], input: {op: aten.squeeze, args: [{t: f32, v: [[[1], [2]]]}]}, expected: {
+    outcome: value, fields: {out: [1, 2]}}}
+- {id: LY.E11, profile: real, clauses: [LY.C4], input: {op: aten.squeeze, args: [{t: f32, v: [[[1], [2]]]}, [0]]}, expected: {
+    outcome: value, fields: {out: [[1], [2]]}}}
+- {id: LY.E12, profile: real, clauses: [LY.C5], input: {op: aten.select, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, 1, -1]},
+  expected: {outcome: value, fields: {out: [3, 6]}}}
+- {id: LY.E13, profile: real, clauses: [LY.C5], input: {op: aten.select, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, 0, 2]},
+  expected: {outcome: invalid_input}}
+- {id: LY.E14, profile: real, clauses: [LY.C5], input: {op: aten.slice, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, 1, 1, 100]},
+  expected: {outcome: value, fields: {out: [[2, 3], [5, 6]]}}}
+- {id: LY.E15, profile: real, clauses: [LY.C5], input: {op: aten.slice, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, 1, 0, 3,
+      2]}, expected: {outcome: value, fields: {out: [[1, 3], [4, 6]]}}}
+- {id: LY.E16, profile: real, clauses: [LY.C5], input: {op: aten.narrow, args: [{t: i64, v: [1, 2, 3, 4]}, 0, -3, 2]}, expected: {
+    outcome: value, fields: {out: [2, 3]}}}
+- {id: LY.E17, profile: real, clauses: [LY.C6], input: {op: aten.cat, args: [[{t: f32, v: [[1, 2]]}, {t: f32, v: [[3, 4], [5,
+            6]]}], 0]}, expected: {outcome: value, fields: {out: [[1, 2], [3, 4], [5, 6]]}}}
+- {id: LY.E18, profile: real, clauses: [LY.C6], input: {op: aten.cat, args: [[{t: f32, v: []}, {t: f32, v: [1, 2]}]]}, expected: {
+    outcome: value, fields: {out: [1, 2]}}}
+- {id: LY.E19, profile: real, clauses: [LY.C6], input: {op: aten.stack, args: [[{t: f32, v: [1, 2]}, {t: f32, v: [3, 4]}], 1]},
+  expected: {outcome: value, fields: {out: [[1, 3], [2, 4]]}}}
+- {id: LY.E20, profile: real, clauses: [LY.C6], input: {op: aten.split, args: [{t: f32, v: [1, 2, 3, 4, 5]}, 2]}, expected: {
+    outcome: value, fields: {out: [[1, 2], [3, 4], [5]]}}}
+- {id: LY.E21, profile: real, clauses: [LY.C6], input: {op: aten.split_with_sizes, args: [{t: f32, v: [1, 2, 3, 4, 5]}, [1,
+        4]]}, expected: {outcome: value, fields: {out: [[1], [2, 3, 4, 5]]}}}
+- {id: LY.E22, profile: real, clauses: [LY.C7], input: {op: aten.constant_pad_nd, args: [{t: f32, v: [[1, 2]]}, [1, 0, 0, 1],
+      9]}, expected: {outcome: value, fields: {out: [[9, 1, 2], [9, 9, 9]]}}}
+- {id: LY.E23, profile: real, clauses: [LY.C7], input: {op: aten.constant_pad_nd, args: [{t: f32, v: [1, 2, 3]}, [-1, 1]]},
+  expected: {outcome: value, fields: {out: [2, 3, 0]}}}
+- {id: LY.E24, profile: real, clauses: [LY.C8], input: {op: aten.select_scatter, args: [{t: f32, v: [[0, 0], [0, 0]]}, {t: f32,
+        v: [5, 6]}, 0, 1]}, expected: {outcome: value, fields: {out: [[0, 0], [5, 6]]}}}
+- {id: LY.E25, profile: real, clauses: [LY.C8], input: {op: aten.slice_scatter, args: [{t: f32, v: [0, 0, 0, 0]}, {t: f32, v: [
+          7, 8]}, 0, 1, 4, 2]}, expected: {outcome: value, fields: {out: [0, 7, 0, 8]}}}
+- {id: LY.E26, profile: real, clauses: [LY.C9], input: {op: aten.clone, args: [{t: f32, v: ['1/3', -inf]}]}, expected: {
+    outcome: value, fields: {out: ['1/3', -inf]}}}
+- {id: LY.E27, profile: real, clauses: [LY.C9], input: {op: aten.copy, args: [{t: f32, v: [[0, 0], [0, 0]]}, {t: f32, v: [1,
+        2]}]}, expected: {outcome: value, fields: {out: [[1, 2], [1, 2]]}}}
+- {id: LY.E28, profile: real, clauses: [LY.C10], input: {op: aten.full, args: [[2], '1/2']}, expected: {outcome: value, fields: {
+      out: ['1/2', '1/2']}}}
+- {id: LY.E29, profile: real, clauses: [LY.C10], input: {op: aten.scalar_tensor, args: [-inf]}, expected: {outcome: value,
+    fields: {out: -inf}}}
+- {id: LY.E30, profile: real, clauses: [LY.C10], input: {op: aten.full_like, args: [{t: i64, v: [1, 2, 3]}, 7]}, expected: {
+    outcome: value, fields: {out: [7, 7, 7]}}}
+- {id: LY.E31, profile: real, clauses: [LY.C11], input: {op: aten.arange, args: [0, 6, 2]}, expected: {outcome: value, fields: {
+      out: [0, 2, 4]}}}
+- {id: LY.E32, profile: real, clauses: [LY.C11], input: {op: aten.arange, args: ['1/2', 2, '1/2']}, expected: {outcome: value,
+    fields: {out: ['1/2', 1, '3/2']}}}
+- {id: LY.E33, profile: real, clauses: [LY.C11], input: {op: prims.iota, args: [4], kwargs: {start: 1, step: 3}}, expected: {
+    outcome: value, fields: {out: [1, 4, 7, 10]}}}
+- {id: LY.E34, profile: real, clauses: [LY.C11], input: {op: aten.linspace, args: [0, 1, 5]}, expected: {outcome: value, fields: {
+      out: [0, '1/4', '1/2', '3/4', 1]}}}
+- {id: LY.E35, profile: real, clauses: [LY.C11], input: {op: aten.linspace, args: [2, 3, 1]}, expected: {outcome: value, fields: {
+      out: [2]}}}
+- {id: LY.E36, profile: real, clauses: [LY.C12], input: {op: aten.triu, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6], [7, 8, 9]]},
+      1]}, expected: {outcome: value, fields: {out: [[0, 2, 3], [0, 0, 6], [0, 0, 0]]}}}
+- {id: LY.E37, profile: real, clauses: [LY.C12], input: {op: aten.tril, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6], [7, 8, 9]]},
+      -1]}, expected: {outcome: value, fields: {out: [[0, 0, 0], [4, 0, 0], [7, 8, 0]]}}}
+signature:
+  inputs: ['op: one of the covered ATen names', 'args / kwargs: tensors {t: dtype, v: values}, lists of tensors, shapes and scalars']
+  pre_state: []
+  post_state: []
+  observation_unit: the result value(s) of one operation
+domain:
+  valid: [any exact values; shapes and indices within the documented ranges]
+  invalid_input: [incompatible view / expand sizes, out-of-range dimension or index, cat shape mismatch, split sizes not
+      adding up, narrow outside the dimension, non-positive slice step]
+  unsupported: [non-constant padding modes (reflect, replicate, circular), sparse layouts]
+mutation_requirements:
+- {id: LY.M1, misreading: view reads elements in column-major order, witnesses: [LY.E1]}
+- {id: LY.M2, misreading: permute applies the inverse permutation, witnesses: [LY.E4]}
+- {id: LY.M3, misreading: slice ignores the step, witnesses: [LY.E15]}
+- {id: LY.M4, misreading: split drops the smaller last chunk, witnesses: [LY.E20]}
+- {id: LY.M5, misreading: pad pairs read from the first dimension forwards, witnesses: [LY.E22]}
+- {id: LY.M6, misreading: arange includes end, witnesses: [LY.E31]}
+- {id: LY.M7, misreading: linspace excludes end (steps intervals), witnesses: [LY.E34]}
+- {id: LY.M8, misreading: triu diagonal offset with the opposite sign, witnesses: [LY.E36]}
+- {id: LY.M9, misreading: squeeze with dim removes every size-1 dimension, witnesses: [LY.E11]}
+nonclaims:
+- Aliasing, strides and memory format are not values and are not judged.
+changes: []

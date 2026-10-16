@@ -455,7 +455,11 @@ def clone(a, **kw):
     return Ten(a.a.copy(), a.dtype)
 
 
-copy_ = clone
+def copy(dst, src):
+    """aten.copy (functional Tensor.copy_): the values of src broadcast to dst's shape and converted to dst's dtype."""
+    dst, src = as_ten(dst), as_ten(src)
+    s = expand(src, list(dst.shape)) if src.shape != dst.shape else src
+    return s if s.dtype == dst.dtype else convert_element_type(s, dst.dtype)
 
 
 def view(a, shape):
@@ -666,6 +670,33 @@ def iota(length, start=0, step=1, dtype="i64", **kw):
 
 def lift_fresh_copy(a):
     return clone(a)
+
+
+def linspace(start, end, steps, dtype=None, **kw):
+    """torch.linspace: steps values evenly spaced from start to end inclusive, start + i (end - start)/(steps - 1)."""
+    if steps < 0:
+        raise Invalid("linspace: negative steps")
+    s, e = Fraction(start), Fraction(end)
+    vals = [s] if steps == 1 else [s + i * (e - s) / (steps - 1) for i in range(steps)]
+    return tensor(vals, dtype or "f32")
+
+
+def narrow(a, dim, start, length):
+    a = as_ten(a)
+    n = a.a.shape[dim]
+    start = start + n if start < 0 else start
+    if not (0 <= start and start + length <= n and length >= 0):
+        raise Invalid("narrow: range outside the dimension")
+    return slice_(a, dim, start, start + length)
+
+
+def take_along_dim(a, idx, dim):
+    return gather(a, dim, expand(idx, list(np.broadcast_shapes(as_ten(idx).shape, as_ten(a).shape)))
+                  if as_ten(idx).a.ndim == as_ten(a).a.ndim else idx)
+
+
+def floor_divide(a, b):
+    return div(a, b, rounding_mode="floor")
 
 
 def triu(a, diagonal=0):
@@ -1314,14 +1345,16 @@ OPS = {
     "aten.bitwise_and": bitwise_and, "aten.bitwise_or": bitwise_or, "aten.bitwise_not": bitwise_not,
     "aten.any": any_, "aten.all": all_,
     "prims.convert_element_type": convert_element_type, "aten._to_copy": _to_copy,
-    "aten.clone": clone, "aten.copy": lambda dst, src, *a: clone(src), "aten.view": view, "aten.reshape": reshape,
+    "aten.clone": clone, "aten.copy": lambda dst, src, *a: copy(dst, src), "aten.view": view, "aten.reshape": reshape,
     "aten._unsafe_view": view, "aten.permute": permute, "aten.transpose": transpose, "aten.t": t, "aten.expand": expand,
     "aten.unsqueeze": unsqueeze, "aten.squeeze": squeeze, "aten.select": select, "aten.slice": slice_, "aten.cat": cat,
     "aten.stack": stack, "aten.split": split, "aten.split_with_sizes": split_with_sizes,
     "aten.constant_pad_nd": constant_pad_nd, "aten.select_scatter": select_scatter, "aten.slice_scatter": slice_scatter,
     "aten.full": full, "aten.zeros": zeros, "aten.ones": ones, "aten.full_like": full_like, "aten.zeros_like": zeros_like,
     "aten.new_zeros": new_zeros, "aten.scalar_tensor": scalar_tensor, "aten.arange": arange, "prims.iota": iota,
-    "aten.lift_fresh_copy": lift_fresh_copy, "aten.triu": triu, "aten.tril": tril, "aten.fill": fill,
+    "aten.lift_fresh_copy": lift_fresh_copy, "aten.lift_fresh": clone, "aten.alias": clone, "aten.triu": triu,
+    "aten.tril": tril, "aten.fill": fill, "aten.linspace": linspace, "aten.narrow": narrow,
+    "aten.take_along_dim": take_along_dim, "aten.floor_divide": floor_divide,
     "aten.index": index, "aten.index_put": index_put, "aten.index_put_": index_put, "aten.gather": gather,
     "aten.scatter": scatter, "aten.scatter_add": scatter_add, "aten.index_select": index_select,
     "aten.index_add": index_add, "aten.embedding": embedding, "aten.embedding_dense_backward": embedding_dense_backward,

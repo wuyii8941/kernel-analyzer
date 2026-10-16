@@ -297,6 +297,10 @@ def sqrt(x):
 
 
 def rsqrt(x):
+    """1/sqrt(x); at 0 the one-sided limit inside the domain [0, inf) is +inf (decision MF.EDGE)."""
+    x = R(x)
+    if x.finite and x.sign() == 0:
+        return R(POS)
     return R(1) / sqrt(x)
 
 

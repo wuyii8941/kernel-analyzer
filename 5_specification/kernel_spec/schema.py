@@ -20,6 +20,7 @@ def known_bases(contract: dict, sources: dict) -> set:
 
 
 def _check_expected(value, prefix, errors, boolean=False):
+    """boolean: True (only booleans), False (no booleans) or None (kind 'discrete': booleans and integers both allowed)."""
     if isinstance(value, dict) and "set" in value:
         for v in value["set"]:
             _check_expected(v, prefix, errors, boolean)
@@ -32,7 +33,7 @@ def _check_expected(value, prefix, errors, boolean=False):
         for v in value:
             _check_expected(v, prefix, errors, boolean)
         return
-    if isinstance(value, bool) != boolean:
+    if boolean is not None and isinstance(value, bool) != boolean:
         errors.append(f"{prefix}: {'non-boolean' if boolean else 'boolean'} value {value!r} for a "
                       f"{'boolean' if boolean else 'numeric'} output")
         return
@@ -51,7 +52,8 @@ def _check_block(block, outputs, prefix, errors):
         if set(fields) != set(outputs):
             errors.append(f"{prefix}: output keys {sorted(fields)} do not match the declared outputs {sorted(outputs)}")
         for k, v in fields.items():
-            _check_expected(v, f"{prefix}.{k}", errors, (outputs.get(k) or {}).get("kind") == "boolean")
+            kind = (outputs.get(k) or {}).get("kind")
+            _check_expected(v, f"{prefix}.{k}", errors, None if kind == "discrete" else kind == "boolean")
     elif "fields" in block:
         errors.append(f"{prefix}: a non-value outcome must not carry value fields")
 
