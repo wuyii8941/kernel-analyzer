@@ -1106,6 +1106,8 @@ def norm(a, p=2, dim=None, keepdim=False):
 
 
 def _softmax_row(xs):
+    if not xs:
+        return []                                 # softmax over an empty dimension is the empty tensor
     m = xs[0]
     for x in xs[1:]:
         m = rl.max_(m, x)
@@ -1145,6 +1147,8 @@ def safe_softmax(a, dim):
 
 def log_softmax(a, dim, half_to_float=False):
     def row(xs):
+        if not xs:
+            return []
         m = xs[0]
         for x in xs[1:]:
             m = rl.max_(m, x)
@@ -1281,12 +1285,17 @@ def vjp_std(g, x, dim=None, correction=1, keepdim=False):
 
 
 def vjp_logsumexp(g, x, dim, keepdim=False):
+    """d logsumexp / d x_i = exp(x_i - logsumexp(x)) over the reduced dims (the softmax of the reduced slice); a slice of
+    -inf only has lse = -inf and the gradient is undefined there."""
     x = _floatify(x)
     gb = _bcast_back(_floatify(g), x, dim, keepdim)
-    dims = _axes(x, dim)
-    if len(dims) != 1:
-        raise Unsupported("logsumexp gradient over several dimensions")
-    return mul(gb, softmax(x, dims[0]))
+    if x.a.size == 0:
+        return Ten(np.empty(x.shape, dtype=object), x.dtype)
+    lse = expand(logsumexp(x, dim, keepdim=True), list(x.shape))
+    for v in lse.a.reshape(-1):
+        if v.v == rl.NEG:
+            raise Undefined("softmax of a row whose entries are all -inf")
+    return mul(gb, exp(sub(x, lse)))
 
 
 def vjp_cumsum(g, x, dim):

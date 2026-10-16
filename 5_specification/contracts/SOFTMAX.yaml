@@ -80,6 +80,8 @@ examples:
       1]}, expected: {outcome: value, fields: {out: [[[1], [2]], [[1+exp(-1)], [2]]]}}}
 - {id: SM.E11, profile: real, clauses: [SM.C6], input: {op: prims.prepare_softmax_online, args: [{t: f32, v: [[-inf, -inf]]},
       1]}, expected: {outcome: domain_undefined}}
+- {id: SM.E12, profile: real, clauses: [SM.C1], input: {op: aten._softmax, args: [{t: f32, v: [], shape: [3, 0]}, -1, false]},
+  expected: {outcome: value, fields: {out: [[], [], []]}}, note: Softmax over an empty dimension is the empty tensor.}
 signature:
   inputs: ['op: one of the covered names', 'args as in ATen: (input, dim, half_to_float) / (grad, output, dim, input_dtype) / (input, dim)']
   pre_state: []
@@ -100,4 +102,6 @@ mutation_requirements:
 - {id: SM.M7, misreading: _safe_softmax leaves masked rows undefined, witnesses: [SM.E7]}
 nonclaims:
 - How a kernel stabilises the computation (max subtraction, online rescaling) is numerical (K - G).
-changes: []
+changes:
+- {date: '2026-10-17', change: 'softmax / log_softmax over an empty dimension give the empty tensor (example SM.E12)', trigger:
+    'replay of the essential-round reductions conditions (V3): empty-extent softmax raised an implementation error'}

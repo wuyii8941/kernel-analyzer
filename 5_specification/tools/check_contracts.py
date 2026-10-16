@@ -127,11 +127,8 @@ def main(argv=None):
     ap.add_argument("--sources", type=Path, default=registry.SOURCES)
     ap.add_argument("--json", type=Path)
     ap.add_argument("--lock", action="store_true")
-    ap.add_argument("--only", nargs="*", help="check only these contract IDs (no --lock with --only)")
+    ap.add_argument("--only", nargs="*", help="check only these contract IDs (with --lock: lock only these)")
     a = ap.parse_args(argv)
-    if a.only and a.lock:
-        print("--lock needs the full set of contracts")
-        return 1
     try:
         sources = json.loads(a.sources.read_text())
     except (OSError, ValueError) as e:

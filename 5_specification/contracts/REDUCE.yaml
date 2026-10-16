@@ -73,8 +73,9 @@ clauses:
     min along a dim (to the returned index)', observes: [out], evidence_kind: derived}
 - {id: RD.C11, basis: [RD.VJP, T_VAR.DEF, T_STD.DEF], statement: 'VJP of var: 2 (x - mean) / (N - correction); of std:
     (x - mean) / ((N - correction) std)', observes: [out], evidence_kind: derived}
-- {id: RD.C12, basis: [RD.VJP, T_LOGSUMEXP.DEF, T_CUMSUM.DEF, T_NORM.DEF], statement: 'VJP of logsumexp: softmax; of
-    cumsum: reverse cumulative sum; of the 2-norm: x / ||x|| (0 at x = 0)', observes: [out], evidence_kind: derived}
+- {id: RD.C12, basis: [RD.VJP, T_LOGSUMEXP.DEF, T_CUMSUM.DEF, T_NORM.DEF], statement: 'VJP of logsumexp: exp(x - lse), the
+    softmax of the reduced slice over any number of dims (undefined for an all -inf slice); of cumsum: reverse cumulative
+    sum; of the 2-norm: x / ||x|| (0 at x = 0)', observes: [out], evidence_kind: derived}
 examples:
 - {id: RD.E1, profile: real, clauses: [RD.C1], input: {op: aten.sum, args: [{t: f32, v: [[1, 2], [3, 4]]}, [1]]}, expected: {
     outcome: value, fields: {out: [3, 7]}}}
@@ -142,6 +143,11 @@ examples:
     outcome: value, fields: {out: ['3/5', '4/5']}}}
 - {id: RD.E35, profile: real, clauses: [RD.C12], input: {op: vjp.aten.norm, args: [{t: f32, v: 1}, {t: f32, v: [0, 0]}]}, expected: {
     outcome: value, fields: {out: [0, 0]}}}
+- {id: RD.E36, profile: real, clauses: [RD.C12], input: {op: vjp.aten.logsumexp, args: [{t: f32, v: [1]}, {t: f32, v: [[[0,
+            0], [0, 0]]]}, [1, 2]]}, expected: {outcome: value, fields: {out: [[['1/4', '1/4'], ['1/4', '1/4']]]}}, note: Gradient
+    over two reduced dims is the softmax of the flattened slice.}
+- {id: RD.E37, profile: real, clauses: [RD.C12], input: {op: vjp.aten.logsumexp, args: [{t: f32, v: [1]}, {t: f32, v: [[-inf,
+          -inf]]}, 1]}, expected: {outcome: domain_undefined}}
 signature:
   inputs: ['op: one of the covered names', 'args: (input, dim, keepdim, ...) as in ATen; vjp ops take (upstream, input, op arguments)']
   pre_state: []
@@ -151,7 +157,7 @@ domain:
   valid: [exact values and +-inf; dims within range]
   domain_undefined: [empty mean, var / std with N - correction <= 0, +inf and -inf in one sum]
   invalid_input: [amax / amin / argmax / argmin of an empty set, dims out of range]
-  unsupported: [nuclear norm, logsumexp gradient over several dims]
+  unsupported: [nuclear norm]
 mutation_requirements:
 - {id: RD.M1, misreading: var divides by N regardless of correction, witnesses: [RD.E15]}
 - {id: RD.M2, misreading: argmax returns the last maximal index, witnesses: [RD.E12]}
@@ -164,4 +170,6 @@ mutation_requirements:
   witnesses: [RD.E21]}
 nonclaims:
 - Accumulation order and precision of device reductions are numerical (K - G).
-changes: []
+changes:
+- {date: '2026-10-17', change: 'logsumexp gradient over several dims (was unsupported) and on all -inf slices; examples RD.E36-E37',
+  trigger: 'replay of the essential-round reductions conditions (V3) found 6 conditions without f and 3 implementation errors'}
