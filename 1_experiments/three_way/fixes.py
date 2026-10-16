@@ -24,7 +24,8 @@ def _align(vals, g, ok):
     return [_alignment(e, g), _se(e, g)]
 
 
-def one(unit: str, output: str) -> dict:
+def one(unit: str, output: str, out_dir=None) -> dict:
+    """out_dir: where the patched launch is saved (default: one directory per unit, as in the main run)."""
     import numpy as np
 
     from analyze_units import analyze, programs_for
@@ -90,7 +91,7 @@ def one(unit: str, output: str) -> dict:
     row["predicted_after"] = {"C": _align(xc.lo, gm, m), "A": _align(xa.lo, gm, m)}
     row["A_before"] = _align(xa0.lo, gm, m)
     # the real fix on the device
-    out = HERE / "fixes" / Path(unit).parent.parent.name / Path(unit).parent.name / Path(unit).name
+    out = Path(out_dir) if out_dir else HERE / "fixes" / Path(unit).parent.parent.name / Path(unit).parent.name / Path(unit).name
     run_patched(unit, [[src[1], old, new]], out)
     after = analyze(str(out))
     row["after"] = {"verify": after.get("verify"), "truth": after["outputs"].get(output, {}).get("truth"),
