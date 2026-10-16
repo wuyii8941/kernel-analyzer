@@ -1,0 +1,33 @@
+id: F7_FP8SCALE
+title: scaled FP8 quantization per tensor / per token / per group (1x128) / per block
+kind: K11
+survey_class: F
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: standard, doc: "NVIDIA Transformer Engine current scaling: scale from the current amax, FP8_MAX / amax", version: "release 2.15"}
+  S2: {identity: engine_ref, doc: "engine per-token / 1x128 group quantization references (amax floor eps varies 1e-4 .. 1e-12)", version: "survey 9bb8abe"}
+dimensions:
+  D1: {status: n/a}
+  D2: {status: defined, clauses: [F7.C2]}
+  D3: {status: defined, clauses: [F7.C1]}
+  D4: {status: n/a}
+  D5: {status: defined, clauses: [F7.C1, F7.C3]}
+  D6: {status: n/a}
+  D7: {status: n/a}
+  D8: {status: n/a}
+  D9: {status: n/a}
+  D10: {status: n/a}
+  D11: {status: defined, clauses: [F7.C2]}
+  D12: {status: n/a}
+clauses:
+  F7.C1: {statement: "one scale per declared group (tensor, row, 1x128 or 128x128): scale = amax / FP8_MAX; q = round_ties_even(v / scale) saturated", basis: [S1, S2], guarantee: exact}
+  F7.C2: {statement: "amax is floored at the declared eps (amax = max(amax, eps)); the eps value is part of the kernel's declaration", basis: [S2], guarantee: exact}
+  F7.C3: {statement: "the scale is used exactly unless the kernel declares that it stores and uses an fp32-rounded scale (reading)", basis: [S1], guarantee: exact}
+examples:
+  E1: {call: groups, clauses: [F7.C1, F7.C2], input: {x: [448, 224, 1], group: 3, eps: "1/10000"}, expected: [[1, [448, 224, 1]]]}
+  E2: {call: groups, clauses: [F7.C1], input: {x: [448, 1, 2, 2], group: 2}, expected: [[1, [448, 1]], ["1/224", [448, 448]]]}
+  E3: {call: groups, clauses: [F7.C2], input: {x: [0, 0], group: 2, eps: "1/10000"}, expected: [["1/4480000", [0, 0]]]}
+  E4: {call: scale, clauses: [F7.C3], input: {x: [1], group: 1}, expected: "1/448", readings: {fp32: "9586981/4294967296"}}
+mutants:
+  M1: {clauses: [F7.C2], misreading: "eps added to amax instead of used as a floor"}
+  M2: {clauses: [F7.C1], misreading: "one scale for the whole tensor instead of per group"}

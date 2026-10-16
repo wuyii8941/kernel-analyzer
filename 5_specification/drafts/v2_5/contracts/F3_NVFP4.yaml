@@ -1,0 +1,34 @@
+id: F3_NVFP4
+title: NVFP4 two-level scaling (16-element blocks, E4M3 block scale, FP32 global scale)
+kind: K11
+survey_class: F
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: standard, doc: "NVIDIA Transformer Engine user guide, NVFP4 data format", version: "release 2.16"}
+dimensions:
+  D1: {status: n/a}
+  D2: {status: n/a}
+  D3: {status: open, reason: "rowwise vs columnwise block axis and the swizzled scale layout must be declared per kernel"}
+  D4: {status: n/a}
+  D5: {status: defined, clauses: [F3.C1, F3.C2, F3.C3]}
+  D6: {status: n/a}
+  D7: {status: n/a}
+  D8: {status: n/a}
+  D9: {status: open, reason: "TE applies stochastic rounding to some tensors; checked with F1.C3 once the uniforms are captured"}
+  D10: {status: n/a}
+  D11: {status: defined, clauses: [F3.C4]}
+  D12: {status: n/a}
+clauses:
+  F3.C1: {statement: "s_global = global_amax / (448 * 6), stored as FP32", basis: [S1], guarantee: exact}
+  F3.C2: {statement: "s_block = (block_amax / 6) / s_global, stored as E4M3 (ties to even, saturating)", basis: [S1], guarantee: exact}
+  F3.C3: {statement: "element = round_E2M1(v / (s_block * s_global)), saturating; x = x_e2m1 * s_block * s_global", basis: [S1], guarantee: exact}
+  F3.C4: {statement: "a block whose E4M3 scale rounds to 0 is all zeros", basis: [S1], guarantee: exact}
+examples:
+  E1: {call: nvfp4, clauses: [F3.C1, F3.C2, F3.C3], input: {blocks: [[2688, 672, 1]], global_amax: 2688}, expected: [1, [[448, [6, "3/2", 0]]]]}
+  E2: {call: nvfp4, clauses: [F3.C2, F3.C3], input: {blocks: [[2688, 0], [5, 1]], global_amax: 2688}, expected: [1, [[448, [6, 0]], ["13/16", [6, 1]]]]}
+  E3: {call: nvfp4, clauses: [F3.C1], input: {blocks: [[5376, 1344]], global_amax: 5376}, expected: [2, [[448, [6, "3/2"]]]]}
+  E4: {call: nvfp4, clauses: [F3.C4], input: {blocks: [[2688], ["1/10000"]], global_amax: 2688}, expected: [1, [[448, [6]], [0, [0]]]]}
+mutants:
+  M3: {clauses: [F3.C4], misreading: "a zero block scale divides by zero (NaN elements)"}
+  M1: {clauses: [F3.C1], misreading: "no second-level (global) scale"}
+  M2: {clauses: [F3.C2], misreading: "power-of-two block scale (MX style) instead of E4M3"}

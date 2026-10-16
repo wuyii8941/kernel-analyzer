@@ -1,0 +1,38 @@
+id: F4_INTQ
+title: integer quantization (symmetric absmax per token / group; asymmetric with zero point)
+kind: K11
+survey_class: F
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: torch_doc, doc: "torch.round (round half to even)", version: "2.10"}
+  S2: {identity: engine_ref, doc: "LMDeploy torch reference for per_token_quant_int8; GPTQ Quantizer.find_params (range includes 0)", version: "survey 9bb8abe"}
+dimensions:
+  D1: {status: n/a}
+  D2: {status: defined, clauses: [F4.C1]}
+  D3: {status: n/a}
+  D4: {status: n/a}
+  D5: {status: defined, clauses: [F4.C1, F4.C2]}
+  D6: {status: n/a}
+  D7: {status: n/a}
+  D8: {status: n/a}
+  D9: {status: n/a}
+  D10: {status: n/a}
+  D11: {status: defined, clauses: [F4.C3]}
+  D12: {status: n/a}
+clauses:
+  F4.C1: {statement: "symmetric: scale = max(amax, eps) / (2^(b-1) - 1); q = clamp(round_half_even(v / scale), -qmax, qmax)", basis: [S1, S2], guarantee: exact}
+  F4.C2: {statement: "asymmetric: range [min(x, 0), max(x, 0)]; scale = range / (2^b - 1); z = round(-min / scale); q = clamp(round(v / scale) + z, 0, 2^b - 1); dequant (q - z) * scale", basis: [S2], guarantee: exact}
+  F4.C3: {statement: "all-zero group with eps = 0, or constant group: scale undefined (not established)", basis: [S2], guarantee: allowed_set}
+readings:
+  F4-A1: {main: z, alternatives: [z_minus_1], note: "some GPTQ checkpoints store z - 1 and the dequantizer adds 1"}
+examples:
+  E1: {call: sym, clauses: [F4.C1], input: {x: ["5/2", -1, "127/2"]}, expected: ["1/2", [5, -2, 127]]}
+  E2: {call: sym, clauses: [F4.C1], input: {x: ["5/4", "127/2"]}, expected: ["1/2", [2, 127]]}
+  E3: {call: asym, clauses: [F4.C2], input: {x: [-1, 0, 2, 4], bits: 4}, expected: ["1/3", 3, [0, 3, 9, 15]]}
+  E4: {call: asym, clauses: [F4.C2], input: {x: [1, 4], bits: 4}, expected: ["4/15", 0, [4, 15]]}
+  E5: {call: sym, clauses: [F4.C3], input: {x: [0, 0]}, expected: undefined}
+mutants:
+  M4: {clauses: [F4.C3], misreading: "all-zero group returns scale 0 and zeros"}
+  M1: {clauses: [F4.C1], misreading: "round half away from zero (LMDeploy per_token_quant_int8 kernel, survey)"}
+  M2: {clauses: [F4.C1], misreading: "scale = amax / 2^(b-1)"}
+  M3: {clauses: [F4.C2], misreading: "asymmetric range [min x, max x] without including 0"}

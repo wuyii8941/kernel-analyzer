@@ -1,0 +1,32 @@
+id: F6_DELAYED
+title: delayed scaling state for FP8 training (amax history)
+kind: K11
+survey_class: F
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: standard, doc: "NVIDIA Transformer Engine common API, DelayedScaling recipe", version: "release 2.7 / 2.15"}
+dimensions:
+  D1: {status: n/a}
+  D2: {status: defined, clauses: [F6.C3]}
+  D3: {status: n/a}
+  D4: {status: n/a}
+  D5: {status: defined, clauses: [F6.C3]}
+  D6: {status: n/a}
+  D7: {status: defined, clauses: [F6.C1, F6.C2]}
+  D8: {status: n/a}
+  D9: {status: n/a}
+  D10: {status: n/a}
+  D11: {status: open, reason: "behaviour when the history amax is 0 is not confirmed from the source (the reference keeps the previous scale)"}
+  D12: {status: n/a}
+clauses:
+  F6.C1: {statement: "the scale used at step t is the one computed after step t-1 (initial scale at step 1)", basis: [S1], guarantee: exact}
+  F6.C2: {statement: "amax is taken over the last L recorded values (max) or is the most recent value", basis: [S1], guarantee: exact}
+  F6.C3: {statement: "new scale = (FP8_MAX / amax) / 2^margin", basis: [S1], guarantee: exact}
+examples:
+  E1: {call: full, clauses: [F6.C1, F6.C3], input: {steps: [[2, -4], [1, 1]], L: 2}, expected: [[1, [2, -4]], [112, [112, 112]]]}
+  E2: {call: used, clauses: [F6.C3], input: {steps: [[2, -4], [1, 1]], L: 2, margin: 1}, expected: [1, 56]}
+  E3: {call: used, clauses: [F6.C2], input: {steps: [[8], [2], [1]], L: 2, algo: most_recent}, expected: [1, 56, 224]}
+  E4: {call: used, clauses: [F6.C2], input: {steps: [[8], [2], [1]], L: 2, algo: max}, expected: [1, 56, 56]}
+mutants:
+  M1: {clauses: [F6.C1], misreading: "current scaling: step t uses its own amax"}
+  M2: {clauses: [F6.C3], misreading: "margin multiplies the scale"}

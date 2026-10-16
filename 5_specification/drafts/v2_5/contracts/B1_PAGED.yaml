@@ -1,0 +1,49 @@
+id: B1_PAGED
+title: paged / variable-length KV attention (layouts, prefix alignment, window, sink, softcap, GQA mapping)
+kind: K5
+survey_class: B
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: torch_doc, doc: "torch.nn.functional.scaled_dot_product_attention (scale 1/sqrt(E), enable_gqa grouping)", version: "2.10"}
+  S2: {identity: model_impl, doc: "GPT-OSS reference and HF eager attention: sink logit appended then dropped; window q - k < W", version: "openai/gpt-oss main"}
+  S3: {identity: engine_ref, doc: "engine KV layouts: block table, req_to_token, kv_indptr + kv_indices", version: "survey 9bb8abe"}
+  S4: {identity: standard, doc: "ONNX Attention-23 ordering: softcap before the mask (onnx#7867)", version: "opset 23"}
+dimensions:
+  D1: {status: n/a}
+  D2: {status: defined, clauses: [B1.C2]}
+  D3: {status: defined, clauses: [B1.C1, B1.C5]}
+  D4: {status: n/a}
+  D5: {status: n/a}
+  D6: {status: defined, clauses: [B1.C2, B1.C3, B1.C4, B1.C6]}
+  D7: {status: n/a}
+  D8: {status: open, reason: "quantized KV: the default target is attention over the dequantized cache; comparing against attention on the original tensors needs them captured"}
+  D9: {status: n/a}
+  D10: {status: n/a}
+  D11: {status: defined, clauses: [B1.C7]}
+  D12: {status: open, reason: "backward of paged attention not specified in v2.5"}
+clauses:
+  B1.C1: {statement: "token j of a request lives at block_table[j // page] offset j % page (or the listed slot for req_to_token / indptr); -1 is padding", basis: [S3], guarantee: exact}
+  B1.C2: {statement: "queries continuing a cached prefix are bottom-right aligned: query i has position L - Lq + i and sees keys j <= position; score = scale * q.k", basis: [S1, S3], guarantee: rigorous_enclosure}
+  B1.C3: {statement: "sliding window keeps keys with position - j < W", basis: [S2], guarantee: rigorous_enclosure}
+  B1.C4: {statement: "sink: one extra per-head logit in the softmax, dropped from the output", basis: [S2], guarantee: rigorous_enclosure}
+  B1.C5: {statement: "GQA: query head h uses kv head h // (Hq / Hkv)", basis: [S1], guarantee: exact}
+  B1.C6: {statement: "softcap c * tanh(s / c) is applied to the scaled score before masking; masked keys stay excluded", basis: [S4], guarantee: rigorous_enclosure}
+  B1.C7: {statement: "a query that sees no key returns zeros and logsumexp +inf", basis: [S3], guarantee: allowed_set}
+readings:
+  B1-A1: {main: strict, alternatives: [inclusive], note: "window endpoint"}
+  B1-A2: {main: grouped, alternatives: [modulo], note: "applied-ai uses h % Hkv; a kernel must declare its mapping"}
+examples:
+  E1: {call: slots, clauses: [B1.C1], input: {block_table: [3, 1], seq_len: 3, page_size: 2}, expected: [[3, 0], [3, 1], [1, 0]]}
+  E2: {call: attn, clauses: [B1.C2], input: {q: [[0]], k: [[1], [2], [3]], v: [[3], [6], [9]], kw: {scale: 1}}, expected: "6"}
+  E3: {call: attn, clauses: [B1.C3], input: {q: [[0]], k: [[1], [2], [3]], v: [[3], [6], [9]], kw: {scale: 1, window: 2}}, expected: "15/2", readings: {inclusive: "6"}}
+  E4: {call: attn, clauses: [B1.C4], input: {q: [[0]], k: [[1], [2], [3]], v: [[3], [6], [9]], kw: {scale: 1, sink: 0}}, expected: "9/2"}
+  E5: {call: kv_head, clauses: [B1.C5], input: {h: 1, hq: 4, hkv: 2}, expected: 0, readings: {modulo: 1}}
+  E6: {call: attn, clauses: [B1.C6], input: {q: [[2]], k: [[1], [-1]], v: [[1], [0]], kw: {scale: "1/2", softcap: 1, causal: false}}, expected: "1/(1+exp(-2*tanh(1)))"}
+  E7: {call: attn, clauses: [B1.C2, B1.C6], input: {q: [[1], [1]], k: [[1], [1]], v: [[1], [0]], kw: {scale: 1, softcap: 1}, row: 0}, expected: "1"}
+  E8: {call: attn, clauses: [B1.C7], input: {q: [[1]], k: [[1], [2]], v: [[3], [4]], kw: {scale: 1, causal: false, key_set: []}}, expected: "0"}
+mutants:
+  M5: {clauses: [B1.C7], misreading: "a row with no visible key returns NaN"}
+  M1: {clauses: [B1.C2], misreading: "top-left alignment for queries that continue a prefix"}
+  M2: {clauses: [B1.C4], misreading: "sink ignored"}
+  M3: {clauses: [B1.C6], misreading: "softcap applied before the scale"}
+  M4: {clauses: [B1.C6], misreading: "mask added before softcap (masked keys become -c, ORT 1.24 CPU)"}

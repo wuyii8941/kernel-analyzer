@@ -1,0 +1,33 @@
+id: H2_ALIGN
+title: MoE token alignment (moe_align_block_size) and fused expert computation
+kind: K10
+survey_class: H
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: engine_ref, doc: "vLLM / SGLang moe_align_block_size: per-expert padding to the block size, pad id = numel", version: "survey 9bb8abe"}
+  S2: {identity: model_impl, doc: "Mixtral / DeepSeek MoE: sum_j w_j * Expert_j(x), SwiGLU experts", version: "transformers main"}
+dimensions:
+  D1: {status: defined, clauses: [H2.C3]}
+  D2: {status: n/a}
+  D3: {status: defined, clauses: [H2.C1]}
+  D4: {status: defined, clauses: [H2.C2]}
+  D5: {status: open, reason: "quantized expert weights follow F and G contracts; per-kernel format declaration needed"}
+  D6: {status: n/a}
+  D7: {status: n/a}
+  D8: {status: n/a}
+  D9: {status: n/a}
+  D10: {status: n/a}
+  D11: {status: defined, clauses: [H2.C1]}
+  D12: {status: n/a}
+clauses:
+  H2.C1: {statement: "each expert's token list is padded to a multiple of the block size (0 tokens -> 0 blocks); one expert id per block; pad id = numel", basis: [S1], guarantee: exact}
+  H2.C2: {statement: "token order inside an expert is unspecified (atomics): compared as sets", basis: [S1], guarantee: allowed_set}
+  H2.C3: {statement: "the routing weight multiplies the expert output (equivalently the down-projection epilogue), not the expert input", basis: [S2], guarantee: rigorous_enclosure}
+examples:
+  E1: {call: align, clauses: [H2.C1, H2.C2], input: {ids: [[0, 2], [2, 1], [0, 2]], E: 3, B: 4}, expected: [[4, 4, 4], 12, [0, 1, 2], 6, [[0, 4], [3], [1, 2, 5]]]}
+  E2: {call: align, clauses: [H2.C1], input: {ids: [[0], [0]], E: 2, B: 4}, expected: [[4, 0], 4, [0], 2, [[0, 1], []]]}
+  E3: {call: moe, clauses: [H2.C3], input: {x: [1], ids: [0], w: ["1/2"], Wg: [[[1]]], Wu: [[[2]]], Wd: [[[3]]]}, expected: "3/(1+exp(-1))"}
+mutants:
+  M1: {clauses: [H2.C1], misreading: "pad id -1"}
+  M2: {clauses: [H2.C3], misreading: "routing weight applied to the expert input"}
+  M3: {clauses: [H2.C1], misreading: "an expert with no tokens still gets one block"}

@@ -1,0 +1,44 @@
+id: A1_LINEAR
+title: linear attention and state recurrences (linear, scalar decay, GLA, DeltaNet, Gated DeltaNet, KDA)
+kind: K7
+survey_class: A
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: paper, doc: "Katharopoulos 2020; RetNet; Mamba-2; GLA (Yang 2024); DeltaNet (Schlag 2021, Yang 2024); Gated DeltaNet (Yang 2025); Kimi Linear (KDA)", version: "as published"}
+  S2: {identity: model_impl, doc: "flash-linear-attention naive.py recurrences (fp32), default scale K^-0.5", version: "survey 9bb8abe"}
+dimensions:
+  D1: {status: defined, clauses: [A1.C1]}
+  D2: {status: defined, clauses: [A1.C2]}
+  D3: {status: defined, clauses: [A1.C3]}
+  D4: {status: n/a}
+  D5: {status: n/a}
+  D6: {status: n/a}
+  D7: {status: defined, clauses: [A1.C1, A1.C3]}
+  D8: {status: defined, clauses: [A1.C4]}
+  D9: {status: n/a}
+  D10: {status: n/a}
+  D11: {status: open, reason: "padding slots of the state pool and partially filled chunks need each engine's convention"}
+  D12: {status: defined, clauses: [A1.C5]}
+clauses:
+  A1.C1: {statement: "state dk x dv; linear S+kv^T; decay aS+kv^T; GLA Diag(a)S+kv^T; DeltaNet (I-bkk^T)S+bkv^T; Gated DeltaNet a(I-bkk^T)S+bkv^T; KDA (I-bkk^T)Diag(a)S+bkv^T; o = scale S^T q", basis: [S1], guarantee: exact}
+  A1.C2: {statement: "default scale dk^-1/2; gates from log space a = exp(g) or 2^g as declared", basis: [S1, S2], guarantee: rigorous_enclosure}
+  A1.C3: {statement: "variable-length batches: each sequence starts from its own initial state; nothing crosses a boundary", basis: [S2], guarantee: exact}
+  A1.C4: {statement: "chunked algorithms equal the recurrence in exact arithmetic (checked here for linear, decay, GLA); a nonzero G_pi - f is an execution effect or a bug", basis: [S1], guarantee: exact}
+  A1.C5: {statement: "backward includes the gradient that reaches the final state (linear, decay, GLA covered exactly; delta-rule backward via G_pi of the kernel)", basis: [S1], guarantee: exact}
+examples:
+  E1: {call: run, clauses: [A1.C1], input: {variant: linear, q: [[1], [1]], k: [[1], [2]], v: [[3], [4]]}, expected: [3, 11, 11]}
+  E2: {call: run, clauses: [A1.C1], input: {variant: decay, a: ["1/2", "1/2"], q: [[1], [1]], k: [[1], [2]], v: [[3], [4]]}, expected: [3, "19/2", "19/2"]}
+  E3: {call: run, clauses: [A1.C1], input: {variant: delta, b: ["1/2", "1/2"], q: [[1], [1]], k: [[1], [2]], v: [[3], [4]]}, expected: ["3/2", "5/2", "5/2"]}
+  E4: {call: run, clauses: [A1.C1], input: {variant: gated_delta, a: ["1/2", "1/2"], b: ["1/2", "1/2"], q: [[1], [1]], k: [[1], [2]], v: [[3], [4]]}, expected: ["3/2", "13/4", "13/4"]}
+  E5: {call: run, clauses: [A1.C3], input: {variant: linear, q: [[1], [1]], k: [[1], [2]], v: [[3], [4]], cu: [0, 1, 2]}, expected: [3, 8]}
+  E7: {call: default_scale, clauses: [A1.C2], input: {q: [[1, 0, 0, 0]], k: [[1, 0, 0, 0]], v: [[3]]}, expected: "3/2"}
+  E8: {call: gate, clauses: [A1.C2], input: {g: -1, base: log2}, expected: "1/2"}
+  E9: {call: chunked, clauses: [A1.C4], input: {variant: decay, a: ["1/2", "1/2"], q: [[1], [1]], k: [[1], [2]], v: [[3], [4]], C: 1}, expected: [3, "19/2", "19/2"]}
+  E6: {call: grad, clauses: [A1.C5], input: {variant: decay, q: [[1]], k: [[1]], v: [[1]], a: ["1/2"], S0: [[2]], dO: [[0]], dST: [[1]]}, expected: "1/2"}
+mutants:
+  M1: {clauses: [A1.C1], misreading: "Gated DeltaNet gate applied after the write"}
+  M2: {clauses: [A1.C3], misreading: "state carried across sequence boundaries"}
+  M3: {clauses: [A1.C5], misreading: "final-state gradient dropped (fla HGRN / ABC chunked backward, survey)"}
+  M4: {clauses: [A1.C1], misreading: "decay applied after adding k v^T"}
+  M5: {clauses: [A1.C2], misreading: "natural-log gate where the kernel declares log2"}
+  M6: {clauses: [A1.C4], misreading: "chunked form carries the state between chunks without its decay"}

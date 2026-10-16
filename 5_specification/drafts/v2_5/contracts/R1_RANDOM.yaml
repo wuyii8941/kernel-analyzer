@@ -1,0 +1,39 @@
+id: R1_RANDOM
+title: randomness (dropout conditional on the kernel's mask; inverse-CDF sampling given u)
+kind: K15
+survey_class: R
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: torch_doc, doc: "torch.nn.Dropout: zeroes with probability p, scales kept outputs by 1/(1-p)", version: "2.10"}
+  S2: {identity: paper, doc: "inverse transform sampling", version: "mathematical definition"}
+dimensions:
+  D1: {status: defined, clauses: [R1.C4]}
+  D2: {status: open, reason: "temperature floor and the order of top-k / top-p filtering need per-engine declarations"}
+  D3: {status: n/a}
+  D4: {status: n/a}
+  D5: {status: n/a}
+  D6: {status: n/a}
+  D7: {status: n/a}
+  D8: {status: n/a}
+  D9: {status: defined, clauses: [R1.C1, R1.C3]}
+  D10: {status: n/a}
+  D11: {status: n/a}
+  D12: {status: defined, clauses: [R1.C2]}
+clauses:
+  R1.C1: {statement: "conditional on the kernel's keep mask: y = x * keep / (1 - p)", basis: [S1], guarantee: exact}
+  R1.C2: {statement: "backward reuses the forward mask: dx = dy * keep / (1 - p)", basis: [S1], guarantee: exact}
+  R1.C3: {statement: "the mask stream is checked separately: Clopper-Pearson interval for the keep rate must contain 1 - p", basis: [S1], guarantee: allowed_set}
+  R1.C4: {statement: "sample = smallest i with cumulative probability > u", basis: [S2], guarantee: exact}
+readings:
+  R1-A1: {main: gt, alternatives: [ge], note: "only differs when u equals a cumulative sum"}
+examples:
+  E1: {call: fwd, clauses: [R1.C1], input: {x: [2, -4, 6], keep: [1, 0, 1], p: "1/2"}, expected: [4, 0, 12]}
+  E2: {call: bwd, clauses: [R1.C2], input: {dy: [1, 1, 1], keep: [1, 0, 1], p: "1/4"}, expected: ["4/3", 0, "4/3"]}
+  E3: {call: bwd, clauses: [R1.C2], input: {x: [-2, 3], dy: [1, 1], keep: [1, 1], p: "1/2"}, expected: [2, 2]}
+  E4: {call: sample, clauses: [R1.C4], input: {probs: ["1/4", "1/2", "1/4"], u: "1/4"}, expected: 1, readings: {ge: 0}}
+  E5: {call: rate, clauses: [R1.C3], input: {n_keep: 480, n: 1000, p: "1/2"}, expected: pass}
+  E6: {call: rate, clauses: [R1.C3], input: {n_keep: 600, n: 1000, p: "1/2"}, expected: fail}
+mutants:
+  M3: {clauses: [R1.C3], misreading: "fixed tolerance |rate - (1 - p)| < 0.01 instead of a confidence interval"}
+  M1: {clauses: [R1.C2], misreading: "backward multiplies by (1 - p) (trident, survey)"}
+  M2: {clauses: [R1.C2], misreading: "backward rebuilds the mask from y > 0 (trident, survey)"}

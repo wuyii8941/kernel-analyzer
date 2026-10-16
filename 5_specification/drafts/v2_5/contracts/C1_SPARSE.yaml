@@ -1,0 +1,42 @@
+id: C1_SPARSE
+title: sparse attention selection (DSA lightning indexer, NSA block selection, key ranges)
+kind: K6
+survey_class: C
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: paper, doc: "DeepSeek-V3.2: I_{t,s} = sum_j w_{t,j} ReLU(q_{t,j} . k_s), top-k over preceding tokens", version: "arXiv 2512.02556"}
+  S2: {identity: paper, doc: "Native Sparse Attention: block importance, forced initial / local blocks, top-n blocks", version: "as published"}
+  S3: {identity: engine_ref, doc: "engine index conventions (-1 for no entry, ks / ke ranges)", version: "survey 9bb8abe"}
+dimensions:
+  D1: {status: defined, clauses: [C1.C1, C1.C3]}
+  D2: {status: n/a}
+  D3: {status: defined, clauses: [C1.C2, C1.C4]}
+  D4: {status: defined, clauses: [C1.C2]}
+  D5: {status: open, reason: "fp8 / fp4 KV byte layouts and UE8M0 scale rounding in indexer caches need per-engine declarations (F contracts give the arithmetic)"}
+  D6: {status: defined, clauses: [C1.C2]}
+  D7: {status: open, reason: "compressed-KV ring buffers not specified in v2.5"}
+  D8: {status: n/a}
+  D9: {status: n/a}
+  D10: {status: n/a}
+  D11: {status: n/a}
+  D12: {status: n/a}
+clauses:
+  C1.C1: {statement: "index score I_{t,s} = sum_j w_{t,j} * ReLU(q_{t,j} . k_s)", basis: [S1], guarantee: exact}
+  C1.C2: {statement: "top-k over s <= t; ties give a set of admissible selections; fewer than k candidates are padded with -1", basis: [S1, S3], guarantee: allowed_set}
+  C1.C3: {statement: "NSA: forced blocks always kept; remaining blocks chosen by block score (sum of token scores)", basis: [S2], guarantee: allowed_set}
+  C1.C4: {statement: "key range [ks, ke) is half-open", basis: [S3], guarantee: exact}
+readings:
+  C1-A1: {main: sum, alternatives: [max], note: "block aggregation"}
+  C1-A2: {main: half_open, alternatives: [closed], note: "ks / ke convention"}
+examples:
+  E1: {call: topk, clauses: [C1.C1, C1.C2], input: {q: [[1, 0], [0, 1]], w: [1, 2], k: [[1, 1], [2, -1], [0, 3], [1, 0]], t: 3, k_sel: 2}, expected: {set: [[0, 2]]}}
+  E2: {call: topk, clauses: [C1.C2], input: {q: [[1, 0]], w: [1], k: [[1, 0]], t: 0, k_sel: 2}, expected: {set: [[0, -1]]}}
+  E3: {call: topk, clauses: [C1.C2], input: {scores: [2, 1, 2, 2], k_sel: 2}, expected: {set: [[0, 2], [0, 3], [2, 3]]}}
+  E4: {call: score, clauses: [C1.C1], input: {q: [[1], [-1]], w: [1, -1], k: [[2]], t: 0, s: 0}, expected: 2}
+  E5: {call: topk, clauses: [C1.C2], input: {q: [[1, 0]], w: [1], k: [[1, 0], [0, 0], [0, 0], [5, 0]], t: 3, k_sel: 2}, expected: {set: [[0, 3]]}}
+  E6: {call: blocks, clauses: [C1.C3], input: {tok: [1, 1, 1, 1, 3, 0, 0, 0, 2, 2, 0, 0], block: 4, n: 2, forced: [0]}, expected: {set: [[0, 2]]}, readings: {max: {set: [[0, 1]]}}}
+  E7: {call: range, clauses: [C1.C4], input: {ks: 2, ke: 5}, expected: [2, 3, 4], readings: {closed: [2, 3, 4, 5]}}
+mutants:
+  M1: {clauses: [C1.C1], misreading: "ReLU applied after the head weighting"}
+  M2: {clauses: [C1.C2], misreading: "only strictly earlier tokens (s < t)"}
+  M3: {clauses: [C1.C2], misreading: "padding with 0 instead of -1"}

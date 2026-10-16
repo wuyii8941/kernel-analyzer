@@ -1,0 +1,30 @@
+id: F5_PACK
+title: 4-bit packing into 32-bit words (GPTQ and AWQ orders)
+kind: K1
+survey_class: G
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: engine_ref, doc: "GPTQ (low nibble first) and AWQ reference implementations; order as recorded in the library survey", version: "survey 9bb8abe"}
+dimensions:
+  D1: {status: n/a}
+  D2: {status: n/a}
+  D3: {status: defined, clauses: [F5.C1, F5.C2]}
+  D4: {status: n/a}
+  D5: {status: n/a}
+  D6: {status: n/a}
+  D7: {status: n/a}
+  D8: {status: n/a}
+  D9: {status: n/a}
+  D10: {status: n/a}
+  D11: {status: n/a}
+  D12: {status: n/a}
+clauses:
+  F5.C1: {statement: "GPTQ: element i occupies nibble i (bits 4i..4i+3)", basis: [S1], guarantee: exact}
+  F5.C2: {statement: "AWQ: element i occupies nibble [0,4,1,5,2,6,3,7][i]", basis: [S1], guarantee: exact}
+examples:
+  E1: {call: pack, clauses: [F5.C1], input: {vals: [1, 2, 3, 4, 5, 6, 7, 8], order: gptq}, expected: 0x87654321}
+  E2: {call: pack, clauses: [F5.C2], input: {vals: [1, 2, 3, 4, 5, 6, 7, 8], order: awq}, expected: 0x86427531}
+  E3: {call: unpack, clauses: [F5.C2], input: {word: "0x86427531", order: awq}, expected: [1, 2, 3, 4, 5, 6, 7, 8]}
+mutants:
+  M1: {clauses: [F5.C2], misreading: "AWQ packing map [0,2,4,6,1,3,5,7] used as nibble positions"}
+  M2: {clauses: [F5.C1], misreading: "high nibble first"}

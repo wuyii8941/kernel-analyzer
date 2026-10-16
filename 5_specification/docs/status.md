@@ -17,22 +17,21 @@
 
 ## 2 已知问题
 
-### 2.1 合同层还不能用来裁决
+### 2.1 合同层（2026-10-16 规格 v3 第 1 阶段之后）
 
-审阅发现（`reviews/2026-10-15/REVIEW.md` F1–F5）：
+10-15 审阅的 F1–F5 与 10-16 审阅第 5 项已处理（计划见 `PLAN_v3.md`）：
 
-| | 问题 | 位置 |
-|---|---|---|
-| F1 | 样例通过被升级成「条款成立」；依据只查非空，不存在的编号也能通过；草案状态不影响结论 | `contracts/draft/contract_check.py` |
-| F2 | 失败仍返回成功：旧 `run_all.sh` 的管道吞掉退出码；草案检查器发现矛盾也返回 0 | 顶层已由 `run_checks.py` 取代；草案检查器本身未改 |
-| F3 | 适配器比合同窄：ADAMW 不读前态、只返回 theta；CE 只返回标量 loss、写死 ignore_index；梯度全改成零仍判成立 | `contracts/draft/adapters/` |
-| F4 | 合法域只是文字：RANKMEAN 把计数 3.9 截成 3，长度不一致也返回结果 | `contracts/draft/adapters/RANKMEAN.py` |
-| F5 | 比较器的「严格」没有依据：有理数转成 mpf；1e-50 的宽限；倒置区间也判成立；用 eval 解析期望值 | `contracts/draft/contract_check.py` |
+| | 处理 |
+|---|---|
+| 检查器 | 新的唯一检查器 `tools/check_contracts.py`：期望值用 AST 解析，不用 eval；精确值与严格包围按 PLAN_v3 §3 比较，不设隐藏容差；每个例子、读法、变异要求都参与结论；矛盾、结构错误、实现错误退出 1，未建立退出 2 |
+| 注入失败 | `tests/test_checker.py` 的 35 项测试，含注入 A–I：错误期望值、不存在的来源、子进程 exit 9、倒置区间、缺输出 / 状态 / 行、错误读法、未审阅或未绑定或哈希过期的自动启用、只靠异常「杀死」的变异、隐藏容差。全部按预期失败 |
+| 适配器 | `adapters/CE.py`、`ADAMW.py`、`RANKMEAN.py`：输入先校验（不截断计数、不丢多余项）；CE 返回 loss 与对显式上游的 VJP；ADAMW 读入前态、返回 theta / m / v / t；参照调用 v2.4 代码，误读由独立实现给出 |
+| 结果 | 29 个例子全部一致（含 7 个非法输入 / 未支持例）；20 条变异要求全部在指定输出上被拒绝 |
+| 来源 | 三个来源的原文快照存于 `sources/`，SHA-256 记在 `SOURCES.json`；作者已逐条对照，未发现与条款冲突 |
+| 启用 | 唯一入口 `kernel_spec/registry.py`：只读 `contracts/*.yaml`；要求已审阅、`contracts/LOCK.json` 中的哈希与当前文件一致、来源有快照、需任务选择的 profile 已显式绑定。CE 的非任务 profile 与 ADAMW 现可启用；CE.R_A 与 RANKMEAN 需每次绑定 |
 
-修法写在 `reviews/2026-10-15/CODEX_TASK.md`，分三步，尚未开始：
-- P0 修检查器；
-- P1 实现三个适配器；
-- P2 验收。
+被取代的文件：`contracts/draft/` 的草案检查器与适配器保留作历史；`tools/validate_contracts.py`、`tools/run_review_checks.py`、
+`tests/test_contract_validator.py` 已由上面的检查器与测试取代（其中的结构检查已移到 `kernel_spec/schema.py`，原测试逐项移植）。
 
 ### 2.2 来源
 

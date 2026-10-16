@@ -13,7 +13,11 @@
       "IGNORE": "Ignore index may lie outside the class range; ignored rows do not contribute input gradient; class-index targets only.",
       "SMOOTH": "Targets are mixed with the uniform class distribution.",
       "SHAPE": "Target/index/probability shapes and reduction output shape; probability constraints are caller responsibilities."
-    }
+    },
+    "snapshot": "sources/PCE.html",
+    "snapshot_sha256": "66718d0971989ca2109affa597474defaa94e6d26bad2bcf5c9816920b69e40e",
+    "retrieved": "2026-10-16",
+    "snapshot_check": "items INDEX (unreduced class-index formula with w_{y_n} and the ignore indicator), REDUCE (mean divides by the sum of w_{y_n} over non-ignored rows; sum; none), PROB (l_n = -sum_c w_c log softmax_c y_{n,c}; mean divides by N), IGNORE (index may lie outside [0,C); no input-gradient contribution; class indices only), SMOOTH (mixture with the uniform distribution, prose only) and SHAPE found in the archived text; no conflict with the reviewed clauses. Weighted smoothing is not given by a formula, consistent with decision CE.R_A needing a binding. Checked by the spec v3 author (Claude), not an external review."
   },
   "PAW": {
     "kind": "versioned_document",
@@ -28,7 +32,11 @@
       "CORRECTION": "Current step t appears in 1-beta**t; amsgrad=False uses the current second moment.",
       "UPDATE": "Subtract lr*m_hat/(sqrt(v_hat)+eps); eps is outside sqrt.",
       "NONE": "The zero_grad note distinguishes None (step skipped) from a zero gradient (full step)."
-    }
+    },
+    "snapshot": "sources/PAW.html",
+    "snapshot_sha256": "65e6a093ab380de591474e47f2dcce27a225e434bb5b8d7fc67628b753a87eb5",
+    "retrieved": "2026-10-16",
+    "snapshot_check": "algorithm box archived: decay of theta_{t-1} before the adaptive step, moments, bias correction with the current t, eps outside the square root, amsgrad via v_max; the zero_grad note distinguishes a None gradient (step skipped) from a zero gradient (full step). No conflict with the reviewed clauses. Checked by the spec v3 author (Claude), not an external review."
   },
   "HF": {
     "kind": "supporting_example",
@@ -39,6 +47,10 @@
     "verification": "Official author blog read using web; supporting task example, not authority for all distributed objectives",
     "items": {
       "TOKEN_MEAN": "For the discussed token-level task, use accumulated loss sum divided by all valid token counts rather than mean of batch means."
-    }
+    },
+    "snapshot": "sources/HF.html",
+    "snapshot_sha256": "0aaf4c702ca67d8b65afae1741c74b3f66ade852e0b731dc4cd2b351b8187ce1",
+    "retrieved": "2026-10-16",
+    "snapshot_check": "archived: for token-level tasks the accumulated loss is the total loss divided by the total number of non-padding tokens, not the mean of per-batch means. A supporting example for the task decision RM.TASK, as the reviewed contract says. Checked by the spec v3 author (Claude), not an external review."
   }
 }

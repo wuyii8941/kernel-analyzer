@@ -1,0 +1,39 @@
+id: K14_COLL
+title: distributed and communication kernels (all-reduce, reduce-scatter, GEMM+RS, split-KV merge, EP dispatch/combine)
+kind: K14
+survey_class: none
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: standard, doc: "StableHLO all_reduce / reduce_scatter semantics: process groups, reduction function, rank order", version: "spec main"}
+  S2: {identity: engine_ref, doc: "Triton-distributed AG+GEMM, GEMM+ReduceScatter, EP AllToAll dispatch/combine", version: "docs latest"}
+  S3: {identity: paper, doc: "softmax over a union of key sets (flash-decoding partial merge identity)", version: "mathematical definition"}
+dimensions:
+  D1: {status: defined, clauses: [K14.C1, K14.C4, K14.C5]}
+  D2: {status: n/a}
+  D3: {status: defined, clauses: [K14.C2]}
+  D4: {status: defined, clauses: [K14.C3]}
+  D5: {status: n/a}
+  D6: {status: n/a}
+  D7: {status: open, reason: "symmetric-memory buffers and signal protocols are execution details; only their results are specified"}
+  D8: {status: n/a}
+  D9: {status: n/a}
+  D10: {status: n/a}
+  D11: {status: defined, clauses: [K14.C2, K14.C5]}
+  D12: {status: n/a}
+clauses:
+  K14.C1: {statement: "reduction function and weights are part of the definition: sum, average over ranks, or weighted by declared counts", basis: [S1], guarantee: exact}
+  K14.C2: {statement: "reduce-scatter shard r and all-gather segment r follow rank order; uneven lengths are not established", basis: [S1], guarantee: exact}
+  K14.C3: {statement: "AG+GEMM and GEMM+RS equal the single-device product in exact arithmetic when every contribution is present exactly once", basis: [S1, S2], guarantee: exact}
+  K14.C4: {statement: "split-KV merge: lse = log sum exp(lse_i); o = sum exp(lse_i - lse) o_i", basis: [S3], guarantee: rigorous_enclosure}
+  K14.C5: {statement: "EP dispatch/combine returns sum_j w_j * expert_j(x) per token; capacity dropping is not established unless the arrival order is declared", basis: [S2], guarantee: exact}
+examples:
+  E1: {call: allreduce, clauses: [K14.C1], input: {xs: [[1, 2], [3, 4]], op: weighted, weights: [3, 1]}, expected: ["3/2", "5/2"]}
+  E2: {call: rs, clauses: [K14.C2], input: {xs: [[1, 2, 3, 4], [10, 20, 30, 40]]}, expected: [[11, 22], [33, 44]]}
+  E3: {call: gemm_rs, clauses: [K14.C3], input: {A: [[[1], [2]], [[3], [4]]], B: [[[1, 0]], [[0, 1]]]}, expected: [[[1, 3]], [[2, 4]]]}
+  E4: {call: merge, clauses: [K14.C4], input: {parts: [[0, 1, [2]], [0, 3, [4]]]}, expected: "7/2"}
+  E5: {call: ep, clauses: [K14.C5], input: {x: [[1], [2]], routes: [[[0, "1/2"], [1, "1/2"]], [[1, 1]]], placement: [0, 1]}, expected: ["3/2", 4]}
+mutants:
+  M1: {clauses: [K14.C1], misreading: "plain average over ranks instead of the declared weights"}
+  M2: {clauses: [K14.C2], misreading: "shards in reverse rank order"}
+  M3: {clauses: [K14.C4], misreading: "partial outputs averaged without their softmax mass"}
+  M4: {clauses: [K14.C5], misreading: "combine without routing weights"}

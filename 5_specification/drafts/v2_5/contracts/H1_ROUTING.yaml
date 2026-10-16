@@ -1,0 +1,35 @@
+id: H1_ROUTING
+title: MoE routing (softmax top-k with renormalization; DeepSeek-V3 grouped sigmoid routing; ties)
+kind: K10
+survey_class: H
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: model_impl, doc: "Mixtral HF implementation: softmax over experts, top-k, renormalize (norm_topk_prob)", version: "transformers main"}
+  S2: {identity: paper, doc: "DeepSeek-V3 technical report: sigmoid affinities, selection bias not used in gating values, node-limited routing", version: "arXiv 2412.19437"}
+  S3: {identity: engine_ref, doc: "FlashInfer fused_topk_deepseek: group score = sum of top-2, top topk_group groups, weights normalized * routed_scaling_factor", version: "docs latest"}
+dimensions:
+  D1: {status: defined, clauses: [H1.C1, H1.C2]}
+  D2: {status: defined, clauses: [H1.C2]}
+  D3: {status: n/a}
+  D4: {status: defined, clauses: [H1.C3]}
+  D5: {status: n/a}
+  D6: {status: n/a}
+  D7: {status: n/a}
+  D8: {status: n/a}
+  D9: {status: n/a}
+  D10: {status: n/a}
+  D11: {status: n/a}
+  D12: {status: open, reason: "router backward (gradient through gating values only) not specified in v2.5"}
+clauses:
+  H1.C1: {statement: "softmax over all experts, top-k, weights renormalized over the selected experts", basis: [S1], guarantee: rigorous_enclosure}
+  H1.C2: {statement: "DeepSeek-V3: sigmoid; selection on score + bias; group score = sum of the top-2 biased scores; top topk_group groups; top-k inside; weights = unbiased scores normalized * routed_scaling_factor", basis: [S2, S3], guarantee: rigorous_enclosure}
+  H1.C3: {statement: "ties (or scores not separable at the enclosure width) give a set of admissible selections; a kernel must return one of them", basis: [S1, S2], guarantee: allowed_set}
+examples:
+  E1: {call: ids, clauses: [H1.C3], input: {logits: [3, 1, 3, 3], k: 2, method: softmax_topk_renorm}, expected: {set: [[0, 2], [0, 3], [2, 3]]}}
+  E2: {call: weight, clauses: [H1.C1], input: {logits: [0, 0, 1], k: 2, method: softmax_topk_renorm, expert: 2}, expected: "e/(e+1)"}
+  E3: {call: ids, clauses: [H1.C2], input: {logits: [0, 2, 1, -1, 3, 0, 1, 2], k: 2, method: deepseek_v3, bias: [0, 0, 0, 0, 0, 0, 0, 0], n_group: 4, topk_group: 2, rsf: "5/2"}, expected: {set: [[4, 7]]}}
+  E4: {call: weight, clauses: [H1.C2], input: {logits: [0, 1, 0], k: 2, method: deepseek_v3, bias: [2, 0, 0], expert: 0}, expected: "(1/2)/((1/2)+1/(1+exp(-1)))"}
+mutants:
+  M1: {clauses: [H1.C2], misreading: "selection bias also used in the gating weights"}
+  M2: {clauses: [H1.C2], misreading: "group score = max instead of sum of top-2"}
+  M3: {clauses: [H1.C1], misreading: "weights not renormalized over the selected experts"}

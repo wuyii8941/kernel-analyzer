@@ -1,0 +1,44 @@
+id: F1_FORMATS
+title: element rounding to OFP8 / MX FP6 / MX FP4 / bf16 / fp32
+kind: K11
+survey_class: F
+status_of_contract: draft-for-review
+sources:
+  S1: {identity: standard, doc: "OCP 8-bit Floating Point Specification (OFP8) and OCP Microscaling Formats (MX) v1.0", version: "1.0"}
+  S2: {identity: standard, doc: "ONNX Cast operator, saturate table (opset 19-23)", version: "opset 23"}
+dimensions:
+  D1: {status: n/a}
+  D2: {status: n/a}
+  D3: {status: n/a}
+  D4: {status: n/a}
+  D5: {status: defined, clauses: [F1.C1, F1.C2, F1.C4]}
+  D6: {status: n/a}
+  D7: {status: n/a}
+  D8: {status: n/a}
+  D9: {status: defined, clauses: [F1.C3]}
+  D10: {status: n/a}
+  D11: {status: defined, clauses: [F1.C2]}
+  D12: {status: n/a}
+clauses:
+  F1.C1: {statement: "round to nearest, ties to even, on the exact element grid (subnormals included)", basis: [S1], guarantee: exact}
+  F1.C2: {statement: "overflow: saturate gives +-max; otherwise E4M3 gives NaN and E5M2 gives Inf; FP6 and FP4 have no Inf/NaN and always saturate", basis: [S1], guarantee: exact}
+  F1.C3: {statement: "stochastic rounding is checked conditionally on the kernel's uniform u: round up iff u < fractional part", basis: [S1], guarantee: exact}
+  F1.C4: {statement: "overflow is decided after rounding (IEEE-like); deciding on |x| > max before rounding is the ONNX table read literally (reading R_before)", basis: [S1, S2], guarantee: exact}
+readings:
+  F1-A1: {main: after_rounding, alternatives: [before_rounding], note: "only differs for max < |x| < rounding threshold"}
+examples:
+  E1: {call: round, clauses: [F1.C1], input: {x: "5/2", fmt: e2m1}, expected: 2}
+  E2: {call: round, clauses: [F1.C1], input: {x: "7/2", fmt: e2m1}, expected: 4}
+  E3: {call: round, clauses: [F1.C2], input: {x: "13/2", fmt: e2m1}, expected: 6}
+  E4: {call: round, clauses: [F1.C2], input: {x: 470, fmt: e4m3}, expected: nan}
+  E5: {call: round, clauses: [F1.C2], input: {x: 470, fmt: e4m3, saturate: true}, expected: 448}
+  E6: {call: round, clauses: [F1.C2], input: {x: 61440, fmt: e5m2}, expected: inf}
+  E7: {call: round, clauses: [F1.C3], input: {x: "9/4", fmt: e2m1, mode: stochastic, u: "1/8"}, expected: 3}
+  E8: {call: round, clauses: [F1.C3], input: {x: "9/4", fmt: e2m1, mode: stochastic, u: "1/2"}, expected: 2}
+  E9: {call: round, clauses: [F1.C3], input: {x: "9/4", fmt: e2m1, mode: stochastic, u: "1/4"}, expected: 2}
+  E10: {call: round, clauses: [F1.C4], input: {x: 450, fmt: e4m3}, expected: 448, readings: {before_rounding: nan}}
+mutants:
+  M1: {clauses: [F1.C1], misreading: "ties away from zero"}
+  M2: {clauses: [F1.C1], misreading: "truncation toward zero"}
+  M3: {clauses: [F1.C2], misreading: "FP4/FP6 overflow treated like E4M3 (NaN)"}
+  M4: {clauses: [F1.C3], misreading: "stochastic rounding with u <= fraction"}
