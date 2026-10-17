@@ -1,0 +1,1117 @@
+{
+ "group": "D2_special",
+ "date": "2026-10-17",
+ "author": "Claude (spec v3 author, group D2_special)",
+ "source": ".cache/spec_v3/group_D2_special.jsonl (44 rows, 36 distinct ids: repeated FlagGems rows are several launches of the same internal kernel)",
+ "contracts": {
+  "GDR": "contracts/GDR.yaml",
+  "SSU": "contracts/SSU.yaml",
+  "LORA": "contracts/LORA.yaml",
+  "SAMPLING": "contracts/SAMPLING.yaml",
+  "SORT": "contracts/SORT.yaml",
+  "BSR": "contracts/BSR.yaml"
+ },
+ "rule": "every instance maps to a contract and the profile under which its recorded outputs are judged; FlagGems internal launches map to the torch call they implement (f is stated for the call's outputs)",
+ "combinations": [
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "linear_attention_recurrence",
+   "operator": "fla.ops.gated_delta_rule.chunk_gated_delta_rule (main)",
+   "contract": "GDR",
+   "instances": 1
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "ssm_state_update",
+   "operator": "mamba_ssm.ops.triton.selective_state_update (main)",
+   "contract": "SSU",
+   "instances": 1
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "lora",
+   "operator": "vllm _lora_shrink (Triton, multi-LoRA)",
+   "contract": "LORA",
+   "instances": 1
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "sampling",
+   "operator": "vllm apply_top_k_top_p_triton (pivot search)",
+   "contract": "SAMPLING",
+   "instances": 1
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "block_sparse_matmul",
+   "operator": "torch.sparse bsr_dense_mm (Triton)",
+   "contract": "BSR",
+   "instances": 1
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "block_sparse_softmax",
+   "operator": "torch.sparse bsr_softmax (Triton)",
+   "contract": "BSR",
+   "instances": 1
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "sampled_addmm",
+   "operator": "torch.sparse sampled_addmm (Triton)",
+   "contract": "BSR",
+   "instances": 1
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float32",
+   "contract": "SORT",
+   "instances": 9
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float16",
+   "contract": "SORT",
+   "instances": 10
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.bfloat16",
+   "contract": "SORT",
+   "instances": 10
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:topk",
+   "operator": "gems.topk.float32",
+   "contract": "SORT",
+   "instances": 2
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:topk",
+   "operator": "gems.topk.float16",
+   "contract": "SORT",
+   "instances": 3
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:topk",
+   "operator": "gems.topk.bfloat16",
+   "contract": "SORT",
+   "instances": 3
+  }
+ ],
+ "entries": [
+  {
+   "instance_id": "general_round_v3_1/fla_gdr_chunk_basic",
+   "rows": 1,
+   "experiment": "general_round_v3_1",
+   "kind": "linear_attention_recurrence",
+   "operator": "fla.ops.gated_delta_rule.chunk_gated_delta_rule (main)",
+   "params": {},
+   "status_then": "hand-written float64 reference",
+   "contract": "GDR",
+   "profiles": [
+    "fla_chunk"
+   ],
+   "call": {
+    "B": 2,
+    "T": 128,
+    "H": 2,
+    "HV": 2,
+    "K": 32,
+    "V": 32,
+    "scale": null,
+    "use_qk_l2norm_in_kernel": false,
+    "use_beta_sigmoid_in_kernel": false,
+    "allow_neg_eigval": false,
+    "use_gate_in_kernel": false,
+    "initial_state": null,
+    "output_final_state": false,
+    "state_v_first": false,
+    "cu_seqlens": null
+   },
+   "outputs": {
+    "o": "out.o"
+   },
+   "inputs": "q, k (L2-normalised by the harness, not in kernel), v, g = logsigmoid(.), beta in (0,1) as recorded per seed",
+   "notes": "default scale 1/sqrt(32) (enclosure, GD.SCALE); reference checked at the full tested size: outcome value, 54.5 s, enclosure width < 1e-63"
+  },
+  {
+   "instance_id": "general_round_v3_1/mamba_ssu_plain",
+   "rows": 1,
+   "experiment": "general_round_v3_1",
+   "kind": "ssm_state_update",
+   "operator": "mamba_ssm.ops.triton.selective_state_update (main)",
+   "params": {},
+   "status_then": "hand-written float64 reference",
+   "contract": "SSU",
+   "profiles": [
+    "mamba_ref"
+   ],
+   "call": {
+    "batch": 4,
+    "nheads": 4,
+    "dim": 32,
+    "dstate": 16,
+    "ngroups": 1,
+    "D": true,
+    "z": false,
+    "dt_bias": true,
+    "dt_softplus": false
+   },
+   "outputs": {
+    "y": "out.y",
+    "state": "out.state"
+   },
+   "inputs": "state, x, dt, A, B, C, D, dt_bias of the harness",
+   "notes": "paper_zoh is a task-bound alternative (SS.DISCRETIZE); the case's own f is mamba_ref"
+  },
+  {
+   "instance_id": "general_round_v3_1/v2_lora_shrink_3slice",
+   "rows": 1,
+   "experiment": "general_round_v3_1",
+   "kind": "lora",
+   "operator": "vllm _lora_shrink (Triton, multi-LoRA)",
+   "params": {},
+   "status_then": "hand-written float64 reference",
+   "contract": "LORA",
+   "profiles": [
+    "vllm_shrink"
+   ],
+   "call": {
+    "num_tokens": 24,
+    "hidden": 256,
+    "rank": 16,
+    "num_loras": 3,
+    "slices": 3,
+    "scaling": "1/2",
+    "mapping": "randint(-1, 3)"
+   },
+   "outputs": {
+    "y": "y"
+   },
+   "inputs": "x, three slice weights, mapping; metadata derived from the mapping (LR.METADATA)",
+   "notes": "rows of tokens mapped to -1 are 0 (LR.NO_LORA: output_tensor.zero_()); the general-round record called them untouched and excluded them"
+  },
+  {
+   "instance_id": "general_round_v3_1/v2_topkp_p_split",
+   "rows": 1,
+   "experiment": "general_round_v3_1",
+   "kind": "sampling",
+   "operator": "vllm apply_top_k_top_p_triton (pivot search)",
+   "params": {},
+   "status_then": "hand-written float64 reference",
+   "contract": "SAMPLING",
+   "profiles": [
+    "nucleus"
+   ],
+   "call": {
+    "op": "mask",
+    "B": 8,
+    "V": 4096,
+    "k": null,
+    "p": "0.5 + 0.45 U(0,1) per row (float32)"
+   },
+   "outputs": {
+    "logits": "out (allowed set of masked rows per row)"
+   },
+   "inputs": "logits and p of the harness",
+   "notes": "ties at the top-p boundary are allowed sets (SP.TOPP_TIES); the general-round f (tie-inclusive) is mutant SP.M1; reference checked at the tested size (8 x 4096, outcome value, singleton sets)"
+  },
+  {
+   "instance_id": "general_round_v3_1/demo_bsr_dense_mm",
+   "rows": 1,
+   "experiment": "general_round_v3_1",
+   "kind": "block_sparse_matmul",
+   "operator": "torch.sparse bsr_dense_mm (Triton)",
+   "params": {},
+   "status_then": "no f (demo)",
+   "contract": "BSR",
+   "profiles": [
+    "torch_sparse"
+   ],
+   "call": {
+    "op": "bsr_dense_mm",
+    "shape": [
+     64,
+     64
+    ],
+    "blocksize": [
+     16,
+     16
+    ],
+    "dense": [
+     64,
+     32
+    ],
+    "dtype": "float32"
+   },
+   "outputs": {
+    "out": "out"
+   },
+   "inputs": "x.to_sparse_bsr(16) of bsr_ops.block_sparse (blocks containing a nonzero are specified), d"
+  },
+  {
+   "instance_id": "general_round_v3_1/demo_bsr_softmax",
+   "rows": 1,
+   "experiment": "general_round_v3_1",
+   "kind": "block_sparse_softmax",
+   "operator": "torch.sparse bsr_softmax (Triton)",
+   "params": {},
+   "status_then": "no f (demo)",
+   "contract": "BSR",
+   "profiles": [
+    "torch_sparse"
+   ],
+   "call": {
+    "op": "bsr_softmax",
+    "shape": [
+     64,
+     64
+    ],
+    "blocksize": [
+     16,
+     16
+    ],
+    "dtype": "float32"
+   },
+   "outputs": {
+    "values": "out"
+   },
+   "inputs": "x.to_sparse_bsr(16) of bsr_ops.block_sparse"
+  },
+  {
+   "instance_id": "general_round_v3_1/demo_sampled_addmm",
+   "rows": 1,
+   "experiment": "general_round_v3_1",
+   "kind": "sampled_addmm",
+   "operator": "torch.sparse sampled_addmm (Triton)",
+   "params": {},
+   "status_then": "no f (demo)",
+   "contract": "BSR",
+   "profiles": [
+    "torch_sparse"
+   ],
+   "call": {
+    "op": "sampled_addmm",
+    "shape": [
+     64,
+     64
+    ],
+    "blocksize": [
+     16,
+     16
+    ],
+    "mat1": [
+     64,
+     48
+    ],
+    "mat2": [
+     48,
+     64
+    ],
+    "alpha": 1,
+    "beta": 0
+   },
+   "outputs": {
+    "values": "out"
+   },
+   "inputs": "m.to_sparse_bsr(16), a, b"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float32/fill_scalar_func_kernel_rank_1",
+   "rows": 2,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "fill_scalar_func_kernel_rank_1"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float32, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch fill_scalar_func_kernel_rank_1 of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float16/fill_scalar_func_kernel_rank_1",
+   "rows": 2,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "fill_scalar_func_kernel_rank_1"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch fill_scalar_func_kernel_rank_1 of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.bfloat16/fill_scalar_func_kernel_rank_1",
+   "rows": 2,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "fill_scalar_func_kernel_rank_1"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at bfloat16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch fill_scalar_func_kernel_rank_1 of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float32/compute_global_hist_kernel",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "compute_global_hist_kernel"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float32, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch compute_global_hist_kernel of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float32/reduce_then_scan_root_scan_kernel_row",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "reduce_then_scan_root_scan_kernel_row"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float32, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch reduce_then_scan_root_scan_kernel_row of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float16/reduce_then_scan_root_scan_kernel_row",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "reduce_then_scan_root_scan_kernel_row"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch reduce_then_scan_root_scan_kernel_row of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.bfloat16/reduce_then_scan_root_scan_kernel_row",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "reduce_then_scan_root_scan_kernel_row"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at bfloat16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch reduce_then_scan_root_scan_kernel_row of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float32/sub_func_kernel_rank_1",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "sub_func_kernel_rank_1"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float32, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch sub_func_kernel_rank_1 of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float16/sub_func_kernel_rank_1",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "sub_func_kernel_rank_1"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch sub_func_kernel_rank_1 of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.bfloat16/sub_func_kernel_rank_1",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "sub_func_kernel_rank_1"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at bfloat16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch sub_func_kernel_rank_1 of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float32/_to_copy_func_kernel_rank_1",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "_to_copy_func_kernel_rank_1"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float32, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch _to_copy_func_kernel_rank_1 of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float16/_to_copy_func_kernel_rank_1",
+   "rows": 2,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "_to_copy_func_kernel_rank_1"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch _to_copy_func_kernel_rank_1 of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.bfloat16/_to_copy_func_kernel_rank_1",
+   "rows": 2,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "_to_copy_func_kernel_rank_1"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at bfloat16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch _to_copy_func_kernel_rank_1 of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float32/arange_func",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "arange_func"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float32, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch arange_func of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float16/arange_func",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "arange_func"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch arange_func of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.bfloat16/arange_func",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "arange_func"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at bfloat16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch arange_func of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float32/sweep",
+   "rows": 2,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "sweep"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float32, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch sweep of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.topk.float32/topk_stage1_kernel",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:topk",
+   "operator": "gems.topk.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "topk_stage1_kernel"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.topk",
+    "args": "x (16, 256) at float32, k=8, dim=1",
+    "largest": true,
+    "sorted": true
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch topk_stage1_kernel of the gems.topk call; f is stated for the call's outputs"
+  },
+  {
+   "instance_id": "composition_corpus/gems.topk.float32/topk_stage2_kernel",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:topk",
+   "operator": "gems.topk.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "topk_stage2_kernel"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.topk",
+    "args": "x (16, 256) at float32, k=8, dim=1",
+    "largest": true,
+    "sorted": true
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch topk_stage2_kernel of the gems.topk call; f is stated for the call's outputs"
+  },
+  {
+   "instance_id": "composition_corpus/gems.topk.float16/_to_copy_func_kernel_rank_1",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:topk",
+   "operator": "gems.topk.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "_to_copy_func_kernel_rank_1"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.topk",
+    "args": "x (16, 256) at float16, k=8, dim=1",
+    "largest": true,
+    "sorted": true
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch _to_copy_func_kernel_rank_1 of the gems.topk call; f is stated for the call's outputs"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float16/compute_global_hist_kernel",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "compute_global_hist_kernel"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch compute_global_hist_kernel of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.float16/sweep",
+   "rows": 2,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "sweep"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at float16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch sweep of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.topk.float16/topk_stage1_kernel",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:topk",
+   "operator": "gems.topk.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "topk_stage1_kernel"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.topk",
+    "args": "x (16, 256) at float16, k=8, dim=1",
+    "largest": true,
+    "sorted": true
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch topk_stage1_kernel of the gems.topk call; f is stated for the call's outputs"
+  },
+  {
+   "instance_id": "composition_corpus/gems.topk.float16/topk_stage2_kernel",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:topk",
+   "operator": "gems.topk.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "topk_stage2_kernel"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.topk",
+    "args": "x (16, 256) at float16, k=8, dim=1",
+    "largest": true,
+    "sorted": true
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch topk_stage2_kernel of the gems.topk call; f is stated for the call's outputs"
+  },
+  {
+   "instance_id": "composition_corpus/gems.topk.bfloat16/_to_copy_func_kernel_rank_1",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:topk",
+   "operator": "gems.topk.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "_to_copy_func_kernel_rank_1"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.topk",
+    "args": "x (16, 256) at bfloat16, k=8, dim=1",
+    "largest": true,
+    "sorted": true
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch _to_copy_func_kernel_rank_1 of the gems.topk call; f is stated for the call's outputs"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.bfloat16/compute_global_hist_kernel",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "compute_global_hist_kernel"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at bfloat16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch compute_global_hist_kernel of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.sort.bfloat16/sweep",
+   "rows": 2,
+   "experiment": "composition_corpus",
+   "kind": "gems:sort",
+   "operator": "gems.sort.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "sweep"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.sort",
+    "args": "x (16, 256) at bfloat16, dim=1",
+    "descending": false,
+    "stable": false
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch sweep of the gems.sort call; f is stated for the call's outputs (values, indices), the launch is a component"
+  },
+  {
+   "instance_id": "composition_corpus/gems.topk.bfloat16/topk_stage1_kernel",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:topk",
+   "operator": "gems.topk.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "topk_stage1_kernel"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.topk",
+    "args": "x (16, 256) at bfloat16, k=8, dim=1",
+    "largest": true,
+    "sorted": true
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch topk_stage1_kernel of the gems.topk call; f is stated for the call's outputs"
+  },
+  {
+   "instance_id": "composition_corpus/gems.topk.bfloat16/topk_stage2_kernel",
+   "rows": 1,
+   "experiment": "composition_corpus",
+   "kind": "gems:topk",
+   "operator": "gems.topk.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "topk_stage2_kernel"
+   },
+   "status_then": "no f (K vs G only)",
+   "contract": "SORT",
+   "profiles": [
+    "real"
+   ],
+   "call": {
+    "op": "aten.topk",
+    "args": "x (16, 256) at bfloat16, k=8, dim=1",
+    "largest": true,
+    "sorted": true
+   },
+   "outputs": {
+    "values": "out[0]",
+    "indices": "out[1] (allowed sets where values tie)"
+   },
+   "notes": "internal launch topk_stage2_kernel of the gems.topk call; f is stated for the call's outputs"
+  }
+ ],
+ "gaps": [],
+ "outcomes_for_tested_variants": {
+  "checked_at_tested_size": "GDR (B2 T128 H2 K32 V32): value; SSU (4x4x32x16): value; LORA (24 tokens, 3 slices): value; SAMPLING mask (8x4096, p only): value; SORT/topk (16x256 at f32 / f16 / coarse bf16 grid with ties): value; BSR (64x64, 16x16 blocks, all three ops): value",
+  "unsupported": 0,
+  "not_established": 0,
+  "script": ".cache/spec_v3/d2/scripts/scale.py and gdr_scale.py (random inputs of the tested shapes, adapters called directly; no LOCK entry exists for drafted contracts)"
+ }
+}

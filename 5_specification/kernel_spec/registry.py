@@ -7,8 +7,9 @@ Each contract binds to `adapters/<ID>.py`. A query is answered only when the con
   labelled as coming from a draft contract);
 - implementation: the contract and adapter hashes equal the ones in `contracts/LOCK.json`, which `check_contracts.py
   --lock` writes only after every example, reading and mutation requirement of the contract passed;
-- sources: every source a clause or decision rests on has an archived snapshot (SOURCES.json snapshot_sha256);
-- task choice: a profile with task_choice_required needs an explicit binding from the caller;
+- sources: every source a clause, decision or diagnostic reading rests on resolves to a retained source;
+- task choice: a profile with task_choice_required needs an explicit nonempty choice from the caller
+  (this choice alone is not evidence of a kernel's input/output/state binding);
 - profile: must be declared in the contract.
 
 None of these is upgraded automatically from another (CONTRACT_PROTOCOL sections 2 and 7).
@@ -24,6 +25,7 @@ from pathlib import Path
 import yaml
 
 from .num import Result, evaluate
+from .schema import known_bases
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACTS = ROOT / "contracts"
@@ -45,8 +47,16 @@ def contract_paths() -> list[Path]:
 
 
 def frozen_source(entry: dict) -> bool:
-    """An archived snapshot with its hash, or a published standard cited by edition and section (not archivable)."""
-    return bool(entry.get("snapshot_sha256")) or (entry.get("kind") == "standard" and bool(entry.get("edition")))
+    """The cited source is available locally, or is a standard cited by edition.
+
+    A metadata entry alone does not establish that a source was retained. This
+    availability check is not a review of the source's meaning.
+    """
+    snapshot = entry.get("snapshot")
+    if snapshot:
+        path = (ROOT / snapshot).resolve()
+        return ROOT.resolve() in path.parents and path.is_file()
+    return entry.get("kind") == "standard" and bool(entry.get("edition"))
 
 
 def load_lock() -> dict:
@@ -104,8 +114,12 @@ def activation(c: Contract, profile: str, task_bindings=None, allow_draft=False,
     elif status != "reviewed_for_implementation":
         reasons.append(f"review status {status!r}")
     sources = load_sources()
-    used = {b.split(".")[0] for node in [*c.data.get("clauses", []), *c.data.get("decisions", [])]
-            for b in node.get("basis", [])}
+    bases = [b for node in [*c.data.get("clauses", []), *c.data.get("decisions", []),
+                            *(c.data.get("readings") or {}).values()] for b in node.get("basis", [])]
+    unresolved = sorted(set(bases) - known_bases(c.data, sources))
+    if unresolved:
+        reasons.append(f"unresolved basis: {', '.join(unresolved)}")
+    used = {b.split(".")[0] for b in bases}
     unfrozen = sorted(s for s in used if s in sources and not frozen_source(sources[s]))
     if unfrozen:
         reasons.append(f"sources without an archived snapshot: {', '.join(unfrozen)}")
@@ -120,7 +134,7 @@ def activation(c: Contract, profile: str, task_bindings=None, allow_draft=False,
     prof = c.data["profiles"].get(profile)
     if prof is None:
         reasons.append(f"unknown profile {profile!r}")
-    elif prof.get("task_choice_required") and profile not in (task_bindings or {}):
+    elif prof.get("task_choice_required") and not (task_bindings or {}).get(profile):
         reasons.append(f"profile {profile!r} needs an explicit task binding")
     return not reasons, reasons, labels
 
@@ -132,5 +146,10 @@ def query(cid: str, profile: str, inputs: dict, task_bindings=None, allow_draft=
     if not ok:
         return Result("not_established", note="refused: " + "; ".join(reasons), labels=labels)
     r = evaluate(c.adapter.reference, profile, inputs)
+    if r.outcome == "value":
+        required = set(c.data["outputs"])
+        if not isinstance(r.fields, dict) or set(r.fields) != required:
+            got = sorted(r.fields) if isinstance(r.fields, dict) else type(r.fields).__name__
+            r = Result("implementation_error", note=f"output fields {got}; contract requires {sorted(required)}")
     r.labels.update(labels)
     return r

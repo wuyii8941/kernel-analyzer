@@ -2763,7 +2763,9 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "ORDER": "Learning rate scheduling should be applied after the optimizer's update (scheduler.step() after optimizer.step()); calling scheduler.step() before the optimizer's update skips the first value of the schedule (behaviour changed in 1.1.0). Most schedulers can be chained."
+      "ORDER": "Learning rate scheduling should be applied after the optimizer's update (scheduler.step() after optimizer.step()); calling scheduler.step() before the optimizer's update skips the first value of the schedule (behaviour changed in 1.1.0). Most schedulers can be chained.",
+      "EMA_EQ": "Weight Averaging section: get_ema_multi_avg_fn() returns a function that applies W^EMA_{t+1} = alpha*W^EMA_t + (1-alpha)*W^model_t, where alpha is the EMA decay (a parameter between 0 and 1, default 0.999); averaged_model = AveragedModel(model, multi_avg_fn=get_ema_multi_avg_fn(decay)); update_parameters(model) is called after optimizer.step().",
+      "SWA_DEFAULT": "Weight Averaging section: by default AveragedModel computes a running equal average of the parameters that you provide; custom averaging via avg_fn or multi_avg_fn."
     },
     "snapshot": "sources/T_OPTIM.txt.gz",
     "snapshot_sha256": "0793b07a69178dbc87f335fd0b0071390782307fc91d5398fde45d70182167d3",
@@ -3732,7 +3734,17 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Adafactor page"
+      "PAGE": "Adafactor page",
+      "MAXIMIZE": "Algorithm box: if maximize, G_t <- -grad f_t(theta_{t-1}), else G_t <- grad f_t(theta_{t-1}); first line of the loop.",
+      "SCHEDULE": "Algorithm box: beta2_hat_t <- 1 - t^tau; rho_t <- min(lr, 1/sqrt(t)); alpha_t <- max(eps2, RMS(theta_{t-1}))*rho_t.",
+      "DECAY": "Algorithm box: theta_t <- theta_{t-1} - gamma*lambda*theta_{t-1}; the last line then reads theta_t <- theta_{t-1} - alpha_t*U_hat_t (literally discarding the decay line); text: 'we use the learning rate as a coefficient for decoupled weight decay'.",
+      "FACTORED": "Algorithm box: if dim(G_t) > 1: R_t <- beta2_hat_t R_{t-1} + (1-beta2_hat_t)(G_t . G_t) 1_m; C_t <- beta2_hat_t C_{t-1} + (1-beta2_hat_t) 1_n^T (G_t . G_t); V_hat_t <- R_t C_t / max(1_n^T R_t, eps1).",
+      "VECTOR": "Algorithm box: else V_hat_t <- beta2_hat_t V_hat_{t-1} + (1-beta2_hat_t)(G_t . G_t).",
+      "UPDATE": "Algorithm box: U_t <- G_t / max(sqrt(V_hat_t), eps1); U_hat_t <- U_t / max(1, RMS(U_t)/d); theta_t <- theta_{t-1} - alpha_t U_hat_t.",
+      "INIT": "Algorithm box: initialize R_0 <- 0, C_0 <- 0, V_hat_0 <- 0.",
+      "MEAN_NOTE": "Note: Shazeer and Stern describe the sum of squared gradients, while this implementation uses the mean instead; called mathematically equivalent and numerically more stable.",
+      "EPS1_NOTE": "Note: eps1 is applied at the final calculation of the variance estimate V_hat_t and for the update U_t (row and column factors left alone), in contrast to the paper and other frameworks which add eps1 to G.G in R_t and C_t and use V_hat_t = R_t C_t/(1_n^T R_t), U_t = G_t/sqrt(V_hat_t).",
+      "LR_NOTE": "Note and parameter lr: deviating from the paper, lr is used for weight decay and as the maximum of the relative step rho_t (the paper uses the constant 0.01). Defaults: lr 1e-2, beta2_decay -0.8, eps (None, 1e-3), d 1.0, weight_decay 0.0."
     },
     "snapshot": "sources/T_ADAFACTOR_OPT.txt.gz",
     "snapshot_sha256": "6095da5197d69db1cc2207337a49a96e7d34d17cf75c651f6aca70a9e6e92b3f",
@@ -3761,7 +3773,10 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "AveragedModel page"
+      "PAGE": "AveragedModel page",
+      "FIRST_COPY": "Note: when update_parameters() is called for the first time (n_averaged is 0) the parameters of model are copied to the parameters of AveragedModel; for every subsequent call the averaging function is used.",
+      "DEFAULT_EQUAL": "avg_fn / multi_avg_fn take the current averaged parameter(s), the current model parameter(s) and the number of models already averaged; if None, an equally weighted average is used.",
+      "BUFFERS": "use_buffers (default False): if True, running averages are computed for both parameters and buffers."
     },
     "snapshot": "sources/T_AVERAGED_MODEL.txt.gz",
     "snapshot_sha256": "153adea28088ed61d7b0fc300ddafeffa3fb722b03e4f090e7642532c5d30142",
@@ -3840,7 +3855,10 @@
     "title": "torch 2.10 source torch/optim/_adafactor.py",
     "kind": "reference_program",
     "items": {
-      "PAGE": "adafactor source"
+      "PAGE": "adafactor source",
+      "CHECKS": "Adafactor.__init__ raises ValueError unless lr >= 0, beta2_decay <= 0, eps1 (if not None) >= 0, eps2 >= 0, d >= 1, weight_decay >= 0.",
+      "STATE": "State: step; for grad.dim() > 1 row_var of shape grad.shape with last dim 1 and col_var of shape grad.shape with dim -2 equal to 1 (factored along the last two dimensions, leading dimensions batched); otherwise variance of the shape of grad.",
+      "STEP": "_single_tensor_adafactor: grad = -grad if maximize; eps1 = finfo(param.dtype).eps if eps1 is None; step += 1; one_minus_beta2_t = step**beta2_decay; rho_t = min(lr, 1/sqrt(step)); alpha = max(eps2, ||param||_2/sqrt(numel))*rho_t computed before the decay; param *= 1 - lr*weight_decay; factored: row_var.lerp_(mean of grad^2 over dim -1, one_minus_beta2_t), col_var.lerp_(mean of grad^2 over dim -2, one_minus_beta2_t), var_estimate = row_var @ col_var / clamp(mean of row_var over dim -2, min=eps1); vector: variance.lerp_(grad^2, one_minus_beta2_t), var_estimate = variance; update = rsqrt(clamp(var_estimate, min=eps1^2))*grad; denom = max(1, ||update||_2/(sqrt(numel)*d)); param -= alpha/denom * update."
     },
     "snapshot": "sources/TS_ADAFACTOR.py.gz",
     "snapshot_sha256": "ed5da939a22af0bc4319e794327081c55afe132abb893e1cffcb668cf84c2b85",
@@ -3852,7 +3870,10 @@
     "title": "torch 2.10 source torch/optim/swa_utils.py",
     "kind": "reference_program",
     "items": {
-      "PAGE": "swa_utils source"
+      "PAGE": "swa_utils source",
+      "EMA_FN": "get_ema_multi_avg_fn(decay=0.999): ValueError unless 0 <= decay <= 1; ema_update does _foreach_lerp_(ema, current, 1 - decay) (= decay*ema + (1-decay)*current) for floating tensors.",
+      "SWA_FN": "get_swa_avg_fn / get_swa_multi_avg_fn: averaged + (current - averaged)/(num_averaged + 1) (lerp with weight 1/(num_averaged+1)).",
+      "UPDATE": "update_parameters: if n_averaged == 0 the averaged parameters are copied from the model; if n_averaged > 0 multi_avg_fn (or avg_fn, or the default SWA average) is applied with n_averaged; buffers are copied when use_buffers is False; n_averaged += 1 after every call."
     },
     "snapshot": "sources/TS_SWA_UTILS.py.gz",
     "snapshot_sha256": "9481cc1ab620cc8e6b9591bfa39c1210a8cfde8db9da6650d9b9bbfe6c6f832e",
@@ -3878,7 +3899,12 @@
     "kind": "reference_program",
     "version": "torchao 0.16.0",
     "items": {
-      "PAGE": "torchao adam source"
+      "PAGE": "torchao adam source",
+      "STEP": "single_param_adam (torchao 0.16.0): p_f32 = p.float(); IS_ADAMW: p_f32 = p_f32 - lr*weight_decay*p_f32 (else grad += weight_decay*p); bias_correction1 = 1 - beta1**step, bias_correction2 = 1 - beta2**step (step incremented before the call); exp_avg_f32 = exp_avg.float().lerp(grad, 1-beta1); exp_avg_sq_f32 = exp_avg_sq.float().lerp(grad^2, 1-beta2); both copied back into the stored states; denom = sqrt(exp_avg_sq_f32)/sqrt(bias_correction2) + eps (amsgrad: sqrt of maximum(max_exp_avg_sq, exp_avg_sq_f32)); p_f32 = p_f32 - lr*(exp_avg_f32/bias_correction1)/denom; the update uses the high-precision copies, not the re-read stored states.",
+      "SR_FLAG": "step(): stochastic rounding is applied iff bf16_stochastic_round and p.dtype is torch.bfloat16: p.copy_(_fp32_to_bf16_sr(p_f32)); otherwise p.copy_(p_f32). Parameters with grad None are skipped; state step is a float32 tensor incremented by 1 per step; lr is converted to a float32 tensor in add_param_group.",
+      "BUFFER": "_new_buffer: a quantized state subclass is used only if p.numel() >= 4096 and p.numel() % block_size == 0; otherwise torch.zeros_like(p) (same dtype as the parameter). _AdamW uses block_size = inf, so its states are plain tensors of the parameter dtype.",
+      "ADAMW4BIT": "AdamW4bit(params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-2, amsgrad=False, block_size=128, bf16_stochastic_round=False): is_adamw=True; states created by OptimState4bit.zeros(shape, signed, block_size) (exp_avg signed, exp_avg_sq and max_exp_avg_sq unsigned).",
+      "ADAMW_SR": "_AdamW(params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-2, amsgrad=False, bf16_stochastic_round=False): AdamW (is_adamw=True) meant for torchao quantized training."
     },
     "snapshot": "sources/AO_ADAM.py.gz",
     "snapshot_sha256": "918863461ba430e0924944b561e298ce6e0ff870ef834eb02da93d5542adf55f",
@@ -3891,7 +3917,12 @@
     "kind": "reference_program",
     "version": "torchao 0.16.0",
     "items": {
-      "PAGE": "torchao quant utils source"
+      "PAGE": "torchao quant utils source",
+      "SR": "_fp32_to_bf16_sr: for an FP32 bit pattern, round toward zero keeps the upper 16 bits, round away from zero adds 0x10000 to them; rand_16bit = randint(0, 2^16) per element; the result rounds away from zero iff rand_16bit < (lower 16 bits as an integer), i.e. with probability (lower 16 bits)/2^16; then the FP32 value with zeroed lower bits is converted to bfloat16.",
+      "DYNAMIC_MAP": "create_dynamic_map(signed, max_exponent_bits, total_bits) (from bitsandbytes, zero padding removed): for i in range(max_exponent_bits): fraction_items = 2^(i + non_sign_bits - max_exponent_bits) + 1 (signed) or 2^(i + non_sign_bits - max_exponent_bits + 1) + 1 (unsigned), boundaries = torch.linspace(0.1, 1, fraction_items), means = midpoints of consecutive boundaries, values 10^(-(max_exponent_bits-1)+i)*means (and their negatives if signed); additional items when non_sign_bits > max_exponent_bits; then 0 and 1.0 appended, length 2^total_bits asserted, sorted.",
+      "SCALE": "scale_tensor(input, block_size): view as (-1, block_size), scale = abs().amax(-1).clip(1e-12) per block, input / scale.",
+      "QUANT4": "quantize_4bit_with_qmap: branchless binary search for codes = largest index with input >= qmap[index] (starting from 0), then codes_up = min(codes+1, 15); round up iff input - qmap[codes] >= (qmap[codes_up] - qmap[codes])*0.5 (ties up).",
+      "DEQUANT": "dequant_with_qmap(codes, qmap, scale) = qmap[codes] * scale per block."
     },
     "snapshot": "sources/AO_QUANT_UTILS.py.gz",
     "snapshot_sha256": "b0c1409ebb6654399bc901230489f8f1e2bdb6b1a96fb1fe90050131de29a937",
@@ -3904,7 +3935,9 @@
     "kind": "reference_program",
     "version": "torchao 0.16.0",
     "items": {
-      "PAGE": "torchao 4-bit subclass source"
+      "PAGE": "torchao 4-bit subclass source",
+      "QMAPS": "get_qmap_signed() = create_dynamic_map(True, 3, 4); get_qmap_unsigned() = torch.linspace(0, 1, 17)[1:].tolist() (k/16 for k = 1..16, no zero); qmap stored as a float32 tensor.",
+      "COPY": "aten.copy_ into an OptimState4bit from a float tensor: scaled, scale = scale_tensor(src.view(-1), block_size); codes = quantize_4bit_with_qmap(scaled, qmap); codes packed two per byte; scale stored. Reading (dequantize) gives qmap[codes]*scale per block. block_size = codes.numel()*2 // scale.numel()."
     },
     "snapshot": "sources/AO_SUBCLASS_4BIT.py.gz",
     "snapshot_sha256": "349a6cab12a7b42a86ee25bc14e1e7f40f117022e5b6f23bbe38d5ab7e023d8d",
@@ -3917,7 +3950,10 @@
     "kind": "reference_program",
     "version": "timm 1.0.30",
     "items": {
-      "PAGE": "timm model_ema source"
+      "PAGE": "timm model_ema source",
+      "V3_INIT": "ModelEmaV3(model, decay=0.9999, min_decay=0.0, update_after_step=0, use_warmup=False, warmup_gamma=1.0, warmup_power=2/3, ...): the EMA module is a deepcopy of the model.",
+      "GET_DECAY": "get_decay(step): step None -> self.decay; otherwise step = max(0, step - update_after_step - 1); step <= 0 -> 0.0; use_warmup -> decay = 1 - (1 + step/warmup_gamma)**(-warmup_power), clamped to max(min(decay, self.decay), self.min_decay); else self.decay.",
+      "UPDATE": "update(model, step): decay = get_decay(step); every floating state_dict entry (or parameters only with exclude_buffers) is updated by lerp(ema, model, weight = 1 - decay); non-floating entries are copied. No update counter is kept."
     },
     "snapshot": "sources/TIMM_EMA.py.gz",
     "snapshot_sha256": "2e9a25fed2f8a319ffc62b0b803f997f33ae4f6b8df34e885eb171fa406a3384",
@@ -3930,7 +3966,10 @@
     "kind": "reference_program",
     "version": "transformers 4.57.3",
     "items": {
-      "PAGE": "HF Adafactor source"
+      "PAGE": "HF Adafactor source",
+      "OPTIONS": "Adafactor(params, lr=None, eps=(1e-30, 1e-3), clip_threshold=1.0, decay_rate=-0.8, beta1=None, weight_decay=0.0, scale_parameter=True, relative_step=True, warmup_init=False); docstring: to use a manual (external) learning rate set scale_parameter=False and relative_step=False; no maximize option.",
+      "LR": "_get_lr: relative_step False -> rel_step_sz = lr; scale_parameter False -> param_scale = 1; step size = param_scale*rel_step_sz.",
+      "STEP": "step(): factored iff len(shape) >= 2; state step += 1; beta2t = 1 - step**decay_rate; update = grad^2 + eps[0]; factored: exp_avg_sq_row = beta2t*row + (1-beta2t)*mean(update, dim=-1) (shape grad[:-1]), exp_avg_sq_col = beta2t*col + (1-beta2t)*mean(update, dim=-2) (shape grad[:-2]+grad[-1:]); update = rsqrt(row/mean(row, dim=-1)) (unsqueezed) * rsqrt(col) (unsqueezed) * grad; else exp_avg_sq = beta2t*v + (1-beta2t)*update, update = rsqrt(exp_avg_sq)*grad; update /= max(RMS(update)/clip_threshold, 1); update *= lr; beta1 None: no first moment; weight_decay != 0: p += -weight_decay*lr*p; p -= update."
     },
     "snapshot": "sources/HF_ADAFACTOR_SRC.py.gz",
     "snapshot_sha256": "41b08ffb29c2691626b225ed389a694cc8e61480818214a35f215b5c39167bfb",
@@ -4555,6 +4594,112 @@
     "snapshot_sha256": "a1c1ceadead00c55d39bc8b45bb93e095616594d376bfd85c79e39f30315c731",
     "raw_html_sha256": "5eeb93b306c764fe8270dc1c3879c9c7c380dff224ed6c22b53147ff7a7be993",
     "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_SORT": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.sort.html",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "title": "torch.sort",
+    "items": {
+      "DEF": "sort(input, dim=-1, descending=False, *, stable=False): sorts the elements along dim in ascending order by value (descending order if descending=True); returns (values, indices), indices of the elements in the original input; dim defaults to the last dimension.",
+      "STABLE": "stable=True makes the sorting routine stable, preserving (guaranteeing) the order of equivalent elements; the example sorts [0, 1] * 9 with stable=False giving equal elements in a non-original order and with stable=True in the original order."
+    },
+    "snapshot": "sources/T_SORT.txt.gz",
+    "snapshot_sha256": "c21d78db9bde1af78b6d7b6392cdbfc00843581e5674a4ae60347c42feb7ee07",
+    "raw_html_sha256": "2f53e2163ea081f58e48f4ff3496d901d79379c29197099c8118b3aa901a3f57",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_ARGSORT": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.argsort.html",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "title": "torch.argsort",
+    "items": {
+      "DEF": "argsort returns the indices that sort the tensor (the second value of torch.sort); with stable=False the relative order of values which compare equal is not guaranteed."
+    },
+    "snapshot": "sources/T_ARGSORT.txt.gz",
+    "snapshot_sha256": "3e614ec1824de58e6afca7c2882c5a8dae5c75d0f771380e9c363f0230a855ab",
+    "raw_html_sha256": "c3d6b29533fd92098308b6f69d0f3828bc3131e443c41218f1aa82fdd4117115",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_TOPK": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.topk.html",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "title": "torch.topk",
+    "items": {
+      "DEF": "topk(input, k, dim=None, largest=True, sorted=True): the k largest elements along dim (last dimension by default), or the k smallest if largest=False; returns (values, indices).",
+      "SORTED": "sorted=True makes sure the returned k elements are themselves sorted.",
+      "TIES": "Note: the indices of tied elements are not guaranteed to be stable and may vary across invocations."
+    },
+    "snapshot": "sources/T_TOPK.txt.gz",
+    "snapshot_sha256": "8c9ae2517426b7616f78edde49215c5b4ebbd4951cf521b9e853af1c4a9147ba",
+    "raw_html_sha256": "5ecf69f2c4396d2898661f3f5918a0d3f10ff9143f5c0a1368cc24bbc76659af",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_SPARSE": {
+    "url": "https://docs.pytorch.org/docs/2.10/sparse.html",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "title": "torch.sparse (sparse tensor formats)",
+    "items": {
+      "SPECIFIED": "Sparse formats store specified elements; the compressed (unspecified) elements are assumed to have the same fill value, zero by default.",
+      "BLOCK": "For block sparse compressed layouts the 2-D block is the element being specified; values has shape (nse, blocksize...).",
+      "BSR": "BSR: crow_indices (nrowblocks + 1, the last element is the number of specified blocks; successive differences give the number of blocks in each block row), col_indices (column block index of each specified block), values (the blocks); to_dense places each block at its block row / column."
+    },
+    "snapshot": "sources/T_SPARSE.txt.gz",
+    "snapshot_sha256": "bd92c52b0f8fc4d0f4f44ce3fb492a4d153aea19d7de97446e53bba6be6166e6",
+    "raw_html_sha256": "2d0caccf6e53e207ad08dc2113d832b6fe986cab0bbe90ed21ac54ee74dd023c",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_SPARSE_SAMPLED_ADDMM": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.sparse.sampled_addmm.html",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "title": "torch.sparse.sampled_addmm",
+    "items": {
+      "DEF": "out = alpha (mat1 @ mat2) * spy(input) + beta input: the product of the dense mat1 (m, k) and mat2 (k, n) at the locations of the sparsity pattern of input, plus beta times input.",
+      "SPY": "spy(input) has value 1 at the positions where input has non-zero values, and 0 elsewhere; the documented input is a sparse CSR tensor."
+    },
+    "snapshot": "sources/T_SPARSE_SAMPLED_ADDMM.txt.gz",
+    "snapshot_sha256": "0dd799d562bbd5713e85447fae3ff947eeb63cf61df534ca39b2836225f82e3c",
+    "raw_html_sha256": "492573fdef7a7fb63af954562fd0d87036449e3ddac730079a2d07a1e8b6e52c",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_SPARSE_SOFTMAX": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.sparse.softmax.html",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "title": "torch.sparse.softmax",
+    "items": {
+      "DEF": "Softmax(x_i) = exp(x_i) / sum_j exp(x_j) where i, j run over the sparse tensor's indices and unspecified entries are ignored, equivalently unspecified entries are -inf so that exp = 0; applied to all slices along dim."
+    },
+    "snapshot": "sources/T_SPARSE_SOFTMAX.txt.gz",
+    "snapshot_sha256": "4d138131c2a2d059f3cafaa7d1486e654edea8e60905107e5a95d59104d409e3",
+    "raw_html_sha256": "8a0b98b5533efd020758bf44e391d5097873fc16cde440ab53bac107b5c01ace",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "TS_SPARSE_TRITON": {
+    "kind": "torch_source",
+    "version": "torch 2.10.0",
+    "title": "torch.sparse._triton_ops (bsr_dense_mm, bsr_softmax, sampled_addmm Triton implementations)",
+    "items": {
+      "DENSE_MM": "bsr_dense_mm(bsr, dense): out (m, n) = bsr @ dense via bsr_dense_addmm with beta = 0 (the zero result when bsr has no specified block); checks: BSR layout, same dtype among half / bfloat16 / float32 (int8 allowed), compatible shapes, block sizes powers of two >= 16, dense.size(-1) divisible by 16.",
+      "ADDMM": "bsr_dense_addmm docstring: out = beta * input + left_alpha * (alpha * (bsr @ dense)) * right_alpha.",
+      "SOFTMAX": "bsr_softmax(input): for each row of each block row, the values of all specified blocks of that block row (row_nnz * col_block entries, including explicit zeros inside blocks) are normalised as exp(x - max) / sum; block rows without specified blocks are skipped; the result has the input's crow / col indices.",
+      "SAMPLED": "sampled_addmm(input, mat1, mat2, beta, alpha): out starts as a copy of input (same specified blocks); with alpha == 0 or k == 0 out values = beta * values; otherwise every specified block gets alpha * (mat1 @ mat2) on its block, plus beta * old value when beta != 0 (with beta == 0 the old values are not read)."
+    },
+    "snapshot": "sources/TS_SPARSE_TRITON.py.gz",
+    "snapshot_sha256": "423a2d8cee233ea0c457e0140188d52b6e79362ddfd2d36fe68df619f3c9f11e",
+    "path": "torch/sparse/_triton_ops.py",
+    "torch_version": "2.10.0+cu128",
     "retrieved": "2026-10-17"
   }
 }

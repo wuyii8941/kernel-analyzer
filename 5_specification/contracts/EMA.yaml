@@ -1,0 +1,148 @@
+schema_version: '1.2'
+id: EMA
+role: EMA
+title: Parameter averaging - torch.optim.swa_utils.AveragedModel (EMA via get_ema_multi_avg_fn, default SWA) and timm
+  1.0.30 ModelEmaV3 - one update from an explicit pre-state
+review:
+  status: drafted
+  author: Claude (spec v3 author, group E1_optim), 2026-10-17
+  date: '2026-10-17'
+  scope: One update_parameters / update call on the averaged copy of one parameter tensor, exact rational arithmetic
+    (timm warmup with a non-integer power uses enclosures); awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [torch.optim.swa_utils.AveragedModel.update_parameters, torch.optim.swa_utils.get_ema_multi_avg_fn,
+  torch.optim.swa_utils.get_swa_multi_avg_fn, timm.utils.model_ema.ModelEmaV3.update]
+profiles:
+  swa_ema:
+    meaning: AveragedModel(model, multi_avg_fn=get_ema_multi_avg_fn(decay)), parameters (use_buffers=False).
+    task_choice_required: false
+  swa_equal:
+    meaning: AveragedModel(model) with the default equally weighted average (SWA).
+    task_choice_required: false
+  timm_v3:
+    meaning: timm 1.0.30 ModelEmaV3.update(model, step) with its get_decay rule (warmup optional); reference program
+      only. timm keeps no update counter; n is passed through unchanged.
+    task_choice_required: false
+outputs:
+  avg:
+    shape: '[d] averaged parameter'
+    guarantee: rigorous_enclosure
+  n:
+    shape: 'integer: AveragedModel n_averaged after the update; timm_v3: unchanged'
+    guarantee: exact
+comparison:
+  input_binding: All values are the exactly received rationals.
+  quality: Exact except the timm warmup decay with a non-integer power (enclosure).
+  test_evidence: Exact equality or containment.
+  error_handling: Inputs validated before evaluation.
+decisions:
+- id: EM.FIRST
+  status: drafted
+  statement: 'AveragedModel: the first update (n_averaged = 0) copies the model parameters, whatever the averaged copy
+    held before (documented note); later updates apply the averaging function with n_averaged, then n_averaged += 1.
+    An EMA started at the initial parameters theta_0 and decayed from the first update (the fp32 EMA of the tolerance
+    study workload) is a different initialisation, not this task; the difference is one optimizer step (deviation D-10
+    of the tolerance study).'
+  basis: [T_AVERAGED_MODEL.FIRST_COPY, TS_SWA_UTILS.UPDATE]
+- id: EM.EMA_FORM
+  status: drafted
+  statement: 'swa_ema: avg_new = decay*avg + (1-decay)*current (documented equation; the reference program''s lerp with
+    weight 1-decay is the same real value). decay outside [0, 1] is invalid input (ValueError in the reference
+    program).'
+  basis: [T_OPTIM.EMA_EQ, TS_SWA_UTILS.EMA_FN]
+- id: EM.TIMM
+  status: drafted
+  statement: 'timm_v3 is defined by the timm 1.0.30 source: decay(step) = decay if step is None; with
+    s = max(0, step - update_after_step - 1), 0 if s <= 0 (so the first update with step = 1 copies), else decay (no
+    warmup) or max(min(1 - (1 + s/warmup_gamma)^(-warmup_power), decay), min_decay); avg_new = lerp(avg, current,
+    1 - decay(step)). The tolerance-study runs used decay = 0.999 without warmup and passed the step; the warmup
+    branch is included because it is part of the same update rule.'
+  basis: [TIMM_EMA.GET_DECAY, TIMM_EMA.UPDATE, TIMM_EMA.V3_INIT]
+clauses:
+- {id: EM.C1, basis: [EM.FIRST, T_AVERAGED_MODEL.FIRST_COPY], statement: 'AveragedModel, n = 0: avg_new = current;
+    n_new = 1', observes: [avg, n], evidence_kind: definition}
+- {id: EM.C2, basis: [EM.EMA_FORM], statement: 'swa_ema, n >= 1: avg_new = decay*avg + (1-decay)*current; n_new = n+1',
+  observes: [avg, n], evidence_kind: definition}
+- {id: EM.C3, basis: [T_AVERAGED_MODEL.DEFAULT_EQUAL, T_OPTIM.SWA_DEFAULT, TS_SWA_UTILS.SWA_FN], statement: 'swa_equal,
+    n >= 1: avg_new = avg + (current - avg)/(n + 1) (running equal average); n_new = n+1', observes: [avg, n],
+  evidence_kind: definition}
+- {id: EM.C4, basis: [EM.TIMM], statement: 'timm_v3: avg_new = avg + (1 - decay(step))*(current - avg) with the get_decay
+    rule; n unchanged', observes: [avg, n], evidence_kind: definition}
+examples:
+- {id: EM.E1, profile: swa_ema, clauses: [EM.C1], input: {state: {avg: [5, 5], n: 0}, current: [1, 2], decay: 999/1000},
+  expected: {outcome: value, fields: {avg: [1, 2], n: 1}}}
+- {id: EM.E2, profile: swa_ema, clauses: [EM.C2], input: {state: {avg: [1], n: 3}, current: [2], decay: 9/10},
+  expected: {outcome: value, fields: {avg: ['11/10'], n: 4}}}
+- {id: EM.E3, profile: swa_equal, clauses: [EM.C3], input: {state: {avg: [1], n: 2}, current: [4]}, expected: {
+    outcome: value, fields: {avg: [2], n: 3}}}
+- {id: EM.E4, profile: swa_equal, clauses: [EM.C1], input: {state: {avg: [9], n: 0}, current: [4]}, expected: {
+    outcome: value, fields: {avg: [4], n: 1}}}
+- id: EM.E5
+  profile: swa_ema
+  clauses: [EM.C2]
+  input: {state: {avg: [1], n: 5}, current: [3/2], decay: 999/1000}
+  expected: {outcome: value, fields: {avg: ['2001/2000'], n: 6}}
+  note: The increment 1/2000 is below half a bfloat16 spacing at 1 (2^-8); a bf16 averaged copy stays 1 (B019).
+- {id: EM.E6, profile: timm_v3, clauses: [EM.C4], input: {state: {avg: [1], n: 0}, current: [2], decay: 999/1000,
+    step: 10}, expected: {outcome: value, fields: {avg: ['1001/1000'], n: 0}}}
+- {id: EM.E7, profile: timm_v3, clauses: [EM.C4], input: {state: {avg: [7], n: 0}, current: [2], decay: 999/1000,
+    step: 1}, expected: {outcome: value, fields: {avg: [2], n: 0}}, note: 'step 1: s = 0, decay 0, the update copies.'}
+- id: EM.E8
+  profile: timm_v3
+  clauses: [EM.C4]
+  input: {state: {avg: [1], n: 0}, current: [2], decay: 999/1000, step: 4, use_warmup: true, warmup_gamma: 1,
+    warmup_power: 1}
+  expected: {outcome: value, fields: {avg: ['5/4'], n: 0}}
+  note: s = 3, decay = 1 - 1/4.
+- id: EM.E9
+  profile: timm_v3
+  clauses: [EM.C4]
+  input: {state: {avg: [1], n: 0}, current: [2], decay: 9/10, step: 1000, use_warmup: true, warmup_gamma: 1,
+    warmup_power: 1}
+  expected: {outcome: value, fields: {avg: ['11/10'], n: 0}}
+  note: Warmup decay 999/1000 is capped at decay = 9/10.
+- {id: EM.E10, profile: timm_v3, clauses: [EM.C4], input: {state: {avg: [1], n: 0}, current: [3], decay: 1/2, step: null},
+  expected: {outcome: value, fields: {avg: [2], n: 0}}}
+- id: EM.E11
+  profile: timm_v3
+  clauses: [EM.C4]
+  input: {state: {avg: [0], n: 0}, current: [1], decay: 999/1000, step: 2, use_warmup: true}
+  expected: {outcome: value, fields: {avg: [2**(-2/3)], n: 0}}
+  note: Default warmup (gamma 1, power 2/3), s = 1, decay = 1 - 2^(-2/3).
+- {id: EM.N1, profile: swa_ema, clauses: [EM.C2], input: {state: {avg: [1], n: 1}, current: [2], decay: 3/2},
+  expected: {outcome: invalid_input}}
+- {id: EM.N2, profile: swa_equal, clauses: [EM.C3], input: {state: {avg: [1, 2], n: 1}, current: [2]}, expected: {
+    outcome: invalid_input}}
+signature:
+  inputs: ['current [d] (model parameter after the optimizer step)', 'decay (swa_ema, timm_v3)', 'timm_v3: step or None,
+      update_after_step, use_warmup, warmup_gamma, warmup_power, min_decay']
+  pre_state: ['avg [d]', n nonnegative integer]
+  post_state: ['avg [d]', n]
+  observation_unit: one averaging call on one parameter tensor (element-wise)
+domain:
+  valid: [d >= 1, finite rationals, '0 <= decay <= 1', 'warmup_gamma > 0']
+  domain_undefined: []
+  invalid_input: [length mismatch, 'decay outside [0, 1]', non-integer n or step, NaN or infinite values]
+  unsupported: ['averaging of buffers (use_buffers=True, timm buffers): not tested', custom avg_fn]
+mutation_requirements:
+- {id: EM.M1, misreading: decay and 1-decay swapped, witnesses: [EM.E2, EM.E6]}
+- {id: EM.M2, misreading: 'first AveragedModel update averages instead of copying', witnesses: [EM.E1]}
+- {id: EM.M3, misreading: n_averaged not advanced, witnesses: [EM.E2]}
+- {id: EM.M4, misreading: SWA divides by n instead of n+1, witnesses: [EM.E3]}
+- {id: EM.M5, misreading: 'averaged copy stored in bfloat16 (B019: increments below half an ulp are lost)', witnesses: [
+    EM.E5]}
+- {id: EM.M6, misreading: 'timm warmup step offset without the -1 (s = step - update_after_step)', witnesses: [EM.E7,
+    EM.E8]}
+- {id: EM.M7, misreading: timm warmup decay not capped at decay, witnesses: [EM.E9]}
+nonclaims:
+- 'The task is the real-arithmetic average. An averaged copy kept in bfloat16 (AveragedModel and timm inherit the model
+  dtype; bug B019, tolerance study A:ema) deviates numerically from this target (K - f); the contract does not make the
+  bf16 result a different task.'
+- Buffers and non-floating state entries (copied, not averaged) are not covered.
+- timm_v3 rests on the reference program only.
+- A rejected mutant witnesses a particular error; rejecting all listed mutants does not prove completeness.
+changes: []

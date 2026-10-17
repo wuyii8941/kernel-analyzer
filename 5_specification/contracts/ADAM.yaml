@@ -1,0 +1,295 @@
+schema_version: '1.2'
+id: ADAM
+role: ADAM
+title: torch.optim.Adam (coupled L2 weight decay, amsgrad, maximize) and the AdamW variants with amsgrad or maximize,
+  one step from an explicit pre-state, PyTorch 2.10 algorithm boxes
+review:
+  status: drafted
+  author: Claude (spec v3 author, group E1_optim), 2026-10-17
+  date: '2026-10-17'
+  scope: One optimizer step on one parameter tensor (flattened), real arithmetic; awaiting a review by someone who did
+    not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [torch.optim.Adam, 'torch.optim.Adam(decoupled_weight_decay=True)', 'torch.optim.AdamW(amsgrad=True)',
+  'torch.optim.AdamW(maximize=True)', aten._fused_adam_, aten._fused_adamw_]
+profiles:
+  adam:
+    meaning: torch.optim.Adam with decoupled_weight_decay=False (weight decay added to the gradient, L2); amsgrad and
+      maximize either value.
+    must_match: {decoupled: false}
+    task_choice_required: false
+  adamw_variants:
+    meaning: Decoupled weight decay (torch.optim.AdamW, or Adam with decoupled_weight_decay=True) with amsgrad=True or
+      maximize=True. AdamW with both False is contract ADAMW (reviewed), profile base, and is refused here (unsupported
+      by design, never the outcome of a tested variant).
+    must_match: {decoupled: true, 'amsgrad or maximize': true}
+    task_choice_required: false
+outputs:
+  theta:
+    shape: '[d]'
+    guarantee: rigorous_enclosure
+  m:
+    shape: '[d]'
+    guarantee: exact
+  v:
+    shape: '[d]'
+    guarantee: exact
+  vmax:
+    shape: '[d] (passed through unchanged when amsgrad=False)'
+    guarantee: exact
+  t:
+    shape: scalar integer
+    guarantee: exact
+comparison:
+  input_binding: All values are the exactly received rationals (a binary float is its exact value); decimal constants
+    are not substituted.
+  quality: No tolerance. theta is a strict enclosure (square root); the state tensors are exact rationals.
+  test_evidence: Exact equality of m, v, vmax, t; containment of the expected theta in the enclosure.
+  error_handling: Inputs are validated before evaluation; nothing is truncated or coerced.
+decisions:
+- id: AD.VMAX
+  status: drafted
+  statement: 'The post-state always carries vmax. With amsgrad=False the boxes never read or write v^max, so vmax is
+    returned unchanged (torch does not even allocate max_exp_avg_sq then). Alternative (vmax <- max(vmax, v_t) also
+    when amsgrad=False) rejected: the box writes v^max only inside the amsgrad branch.'
+  basis: [T_ADAM_OPT.AMSGRAD, PAW.AMSGRAD]
+- id: AD.SCOPE
+  status: drafted
+  statement: 'AdamW with amsgrad=False and maximize=False is the reviewed contract ADAMW (profile base); this contract
+    refuses that combination (unsupported) instead of duplicating it. Adam(decoupled_weight_decay=True) is AdamW by its
+    documentation and uses the decoupled profiles (ADAMW.base or adamw_variants).'
+  basis: [T_ADAM_OPT.DECOUPLED, PAW.DECAY]
+- id: AD.NONFINITE
+  status: drafted
+  statement: 'The task is a finite real step. A gradient, state or hyperparameter that is NaN or infinite is invalid
+    input here. The essential-round condition nonfinite_skip (GradScaler finds inf and skips optimizer.step) is the
+    SCALER contract; the skipped step leaves the optimizer state unchanged, which is the None-gradient clause of this
+    contract applied to the whole step.'
+  basis: [T_ZERO_GRAD.SKIP, T_ADAM_OPT.MOMENTS]
+clauses:
+- {id: AD.C1, basis: [T_ADAM_OPT.MAXIMIZE, PAW.MAXIMIZE], statement: 'maximize negates the gradient first:
+    g = -grad (then weight decay, then the moments); maximize=False uses g = grad', observes: [theta, m, v],
+  evidence_kind: definition}
+- {id: AD.C2, basis: [T_ADAM_OPT.L2], statement: 'profile adam: if weight_decay != 0, g <- g + weight_decay*theta_old
+    (the decay enters m and v)', observes: [theta, m, v], evidence_kind: definition}
+- {id: AD.C3, basis: [PAW.DECAY, T_ADAM_OPT.DECOUPLED], statement: 'profile adamw_variants: theta_dec = theta_old*(1 -
+    lr*weight_decay); the decay does not enter g, m or v; the adaptive step is subtracted from theta_dec',
+  observes: [theta, m, v], evidence_kind: definition}
+- {id: AD.C4, basis: [T_ADAM_OPT.MOMENTS, PAW.MOMENTS, PAW.CORRECTION], statement: 't_new = t_old + 1;
+    m_new = beta1*m_old + (1-beta1)*g; v_new = beta2*v_old + (1-beta2)*g**2; m_hat = m_new/(1-beta1**t_new)',
+  observes: [m, v, t, theta], evidence_kind: definition}
+- {id: AD.C5, basis: [T_ADAM_OPT.AMSGRAD, PAW.AMSGRAD, AD.VMAX], statement: 'amsgrad: vmax_new = max(vmax_old, v_new)
+    (uncorrected), v_hat = vmax_new/(1-beta2**t_new); otherwise v_hat = v_new/(1-beta2**t_new) and vmax is unchanged',
+  observes: [vmax, theta], evidence_kind: definition}
+- {id: AD.C6, basis: [T_ADAM_OPT.UPDATE, PAW.UPDATE], statement: 'theta_new = theta_base - lr*m_hat/(sqrt(v_hat) + eps),
+    theta_base = theta_old (adam) or theta_dec (adamw_variants); sqrt(v_hat) + eps = 0 is domain_undefined',
+  observes: [theta], evidence_kind: definition}
+- {id: AD.C7, basis: [T_ZERO_GRAD.SKIP, PAW.NONE, AD.NONFINITE], statement: 'gradient None leaves theta, m, v, vmax
+    and t unchanged; a zero gradient executes the full step', observes: [theta, m, v, vmax, t], evidence_kind: definition}
+examples:
+- id: AD.E1
+  profile: adam
+  clauses: [AD.C2, AD.C4, AD.C6]
+  input: &cold
+    state: {theta: [1], m: [0], v: [0], vmax: [0], t: 0}
+    gradient: [2]
+    lr: 1/10
+    beta1: 9/10
+    beta2: 99/100
+    eps: 0
+    weight_decay: 1/10
+    maximize: false
+    amsgrad: false
+    decoupled: false
+  expected: {outcome: value, fields: {theta: ['9/10'], m: ['21/100'], v: ['441/10000'], vmax: [0], t: 1}}
+  note: g = 2 + 1/10 = 21/10; m_hat = 21/10, v_hat = 441/100; theta = 1 - (1/10)(21/10)/(21/10) = 9/10.
+- id: AD.E2
+  profile: adam
+  clauses: [AD.C4, AD.C5, AD.C6]
+  input:
+    state: {theta: [1], m: [1], v: [2], vmax: [4], t: 1}
+    gradient: [-2]
+    lr: 1/10
+    beta1: 1/2
+    beta2: 1/2
+    eps: 0
+    weight_decay: 0
+    maximize: false
+    amsgrad: true
+    decoupled: false
+  expected: {outcome: value, fields: {theta: [1+sqrt(3)/60], m: ['-1/2'], v: [3], vmax: [4], t: 2}}
+  note: vmax keeps 4 > v_new = 3; m_hat = -2/3, v_hat = 4/(3/4) = 16/3; theta = 1 + (1/15)/(4/sqrt(3)).
+- id: AD.E3
+  profile: adam
+  clauses: [AD.C1, AD.C2, AD.C4, AD.C5, AD.C6]
+  input:
+    <<: *cold
+    maximize: true
+    amsgrad: true
+  expected: {outcome: value, fields: {theta: ['11/10'], m: ['-19/100'], v: ['361/10000'], vmax: ['361/10000'], t: 1}}
+  note: g = -2 + 1/10 = -19/10 (negate, then decay); m_hat = -19/10, v_hat = 361/100; theta = 1 + 1/10.
+- id: AD.E4
+  profile: adamw_variants
+  clauses: [AD.C1, AD.C3, AD.C4, AD.C6]
+  input:
+    <<: *cold
+    maximize: true
+    decoupled: true
+  expected: {outcome: value, fields: {theta: ['109/100'], m: ['-1/5'], v: ['1/25'], vmax: [0], t: 1}}
+  note: theta_dec = 99/100; g = -2; m_hat = -2, v_hat = 4; theta = 99/100 + (1/10)(2/2).
+- id: AD.E5
+  profile: adamw_variants
+  clauses: [AD.C3, AD.C4, AD.C5, AD.C6]
+  input:
+    state: {theta: [2], m: [1], v: [2], vmax: [4], t: 1}
+    gradient: [-2]
+    lr: 1/10
+    beta1: 1/2
+    beta2: 1/2
+    eps: 0
+    weight_decay: 1/10
+    maximize: false
+    amsgrad: true
+    decoupled: true
+  expected: {outcome: value, fields: {theta: [99/50+sqrt(3)/60], m: ['-1/2'], v: [3], vmax: [4], t: 2}}
+- id: AD.E6
+  profile: adam
+  clauses: [AD.C4, AD.C5, AD.C6]
+  input:
+    state: {theta: [0, 0], m: [0, 0], v: [1, 0], vmax: [3, 0], t: 1}
+    gradient: [1, 2]
+    lr: 1
+    beta1: 1/2
+    beta2: 1/2
+    eps: 0
+    weight_decay: 0
+    maximize: false
+    amsgrad: true
+    decoupled: false
+  expected: {outcome: value, fields: {theta: ['-1/3', -sqrt(6)/3], m: ['1/2', 1], v: [1, 2], vmax: [3, 2], t: 2}}
+  note: Element-wise maximum; coordinate 0 keeps vmax 3, coordinate 1 takes v_new 2.
+- id: AD.E7
+  profile: adamw_variants
+  clauses: [AD.C7]
+  input:
+    state: {theta: [1], m: [1], v: [2], vmax: [3], t: 1}
+    gradient: null
+    lr: 1/10
+    beta1: 1/2
+    beta2: 1/2
+    eps: 0
+    weight_decay: 1/10
+    maximize: true
+    amsgrad: true
+    decoupled: true
+  expected: {outcome: value, fields: {theta: [1], m: [1], v: [2], vmax: [3], t: 1}}
+- id: AD.E8
+  profile: adamw_variants
+  clauses: [AD.C1, AD.C3, AD.C7]
+  input:
+    state: {theta: [1], m: [1], v: [2], vmax: [0], t: 1}
+    gradient: [0]
+    lr: 1/10
+    beta1: 1/2
+    beta2: 1/2
+    eps: 0
+    weight_decay: 1/10
+    maximize: true
+    amsgrad: false
+    decoupled: true
+  expected: {outcome: value, fields: {theta: [99/100-sqrt(3)/30], m: ['1/2'], v: [1], vmax: [0], t: 2}}
+  note: Zero gradient, full step on the warm state (as ADAMW AW.E5; the sign of a zero gradient does not matter).
+- id: AD.E9
+  profile: adam
+  clauses: [AD.C6]
+  input:
+    <<: *cold
+    gradient: [0]
+    weight_decay: 0
+  expected: {outcome: domain_undefined}
+- id: AD.E10
+  profile: adamw_variants
+  clauses: [AD.C1, AD.C6]
+  input:
+    state: {theta: [1], m: [0], v: [0], vmax: [0], t: 0}
+    gradient: [1]
+    lr: 1/1000
+    beta1: 9/10
+    beta2: 99/100
+    eps: 0
+    weight_decay: 0
+    maximize: true
+    amsgrad: false
+    decoupled: true
+  expected: {outcome: value, fields: {theta: ['1001/1000'], m: ['-1/10'], v: ['1/100'], vmax: [0], t: 1}}
+  note: The real step moves theta by 1/1000, less than half a bfloat16 spacing above 1 (2^-8); bf16 storage keeps 1.
+- id: AD.N1
+  profile: adam
+  clauses: [AD.C7]
+  input:
+    <<: *cold
+    gradient: [inf]
+  expected: {outcome: invalid_input}
+- id: AD.N2
+  profile: adamw_variants
+  clauses: [AD.C3]
+  input:
+    <<: *cold
+    decoupled: true
+  expected: {outcome: unsupported}
+  note: AdamW without amsgrad and maximize is ADAMW.base (decision AD.SCOPE).
+- id: AD.N3
+  profile: adam
+  clauses: [AD.C5]
+  input:
+    state: {theta: [1], m: [0], v: [0], vmax: [-1], t: 0}
+    gradient: [2]
+    lr: 1/10
+    beta1: 9/10
+    beta2: 99/100
+    eps: 0
+    weight_decay: 0
+    maximize: false
+    amsgrad: true
+    decoupled: false
+  expected: {outcome: invalid_input}
+signature:
+  inputs: ['gradient [d] or None', lr, beta1, beta2, eps, weight_decay, 'maximize, amsgrad, decoupled (booleans)']
+  pre_state: ['theta [d]', 'm [d]', 'v [d]', 'vmax [d]', t nonnegative integer]
+  post_state: ['theta [d]', 'm [d]', 'v [d]', 'vmax [d]', t]
+  observation_unit: one parameter tensor (flattened; the update is element-wise), one optimizer step; a step sequence
+    is the composition of steps on the returned post-state
+domain:
+  valid: [d >= 1, all tensors of length d, finite rationals, v and vmax >= 0, t integer >= 0, '0 <= beta1, beta2 < 1',
+    'lr, eps, weight_decay >= 0']
+  domain_undefined: ['sqrt(v_hat_i) + eps = 0 for some i (e.g. eps = 0 and zero second moment)']
+  invalid_input: [length mismatch, negative v or vmax, non-integer or negative t, NaN or infinite values,
+    non-boolean options, hyperparameters out of range]
+  unsupported: ['AdamW with amsgrad=False and maximize=False (contract ADAMW)', sparse gradients, complex parameters,
+    differentiable=True]
+mutation_requirements:
+- {id: AD.M1, misreading: 'amsgrad maximum over the bias-corrected v_hat (older documentation reading)',
+  witnesses: [AD.E2, AD.E5]}
+- {id: AD.M2, misreading: amsgrad flag ignored (v_new used in the denominator), witnesses: [AD.E2, AD.E6]}
+- {id: AD.M3, misreading: vmax computed but not stored in the post-state, witnesses: [AD.E3, AD.E6]}
+- {id: AD.M4, misreading: 'maximize negates after the L2 term is added (negate(g + lambda*theta), the SGD v1 order
+    error)', witnesses: [AD.E3]}
+- {id: AD.M5, misreading: 'maximize applied only at the parameter update (moments built from +grad)', witnesses: [AD.E3,
+    AD.E4]}
+- {id: AD.M6, misreading: Adam computed with decoupled (AdamW) weight decay, witnesses: [AD.E1, AD.E3]}
+- {id: AD.M7, misreading: AdamW variant computed with coupled L2 weight decay, witnesses: [AD.E4, AD.E5]}
+- {id: AD.M8, misreading: None gradient treated as a zero gradient, witnesses: [AD.E7]}
+- {id: AD.M9, misreading: 'pure-bf16 storage (B005): parameter and states rounded to bfloat16 after the step, so a
+    small increment is not written', witnesses: [AD.E10]}
+nonclaims:
+- The task is the real-arithmetic step. Storage of parameters and states in bfloat16 (pure-bf16 AdamW, torchtune default
+  in the tolerance study, mechanism A; bug B005) is a numerical deviation of the device from this target (K - f), not a
+  different task; the tolerance-study instances bind to ADAMW.base or ADAM with that statement.
+- foreach, fused and compiled implementations are judged against the same real step; the contract says nothing about
+  their rounding.
+- A rejected mutant witnesses a particular error; rejecting all listed mutants does not prove completeness.
+changes: []

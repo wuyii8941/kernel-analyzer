@@ -1,0 +1,151 @@
+schema_version: '1.2'
+id: SROUND
+role: ADAM
+title: torchao 0.16 _AdamW(bf16_stochastic_round=True) - AdamW step whose bfloat16 parameter is stochastically rounded,
+  conditioned on the random bits, from an explicit pre-state
+review:
+  status: drafted
+  author: Claude (spec v3 author, group E1_optim), 2026-10-17
+  date: '2026-10-17'
+  scope: One optimizer step on one bfloat16 parameter tensor (flattened) with given random bits; awaiting a review by
+    someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: ['torchao.optim._AdamW(bf16_stochastic_round=True)', torchao.optim.quant_utils._fp32_to_bf16_sr]
+profiles:
+  torchao016:
+    meaning: 'torchao 0.16.0 _AdamW with a bfloat16 parameter and bf16_stochastic_round=True, amsgrad=False: the AdamW
+      step of torch.optim.AdamW (real arithmetic) followed by stochastic rounding of the new parameter to bfloat16,
+      conditioned on one 16-bit random integer per element (reference program).'
+    task_choice_required: false
+outputs:
+  theta:
+    shape: '[d] bfloat16 values'
+    guarantee: exact
+  m:
+    shape: '[d]'
+    guarantee: exact
+  v:
+    shape: '[d]'
+    guarantee: exact
+  t:
+    shape: scalar integer
+    guarantee: exact
+comparison:
+  input_binding: All values are the exactly received rationals; rand16 are the integers drawn by torch.randint(0, 2^16)
+    for the elements (row-major).
+  quality: 'Exact: theta is a bfloat16 value decided from an enclosure of the real update (not_established if the
+    enclosure does not decide the rounding).'
+  test_evidence: Exact equality.
+  error_handling: Inputs validated before evaluation.
+decisions:
+- id: SR.TARGET
+  status: drafted
+  statement: 'Task: y = the AdamW step of torch.optim.AdamW in real arithmetic (decoupled decay, bias correction, eps
+    outside the root; the same arithmetic as torchao single_param_adam), then theta_new = SR(y | r): with t_z the
+    bfloat16 value of largest magnitude not exceeding |y| (sign of y) and u the bfloat16 spacing above it, theta_new =
+    t_z + sign(y)*u if r < 2^16*(|y| - |t_z|)/u, else t_z. For y a binary32 number this is exactly the reference
+    program''s rule (lower 16 bits of the binary32 pattern compared with r). The program first computes y in binary32;
+    that rounding of y is numerical (K - f), not part of the task. Alternative (the task is the binary32 value
+    computed by the program, then SR) rejected: it would make the program''s own rounding the definition.'
+  basis: [AO_ADAM.STEP, AO_ADAM.SR_FLAG, AO_QUANT_UTILS.SR, PAW.UPDATE]
+- id: SR.STATES
+  status: drafted
+  statement: 'The task''s m and v are the real AdamW moments. torchao keeps _AdamW states in the parameter dtype
+    (bfloat16, round to nearest; block_size = inf so no quantized subclass) - bug B009: they drift as in pure-bf16 AdamW.
+    Under this contract that is a numerical deviation of the stored states (mutant SR.M5), not a different task.'
+  basis: [AO_ADAM.BUFFER, AO_ADAM.STEP]
+- id: SR.BF16_PARAM
+  status: drafted
+  statement: 'Stochastic rounding applies only when the parameter dtype is bfloat16 (otherwise the step is ADAMW.base).
+    The pre-state theta must therefore hold bfloat16 values (invalid input otherwise). The bfloat16 exponent range is
+    not modelled (normal numbers; no overflow or subnormal results in this contract).'
+  basis: [AO_ADAM.SR_FLAG]
+clauses:
+- {id: SR.C1, basis: [SR.TARGET, AO_ADAM.STEP, PAW.DECAY, PAW.MOMENTS, PAW.CORRECTION], statement: 'm_new, v_new, t_new
+    and the real update y exactly as AdamW (amsgrad=False, maximize=False)', observes: [m, v, t, theta],
+  evidence_kind: definition}
+- {id: SR.C2, basis: [SR.TARGET, AO_QUANT_UTILS.SR], statement: 'theta_new = t_z + sign(y)*u iff r < 2^16*(|y|-|t_z|)/u,
+    else t_z (truncation toward zero; strict comparison)', observes: [theta], evidence_kind: definition}
+- {id: SR.C3, basis: [SR.STATES], statement: 'm and v are returned as real values (no bfloat16 rounding of the task
+    states)', observes: [m, v], evidence_kind: definition}
+- {id: SR.C4, basis: [AO_ADAM.SR_FLAG, T_ZERO_GRAD.SKIP], statement: 'gradient None skips the parameter (state
+    unchanged, no rounding)', observes: [theta, m, v, t], evidence_kind: definition}
+examples:
+- id: SR.E1
+  profile: torchao016
+  clauses: [SR.C1, SR.C2, SR.C3]
+  input: {state: {theta: [1, 1], m: [0, 0], v: [0, 0], t: 0}, gradient: [1, 1], rand16: [48758, 48759], lr: 1/1000,
+    beta1: 9/10, beta2: 99/100, eps: 0, weight_decay: 0}
+  expected: {outcome: value, fields: {theta: [1, '255/256'], m: ['1/10', '1/10'], v: ['1/100', '1/100'], t: 1}}
+  note: y = 999/1000; t_z = 255/256, u = 1/256; 2^16*(y - t_z)/u = 48758.784; r = 48758 rounds away, 48759 does not.
+- id: SR.E2
+  profile: torchao016
+  clauses: [SR.C2]
+  input: {state: {theta: [-1], m: [0], v: [0], t: 0}, gradient: [-1], rand16: [10000], lr: 1/1000, beta1: 9/10,
+    beta2: 99/100, eps: 0, weight_decay: 0}
+  expected: {outcome: value, fields: {theta: [-1], m: ['-1/10'], v: ['1/100'], t: 1}}
+  note: y = -999/1000; truncation toward zero gives -255/256; 10000 < 48758.784 rounds away from zero to -1.
+- id: SR.E3
+  profile: torchao016
+  clauses: [SR.C1, SR.C2]
+  input: {state: {theta: [1], m: [1], v: [2], t: 1}, gradient: [0], rand16: [0], lr: 1/10, beta1: 1/2, beta2: 1/2,
+    eps: 0, weight_decay: 1/10}
+  expected: {outcome: value, fields: {theta: ['239/256'], m: ['1/2'], v: [1], t: 2}}
+  note: y = 99/100 - sqrt(3)/30 (about 0.93227, as ADAMW AW.E5); 256*y = 238.66, so t_z = 238/256 and r = 0 rounds away.
+- id: SR.E4
+  profile: torchao016
+  clauses: [SR.C4]
+  input: {state: {theta: [1], m: [1], v: [2], t: 1}, gradient: null, rand16: [0], lr: 1/10, beta1: 1/2, beta2: 1/2,
+    eps: 0, weight_decay: 1/10}
+  expected: {outcome: value, fields: {theta: [1], m: [1], v: [2], t: 1}}
+- id: SR.E5
+  profile: torchao016
+  clauses: [SR.C2]
+  input: {state: {theta: [1], m: [0], v: [0], t: 0}, gradient: [1], rand16: [0], lr: 1/256, beta1: 9/10, beta2: 99/100,
+    eps: 0, weight_decay: 0}
+  expected: {outcome: value, fields: {theta: ['255/256'], m: ['1/10'], v: ['1/100'], t: 1}}
+  note: y = 255/256 is a bfloat16 value; the fraction is 0 and no r rounds away.
+- id: SR.N1
+  profile: torchao016
+  clauses: [SR.C2]
+  input: {state: {theta: [1/3], m: [0], v: [0], t: 0}, gradient: [1], rand16: [0], lr: 1/256, beta1: 9/10,
+    beta2: 99/100, eps: 0, weight_decay: 0}
+  expected: {outcome: invalid_input}
+- id: SR.N2
+  profile: torchao016
+  clauses: [SR.C2]
+  input: {state: {theta: [1], m: [0], v: [0], t: 0}, gradient: [1], rand16: [65536], lr: 1/256, beta1: 9/10,
+    beta2: 99/100, eps: 0, weight_decay: 0}
+  expected: {outcome: invalid_input}
+signature:
+  inputs: ['gradient [d] or None', 'rand16 [d] integers in [0, 2^16)', lr, beta1, beta2, eps, weight_decay]
+  pre_state: ['theta [d] bfloat16 values', 'm [d]', 'v [d]', t nonnegative integer]
+  post_state: ['theta [d] bfloat16 values', 'm [d]', 'v [d]', t]
+  observation_unit: one bfloat16 parameter tensor (flattened), one optimizer step, conditioned on its random bits
+domain:
+  valid: [d >= 1, theta bfloat16-representable, finite rationals, v >= 0, '0 <= beta1, beta2 < 1',
+    'lr, eps, weight_decay >= 0']
+  domain_undefined: ['sqrt(v_hat) + eps = 0']
+  invalid_input: [length mismatch, theta not bfloat16-representable, 'random integers outside [0, 2^16)', NaN or
+      infinite values]
+  unsupported: [amsgrad=True (not tested), bfloat16 overflow or subnormal results]
+mutation_requirements:
+- {id: SR.M1, misreading: round to nearest instead of stochastic rounding, witnesses: [SR.E1]}
+- {id: SR.M2, misreading: 'probability inverted (round away iff r >= threshold)', witnesses: [SR.E1, SR.E3]}
+- {id: SR.M3, misreading: 'truncation toward minus infinity instead of toward zero for negative values', witnesses: [
+    SR.E2]}
+- {id: SR.M4, misreading: 'non-strict comparison r <= threshold (a bfloat16 value can round away)', witnesses: [SR.E5]}
+- {id: SR.M5, misreading: 'states stored in bfloat16 with round-to-nearest (B009)', witnesses: [SR.E1]}
+- {id: SR.M6, misreading: coupled L2 weight decay instead of AdamW decay, witnesses: [SR.E3]}
+- {id: SR.M7, misreading: None gradient treated as zero, witnesses: [SR.E4]}
+nonclaims:
+- The binary32 evaluation of y inside torchao (and the float32 learning-rate tensor) is numerical (K - f).
+- 'The distribution of the random bits is not judged: the contract is conditioned on the bits actually drawn. Without
+  them, the contract implies only the allowed pair {t_z, t_z + sign(y)*u}.'
+- Agreement on the rounding rule is agreement with the torchao reference program (no documentation states it).
+- A rejected mutant witnesses a particular error; rejecting all listed mutants does not prove completeness.
+changes: []

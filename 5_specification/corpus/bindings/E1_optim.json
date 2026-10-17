@@ -1,0 +1,943 @@
+{
+ "group": "E1_optim",
+ "date": "2026-10-17",
+ "author": "Claude (spec v3 author, group E1_optim)",
+ "source": ".cache/spec_v3/group_E1_optim.jsonl (40 instances)",
+ "contracts": {
+  "ADAM": "contracts/ADAM.yaml",
+  "SGD": "contracts/SGD.yaml",
+  "RMSPROP": "contracts/RMSPROP.yaml",
+  "RADAM": "contracts/RADAM.yaml",
+  "RPROP": "contracts/RPROP.yaml",
+  "ADAFACTOR": "contracts/ADAFACTOR.yaml",
+  "OPT4BIT": "contracts/OPT4BIT.yaml",
+  "SROUND": "contracts/SROUND.yaml",
+  "EMA": "contracts/EMA.yaml"
+ },
+ "referenced_contracts_of_other_groups": [
+  "ADAMW",
+  "SCALER"
+ ],
+ "rule": "every instance is mapped to the contracts and profiles under which its recorded parameter and state outputs are judged; outcome is the reference outcome class for the tested variants (value; domain_undefined only for eps = 0 cases that the tested hyperparameters never reach); no profile needs a task binding",
+ "instances": 40,
+ "gaps": [],
+ "entries": [
+  {
+   "id": "essential_phase2b/opt_adafactor_cold_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "outside the contract (Adafactor)",
+   "bindings": [
+    {
+     "contract": "ADAFACTOR",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "torch.optim.Adafactor(lr=1e-2), defaults, eps1=None bound to finfo(dtype).eps (2^-23 float32, 2^-52 float64; decision AF.EPS1), maximize False and True; fused raises NotImplementedError in torch 2.10 (not a tested variant)",
+     "outcome": "value"
+    },
+    {
+     "contract": "ADAFACTOR",
+     "profiles": [
+      "hf_manual_lr"
+     ],
+     "use": "transformers 4.57.3 Adafactor(lr=1e-2, scale_parameter=False, relative_step=False, warmup_init=False): eps1 1e-30, clip_threshold 1, decay_rate -0.8; variant base only (no maximize option)",
+     "outcome": "value"
+    }
+   ],
+   "note": "two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adafactor_seq_zero_restore_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "outside the contract (Adafactor)",
+   "bindings": [
+    {
+     "contract": "ADAFACTOR",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "torch.optim.Adafactor(lr=1e-2), defaults, eps1=None bound to finfo(dtype).eps (2^-23 float32, 2^-52 float64; decision AF.EPS1), maximize False and True; fused raises NotImplementedError in torch 2.10 (not a tested variant)",
+     "outcome": "value"
+    },
+    {
+     "contract": "ADAFACTOR",
+     "profiles": [
+      "hf_manual_lr"
+     ],
+     "use": "transformers 4.57.3 Adafactor(lr=1e-2, scale_parameter=False, relative_step=False, warmup_init=False): eps1 1e-30, clip_threshold 1, decay_rate -0.8; variant base only (no maximize option)",
+     "outcome": "value"
+    }
+   ],
+   "note": "state sequence: each step is one contract step on the returned post-state; save/restore (state_dict round trip) is the identity on the explicit state; zero gradient at step 2 is a full step; two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adam_amsgrad_cold_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adam"
+     ],
+     "use": "Adam (coupled L2, amsgrad=True), maximize False and True (mirror)",
+     "outcome": "value"
+    }
+   ],
+   "note": "two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adam_amsgrad_save_restore_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adam"
+     ],
+     "use": "Adam (coupled L2, amsgrad=True), maximize False and True (mirror)",
+     "outcome": "value"
+    }
+   ],
+   "note": "state sequence: each step is one contract step on the returned post-state; save/restore (state_dict round trip) is the identity on the explicit state; two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adam_amsgrad_seq_zero_restore_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adam"
+     ],
+     "use": "Adam (coupled L2, amsgrad=True), maximize False and True (mirror)",
+     "outcome": "value"
+    }
+   ],
+   "note": "state sequence: each step is one contract step on the returned post-state; save/restore (state_dict round trip) is the identity on the explicit state; zero gradient at step 2 is a full step; two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adam_cold_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adam"
+     ],
+     "use": "Adam (coupled L2, amsgrad=False), maximize False and True (mirror)",
+     "outcome": "value"
+    }
+   ],
+   "note": "two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adam_seq_zero_restore_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adam"
+     ],
+     "use": "Adam (coupled L2, amsgrad=False), maximize False and True (mirror)",
+     "outcome": "value"
+    }
+   ],
+   "note": "state sequence: each step is one contract step on the returned post-state; save/restore (state_dict round trip) is the identity on the explicit state; zero gradient at step 2 is a full step; two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adamw_cold_max_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adamw_variants"
+     ],
+     "use": "AdamW steps with maximize=True (variant base)",
+     "outcome": "value"
+    },
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "AdamW steps with maximize=False (variant mirror)",
+     "outcome": "value"
+    }
+   ],
+   "note": "two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adamw_cold_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "AdamW steps with maximize=False (variant base; all torch candidates, bnb AdamW32bit, torchao _AdamW fp32)",
+     "outcome": "value"
+    },
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adamw_variants"
+     ],
+     "use": "AdamW steps with maximize=True (variant mirror, torch candidates)",
+     "outcome": "value"
+    }
+   ],
+   "note": "two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adamw_cold_min_wd0.1",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "AdamW steps with maximize=False (variant base; all torch candidates, bnb AdamW32bit, torchao _AdamW fp32)",
+     "outcome": "value"
+    },
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adamw_variants"
+     ],
+     "use": "AdamW steps with maximize=True (variant mirror, torch candidates)",
+     "outcome": "value"
+    }
+   ],
+   "note": "two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adamw_grad_none_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "AdamW steps with maximize=False (variant base; all torch candidates, bnb AdamW32bit, torchao _AdamW fp32)",
+     "outcome": "value"
+    },
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adamw_variants"
+     ],
+     "use": "AdamW steps with maximize=True (variant mirror, torch candidates)",
+     "outcome": "value"
+    }
+   ],
+   "note": "parameter 1 has grad None at step 4: contract clause 'gradient None leaves the state unchanged'; two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adamw_nonfinite_skip_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "AdamW steps with maximize=False (variant base; all torch candidates, bnb AdamW32bit, torchao _AdamW fp32)",
+     "outcome": "value"
+    },
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adamw_variants"
+     ],
+     "use": "AdamW steps with maximize=True (variant mirror, torch candidates)",
+     "outcome": "value"
+    },
+    {
+     "contract": "SCALER",
+     "profiles": [
+      "real"
+     ],
+     "use": "GradScaler finds inf and skips optimizer.step: the optimizer state is unchanged for that step (ADAM decision AD.NONFINITE)",
+     "outcome": "value"
+    }
+   ],
+   "note": "two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adamw_save_restore_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "AdamW steps with maximize=False (variant base; all torch candidates, bnb AdamW32bit, torchao _AdamW fp32)",
+     "outcome": "value"
+    },
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adamw_variants"
+     ],
+     "use": "AdamW steps with maximize=True (variant mirror, torch candidates)",
+     "outcome": "value"
+    }
+   ],
+   "note": "state sequence: each step is one contract step on the returned post-state; save/restore (state_dict round trip) is the identity on the explicit state; two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adamw_seq_zero_restore_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "AdamW steps with maximize=False (variant base; all torch candidates, bnb AdamW32bit, torchao _AdamW fp32)",
+     "outcome": "value"
+    },
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adamw_variants"
+     ],
+     "use": "AdamW steps with maximize=True (variant mirror, torch candidates)",
+     "outcome": "value"
+    }
+   ],
+   "note": "state sequence: each step is one contract step on the returned post-state; save/restore (state_dict round trip) is the identity on the explicit state; zero gradient at step 2 is a full step; two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adamw_warm_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "AdamW steps with maximize=False (variant base; all torch candidates, bnb AdamW32bit, torchao _AdamW fp32)",
+     "outcome": "value"
+    },
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adamw_variants"
+     ],
+     "use": "AdamW steps with maximize=True (variant mirror, torch candidates)",
+     "outcome": "value"
+    }
+   ],
+   "note": "two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_adamw_zero_grad_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "AdamW steps with maximize=False (variant base; all torch candidates, bnb AdamW32bit, torchao _AdamW fp32)",
+     "outcome": "value"
+    },
+    {
+     "contract": "ADAM",
+     "profiles": [
+      "adamw_variants"
+     ],
+     "use": "AdamW steps with maximize=True (variant mirror, torch candidates)",
+     "outcome": "value"
+    }
+   ],
+   "note": "zero gradient at step 4: full step (zero-gradient clause); two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_rmsprop_centered_cold_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "RMSPROP",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "RMSprop alpha 0.9, momentum 0.5, centered, maximize False and True",
+     "outcome": "value"
+    }
+   ],
+   "note": "two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_rmsprop_centered_seq_zero_restore_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "RMSPROP",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "RMSprop alpha 0.9, momentum 0.5, centered, maximize False and True",
+     "outcome": "value"
+    }
+   ],
+   "note": "state sequence: each step is one contract step on the returned post-state; save/restore (state_dict round trip) is the identity on the explicit state; zero gradient at step 2 is a full step; two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_sgd_dampening_cold_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "SGD",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "SGD momentum 0.9 with dampening 0.5, maximize False and True",
+     "outcome": "value"
+    }
+   ],
+   "note": "two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_sgd_dampening_seq_zero_restore_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "SGD",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "SGD momentum 0.9 with dampening 0.5, maximize False and True",
+     "outcome": "value"
+    }
+   ],
+   "note": "state sequence: each step is one contract step on the returned post-state; save/restore (state_dict round trip) is the identity on the explicit state; zero gradient at step 2 is a full step; two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_sgd_nesterov_cold_max_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "SGD",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "SGD momentum 0.9 with nesterov, maximize False and True",
+     "outcome": "value"
+    }
+   ],
+   "note": "two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_sgd_nesterov_cold_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "SGD",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "SGD momentum 0.9 with nesterov, maximize False and True",
+     "outcome": "value"
+    }
+   ],
+   "note": "two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "essential_phase2b/opt_sgd_nesterov_seq_zero_restore_min_wd0.0",
+   "experiment": "essential_phase2b",
+   "kind": "optimizer",
+   "operator": "specs/phase2/spec_optimizers.py v0.1 (+ spec_training_program GradScaler)",
+   "params": {
+    "family": "optimizers"
+   },
+   "status_then": "ok",
+   "bindings": [
+    {
+     "contract": "SGD",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "SGD momentum 0.9 with nesterov, maximize False and True",
+     "outcome": "value"
+    }
+   ],
+   "note": "state sequence: each step is one contract step on the returned post-state; save/restore (state_dict round trip) is the identity on the explicit state; zero gradient at step 2 is a full step; two parameter groups (group 1: lr x 2, weight_decay 0) are separate per-tensor steps with their own hyperparameters; variants base and mirror (maximize flipped, gradients negated)"
+  },
+  {
+   "id": "general_round_v3_1/opt_rprop",
+   "experiment": "general_round_v3_1",
+   "kind": "optimizer",
+   "operator": "torch.compile(optimizer.step) -> Inductor Triton kernels (one step from a populated state)",
+   "params": {},
+   "status_then": "hand-written float64 reference",
+   "bindings": [
+    {
+     "contract": "RPROP",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "torch.optim.Rprop(lr=0.01), etas (0.5, 1.2), step_sizes (1e-6, 50), one step from a populated state (prev, step_size, step); step sizes stay inside the bounds, so decision RP.CLAMP does not apply",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "tolerance_study/A:58e9e8f1",
+   "experiment": "tolerance_study",
+   "kind": "optimizer",
+   "operator": "AdamW (bf16 parameters and states)",
+   "params": {
+    "implementation": "torch.compile(torch.optim.AdamW(foreach=True).step) -- Inductor Triton kernels"
+   },
+   "status_then": "hand-written spec",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "torch.optim.AdamW lr 2e-5, betas (0.9, 0.999), eps 1e-8, weight_decay 0.01, one step from the captured bf16 state: the task is the real AdamW step; bf16 storage of parameter and states is numerical (mechanism A, ADAM nonclaims, mutant AD.M9)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "tolerance_study/A:fcc29ec6",
+   "experiment": "tolerance_study",
+   "kind": "optimizer",
+   "operator": "AdamW (bf16 parameters and states)",
+   "params": {
+    "implementation": "torch.optim.AdamW(fused=True) -- torchtune default, ATen fused kernel"
+   },
+   "status_then": "hand-written spec",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "torch.optim.AdamW lr 2e-5, betas (0.9, 0.999), eps 1e-8, weight_decay 0.01, one step from the captured bf16 state: the task is the real AdamW step; bf16 storage of parameter and states is numerical (mechanism A, ADAM nonclaims, mutant AD.M9)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "tolerance_study/A:1f08a321",
+   "experiment": "tolerance_study",
+   "kind": "optimizer",
+   "operator": "AdamW (bf16 parameters and states)",
+   "params": {
+    "implementation": "fused"
+   },
+   "status_then": "hand-written spec",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "torch.optim.AdamW lr 2e-5, betas (0.9, 0.999), eps 1e-8, weight_decay 0.01, one step from the captured bf16 state: the task is the real AdamW step; bf16 storage of parameter and states is numerical (mechanism A, ADAM nonclaims, mutant AD.M9)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "tolerance_study/A:bac2ad9d",
+   "experiment": "tolerance_study",
+   "kind": "optimizer",
+   "operator": "AdamW (bf16 parameters and states)",
+   "params": {
+    "implementation": "compiled"
+   },
+   "status_then": "hand-written spec",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "torch.optim.AdamW lr 2e-5, betas (0.9, 0.999), eps 1e-8, weight_decay 0.01, one step from the captured bf16 state: the task is the real AdamW step; bf16 storage of parameter and states is numerical (mechanism A, ADAM nonclaims, mutant AD.M9)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "tolerance_study/A:3ec9ba37",
+   "experiment": "tolerance_study",
+   "kind": "optimizer",
+   "operator": "AdamW (bf16 parameters and states)",
+   "params": {
+    "implementation": "eager_bf16"
+   },
+   "status_then": "hand-written spec",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "torch.optim.AdamW lr 2e-5, betas (0.9, 0.999), eps 1e-8, weight_decay 0.01, one step from the captured bf16 state: the task is the real AdamW step; bf16 storage of parameter and states is numerical (mechanism A, ADAM nonclaims, mutant AD.M9)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "tolerance_study/A:f900a70b",
+   "experiment": "tolerance_study",
+   "kind": "optimizer",
+   "operator": "AdamW (bf16 parameters and states)",
+   "params": {
+    "implementation": "correctly_rounded"
+   },
+   "status_then": "hand-written spec",
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "torch.optim.AdamW lr 2e-5, betas (0.9, 0.999), eps 1e-8, weight_decay 0.01, one step from the captured bf16 state: the task is the real AdamW step; bf16 storage of parameter and states is numerical (mechanism A, ADAM nonclaims, mutant AD.M9)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "tolerance_study/B:0d5b63d5",
+   "experiment": "tolerance_study",
+   "kind": "optimizer",
+   "operator": "RAdam",
+   "params": {
+    "implementation": "torch.compile(torch.optim.RAdam(foreach=True).step) -- Inductor Triton kernels"
+   },
+   "status_then": "hand-written spec",
+   "bindings": [
+    {
+     "contract": "RADAM",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "torch.optim.RAdam lr 2e-5, betas (0.9, 0.999), eps 1e-8, weight_decay 0, one step at captured steps 6, 7, 10, 20, 100; rho_t exact from the received beta2 (mechanism B: binary32 rho_t is a deviation, mutant RA.M1)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "tolerance_study/B:6d4af710",
+   "experiment": "tolerance_study",
+   "kind": "optimizer",
+   "operator": "RAdam",
+   "params": {
+    "implementation": "torch.optim.RAdam(foreach=True), eager -- ATen"
+   },
+   "status_then": "hand-written spec",
+   "bindings": [
+    {
+     "contract": "RADAM",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "torch.optim.RAdam lr 2e-5, betas (0.9, 0.999), eps 1e-8, weight_decay 0, one step at captured steps 6, 7, 10, 20, 100; rho_t exact from the received beta2 (mechanism B: binary32 rho_t is a deviation, mutant RA.M1)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "tolerance_study/B:bac2ad9d",
+   "experiment": "tolerance_study",
+   "kind": "optimizer",
+   "operator": "RAdam",
+   "params": {
+    "implementation": "compiled"
+   },
+   "status_then": "hand-written spec",
+   "bindings": [
+    {
+     "contract": "RADAM",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "torch.optim.RAdam lr 2e-5, betas (0.9, 0.999), eps 1e-8, weight_decay 0, one step at captured steps 6, 7, 10, 20, 100; rho_t exact from the received beta2 (mechanism B: binary32 rho_t is a deviation, mutant RA.M1)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "tolerance_study/B:a5a6b9cc",
+   "experiment": "tolerance_study",
+   "kind": "optimizer",
+   "operator": "RAdam",
+   "params": {
+    "implementation": "eager"
+   },
+   "status_then": "hand-written spec",
+   "bindings": [
+    {
+     "contract": "RADAM",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "torch.optim.RAdam lr 2e-5, betas (0.9, 0.999), eps 1e-8, weight_decay 0, one step at captured steps 6, 7, 10, 20, 100; rho_t exact from the received beta2 (mechanism B: binary32 rho_t is a deviation, mutant RA.M1)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "tolerance_study/A:ema",
+   "experiment": "tolerance_study",
+   "kind": "ema",
+   "operator": "bf16 EMA (AveragedModel, timm)",
+   "params": {},
+   "status_then": "hand-written",
+   "bindings": [
+    {
+     "contract": "EMA",
+     "profiles": [
+      "swa_ema"
+     ],
+     "use": "AveragedModel(get_ema_multi_avg_fn(0.999), use_buffers=False); the bf16 averaged copy is a numerical deviation from the real EMA (EMA nonclaims, mutant EM.M5)",
+     "outcome": "value"
+    },
+    {
+     "contract": "EMA",
+     "profiles": [
+      "timm_v3"
+     ],
+     "use": "timm 1.0.30 ModelEmaV3(decay=0.999), update(model, step=step), no warmup",
+     "outcome": "value"
+    }
+   ],
+   "note": "the workload's fp32 EMA starts at theta_0 and decays from the first update, while AveragedModel / timm copy theta_1 at their first update (decision EM.FIRST, tolerance-study deviation D-10): the fp32 EMA is a differently initialised reference, not one of these profiles"
+  },
+  {
+   "id": "bugs/B005",
+   "experiment": "bugs",
+   "kind": "optimizer",
+   "operator": "pure-bf16 AdamW",
+   "params": {},
+   "status_then": null,
+   "bindings": [
+    {
+     "contract": "ADAMW",
+     "profiles": [
+      "base"
+     ],
+     "use": "pure-bf16 AdamW: the task is the real AdamW step; the lost increments of bf16 storage are a numerical deviation (ADAM nonclaims; mutant AD.M9 shows the contract rejects bf16-stored results on AD.E10)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "bugs/B008",
+   "experiment": "bugs",
+   "kind": "optimizer_quantized_state",
+   "operator": "torchao AdamW4bit",
+   "params": {},
+   "status_then": null,
+   "bindings": [
+    {
+     "contract": "OPT4BIT",
+     "profiles": [
+      "torchao016"
+     ],
+     "use": "torchao 0.16 AdamW4bit: quantised states are part of the task (decision Q4.TASK); B008 is a design trade-off measured against ADAMW.base, mutant Q4.M5",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "bugs/B009",
+   "experiment": "bugs",
+   "kind": "optimizer",
+   "operator": "torchao _AdamW(bf16_stochastic_round)",
+   "params": {},
+   "status_then": null,
+   "bindings": [
+    {
+     "contract": "SROUND",
+     "profiles": [
+      "torchao016"
+     ],
+     "use": "torchao 0.16 _AdamW(bf16_stochastic_round=True): parameter rounding conditioned on the random bits; bf16 round-to-nearest states are a deviation (decision SR.STATES, mutant SR.M5)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "bugs/B012",
+   "experiment": "bugs",
+   "kind": "optimizer",
+   "operator": "RAdam",
+   "params": {},
+   "status_then": null,
+   "bindings": [
+    {
+     "contract": "RADAM",
+     "profiles": [
+      "torch210"
+     ],
+     "use": "binary32 rectification term on the compiled / capturable path (decision RA.THRESHOLD, mutant RA.M1 rejected on RA.E4)",
+     "outcome": "value"
+    }
+   ]
+  },
+  {
+   "id": "bugs/B019",
+   "experiment": "bugs",
+   "kind": "ema",
+   "operator": "EMA",
+   "params": {},
+   "status_then": null,
+   "bindings": [
+    {
+     "contract": "EMA",
+     "profiles": [
+      "swa_ema"
+     ],
+     "use": "AveragedModel EMA of a bf16 model: the task is the real EMA; increments below half a bf16 ulp are a numerical deviation (mutant EM.M5 rejected on EM.E5)",
+     "outcome": "value"
+    }
+   ]
+  }
+ ],
+ "for_other_groups": {
+  "E2_program clip_scaler_step_n2.0_normal_loop_s1": "SGD profile torch210 (plain SGD, lr 1, momentum 0; example SG.E10)"
+ }
+}
