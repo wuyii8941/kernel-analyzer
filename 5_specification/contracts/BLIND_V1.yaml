@@ -1,0 +1,288 @@
+schema_version: '1.2'
+id: BLIND_V1
+role: ISSUER_TASK
+title: Blind test v1 -- the issuer's family specifications f (F1-F8, F2S), one profile per family
+review:
+  status: drafted
+  author: Claude (spec v3 author, group F_issuer), 2026-10-17
+  date: '2026-10-17'
+  scope: Transcription of the issuer's phase-2 family formulas into executable exact-real references; awaiting a review
+    by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [blind_v1.F1, blind_v1.F2, blind_v1.F2S, blind_v1.F3, blind_v1.F4, blind_v1.F5, blind_v1.F6, blind_v1.F7,
+  blind_v1.F8]
+profiles:
+  F1:
+    meaning: 'F1 (normalise, gate, shift): inputs x, s, b [R, D], scalar eps; y [R, D]'
+    task_choice_required: false
+  F2:
+    meaning: 'F2 (gated product): inputs a, b of one shape; y of that shape'
+    task_choice_required: false
+  F2S:
+    meaning: 'F2S (gated product scaled by a runtime scalar): inputs a, b of one shape, scalar t; y of that shape'
+    task_choice_required: false
+  F3:
+    meaning: 'F3 (row mean and rstd): input x [R, D], scalar eps; y [R, 2] with y[r,0] the mean, y[r,1] the rstd'
+    task_choice_required: false
+  F4:
+    meaning: 'F4 (partial rotation): x [R, D] with D a multiple of 4, cos and sin [R, D/4], scalar t; y [R, D]'
+    task_choice_required: false
+  F5:
+    meaning: 'F5 (grouped dequantised dot product): q [R, K] int8 values, sc [R, ceil(K/G)], a [K], group size G; y [R]'
+    task_choice_required: false
+  F6:
+    meaning: 'F6 (gated masked weighted mean): h, m [R, L], x [R, L, D]; y [R, D]'
+    task_choice_required: false
+  F7:
+    meaning: 'F7 (row KL divergence of softmaxes): p, q [R, V]; y [R]'
+    task_choice_required: false
+  F8:
+    meaning: 'F8 (Huber-style clipped difference, masked, divided by a count): pred, target, m of one shape, scalar
+      delta, integer nvalid; y of that shape'
+    task_choice_required: false
+outputs:
+  y:
+    shape: the program's output shape, per profile
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Every tensor element and runtime scalar is the exact rational value received by the program (a float32
+    or fp16 value is its exact binary value; int8 values are integers). The published decimal of a scalar is not
+    substituted for the received value (decision BV1.SCALARS).
+  quality: No tolerance. Rational arithmetic is exact; (.)^(-1/2), exp and log are rigorous enclosures.
+  test_evidence: Hand derivations, checked with sympy; the issuer-side verification scripts are a cross-check only.
+  error_handling: Shape and type violations are invalid_input; legal inputs where the real formula has no value
+    (empty mean, non-positive argument of (.)^(-1/2), zero denominator) are domain_undefined.
+decisions:
+- id: BV1.FAMILY_F
+  status: drafted
+  statement: The task f of every program is its family's formula as published by the issuer (phase-2 release section 1,
+    repeated verbatim in the answer key's specs_phase2). All programs of a family share one f; the planted semantic
+    variants (S-*) are deliberately wrong implementations of that same f, and the numerical variants (P-*, U-*, N-*)
+    are implementations of it. Alternative (a per-program f, e.g. the declared semantics of the S-variant) rejected
+    because the issuer states that one f is used per family.
+  basis: [ISS_BV1_RELEASE.SAME_F, ISS_BV1_KEY.SPECS, ISS_BV1_KEY.FAMILIES]
+- id: BV1.SCALARS
+  status: drafted
+  statement: Runtime scalars (eps, t, delta, nvalid) are the values the kernel received. The issuer ruled this for F4's
+    t (erratum 4, float32 value received is the official reading; the published double reading is an interface
+    difference). The issuer's phase-2 verification evaluated f under both readings (given value and float32 value) for
+    every family; the contract takes the scalar as an exact input, so either reading is a choice of input value made by
+    the caller, and the official one for F4 is the float32 value. Alternative (fix the published decimal inside the
+    contract) rejected because the issuer's ruling names the received value.
+  basis: [ISS_BV_ERRATA.E4, ISS_BV1_VERIFY2.MODES, ISS_BV1_RELEASE.F2S]
+- id: BV1.UNDEFINED
+  status: drafted
+  statement: Where the issuer's formula has no real value on a legal input the result is domain_undefined, with no
+    requirement on the device output -- mean_d over an empty row (D = 0), (.)^(-1/2) of a value <= 0 (F1 ms + eps,
+    F3 var + eps), F6 sum_l w[r,l] = 0 (e.g. a fully masked row), F7 softmax over an empty row, F8 nvalid = 0. The
+    issuer's programs never produce these (their eps > 0, masks with valid entries); the release does not address them.
+  basis: [ISS_BV1_RELEASE.F1, ISS_BV1_RELEASE.F3, ISS_BV1_RELEASE.F6, ISS_BV1_RELEASE.F7, ISS_BV1_RELEASE.F8]
+- id: BV1.F4_LAYOUT
+  status: drafted
+  statement: 'F4: P = D/4 must be an integer, so D not a multiple of 4 is invalid_input. cos and sin are inputs of the
+    shape of x1 ([R, P]); the formula multiplies them element-wise with x1 and x2 and does not require cos^2 + sin^2 = 1,
+    so no such check is made. The passthrough part xp = x[:, 2P:D] has D/2 columns and is copied unscaled (t multiplies
+    y1 and y2 only). The issuer-side script indexes cos[r,i], sin[r,i] for i < P and copies columns D/2..D-1.'
+  basis: [ISS_BV1_RELEASE.F4, ISS_BV1_VERIFY1.F4]
+- id: BV1.F5_GROUPS
+  status: drafted
+  statement: 'F5: G is the group size, a positive integer input; sc must have exactly ceil(K/G) columns (every column is
+    used by some k; the issuer-side script derives G = K // NG from the number of columns, which agrees when G divides
+    K). q values are integers in the int8 range [-128, 127], otherwise invalid_input; a is taken at its exact received
+    value (the formula says a fp16 is converted exactly; checking fp16 representability is the interface''s job).'
+  basis: [ISS_BV1_RELEASE.F5, ISS_BV1_VERIFY1.F5]
+- id: BV1.F6_MASK
+  status: drafted
+  statement: 'F6: m is used at its received values in w = m*g (the formula does not restrict m to {0, 1}); x has shape
+    [R, L, D] and the weighted mean runs over l. Both numerator and denominator use w (the answer key calls the
+    unmasked denominator the semantic error of prog_10).'
+  basis: [ISS_BV1_RELEASE.F6, ISS_BV1_KEY.P10_UNMASKED, ISS_BV1_VERIFY1.F6]
+- id: BV1.F8_COUNT
+  status: drafted
+  statement: 'F8: nvalid is the runtime count passed to the program (answer key: div_rn by a runtime count), a
+    non-negative integer input; the formula does not define it as sum(m), so the contract does not derive it.
+    sign(0) = +1 as the issuer states; it matters only when |d| > delta, which for d = 0 needs delta < 0 -- the formula
+    does not restrict delta, so delta < 0 is evaluated as written. At |d| = delta both branches give the same value.'
+  basis: [ISS_BV1_RELEASE.F8, ISS_BV1_RELEASE.SIGN0, ISS_BV1_KEY.P02_F8]
+- id: BV1.EQUIVALENT_VARIANTS
+  status: drafted
+  statement: Variants that compute the same real function are not misreadings and are not mutation requirements -- F2
+    prog_03 (0.5 + 0.5*d, erratum 5 re-recorded it as a negative control), F3 prog_25 (E[x^2] - E[x]^2, equal in
+    the reals), and the N-* controls.
+  basis: [ISS_BV1_KEY.P03_REASSOC, ISS_BV_ERRATA.E5, ISS_BV1_KEY.P25_NAIVE]
+clauses:
+- {id: BV1.C1, basis: [ISS_BV1_RELEASE.F1, BV1.UNDEFINED], statement: 'F1 y = x*(mean_d(x^2) + eps)^(-1/2)*(1 + s) + b; ms + eps <= 0 or D = 0
+    domain_undefined', observes: [y], evidence_kind: definition}
+- {id: BV1.C2, basis: [ISS_BV1_RELEASE.F2], statement: 'F2 g(a) = (1 + a/(1+|a|))/2, y = (a*g(a))*b element-wise',
+  observes: [y], evidence_kind: definition}
+- {id: BV1.C3, basis: [ISS_BV1_RELEASE.F2S, BV1.SCALARS], statement: 'F2S y = ((a*g(a))*b)*t with the received t',
+  observes: [y], evidence_kind: definition}
+- {id: BV1.C4, basis: [ISS_BV1_RELEASE.F3, ISS_BV1_VERIFY2.F3, BV1.UNDEFINED], statement: 'F3 y[r] = [mean, (var + eps)^(-1/2)], var the
+    biased (divide by D) mean of squared deviations', observes: [y], evidence_kind: definition}
+- {id: BV1.C5, basis: [ISS_BV1_RELEASE.F4, BV1.F4_LAYOUT, BV1.SCALARS], statement: 'F4 y = [t(x1 cos - x2 sin), t(x1 sin + x2 cos), xp]',
+  observes: [y], evidence_kind: definition}
+- {id: BV1.C6, basis: [ISS_BV1_RELEASE.F5, BV1.F5_GROUPS], statement: 'F5 y[r] = sum_k q[r,k] sc[r, floor(k/G)] a[k] exactly',
+  observes: [y], evidence_kind: definition}
+- {id: BV1.C7, basis: [ISS_BV1_RELEASE.F6, BV1.F6_MASK, BV1.UNDEFINED], statement: 'F6 y[r,d] = sum_l w x / sum_l w, w = m*g(h); zero
+    denominator domain_undefined', observes: [y], evidence_kind: definition}
+- {id: BV1.C8, basis: [ISS_BV1_RELEASE.F7, ISS_BV1_RELEASE.EVAL], statement: 'F7 y[r] = KL(softmax(p[r]) || softmax(q[r]))',
+  observes: [y], evidence_kind: definition}
+- {id: BV1.C9, basis: [ISS_BV1_RELEASE.F8, ISS_BV1_RELEASE.SIGN0, BV1.F8_COUNT, BV1.UNDEFINED], statement: 'F8 y = g*m/nvalid, g = d
+    if |d| <= delta else delta*sign(d), sign(0) = +1', observes: [y], evidence_kind: definition}
+- {id: BV1.C10, basis: [ISS_BV1_RELEASE.F1, BV1.F4_LAYOUT, BV1.F5_GROUPS], statement: 'operand shapes that the formula cannot index
+    (mismatched shapes, D not a multiple of 4, wrong number of scale columns, q outside int8, non-integer nvalid) are
+    invalid_input', observes: [y], evidence_kind: definition}
+examples:
+- id: BV1.E1
+  profile: F1
+  clauses: [BV1.C1]
+  input: {x: [[1, 1]], s: [[0, 1]], b: [[0, '1/2']], eps: 3}
+  expected: {outcome: value, fields: {y: [['1/2', '3/2']]}}
+  note: ms = 1, (1 + 3)^(-1/2) = 1/2; y = 1*(1/2)*1 + 0 and 1*(1/2)*2 + 1/2.
+- id: BV1.E2
+  profile: F1
+  clauses: [BV1.C1]
+  input: {x: [[1, 2], [0, 0]], s: [[0, 0], [1, 1]], b: [[0, 0], [0, '1/4']], eps: '1/2'}
+  expected: {outcome: value, fields: {y: [['1/sqrt(3)', '2/sqrt(3)'], [0, '1/4']]}}
+  note: Row 0 ms = 5/2, q = 3. Row 1 ms = 0, q = 1/2 > 0, y = b.
+- {id: BV1.E3, profile: F1, clauses: [BV1.C1], input: {x: [[0, 0]], s: [[0, 0]], b: [[0, 0]], eps: 0}, expected: {
+    outcome: domain_undefined}, note: ms + eps = 0}
+- {id: BV1.E4, profile: F1, clauses: [BV1.C1], input: {x: [[]], s: [[]], b: [[]], eps: 1}, expected: {outcome: domain_undefined},
+  note: mean over an empty row}
+- {id: BV1.E5, profile: F1, clauses: [BV1.C10], input: {x: [[1, 2]], s: [[0]], b: [[0, 0]], eps: 1}, expected: {
+    outcome: invalid_input}}
+- id: BV1.E6
+  profile: F2
+  clauses: [BV1.C2]
+  input: {a: [[1, -1, 0, 3]], b: [[2, 2, 5, 1]]}
+  expected: {outcome: value, fields: {y: [['3/2', '-1/2', 0, '21/8']]}}
+  note: g(1) = 3/4, g(-1) = 1/4, g(0) = 1/2, g(3) = 7/8.
+- {id: BV1.E7, profile: F2, clauses: [BV1.C10], input: {a: [[1, 2]], b: [[1, 2, 3]]}, expected: {outcome: invalid_input}}
+- id: BV1.E8
+  profile: F2S
+  clauses: [BV1.C3]
+  input: {a: [[1, -1]], b: [[2, 2]], t: '1/4'}
+  expected: {outcome: value, fields: {y: [['3/8', '-1/8']]}}
+- id: BV1.E9
+  profile: F2S
+  clauses: [BV1.C3]
+  input: {a: [[1]], b: [[1]], t: '1/21267647932558653966460912964485513216'}
+  expected: {outcome: value, fields: {y: [['3/85070591730234615865843651857942052864']]}}
+  note: t = 2^-124 as in prog_23; y = (3/4)*2^-124 = 3*2^-126, exact (a subnormal float32 value is still a real).
+- id: BV1.E10
+  profile: F3
+  clauses: [BV1.C4]
+  input: {x: [[1, 3]], eps: 3}
+  expected: {outcome: value, fields: {y: [[2, '1/2']]}}
+  note: mean 2, var ((1-2)^2 + (3-2)^2)/2 = 1, (1 + 3)^(-1/2) = 1/2.
+- id: BV1.E11
+  profile: F3
+  clauses: [BV1.C4]
+  input: {x: [[0, 1, 2], [4, 4, 4]], eps: '1/3'}
+  expected: {outcome: value, fields: {y: [[1, 1], [4, 'sqrt(3)']]}}
+  note: Row 0 var 2/3, var + eps = 1. Row 1 var 0, (1/3)^(-1/2) = sqrt(3).
+- {id: BV1.E12, profile: F3, clauses: [BV1.C4], input: {x: [[5, 5]], eps: 0}, expected: {outcome: domain_undefined}}
+- id: BV1.E13
+  profile: F4
+  clauses: [BV1.C5]
+  input: {x: [[1, 2, 3, 4]], cos: [['1/2']], sin: [['1/3']], t: 2}
+  expected: {outcome: value, fields: {y: [['-1/3', '8/3', 3, 4]]}}
+  note: y1 = 2(1/2 - 2/3) = -1/3; y2 = 2(1/3 + 1) = 8/3; xp = [3, 4] unscaled.
+- id: BV1.E14
+  profile: F4
+  clauses: [BV1.C5]
+  input: {x: [[1, 2, 3, 4, 5, 6, 7, 8]], cos: [[1, 0]], sin: [[0, 1]], t: 1}
+  expected: {outcome: value, fields: {y: [[1, -4, 3, 2, 5, 6, 7, 8]]}}
+  note: P = 2, x1 = [1, 2], x2 = [3, 4], xp = [5, 6, 7, 8].
+- {id: BV1.E15, profile: F4, clauses: [BV1.C10], input: {x: [[1, 2, 3, 4, 5, 6]], cos: [[1]], sin: [[0]], t: 1}, expected: {
+    outcome: invalid_input}, note: D = 6 is not a multiple of 4}
+- id: BV1.E16
+  profile: F5
+  clauses: [BV1.C6]
+  input: {q: [[1, -2, 3, 4]], sc: [[2, '1/4']], a: [1, 1, '1/2', 2], G: 2}
+  expected: {outcome: value, fields: {y: ['3/8']}}
+  note: 1*2*1 - 2*2*1 + 3*(1/4)*(1/2) + 4*(1/4)*2 = 2 - 4 + 3/8 + 2.
+- id: BV1.E17
+  profile: F5
+  clauses: [BV1.C6]
+  input: {q: [[1, 1, 1], [-128, 127, 0]], sc: [[1, 10], [1, 1]], a: [1, 1, 1], G: 2}
+  expected: {outcome: value, fields: {y: [12, -1]}}
+  note: K = 3, G = 2, ceil(3/2) = 2 scale columns; row 1 uses the int8 extremes.
+- {id: BV1.E18, profile: F5, clauses: [BV1.C10], input: {q: [[128, 0]], sc: [[1]], a: [1, 1], G: 2}, expected: {outcome: invalid_input}}
+- {id: BV1.E19, profile: F5, clauses: [BV1.C10], input: {q: [[1, 0, 0, 0]], sc: [[1]], a: [1, 1, 1, 1], G: 2}, expected: {
+    outcome: invalid_input}, note: K/G = 2 scale columns needed}
+- id: BV1.E20
+  profile: F6
+  clauses: [BV1.C7]
+  input: {h: [[0, 1, -1]], m: [[1, 1, 0]], x: [[[1, 2], [3, 4], [5, 6]]]}
+  expected: {outcome: value, fields: {y: [['11/5', '16/5']]}}
+  note: g = [1/2, 3/4, 1/4], w = [1/2, 3/4, 0], denominator 5/4; numerators 11/4 and 4.
+- {id: BV1.E21, profile: F6, clauses: [BV1.C7], input: {h: [[0, 1]], m: [[0, 0]], x: [[[1], [2]]]}, expected: {outcome: domain_undefined},
+  note: fully masked row}
+- {id: BV1.E22, profile: F6, clauses: [BV1.C10], input: {h: [[0, 1]], m: [[1, 1]], x: [[[1], [2], [3]]]}, expected: {
+    outcome: invalid_input}}
+- {id: BV1.E23, profile: F7, clauses: [BV1.C8], input: {p: [[0, 0]], q: [[0, 0]]}, expected: {outcome: value, fields: {
+      y: [0]}}}
+- id: BV1.E24
+  profile: F7
+  clauses: [BV1.C8]
+  input: {p: [[0, 0], [5, 5]], q: [[0, 1], [3, 4]]}
+  expected: {outcome: value, fields: {y: ['log(1+e) - log(2) - 1/2', 'log(1+e) - log(2) - 1/2']}}
+  note: softmax(p) = (1/2, 1/2); log softmax(q) = q - log(1+e); y = -log 2 - (0 + 1)/2 + log(1+e). Row 1 is row 0
+    shifted (softmax is shift-invariant).
+- id: BV1.E25
+  profile: F8
+  clauses: [BV1.C9]
+  input: {pred: [[3, 1, -5, 2]], target: [[0, '1/2', 0, 0]], m: [[1, 1, 1, 0]], delta: 1, nvalid: 3}
+  expected: {outcome: value, fields: {y: [['1/3', '1/6', '-1/3', 0]]}}
+  note: d = [3, 1/2, -5, 2]; g = [1, 1/2, -1, 1]; masked last element; divided by 3.
+- {id: BV1.E26, profile: F8, clauses: [BV1.C9], input: {pred: [[1, -1]], target: [[0, 0]], m: [[1, 1]], delta: 1, nvalid: 1},
+  expected: {outcome: value, fields: {y: [[1, -1]]}}, note: '|d| = delta: both branches agree'}
+- id: BV1.E27
+  profile: F8
+  clauses: [BV1.C9]
+  input: {pred: [[0, 2]], target: [[0, 0]], m: [[1, 1]], delta: -1, nvalid: 2}
+  expected: {outcome: value, fields: {y: [['-1/2', '-1/2']]}}
+  note: 'delta < 0: |d| <= delta never holds; g = delta*sign(d) with sign(0) = +1 (issuer section 2) gives -1 for d = 0.'
+- {id: BV1.E28, profile: F8, clauses: [BV1.C9], input: {pred: [[1]], target: [[0]], m: [[1]], delta: 1, nvalid: 0}, expected: {
+    outcome: domain_undefined}}
+- {id: BV1.E29, profile: F8, clauses: [BV1.C10], input: {pred: [[1]], target: [[0]], m: [[1]], delta: 1, nvalid: '3/2'},
+  expected: {outcome: invalid_input}}
+signature:
+  inputs: ['profile F1..F8 / F2S', 'a dict of the family''s tensors (nested lists of exact rationals) and runtime scalars, keys per profile']
+  pre_state: []
+  post_state: []
+  observation_unit: the full output tensor of one program launch on one input
+domain:
+  valid: [finite exact rational inputs with the shapes of the profile]
+  domain_undefined: [empty row mean, non-positive argument of (.)^(-1/2), zero F6 denominator, empty F7 row, nvalid = 0]
+  invalid_input: [mismatched shapes, D not a multiple of 4 (F4), wrong number of scale columns or q outside int8 (F5),
+    non-integer or negative nvalid, non-finite or non-rational values, missing or extra keys]
+  unsupported: [profiles other than F1..F8 and F2S]
+mutation_requirements:
+- {id: BV1.M1, misreading: 'F1 eps omitted from the normaliser (answer key prog_18, S-noeps)', witnesses: [BV1.E1, BV1.E2]}
+- {id: BV1.M2, misreading: 'F2 arguments swapped, (b*g(b))*a (answer key prog_33, S-swap)', witnesses: [BV1.E6]}
+- {id: BV1.M3, misreading: 'F3 variance divided by D - 1 (answer key prog_27, S-dm1)', witnesses: [BV1.E10, BV1.E11]}
+- {id: BV1.M4, misreading: 'F4 y2 = x2*cos - x1*sin (answer key prog_35, S-sign)', witnesses: [BV1.E13, BV1.E14]}
+- {id: BV1.M5, misreading: 'F5 scale index min((k+1)//G, NG-1) (answer key prog_20, S-group)', witnesses: [BV1.E16]}
+- {id: BV1.M6, misreading: 'F6 denominator sums g over all positions, mask only in the numerator (answer key prog_10,
+    S-unmasked-den)', witnesses: [BV1.E20]}
+- {id: BV1.M7, misreading: F2S runtime scale t dropped, witnesses: [BV1.E8]}
+- {id: BV1.M8, misreading: 'F1 gain (1 + s) read as s', witnesses: [BV1.E1]}
+- {id: BV1.M9, misreading: 'F3 eps added outside the root, var^(-1/2) + eps (the v2 S-eps-out pattern)', witnesses: [
+    BV1.E10]}
+- {id: BV1.M10, misreading: F4 passthrough columns also scaled by t, witnesses: [BV1.E13]}
+- {id: BV1.M11, misreading: 'F7 divergence direction reversed, KL(softmax(q) || softmax(p))', witnesses: [BV1.E24]}
+- {id: BV1.M12, misreading: F8 mask m not applied, witnesses: [BV1.E25]}
+- {id: BV1.M13, misreading: 'F8 sign(0) = 0 instead of the issuer''s +1', witnesses: [BV1.E27]}
+nonclaims:
+- This contract is the issuer's task definition transcribed; it does not judge whether the issuer's task is the "right"
+  normalisation or loss.
+- Numerical variants (P-*, U-*) and rounding of the device are the K - G question; this contract states f only.
+- The phase-3 update-layer quantities (optimizer responses) of blind test v2 are not task specifications and are not
+  part of either blind contract.
+changes: []

@@ -31,7 +31,9 @@
       "MOMENTS": "m uses beta1 and gradient; v uses beta2 and gradient squared.",
       "CORRECTION": "Current step t appears in 1-beta**t; amsgrad=False uses the current second moment.",
       "UPDATE": "Subtract lr*m_hat/(sqrt(v_hat)+eps); eps is outside sqrt.",
-      "NONE": "The zero_grad note distinguishes None (step skipped) from a zero gradient (full step)."
+      "NONE": "The zero_grad note distinguishes None (step skipped) from a zero gradient (full step).",
+      "MAXIMIZE": "AdamW algorithm box (2.10): if maximize, g_t <- -grad f_t(theta_{t-1}) as the first line of the loop; the decay theta_t <- theta_{t-1} - gamma*lambda*theta_{t-1} does not involve g_t.",
+      "AMSGRAD": "AdamW algorithm box (2.10): if amsgrad, v_t^max <- max(v_{t-1}^max, v_t), v_hat_t <- v_t^max/(1-beta2^t); initialisation v_0^max = 0; the adaptive step theta_t <- theta_t - gamma*m_hat_t/(sqrt(v_hat_t)+eps) is subtracted from the decayed theta_t."
     },
     "snapshot": "sources/PAW.html",
     "snapshot_sha256": "65e6a093ab380de591474e47f2dcce27a225e434bb5b8d7fc67628b753a87eb5",
@@ -3619,6 +3621,940 @@
     "snapshot_sha256": "c324f6547d5b0c08abef6cfb987f3ecebcff64a82f8b1fb798726f496a5c8860",
     "path": "torch/distributed/fsdp/sharded_grad_scaler.py",
     "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "T_ADAM_OPT": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.optim.Adam.html",
+    "title": "PyTorch 2.10 torch.optim.Adam",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Adam page",
+      "MAXIMIZE": "Algorithm box: if maximize, g_t <- -grad f_t(theta_{t-1}), else g_t <- grad f_t(theta_{t-1}); this is the first line of the loop, before weight decay.",
+      "L2": "Algorithm box: if lambda != 0, g_t <- g_t + lambda*theta_{t-1} (weight decay added to the possibly negated gradient, L2 penalty); weight_decay is described as 'weight decay (L2 penalty)'.",
+      "MOMENTS": "Algorithm box: m_t <- beta1 m_{t-1} + (1-beta1) g_t; v_t <- beta2 v_{t-1} + (1-beta2) g_t^2; m_hat_t <- m_t/(1-beta1^t); initialisation m_0 = v_0 = v_0^max = 0; loop index t = 1, 2, ...",
+      "AMSGRAD": "Algorithm box: if amsgrad, v_t^max <- max(v_{t-1}^max, v_t) and v_hat_t <- v_t^max/(1-beta2^t) (maximum over the uncorrected second moment, then bias-corrected); else v_hat_t <- v_t/(1-beta2^t).",
+      "UPDATE": "Algorithm box: theta_t <- theta_{t-1} - gamma*m_hat_t/(sqrt(v_hat_t) + eps); eps outside the square root.",
+      "DECOUPLED": "Parameter decoupled_weight_decay (default False): if True, this optimizer is equivalent to AdamW and the algorithm will not accumulate weight decay in the momentum nor variance."
+    },
+    "snapshot": "sources/T_ADAM_OPT.txt.gz",
+    "snapshot_sha256": "f7bdcef4e35ef9aa69b8c81eae3cd7aa2f98e0445eb7525685baad9fa99abde8",
+    "raw_html_sha256": "69b9f4994e987b942e174792ffb99945faaa1afb3a3f2fcf416cc7c4dec59c7e",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_SGD_OPT": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.optim.SGD.html",
+    "title": "PyTorch 2.10 torch.optim.SGD",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "SGD page",
+      "MAXIMIZE": "Algorithm box: if maximize, g_t <- -grad f_t(theta_{t-1}), else g_t <- grad f_t(theta_{t-1}); first line of the loop, before weight decay and momentum.",
+      "L2": "Algorithm box: if lambda != 0, g_t <- g_t + lambda*theta_{t-1} (after the maximize negation); weight_decay is 'weight decay (L2 penalty)'.",
+      "MOMENTUM": "Algorithm box: if mu != 0: if t > 1, b_t <- mu*b_{t-1} + (1-tau)*g_t, else b_t <- g_t (no dampening on the first step).",
+      "NESTEROV": "Algorithm box: if nesterov, g_t <- g_t + mu*b_t, else g_t <- b_t (with the new buffer b_t).",
+      "UPDATE": "Algorithm box: theta_t <- theta_{t-1} - gamma*g_t (no separate maximize branch at the update; maximize acted on g_t at the start).",
+      "NESTEROV_PRE": "Parameter nesterov: enables Nesterov momentum. Only applicable when momentum is non-zero.",
+      "NOTE_FORM": "Note: the momentum update is v_{t+1} = mu*v_t + g_{t+1}, p_{t+1} = p_t - lr*v_{t+1}, in contrast to Sutskever et al. and other frameworks which use v_{t+1} = mu*v_t + lr*g_{t+1}, p_{t+1} = p_t - v_{t+1}."
+    },
+    "snapshot": "sources/T_SGD_OPT.txt.gz",
+    "snapshot_sha256": "67b6b7f4f1676ad6e6628ab1155a3c7fb7bbb83ca893d0644389210c4d3bffa3",
+    "raw_html_sha256": "7442dc500ec8f370617ee804222a1081612da158088f78cc5b8921f933974d67",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_RMSPROP_OPT": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.optim.RMSprop.html",
+    "title": "PyTorch 2.10 torch.optim.RMSprop",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "RMSprop page",
+      "INIT": "Algorithm box: initialize v_0 <- 0 (square average), b_0 <- 0 (buffer), g^ave_0 <- 0; loop t = 1, 2, ...",
+      "L2": "Algorithm box: g_t <- grad f_t(theta_{t-1}); if lambda != 0, g_t <- g_t + lambda*theta_{t-1}.",
+      "SQUARE_AVG": "Algorithm box: v_t <- alpha*v_{t-1} + (1-alpha)*g_t^2; v~_t <- v_t.",
+      "CENTERED": "Algorithm box: if centered, g^ave_t <- g^ave_{t-1}*alpha + (1-alpha)*g_t and v~_t <- v~_t - (g^ave_t)^2 (the updated average, squared).",
+      "UPDATE": "Algorithm box: if mu > 0, b_t <- mu*b_{t-1} + g_t/(sqrt(v~_t) + eps) and theta_t <- theta_{t-1} - gamma*b_t; else theta_t <- theta_{t-1} - gamma*g_t/(sqrt(v~_t) + eps).",
+      "EPS": "Text: the implementation takes the square root of the gradient average before adding epsilon (TensorFlow interchanges these two operations); effective learning rate gamma/(sqrt(v) + eps).",
+      "MAXIMIZE": "The algorithm box has no maximize line; the parameter list describes maximize as 'maximize the objective with respect to the params, instead of minimizing (default: False)'."
+    },
+    "snapshot": "sources/T_RMSPROP_OPT.txt.gz",
+    "snapshot_sha256": "8e6ad07bc3b1e07403c35504d63492ba0ba20633e60c20855f2b9e5e8df60582",
+    "raw_html_sha256": "b38611ca85f499ed15ccaeef87e16cd773d7bbfd08002a4423f10f410dcd0b4c",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_RADAM_OPT": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.optim.RAdam.html",
+    "title": "PyTorch 2.10 torch.optim.RAdam",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "RAdam page",
+      "INIT": "Algorithm box: initialize m_0 <- 0, v_0 <- 0, rho_inf <- 2/(1-beta2) - 1.",
+      "MAXIMIZE": "Algorithm box: if maximize, g_t <- -grad f_t(theta_{t-1}), else g_t <- grad f_t(theta_{t-1}); first line of the loop.",
+      "DECAY": "Algorithm box: theta_t <- theta_{t-1}; if lambda != 0: if decoupled_weight_decay, theta_t <- theta_t - gamma*lambda*theta_t, else g_t <- g_t + lambda*theta_t.",
+      "MOMENTS": "Algorithm box: m_t <- beta1 m_{t-1} + (1-beta1) g_t; v_t <- beta2 v_{t-1} + (1-beta2) g_t^2; m_hat_t <- m_t/(1-beta1^t).",
+      "RHO": "Algorithm box: rho_t <- rho_inf - 2 t beta2^t/(1-beta2^t).",
+      "RECT": "Algorithm box: if rho_t > 5: l_t <- sqrt(1-beta2^t)/(sqrt(v_t) + eps); r_t <- sqrt((rho_t-4)(rho_t-2)rho_inf/((rho_inf-4)(rho_inf-2)rho_t)); theta_t <- theta_t - gamma*m_hat_t*r_t*l_t.",
+      "UNRECT": "Algorithm box: else theta_t <- theta_t - gamma*m_hat_t (no adaptive denominator).",
+      "DECOUPLED_TEXT": "Text: decoupled_weight_decay=False (default) applies weight decay to the gradient as in Adam; True applies it to the weight as in AdamW (RAdamW)."
+    },
+    "snapshot": "sources/T_RADAM_OPT.txt.gz",
+    "snapshot_sha256": "70e6ef2ed82932e288cd90249728f0ae005f52c8ac2908ce3a55a058186af82c",
+    "raw_html_sha256": "1fd3a022b258cebdc3ef361e25639fab8ef7bfd2f0129e626c1e360e8f5be141",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_RPROP_OPT": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.optim.Rprop.html",
+    "title": "PyTorch 2.10 torch.optim.Rprop",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Rprop page",
+      "INIT": "Algorithm box: initialize g^0_prev <- 0, eta_0 <- lr (learning rate); loop t = 1, 2, ...; g_t <- grad f_t(theta_{t-1}).",
+      "SIGN_LOGIC": "Algorithm box, per coordinate i: if g^i_prev*g^i_t > 0: eta^i_t <- min(eta^i_{t-1}*eta_plus, Gamma_max); else if g^i_prev*g^i_t < 0: eta^i_t <- max(eta^i_{t-1}*eta_minus, Gamma_min) and g^i_t <- 0; else eta^i_t <- eta^i_{t-1}.",
+      "UPDATE": "Algorithm box: theta_t <- theta_{t-1} - eta_t*sign(g_t); g_prev <- g_t (the possibly zeroed gradient).",
+      "PARAMS": "Parameters: lr (default 1e-2); etas = (etaminus, etaplus), multiplicative increase and decrease factors (default (0.5, 1.2)); step_sizes = (minimal, maximal) allowed step sizes (default (1e-6, 50)).",
+      "MAXIMIZE": "The algorithm box has no maximize line; the parameter list describes maximize as 'maximize the objective with respect to the params, instead of minimizing (default: False)'."
+    },
+    "snapshot": "sources/T_RPROP_OPT.txt.gz",
+    "snapshot_sha256": "81166bd3559caaf538038a266dc852ef4d5cfd0e9c1e163bc70a61426fea687e",
+    "raw_html_sha256": "9abd7f563b11ac4ab2a8269a8d4f1f2d395cb3d4667dc04d3c67eec0b2b70470",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_ADAFACTOR_OPT": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.optim.Adafactor.html",
+    "title": "PyTorch 2.10 torch.optim.Adafactor",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Adafactor page"
+    },
+    "snapshot": "sources/T_ADAFACTOR_OPT.txt.gz",
+    "snapshot_sha256": "6095da5197d69db1cc2207337a49a96e7d34d17cf75c651f6aca70a9e6e92b3f",
+    "raw_html_sha256": "9252a4c07ccb97ba319072cf55ba2a902a7c63f0d52c9705adef57e3a489559f",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_ZERO_GRAD": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.optim.Optimizer.zero_grad.html",
+    "title": "PyTorch 2.10 torch.optim.Optimizer.zero_grad",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "zero_grad page",
+      "SKIP": "torch.optim optimizers have a different behavior if the gradient is 0 or None: in one case it does the step with a gradient of 0 and in the other it skips the step altogether."
+    },
+    "snapshot": "sources/T_ZERO_GRAD.txt.gz",
+    "snapshot_sha256": "18e29ea8a8e895014ea647cec0fb1a57eb867135104a09b0810c72dbbea71d4a",
+    "raw_html_sha256": "5778aedceeef0f477a433755637a99fbddc4a61d72cd4eb0fad140b84311e454",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "T_AVERAGED_MODEL": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.optim.swa_utils.AveragedModel.html",
+    "title": "PyTorch 2.10 torch.optim.swa_utils.AveragedModel",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "AveragedModel page"
+    },
+    "snapshot": "sources/T_AVERAGED_MODEL.txt.gz",
+    "snapshot_sha256": "153adea28088ed61d7b0fc300ddafeffa3fb722b03e4f090e7642532c5d30142",
+    "raw_html_sha256": "3bb788015dcb9f2b9cd3f8ae85dd9969b5b719db4ba91e229ad69d701956091c",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "TS_ADAM": {
+    "title": "torch 2.10 source torch/optim/adam.py",
+    "kind": "reference_program",
+    "items": {
+      "PAGE": "adam source"
+    },
+    "snapshot": "sources/TS_ADAM.py.gz",
+    "snapshot_sha256": "691246e104a54c3ff985922a4f551aea088c06c3358a18861e59c34a920d21e1",
+    "path": "torch/optim/adam.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "TS_SGD": {
+    "title": "torch 2.10 source torch/optim/sgd.py",
+    "kind": "reference_program",
+    "items": {
+      "PAGE": "sgd source",
+      "NESTEROV_CHECK": "SGD.__init__ raises ValueError('Nesterov momentum requires a momentum and zero dampening') if nesterov and (momentum <= 0 or dampening != 0).",
+      "FIRST_BUF": "_single_tensor_sgd: grad negated if maximize, weight decay added, then if momentum != 0: when the stored momentum buffer is None it becomes a clone of grad, otherwise buf = momentum*buf + (1-dampening)*grad; nesterov uses grad + momentum*buf; param -= lr*grad. The buffer is per parameter state (no step counter is kept); parameters with grad None are not in the step lists."
+    },
+    "snapshot": "sources/TS_SGD.py.gz",
+    "snapshot_sha256": "8c97f1289923574f2a4ad7ff2fb758ea6e66e1be658d039a9a3bae10a1222a28",
+    "path": "torch/optim/sgd.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "TS_RMSPROP": {
+    "title": "torch 2.10 source torch/optim/rmsprop.py",
+    "kind": "reference_program",
+    "items": {
+      "PAGE": "rmsprop source",
+      "STEP": "_single_tensor_rmsprop: grad = -grad if maximize (first), step += 1, weight decay added to grad, square_avg = alpha*square_avg + (1-alpha)*grad^2, if centered grad_avg.lerp_(grad, 1-alpha) and avg = sqrt(square_avg - grad_avg^2) else sqrt(square_avg); avg += eps; momentum > 0: buf = momentum*buf + grad/avg, param -= lr*buf; else param -= lr*grad/avg. State keys: step, square_avg, momentum_buffer (momentum > 0), grad_avg (centered)."
+    },
+    "snapshot": "sources/TS_RMSPROP.py.gz",
+    "snapshot_sha256": "ee4e612d83c543dd3ad7b645830cd59812aad6ce1d79a68e992f7eb755e0ecbd",
+    "path": "torch/optim/rmsprop.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "TS_RADAM": {
+    "title": "torch 2.10 source torch/optim/radam.py",
+    "kind": "reference_program",
+    "items": {
+      "PAGE": "radam source",
+      "STEP": "_single_tensor_radam: grad negated if maximize; step += 1; weight decay (decoupled: param *= 1 - lr*wd; else grad += wd*param); exp_avg.lerp_(grad, 1-beta1); exp_avg_sq = beta2*exp_avg_sq + (1-beta2)*grad^2; rho_inf = 2/(1-beta2) - 1; rho_t = rho_inf - 2*step*beta2^step/(1-beta2^step); if rho_t > 5.0: param -= m/(1-beta1^step) * lr * sqrt(1-beta2^step)/(sqrt(exp_avg_sq)+eps) * sqrt((rho_t-4)(rho_t-2)rho_inf/((rho_inf-4)(rho_inf-2)rho_t)); else param -= m/(1-beta1^step) * lr. With capturable=True the same formula is evaluated with torch.where on tensors."
+    },
+    "snapshot": "sources/TS_RADAM.py.gz",
+    "snapshot_sha256": "4f99da3c574225177181f054f395fc3b8e4fa379979c69311e9a847aebb3660e",
+    "path": "torch/optim/radam.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "TS_RPROP": {
+    "title": "torch 2.10 source torch/optim/rprop.py",
+    "kind": "reference_program",
+    "items": {
+      "PAGE": "rprop source",
+      "ETAS_CHECK": "Rprop.__init__ raises ValueError unless 0.0 < etas[0] < 1.0 < etas[1]; lr must be >= 0.",
+      "STATE": "State initialisation: step = 0, prev = zeros_like(p), step_size = full_like(grad, lr).",
+      "STEP": "_single_tensor_rprop: grad = -grad if maximize (first); step += 1; sign = sign(grad*prev) replaced by etaplus (>0), etaminus (<0), 1 (=0); step_size = clamp(step_size*sign, step_size_min, step_size_max) for every coordinate (also where the product is 0); grad set to 0 where sign == etaminus; param -= sign(grad)*step_size; prev = grad."
+    },
+    "snapshot": "sources/TS_RPROP.py.gz",
+    "snapshot_sha256": "b189ddadabdfc2fa782241edb526a9138624e1b99dc728246fe5d3f704ffd6a8",
+    "path": "torch/optim/rprop.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "TS_ADAFACTOR": {
+    "title": "torch 2.10 source torch/optim/_adafactor.py",
+    "kind": "reference_program",
+    "items": {
+      "PAGE": "adafactor source"
+    },
+    "snapshot": "sources/TS_ADAFACTOR.py.gz",
+    "snapshot_sha256": "ed5da939a22af0bc4319e794327081c55afe132abb893e1cffcb668cf84c2b85",
+    "path": "torch/optim/_adafactor.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "TS_SWA_UTILS": {
+    "title": "torch 2.10 source torch/optim/swa_utils.py",
+    "kind": "reference_program",
+    "items": {
+      "PAGE": "swa_utils source"
+    },
+    "snapshot": "sources/TS_SWA_UTILS.py.gz",
+    "snapshot_sha256": "9481cc1ab620cc8e6b9591bfa39c1210a8cfde8db9da6650d9b9bbfe6c6f832e",
+    "path": "torch/optim/swa_utils.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "TS_OPTIMIZER": {
+    "title": "torch 2.10 source torch/optim/optimizer.py",
+    "kind": "reference_program",
+    "items": {
+      "PAGE": "optimizer base source"
+    },
+    "snapshot": "sources/TS_OPTIMIZER.py.gz",
+    "snapshot_sha256": "42df31dfcefe83890047b0922c85b04210e9c3f9b039b6ea311f875bd7444c2e",
+    "path": "torch/optim/optimizer.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "AO_ADAM": {
+    "url": "https://github.com/pytorch/ao/blob/v0.16.0/torchao/optim/adam.py",
+    "title": "torchao 0.16.0 source torchao/optim/adam.py (installed wheel, liger env)",
+    "kind": "reference_program",
+    "version": "torchao 0.16.0",
+    "items": {
+      "PAGE": "torchao adam source"
+    },
+    "snapshot": "sources/AO_ADAM.py.gz",
+    "snapshot_sha256": "918863461ba430e0924944b561e298ce6e0ff870ef834eb02da93d5542adf55f",
+    "path": ".cache/spec_v3/e1_scratch/src/torchao_adam.py",
+    "retrieved": "2026-10-17"
+  },
+  "AO_QUANT_UTILS": {
+    "url": "https://github.com/pytorch/ao/blob/v0.16.0/torchao/optim/quant_utils.py",
+    "title": "torchao 0.16.0 source torchao/optim/quant_utils.py (installed wheel, liger env)",
+    "kind": "reference_program",
+    "version": "torchao 0.16.0",
+    "items": {
+      "PAGE": "torchao quant utils source"
+    },
+    "snapshot": "sources/AO_QUANT_UTILS.py.gz",
+    "snapshot_sha256": "b0c1409ebb6654399bc901230489f8f1e2bdb6b1a96fb1fe90050131de29a937",
+    "path": ".cache/spec_v3/e1_scratch/src/torchao_quant_utils.py",
+    "retrieved": "2026-10-17"
+  },
+  "AO_SUBCLASS_4BIT": {
+    "url": "https://github.com/pytorch/ao/blob/v0.16.0/torchao/optim/subclass_4bit.py",
+    "title": "torchao 0.16.0 source torchao/optim/subclass_4bit.py (installed wheel, liger env)",
+    "kind": "reference_program",
+    "version": "torchao 0.16.0",
+    "items": {
+      "PAGE": "torchao 4-bit subclass source"
+    },
+    "snapshot": "sources/AO_SUBCLASS_4BIT.py.gz",
+    "snapshot_sha256": "349a6cab12a7b42a86ee25bc14e1e7f40f117022e5b6f23bbe38d5ab7e023d8d",
+    "path": ".cache/spec_v3/e1_scratch/src/torchao_subclass_4bit.py",
+    "retrieved": "2026-10-17"
+  },
+  "TIMM_EMA": {
+    "url": "https://github.com/huggingface/pytorch-image-models/blob/v1.0.30/timm/utils/model_ema.py",
+    "title": "timm 1.0.30 source timm/utils/model_ema.py (released wheel, .cache/pydeps/timm_1_0_30)",
+    "kind": "reference_program",
+    "version": "timm 1.0.30",
+    "items": {
+      "PAGE": "timm model_ema source"
+    },
+    "snapshot": "sources/TIMM_EMA.py.gz",
+    "snapshot_sha256": "2e9a25fed2f8a319ffc62b0b803f997f33ae4f6b8df34e885eb171fa406a3384",
+    "path": ".cache/spec_v3/e1_scratch/src/timm_model_ema.py",
+    "retrieved": "2026-10-17"
+  },
+  "HF_ADAFACTOR_SRC": {
+    "url": "https://github.com/huggingface/transformers/blob/v4.57.3/src/transformers/optimization.py",
+    "title": "transformers 4.57.3 source src/transformers/optimization.py, class Adafactor (installed wheel, liger env)",
+    "kind": "reference_program",
+    "version": "transformers 4.57.3",
+    "items": {
+      "PAGE": "HF Adafactor source"
+    },
+    "snapshot": "sources/HF_ADAFACTOR_SRC.py.gz",
+    "snapshot_sha256": "41b08ffb29c2691626b225ed389a694cc8e61480818214a35f215b5c39167bfb",
+    "path": ".cache/spec_v3/e2_scratch/hf_src/optimization.py",
+    "retrieved": "2026-10-17"
+  },
+  "ADAFACTOR_PAPER": {
+    "url": "https://arxiv.org/abs/1804.04235",
+    "title": "Shazeer and Stern 2018, Adafactor: Adaptive Learning Rates with Sublinear Memory Cost (arXiv abstract page)",
+    "kind": "paper",
+    "version": "arXiv 1804.04235",
+    "items": {
+      "PAGE": "abstract"
+    },
+    "snapshot": "sources/ADAFACTOR_PAPER.txt.gz",
+    "snapshot_sha256": "e05252e9a2f7bf06b3e2c7cdfc00e0038206431a54eaa753254ce8945460a3e5",
+    "raw_html_sha256": "d49abe56c6321ac30931f75c5c8bc6c10f8fa7b9f3acff749665d69e24f3b63d",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "RADAM_PAPER": {
+    "url": "https://arxiv.org/abs/1908.03265",
+    "title": "Liu et al. 2019, On the Variance of the Adaptive Learning Rate and Beyond (arXiv abstract page)",
+    "kind": "paper",
+    "version": "arXiv 1908.03265",
+    "items": {
+      "PAGE": "abstract"
+    },
+    "snapshot": "sources/RADAM_PAPER.txt.gz",
+    "snapshot_sha256": "d7ca7f265ecbeb4c131e9ef48e5bc2e4181c8686ca49e2110152eee997d0af18",
+    "raw_html_sha256": "b5ce911568c9a5b2722a44bf7dde205923eb6061d2c4705f87af1297faa98135",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_BV1_RELEASE": {
+    "title": "Blind test v1, phase 2 release (issuer), 2026-10-03: family specifications f and their evaluation",
+    "kind": "issuer_task_definition",
+    "identity": "task definition written by the blind-test issuer, independent of the tested tool",
+    "items": {
+      "F1": "Section 1 table: F1 y[r,d] = x[r,d] * (mean_d(x[r,:]^2) + eps)^(-1/2) * (1 + s[r,d]) + b[r,d].",
+      "F2": "Section 1 table: F2 g(a) = 0.5*(1 + a/(1+|a|)); y = (a*g(a))*b, element-wise.",
+      "F2S": "Section 1 table: F2S g(a) = 0.5*(1 + a/(1+|a|)); y = ((a*g(a))*b)*t, element-wise, t a runtime scalar.",
+      "F3": "Section 1 table: F3 out[r,0] = mean_d(x[r,:]); var = mean_d((x - mean)^2); out[r,1] = (var + eps)^(-1/2).",
+      "F4": "Section 1 table: F4 P = D/4, x1 = x[:, 0:P], x2 = x[:, P:2P], xp = x[:, 2P:D]; y1 = t*(x1*cos - x2*sin); y2 = t*(x1*sin + x2*cos); y = [y1, y2, xp].",
+      "F5": "Section 1 table: F5 y[r] = sum_k (q[r,k] * sc[r, floor(k/G)]) * a[k], q (int8) and a (fp16) converted by their exact values.",
+      "F6": "Section 1 table: F6 g = 0.5*(1 + h/(1+|h|)); w = m*g; y[r,d] = sum_l w[r,l]*x[r,l,d] / sum_l w[r,l].",
+      "F7": "Section 1 table: F7 y[r] = sum_v softmax(p[r])_v * (log softmax(p[r])_v - log softmax(q[r])_v).",
+      "F8": "Section 1 table: F8 d = pred - target; g = d if |d| <= delta, otherwise delta*sign(d); y = g*m / nvalid.",
+      "SAME_F": "Section 1: all programs of one family use the same f; f must be evaluated independently of the candidate program's TTIR, from the formula, by the reference evaluator's internal operations or independent exact rational code.",
+      "EVAL": "Section 2: add, subtract, multiply, divide, absolute value and selection by integer position are evaluated in exact rationals (width 0); (.)^(-1/2) by correctly rounded sqrt computed once upward and once downward; F7's exp and log rounded upward and downward, softmax with a max shift.",
+      "SIGN0": "Section 2: F8's sign is exact; for d = 0, sign(0) = +1 (consistent with the program's 'd >= 0' formulation).",
+      "PHASE2": "Section 3: phase 2 adds e_sem = K_R - f, the program's declared semantics minus the family specification."
+    },
+    "snapshot": "sources/ISS_BV1_RELEASE.md.gz",
+    "snapshot_sha256": "edfb7ce808bcba099b93f294ed50809b756a046cddc5861c30324504e7beb517",
+    "path": "1_experiments/blind_tests/blind_records/v1/blind_test_v1_phase2_release.md",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_BV1_KEY": {
+    "title": "Blind test v1 answer key (issuer, unsealed; SHA-256 d346a53a...bd77)",
+    "kind": "issuer_task_definition",
+    "identity": "issuer's sealed answer key: program -> family, variant, class, mechanism; specs_phase2 restates f",
+    "items": {
+      "SPECS": "specs_phase2 gives the nine family formulas F1, F2, F2S, F3, F4, F5, F6, F7, F8 with the same text as the phase-2 release (F5: 'q int8 and a fp16 converted exactly'; F2S: 't runtime scalar').",
+      "FAMILIES": "programs: each of prog_01..prog_37 carries a family (F1..F8 or F2S), a variant (clean, P-*, S-*, U-*, N-*) and a class (clean, clean-only, positive, semantic, unknown, negative).",
+      "P18_NOEPS": "prog_18 (F1, S-noeps, semantic): eps omitted from the normaliser (spec: (ms+eps)^-1/2).",
+      "P33_SWAP": "prog_33 (F2, S-swap, semantic): arguments swapped, computes (b*g(b))*a instead of (a*g(a))*b.",
+      "P27_DM1": "prog_27 (F3, S-dm1, semantic): variance divided by D-1 (spec: D).",
+      "P35_SIGN": "prog_35 (F4, S-sign, semantic): y2 computed as x2*c - x1*s (spec: x1*s + x2*c).",
+      "P20_GROUP": "prog_20 (F5, S-group, semantic): scale index off by one element, (k+1)//G clipped (spec: k//G).",
+      "P10_UNMASKED": "prog_10 (F6, S-unmasked-den, semantic): denominator sums g over all positions, mask applied to the numerator only (spec: both masked).",
+      "P03_REASSOC": "prog_03 (F2, U-reassoc): g written as 0.5 + 0.5*d instead of 0.5*(1+d): different rounding sequence, same real value.",
+      "P25_NAIVE": "prog_25 (F3, U-naive): variance by E[x^2]-E[x]^2 instead of the chunked Welford merge.",
+      "P02_F8": "prog_02 (F8, clean-only): RN ops, where/select, div_rn by a runtime count.",
+      "P01_F7": "prog_01 (F7, clean-only): uses tl.exp/tl.log and max-shifted log-sum-exp."
+    },
+    "snapshot": "sources/ISS_BV1_KEY.json.gz",
+    "snapshot_sha256": "d346a53adde9fc974f26787ab0e95a97cdbae03e7f8288b2c58b3fd2acc3bd77",
+    "path": "1_experiments/blind_tests/blind_records/v1/blind_test_v1_answer_key_UNSEALED.json",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_BV_ERRATA": {
+    "title": "Blind tests v1 and v2: issuer's errata list and summary counts",
+    "kind": "issuer_task_definition",
+    "identity": "issuer's errata to its own answer keys",
+    "items": {
+      "E4": "Erratum 4 (v1, all F4 programs): the runtime scalar t in the specification is the float32 value the kernel received; detections under the published-value reading are interface differences and are not counted.",
+      "E5": "Erratum 5 (v1, prog_03, the 0.5+0.5d rewrite): the rewrite is exactly equivalent in floating point and bitwise identical to the clean version; re-recorded as a negative control.",
+      "E7": "Erratum 7 (v2, prog_15, eps added outside the square root): K_R - f is about 1.5*eps relative, not eps; sign and rule unchanged.",
+      "E9": "Erratum 9 (v2, prog_35, momentum written as mu*(v+g)): semantic variant.",
+      "COUNTS": "Summary: v1 families F1, F2, F2S, F3, F4, F5, F6, F7, F8 (9); v2 families G1-G8 (8); programs v1 37, v2 38."
+    },
+    "snapshot": "sources/ISS_BV_ERRATA.md.gz",
+    "snapshot_sha256": "078a607c6f643ec479ed6889639c45107e5ad0f13c49d3591eab671a77b3d3a9",
+    "path": "1_experiments/blind_tests/blind_records/errata.md",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_BV1_VERIFY1": {
+    "title": "Blind test v1 phase-1 independent verification script (issuer side; Decimal / Fraction evaluation)",
+    "kind": "reference_program",
+    "identity": "issuer-side exact evaluation used for cross-checking the tool; not the task definition",
+    "items": {
+      "F5": "eval_F5: NG = sc.shape[1], G = K // NG; acc = sum_k Fraction(q[r,k]) * sc[r, k//G] * a[k]; the group_bug variant uses min((k+1)//G, NG-1).",
+      "F6": "eval_F6: g = 0.5*(1 + h/(1+|h|)); w = m*g; den = sum of w (unmasked_den variant: sum of g); y = sum_l w[l]*x[r,l,d] / den, x of shape [R, L, D].",
+      "F7": "eval_F7: max-shifted log-sum-exp per row of p and q; kl = sum_i exp(lp_i)*(lp_i - lq_i).",
+      "F4": "eval_F4: P = D//4, HALF = D//2; y1 uses x[r,i], x[r,P+i], cos[r,i], sin[r,i] for i < P, multiplied by t; columns HALF..D-1 copy x; sign_bug variant y2 = x2*c - x1*s."
+    },
+    "snapshot": "sources/ISS_BV1_VERIFY1.py.gz",
+    "snapshot_sha256": "3be41d88b119e6353076e6363d70b546b8cf663435b1969395effc66f81ec5b9",
+    "path": "1_experiments/blind_tests/blind_records/v1/blind_test_v1_independent_verify.py",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_BV1_VERIFY2": {
+    "title": "Blind test v1 phase-2 independent verification script (issuer side)",
+    "kind": "reference_program",
+    "identity": "issuer-side exact evaluation of f used for cross-checking the tool; not the task definition",
+    "items": {
+      "MODES": "f_eval evaluates f with the runtime scalars in two modes, the given (published) value and its float32 value.",
+      "F1": "eval_F1_exact: ms = sum x^2 / D; r = 1/sqrt(ms + eps) enclosed; y = x*(1+s)*r + b; the noeps variant sets eps = 0.",
+      "F3": "eval_F3_exact: mean = sum x / D; var = sum (x-mean)^2 / D; out = (mean, 1/sqrt(var+eps)), two outputs per row."
+    },
+    "snapshot": "sources/ISS_BV1_VERIFY2.py.gz",
+    "snapshot_sha256": "c0c6affd73731d84e25c206ae08ea81426b0f8e9388e206d0dcfe4cc92a199f1",
+    "path": "1_experiments/blind_tests/blind_records/v1/blind_test_v1_independent_verify_phase2.py",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_BV2_RELEASE": {
+    "title": "Blind test v2, phase 2 release (issuer), 2026-10-04: family specifications f and their evaluation",
+    "kind": "issuer_task_definition",
+    "identity": "task definition written by the blind-test issuer, independent of the tested tool",
+    "items": {
+      "G1": "Section 1 table: G1 mean = mean_d(x[r,:]); var = mean_d((x - mean)^2); rstd = (var + eps)^(-1/2); y[r,d] = (x[r,d] - mean)*rstd*gamma[d] + beta[d] + res[r,d].",
+      "G2": "Section 1 table: G2 r = max(a, 0); y = r^2 * b, element-wise.",
+      "G3": "Section 1 table: G3 t_i = 1 + h_i/(1 + |h_i|); y_i = t_i / sum_j t_j, per row.",
+      "G4": "Section 1 table: G4 v' = mu*v + g; y = theta - lr*(v' + wd*theta), element-wise.",
+      "G5": "Section 1 table: G5 byte_j = packed[r,j]; q_{2j} = (byte_j & 15) - 8; q_{2j+1} = ((byte_j >> 4) & 15) - 8; y[r] = sum_k q_k*sc[r, floor(k/G)]*a[k], a (fp16) converted by its exact value.",
+      "G6": "Section 1 table: G6 y[r] = <a_r, b_r> / (sqrt(<a_r, a_r>) * sqrt(<b_r, b_r>)).",
+      "G7": "Section 1 table: G7 s_j = max(<q, k_j>*scale, 0) for j <= pos, otherwise s_j = 0; y = sum_j s_j*v_j / (sum_j s_j + 1).",
+      "G8": "Section 1 table: G8 y[r,d] = (sum_{i<=d} x[r,i]) / D.",
+      "SCALARS": "Section 1: all runtime scalars (eps = 2^-20, lr = 2^-10, mu = 7/8, wd = 2^-8, scale = 1/8) are exactly representable in float32; the published value equals the value the kernel receives; phase 2 has one scalar reading.",
+      "EVAL": "Section 2: f is evaluated independently of the candidate's TTIR; add, subtract, multiply, divide, max, absolute value, selection by position and integer bit operations in exact rationals; (.)^(-1/2) and sqrt rounded upward and downward; G8's prefix sums accumulated exactly term by term.",
+      "ERRATUM2": "Section 4 erratum 2: for the variant with eps outside the square root, K_R's rstd = var^(-1/2) + eps against f's rstd = (var + eps)^(-1/2); the difference is about eps*(1 + 1/(2 var^(3/2)))."
+    },
+    "snapshot": "sources/ISS_BV2_RELEASE.md.gz",
+    "snapshot_sha256": "47b8be1c05e2f897aab69417ef3b9e738882fc06048b13b5c3b50962a6c684d8",
+    "path": "1_experiments/blind_tests/blind_records/v2/blind_test_v2_phase2_release.md",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_BV2_KEY": {
+    "title": "Blind test v2 answer key (issuer, unsealed; SHA-256 6710f1b9...e869)",
+    "kind": "issuer_task_definition",
+    "identity": "issuer's sealed answer key: program -> family, variant, class, mechanism; specs_phase2 restates f",
+    "items": {
+      "SPECS": "specs_phase2 gives the eight family formulas G1..G8 with the same text as the phase-2 release (G4: 'lr, mu, wd runtime scalars, exactly representable').",
+      "FAMILIES": "programs: each of prog_01..prog_38 carries a family (G1..G8), a variant (clean, P-*, S-*, U-*, N-*) and a class.",
+      "P02_SWAP": "prog_02 (G2, S-swap, semantic): gate on b, multiply by a.",
+      "P03_ABS": "prog_03 (G2, S-abs, semantic): |a| instead of max(a,0).",
+      "P05_NIBBLE": "prog_05 (G5, S-nibble-swap, semantic): low/high nibble roles swapped (spec: low nibble = even index).",
+      "P15_EPSOUT": "prog_15 (G1, S-eps-out, semantic): eps added to rstd instead of inside the sqrt (spec: inside).",
+      "P21_NOONE": "prog_21 (G3, S-noone, semantic): denominator sums h/(1+|h|) without the +1 (spec: sum of 1+h/(1+|h|)).",
+      "P26_NOSQRT": "prog_26 (G6, S-nosqrt, semantic): na = sum(a^2) without sqrt (spec: sqrt).",
+      "P28_DM1": "prog_28 (G1, S-dm1, semantic): variance over D-1 (spec: D).",
+      "P35_MOM": "prog_35 (G4, S-mom-after, semantic): v' = mu (v+g) instead of mu v + g.",
+      "P37_DECOUPLED": "prog_37 (G4, U-decoupled): (1-lr wd) theta - lr v', same real function, different rounding sequence.",
+      "P19_ONEPASS": "prog_19 (G1, U-onepass): variance by E[x^2]-E[x]^2.",
+      "P12_G8": "prog_12 (G8, clean-only): tl.cumsum then exact division by 1024.",
+      "P04_G7": "prog_04 (G7, clean-only): causal ReLU attention with +1 in the denominator; exact ops only."
+    },
+    "snapshot": "sources/ISS_BV2_KEY.json.gz",
+    "snapshot_sha256": "6710f1b9477d771cdf0b23acdcae7142ff40377716279b7bedd580389cd0e869",
+    "path": "1_experiments/blind_tests/blind_records/v2/blind_test_v2_answer_key_UNSEALED.json",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_BV2_VERIFY": {
+    "title": "Blind test v2 independent verification script (issuer side; Decimal evaluation)",
+    "kind": "reference_program",
+    "identity": "issuer-side evaluation used for cross-checking the tool; not the task definition",
+    "items": {
+      "G5": "g5: packed has shape [R, K/2], K = 2*KH, NG = sc.shape[1], G = K // NG; lo = (byte & 15) - 8 goes with index 2j, hi = ((byte >> 4) & 15) - 8 with index 2j+1; nibble-swap variant exchanges them.",
+      "G7": "g7: q [R, D], k and v [R, L, D], pos [R] integers; s_j for j in range(L) with j <= pos[r] (0-based), s_j = max(dot*scale, 0); den = sum s + 1.",
+      "G8": "g8: running sum over d of x[r,d], each divided by the row length D."
+    },
+    "snapshot": "sources/ISS_BV2_VERIFY.py.gz",
+    "snapshot_sha256": "0da50e741cc8a6a5cb9ded1884a26e8f17fadd1a66afde5b2101817cf62271df",
+    "path": "1_experiments/blind_tests/blind_records/v2/blind_test_v2_independent_verify.py",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_ST_V1README": {
+    "title": "Structure acceptance set v1 README (issuer's original package, kept in v1.1-rc1 history/)",
+    "kind": "issuer_task_definition",
+    "identity": "task definitions of the structure acceptance issuer",
+    "items": {
+      "T1": "Family table: T1 multi-value reduction (Welford triple merged by tl.reduce, row length 1536 in a 2048 block with zero-weight lanes); task: per-row mean and biased variance.",
+      "T2": "Family table: T2 inclusive prefix sum by tl.associative_scan; task: y_i = sum_{j<=i} x_j*s.",
+      "T3": "Family table: T3 nested loops, K-blocked fma accumulation then reduction; task: y_r = sum_k x_{rk} w_k.",
+      "T4": "Family table: T4 branch on program_id (scf.if) between two declared formulas; task: r < split: x*alpha; otherwise x*beta + gamma.",
+      "T5": "Family table: T5 row mean stored to a global buffer and read back; task: y = x - mean_row.",
+      "T6": "Family table: T6 cross-launch state, k1 writes the sum of squares, k2 reads it and normalises; task: y = x / sqrt(mean(x^2) + eps).",
+      "T7": "Family table: T7 atomic_add of per-column-block partial sums into the row output; task: y_r = sum_k x_{rk} w_k.",
+      "VARIANTS": "Each family contains a clean version, one injection (P), one semantic variant (S), one negative control (N, same structure as the clean version with names and comments changed) and in some families U variants (algorithm replacement, bf16 storage, no zero-weight guard); the specification f is in programs/specs.py."
+    },
+    "snapshot": "sources/ISS_ST_V1README.md.gz",
+    "snapshot_sha256": "36af509d257a429f5625fa5832d36d5f91e84fc57bfb1f7d11a80f44eff5bbab",
+    "path": ".cache/acceptance/structure_acceptance_v1_1_rc1/history/v1_README.md",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_ST_README": {
+    "title": "Structure acceptance set v1.1.0-rc1 README (revised package, 2026-10-08)",
+    "kind": "issuer_task_definition",
+    "identity": "revised issuer package; states that the task definitions are unchanged from v1",
+    "items": {
+      "TABLE": "Family table, independent task f: T1 per-row mean and biased variance returned separately; T2 y_i = sum_{j<=i}(x_j*s); T3 exact per-row dot product; T4 two pre-declared affine formulas; T5 per-row mean removal (one item is a race boundary probe); T6 x/sqrt(mean(x^2)+eps); T7 exact row dot product (execution order recorded separately).",
+      "OUTPUTS": "Change 2: T1 returns {'mean': mean, 'variance': var}; every other program returns {'output': tensor}.",
+      "LANES": "32 programs are in the ordinary measurement lane; one program with unsynchronised cross-program reads is in the isolated boundary lane, not run by default and outside finite-mean scores, kept in the 33-item coverage denominator.",
+      "NO_ANSWER": "Status: the original answer file was not delivered to this reviser and was not read, rebuilt or invented; the issuer must re-check and reseal for this version."
+    },
+    "snapshot": "sources/ISS_ST_README.md.gz",
+    "snapshot_sha256": "23ab317d0065d887b1adcd238bd115fe1c9fea86ad133ef5b505fbd5576fd76d",
+    "path": ".cache/acceptance/structure_acceptance_v1_1_rc1/README.md",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_ST_SPECS": {
+    "title": "Structure acceptance v1.1-rc1 programs/specs.py: independent task specifications (exact rationals)",
+    "kind": "issuer_task_definition",
+    "identity": "issuer package's executable statement of f; does not import the tool or any candidate kernel",
+    "items": {
+      "TARGET": "Docstring: target = the finite values actually passed at the input interface; rationals are exact; T6 returns rational interval pairs proved with integer square-root bounds; results map output names to nested values.",
+      "INPUTS": "_rows / _scalar: x must be a non-empty rank-2 floating tensor; every value and scalar must be finite; otherwise SpecNotEstablished ('outside the declared finite test contract').",
+      "T1": "T1: m = sum(row)/len(row); variance = sum((v-m)^2)/len(row); returns {'mean': means, 'variance': variances}.",
+      "T2": "T2: acc += v*s along the row, each partial sum is an output (inclusive prefix); returns {'output': ...}.",
+      "T3T7": "T3 and T7: w must be rank 1 with length equal to the row length, otherwise SpecNotEstablished; output = sum(a*b for a, b in zip(row, w)) per row.",
+      "T4": "T4: alpha, beta, gamma scalars; split must be a non-boolean integer with 0 <= split <= R, otherwise SpecNotEstablished; row r < split gives v*alpha, otherwise v*beta + gamma.",
+      "T5": "T5: mean = sum(row)/len(row); output v - mean.",
+      "T6": "T6: eps must be positive ('eps must be positive in this task contract'), otherwise SpecNotEstablished; q = sum(v*v)/len(row) + eps; output v * sqrt(1/q) as an interval."
+    },
+    "snapshot": "sources/ISS_ST_SPECS.py.gz",
+    "snapshot_sha256": "68ee0c3d941951583a10a38c95ada8db64a4645c321cf6c00dd7474e9f2e3e3f",
+    "path": ".cache/acceptance/structure_acceptance_v1_1_rc1/programs/specs.py",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_ST_REFNOTES": {
+    "title": "Structure acceptance v1.1-rc1 docs/reference_notes.md: T6 enclosure and output boundary",
+    "kind": "issuer_task_definition",
+    "identity": "issuer package's derivation notes for f",
+    "items": {
+      "T6": "Mathematical target: inputs and eps are the exact rationals of the finite floats received; per row q = sum(x_i^2)/D + eps > 0, y_i = x_i/sqrt(q).",
+      "OUTPUTS": "T1 returns the raw mean and variance tensors under those names; the other families use the key 'output'; spec gives f, the automatic reference G is generated independently by the tool."
+    },
+    "snapshot": "sources/ISS_ST_REFNOTES.md.gz",
+    "snapshot_sha256": "16d74721354bf80c4df4a654e667b9c8bbfd96331baec2167c3531252e80bcd9",
+    "path": ".cache/acceptance/structure_acceptance_v1_1_rc1/docs/reference_notes.md",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_ST_PROTOCOL": {
+    "title": "Structure acceptance v1.1 execution and scoring protocol",
+    "kind": "issuer_task_definition",
+    "identity": "issuer package's protocol",
+    "items": {
+      "SCALARS": "Section 2: compile-time constants, received scalars and task constants must not be interchanged; all runtime scalars of the package are exactly representable in float32.",
+      "PROPS": "Section 5: T2 exact target satisfies adjacent prefix differences = x*s; T5 exact row sum is 0; T6 with m2 = mean(x^2) the exact target satisfies sum(y^2) = D*m2/(m2+eps), not D or 1; T7 the real dot product does not depend on blocking; T1 mean and variance separately.",
+      "ATOMIC": "Section 4: T7 runs every input 8 times; the runtime schedule distribution is a declared assumption."
+    },
+    "snapshot": "sources/ISS_ST_PROTOCOL.md.gz",
+    "snapshot_sha256": "f1f61238b35c9e7e09db2b7803fb3fc74f08bf49bd76daa1899ab6f34d80943c",
+    "path": ".cache/acceptance/structure_acceptance_v1_1_rc1/PROTOCOL.md",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_ST_INPUTS": {
+    "title": "Structure acceptance v1.1-rc1 programs/inputs.py: deterministic inputs",
+    "kind": "issuer_task_definition",
+    "identity": "issuer package's input generator",
+    "items": {
+      "SHAPES": "SHAPES: T1 R=64, D=1536; T2 R=64, D=1024; T3 and T7 R=64, K=4096; T4, T5, T6 R=64, D=2048; all float32.",
+      "SCALARS": "Scalars: T2 s = 0.75; T4 split = 37, alpha = 1.25, beta = 0.5, gamma = 0.125; T6 eps = 2^-20; T3/T7 w of length K."
+    },
+    "snapshot": "sources/ISS_ST_INPUTS.py.gz",
+    "snapshot_sha256": "87eab87a891337be682539d1a05a9df816e5411fcc93474931173abb5630171b",
+    "path": ".cache/acceptance/structure_acceptance_v1_1_rc1/programs/inputs.py",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_ST_MANIFEST": {
+    "title": "Structure acceptance v1.1-rc1 manifest.json: program -> family, lane, repeats, output names",
+    "kind": "issuer_task_definition",
+    "identity": "issuer package's program inventory",
+    "items": {
+      "PROGRAMS": "33 programs prog_01..prog_33, each with a family T1..T7; prog_26 (T5) is isolated_boundary and not run by default; T7 programs have execution_repeats 8; T1 programs have output names mean and variance, the others output.",
+      "ANSWERS": "answer_status: issuer_reseal_required."
+    },
+    "snapshot": "sources/ISS_ST_MANIFEST.json.gz",
+    "snapshot_sha256": "4e1fe8cb2036ab537afb150b1bf698b8d1f98cfd73db5799a9153ca306776057",
+    "path": ".cache/acceptance/structure_acceptance_v1_1_rc1/manifest.json",
+    "retrieved": "2026-10-17"
+  },
+  "ISS_ST_NOTES": {
+    "title": "Structure acceptance v1.1-rc1 docs/issuer_notes.md: notes to the issuer",
+    "kind": "issuer_task_definition",
+    "identity": "issuer package notes",
+    "items": {
+      "NO_KEY": "The original package had only a SEALED_HASH and no answer file; the revision did not guess hidden labels.",
+      "INACTIVE": "prog_10's explicit multiplication produces no rounding under beta = 0.5, and prog_27's mask equals the original under K = 4096, BK = 512: inactive variants, not to be required as detected positives.",
+      "BOUNDARY": "prog_26 reads and writes across programs without synchronisation; kept as an isolated concurrency boundary probe with no unique finite target required."
+    },
+    "snapshot": "sources/ISS_ST_NOTES.md.gz",
+    "snapshot_sha256": "98faf2219328cd1f76d444c3d6dbb5200ebb82f6920adf84fa339138309ad571",
+    "path": ".cache/acceptance/structure_acceptance_v1_1_rc1/docs/issuer_notes.md",
+    "retrieved": "2026-10-17"
+  },
+  "GDN_ABS": {
+    "url": "https://arxiv.org/abs/2412.06464v3",
+    "kind": "paper",
+    "version": "arXiv 2412.06464v3",
+    "title": "Yang, Kautz, Hatamizadeh: Gated Delta Networks: Improving Mamba2 with Delta Rule (abstract page)",
+    "items": {
+      "PAGE": "Abstract: introduces the gated delta rule, combining gating (rapid memory erasure) and the delta update rule (targeted updates), with a parallel training algorithm."
+    },
+    "snapshot": "sources/GDN_ABS.txt.gz",
+    "snapshot_sha256": "5eda71a575545f3c5d9d2e082d718cd3518934c081099c14208616efbd9c844a",
+    "raw_html_sha256": "96985681b8042c69be0ccd13cda3c63c7409c3cf68c57330ca427876e9f01980",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "GDN_PAPER": {
+    "url": "https://arxiv.org/html/2412.06464v3",
+    "kind": "paper",
+    "version": "arXiv 2412.06464v3 (HTML)",
+    "title": "Gated Delta Networks (full text, HTML rendering)",
+    "items": {
+      "OUT": "Section 2.1: linear attention as the recurrence S_t = S_{t-1} + v_t k_t^T in R^{dv x dk}, o_t = S_t q_t (excluding normalization and query/key activations); dk, dv are the head dimensions of query/key and value.",
+      "EQ10": "Section 3.1, Eq. 10: the gated delta rule S_t = S_{t-1} (alpha_t (I - beta_t k_t k_t^T)) + beta_t v_t k_t^T, with a data-dependent gating term alpha_t in (0, 1) controlling state decay.",
+      "BETA": "Section 2.2: DeltaNet writing strength beta_t in (0, 1); footnote: beta_t may be set in (0, 2) to allow negative eigenvalues.",
+      "CHUNK": "Sections 2.2 and 3.3: the chunkwise parallel form (WY representation, UT transform, Eqs. 3-9 and their gated extension) is obtained by partially expanding the recurrence, i.e. it is an exact rewriting of the same recurrence.",
+      "BLOCK": "Section 3.4: in the Gated DeltaNet token mixer, q, k, v come from linear projection, short convolution and SiLU, with L2 normalization applied to q and k for training stability; alpha uses Mamba2's parameterization; the output then goes through normalization and gating."
+    },
+    "snapshot": "sources/GDN_PAPER.txt.gz",
+    "snapshot_sha256": "d756c551466389d6e27013a48a51c312a03b7c6626b402140e68442197872f24",
+    "raw_html_sha256": "0b5dc7cc14d27e0b29a831b6016321b466e7691ea363c8d66b26cc7cc04b3702",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "FLA_GDR_CHUNK": {
+    "url": "https://raw.githubusercontent.com/fla-org/flash-linear-attention/8024667ab58fdd8986587147fca71fecc017f977/fla/ops/gated_delta_rule/chunk.py",
+    "kind": "reference_program",
+    "version": "fla-org/flash-linear-attention main at 8024667 (last commit before the case was added, 2026-10-05 03:45 UTC; the case recorded only 'main')",
+    "title": "FLA chunk_gated_delta_rule (chunked training path)",
+    "items": {
+      "SHAPES": "Docstring: q, k [B, T, H, K]; v [B, T, HV, V], GVA when HV > H with HV divisible by H; g and beta [B, T, HV]; o [B, T, HV, V].",
+      "GATE_LOG": "Docstring: with use_gate_in_kernel=False (default) g is in log space (pre-computed decay); with use_gate_in_kernel=True g is the raw input and the kernel fuses -exp(A_log) * softplus(g + dt_bias); A_log [HV] required, dt_bias [HV] optional.",
+      "SCALE": "Docstring: scale defaults to 1 / sqrt(K); code: if scale is None: scale = k.shape[-1] ** -0.5.",
+      "STATE": "Docstring: initial_state [N, HV, K, V] for N input sequences (N = B for equal lengths); output_final_state returns the final state [N, HV, K, V]; state_v_first stores the state in [V, K] layout instead of [K, V].",
+      "BETA": "Docstring: use_beta_sigmoid_in_kernel=True applies sigmoid(beta) (beta are logits), False means beta is already post-sigmoid; allow_neg_eigval scales beta to [0, 2) (2 * sigmoid(beta)) and requires use_beta_sigmoid_in_kernel=True (ValueError otherwise).",
+      "L2": "Docstring: use_qk_l2norm_in_kernel applies L2norm to q and k internally (forward: q, k = l2norm_fwd(q), l2norm_fwd(k)).",
+      "VARLEN": "Docstring and checks: cu_seqlens [N+1] cumulative lengths as in FlashAttention; batch size must be 1 with cu_seqlens; the number of initial states must equal the number of sequences.",
+      "LOG2": "Code: the gate cumsum is scaled by RCP_LN2 (1/ln 2) before the chunk kernels, which use base-2 exponentials (exp2(g / ln 2) = exp(g)).",
+      "CHUNK_SIZE": "Code: chunk_size defaults to 64 and must be 16, 32 or 64."
+    },
+    "snapshot": "sources/FLA_GDR_CHUNK.py.gz",
+    "snapshot_sha256": "a18ddbb3b326d160f6909e4ecf159117ea462817213f1e9b1197551329005243",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieved": "2026-10-17"
+  },
+  "FLA_GDR_NAIVE": {
+    "url": "https://raw.githubusercontent.com/fla-org/flash-linear-attention/8024667ab58fdd8986587147fca71fecc017f977/fla/ops/gated_delta_rule/naive.py",
+    "kind": "reference_program",
+    "version": "fla main at 8024667",
+    "title": "FLA naive_recurrent_gated_delta_rule / naive_chunk_gated_delta_rule",
+    "items": {
+      "RECURRENT": "naive_recurrent_gated_delta_rule: h [K, V] starts at zero or initial_state; per step h = h * exp(g_t); v' = beta_t (v_t - sum_k h * k_t); h = h + k_t v'^T; o_t = (scale q_t)^T h; scale defaults to 1 / sqrt(K).",
+      "CHUNK": "naive_chunk_gated_delta_rule: chunked WY form (cumulative log decay per chunk, strictly lower triangular solve, inter-chunk state) with the same default scale 1 / sqrt(K); the sequence is zero-padded to a multiple of the chunk size and the output is unpadded."
+    },
+    "snapshot": "sources/FLA_GDR_NAIVE.py.gz",
+    "snapshot_sha256": "d1cf17992349fd3e94af999b22e3d3a81be4a2d1881ce5b70a3457257166e0cb",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieved": "2026-10-17"
+  },
+  "FLA_GDR_GATE": {
+    "url": "https://raw.githubusercontent.com/fla-org/flash-linear-attention/8024667ab58fdd8986587147fca71fecc017f977/fla/ops/gated_delta_rule/gate.py",
+    "kind": "reference_program",
+    "version": "fla main at 8024667",
+    "title": "FLA GDN gate (naive_gdn_gate)",
+    "items": {
+      "NAIVE": "naive_gdn_gate: g = -exp(A_log) * F.softplus(g + dt_bias) (dt_bias optional)."
+    },
+    "snapshot": "sources/FLA_GDR_GATE.py.gz",
+    "snapshot_sha256": "e976315625d8af39c702d033eaa35f41b789463fa27b8660b5d2f0663e2d8bc2",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieved": "2026-10-17"
+  },
+  "FLA_L2NORM": {
+    "url": "https://raw.githubusercontent.com/fla-org/flash-linear-attention/8024667ab58fdd8986587147fca71fecc017f977/fla/modules/l2norm.py",
+    "kind": "reference_program",
+    "version": "fla main at 8024667",
+    "title": "FLA l2norm_fwd",
+    "items": {
+      "FWD": "l2norm_fwd(x, eps=1e-6): y = x * rstd with rstd = 1 / sqrt(sum(x * x) + eps) over the last dimension."
+    },
+    "snapshot": "sources/FLA_L2NORM.py.gz",
+    "snapshot_sha256": "24a20488800e5412501a579dcb712f43b70e08d3f5af3029847e71019ea2b033",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieved": "2026-10-17"
+  },
+  "FLA_CHUNK_O": {
+    "url": "https://raw.githubusercontent.com/fla-org/flash-linear-attention/8024667ab58fdd8986587147fca71fecc017f977/fla/ops/common/chunk_o.py",
+    "kind": "reference_program",
+    "version": "fla main at 8024667",
+    "title": "FLA chunk_fwd_o (output kernel of the chunked path)",
+    "items": {
+      "GVA": "chunk_fwd_kernel_o: value head i_h (of HV) reads q and k of head i_h // (HV // H)."
+    },
+    "snapshot": "sources/FLA_CHUNK_O.py.gz",
+    "snapshot_sha256": "22c759a0831d1f47d9cf0e57a2a56cc36019b4b17782967112cfb4b64e1dc0a4",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieved": "2026-10-17"
+  },
+  "MAMBA_ABS": {
+    "url": "https://arxiv.org/abs/2312.00752v2",
+    "kind": "paper",
+    "version": "arXiv 2312.00752v2",
+    "title": "Gu, Dao: Mamba: Linear-Time Sequence Modeling with Selective State Spaces (abstract page)",
+    "items": {
+      "PAGE": "Abstract: selective state space models whose SSM parameters are functions of the input, integrated into the Mamba architecture."
+    },
+    "snapshot": "sources/MAMBA_ABS.txt.gz",
+    "snapshot_sha256": "881823906368bfcd8214824230628a606dad0a9af87586cec00cb2954d605b1e",
+    "raw_html_sha256": "6e1bae4a296753a1410c082dfe588cda60949de6c8fa5a390b9c578491be27fc",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "MAMBA_PAPER": {
+    "url": "https://arxiv.org/html/2312.00752v2",
+    "kind": "paper",
+    "version": "arXiv 2312.00752v2 (HTML)",
+    "title": "Mamba (full text, HTML rendering)",
+    "items": {
+      "REC": "Eq. 2: h_t = A_bar h_{t-1} + B_bar x_t (2a), y_t = C h_t (2b).",
+      "ZOH": "Eq. 4: zero-order hold discretization A_bar = exp(Delta A), B_bar = (Delta A)^{-1} (exp(Delta A) - I) . Delta B; discretization is the first step of the forward computation; other rules can be used.",
+      "S6": "Algorithm 2 (S6): B, C of shape (B, L, N) and Delta of shape (B, L, D) are functions of the input, Delta = tau_Delta(Parameter + s_Delta(x)); A_bar, B_bar = discretize(Delta, A, B); y = SSM(A_bar, B_bar, C)(x).",
+      "SOFTPLUS": "Section 3.2 and the proof of Theorem 1: tau_Delta = softplus, and the Parameter is a learnable bias added before the softplus.",
+      "BLOCK": "Section 3.4: the Mamba block uses the SiLU / Swish activation and a multiplicative gate branch."
+    },
+    "snapshot": "sources/MAMBA_PAPER.txt.gz",
+    "snapshot_sha256": "f8123f9274a11f931e137ae14dbdd0aa5b2e3aa36a0594c8111f7acce3e35b8e",
+    "raw_html_sha256": "db9c91f06ddc2159326fc945f7ea0c1f72e850263fef977b7c47d2281669c8e0",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "MAMBA_SSU": {
+    "url": "https://raw.githubusercontent.com/state-spaces/mamba/e9594ce1c732d97440f0332fdc43170a2294dbfa/mamba_ssm/ops/triton/selective_state_update.py",
+    "kind": "reference_program",
+    "version": "state-spaces/mamba main at e9594ce (last main commit before the case was added, 2026-10-05; the case recorded only 'main')",
+    "title": "mamba_ssm selective_state_update (Triton kernel) and selective_state_update_ref",
+    "items": {
+      "SHAPES": "Docstring: state (batch, dim, dstate) or (batch, nheads, dim, dstate); x, dt, z (batch, nheads, dim); A (nheads, dim, dstate); B, C (batch, ngroups, dstate); D, dt_bias (nheads, dim); the 3-D forms are unsqueezed to one head; nheads must be divisible by ngroups (assert).",
+      "REF": "selective_state_update_ref: dt = dt + dt_bias (if given); dt = softplus(dt) if dt_softplus; dA = exp(dt * A); B, C repeated over heads (group g serves heads g*(nheads/ngroups) ... ); dB = dt * B; state <- state * dA + dB * x (in place); out = sum_n state * C; out += x * D (if D); out = out * silu(z) (if z).",
+      "GROUPS": "Kernel: head pid_h reads B and C of group pid_h // (nheads / ngroups).",
+      "SOFTPLUS": "Kernel: if DT_SOFTPLUS, dt = softplus(dt) where dt <= 20, else dt.",
+      "PAD": "Kernel: with state_batch_indices, row b uses state slot state_batch_indices[b]; a negative index is a padding token: the output row is set to 0 and the state is not touched.",
+      "INPLACE": "The kernel stores the updated state into the state tensor (in place) and returns out."
+    },
+    "snapshot": "sources/MAMBA_SSU.py.gz",
+    "snapshot_sha256": "4bc67389730c9fd0ad40569b9ee48de88c699bc9612fbc4607eb5d38c1b4a9b9",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieved": "2026-10-17"
+  },
+  "LORA_ABS": {
+    "url": "https://arxiv.org/abs/2106.09685v2",
+    "kind": "paper",
+    "version": "arXiv 2106.09685v2",
+    "title": "Hu et al.: LoRA: Low-Rank Adaptation of Large Language Models (abstract page)",
+    "items": {
+      "PAGE": "Abstract: freezes the pre-trained weights and injects trainable rank decomposition matrices into each layer."
+    },
+    "snapshot": "sources/LORA_ABS.txt.gz",
+    "snapshot_sha256": "e3027f172d2392140f2c9f0f51dbc1ef0b9da6e38278833cdf9e20dd8d4ca2ce",
+    "raw_html_sha256": "f3815f3e8770d2b76ccc59d9d9eda8027a2a3a5713cd54f6fa7dced05ca0877f",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "LORA_PAPER": {
+    "url": "https://arxiv.org/html/2106.09685v2",
+    "kind": "paper",
+    "version": "arXiv 2106.09685v2 (HTML)",
+    "title": "LoRA (full text, HTML rendering)",
+    "items": {
+      "DECOMP": "Section 4.1: W0 + Delta W = W0 + B A with B in R^{d x r}, A in R^{r x k}, rank r << min(d, k).",
+      "FWD": "Section 4.1: h = W0 x + Delta W x = W0 x + B A x.",
+      "SCALE": "Section 4.1: Delta W x is scaled by alpha / r, alpha a constant in r."
+    },
+    "snapshot": "sources/LORA_PAPER.txt.gz",
+    "snapshot_sha256": "0a707f09771565707d4ffaf81d2a8744a0f984f1814e2f270754b204b4d02a48",
+    "raw_html_sha256": "8e12fd6d07c6317e79989775644aa1d5fdc58091ef12b5918d47a9298cea319c",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "VLLM_LORA_SHRINK": {
+    "url": "https://raw.githubusercontent.com/vllm-project/vllm/51eeb0c/vllm/lora/ops/triton_ops/lora_shrink_op.py",
+    "kind": "reference_program",
+    "version": "vllm-project/vllm main at 51eeb0c (2026-10-05, the version of the general-round vLLM cases)",
+    "title": "vLLM _lora_shrink (multi-LoRA shrink, Triton)",
+    "items": {
+      "ARGS": "_lora_shrink docstring: inputs [num_tokens, hidden_size]; lora_a_weights list of [num_loras, lora_rank, hidden_size] (one per slice); output_tensor [num_slices, num_tokens, lora_rank]; token_lora_mapping [num_tokens], -1 means LoRA does not apply to that token; token_indices_sorted_by_lora_ids, num_tokens_per_lora, lora_token_start_loc, lora_ids describe the tokens grouped by LoRA id; scaling a scaling factor.",
+      "EARLY": "_lora_shrink: returns without writing when inputs.size(0) == 0 or when no_lora_flag_cpu is set (no input requires LoRA).",
+      "ZERO": "_lora_shrink: output_tensor.zero_() before the kernel launch, so rows of tokens that no LoRA program writes stay 0.",
+      "CHECKS": "_lora_shrink asserts: inputs and weights in float16 / bfloat16 with equal dtype; inputs.size(1) == weights[0].size(-1) (hidden size); mapping length == number of tokens; N, K = weights[0].shape[-2:] (rank, hidden size).",
+      "KERNEL": "_lora_shrink_kernel: programs with lora_id == -1 exit; each program takes the tokens of one LoRA id (from the sorted metadata) and one slice and calls do_shrink_kernel."
+    },
+    "snapshot": "sources/VLLM_LORA_SHRINK.py.gz",
+    "snapshot_sha256": "261e39f1831f2763691d746a8858ad5ed66d7a5fc9186fb361e9ab378324d113",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieved": "2026-10-17"
+  },
+  "VLLM_LORA_KUTILS": {
+    "url": "https://raw.githubusercontent.com/vllm-project/vllm/51eeb0c/vllm/lora/ops/triton_ops/kernel_utils.py",
+    "kind": "reference_program",
+    "version": "vllm main at 51eeb0c",
+    "title": "vLLM LoRA Triton kernel utilities (do_shrink_kernel)",
+    "items": {
+      "SHRINK": "do_shrink_kernel: for slice slice_id (its own weight pointer when SLICE_NUM > 1) and LoRA index lora_index, out[slice, token, n] = scaling * sum_k input[token, k] * lora[lora_index, n, k] (accumulated over K splits, scaled once)."
+    },
+    "snapshot": "sources/VLLM_LORA_KUTILS.py.gz",
+    "snapshot_sha256": "31f0f3846633393c25d36c5b6fdd8513051d2318e3b75c2a53ee837b87333f17",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieved": "2026-10-17"
+  },
+  "VLLM_LORA_TORCH": {
+    "url": "https://raw.githubusercontent.com/vllm-project/vllm/51eeb0c/vllm/lora/ops/torch_ops/lora_ops.py",
+    "kind": "reference_program",
+    "version": "vllm main at 51eeb0c",
+    "title": "vLLM LoRA torch reference ops (bgmv_shrink)",
+    "items": {
+      "BGMV_SHRINK": "bgmv_shrink: selected = lora_weights[lora_indices]; outputs = einsum('bi, boi -> bo', inputs, selected); output[:, :rank] = scaling * outputs."
+    },
+    "snapshot": "sources/VLLM_LORA_TORCH.py.gz",
+    "snapshot_sha256": "33bc2aca729ebc379e1725c3c1ca870e70aa3b278f0ad3d2a621e6ec8ee99c20",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieved": "2026-10-17"
+  },
+  "VLLM_LORA_UTILS": {
+    "url": "https://raw.githubusercontent.com/vllm-project/vllm/51eeb0c/vllm/lora/ops/triton_ops/utils.py",
+    "kind": "reference_program",
+    "version": "vllm main at 51eeb0c",
+    "title": "vLLM LoRA Triton utilities (_get_lora_a_ptr)",
+    "items": {
+      "PTR": "_get_lora_a_ptr: each slice weight is 3-D (num_loras, rank, hidden) or 4-D with a singleton second dimension (squeezed); all slice weights must have the same strides (ValueError otherwise)."
+    },
+    "snapshot": "sources/VLLM_LORA_UTILS.py.gz",
+    "snapshot_sha256": "387444c1ca83d20e8a0f5c93d4886393a6040aab9f00c58086393670c24a6387",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieved": "2026-10-17"
+  },
+  "NUCLEUS_ABS": {
+    "url": "https://arxiv.org/abs/1904.09751v2",
+    "kind": "paper",
+    "version": "arXiv 1904.09751v2",
+    "title": "Holtzman et al.: The Curious Case of Neural Text Degeneration (abstract page)",
+    "items": {
+      "PAGE": "Abstract: proposes Nucleus Sampling, sampling text from the dynamic nucleus of the probability distribution."
+    },
+    "snapshot": "sources/NUCLEUS_ABS.txt.gz",
+    "snapshot_sha256": "1fa07beab1d0bbe0d02b08d3989c6f4656acaedb16be0a016e7c23805c0cbe8a",
+    "raw_html_sha256": "4d0092b44a700d860e362b3316c58c275a360a2780407a7f5bb9c05d7873d7c8",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "NUCLEUS_PAPER": {
+    "url": "https://arxiv.org/html/1904.09751v2",
+    "kind": "paper",
+    "version": "arXiv 1904.09751v2 (HTML)",
+    "title": "The Curious Case of Neural Text Degeneration (full text, HTML rendering)",
+    "items": {
+      "TOPP": "Section 3.1, Eq. 2: the top-p vocabulary V(p) is the smallest set such that the sum of P(x) over V(p) is >= p; in practice the highest probability tokens whose cumulative mass exceeds p.",
+      "RESCALE": "Section 3.1, Eq. 3: P'(x) = P(x) / p' for x in V(p) and 0 otherwise, p' the mass of V(p); the next word is sampled from P'.",
+      "TOPK": "Section 3.2: the top-k vocabulary V(k) is the set of size k which maximizes the sum of P(x) over it; the distribution is re-scaled as in Eq. 3."
+    },
+    "snapshot": "sources/NUCLEUS_PAPER.txt.gz",
+    "snapshot_sha256": "e511ff82eb56a6fb59c9d1919722b983b22183ac11c4e3cd1eb178385efeb11d",
+    "raw_html_sha256": "3c3faa5db0d24841561511b7631c57d49004f91124e14ed6b7fb517c2c495c60",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieved": "2026-10-17"
+  },
+  "VLLM_TOPKP_TRITON": {
+    "url": "https://raw.githubusercontent.com/vllm-project/vllm/51eeb0c/vllm/v1/sample/ops/topk_topp_triton.py",
+    "kind": "reference_program",
+    "version": "vllm main at 51eeb0c (2026-10-05)",
+    "title": "vLLM apply_top_k_top_p_triton (pivot search)",
+    "items": {
+      "API": "apply_top_k_top_p_triton docstring: logits [batch, vocab] float32; k [batch] top-k values or None; p [batch] top-p values (0 to 1) or None; masked positions get mask_value (default -inf); top-k is applied first (by logit value), then top-p is applied to the remaining k values (by probability).",
+      "SPLIT": "Rows without an active top-k at small batch sizes go through the split-row top-p pipeline (_topp_sb_stats / _topp_sb_step / _topp_sb_mask kernels).",
+      "PGE1": "_topp_sb_mask_kernel: a row with p >= 1 is left unmasked.",
+      "TIES": "_topp_sb_mask_kernel and the top-k path: copies of the boundary value are kept only up to the number needed (numkeep), in index order; the rest of the copies are masked.",
+      "UNIFORM": "_topp_sb_mask_kernel: if max_prob <= min_prob * (1 + 1e-6) the row is treated as (nearly) uniform and nothing is masked."
+    },
+    "snapshot": "sources/VLLM_TOPKP_TRITON.py.gz",
+    "snapshot_sha256": "d39388245d5d5f54dfdd11ef9285d45b5029054167cfddb6b86961d07d562712",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieved": "2026-10-17"
+  },
+  "VLLM_SAMPLER": {
+    "url": "https://raw.githubusercontent.com/vllm-project/vllm/51eeb0c/vllm/v1/sample/ops/topk_topp_sampler.py",
+    "kind": "reference_program",
+    "version": "vllm main at 51eeb0c",
+    "title": "vLLM TopKTopPSampler, apply_top_k_top_p_pytorch, random_sample",
+    "items": {
+      "NATIVE": "forward_native: logits = apply_top_k_top_p(logits, k, p); probs = softmax(logits); return random_sample(probs, generators).",
+      "TORCH_TOPK": "apply_top_k_top_p_pytorch: sorts ascending; top-k masks logits < the k-th largest value (all copies of the k-th value are kept).",
+      "TORCH_TOPP": "apply_top_k_top_p_pytorch: probs_sort = softmax of the top-k-masked sorted logits; probs_sum = cumsum; mask probs_sum <= 1 - p; the last (largest) token is always kept.",
+      "SAMPLE": "random_sample: q filled by exponential_() (per-request generators where given); sample_with_exponential_noise returns argmax(probs / q) per row."
+    },
+    "snapshot": "sources/VLLM_SAMPLER.py.gz",
+    "snapshot_sha256": "ddb98512af7d08489054d2f73e641b3534a3f5b14a3fc34cd1db85ef4515a038",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieved": "2026-10-17"
+  },
+  "T_EXPONENTIAL": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.Tensor.exponential_.html",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "title": "torch.Tensor.exponential_",
+    "items": {
+      "DEF": "Fills the tensor with samples of the density lambda exp(-lambda x), x > 0; exponential_() does not sample zero, its support is (0, inf)."
+    },
+    "snapshot": "sources/T_EXPONENTIAL.txt.gz",
+    "snapshot_sha256": "a1c1ceadead00c55d39bc8b45bb93e095616594d376bfd85c79e39f30315c731",
+    "raw_html_sha256": "5eeb93b306c764fe8270dc1c3879c9c7c380dff224ed6c22b53147ff7a7be993",
+    "snapshot_note": "main text extracted from the HTML page",
     "retrieved": "2026-10-17"
   }
 }

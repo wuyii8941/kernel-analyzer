@@ -27,18 +27,28 @@ class ExpressionError(ValueError):
 
 
 def iv_erf(x: IV) -> IV:
-    """Enclosure of erf on an interval. erf is increasing, so it is enclosed at both endpoints. mpmath has no interval
-    erf: the point values come from mpmath's erf at 64 extra bits and are widened by 2^-256 (relative and absolute),
-    a margin of 2^64 ulps of the working precision -- an assumption on mpmath's erf accuracy, stated here."""
-    from mpmath import mp, mpf, erf
-    out = []
-    for e in (x.a, x.b):
-        with mp.workprec(iv.prec + 64):
-            v = erf(mpf(e))
-            # mpmath's erf at workprec+64 bits is accurate far beyond 2^-(prec); widen by 2^-(prec) relative + absolute
-            r = abs(v) * mpf(2) ** (-iv.prec) + mpf(2) ** (-iv.prec)
-            out.append((v - r, v + r))
-    return iv.mpf([max(out[0][0], -1), min(out[1][1], 1)])
+    """Rigorous enclosure of erf on an interval. erf is increasing, so it is enclosed at both endpoints; each endpoint
+    value is computed by Arb (python-flint) ball arithmetic, which bounds its own error, and the ball's endpoints are
+    read out exactly and re-enclosed outward. Endpoints of the input interval are exact binary numbers, converted to
+    Arb exactly."""
+    import flint
+    from fractions import Fraction
+    from .num import ends, to_iv
+    saved = flint.ctx.prec
+    flint.ctx.prec = iv.prec + 64
+    try:
+        lo_q, hi_q = ends(x)
+        out = []
+        for q, side in ((lo_q, 0), (hi_q, 1)):
+            a = flint.arb(q.numerator) / flint.arb(q.denominator)        # Arb encloses the quotient rigorously
+            ball = a.erf()
+            m, e = (ball.lower() if side == 0 else ball.upper()).man_exp()
+            v = Fraction(int(m)) * (Fraction(2) ** int(e))
+            out.append(v)
+    finally:
+        flint.ctx.prec = saved
+    lo, hi = to_iv(max(out[0], Fraction(-1))), to_iv(min(out[1], Fraction(1)))
+    return iv.mpf([lo.a, hi.b])
 
 
 FUNCTIONS["erf"] = iv_erf

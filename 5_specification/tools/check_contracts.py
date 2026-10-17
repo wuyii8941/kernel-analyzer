@@ -38,8 +38,10 @@ def safe_compare(res, expected, outputs):
 
 
 def killed(mres, expected, outputs):
-    if mres.outcome == "implementation_error":
-        return False, f"not applicable: {mres.note[:80]}"
+    # Failure to evaluate a reading supplies no evidence about its mathematical
+    # result, including when the witness expects an invalid/undefined input.
+    if mres.outcome in {"implementation_error", "not_established", "unsupported"}:
+        return False, f"not applicable ({mres.outcome}): {mres.note[:80]}"
     if expected["outcome"] != "value":
         return mres.outcome != expected["outcome"], f"outcome {mres.outcome}"
     if mres.outcome != "value":
@@ -49,7 +51,7 @@ def killed(mres, expected, outputs):
     # 'cannot compare' (an inexact allowed-set element, a failed comparison) is not evidence
     def real(vv, d):
         return vv == C.CONTRADICTION or (vv == C.STRUCTURE and not any(
-            k in d for k in ("not exact", "is an enclosure", "comparison failed", "expected value:")))
+            k in d for k in ("not exact", "is an enclosure", "comparison failed", "expected value:", "reference value of type")))
     bad = [f"{p}: {d}" for p, vv, d in checks if real(vv, d)]
     return bool(bad), (bad[0] if bad else v)[:120]
 

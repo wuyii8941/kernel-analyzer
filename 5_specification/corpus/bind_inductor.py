@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static binding of the three_way Inductor kernels to their ATen graph fragments (PLAN_v3 V3, static part).
+"""Static matching of the three_way Inductor kernels to their ATen graph fragments (PLAN_v3 V3, static part).
 
 For every unit of 1_experiments/three_way/results/units.jsonl:
   1. the kernel file named in the captured TTIR (#loc) is matched to a kernel block of Inductor's output code under
@@ -94,8 +94,12 @@ def main():
                         bad.append(n["op"])
             except fx_text.ParseError as e:
                 problems.append(f"parse: {e}")
-        st = ("bound" if rec and not bad and not problems else "bound, uncovered operations" if rec and bad
-              else "bound, fragment not parsed" if rec else "not bound")
+        # what this checks: the kernel source matches an output-code block, its graph fragment parses, and every
+        # operation is covered by a base contract. It does NOT bind inputs, outputs, state or profile (see
+        # dynamic_three_way.py for that); hence the status names below.
+        st = ("fragment matched, operations covered" if rec and not bad and not problems
+              else "fragment matched, uncovered operations" if rec and bad
+              else "fragment matched, not parsed" if rec else "no fragment")
         status[st] += 1
         uncovered.update(bad)
         out.append({"unit": f"{model}/{config}/{name}", "kernel": u.get("kernel"), "verify": u.get("verify"), "status": st,
@@ -111,7 +115,7 @@ def main():
     for r in out:
         if r["problems"]:
             print("problem", r["unit"], r["problems"][:2])
-    return 0 if status["bound"] == len(out) else 1
+    return 0 if status["fragment matched, operations covered"] == len(out) else 1
 
 
 if __name__ == "__main__":

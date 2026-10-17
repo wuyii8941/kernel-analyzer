@@ -1,0 +1,219 @@
+schema_version: '1.2'
+id: STRUCTURE
+role: ISSUER_TASK
+title: Structure acceptance v1.1 -- the issuer's task specifications f (T1-T7), one profile per family
+review:
+  status: drafted
+  author: Claude (spec v3 author, group F_issuer), 2026-10-17
+  date: '2026-10-17'
+  scope: Transcription of the issuer package's family tasks (v1 README table, v1.1 programs/specs.py) into executable
+    exact-real references; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [structure_v1_1.T1, structure_v1_1.T2, structure_v1_1.T3, structure_v1_1.T4, structure_v1_1.T5, structure_v1_1.T6,
+  structure_v1_1.T7]
+profiles:
+  T1:
+    meaning: 'T1 (masked multi-value Welford reduction): x [R, D]; out = {mean [R], variance [R]} (biased variance)'
+    task_choice_required: false
+  T2:
+    meaning: 'T2 (inclusive prefix scan): x [R, D], scalar s; out = {output [R, D]}'
+    task_choice_required: false
+  T3:
+    meaning: 'T3 (nested loops, blocked multiply-add): x [R, K], w [K]; out = {output [R]}'
+    task_choice_required: false
+  T4:
+    meaning: 'T4 (program_id branch): x [R, D], integer split, scalars alpha, beta, gamma; out = {output [R, D]}'
+    task_choice_required: false
+  T5:
+    meaning: 'T5 (store / load of the row mean): x [R, D]; out = {output [R, D]}'
+    task_choice_required: false
+  T6:
+    meaning: 'T6 (two-launch state passing): x [R, D], scalar eps > 0; out = {output [R, D]}'
+    task_choice_required: false
+  T7:
+    meaning: 'T7 (multi-program float atomic_add): x [R, K], w [K]; out = {output [R]}'
+    task_choice_required: false
+outputs:
+  out:
+    shape: the program's output mapping -- {mean, variance} for T1, {output} for T2-T7 -- with the shapes of the profile
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Every input element and scalar is the exact rational value of the finite float actually passed (issuer
+    specs.py docstring and reference notes); compile-time constants, received scalars and task constants are not
+    interchanged.
+  quality: No tolerance. Rational arithmetic is exact; the T6 square root is a rigorous enclosure.
+  test_evidence: Hand derivations, checked with sympy; T6 examples also satisfy the issuer's property sum(y^2) =
+    D m2/(m2 + eps).
+  error_handling: The issuer's explicit input conditions (non-empty rank-2 x, finite values, w of the row length, split
+    an integer in [0, R], eps > 0) are invalid_input.
+decisions:
+- id: ST.FAMILY_F
+  status: drafted
+  statement: The task f of every program is its family's task as defined by the issuer -- the v1 README table (original
+    issuer text) and programs/specs.py of the v1.1 package, whose CHANGELOG/README state that the task definitions are
+    unchanged from v1. All programs of a family share it (the package's variants -- clean, injection P, semantic S,
+    negative N, U -- are implementations of the family task). Alternative (per-program f) rejected because the issuer
+    lists one task per family.
+  basis: [ISS_ST_V1README.VARIANTS, ISS_ST_README.TABLE, ISS_ST_SPECS.TARGET]
+- id: ST.OUTPUTS
+  status: drafted
+  statement: The output is the program's output mapping, exactly as the issuer's spec returns it -- T1 {mean, variance}
+    as two named per-row vectors, the other families {output}. No stacking into an extra tensor.
+  basis: [ISS_ST_README.OUTPUTS, ISS_ST_REFNOTES.OUTPUTS, ISS_ST_MANIFEST.PROGRAMS]
+- id: ST.REJECT
+  status: drafted
+  statement: The issuer's spec raises SpecNotEstablished ('outside the declared finite test contract') for an empty or
+    non-rank-2 x, non-finite values, w whose length differs from the row length (T3/T7), split not a non-boolean
+    integer in [0, R] (T4), and eps <= 0 (T6). These are explicit input conditions of the task, so the contract maps
+    them to invalid_input; not_established (a budget outcome) and domain_undefined (a legal input without a real value)
+    do not fit. The floating-dtype check of the spec is an interface property and is not modelled (values only). With
+    these conditions no legal input lacks a real value, so this contract has no domain_undefined outcome.
+  basis: [ISS_ST_SPECS.INPUTS, ISS_ST_SPECS.T3T7, ISS_ST_SPECS.T4, ISS_ST_SPECS.T6]
+- id: ST.T4_BRANCH
+  status: drafted
+  statement: 'T4: rows r < split (0-based) use x*alpha, rows r >= split use x*beta + gamma; split = 0 sends every row to
+    the second formula and split = R every row to the first. The v1 README states the same rule.'
+  basis: [ISS_ST_V1README.T4, ISS_ST_SPECS.T4]
+- id: ST.T5_BOUNDARY
+  status: drafted
+  statement: 'T5: the task is per-row mean removal for every T5 program, including the four programs (prog_01, 13, 22,
+    23) whose store-then-load without a barrier makes the device output launch-dependent and the isolated prog_26
+    (boundary probe, not run). A race does not change f; it is an execution-validity matter outside this contract.'
+  basis: [ISS_ST_V1README.T5, ISS_ST_SPECS.T5, ISS_ST_README.LANES, ISS_ST_NOTES.BOUNDARY]
+- id: ST.T7_ORDER
+  status: drafted
+  statement: 'T7: f is the exact real row dot product, the same as T3; the atomic accumulation order and its run-to-run
+    variation are a declared execution assumption (8 repeats per input), not part of f.'
+  basis: [ISS_ST_V1README.T7, ISS_ST_SPECS.T3T7, ISS_ST_PROTOCOL.ATOMIC, ISS_ST_PROTOCOL.PROPS]
+- id: ST.NO_ANSWER_KEY
+  status: drafted
+  statement: The issuer's answer key for this set (per-program variant and planted defect) is not available -- the v1.1
+    package records that no answer file was delivered, and the resealed answer has not been received. The mutation
+    requirements below are therefore the natural misreadings of each family task, not the planted defects; they must be
+    replaced or extended once the issuer's answer key is received.
+  basis: [ISS_ST_NOTES.NO_KEY, ISS_ST_README.NO_ANSWER, ISS_ST_MANIFEST.ANSWERS]
+clauses:
+- {id: ST.C1, basis: [ISS_ST_V1README.T1, ISS_ST_SPECS.T1, ST.OUTPUTS], statement: 'T1 mean = sum(row)/D, variance =
+    sum((v - mean)^2)/D (biased), returned as named vectors', observes: [out], evidence_kind: definition}
+- {id: ST.C2, basis: [ISS_ST_V1README.T2, ISS_ST_SPECS.T2], statement: 'T2 y_i = sum_{j<=i} x_j s (inclusive)', observes: [
+    out], evidence_kind: definition}
+- {id: ST.C3, basis: [ISS_ST_V1README.T3, ISS_ST_SPECS.T3T7], statement: 'T3 y_r = sum_k x_rk w_k exactly', observes: [out],
+  evidence_kind: definition}
+- {id: ST.C4, basis: [ST.T4_BRANCH], statement: 'T4 r < split: x alpha; otherwise x beta + gamma', observes: [out], evidence_kind: definition}
+- {id: ST.C5, basis: [ISS_ST_V1README.T5, ISS_ST_SPECS.T5, ST.T5_BOUNDARY], statement: 'T5 y = x - mean_row', observes: [
+    out], evidence_kind: definition}
+- {id: ST.C6, basis: [ISS_ST_V1README.T6, ISS_ST_SPECS.T6, ISS_ST_REFNOTES.T6], statement: 'T6 y = x / sqrt(mean(x^2) + eps), eps > 0',
+  observes: [out], evidence_kind: definition}
+- {id: ST.C7, basis: [ST.T7_ORDER], statement: 'T7 y_r = sum_k x_rk w_k exactly (order-free)', observes: [out], evidence_kind: definition}
+- {id: ST.C8, basis: [ST.REJECT], statement: 'inputs violating the issuer''s explicit conditions are invalid_input',
+  observes: [out], evidence_kind: definition}
+examples:
+- id: ST.E1
+  profile: T1
+  clauses: [ST.C1]
+  input: {x: [[1, 2, 3, 4], [0, 0, 0, '1/2']]}
+  expected: {outcome: value, fields: {out: {mean: ['5/2', '1/8'], variance: ['5/4', '3/64']}}}
+  note: Row 0 squared deviations 9/4, 1/4, 1/4, 9/4. Row 1 three times 1/64 and 9/64.
+- id: ST.E2
+  profile: T1
+  clauses: [ST.C1]
+  input: {x: [[7], [-3]]}
+  expected: {outcome: value, fields: {out: {mean: [7, -3], variance: [0, 0]}}}
+  note: D = 1 is legal for the biased variance.
+- {id: ST.E3, profile: T1, clauses: [ST.C8], input: {x: [[]]}, expected: {outcome: invalid_input}, note: empty rows}
+- id: ST.E4
+  profile: T2
+  clauses: [ST.C2]
+  input: {x: [[1, 2, 3], [-1, 0, '1/2']], s: '3/4'}
+  expected: {outcome: value, fields: {out: {output: [['3/4', '9/4', '9/2'], ['-3/4', '-3/4', '-3/8']]}}}
+- {id: ST.E5, profile: T2, clauses: [ST.C8], input: {x: [[1, 2]], s: inf}, expected: {outcome: invalid_input}, note: non-finite
+    scalar}
+- id: ST.E6
+  profile: T3
+  clauses: [ST.C3]
+  input: {x: [[1, 2, 3], [0, -1, '1/2']], w: [2, '1/2', -1]}
+  expected: {outcome: value, fields: {out: {output: [0, -1]}}}
+  note: 2 + 1 - 3 and 0 - 1/2 - 1/2.
+- {id: ST.E7, profile: T3, clauses: [ST.C8], input: {x: [[1, 2, 3]], w: [1, 1]}, expected: {outcome: invalid_input}}
+- id: ST.E8
+  profile: T4
+  clauses: [ST.C4]
+  input: {x: [[1, 2], [3, 4], [5, 6]], split: 1, alpha: '5/4', beta: '1/2', gamma: '1/8'}
+  expected: {outcome: value, fields: {out: {output: [['5/4', '5/2'], ['13/8', '17/8'], ['21/8', '25/8']]}}}
+  note: The issuer's scalars (alpha 1.25, beta 0.5, gamma 0.125); row 0 first formula, rows 1 and 2 second.
+- {id: ST.E9, profile: T4, clauses: [ST.C4], input: {x: [[2]], split: 0, alpha: '5/4', beta: '1/2', gamma: '1/8'}, expected: {
+    outcome: value, fields: {out: {output: [['9/8']]}}}, note: split = 0 -- every row takes x beta + gamma}
+- {id: ST.E10, profile: T4, clauses: [ST.C4], input: {x: [[2]], split: 1, alpha: '5/4', beta: '1/2', gamma: '1/8'}, expected: {
+    outcome: value, fields: {out: {output: [['5/2']]}}}, note: split = R -- every row takes x alpha}
+- {id: ST.E11, profile: T4, clauses: [ST.C8], input: {x: [[2]], split: 2, alpha: 1, beta: 1, gamma: 0}, expected: {outcome: invalid_input},
+  note: split > R}
+- {id: ST.E12, profile: T4, clauses: [ST.C8], input: {x: [[2]], split: true, alpha: 1, beta: 1, gamma: 0}, expected: {
+    outcome: invalid_input}, note: boolean split}
+- id: ST.E13
+  profile: T5
+  clauses: [ST.C5]
+  input: {x: [[1, 2, 3], [0, 0, '3/2']]}
+  expected: {outcome: value, fields: {out: {output: [[-1, 0, 1], ['-1/2', '-1/2', 1]]}}}
+- {id: ST.E14, profile: T5, clauses: [ST.C8], input: {x: [[1, inf]]}, expected: {outcome: invalid_input}, note: non-finite
+    value}
+- id: ST.E15
+  profile: T6
+  clauses: [ST.C6]
+  input: {x: [[1, -1]], eps: 3}
+  expected: {outcome: value, fields: {out: {output: [['1/2', '-1/2']]}}}
+  note: m2 = 1, q = 4; property sum(y^2) = 1/2 = 2*1/(1 + 3).
+- id: ST.E16
+  profile: T6
+  clauses: [ST.C6]
+  input: {x: [[1, 2], [0, 0]], eps: '1/2'}
+  expected: {outcome: value, fields: {out: {output: [['1/sqrt(3)', '2/sqrt(3)'], [0, 0]]}}}
+  note: Row 0 m2 = 5/2, q = 3. Row 1 is a zero row (the protocol lists zero rows separately); y = 0.
+- id: ST.E17
+  profile: T6
+  clauses: [ST.C6]
+  input: {x: [[3, 4]], eps: '1/1048576'}
+  expected: {outcome: value, fields: {out: {output: [['3/sqrt(25/2 + 1/1048576)', '4/sqrt(25/2 + 1/1048576)']]}}}
+  note: The issuer's eps = 2^-20; m2 = 25/2.
+- {id: ST.E18, profile: T6, clauses: [ST.C8], input: {x: [[1, 2]], eps: 0}, expected: {outcome: invalid_input}, note: 'eps
+    must be positive (issuer spec)'}
+- id: ST.E19
+  profile: T7
+  clauses: [ST.C7]
+  input: {x: [[1, 1, 1, 1], [1, -1, 1, -1]], w: [1, 2, 3, 4]}
+  expected: {outcome: value, fields: {out: {output: [10, -2]}}}
+- {id: ST.E20, profile: T7, clauses: [ST.C8], input: {x: [[1, 2]], w: [[1, 2]]}, expected: {outcome: invalid_input}, note: w
+    must be rank 1}
+signature:
+  inputs: ['profile T1..T7', 'a dict of the family''s tensors (nested lists of exact rationals) and scalars, keys per profile']
+  pre_state: []
+  post_state: []
+  observation_unit: the full output mapping of one program launch on one input (for T7 each of the 8 repeated executions
+    is compared with the same f)
+domain:
+  valid: ['non-empty rank-2 x of finite exact rationals', 'w of the row length', 'integer split in [0, R]', 'eps > 0']
+  domain_undefined: []
+  invalid_input: ['empty or non-rank-2 x', 'non-finite values', 'w of another length or rank', 'split outside [0, R],
+      boolean or non-integer', 'eps <= 0', 'missing or extra keys']
+  unsupported: ['profiles other than T1..T7']
+mutation_requirements:
+- {id: ST.M1, misreading: 'T1 unbiased variance (divide by D - 1); the issuer specifies the biased variance', witnesses: [
+    ST.E1]}
+- {id: ST.M2, misreading: 'T1 variance read as the uncentred second moment mean(x^2)', witnesses: [ST.E1]}
+- {id: ST.M3, misreading: 'T2 exclusive prefix (j < i)', witnesses: [ST.E4]}
+- {id: ST.M4, misreading: T2 scale s dropped, witnesses: [ST.E4]}
+- {id: ST.M5, misreading: 'T3 / T7 mean over K instead of the dot product sum', witnesses: [ST.E6, ST.E19]}
+- {id: ST.M6, misreading: 'T4 split boundary read as r <= split', witnesses: [ST.E8]}
+- {id: ST.M7, misreading: T4 the two formulas assigned to the wrong side of split, witnesses: [ST.E8]}
+- {id: ST.M8, misreading: T4 gamma added in both branches, witnesses: [ST.E8]}
+- {id: ST.M9, misreading: T5 one global mean subtracted instead of the row mean, witnesses: [ST.E13]}
+- {id: ST.M10, misreading: 'T6 eps added outside the root, x / (sqrt(mean(x^2)) + eps)', witnesses: [ST.E15]}
+- {id: ST.M11, misreading: 'T6 sum of squares instead of their mean', witnesses: [ST.E15, ST.E16]}
+nonclaims:
+- The issuer's answer key for this set is not available (decision ST.NO_ANSWER_KEY); the mutation requirements are
+  natural misreadings, not the issuer's planted defects.
+- Execution validity (the T5 race, T7 atomic order) and numerical behaviour (K - G) are outside this contract.
+changes: []

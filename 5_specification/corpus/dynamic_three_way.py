@@ -237,13 +237,16 @@ def run_unit(rec, rng):
             idxs = {tuple(0 for _ in K.shape), tuple(s - 1 for s in K.shape)} if K.size else set()
             while len(idxs) < min(34, K.size):
                 idxs.add(tuple(rng.randrange(s) for s in K.shape))
-            errs, undefined = [], 0
+            errs, undefined, not_established = [], 0, 0
             for i in sorted(idxs):
                 try:
                     errs.append(relerr(lt.get(i), float(K[i]) if K.dtype != bool else bool(K[i]), TORCH_DT[arg.dtype]))
-                except (Undefined, NotEstablished):
+                except Undefined:
                     undefined += 1
+                except NotEstablished:
+                    not_established += 1
             entry[reading] = {"outcome": "value", "elements": len(idxs), "undefined": undefined,
+                              "not_established": not_established,
                               "max_rel": max(errs) if errs else None, "median_rel": float(np.median(errs)) if errs else None}
     return result
 
@@ -268,7 +271,7 @@ def main():
     ap.add_argument("--only", nargs="*")
     a = ap.parse_args()
     recs = json.loads(gzip.open(HERE / "bindings/three_way.json.gz").read())
-    frame = sorted((r for r in recs if r["verify"] == "bit_identical" and r["output_code"]), key=lambda r: r["unit"])
+    frame = sorted((r for r in recs if r["verify"] == "bit_identical" and r["output_code"]), key=lambda r: r["unit"])  # same frame as before
     sample = random.Random(SEED).sample(frame, a.n) if not a.only else [r for r in frame if r["unit"] in a.only]
     rng = random.Random(SEED)
     out_path = HERE / "results/three_way_dynamic.jsonl"

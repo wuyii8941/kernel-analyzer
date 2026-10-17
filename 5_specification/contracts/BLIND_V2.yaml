@@ -1,0 +1,249 @@
+schema_version: '1.2'
+id: BLIND_V2
+role: ISSUER_TASK
+title: Blind test v2 -- the issuer's family specifications f (G1-G8), one profile per family
+review:
+  status: drafted
+  author: Claude (spec v3 author, group F_issuer), 2026-10-17
+  date: '2026-10-17'
+  scope: Transcription of the issuer's phase-2 family formulas into executable exact-real references; awaiting a review
+    by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [blind_v2.G1, blind_v2.G2, blind_v2.G3, blind_v2.G4, blind_v2.G5, blind_v2.G6, blind_v2.G7, blind_v2.G8]
+profiles:
+  G1:
+    meaning: 'G1 (layer norm with affine and residual): x, res [R, D], gamma, beta [D], scalar eps; y [R, D]'
+    task_choice_required: false
+  G2:
+    meaning: 'G2 (squared ReLU gate): a, b of one shape; y of that shape'
+    task_choice_required: false
+  G3:
+    meaning: 'G3 (soft-sign normalised weights): h [R, D]; y [R, D]'
+    task_choice_required: false
+  G4:
+    meaning: 'G4 (momentum SGD step with weight decay): theta, v, g of one shape, scalars lr, mu, wd; y of that shape'
+    task_choice_required: false
+  G5:
+    meaning: 'G5 (int4-packed grouped dot product): packed [R, K/2] bytes, sc [R, ceil(K/G)], a [K], group size G; y [R]'
+    task_choice_required: false
+  G6:
+    meaning: 'G6 (row cosine similarity): a, b [R, D]; y [R]'
+    task_choice_required: false
+  G7:
+    meaning: 'G7 (causal ReLU attention with +1 in the denominator): q [R, D], k [R, L, D], v [R, L, Dv], integer pos
+      [R], scalar scale; y [R, Dv]'
+    task_choice_required: false
+  G8:
+    meaning: 'G8 (inclusive prefix sum divided by the row length): x [R, D]; y [R, D]'
+    task_choice_required: false
+outputs:
+  y:
+    shape: the program's output shape, per profile
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Every tensor element and runtime scalar is the exact rational value received (fp16 / float32 values at
+    their exact binary value, bytes and positions as integers). The issuer states that its runtime scalars are exactly
+    representable in float32, so published and received values coincide.
+  quality: No tolerance. Rational arithmetic is exact; square roots are rigorous enclosures.
+  test_evidence: Hand derivations, checked with sympy; one example reproduces the issuer's erratum-2 numbers.
+  error_handling: Shape and type violations are invalid_input; legal inputs where the real formula has no value are
+    domain_undefined.
+decisions:
+- id: BV2.FAMILY_F
+  status: drafted
+  statement: The task f of every program is its family's formula as published by the issuer (phase-2 release section 1,
+    repeated in the answer key's specs_phase2). All programs of a family share it; S-* programs are deliberately wrong
+    implementations of that f (the release reports e_sem = K_R - f against the family f). Alternative (per-program f)
+    rejected for the same reason as in BLIND_V1.
+  basis: [ISS_BV2_RELEASE.EVAL, ISS_BV2_KEY.SPECS, ISS_BV2_KEY.FAMILIES]
+- id: BV2.SCALARS
+  status: drafted
+  statement: eps, lr, mu, wd and scale are inputs taken at their received values. The issuer's values (eps = 2^-20,
+    lr = 2^-10, mu = 7/8, wd = 2^-8, scale = 1/8) are exactly representable in float32, so there is one reading;
+    the contract does not hard-code them.
+  basis: [ISS_BV2_RELEASE.SCALARS, ISS_BV2_KEY.SPECS]
+- id: BV2.UNDEFINED
+  status: drafted
+  statement: 'domain_undefined where the formula has no real value: G1 mean over an empty row or var + eps <= 0;
+    G6 a zero row norm (0/0). G3 needs no rule (t_i = 1 + h_i/(1+|h_i|) lies in (0, 2), so the row sum is positive) and
+    G7 none (the denominator is at least 1). An empty G3 / G8 row has no outputs. No device behaviour is required.'
+  basis: [ISS_BV2_RELEASE.G1, ISS_BV2_RELEASE.G3, ISS_BV2_RELEASE.G6, ISS_BV2_RELEASE.G7]
+- id: BV2.G5_BYTES
+  status: drafted
+  statement: 'G5: packed has K/2 columns and q_{2j} (even index) is the low nibble, q_{2j+1} the high nibble, each minus
+    8. A byte is accepted as an integer in [-128, 255]: the formula''s & and >> act on the byte''s bits, so an int8
+    byte and the uint8 byte with the same bits give the same nibbles (e.g. -1 and 255 both give q = 7, 7). G is a
+    positive integer input and sc has exactly ceil(K/G) columns (the issuer-side script derives G = K // NG). a is
+    used at its exact received value.'
+  basis: [ISS_BV2_RELEASE.G5, ISS_BV2_KEY.P05_NIBBLE, ISS_BV2_VERIFY.G5]
+- id: BV2.G7_POSITIONS
+  status: drafted
+  statement: 'G7: positions j are 0-based key indices (j = 0 .. L-1) and pos is an integer per row; j <= pos keeps j,
+    so pos < 0 keeps none (y = 0) and pos >= L - 1 keeps all. The output width is that of v (the formula does not tie
+    it to the width of q and k). The issuer-side script uses range(L) with j <= pos[r].'
+  basis: [ISS_BV2_RELEASE.G7, ISS_BV2_VERIFY.G7]
+- id: BV2.G8_LENGTH
+  status: drafted
+  statement: 'G8: D is the row length (the clean program divides by 1024, its row length); the prefix is inclusive
+    (i <= d).'
+  basis: [ISS_BV2_RELEASE.G8, ISS_BV2_KEY.P12_G8, ISS_BV2_VERIFY.G8]
+- id: BV2.EQUIVALENT_VARIANTS
+  status: drafted
+  statement: Variants that compute the same real function are not misreadings -- G4 prog_37 ((1 - lr wd) theta - lr v'),
+    G1 prog_19 (E[x^2] - E[x]^2), and the N-* controls.
+  basis: [ISS_BV2_KEY.P37_DECOUPLED, ISS_BV2_KEY.P19_ONEPASS]
+clauses:
+- {id: BV2.C1, basis: [ISS_BV2_RELEASE.G1, BV2.UNDEFINED], statement: 'G1 y = (x - mean)(var + eps)^(-1/2) gamma + beta + res, var biased',
+  observes: [y], evidence_kind: definition}
+- {id: BV2.C2, basis: [ISS_BV2_RELEASE.G2], statement: 'G2 y = max(a, 0)^2 b element-wise', observes: [y], evidence_kind: definition}
+- {id: BV2.C3, basis: [ISS_BV2_RELEASE.G3, BV2.UNDEFINED], statement: 'G3 y_i = t_i / sum_j t_j, t = 1 + h/(1+|h|), per row',
+  observes: [y], evidence_kind: definition}
+- {id: BV2.C4, basis: [ISS_BV2_RELEASE.G4, BV2.SCALARS], statement: 'G4 v'' = mu v + g; y = theta - lr (v'' + wd theta)', observes: [
+    y], evidence_kind: definition}
+- {id: BV2.C5, basis: [ISS_BV2_RELEASE.G5, BV2.G5_BYTES], statement: 'G5 unpack two signed nibbles per byte (low = even
+    index), y[r] = sum_k q_k sc[r, floor(k/G)] a[k]', observes: [y], evidence_kind: definition}
+- {id: BV2.C6, basis: [ISS_BV2_RELEASE.G6, BV2.UNDEFINED], statement: 'G6 y = <a, b> / (sqrt<a, a> sqrt<b, b>); a zero norm
+    domain_undefined', observes: [y], evidence_kind: definition}
+- {id: BV2.C7, basis: [ISS_BV2_RELEASE.G7, BV2.G7_POSITIONS], statement: 'G7 s_j = max(<q, k_j> scale, 0) for j <= pos, else 0;
+    y = sum_j s_j v_j / (sum_j s_j + 1)', observes: [y], evidence_kind: definition}
+- {id: BV2.C8, basis: [ISS_BV2_RELEASE.G8, BV2.G8_LENGTH], statement: 'G8 y[r,d] = sum_{i<=d} x[r,i] / D', observes: [y],
+  evidence_kind: definition}
+- {id: BV2.C9, basis: [ISS_BV2_RELEASE.G1, BV2.G5_BYTES, BV2.G7_POSITIONS], statement: 'shapes the formula cannot index,
+    bytes outside [-128, 255], non-integer positions are invalid_input', observes: [y], evidence_kind: definition}
+examples:
+- id: BV2.E1
+  profile: G1
+  clauses: [BV2.C1]
+  input: {x: [[1, 3]], gamma: [1, 2], beta: [0, '1/2'], res: [[0, 1]], eps: 3}
+  expected: {outcome: value, fields: {y: [['-1/2', '5/2']]}}
+  note: mean 2, var 1, (1 + 3)^(-1/2) = 1/2; y = -1/2*1 + 0 + 0 and 1/2*2 + 1/2 + 1.
+- id: BV2.E2
+  profile: G1
+  clauses: [BV2.C1]
+  input: {x: [[0, 1, 2]], gamma: [1, 1, 1], beta: [0, 0, 0], res: [[0, 0, 0]], eps: 0}
+  expected: {outcome: value, fields: {y: [['-sqrt(3/2)', 0, 'sqrt(3/2)']]}}
+  note: var 2/3, rstd = sqrt(3/2).
+- id: BV2.E3
+  profile: G1
+  clauses: [BV2.C1]
+  input: {x: [[-1, 1]], gamma: [1, 1], beta: [0, 0], res: [[0, 0]], eps: '1/1048576'}
+  expected: {outcome: value, fields: {y: [['-1/sqrt(1 + 1/1048576)', '1/sqrt(1 + 1/1048576)']]}}
+  note: 'The issuer''s erratum-2 setting (var = 1, eps = 2^-20). The eps-outside variant gives rstd 1 + 2^-20; the
+    difference 1 + eps - (1 + eps)^(-1/2) is about 1.5 eps = 1.43e-6, the issuer''s corrected magnitude.'
+- {id: BV2.E4, profile: G1, clauses: [BV2.C1], input: {x: [[2, 2]], gamma: [1, 1], beta: [0, 0], res: [[0, 0]], eps: 0},
+  expected: {outcome: domain_undefined}, note: var + eps = 0}
+- {id: BV2.E5, profile: G1, clauses: [BV2.C9], input: {x: [[1, 2]], gamma: [1], beta: [0, 0], res: [[0, 0]], eps: 1},
+  expected: {outcome: invalid_input}}
+- id: BV2.E6
+  profile: G2
+  clauses: [BV2.C2]
+  input: {a: [[2, -3, 0, '1/2']], b: [[1, 5, 7, 4]]}
+  expected: {outcome: value, fields: {y: [[4, 0, 0, 1]]}}
+- {id: BV2.E7, profile: G2, clauses: [BV2.C9], input: {a: [[1, 2]], b: [[1]]}, expected: {outcome: invalid_input}}
+- id: BV2.E8
+  profile: G3
+  clauses: [BV2.C3]
+  input: {h: [[0, 1, -1], [1, 3, 0]]}
+  expected: {outcome: value, fields: {y: [['1/3', '1/2', '1/6'], ['6/17', '7/17', '4/17']]}}
+  note: Row 0 t = [1, 3/2, 1/2], sum 3. Row 1 t = [3/2, 7/4, 1], sum 17/4.
+- {id: BV2.E22, profile: G3, clauses: [BV2.C3], input: {h: [[1, 3, 0]]}, expected: {outcome: value, fields: {y: [['6/17',
+        '7/17', '4/17']]}}, note: 'the second row of BV2.E8 alone, so that a misreading with a zero denominator on row 0
+    is judged on values'}
+- id: BV2.E9
+  profile: G4
+  clauses: [BV2.C4]
+  input: {theta: [[1, -2]], v: [[2, 0]], g: [[1, 4]], lr: '1/2', mu: '1/2', wd: '1/4'}
+  expected: {outcome: value, fields: {y: [['-1/8', '-15/4']]}}
+  note: v' = [2, 4]; y = 1 - (2 + 1/4)/2 and -2 - (4 - 1/2)/2.
+- id: BV2.E10
+  profile: G4
+  clauses: [BV2.C4]
+  input: {theta: [[1]], v: [[0]], g: [[0]], lr: '1/1024', mu: '7/8', wd: '1/256'}
+  expected: {outcome: value, fields: {y: [['262143/262144']]}}
+  note: The issuer's scalars; v' = 0, y = 1 - 2^-10 * 2^-8.
+- id: BV2.E11
+  profile: G5
+  clauses: [BV2.C5]
+  input: {packed: [[58]], sc: [[3]], a: [1, 2], G: 2}
+  expected: {outcome: value, fields: {y: [-24]}}
+  note: 58 = 0x3A; low nibble 10 - 8 = 2 (k = 0), high nibble 3 - 8 = -5 (k = 1); 2*3*1 - 5*3*2.
+- id: BV2.E12
+  profile: G5
+  clauses: [BV2.C5]
+  input: {packed: [[-1], [255]], sc: [[1], [1]], a: [1, 2], G: 2}
+  expected: {outcome: value, fields: {y: [21, 21]}}
+  note: Both bytes have bits 0xFF; q = 7, 7; 7 + 14.
+- id: BV2.E13
+  profile: G5
+  clauses: [BV2.C5]
+  input: {packed: [[152]], sc: [[5, 7]], a: [3, 4], G: 1}
+  expected: {outcome: value, fields: {y: [28]}}
+  note: 152 = 0x98; q0 = 8 - 8 = 0 with sc[0], q1 = 9 - 8 = 1 with sc[1]; 0 + 1*7*4.
+- {id: BV2.E14, profile: G5, clauses: [BV2.C9], input: {packed: [[256]], sc: [[1]], a: [1, 1], G: 2}, expected: {outcome: invalid_input}}
+- {id: BV2.E15, profile: G6, clauses: [BV2.C6], input: {a: [[3, 4], [1, 1]], b: [[4, 3], [1, 0]]}, expected: {outcome: value,
+    fields: {y: ['24/25', '1/sqrt(2)']}}}
+- {id: BV2.E16, profile: G6, clauses: [BV2.C6], input: {a: [[0, 0]], b: [[1, 0]]}, expected: {outcome: domain_undefined}}
+- id: BV2.E17
+  profile: G7
+  clauses: [BV2.C7]
+  input: {q: [[1, 2]], k: [[[1, 0], [0, 1], [-1, 0]]], v: [[[1, 2], [3, 4], [5, 6]]], pos: [1], scale: '1/2'}
+  expected: {outcome: value, fields: {y: [['7/5', 2]]}}
+  note: scores [1/2, 1, -1/2]; j <= 1 keeps [1/2, 1]; numerator [7/2, 5], denominator 3/2 + 1.
+- id: BV2.E18
+  profile: G7
+  clauses: [BV2.C7]
+  input: {q: [[1, 2]], k: [[[1, 0], [0, 1], [-1, 0]]], v: [[[1, 2], [3, 4], [5, 6]]], pos: [2], scale: '1/2'}
+  expected: {outcome: value, fields: {y: [['7/5', 2]]}}
+  note: j = 2 is kept but its score -1/2 is clipped to 0 by the max.
+- id: BV2.E19
+  profile: G7
+  clauses: [BV2.C7]
+  input: {q: [[1, 2], [1, 1]], k: [[[1, 0], [0, 1], [1, 1]], [[1, 0], [0, 1], [1, 1]]], v: [[[1, 2], [3, 4], [5, 6]],
+      [[1, 2], [3, 4], [5, 6]]], pos: [5, -1], scale: '1/2'}
+  expected: {outcome: value, fields: {y: [['11/4', '7/2'], [0, 0]]}}
+  note: Row 0 keeps all, s = [1/2, 1, 3/2], numerator [11, 14], denominator 4. Row 1 pos = -1 keeps none, y = 0/1.
+- {id: BV2.E20, profile: G7, clauses: [BV2.C9], input: {q: [[1]], k: [[[1]]], v: [[[1]]], pos: ['1/2'], scale: 1}, expected: {
+    outcome: invalid_input}}
+- id: BV2.E21
+  profile: G8
+  clauses: [BV2.C8]
+  input: {x: [[1, 2, 3, 4], [-1, '1/2', 0, 0]]}
+  expected: {outcome: value, fields: {y: [['1/4', '3/4', '3/2', '5/2'], ['-1/4', '-1/8', '-1/8', '-1/8']]}}
+signature:
+  inputs: ['profile G1..G8', 'a dict of the family''s tensors (nested lists of exact rationals / integers) and runtime scalars, keys per profile']
+  pre_state: []
+  post_state: []
+  observation_unit: the full output tensor of one program launch on one input
+domain:
+  valid: [finite exact rational inputs with the shapes of the profile; integer bytes and positions]
+  domain_undefined: ['G1 empty row or var + eps <= 0', 'G6 zero row norm']
+  invalid_input: [mismatched shapes, wrong number of scale columns, 'bytes outside [-128, 255]', non-integer positions,
+    non-finite values, missing or extra keys]
+  unsupported: [profiles other than G1..G8]
+mutation_requirements:
+- {id: BV2.M1, misreading: 'G1 variance over D - 1 (answer key prog_28, S-dm1)', witnesses: [BV2.E1, BV2.E2]}
+- {id: BV2.M2, misreading: 'G1 eps added to rstd outside the root (answer key prog_15, S-eps-out)', witnesses: [BV2.E1,
+    BV2.E3]}
+- {id: BV2.M3, misreading: 'G2 gate on b, multiply by a (answer key prog_02, S-swap)', witnesses: [BV2.E6]}
+- {id: BV2.M4, misreading: 'G2 |a| instead of max(a, 0) (answer key prog_03, S-abs)', witnesses: [BV2.E6]}
+- {id: BV2.M5, misreading: 'G5 low and high nibble roles swapped (answer key prog_05, S-nibble-swap)', witnesses: [BV2.E11,
+    BV2.E13]}
+- {id: BV2.M6, misreading: 'G3 denominator sums h/(1+|h|) without the +1 (answer key prog_21, S-noone)', witnesses: [BV2.E22, BV2.E8]}
+- {id: BV2.M7, misreading: 'G6 first norm without the square root (answer key prog_26, S-nosqrt)', witnesses: [BV2.E15]}
+- {id: BV2.M8, misreading: 'G4 v'' = mu (v + g) (answer key prog_35, S-mom-after)', witnesses: [BV2.E9]}
+- {id: BV2.M9, misreading: 'G4 weight decay not multiplied by lr, y = theta - lr v'' - wd theta', witnesses: [BV2.E9]}
+- {id: BV2.M10, misreading: G5 nibbles used unsigned (the -8 offset dropped), witnesses: [BV2.E11]}
+- {id: BV2.M11, misreading: G7 the +1 in the denominator dropped, witnesses: [BV2.E17]}
+- {id: BV2.M12, misreading: 'G7 causal mask read as j < pos', witnesses: [BV2.E17]}
+- {id: BV2.M13, misreading: G7 scores not clipped at 0, witnesses: [BV2.E18]}
+- {id: BV2.M14, misreading: 'G8 exclusive prefix (i < d)', witnesses: [BV2.E21]}
+- {id: BV2.M15, misreading: 'G8 running mean (divide by d + 1 instead of D)', witnesses: [BV2.E21]}
+nonclaims:
+- This contract is the issuer's task definition transcribed; the phase-3 update-layer quantities (SGD / AdamW responses
+  to the program output) are measurement definitions, not task specifications, and are not covered here.
+- Numerical variants (P-*, U-*) and device rounding are the K - G question; this contract states f only.
+changes: []

@@ -1,5 +1,20 @@
 # 规格：现状、已知问题与待决事项（2026-10-15）
 
+## 2026-10-17 代码复核补充
+
+以下是对当前代码和已有记录的复核，后文的 10-15 / 10-16 计数保留其日期，不代表当前进度。
+
+- 当前有 37 份合同、565 个例子；3 份为 `reviewed_for_implementation`，34 份为 `drafted`。新增合同不等于新增认证。
+- 唯一检查器、注册入口、v2.5 隔离及子进程失败传播已经实现，本轮不重复实现。
+- 新发现并修复：`tools/check_contracts.py:killed` 曾把变异返回 `not_established` 或 `unsupported` 当作拒绝见证。新增两项测试在修前出现三处失败；修后这两类结果与实现异常一样，不作为数学反例。
+- **严格包围尚有缺口**：`kernel_spec/expr.py:iv_erf` 使用 mpmath 点值加经验余量，并由 `real.erf` 用于 GELU 等路径。这不是已经证明的误差界；与 DSL rc3 §5.2 的要求不符。应改用有向舍入的 MPFR 或 Arb 等严格求值，覆盖输入、求值和输出转换；目前尚未修复，相关路径不能据此声称严格参照已经核验。MPFR 的舍入保证见 [官方手册](https://www.mpfr.org/mpfr-current/mpfr.html#Rounding)。
+- **绑定仍未完成**：`corpus/bind_inductor.py` 记录的 2110/2120 `bound` 实际检查了源码对应、计算图片段解析和运算名支持，未检查完整输入、输出、状态与 profile。不能当作 2110 个真实语义绑定。
+- 已保存的 `corpus/results/three_way_dynamic.jsonl` 共 100 项：22 项 `evaluated`、44 项输入对应不明确、25 项片段引用缺少输入、9 项输出对应不明确。22 项也只是每输出至多 34 个坐标的 K 与 f 中点差异；不是 Gπ − f 的严格裁决或完整输出认证。代码把 `Undefined` 与 `NotEstablished` 合计到 `undefined`，这两类还须分开。
+- **工具入口仍未使用上述条件**：`2_tool/src/kernel_analyzer/reference_eval/audit.py` 的 `spec=` 仍接受 float64 函数，未接合同来源、完整绑定及保证标签。其实现参照比较不能升级为经过这三项条件的语义裁决。
+
+来源抽查：Katharopoulos 等论文 §3.3 式 (10)–(12) 同时包含 S、Z 和归一化分母，§3.3.1 单独推导分子的梯度；因此未归一化计算有依据，但不等于完整归一化注意力。OCP MX v1.0 §6.3 明确允许其他转换算法，因此不能仅凭不同于该节给出的转换方式判错。相关 v2.5 合同仍处于隔离区，本轮未启用。
+原文：[线性注意力论文](https://proceedings.mlr.press/v119/katharopoulos20a/katharopoulos20a.pdf)、[OCP MX v1.0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf)。
+
 ## 1 已有的证据
 
 | 证据 | 结果 | 出处 |

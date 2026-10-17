@@ -135,6 +135,24 @@ class Injections(unittest.TestCase):
         self.assertEqual(self.s.check(), 1)
         self.assertIn("CE.M1: mutation not rejected", self.s.output)
 
+    def test_H_unavailable_mutant_is_not_a_counterexample(self):
+        for outcome in ("not_established", "unsupported"):
+            with self.subTest(outcome=outcome):
+                adapter = self.s.dir / "adapters/CE.py"
+                original = adapter.read_text()
+                try:
+                    adapter.write_text(original.replace('"CE.M1": _m("mean_by_N"),',
+                        f'"CE.M1": lambda p, i: Result("{outcome}", note="no answer"),'))
+                    self.assertEqual(self.s.check(), 1, self.s.output)
+                    self.assertIn("CE.M1: mutation not rejected", self.s.output)
+                finally:
+                    adapter.write_text(original)
+
+    def test_H_unavailable_mutant_on_invalid_input_is_not_a_counterexample(self):
+        for outcome in ("not_established", "unsupported", "implementation_error"):
+            rejected, _ = check_contracts.killed(Result(outcome), {"outcome": "invalid_input"}, {})
+            self.assertFalse(rejected, outcome)
+
     def test_missing_mutant_implementation(self):
         self.s.edit_text("adapters/RANKMEAN.py", '"RM.M5": m5}', '}')
         self.assertEqual(self.s.check(), 1)

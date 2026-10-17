@@ -15,7 +15,7 @@ from . import aten as A
 from .aten_adapter import decode, encode
 from .num import Invalid, NotEstablished, Undefined, Unsupported
 
-BASE_CONTRACTS = ("ARITH", "MATHFN", "LOGIC", "CAST", "LAYOUT", "INDEX", "REDUCE", "SOFTMAX", "MATMUL", "CONV", "RANDOM")
+BASE_CONTRACTS = ("ARITH", "MATHFN", "LOGIC", "CAST", "LAYOUT", "INDEX", "REDUCE", "SOFTMAX", "MATMUL", "CONV", "RANDOM", "ACT")
 CONTRACTS = Path(__file__).resolve().parents[1] / "contracts"
 
 
