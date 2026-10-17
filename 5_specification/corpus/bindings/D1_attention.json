@@ -1,0 +1,3317 @@
+{
+ "group": "D1_attention",
+ "date": "2026-10-17",
+ "author": "Claude (spec v3 author, group D1_attention)",
+ "source": ".cache/spec_v3/group_D1_attention.jsonl (136 instances, 134 distinct ids: the Liger RoPE corpus rows are forward and backward launches of the same kernel)",
+ "contracts": {
+  "ATTN": "contracts/ATTN.yaml",
+  "PACK": "contracts/PACK.yaml",
+  "ROPE": "contracts/ROPE.yaml",
+  "EMB": "contracts/EMB.yaml",
+  "MOE": "contracts/MOE.yaml",
+  "PAGEDATTN": "contracts/PAGEDATTN.yaml"
+ },
+ "rule": "every instance condition (experiment x kind x operator x params x case) maps to a contract and the profiles under which its recorded outputs are judged; task-bound profiles (task_choice_required) are listed where the comparison needs a task binding",
+ "combinations": [
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 72,
+   "contracts": [
+    "ATTN"
+   ]
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 13,
+   "contracts": [
+    "EMB"
+   ]
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "moe",
+   "operator": "specs/phase2/spec_moe.py v0.1 (MOE-C1 renormalised, MOE-C3 drop in order of appearance)",
+   "params": {
+    "family": "moe"
+   },
+   "instances": 10,
+   "contracts": [
+    "MOE"
+   ]
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "packing",
+   "operator": "specs/phase2/spec_attention.py v0.1 (packed_mask)",
+   "params": {
+    "family": "packing"
+   },
+   "instances": 9,
+   "contracts": [
+    "PACK"
+   ]
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "rope",
+   "operator": "specs/phase2/spec_attention.py v0.1 (rope_apply)",
+   "params": {
+    "family": "rope"
+   },
+   "instances": 6,
+   "contracts": [
+    "ROPE"
+   ]
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "attention",
+   "operator": "torch.compile(torch.nn.attention.flex_attention.flex_attention) -> Inductor Triton templates",
+   "params": {},
+   "instances": 2,
+   "contracts": [
+    "ATTN"
+   ]
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "attention",
+   "operator": "Triton tutorial 06-fused-attention (v3.6.0)",
+   "params": {},
+   "instances": 1,
+   "contracts": [
+    "ATTN"
+   ]
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "paged_attention",
+   "operator": "vllm.v1.attention.ops.triton_unified_attention.unified_attention (paged KV cache)",
+   "params": {},
+   "instances": 1,
+   "contracts": [
+    "PAGEDATTN"
+   ]
+  },
+  {
+   "experiment": "flash_attention_case",
+   "kind": "attention",
+   "operator": "Triton tutorial 06 fused attention forward",
+   "params": {},
+   "instances": 7,
+   "contracts": [
+    "ATTN"
+   ]
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "liger:rope",
+   "operator": "liger.rope.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "_triton_rope"
+   },
+   "instances": 2,
+   "contracts": [
+    "ROPE"
+   ]
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "liger:rope",
+   "operator": "liger.rope.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "_triton_rope"
+   },
+   "instances": 2,
+   "contracts": [
+    "ROPE"
+   ]
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:embedding",
+   "operator": "gems.embedding.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "embedding_kernel"
+   },
+   "instances": 1,
+   "contracts": [
+    "EMB"
+   ]
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:embedding",
+   "operator": "gems.embedding.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "_to_copy_func_kernel_rank_1"
+   },
+   "instances": 1,
+   "contracts": [
+    "EMB"
+   ]
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:embedding",
+   "operator": "gems.embedding.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "embedding_kernel"
+   },
+   "instances": 1,
+   "contracts": [
+    "EMB"
+   ]
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:embedding",
+   "operator": "gems.embedding.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "_to_copy_func_kernel_rank_1"
+   },
+   "instances": 1,
+   "contracts": [
+    "EMB"
+   ]
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:embedding",
+   "operator": "gems.embedding.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "embedding_kernel"
+   },
+   "instances": 1,
+   "contracts": [
+    "EMB"
+   ]
+  },
+  {
+   "experiment": "bugs",
+   "kind": "rope",
+   "operator": "Liger RoPE",
+   "params": {},
+   "instances": 2,
+   "contracts": [
+    "ROPE"
+   ]
+  },
+  {
+   "experiment": "bugs",
+   "kind": "moe",
+   "operator": "Liger fused MoE experts (tl.dot TF32)",
+   "params": {},
+   "instances": 1,
+   "contracts": [
+    "MOE"
+   ]
+  },
+  {
+   "experiment": "bugs",
+   "kind": "attention",
+   "operator": "Triton tutorial 06 attention backward",
+   "params": {},
+   "instances": 1,
+   "contracts": [
+    "ATTN"
+   ]
+  },
+  {
+   "experiment": "bugs",
+   "kind": "attention",
+   "operator": "vLLM sliding-window attention",
+   "params": {},
+   "instances": 1,
+   "contracts": [
+    "PAGEDATTN"
+   ]
+  },
+  {
+   "experiment": "bugs",
+   "kind": "attention",
+   "operator": "SDPA rewrite",
+   "params": {},
+   "instances": 1,
+   "contracts": [
+    "ATTN"
+   ]
+  }
+ ],
+ "entries": [
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_equal_causal_mha_sNone_d16/0",
+    "essential_phase2b/att_equal_causal_mha_sNone_d16/1",
+    "essential_phase2b/att_equal_causal_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "is_causal": true
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_equal_fully_masked_row_mha_sNone_d16/0",
+    "essential_phase2b/att_equal_fully_masked_row_mha_sNone_d16/1",
+    "essential_phase2b/att_equal_fully_masked_row_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 8"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa",
+    "sdpa_zero_rows"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "attn_mask": "boolean, batch 1 rows 0 and L//2 have no allowed key"
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "undefined_rows": "AT.EMPTY_ROW: under sdpa the full query is domain_undefined (device value not judged, status_then 'undefined (ATT-A1)'); the defined rows are judged on the query restricted to them (the harness zeroed the upstream there, so dk/dv get no contribution from them). sdpa_zero_rows (task-bound) judges every row with the aten._safe_softmax convention.",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_equal_none_gqa_sNone_d16/0",
+    "essential_phase2b/att_equal_none_gqa_sNone_d16/1",
+    "essential_phase2b/att_equal_none_gqa_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 2,
+    "L": 37,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": true
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_equal_none_mha_s0.5_d16/0",
+    "essential_phase2b/att_equal_none_mha_s0.5_d16/1",
+    "essential_phase2b/att_equal_none_mha_s0.5_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": "1/2",
+    "enable_gqa": false
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_equal_none_mha_sNone_d16/0",
+    "essential_phase2b/att_equal_none_mha_sNone_d16/1",
+    "essential_phase2b/att_equal_none_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_equal_none_mha_sNone_d64/0",
+    "essential_phase2b/att_equal_none_mha_sNone_d64/1",
+    "essential_phase2b/att_equal_none_mha_sNone_d64/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 37,
+    "E": 64,
+    "Ev": 64,
+    "scale": null,
+    "enable_gqa": false
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_equal_none_mha_sNone_d72/0",
+    "essential_phase2b/att_equal_none_mha_sNone_d72/1",
+    "essential_phase2b/att_equal_none_mha_sNone_d72/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 37,
+    "E": 72,
+    "Ev": 72,
+    "scale": null,
+    "enable_gqa": false
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_equal_padding_mha_sNone_d16/0",
+    "essential_phase2b/att_equal_padding_mha_sNone_d16/1",
+    "essential_phase2b/att_equal_padding_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "attn_mask": "boolean, batch 1 masks its last 3 keys"
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_equal_sliding_window_mha_sNone_d16/0",
+    "essential_phase2b/att_equal_sliding_window_mha_sNone_d16/1",
+    "essential_phase2b/att_equal_sliding_window_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "attn_mask": "boolean, allowed iff i - 5 < j <= i (top-left)"
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qeq1_causal_mha_sNone_d16/0",
+    "essential_phase2b/att_qeq1_causal_mha_sNone_d16/1",
+    "essential_phase2b/att_qeq1_causal_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 1,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "is_causal": true
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qeq1_fully_masked_row_mha_sNone_d16/0",
+    "essential_phase2b/att_qeq1_fully_masked_row_mha_sNone_d16/1",
+    "essential_phase2b/att_qeq1_fully_masked_row_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 4"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa",
+    "sdpa_zero_rows"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 1,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "attn_mask": "boolean, batch 1 rows 0 and L//2 have no allowed key"
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "undefined_rows": "AT.EMPTY_ROW: under sdpa the full query is domain_undefined (device value not judged, status_then 'undefined (ATT-A1)'); the defined rows are judged on the query restricted to them (the harness zeroed the upstream there, so dk/dv get no contribution from them). sdpa_zero_rows (task-bound) judges every row with the aten._safe_softmax convention.",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qeq1_none_mha_sNone_d16/0",
+    "essential_phase2b/att_qeq1_none_mha_sNone_d16/1",
+    "essential_phase2b/att_qeq1_none_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 1,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qeq1_padding_mha_sNone_d16/0",
+    "essential_phase2b/att_qeq1_padding_mha_sNone_d16/1",
+    "essential_phase2b/att_qeq1_padding_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 1,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "attn_mask": "boolean, batch 1 masks its last 3 keys"
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qeq1_sliding_window_mha_sNone_d16/0",
+    "essential_phase2b/att_qeq1_sliding_window_mha_sNone_d16/1",
+    "essential_phase2b/att_qeq1_sliding_window_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 1,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "attn_mask": "boolean, allowed iff i - 5 < j <= i (top-left)"
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qgtk_causal_mha_sNone_d16/0",
+    "essential_phase2b/att_qgtk_causal_mha_sNone_d16/1",
+    "essential_phase2b/att_qgtk_causal_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 19,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "is_causal": true
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qgtk_fully_masked_row_mha_sNone_d16/0",
+    "essential_phase2b/att_qgtk_fully_masked_row_mha_sNone_d16/1",
+    "essential_phase2b/att_qgtk_fully_masked_row_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 8"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa",
+    "sdpa_zero_rows"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 19,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "attn_mask": "boolean, batch 1 rows 0 and L//2 have no allowed key"
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "undefined_rows": "AT.EMPTY_ROW: under sdpa the full query is domain_undefined (device value not judged, status_then 'undefined (ATT-A1)'); the defined rows are judged on the query restricted to them (the harness zeroed the upstream there, so dk/dv get no contribution from them). sdpa_zero_rows (task-bound) judges every row with the aten._safe_softmax convention.",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qgtk_none_mha_sNone_d16/0",
+    "essential_phase2b/att_qgtk_none_mha_sNone_d16/1",
+    "essential_phase2b/att_qgtk_none_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 19,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qgtk_padding_mha_sNone_d16/0",
+    "essential_phase2b/att_qgtk_padding_mha_sNone_d16/1",
+    "essential_phase2b/att_qgtk_padding_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 19,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "attn_mask": "boolean, batch 1 masks its last 3 keys"
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qgtk_sliding_window_mha_sNone_d16/0",
+    "essential_phase2b/att_qgtk_sliding_window_mha_sNone_d16/1",
+    "essential_phase2b/att_qgtk_sliding_window_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 112"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa",
+    "sdpa_zero_rows"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 37,
+    "S": 19,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "attn_mask": "boolean, allowed iff i - 5 < j <= i (top-left)"
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "undefined_rows": "AT.EMPTY_ROW: under sdpa the full query is domain_undefined (device value not judged, status_then 'undefined (ATT-A1)'); the defined rows are judged on the query restricted to them (the harness zeroed the upstream there, so dk/dv get no contribution from them). sdpa_zero_rows (task-bound) judges every row with the aten._safe_softmax convention.",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qltk_causal_mha_sNone_d16/0",
+    "essential_phase2b/att_qltk_causal_mha_sNone_d16/1",
+    "essential_phase2b/att_qltk_causal_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 19,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "is_causal": true
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qltk_fully_masked_row_mha_sNone_d16/0",
+    "essential_phase2b/att_qltk_fully_masked_row_mha_sNone_d16/1",
+    "essential_phase2b/att_qltk_fully_masked_row_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 8"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa",
+    "sdpa_zero_rows"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 19,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "attn_mask": "boolean, batch 1 rows 0 and L//2 have no allowed key"
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "undefined_rows": "AT.EMPTY_ROW: under sdpa the full query is domain_undefined (device value not judged, status_then 'undefined (ATT-A1)'); the defined rows are judged on the query restricted to them (the harness zeroed the upstream there, so dk/dv get no contribution from them). sdpa_zero_rows (task-bound) judges every row with the aten._safe_softmax convention.",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qltk_none_mha_sNone_d16/0",
+    "essential_phase2b/att_qltk_none_mha_sNone_d16/1",
+    "essential_phase2b/att_qltk_none_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 19,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qltk_padding_mha_sNone_d16/0",
+    "essential_phase2b/att_qltk_padding_mha_sNone_d16/1",
+    "essential_phase2b/att_qltk_padding_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 19,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "attn_mask": "boolean, batch 1 masks its last 3 keys"
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "attention",
+   "operator": "specs/phase2/spec_attention.py v0.1",
+   "params": {
+    "family": "attention"
+   },
+   "instances": 3,
+   "instance_ids": [
+    "essential_phase2b/att_qltk_sliding_window_mha_sNone_d16/0",
+    "essential_phase2b/att_qltk_sliding_window_mha_sNone_d16/1",
+    "essential_phase2b/att_qltk_sliding_window_mha_sNone_d16/2"
+   ],
+   "status_then": [
+    "ok; rows without an allowed key (ATT-A1, undefined): 0"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "B": 2,
+    "Hq": 4,
+    "Hkv": 4,
+    "L": 19,
+    "S": 37,
+    "E": 16,
+    "Ev": 16,
+    "scale": null,
+    "enable_gqa": false,
+    "attn_mask": "boolean, allowed iff i - 5 < j <= i (top-left)"
+   },
+   "outputs": {
+    "out": "out",
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv (summed over the query heads of a GQA group)"
+   },
+   "inputs": "q, k, v, upstream g of the harness (seeds 0-2); SDPA is_causal for 'causal', explicit masks otherwise",
+   "candidate_notes": "flex_attention candidates: boolean mask_mod (AT.C2); hf_eager_attention adds finfo.min (an exact finite additive mask, AT.C3); xformers LowerTriangularMask is the top-left causal mask; all candidates are judged on the sdpa conventions"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_bag_pad0_mnNone_nofreq_sum_normal_nopsw"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding_bag",
+    "V": 20,
+    "D": 8,
+    "padding_idx": 0,
+    "max_norm": null,
+    "scale_grad_by_freq": false,
+    "mode": "sum",
+    "offsets": [
+     0,
+     4,
+     9,
+     12
+    ],
+    "per_sample_weights": false
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)",
+   "note": "bag 2 holds only padding entries under mode sum: zeros (EM.PAD_BAG); padding excluded from the sum"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_bag_padNone_mnNone_nofreq_max_normal_nopsw"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding_bag",
+    "V": 20,
+    "D": 8,
+    "padding_idx": null,
+    "max_norm": null,
+    "scale_grad_by_freq": false,
+    "mode": "max",
+    "offsets": [
+     0,
+     4,
+     9,
+     12
+    ],
+    "per_sample_weights": false
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_bag_padNone_mnNone_nofreq_mean_empty_nopsw"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding_bag",
+    "V": 20,
+    "D": 8,
+    "padding_idx": null,
+    "max_norm": null,
+    "scale_grad_by_freq": false,
+    "mode": "mean",
+    "offsets": [
+     0,
+     4,
+     4,
+     9
+    ],
+    "per_sample_weights": false
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_bag_padNone_mnNone_nofreq_mean_normal_nopsw"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding_bag",
+    "V": 20,
+    "D": 8,
+    "padding_idx": null,
+    "max_norm": null,
+    "scale_grad_by_freq": false,
+    "mode": "mean",
+    "offsets": [
+     0,
+     4,
+     9,
+     12
+    ],
+    "per_sample_weights": false
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_bag_padNone_mnNone_nofreq_sum_empty_nopsw"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding_bag",
+    "V": 20,
+    "D": 8,
+    "padding_idx": null,
+    "max_norm": null,
+    "scale_grad_by_freq": false,
+    "mode": "sum",
+    "offsets": [
+     0,
+     4,
+     4,
+     9
+    ],
+    "per_sample_weights": false
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_bag_padNone_mnNone_nofreq_sum_normal_nopsw"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding_bag",
+    "V": 20,
+    "D": 8,
+    "padding_idx": null,
+    "max_norm": null,
+    "scale_grad_by_freq": false,
+    "mode": "sum",
+    "offsets": [
+     0,
+     4,
+     9,
+     12
+    ],
+    "per_sample_weights": false
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_bag_padNone_mnNone_nofreq_sum_normal_psw"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding_bag",
+    "V": 20,
+    "D": 8,
+    "padding_idx": null,
+    "max_norm": null,
+    "scale_grad_by_freq": false,
+    "mode": "sum",
+    "offsets": [
+     0,
+     4,
+     9,
+     12
+    ],
+    "per_sample_weights": true
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_bag_padNone_mnNone_nofreq_sum_single_nopsw"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding_bag",
+    "V": 20,
+    "D": 8,
+    "padding_idx": null,
+    "max_norm": null,
+    "scale_grad_by_freq": false,
+    "mode": "sum",
+    "offsets": "0..14",
+    "per_sample_weights": false
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_pad0_mn1.0_nofreq"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc",
+    "renorm_aten"
+   ],
+   "call": {
+    "op": "embedding",
+    "V": 20,
+    "D": 8,
+    "padding_idx": 0,
+    "max_norm": 1,
+    "scale_grad_by_freq": false
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)",
+   "note": "EM.RENORM: renorm_doc is the documented target; renorm_aten (task-bound) is what the ATen kernel computes; the closure round's float64 'beyond' counts on these conditions are this difference"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_pad0_mnNone_nofreq"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding",
+    "V": 20,
+    "D": 8,
+    "padding_idx": 0,
+    "max_norm": null,
+    "scale_grad_by_freq": false
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_padNone_mn1.0_nofreq"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc",
+    "renorm_aten"
+   ],
+   "call": {
+    "op": "embedding",
+    "V": 20,
+    "D": 8,
+    "padding_idx": null,
+    "max_norm": 1,
+    "scale_grad_by_freq": false
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)",
+   "note": "EM.RENORM: renorm_doc is the documented target; renorm_aten (task-bound) is what the ATen kernel computes; the closure round's float64 'beyond' counts on these conditions are this difference"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_padNone_mnNone_freq"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding",
+    "V": 20,
+    "D": 8,
+    "padding_idx": null,
+    "max_norm": null,
+    "scale_grad_by_freq": true
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "embedding",
+   "operator": "specs/phase2/spec_embedding.py v0.1",
+   "params": {
+    "family": "embedding"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/emb_embedding_padNone_mnNone_nofreq"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding",
+    "V": 20,
+    "D": 8,
+    "padding_idx": null,
+    "max_norm": null,
+    "scale_grad_by_freq": false
+   },
+   "outputs": {
+    "out": "out",
+    "dweight": "dweight",
+    "weight_after": "weight_after",
+    "dpsw": "dpsw"
+   },
+   "inputs": "weight, indices, offsets, per_sample_weights and upstream of the harness (seeds 0-2)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "moe",
+   "operator": "specs/phase2/spec_moe.py v0.1 (MOE-C1 renormalised, MOE-C3 drop in order of appearance)",
+   "params": {
+    "family": "moe"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/moe_1_4_None_one_expert"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "MOE",
+   "profiles": [
+    "renorm_aux_top1"
+   ],
+   "call": {
+    "T": 13,
+    "D": 6,
+    "E": 4,
+    "k": 1,
+    "experts": "linear x @ W_e (expert_weights)",
+    "capacity": null,
+    "alpha": 1
+   },
+   "outputs": {
+    "out": "out",
+    "order": "selection (rank order) and topk membership",
+    "w": "weights (dense [T][E])",
+    "dropped": "dropped (dense [T][E])",
+    "aux": "aux (the harness counts order[:, 0], Switch eq. 5)",
+    "unperm": "permute followed by unpermute = identity (INDEX contract semantics of index_select / index_put), not a MOE output"
+   },
+   "inputs": "x, router logits, expert weights of the harness (seeds 0-2)",
+   "also": "renorm_aux_dispatched for the v2.4 reference's count (declared difference, closure MOE-C4)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "moe",
+   "operator": "specs/phase2/spec_moe.py v0.1 (MOE-C1 renormalised, MOE-C3 drop in order of appearance)",
+   "params": {
+    "family": "moe"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/moe_1_4_None_random"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "MOE",
+   "profiles": [
+    "renorm_aux_top1"
+   ],
+   "call": {
+    "T": 13,
+    "D": 6,
+    "E": 4,
+    "k": 1,
+    "experts": "linear x @ W_e (expert_weights)",
+    "capacity": null,
+    "alpha": 1
+   },
+   "outputs": {
+    "out": "out",
+    "order": "selection (rank order) and topk membership",
+    "w": "weights (dense [T][E])",
+    "dropped": "dropped (dense [T][E])",
+    "aux": "aux (the harness counts order[:, 0], Switch eq. 5)",
+    "unperm": "permute followed by unpermute = identity (INDEX contract semantics of index_select / index_put), not a MOE output"
+   },
+   "inputs": "x, router logits, expert weights of the harness (seeds 0-2)",
+   "also": "renorm_aux_dispatched for the v2.4 reference's count (declared difference, closure MOE-C4)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "moe",
+   "operator": "specs/phase2/spec_moe.py v0.1 (MOE-C1 renormalised, MOE-C3 drop in order of appearance)",
+   "params": {
+    "family": "moe"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/moe_1_4_None_ties"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "MOE",
+   "profiles": [
+    "renorm_aux_top1"
+   ],
+   "call": {
+    "T": 13,
+    "D": 6,
+    "E": 4,
+    "k": 1,
+    "experts": "linear x @ W_e (expert_weights)",
+    "capacity": null,
+    "alpha": 1
+   },
+   "outputs": {
+    "out": "out",
+    "order": "selection (rank order) and topk membership",
+    "w": "weights (dense [T][E])",
+    "dropped": "dropped (dense [T][E])",
+    "aux": "aux (the harness counts order[:, 0], Switch eq. 5)",
+    "unperm": "permute followed by unpermute = identity (INDEX contract semantics of index_select / index_put), not a MOE output"
+   },
+   "inputs": "x, router logits, expert weights of the harness (seeds 0-2)",
+   "note": "MO.TIES: bind selection = the candidate's observed order; without it the joint tie choices (up to 2^13) exceed the budget and the result is not_established",
+   "also": "renorm_aux_dispatched for the v2.4 reference's count (declared difference, closure MOE-C4)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "moe",
+   "operator": "specs/phase2/spec_moe.py v0.1 (MOE-C1 renormalised, MOE-C3 drop in order of appearance)",
+   "params": {
+    "family": "moe"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/moe_1_4_exact_random"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "MOE",
+   "profiles": [
+    "renorm_aux_top1"
+   ],
+   "call": {
+    "T": 13,
+    "D": 6,
+    "E": 4,
+    "k": 1,
+    "experts": "linear x @ W_e (expert_weights)",
+    "capacity": "ceil(13*k/E)",
+    "alpha": 1
+   },
+   "outputs": {
+    "out": "out",
+    "order": "selection (rank order) and topk membership",
+    "w": "weights (dense [T][E])",
+    "dropped": "dropped (dense [T][E])",
+    "aux": "aux (the harness counts order[:, 0], Switch eq. 5)",
+    "unperm": "permute followed by unpermute = identity (INDEX contract semantics of index_select / index_put), not a MOE output"
+   },
+   "inputs": "x, router logits, expert weights of the harness (seeds 0-2)",
+   "note": "MO.CAPACITY: k = 1, tokens claim capacity in token order",
+   "also": "renorm_aux_dispatched for the v2.4 reference's count (declared difference, closure MOE-C4)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "moe",
+   "operator": "specs/phase2/spec_moe.py v0.1 (MOE-C1 renormalised, MOE-C3 drop in order of appearance)",
+   "params": {
+    "family": "moe"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/moe_1_4_overflow_one_expert"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "MOE",
+   "profiles": [
+    "renorm_aux_top1"
+   ],
+   "call": {
+    "T": 13,
+    "D": 6,
+    "E": 4,
+    "k": 1,
+    "experts": "linear x @ W_e (expert_weights)",
+    "capacity": "max(1, ceil(13*k/E)//2)",
+    "alpha": 1
+   },
+   "outputs": {
+    "out": "out",
+    "order": "selection (rank order) and topk membership",
+    "w": "weights (dense [T][E])",
+    "dropped": "dropped (dense [T][E])",
+    "aux": "aux (the harness counts order[:, 0], Switch eq. 5)",
+    "unperm": "permute followed by unpermute = identity (INDEX contract semantics of index_select / index_put), not a MOE output"
+   },
+   "inputs": "x, router logits, expert weights of the harness (seeds 0-2)",
+   "note": "MO.CAPACITY: k = 1, tokens claim capacity in token order",
+   "also": "renorm_aux_dispatched for the v2.4 reference's count (declared difference, closure MOE-C4)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "moe",
+   "operator": "specs/phase2/spec_moe.py v0.1 (MOE-C1 renormalised, MOE-C3 drop in order of appearance)",
+   "params": {
+    "family": "moe"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/moe_1_4_overflow_random"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "MOE",
+   "profiles": [
+    "renorm_aux_top1"
+   ],
+   "call": {
+    "T": 13,
+    "D": 6,
+    "E": 4,
+    "k": 1,
+    "experts": "linear x @ W_e (expert_weights)",
+    "capacity": "max(1, ceil(13*k/E)//2)",
+    "alpha": 1
+   },
+   "outputs": {
+    "out": "out",
+    "order": "selection (rank order) and topk membership",
+    "w": "weights (dense [T][E])",
+    "dropped": "dropped (dense [T][E])",
+    "aux": "aux (the harness counts order[:, 0], Switch eq. 5)",
+    "unperm": "permute followed by unpermute = identity (INDEX contract semantics of index_select / index_put), not a MOE output"
+   },
+   "inputs": "x, router logits, expert weights of the harness (seeds 0-2)",
+   "note": "MO.CAPACITY: k = 1, tokens claim capacity in token order",
+   "also": "renorm_aux_dispatched for the v2.4 reference's count (declared difference, closure MOE-C4)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "moe",
+   "operator": "specs/phase2/spec_moe.py v0.1 (MOE-C1 renormalised, MOE-C3 drop in order of appearance)",
+   "params": {
+    "family": "moe"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/moe_1_8_None_random"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "MOE",
+   "profiles": [
+    "renorm_aux_top1"
+   ],
+   "call": {
+    "T": 13,
+    "D": 6,
+    "E": 8,
+    "k": 1,
+    "experts": "linear x @ W_e (expert_weights)",
+    "capacity": null,
+    "alpha": 1
+   },
+   "outputs": {
+    "out": "out",
+    "order": "selection (rank order) and topk membership",
+    "w": "weights (dense [T][E])",
+    "dropped": "dropped (dense [T][E])",
+    "aux": "aux (the harness counts order[:, 0], Switch eq. 5)",
+    "unperm": "permute followed by unpermute = identity (INDEX contract semantics of index_select / index_put), not a MOE output"
+   },
+   "inputs": "x, router logits, expert weights of the harness (seeds 0-2)",
+   "also": "renorm_aux_dispatched for the v2.4 reference's count (declared difference, closure MOE-C4)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "moe",
+   "operator": "specs/phase2/spec_moe.py v0.1 (MOE-C1 renormalised, MOE-C3 drop in order of appearance)",
+   "params": {
+    "family": "moe"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/moe_2_4_None_random"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "MOE",
+   "profiles": [
+    "renorm_aux_top1"
+   ],
+   "call": {
+    "T": 13,
+    "D": 6,
+    "E": 4,
+    "k": 2,
+    "experts": "linear x @ W_e (expert_weights)",
+    "capacity": null,
+    "alpha": 1
+   },
+   "outputs": {
+    "out": "out",
+    "order": "selection (rank order) and topk membership",
+    "w": "weights (dense [T][E])",
+    "dropped": "dropped (dense [T][E])",
+    "aux": "aux (the harness counts order[:, 0], Switch eq. 5)",
+    "unperm": "permute followed by unpermute = identity (INDEX contract semantics of index_select / index_put), not a MOE output"
+   },
+   "inputs": "x, router logits, expert weights of the harness (seeds 0-2)",
+   "also": "renorm_aux_dispatched for the v2.4 reference's count (declared difference, closure MOE-C4)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "moe",
+   "operator": "specs/phase2/spec_moe.py v0.1 (MOE-C1 renormalised, MOE-C3 drop in order of appearance)",
+   "params": {
+    "family": "moe"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/moe_2_4_None_ties"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "MOE",
+   "profiles": [
+    "renorm_aux_top1"
+   ],
+   "call": {
+    "T": 13,
+    "D": 6,
+    "E": 4,
+    "k": 2,
+    "experts": "linear x @ W_e (expert_weights)",
+    "capacity": null,
+    "alpha": 1
+   },
+   "outputs": {
+    "out": "out",
+    "order": "selection (rank order) and topk membership",
+    "w": "weights (dense [T][E])",
+    "dropped": "dropped (dense [T][E])",
+    "aux": "aux (the harness counts order[:, 0], Switch eq. 5)",
+    "unperm": "permute followed by unpermute = identity (INDEX contract semantics of index_select / index_put), not a MOE output"
+   },
+   "inputs": "x, router logits, expert weights of the harness (seeds 0-2)",
+   "note": "MO.TIES: bind selection = the candidate's observed order; without it the joint tie choices (up to 2^13) exceed the budget and the result is not_established",
+   "also": "renorm_aux_dispatched for the v2.4 reference's count (declared difference, closure MOE-C4)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "moe",
+   "operator": "specs/phase2/spec_moe.py v0.1 (MOE-C1 renormalised, MOE-C3 drop in order of appearance)",
+   "params": {
+    "family": "moe"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/moe_2_8_None_random"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "MOE",
+   "profiles": [
+    "renorm_aux_top1"
+   ],
+   "call": {
+    "T": 13,
+    "D": 6,
+    "E": 8,
+    "k": 2,
+    "experts": "linear x @ W_e (expert_weights)",
+    "capacity": null,
+    "alpha": 1
+   },
+   "outputs": {
+    "out": "out",
+    "order": "selection (rank order) and topk membership",
+    "w": "weights (dense [T][E])",
+    "dropped": "dropped (dense [T][E])",
+    "aux": "aux (the harness counts order[:, 0], Switch eq. 5)",
+    "unperm": "permute followed by unpermute = identity (INDEX contract semantics of index_select / index_put), not a MOE output"
+   },
+   "inputs": "x, router logits, expert weights of the harness (seeds 0-2)",
+   "also": "renorm_aux_dispatched for the v2.4 reference's count (declared difference, closure MOE-C4)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "packing",
+   "operator": "specs/phase2/spec_attention.py v0.1 (packed_mask)",
+   "params": {
+    "family": "packing"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/pack_1docs_equal"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "PACK",
+   "profiles": [
+    "packed_causal"
+   ],
+   "call": {
+    "doc_lengths": [
+     12
+    ],
+    "H": 4,
+    "E": 16
+   },
+   "outputs": {
+    "mask / positions": "mask, position_ids",
+    "out_packed": "out",
+    "dq, dk, dv (packed)": "ATTN profile sdpa with attn_mask = PACK mask",
+    "alone runs": "ATTN profile sdpa, is_causal, per document"
+   },
+   "note": "the model-level candidate hf_packed (2-layer Llama fed packed position_ids) is a composition (PACK positions, ROPE, ATTN, NORM, MATMUL, ACT); no whole-model contract, its attention part is PACK + ATTN"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "packing",
+   "operator": "specs/phase2/spec_attention.py v0.1 (packed_mask)",
+   "params": {
+    "family": "packing"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/pack_1docs_one_token_doc"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "PACK",
+   "profiles": [
+    "packed_causal"
+   ],
+   "call": {
+    "doc_lengths": [
+     1
+    ],
+    "H": 4,
+    "E": 16
+   },
+   "outputs": {
+    "mask / positions": "mask, position_ids",
+    "out_packed": "out",
+    "dq, dk, dv (packed)": "ATTN profile sdpa with attn_mask = PACK mask",
+    "alone runs": "ATTN profile sdpa, is_causal, per document"
+   },
+   "note": "the model-level candidate hf_packed (2-layer Llama fed packed position_ids) is a composition (PACK positions, ROPE, ATTN, NORM, MATMUL, ACT); no whole-model contract, its attention part is PACK + ATTN"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "packing",
+   "operator": "specs/phase2/spec_attention.py v0.1 (packed_mask)",
+   "params": {
+    "family": "packing"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/pack_1docs_unequal"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "PACK",
+   "profiles": [
+    "packed_causal"
+   ],
+   "call": {
+    "doc_lengths": [
+     13
+    ],
+    "H": 4,
+    "E": 16
+   },
+   "outputs": {
+    "mask / positions": "mask, position_ids",
+    "out_packed": "out",
+    "dq, dk, dv (packed)": "ATTN profile sdpa with attn_mask = PACK mask",
+    "alone runs": "ATTN profile sdpa, is_causal, per document"
+   },
+   "note": "the model-level candidate hf_packed (2-layer Llama fed packed position_ids) is a composition (PACK positions, ROPE, ATTN, NORM, MATMUL, ACT); no whole-model contract, its attention part is PACK + ATTN"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "packing",
+   "operator": "specs/phase2/spec_attention.py v0.1 (packed_mask)",
+   "params": {
+    "family": "packing"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/pack_2docs_equal"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "PACK",
+   "profiles": [
+    "packed_causal"
+   ],
+   "call": {
+    "doc_lengths": [
+     12,
+     12
+    ],
+    "H": 4,
+    "E": 16
+   },
+   "outputs": {
+    "mask / positions": "mask, position_ids",
+    "out_packed": "out",
+    "dq, dk, dv (packed)": "ATTN profile sdpa with attn_mask = PACK mask",
+    "alone runs": "ATTN profile sdpa, is_causal, per document"
+   },
+   "note": "the model-level candidate hf_packed (2-layer Llama fed packed position_ids) is a composition (PACK positions, ROPE, ATTN, NORM, MATMUL, ACT); no whole-model contract, its attention part is PACK + ATTN"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "packing",
+   "operator": "specs/phase2/spec_attention.py v0.1 (packed_mask)",
+   "params": {
+    "family": "packing"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/pack_2docs_one_token_doc"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "PACK",
+   "profiles": [
+    "packed_causal"
+   ],
+   "call": {
+    "doc_lengths": [
+     1,
+     15
+    ],
+    "H": 4,
+    "E": 16
+   },
+   "outputs": {
+    "mask / positions": "mask, position_ids",
+    "out_packed": "out",
+    "dq, dk, dv (packed)": "ATTN profile sdpa with attn_mask = PACK mask",
+    "alone runs": "ATTN profile sdpa, is_causal, per document"
+   },
+   "note": "the model-level candidate hf_packed (2-layer Llama fed packed position_ids) is a composition (PACK positions, ROPE, ATTN, NORM, MATMUL, ACT); no whole-model contract, its attention part is PACK + ATTN"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "packing",
+   "operator": "specs/phase2/spec_attention.py v0.1 (packed_mask)",
+   "params": {
+    "family": "packing"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/pack_2docs_unequal"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "PACK",
+   "profiles": [
+    "packed_causal"
+   ],
+   "call": {
+    "doc_lengths": [
+     5,
+     19
+    ],
+    "H": 4,
+    "E": 16
+   },
+   "outputs": {
+    "mask / positions": "mask, position_ids",
+    "out_packed": "out",
+    "dq, dk, dv (packed)": "ATTN profile sdpa with attn_mask = PACK mask",
+    "alone runs": "ATTN profile sdpa, is_causal, per document"
+   },
+   "note": "the model-level candidate hf_packed (2-layer Llama fed packed position_ids) is a composition (PACK positions, ROPE, ATTN, NORM, MATMUL, ACT); no whole-model contract, its attention part is PACK + ATTN"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "packing",
+   "operator": "specs/phase2/spec_attention.py v0.1 (packed_mask)",
+   "params": {
+    "family": "packing"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/pack_5docs_equal"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "PACK",
+   "profiles": [
+    "packed_causal"
+   ],
+   "call": {
+    "doc_lengths": [
+     12,
+     12,
+     12,
+     12,
+     12
+    ],
+    "H": 4,
+    "E": 16
+   },
+   "outputs": {
+    "mask / positions": "mask, position_ids",
+    "out_packed": "out",
+    "dq, dk, dv (packed)": "ATTN profile sdpa with attn_mask = PACK mask",
+    "alone runs": "ATTN profile sdpa, is_causal, per document"
+   },
+   "note": "the model-level candidate hf_packed (2-layer Llama fed packed position_ids) is a composition (PACK positions, ROPE, ATTN, NORM, MATMUL, ACT); no whole-model contract, its attention part is PACK + ATTN"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "packing",
+   "operator": "specs/phase2/spec_attention.py v0.1 (packed_mask)",
+   "params": {
+    "family": "packing"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/pack_5docs_one_token_doc"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "PACK",
+   "profiles": [
+    "packed_causal"
+   ],
+   "call": {
+    "doc_lengths": [
+     6,
+     1,
+     9,
+     1,
+     12
+    ],
+    "H": 4,
+    "E": 16
+   },
+   "outputs": {
+    "mask / positions": "mask, position_ids",
+    "out_packed": "out",
+    "dq, dk, dv (packed)": "ATTN profile sdpa with attn_mask = PACK mask",
+    "alone runs": "ATTN profile sdpa, is_causal, per document"
+   },
+   "note": "the model-level candidate hf_packed (2-layer Llama fed packed position_ids) is a composition (PACK positions, ROPE, ATTN, NORM, MATMUL, ACT); no whole-model contract, its attention part is PACK + ATTN"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "packing",
+   "operator": "specs/phase2/spec_attention.py v0.1 (packed_mask)",
+   "params": {
+    "family": "packing"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/pack_5docs_unequal"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "PACK",
+   "profiles": [
+    "packed_causal"
+   ],
+   "call": {
+    "doc_lengths": [
+     3,
+     11,
+     6,
+     17,
+     9
+    ],
+    "H": 4,
+    "E": 16
+   },
+   "outputs": {
+    "mask / positions": "mask, position_ids",
+    "out_packed": "out",
+    "dq, dk, dv (packed)": "ATTN profile sdpa with attn_mask = PACK mask",
+    "alone runs": "ATTN profile sdpa, is_causal, per document"
+   },
+   "note": "the model-level candidate hf_packed (2-layer Llama fed packed position_ids) is a composition (PACK positions, ROPE, ATTN, NORM, MATMUL, ACT); no whole-model contract, its attention part is PACK + ATTN"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "rope",
+   "operator": "specs/phase2/spec_attention.py v0.1 (rope_apply)",
+   "params": {
+    "family": "rope"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/rope_interleaved_0_None_64"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ROPE",
+   "profiles": [
+    "interleaved"
+   ],
+   "call": {
+    "x": "q and k [2][4][11][d] (each batch entry a rank-3 query)",
+    "positions": "arange(11) + 0",
+    "rotary_dim": 64,
+    "base": 10000,
+    "scaling_factor": 1,
+    "upstream": "gq for both q and k"
+   },
+   "outputs": {
+    "q, k": "out",
+    "dq, dk": "grad"
+   },
+   "note": "the interleaved layout is judged on the in-repo reference only (other candidates are rotate-half)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "rope",
+   "operator": "specs/phase2/spec_attention.py v0.1 (rope_apply)",
+   "params": {
+    "family": "rope"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/rope_interleaved_7_None_64"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ROPE",
+   "profiles": [
+    "interleaved"
+   ],
+   "call": {
+    "x": "q and k [2][4][11][d] (each batch entry a rank-3 query)",
+    "positions": "arange(11) + 7",
+    "rotary_dim": 64,
+    "base": 10000,
+    "scaling_factor": 1,
+    "upstream": "gq for both q and k"
+   },
+   "outputs": {
+    "q, k": "out",
+    "dq, dk": "grad"
+   },
+   "note": "the interleaved layout is judged on the in-repo reference only (other candidates are rotate-half)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "rope",
+   "operator": "specs/phase2/spec_attention.py v0.1 (rope_apply)",
+   "params": {
+    "family": "rope"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/rope_rotate_half_0_None_64"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ROPE",
+   "profiles": [
+    "rotate_half",
+    "tables_duplicated (hf_apply_rotary, liger_rope: the cos/sin tables as received)",
+    "tables_half (unsloth_rope: half-width cos/sin tables)"
+   ],
+   "call": {
+    "x": "q and k [2][4][11][d] (each batch entry a rank-3 query)",
+    "positions": "arange(11) + 0",
+    "rotary_dim": 64,
+    "base": 10000,
+    "scaling_factor": 1,
+    "upstream": "gq for both q and k"
+   },
+   "outputs": {
+    "q, k": "out",
+    "dq, dk": "grad"
+   },
+   "note": "the interleaved layout is judged on the in-repo reference only (other candidates are rotate-half)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "rope",
+   "operator": "specs/phase2/spec_attention.py v0.1 (rope_apply)",
+   "params": {
+    "family": "rope"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/rope_rotate_half_0_None_72"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ROPE",
+   "profiles": [
+    "rotate_half",
+    "tables_duplicated (hf_apply_rotary, liger_rope: the cos/sin tables as received)",
+    "tables_half (unsloth_rope: half-width cos/sin tables)"
+   ],
+   "call": {
+    "x": "q and k [2][4][11][d] (each batch entry a rank-3 query)",
+    "positions": "arange(11) + 0",
+    "rotary_dim": 72,
+    "base": 10000,
+    "scaling_factor": 1,
+    "upstream": "gq for both q and k"
+   },
+   "outputs": {
+    "q, k": "out",
+    "dq, dk": "grad"
+   },
+   "note": "the interleaved layout is judged on the in-repo reference only (other candidates are rotate-half)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "rope",
+   "operator": "specs/phase2/spec_attention.py v0.1 (rope_apply)",
+   "params": {
+    "family": "rope"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/rope_rotate_half_0_linear2_64"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ROPE",
+   "profiles": [
+    "rotate_half",
+    "tables_duplicated (hf_apply_rotary, liger_rope: the cos/sin tables as received)",
+    "tables_half (unsloth_rope: half-width cos/sin tables)"
+   ],
+   "call": {
+    "x": "q and k [2][4][11][d] (each batch entry a rank-3 query)",
+    "positions": "arange(11) + 0",
+    "rotary_dim": 64,
+    "base": 10000,
+    "scaling_factor": 2,
+    "upstream": "gq for both q and k"
+   },
+   "outputs": {
+    "q, k": "out",
+    "dq, dk": "grad"
+   },
+   "note": "the interleaved layout is judged on the in-repo reference only (other candidates are rotate-half)"
+  },
+  {
+   "experiment": "essential_phase2b",
+   "kind": "rope",
+   "operator": "specs/phase2/spec_attention.py v0.1 (rope_apply)",
+   "params": {
+    "family": "rope"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "essential_phase2b/rope_rotate_half_7_None_64"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ROPE",
+   "profiles": [
+    "rotate_half",
+    "tables_duplicated (hf_apply_rotary, liger_rope: the cos/sin tables as received)",
+    "tables_half (unsloth_rope: half-width cos/sin tables)"
+   ],
+   "call": {
+    "x": "q and k [2][4][11][d] (each batch entry a rank-3 query)",
+    "positions": "arange(11) + 7",
+    "rotary_dim": 64,
+    "base": 10000,
+    "scaling_factor": 1,
+    "upstream": "gq for both q and k"
+   },
+   "outputs": {
+    "q, k": "out",
+    "dq, dk": "grad"
+   },
+   "note": "the interleaved layout is judged on the in-repo reference only (other candidates are rotate-half)"
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "attention",
+   "operator": "torch.compile(torch.nn.attention.flex_attention.flex_attention) -> Inductor Triton templates",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "general_round_v3_1/flex_bwd_causal"
+   ],
+   "status_then": [
+    "hand-written float64 reference"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa",
+    "sdpa_zero_rows"
+   ],
+   "call": {
+    "B": 1,
+    "H": 2,
+    "Hkv": 2,
+    "L": 256,
+    "S": 256,
+    "E": 64,
+    "attn_mask": "boolean, mask_mod causal i >= j",
+    "dout": "g of the case"
+   },
+   "outputs": {
+    "dq": "dq",
+    "dk": "dk",
+    "dv": "dv"
+   }
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "attention",
+   "operator": "torch.compile(torch.nn.attention.flex_attention.flex_attention) -> Inductor Triton templates",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "general_round_v3_1/flex_fwd_softcap"
+   ],
+   "status_then": [
+    "hand-written float64 reference"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa",
+    "sdpa_zero_rows"
+   ],
+   "call": {
+    "B": 1,
+    "H": 2,
+    "Hkv": 2,
+    "L": 256,
+    "S": 256,
+    "E": 64,
+    "softcap": 20,
+    "attn_mask": "boolean, mask_mod causal i >= j"
+   },
+   "outputs": {
+    "out": "out"
+   },
+   "note": "no row is empty (causal, equal lengths): both profiles agree"
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "attention",
+   "operator": "Triton tutorial 06-fused-attention (v3.6.0)",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "general_round_v3_1/tut_attention_plain"
+   ],
+   "status_then": [
+    "hand-written float64 reference"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "call": {
+    "Z": 1,
+    "H": 2,
+    "N": 256,
+    "E": 64,
+    "scale": "1/8",
+    "is_causal": false
+   },
+   "outputs": {
+    "o": "out"
+   }
+  },
+  {
+   "experiment": "general_round_v3_1",
+   "kind": "paged_attention",
+   "operator": "vllm.v1.attention.ops.triton_unified_attention.unified_attention (paged KV cache)",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "general_round_v3_1/ua_bidir_sw8_mha"
+   ],
+   "status_then": [
+    "hand-written float64 reference"
+   ],
+   "contract": "PAGEDATTN",
+   "profiles": [
+    "vllm_unified"
+   ],
+   "call": {
+    "query_lens": [
+     48,
+     21
+    ],
+    "seq_lens": [
+     48,
+     21
+    ],
+    "Hq": 8,
+    "Hkv": 8,
+    "D": 64,
+    "block_size": 16,
+    "scale": "1/8",
+    "causal": false,
+    "window": [
+     7,
+     7
+    ],
+    "softcap": 0
+   },
+   "outputs": {
+    "out": "out"
+   },
+   "note": "symmetric bidirectional window: PA.WINDOW readings agree"
+  },
+  {
+   "experiment": "flash_attention_case",
+   "kind": "attention",
+   "operator": "Triton tutorial 06 fused attention forward",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "flash_attention_case/tutorial_fwd"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa_lse_base2"
+   ],
+   "call": {
+    "Z": 1,
+    "H": 2,
+    "N": "1024 (2048 for l_bf16)",
+    "E": 64,
+    "scale": "sm_scale as passed",
+    "is_causal": "as run (causal and non-causal cases)"
+   },
+   "outputs": {
+    "O": "out",
+    "M": "lse (base 2: M = m_i + log2 l_i)"
+   },
+   "note": "planted variants change the kernel, not f"
+  },
+  {
+   "experiment": "flash_attention_case",
+   "kind": "attention",
+   "operator": "Triton tutorial 06 fused attention forward",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "flash_attention_case/planted_tf32"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa_lse_base2"
+   ],
+   "call": {
+    "Z": 1,
+    "H": 2,
+    "N": "1024 (2048 for l_bf16)",
+    "E": 64,
+    "scale": "sm_scale as passed",
+    "is_causal": "as run (causal and non-causal cases)"
+   },
+   "outputs": {
+    "O": "out",
+    "M": "lse (base 2: M = m_i + log2 l_i)"
+   },
+   "note": "planted variants change the kernel, not f"
+  },
+  {
+   "experiment": "flash_attention_case",
+   "kind": "attention",
+   "operator": "Triton tutorial 06 fused attention forward",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "flash_attention_case/planted_semantic_constant"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa_lse_base2"
+   ],
+   "call": {
+    "Z": 1,
+    "H": 2,
+    "N": "1024 (2048 for l_bf16)",
+    "E": 64,
+    "scale": "sm_scale as passed",
+    "is_causal": "as run (causal and non-causal cases)"
+   },
+   "outputs": {
+    "O": "out",
+    "M": "lse (base 2: M = m_i + log2 l_i)"
+   },
+   "note": "planted variants change the kernel, not f"
+  },
+  {
+   "experiment": "flash_attention_case",
+   "kind": "attention",
+   "operator": "Triton tutorial 06 fused attention forward",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "flash_attention_case/planted_bf16_accumulator"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa_lse_base2"
+   ],
+   "call": {
+    "Z": 1,
+    "H": 2,
+    "N": "1024 (2048 for l_bf16)",
+    "E": 64,
+    "scale": "sm_scale as passed",
+    "is_causal": "as run (causal and non-causal cases)"
+   },
+   "outputs": {
+    "O": "out",
+    "M": "lse (base 2: M = m_i + log2 l_i)"
+   },
+   "note": "planted variants change the kernel, not f"
+  },
+  {
+   "experiment": "flash_attention_case",
+   "kind": "attention",
+   "operator": "Triton tutorial 06 fused attention forward",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "flash_attention_case/planted_fp16_accumulator"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa_lse_base2"
+   ],
+   "call": {
+    "Z": 1,
+    "H": 2,
+    "N": "1024 (2048 for l_bf16)",
+    "E": 64,
+    "scale": "sm_scale as passed",
+    "is_causal": "as run (causal and non-causal cases)"
+   },
+   "outputs": {
+    "O": "out",
+    "M": "lse (base 2: M = m_i + log2 l_i)"
+   },
+   "note": "planted variants change the kernel, not f"
+  },
+  {
+   "experiment": "flash_attention_case",
+   "kind": "attention",
+   "operator": "Triton tutorial 06 fused attention forward",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "flash_attention_case/planted_stagnation"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa_lse_base2"
+   ],
+   "call": {
+    "Z": 1,
+    "H": 2,
+    "N": "1024 (2048 for l_bf16)",
+    "E": 64,
+    "scale": "sm_scale as passed",
+    "is_causal": "as run (causal and non-causal cases)"
+   },
+   "outputs": {
+    "O": "out",
+    "M": "lse (base 2: M = m_i + log2 l_i)"
+   },
+   "note": "planted variants change the kernel, not f"
+  },
+  {
+   "experiment": "flash_attention_case",
+   "kind": "attention",
+   "operator": "Triton tutorial 06 fused attention forward",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "flash_attention_case/planted_mask"
+   ],
+   "status_then": [
+    "ok"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa_lse_base2"
+   ],
+   "call": {
+    "Z": 1,
+    "H": 2,
+    "N": "1024 (2048 for l_bf16)",
+    "E": 64,
+    "scale": "sm_scale as passed",
+    "is_causal": "as run (causal and non-causal cases)"
+   },
+   "outputs": {
+    "O": "out",
+    "M": "lse (base 2: M = m_i + log2 l_i)"
+   },
+   "note": "planted variants change the kernel, not f"
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "liger:rope",
+   "operator": "liger.rope.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "_triton_rope"
+   },
+   "instances": 2,
+   "instance_ids": [
+    "composition_corpus/liger.rope.float32/_triton_rope"
+   ],
+   "status_then": [
+    "no f (K vs G only)"
+   ],
+   "contract": "ROPE",
+   "profiles": [
+    "tables_duplicated"
+   ],
+   "call": {
+    "q": "[2][8][64][64]",
+    "k": "[2][4][64][64]",
+    "cos/sin": "cat(freqs, freqs) cast to the dtype",
+    "upstream": "ones (sum().backward())"
+   },
+   "outputs": {
+    "forward launch": "out (q and k)",
+    "backward launch": "grad"
+   },
+   "note": "two launches of _triton_rope per call: forward and backward"
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "liger:rope",
+   "operator": "liger.rope.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "_triton_rope"
+   },
+   "instances": 2,
+   "instance_ids": [
+    "composition_corpus/liger.rope.bfloat16/_triton_rope"
+   ],
+   "status_then": [
+    "no f (K vs G only)"
+   ],
+   "contract": "ROPE",
+   "profiles": [
+    "tables_duplicated"
+   ],
+   "call": {
+    "q": "[2][8][64][64]",
+    "k": "[2][4][64][64]",
+    "cos/sin": "cat(freqs, freqs) cast to the dtype",
+    "upstream": "ones (sum().backward())"
+   },
+   "outputs": {
+    "forward launch": "out (q and k)",
+    "backward launch": "grad"
+   },
+   "note": "two launches of _triton_rope per call: forward and backward"
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:embedding",
+   "operator": "gems.embedding.float32",
+   "params": {
+    "dtype": "float32",
+    "kernel": "embedding_kernel"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "composition_corpus/gems.embedding.float32/embedding_kernel"
+   ],
+   "status_then": [
+    "no f (K vs G only)"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding",
+    "indices": "32 random in [0, 64)",
+    "weight": "x_() of the corpus"
+   },
+   "outputs": {
+    "embedding_kernel": "out",
+    "_to_copy_func_kernel_rank_1": "conversion step inside the call: CAST contract (aten._to_copy)"
+   },
+   "note": "forward only"
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:embedding",
+   "operator": "gems.embedding.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "_to_copy_func_kernel_rank_1"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "composition_corpus/gems.embedding.float16/_to_copy_func_kernel_rank_1"
+   ],
+   "status_then": [
+    "no f (K vs G only)"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding",
+    "indices": "32 random in [0, 64)",
+    "weight": "x_() of the corpus"
+   },
+   "outputs": {
+    "embedding_kernel": "out",
+    "_to_copy_func_kernel_rank_1": "conversion step inside the call: CAST contract (aten._to_copy)"
+   },
+   "note": "forward only"
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:embedding",
+   "operator": "gems.embedding.float16",
+   "params": {
+    "dtype": "float16",
+    "kernel": "embedding_kernel"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "composition_corpus/gems.embedding.float16/embedding_kernel"
+   ],
+   "status_then": [
+    "no f (K vs G only)"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding",
+    "indices": "32 random in [0, 64)",
+    "weight": "x_() of the corpus"
+   },
+   "outputs": {
+    "embedding_kernel": "out",
+    "_to_copy_func_kernel_rank_1": "conversion step inside the call: CAST contract (aten._to_copy)"
+   },
+   "note": "forward only"
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:embedding",
+   "operator": "gems.embedding.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "_to_copy_func_kernel_rank_1"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "composition_corpus/gems.embedding.bfloat16/_to_copy_func_kernel_rank_1"
+   ],
+   "status_then": [
+    "no f (K vs G only)"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding",
+    "indices": "32 random in [0, 64)",
+    "weight": "x_() of the corpus"
+   },
+   "outputs": {
+    "embedding_kernel": "out",
+    "_to_copy_func_kernel_rank_1": "conversion step inside the call: CAST contract (aten._to_copy)"
+   },
+   "note": "forward only"
+  },
+  {
+   "experiment": "composition_corpus",
+   "kind": "gems:embedding",
+   "operator": "gems.embedding.bfloat16",
+   "params": {
+    "dtype": "bfloat16",
+    "kernel": "embedding_kernel"
+   },
+   "instances": 1,
+   "instance_ids": [
+    "composition_corpus/gems.embedding.bfloat16/embedding_kernel"
+   ],
+   "status_then": [
+    "no f (K vs G only)"
+   ],
+   "contract": "EMB",
+   "profiles": [
+    "renorm_doc"
+   ],
+   "call": {
+    "op": "embedding",
+    "indices": "32 random in [0, 64)",
+    "weight": "x_() of the corpus"
+   },
+   "outputs": {
+    "embedding_kernel": "out",
+    "_to_copy_func_kernel_rank_1": "conversion step inside the call: CAST contract (aten._to_copy)"
+   },
+   "note": "forward only"
+  },
+  {
+   "experiment": "bugs",
+   "kind": "rope",
+   "operator": "Liger RoPE",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "bugs/B001"
+   ],
+   "status_then": [
+    "None"
+   ],
+   "contract": "ROPE",
+   "profiles": [
+    "tables_half"
+   ],
+   "note": "GPT-OSS half-width tables, full rotation (HF _apply_rotary_emb); the bug is mutant RO.M4"
+  },
+  {
+   "experiment": "bugs",
+   "kind": "rope",
+   "operator": "Liger RoPE",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "bugs/B002"
+   ],
+   "status_then": [
+    "None"
+   ],
+   "contract": "ROPE",
+   "profiles": [
+    "tables_duplicated"
+   ],
+   "note": "Phi-3 partial rotary: table width 96 = rotary_dim < head_dim 128; the bug is mutant RO.M3"
+  },
+  {
+   "experiment": "bugs",
+   "kind": "moe",
+   "operator": "Liger fused MoE experts (tl.dot TF32)",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "bugs/B003"
+   ],
+   "status_then": [
+    "None"
+   ],
+   "contract": "MOE",
+   "profiles": [
+    "renorm_aux_top1",
+    "raw_aux_top1"
+   ],
+   "note": "TF32 in the fused expert matmuls is numerical (K - G); the expert linear layers are MATMUL, the combination MOE (gate profile as the model declares)"
+  },
+  {
+   "experiment": "bugs",
+   "kind": "attention",
+   "operator": "Triton tutorial 06 attention backward",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "bugs/B011"
+   ],
+   "status_then": [
+    "None"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "note": "non-causal backward (dq, dk, dv) of the Triton tutorial; the bug is mutant AT.M12"
+  },
+  {
+   "experiment": "bugs",
+   "kind": "attention",
+   "operator": "vLLM sliding-window attention",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "bugs/B013"
+   ],
+   "status_then": [
+    "None"
+   ],
+   "contract": "PAGEDATTN",
+   "profiles": [
+    "vllm_unified"
+   ],
+   "note": "bidirectional sliding window; the bug is mutant PA.M1"
+  },
+  {
+   "experiment": "bugs",
+   "kind": "attention",
+   "operator": "SDPA rewrite",
+   "params": {},
+   "instances": 1,
+   "instance_ids": [
+    "bugs/B018"
+   ],
+   "status_then": [
+    "None"
+   ],
+   "contract": "ATTN",
+   "profiles": [
+    "sdpa"
+   ],
+   "note": "the eager pattern defines f: explicit scale 1/c, masked_fill(mask == 0, -inf) as a boolean keep-mask mask != 0, finite fill values as additive masks (a fully padded row with a finite fill is softmax of the shifted scores, defined); the rewrite errors are mutants AT.M2, AT.M4, AT.M10"
+  }
+ ],
+ "gaps": [],
+ "outcomes_for_tested_variants": "value, domain_undefined (rows without an allowed key under sdpa; documented in AT.EMPTY_ROW) or not_established (MOE ties without the observed selection); no tested variant falls outside every profile (unsupported)"
+}

@@ -70,6 +70,26 @@ def extract(html: str) -> str:
     return text.strip() + "\n"
 
 
+def is_code(url: str, raw: bytes) -> bool:
+    """Raw source files are archived byte for byte; only HTML pages go through text extraction."""
+    head = raw[:512].lstrip().lower()
+    return ("raw.githubusercontent.com" in url or url.rsplit(".", 1)[-1] in ("py", "txt", "json", "yaml", "md", "c", "cpp", "h",
+                                                                              "cu")) and not head.startswith((b"<!doctype", b"<html"))
+
+
+def snapshot_url(sid, url, proxy):
+    raw = fetch(url, proxy)
+    if is_code(url, raw):
+        ext = "." + url.rsplit(".", 1)[-1] if "." in url.rsplit("/", 1)[-1] else ".txt"
+        (STORE / f"{sid}{ext}.gz").write_bytes(gz_bytes(raw))
+        return {"snapshot": f"sources/{sid}{ext}.gz", "snapshot_sha256": hashlib.sha256(raw).hexdigest(),
+                "snapshot_note": "raw file, byte for byte"}
+    text = extract(raw.decode("utf-8", "replace")).encode()
+    (STORE / f"{sid}.txt.gz").write_bytes(gz_bytes(text))
+    return {"snapshot": f"sources/{sid}.txt.gz", "snapshot_sha256": hashlib.sha256(text).hexdigest(),
+            "raw_html_sha256": hashlib.sha256(raw).hexdigest(), "snapshot_note": "main text extracted from the HTML page"}
+
+
 def gz_bytes(data: bytes) -> bytes:
     return gzip.compress(data, mtime=0)
 
@@ -98,8 +118,29 @@ def main():
     ap.add_argument("--proxy", default="http://127.0.0.1:27890")
     ap.add_argument("--replace", action="store_true")
     ap.add_argument("--items-only", action="store_true", help="update title / items / kind of existing entries, no fetch")
+    ap.add_argument("--resnapshot", action="store_true",
+                    help="LIST is a JSON list of SIDs: re-archive their URL, keeping every other field of the entry")
     a = ap.parse_args()
     todo = json.loads(a.list.read_text())
+    if a.resnapshot:
+        S0 = json.loads(SOURCES.read_text())
+        new = {}
+        for sid in todo:
+            old = S0[sid]
+            for k in ("raw_html_sha256", "snapshot_note"):
+                old.pop(k, None)
+            stale = ROOT / old["snapshot"]
+            new[sid] = snapshot_url(sid, old["url"], a.proxy)
+            if stale.is_file() and str(stale) != str(ROOT / new[sid]["snapshot"]):
+                stale.unlink()
+            print(f"{sid}: {new[sid]['snapshot']} {new[sid]['snapshot_sha256'][:12]}")
+        with locked_sources() as S:
+            for sid, upd in new.items():
+                for k in ("raw_html_sha256", "snapshot_note"):
+                    S[sid].pop(k, None)
+                S[sid].update(upd)
+                S[sid]["resnapshot"] = datetime.date.today().isoformat() + ": raw file archived (was HTML text extraction)"
+        return 0
     if a.items_only:
         with locked_sources() as S:
             for e in todo:
@@ -135,12 +176,7 @@ def main():
                 entry.update(snapshot=f"sources/{sid}.py.gz", snapshot_sha256=hashlib.sha256(raw).hexdigest(),
                              path=e["file"], torch_version=torch.__version__)
             else:
-                raw = fetch(e["url"], a.proxy)
-                text = extract(raw.decode("utf-8", "replace")).encode()
-                (STORE / f"{sid}.txt.gz").write_bytes(gz_bytes(text))
-                entry.update(snapshot=f"sources/{sid}.txt.gz", snapshot_sha256=hashlib.sha256(text).hexdigest(),
-                             raw_html_sha256=hashlib.sha256(raw).hexdigest(),
-                             snapshot_note="main text extracted from the HTML page")
+                entry.update(snapshot_url(sid, e["url"], a.proxy))
         except Exception as err:  # noqa: BLE001
             failed.append(f"{sid}: {err}")
             continue

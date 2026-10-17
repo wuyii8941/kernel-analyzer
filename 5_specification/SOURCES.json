@@ -1673,7 +1673,11 @@
       "RNE": "Section 4.3.1: roundTiesToEven delivers the floating-point number nearest to the exact result; on a tie, the one with an even least significant digit.",
       "OVERFLOW": "Section 7.4: under roundTiesToEven an overflowing result is infinity with the sign of the exact result.",
       "POW0": "Section 9.2.1: pow(x, +-0) is 1 for any x (even a zero or a NaN).",
-      "CONVERT_INT": "Section 5.8: conversion to an integer format with rounding toward zero (convertToIntegerTowardZero); out-of-range values signal the invalid operation exception."
+      "CONVERT_INT": "Section 5.8: conversion to an integer format with rounding toward zero (convertToIntegerTowardZero); out-of-range values signal the invalid operation exception.",
+      "INF_ARITH": "Section 6.1: infinity arithmetic is exact (e.g. finite / infinity = 0, infinity + finite = infinity, sqrt(+infinity) = +infinity) except for the invalid operations of 7.2.",
+      "NAN_PROP": "Section 6.2: every general-computational operation with a quiet NaN operand (other than min/max-number operations) delivers a quiet NaN result.",
+      "INVALID": "Section 7.2: the invalid operation exception is signalled for multiplication(0, infinity) or (infinity, 0), addition of opposite infinities, 0/0 and infinity/infinity; the default result is a quiet NaN.",
+      "MINMAX": "Section 9.6: minimum(x, y) and maximum(x, y) deliver a quiet NaN if either operand is a NaN; minimumNumber / maximumNumber deliver the non-NaN operand when exactly one operand is a NaN."
     }
   },
   "T_SPECIAL": {
@@ -1952,11 +1956,11 @@
       "OFFSET": "Some models shift the weight by a constant offset; Gemma uses offset 1.0, giving (X / RMS(X)) * (W + 1.0).",
       "CAST": "casting_mode llama: only rstd computed in fp32 and x*rstd cast back before the weight; gemma: everything in fp32, output cast back; none: no casting."
     },
-    "snapshot": "sources/NORM_LIGER_RMS.txt.gz",
-    "snapshot_sha256": "bcfb98406686f272e4618eae5e577624d35c68d9ddcb90dd5b0480857bdee0c6",
-    "raw_html_sha256": "1759600f3a4a7f164c233f3d0a83d7eaaadb45f9d168b0caa2824029507311e1",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/NORM_LIGER_RMS.py.gz",
+    "snapshot_sha256": "1759600f3a4a7f164c233f3d0a83d7eaaadb45f9d168b0caa2824029507311e1",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "T_CE_F": {
     "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.cross_entropy.html",
@@ -1984,11 +1988,11 @@
       "PAGE": "Liger LayerNorm source",
       "DEF": "mean = sum(x)/n, var = sum((x - mean)^2)/n, rstd = rsqrt(var + eps), Y = (X - mean) * rstd * W + B per row; LigerLayerNormFunction.forward(X, W, B, eps)."
     },
-    "snapshot": "sources/NORM_LIGER_LN.txt.gz",
-    "snapshot_sha256": "39cac5316e2d0f026ac7127b36bbcf63ec8a1203f3ff9ebd2de20cd15f5b36b5",
-    "raw_html_sha256": "7f1f97ab641dfdb0e3c5df5a4309807fcc7192936197a10ef3ab70cad6d857fd",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/NORM_LIGER_LN.py.gz",
+    "snapshot_sha256": "7f1f97ab641dfdb0e3c5df5a4309807fcc7192936197a10ef3ab70cad6d857fd",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "CE_LIGER_CE": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/cross_entropy.py",
@@ -2005,11 +2009,11 @@
       "EXTRAS": "lse_square_scale adds z_loss = lse_square_scale * lse^2 (divided by n_non_ignore for 'mean'); softcap replaces logits by softcap * tanh(x / softcap); both default off.",
       "BACKWARD": "cross_entropy_backward: if grad_output equals 1.0 the gradient is kept; if grad_output.ndim > 0 (reduction 'none') the gradient rows are multiplied by grad_output.unsqueeze(1); otherwise by the scalar via element_mul_kernel."
     },
-    "snapshot": "sources/CE_LIGER_CE.txt.gz",
-    "snapshot_sha256": "78046bd64e9ed75897e65a7119c78bd269ee5826bae38516e787e08a96ee2abf",
-    "raw_html_sha256": "0e75c5459f5318dd529c4a3cc4604514f2cd41a7a7f1a2d534f2757a6f8b6cae",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/CE_LIGER_CE.py.gz",
+    "snapshot_sha256": "0e75c5459f5318dd529c4a3cc4604514f2cd41a7a7f1a2d534f2757a6f8b6cae",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "NORM_LIGER_GN": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/group_norm.py",
@@ -2020,11 +2024,11 @@
       "PAGE": "Liger GroupNorm source",
       "DEF": "X viewed as (batch, num_groups, -1) (contiguous blocks of num_channels/num_groups channels); variance = E[X^2] - E[X]^2 per group; rstd = rsqrt(variance + eps); Y = (X - m) * rstd * W[c] + B[c] with per-channel W, B."
     },
-    "snapshot": "sources/NORM_LIGER_GN.txt.gz",
-    "snapshot_sha256": "518656b4ba9d920808c54be475baf64badc873f87d7d62720ba7037c46fe4e9d",
-    "raw_html_sha256": "ec1a9820fe7e1d009dbc728c26503a8c242860a6636edb280fdf9e5e5779ab39",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/NORM_LIGER_GN.py.gz",
+    "snapshot_sha256": "ec1a9820fe7e1d009dbc728c26503a8c242860a6636edb280fdf9e5e5779ab39",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "CE_LIGER_FLCE": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/fused_linear_cross_entropy.py",
@@ -2039,11 +2043,11 @@
       "BACKWARD": "fused_linear_cross_entropy_backward: unless grad_output equals 1.0, grad_input, grad_weight and grad_bias are multiplied in place by element_mul_kernel(..., grad_output, ...).",
       "TOKEN_SCALING": "use_token_scaling multiplies each token's loss (and gradient) by its detached predicted probability of the target class."
     },
-    "snapshot": "sources/CE_LIGER_FLCE.txt.gz",
-    "snapshot_sha256": "de7db4f3e6dacf58cb4f4e08d374fa4e967c7d3ffd26a54ee6b2009cc6b5b334",
-    "raw_html_sha256": "d60c76aa58eb7bd3d573ceb58a49c59cd0860be3f7e43db0d5c73fc8c0cef68c",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/CE_LIGER_FLCE.py.gz",
+    "snapshot_sha256": "d60c76aa58eb7bd3d573ceb58a49c59cd0860be3f7e43db0d5c73fc8c0cef68c",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "CE_LIGER_FLCE_MOD": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/transformers/fused_linear_cross_entropy.py",
@@ -2054,11 +2058,11 @@
       "PAGE": "Liger-Kernel v0.7.0 LigerFusedLinearCrossEntropyLoss module (reference program).",
       "MODULE": "LigerFusedLinearCrossEntropyLoss(ce_weight=None, ignore_index=-100, lse_square_scale=0.0, label_smoothing=0.0, reduction='mean', softcap=None, return_z_loss=False, accum_dtype=None, use_token_scaling=False, return_token_accuracy=False); asserts 0 <= label_smoothing <= 1, reduction in {'mean', 'sum', 'none'}, softcap None or > 0; forward(lin_weight, _input, target, bias=None)."
     },
-    "snapshot": "sources/CE_LIGER_FLCE_MOD.txt.gz",
-    "snapshot_sha256": "afdc8aa6db627d8bff2d8ae620231f2cebfd87c3ba536fc99753ebfc1d343357",
-    "raw_html_sha256": "5a71ae47fae32163b45c753255a933faab08466d36f0e2b38b5bdacaf98f7db8",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/CE_LIGER_FLCE_MOD.py.gz",
+    "snapshot_sha256": "5a71ae47fae32163b45c753255a933faab08466d36f0e2b38b5bdacaf98f7db8",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "NORM_HF_QWEN3NEXT": {
     "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/models/qwen3_next/modeling_qwen3_next.py",
@@ -2069,11 +2073,11 @@
       "PAGE": "HF transformers v4.57.3 Qwen3-Next modeling source",
       "OFFSET": "Qwen3NextRMSNorm: weight initialised to zeros; output = x * rsqrt(mean(x^2, -1) + eps) computed in float32, times (1.0 + weight), then cast to the input dtype."
     },
-    "snapshot": "sources/NORM_HF_QWEN3NEXT.txt.gz",
-    "snapshot_sha256": "315ba8d399b5e67438c9682c3c5f398949ce63283cbfc3ceaf1409eba90d9543",
-    "raw_html_sha256": "6b8c88865fffca49feadd1e7d2df079986e196f90e71bc09841f8852840518f9",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/NORM_HF_QWEN3NEXT.py.gz",
+    "snapshot_sha256": "6b8c88865fffca49feadd1e7d2df079986e196f90e71bc09841f8852840518f9",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "NORM_HF_GEMMA": {
     "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/models/gemma/modeling_gemma.py",
@@ -2084,11 +2088,11 @@
       "PAGE": "HF transformers v4.57.3 Gemma modeling source",
       "OFFSET": "GemmaRMSNorm: weight initialised to zeros; output = x * rsqrt(mean(x^2, -1) + eps) in float32, times (1.0 + weight), then cast to the input dtype."
     },
-    "snapshot": "sources/NORM_HF_GEMMA.txt.gz",
-    "snapshot_sha256": "20313dbd1e62d29d0aa86fc7652cf6f397cf9a76a9fdf8131628c97be4a59252",
-    "raw_html_sha256": "cc6c0165dab74e28a4f5674b813ceaafa9c48acf155da4a9e26925c352aa6e89",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/NORM_HF_GEMMA.py.gz",
+    "snapshot_sha256": "cc6c0165dab74e28a4f5674b813ceaafa9c48acf155da4a9e26925c352aa6e89",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "ACT_AUTOGRAD": {
     "url": "https://docs.pytorch.org/docs/2.10/notes/autograd.html",
@@ -2207,11 +2211,11 @@
       "FWD": "LigerSiLUMulFunction.forward(a, b): c = silu(a) * b with silu(x) = x * sigmoid(x), row by row over the last dimension (a, b viewed as (-1, n_cols)).",
       "BWD": "backward(dc): db = dc * silu(a); da = dc * (silu(a) * (1 - sigmoid(a)) + sigmoid(a)) * b."
     },
-    "snapshot": "sources/ACT_LIGER_SWIGLU.txt.gz",
-    "snapshot_sha256": "40772bbd687186ea1af1c2b6c1ee78e1165fb39c662ecf1dab2c7ed1f352632a",
-    "raw_html_sha256": "0fb9dde2efcb227c2c2113420dd63bee5aa74f3f3e5b9749ae9100b7ccc43bf0",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/ACT_LIGER_SWIGLU.py.gz",
+    "snapshot_sha256": "0fb9dde2efcb227c2c2113420dd63bee5aa74f3f3e5b9749ae9100b7ccc43bf0",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "ACT_LIGER_GEGLU": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/geglu.py",
@@ -2223,11 +2227,11 @@
       "FWD": "LigerGELUMulFunction.forward(a, b): c = geglu_a * b with geglu_a = 0.5 * a * (1 + tanh(sqrt(2/pi) * (a + 0.044715 * a^3))): the tanh form of GELU (kernel _geglu_tanh_forward_kernel); no erf form.",
       "BWD": "backward(dc): db = dc * geglu_a; da = dc * b * (0.5 * (1 + tanh(z)) + 0.5 * a * (1 - tanh(z)^2) * sqrt(2/pi) * (1 + 3 * 0.044715 * a^2)), z = sqrt(2/pi) * (a + 0.044715 * a^3)."
     },
-    "snapshot": "sources/ACT_LIGER_GEGLU.txt.gz",
-    "snapshot_sha256": "6165bf9cd561ad4eb455830fe0977a48d6055ead0c70b129e82ce8dd9ff462c9",
-    "raw_html_sha256": "fabb8c0020ec147d58b006a4e811af67492d2c622b044eb2185d1d03247cd945",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/ACT_LIGER_GEGLU.py.gz",
+    "snapshot_sha256": "fabb8c0020ec147d58b006a4e811af67492d2c622b044eb2185d1d03247cd945",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "ACT_DECOMP": {
     "title": "torch 2.10 source torch/_decomp/decompositions.py (activation backward decompositions)",
@@ -2274,7 +2278,10 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.KLDivLoss (items refined after reading)"
+      "PAGE": "Documentation of torch.nn.KLDivLoss",
+      "DEF": "Pointwise KL divergence for tensors of the same shape, y_pred the input and y_true the target: L(y_pred, y_true) = y_true * log(y_true / y_pred) = y_true * (log y_true - log y_pred); the input is expected in log-space, the target in log-space if log_target=True; roughly equivalent to loss_pointwise = target * (target.log() - input) (log_target False) or target.exp() * (target - input) (log_target True).",
+      "REDUCTION": "mean: loss_pointwise.mean(); batchmean: loss_pointwise.sum() / input.size(0) (mathematically correct); sum: loss_pointwise.sum(); none: loss_pointwise; default mean; reduction mean does not return the true KL divergence value.",
+      "SHAPE": "Input (*), any number of dimensions; target (*) of the same shape; output scalar by default, (*) for reduction none."
     },
     "snapshot": "sources/T_KLDIV.txt.gz",
     "snapshot_sha256": "faea520c444ca253c37a9349e37ec7f95a36f3383878cb9144fb2272fdadf121",
@@ -2288,7 +2295,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "Documentation of torch.nn.functional.kl_div (items refined after reading)"
+      "PAGE": "Documentation of torch.nn.functional.kl_div",
+      "DEF": "kl_div(input, target, reduction='mean', log_target=False): input of arbitrary shape in log-probabilities, target of the same shape (see log_target); reductions none | batchmean (sum divided by the batch size) | sum | mean (divided by the number of elements of the output)."
     },
     "snapshot": "sources/T_KLDIV_F.txt.gz",
     "snapshot_sha256": "ed56a32b645ebc56aac826dcb44487edb439a3f67f159a51b5f13b6c965cb43a",
@@ -2302,13 +2310,15 @@
     "kind": "reference_program",
     "version": "v0.7.0",
     "items": {
-      "PAGE": "Liger KL divergence kernel source"
+      "PAGE": "Liger KL divergence source",
+      "FWD": "_kldiv_kernel_forward: log_target False: loss = y_true * (log(max(y_true, eps)) - y); log_target True: loss = exp(y_true) * (y_true - y); LigerKLDivLossFunction.forward(y_pred, y_true, reduction='batchmean', log_target=False, eps=1e-10); batchmean: sum / BT, sum, mean: sum / (BT * V), none.",
+      "BWD": "backward: derivative = -target (log_target False) or -exp(target) (log_target True), multiplied by grad_output, divided by BT (batchmean) or BT * V (mean); no gradient for the target."
     },
-    "snapshot": "sources/DIV_LIGER_KLDIV.txt.gz",
-    "snapshot_sha256": "4a7a86727c62bae7bcc3415423e2c35566ffbef5a456d875b7b52f4d97045a26",
-    "raw_html_sha256": "31965bede00f317972758555e2e2fd693cad5c591d41da7e8e6883c3db42d298",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/DIV_LIGER_KLDIV.py.gz",
+    "snapshot_sha256": "31965bede00f317972758555e2e2fd693cad5c591d41da7e8e6883c3db42d298",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "DIV_LIGER_KLDIV_MOD": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/transformers/kl_div.py",
@@ -2316,13 +2326,13 @@
     "kind": "reference_program",
     "version": "v0.7.0",
     "items": {
-      "PAGE": "Liger KL divergence module"
+      "PAGE": "LigerKLDIVLoss(nn.KLDivLoss) with eps = 1e-10 calling LigerKLDivLossFunction.apply(y_pred, y_true, reduction, log_target, eps)."
     },
-    "snapshot": "sources/DIV_LIGER_KLDIV_MOD.txt.gz",
-    "snapshot_sha256": "7ac82a5e6824163d8243fa2157448e5bd1e398a4db0f35db6e1d605498cf284e",
-    "raw_html_sha256": "f78551e2eba3fb6759093127c0592cbc38be2e9a2bae90791e0998b500999f0d",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/DIV_LIGER_KLDIV_MOD.py.gz",
+    "snapshot_sha256": "f78551e2eba3fb6759093127c0592cbc38be2e9a2bae90791e0998b500999f0d",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "DIV_LIGER_JSD": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/jsd.py",
@@ -2330,13 +2340,17 @@
     "kind": "reference_program",
     "version": "v0.7.0",
     "items": {
-      "PAGE": "Liger JSD kernel source"
+      "PAGE": "Liger JSD source",
+      "DEF": "LigerJSDFunction - generalized JSD(beta)(P || Q) = beta * KLDiv(P || beta P + (1 - beta) Q) + (1 - beta) * KLDiv(Q || beta P + (1 - beta) Q); _input = log Q (student, predictions), target = log P (teacher); forward(_input, target, shift_labels=None, beta=0.5, ignore_index=-100); output a scalar.",
+      "KERNEL": "general beta: P = exp(Y), Q = exp(X), M = beta P + (1 - beta) Q, loss = beta P Y + (1 - beta) Q X - M log M, dX = (1 - beta) Q (X - log M); beta == 0: loss = P (Y - X), dX = -P; beta == 1: loss = Q (X - Y), dX = loss + Q; loss and dX scaled by 1 / n_non_ignore and summed over all elements.",
+      "BETA": "beta in [0, 1]; it implements forward / reverse KL when beta equals 0 and 1 respectively.",
+      "LABELS": "With shift_labels, rows whose label equals ignore_index get zero loss and zero dX, and n_non_ignore counts the other rows; without labels n_non_ignore = BT; backward multiplies dX by grad_output."
     },
-    "snapshot": "sources/DIV_LIGER_JSD.txt.gz",
-    "snapshot_sha256": "6d70a9be89233d3beb37d5de1988f91845ef7b8ae78cd08dd64e27e98e045ee6",
-    "raw_html_sha256": "a271e9e53dcc6ef25a573e55ba9ed6c3a110a7f1d369979ac938c993a16040c6",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/DIV_LIGER_JSD.py.gz",
+    "snapshot_sha256": "a271e9e53dcc6ef25a573e55ba9ed6c3a110a7f1d369979ac938c993a16040c6",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "DIV_LIGER_JSD_MOD": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/transformers/jsd.py",
@@ -2344,13 +2358,13 @@
     "kind": "reference_program",
     "version": "v0.7.0",
     "items": {
-      "PAGE": "Liger JSD module docstring"
+      "PAGE": "LigerJSD module: the generalized JSD formula; log_q the student predictions and log_p the teacher observations in log-space; input (BT, V), shift_labels (BT,), output a scalar."
     },
-    "snapshot": "sources/DIV_LIGER_JSD_MOD.txt.gz",
-    "snapshot_sha256": "955551130e51352d3779fa6a45f213e14a3062692e3a6daaf8b9e1533aabbcdb",
-    "raw_html_sha256": "fca94e5fc61c74e354d2dab46c8443439543070b72c26dd1a3e166966234d6a9",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/DIV_LIGER_JSD_MOD.py.gz",
+    "snapshot_sha256": "fca94e5fc61c74e354d2dab46c8443439543070b72c26dd1a3e166966234d6a9",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "DIV_LIGER_TVD": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/tvd.py",
@@ -2358,13 +2372,15 @@
     "kind": "reference_program",
     "version": "v0.7.0",
     "items": {
-      "PAGE": "Liger TVD kernel source"
+      "PAGE": "Liger TVD source",
+      "DEF": "TVD(P || Q) = 0.5 * |P - Q| element-wise; LigerTVDLossFunction.forward(p, q, shift_labels=None, reduction='batchmean', ignore_index=-100); batchmean: sum / n_non_ignore, sum, mean: sum / (n_non_ignore * V), none: per element; rows whose label equals ignore_index give zero loss and gradient and are not counted.",
+      "GRAD": "grads = where(p > q, 0.5, -0.5), divided like the loss (batchmean, mean); backward multiplies by grad_output."
     },
-    "snapshot": "sources/DIV_LIGER_TVD.txt.gz",
-    "snapshot_sha256": "2884b5197855657314ce3f5e52a73105e9e8795eb78f9a4ff5b3e2113017ddcb",
-    "raw_html_sha256": "14726d2d023de628ea820f54b5a1e93008d20a23f107a09db8fc0f31c1b17a57",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/DIV_LIGER_TVD.py.gz",
+    "snapshot_sha256": "14726d2d023de628ea820f54b5a1e93008d20a23f107a09db8fc0f31c1b17a57",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "DIV_LIGER_SPARSEMAX": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/sparsemax.py",
@@ -2374,11 +2390,11 @@
     "items": {
       "PAGE": "Liger sparsemax kernel source"
     },
-    "snapshot": "sources/DIV_LIGER_SPARSEMAX.txt.gz",
-    "snapshot_sha256": "214fbda4d8c856db233640a6e1d6a4b3938349e9f04f6a1a93f4c9c8ba1a1073",
-    "raw_html_sha256": "01e59ed718241c91442964e3dafbbfd218fb2f3b46be3a97029b3e413a426345",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/DIV_LIGER_SPARSEMAX.py.gz",
+    "snapshot_sha256": "01e59ed718241c91442964e3dafbbfd218fb2f3b46be3a97029b3e413a426345",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "DIV_LIGER_DYT": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/dyt.py",
@@ -2388,11 +2404,11 @@
     "items": {
       "PAGE": "Liger DyT kernel source"
     },
-    "snapshot": "sources/DIV_LIGER_DYT.txt.gz",
-    "snapshot_sha256": "d6cfacbd70746cecf57fef9035338ff6e57752397caf53cff0d2313d116f612c",
-    "raw_html_sha256": "3968d8e89e9d1c57639b625916ebe41d23a58d9aba98bdd786b759490d8250bc",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/DIV_LIGER_DYT.py.gz",
+    "snapshot_sha256": "3968d8e89e9d1c57639b625916ebe41d23a58d9aba98bdd786b759490d8250bc",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "DIV_LIGER_DYT_MOD": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/transformers/dyt.py",
@@ -2402,11 +2418,11 @@
     "items": {
       "PAGE": "Liger DyT module"
     },
-    "snapshot": "sources/DIV_LIGER_DYT_MOD.txt.gz",
-    "snapshot_sha256": "92cbdcb816939824c9b7f487941b8d57e4973c13b224e2a01b8fd5d34f0086ab",
-    "raw_html_sha256": "46783e319412a6b9c619616da6660ab7b3085f6eaf15461bab9aee3383231fe5",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/DIV_LIGER_DYT_MOD.py.gz",
+    "snapshot_sha256": "46783e319412a6b9c619616da6660ab7b3085f6eaf15461bab9aee3383231fe5",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "DIV_SPARSEMAX_ABS": {
     "url": "https://arxiv.org/abs/1602.02068",
@@ -2673,7 +2689,12 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "CosineAnnealingLR page"
+      "RECURSIVE": "The learning rate is updated recursively using eta_{t+1} = eta_min + (eta_t - eta_min) * (1 + cos((T_cur + 1) pi / T_max)) / (1 + cos(T_cur pi / T_max)).",
+      "CLOSED": "This implements a recursive approximation of the closed-form schedule proposed in SGDR: eta_t = eta_min + (1/2)(eta_max - eta_min)(1 + cos(T_cur pi / T_max)); eta_t is the learning rate at step t, T_cur the number of epochs since the last restart, T_max the maximum number of epochs in a cycle; get_lr scales the group lrs so that they approximate eta_min + (base_lr - eta_min)(1 + cos(pi last_epoch / T_max))/2.",
+      "NO_RESTART": "Note: although SGDR includes periodic restarts, this implementation performs cosine annealing without restarts, so T_cur = t and increases monotonically with each call to step().",
+      "PARAMS": "T_max (int): maximum number of iterations; eta_min (float): minimum learning rate, default 0; last_epoch: index of the last epoch, default -1.",
+      "STATE": "state_dict() returns the state of the scheduler as a dict containing an entry for every variable in self.__dict__ which is not the optimizer; load_state_dict loads it.",
+      "STEP": "step(): call this method after calling the optimizer's step(); passing an epoch is deprecated."
     },
     "snapshot": "sources/T_COSINE_LR.txt.gz",
     "snapshot_sha256": "14a6bf51e84e1468793b7ebf9e4fe7e47e2801ac7cf5c4b782cad11d706bbf74",
@@ -2687,7 +2708,9 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "LinearLR page"
+      "DEF": "Decays the learning rate of each parameter group by linearly changing small multiplicative factor until the number of epoch reaches a pre-defined milestone total_iters; when last_epoch=-1, sets initial lr as lr.",
+      "PARAMS": "start_factor: the number we multiply learning rate in the first epoch, changing towards end_factor in the following epochs (default 1/3); end_factor: the number we multiply learning rate at the end of the linear changing process (default 1.0); total_iters: the number of iterations that multiplicative factor reaches to 1 (default 5).",
+      "EXAMPLE": "Example (lr = 0.05, start_factor=0.05, total_iters=40): lr = 0.003687 if epoch == 0, 0.004875 if epoch == 1, 0.006062 if epoch == 2, 0.00725 if epoch == 3, ..., 0.05 if epoch >= 40."
     },
     "snapshot": "sources/T_LINEAR_LR.txt.gz",
     "snapshot_sha256": "16c1644ca4d421117a1cffa5bdebbdc72c82d3523e26288f0ca5be8595ea4587",
@@ -2701,7 +2724,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "OneCycleLR page"
+      "DEF": "Sets the learning rate of each parameter group according to the 1cycle policy: anneals from an initial learning rate to some maximum learning rate and then from that maximum to some minimum learning rate much lower than the initial; the learning rate changes after every batch; step should be called after a batch has been used; not chainable; two phases by default (fastai), three_phase=True mimics the paper.",
+      "PARAMS": "max_lr: upper learning rate boundary; total_steps: total number of steps in the cycle; pct_start: percentage of the cycle (in number of steps) spent increasing the learning rate (default 0.3); anneal_strategy: 'cos' or 'linear' (default 'cos'); div_factor: initial_lr = max_lr/div_factor (default 25); final_div_factor: min_lr = initial_lr/final_div_factor (default 1e4); three_phase: a third phase annihilates the learning rate according to final_div_factor, the first two phases symmetrical about the step indicated by pct_start; last_epoch: total number of batches computed."
     },
     "snapshot": "sources/T_ONECYCLE_LR.txt.gz",
     "snapshot_sha256": "5164535869eb0d80714d5ed50a0450c74cda8d9380e23701e310ff15600ee83f",
@@ -2715,7 +2739,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "LambdaLR page"
+      "DEF": "LambdaLR(optimizer, lr_lambda, last_epoch=-1): the learning rate of each parameter group is set to the initial lr times a given function of the integer epoch; when last_epoch=-1, sets initial lr as lr."
     },
     "snapshot": "sources/T_LAMBDA_LR.txt.gz",
     "snapshot_sha256": "e3510408a353f4be06b89269e90a419cf20fd84231e2789ec8fcd11b8473098e",
@@ -2729,7 +2753,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "torch.optim page"
+      "ORDER": "Learning rate scheduling should be applied after the optimizer's update (scheduler.step() after optimizer.step()); calling scheduler.step() before the optimizer's update skips the first value of the schedule (behaviour changed in 1.1.0). Most schedulers can be chained."
     },
     "snapshot": "sources/T_OPTIM.txt.gz",
     "snapshot_sha256": "0793b07a69178dbc87f335fd0b0071390782307fc91d5398fde45d70182167d3",
@@ -2743,7 +2767,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "clip_grad_norm_ page"
+      "DEF": "clip_grad_norm_(parameters, max_norm, norm_type=2.0, error_if_nonfinite=False, foreach=None): the norm is computed over the norms of the individual gradients of all parameters, as if the norms of the individual gradients were concatenated into a single vector; gradients are modified in-place; equivalent to get_total_norm followed by clip_grads_with_norm_ with that total norm; returns the total norm of the parameter gradients (viewed as a single vector).",
+      "PARAMS": "norm_type: type of the used p-norm, can be 'inf' for infinity norm (default 2.0); error_if_nonfinite: if True, an error is thrown if the total norm of the gradients from parameters is nan, inf, or -inf (default False); foreach: use the faster foreach-based implementation (None: foreach for CUDA and CPU native tensors, otherwise the slow implementation)."
     },
     "snapshot": "sources/T_CLIP_NORM.txt.gz",
     "snapshot_sha256": "883c4a77a98f1d51332c2dc5069d65d633d761b4ca9f26dd727da3e9411f4ea6",
@@ -2757,7 +2782,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "clip_grad_value_ page"
+      "DEF": "clip_grad_value_(parameters, clip_value, foreach=None): clip the gradients of an iterable of parameters at the specified value, in place; clip_value is the maximum allowed value; the gradients are clipped in the range [-clip_value, clip_value]; foreach selects the foreach-based implementation."
     },
     "snapshot": "sources/T_CLIP_VALUE.txt.gz",
     "snapshot_sha256": "729c37df341b936b7107f7a52af1431a60bb39c17faa8646263ed9b6f6a9e124",
@@ -2771,7 +2796,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "get_total_norm page"
+      "DEF": "get_total_norm(tensors, norm_type=2.0, error_if_nonfinite=False, foreach=None): the norm is computed over the norms of the individual tensors, as if the norms of the individual tensors were concatenated into a single vector; norm_type can be 'inf'; error_if_nonfinite: error if the total norm is nan, inf or -inf; returns the total norm (viewed as a single vector)."
     },
     "snapshot": "sources/T_GET_TOTAL_NORM.txt.gz",
     "snapshot_sha256": "04d8a19e80248d32577ce42f22af644d209b79a37aed456562713d20a0acbf8f",
@@ -2785,7 +2810,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "clip_grads_with_norm_ page"
+      "DEF": "clip_grads_with_norm_(parameters, max_norm, total_norm, foreach=None): the gradients are scaled by grad = grad * min(max_norm / (total_norm + 1e-6), 1), in place; the scale coefficient is clamped to a maximum of 1.0 to prevent gradient amplification, so gradients are only scaled down when the total norm exceeds max_norm; equivalent to clip_grad_norm_ with a pre-calculated total norm."
     },
     "snapshot": "sources/T_CLIP_WITH_NORM.txt.gz",
     "snapshot_sha256": "1b9a6066a07e6963230a0be30bd6e80e92068fd6d48867fa644ae2e20bd0b4c3",
@@ -2799,7 +2824,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "vector_norm page"
+      "DEF": "torch.linalg.vector_norm: with dim=None the input is flattened; ord 2 (default) the 2-norm, inf: max(abs(x)), -inf: min(abs(x)), 0: sum(x != 0), other int or float: sum(abs(x)^ord)^(1/ord)."
     },
     "snapshot": "sources/T_VECTOR_NORM.txt.gz",
     "snapshot_sha256": "05a16d9608e51a05ccca2208b98b3fec1d2dda9c50a40b443efa87e41a864434",
@@ -2813,7 +2838,7 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "amp page"
+      "SCALING": "Gradient scaling multiplies the network's loss by a scale factor and invokes backward on the scaled loss, so the gradients are scaled by the same factor; each parameter's gradient should be unscaled before the optimizer updates the parameters. GradScaler(init_scale=65536.0, growth_factor=2.0, backoff_factor=0.5, growth_interval=2000, enabled=True); the scale factor is not guaranteed to stay above 1."
     },
     "snapshot": "sources/T_AMP.txt.gz",
     "snapshot_sha256": "cd5a77a0b378789a4e5922c713a2d1596bc33d08c3b88ff7fd1fbed1fd91425b",
@@ -2827,7 +2852,9 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "amp examples"
+      "SKIP": "scaler.step() first unscales the gradients of the optimizer's assigned params; if these gradients do not contain infs or NaNs, optimizer.step() is then called, otherwise optimizer.step() is skipped; scaler.update() updates the scale for the next iteration.",
+      "UNSCALE_CLIP": "scaler.unscale_(optimizer) unscales the gradients held by the optimizer's assigned parameters in place so that they can be clipped as usual (clip_grad_norm_); step then does not unscale them again but still skips optimizer.step() if they contain infs or NaNs.",
+      "ACCUM": "Gradient accumulation: inf/NaN checking, step skipping and scale updates should occur at effective-batch granularity; the example divides the loss by iters_to_accumulate and accumulates scaled gradients, stepping every iters_to_accumulate iterations."
     },
     "snapshot": "sources/T_AMP_EXAMPLES.txt.gz",
     "snapshot_sha256": "30194e57eb43c7db9d452114fbd33bbafe8b20082867996cb12bf7e7610cf677",
@@ -2855,7 +2882,7 @@
     "kind": "versioned_document",
     "version": "transformers 4.57.3",
     "items": {
-      "PAGE": "HF schedules page"
+      "COSINE": "get_cosine_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, num_cycles=0.5, last_epoch=-1): create a schedule with a learning rate that decreases following the values of the cosine function between the initial lr set in the optimizer to 0, after a warmup period during which it increases linearly between 0 and the initial lr; num_cycles: the number of waves in the cosine schedule (default: decrease from the max value to 0 following a half-cosine)."
     },
     "snapshot": "sources/HF_SCHED_DOC.txt.gz",
     "snapshot_sha256": "b90eeb22964a50b64d9c97e7d95208b263d4c49b3e4a81dd8b53aa8623a4062c",
@@ -2895,7 +2922,11 @@
     "title": "torch 2.10 source torch/optim/lr_scheduler.py",
     "kind": "reference_program",
     "items": {
-      "PAGE": "lr_scheduler source"
+      "INIT": "LRScheduler.__init__ records base_lrs from the groups' initial_lr and performs an initial step (_initial_step) so that last_epoch becomes 0 at construction; each step() increments last_epoch and sets the group lrs to get_lr(); state_dict is every attribute except the optimizer.",
+      "COSINE": "CosineAnnealingLR.get_lr: at construction returns the group lr; if (last_epoch - 1 - T_max) % (2 T_max) == 0 returns group lr + (base_lr - eta_min)(1 - cos(pi/T_max))/2; otherwise (1 + cos(pi last_epoch/T_max)) / (1 + cos(pi (last_epoch - 1)/T_max)) * (group lr - eta_min) + eta_min; _get_closed_form_lr = eta_min + (base_lr - eta_min)(1 + cos(pi last_epoch/T_max))/2.",
+      "LINEAR": "LinearLR: __init__ raises unless 0 < start_factor <= 1 and 0 <= end_factor <= 1; get_lr: last_epoch 0 -> group lr * start_factor; last_epoch > total_iters -> unchanged; otherwise group lr * (1 + (end - start)/(total_iters*start + (last_epoch - 1)(end - start))); closed form base_lr (start + (end - start) min(total_iters, last_epoch)/total_iters).",
+      "ONECYCLE": "OneCycleLR: total_steps must be a positive int; two phases with end_step pct_start*total_steps - 1 (initial_lr -> max_lr) and total_steps - 1 (max_lr -> min_lr), three_phase: pct_start*total_steps - 1, 2*pct_start*total_steps - 2, total_steps - 1; get_lr raises ValueError when last_epoch > total_steps; otherwise the first phase with step <= end_step (or the last phase) gives pct = (step - start_step)/(end_step - start_step) and lr = anneal(start, end, pct); cos anneal = end + (start - end)/2 (cos(pi pct) + 1), linear = (end - start) pct + start; initial_lr = max_lr/div_factor, min_lr = initial_lr/final_div_factor.",
+      "LAMBDA": "LambdaLR.get_lr returns base_lr * lr_lambda(last_epoch) for each group."
     },
     "snapshot": "sources/TS_LR_SCHEDULER.py.gz",
     "snapshot_sha256": "e5618b99182cb3fcbf6155e5b6f00fd471a0933272db098c375bdb90a64b2084",
@@ -2907,7 +2938,9 @@
     "title": "torch 2.10 source torch/nn/utils/clip_grad.py",
     "kind": "reference_program",
     "items": {
-      "PAGE": "clip_grad source"
+      "NORM": "_get_total_norm: an empty list gives 0; per-tensor vector norms (foreach or loop) are stacked and their vector_norm of the same order is the total norm; with error_if_nonfinite a nan or inf total norm raises RuntimeError.",
+      "CLIP": "_clip_grads_with_norm_: parameters without a gradient are skipped; clip_coef = max_norm / (total_norm + 1e-6) (a binary64 literal); clip_coef_clamped = torch.clamp(clip_coef, max=1.0); every gradient is multiplied by clip_coef_clamped (foreach or loop).",
+      "VALUE": "clip_grad_value_: clamp_min(-clip_value) then clamp_max(clip_value) on every gradient (foreach or loop)."
     },
     "snapshot": "sources/TS_CLIP_GRAD.py.gz",
     "snapshot_sha256": "56e8e0d4edc7c0532262d069a48557523ba69176fdab70afe1aeae87baa7cf8d",
@@ -2919,7 +2952,9 @@
     "title": "torch 2.10 source torch/amp/grad_scaler.py",
     "kind": "reference_program",
     "items": {
-      "PAGE": "grad_scaler source"
+      "DOC": "GradScaler class docstring (the API text of torch.amp.GradScaler): scale(loss) multiplies by the current scale; if infs/NaNs are found, step skips the underlying optimizer.step() and update() multiplies the scale by backoff_factor; if none are found, optimizer.step() runs and, if growth_interval unskipped iterations occur consecutively, update() multiplies the scale by growth_factor; enabled=False: step simply invokes optimizer.step() and the other methods become no-ops. Defaults init_scale 2**16, growth_factor 2.0, backoff_factor 0.5, growth_interval 2000.",
+      "UNSCALE": "unscale_ divides ('unscales') the optimizer's gradient tensors by the scale factor (multiplying by the reciprocal computed in float64 and cast to float32), recording found_inf per device; calling it twice before step raises; step skips optimizer.step() when the recorded found_inf sum is nonzero.",
+      "UPDATE": "update(): if any optimizer steps were skipped the scale is multiplied by backoff_factor; if growth_interval unskipped iterations occurred consecutively, it is multiplied by growth_factor; new_scale sets the scale manually; implemented by torch._amp_update_scale_(scale, growth_tracker, found_inf, growth_factor, backoff_factor, growth_interval)."
     },
     "snapshot": "sources/TS_GRAD_SCALER.py.gz",
     "snapshot_sha256": "bff7b16e0840863f0f4d97c52258176e745d30ae38a017d367e1a4377c74ad54",
@@ -2993,7 +3028,7 @@
     "kind": "reference_program",
     "version": "transformers 4.57.3",
     "items": {
-      "PAGE": "HF optimization source"
+      "LAMBDA": "get_cosine_schedule_with_warmup returns LambdaLR(optimizer, partial(_get_cosine_schedule_with_warmup_lr_lambda, ...)); the name resolves at call time to the module's second definition (with min_lr_rate=0.0): step < warmup -> step / max(1, warmup); else progress = (step - warmup) / max(1, total - warmup), factor = 0.5 (1 + cos(pi num_cycles 2 progress)), factor * (1 - 0) + 0, return max(0, factor). The first definition (same file) gives the same values."
     },
     "snapshot": "sources/HF_SCHED_SRC.py.gz",
     "snapshot_sha256": "41b08ffb29c2691626b225ed389a694cc8e61480818214a35f215b5c39167bfb",
@@ -3075,11 +3110,11 @@
       "PAGE": "Liger-Kernel v0.7.0 ops utilities (reference program).",
       "ELEMENT_MUL": "element_mul_kernel(X_ptr, X_stride, grad_output_ptr, n_cols, BLOCK_SIZE) loads one value grad_output = tl.load(grad_output_ptr) and multiplies every element of each row of X by it."
     },
-    "snapshot": "sources/CE_LIGER_UTILS.txt.gz",
-    "snapshot_sha256": "5971c4c47c7efe499f27245d0c556c06e067a4726ef84079d7453d0f703e2700",
-    "raw_html_sha256": "f7457c3f412565e05ab610e19882a6ff9d3a361aecaf5a233b4a91979dff4e7d",
-    "snapshot_note": "main text extracted from the HTML page",
-    "retrieved": "2026-10-16"
+    "snapshot": "sources/CE_LIGER_UTILS.py.gz",
+    "snapshot_sha256": "f7457c3f412565e05ab610e19882a6ff9d3a361aecaf5a233b4a91979dff4e7d",
+    "retrieved": "2026-10-16",
+    "snapshot_note": "raw file, byte for byte",
+    "resnapshot": "2026-10-17: raw file archived (was HTML text extraction)"
   },
   "T_SDPA": {
     "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.scaled_dot_product_attention.html",
@@ -3559,6 +3594,18 @@
     "snapshot": "sources/TS_POST_GRAD.py.gz",
     "snapshot_sha256": "f2efdc2cfd03ceadcec5c73e78aa9f713cccb45eb702007388ce0bc4badb12a3",
     "path": "torch/_inductor/fx_passes/post_grad.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-17"
+  },
+  "TS_SHARDED_SCALER": {
+    "title": "torch 2.10 source torch/distributed/fsdp/sharded_grad_scaler.py",
+    "kind": "reference_program",
+    "items": {
+      "UPDATE_RULE": "_amp_update_scale_cpu_ (Python version of the update): if found_inf >= 1, scale *= backoff_factor and growth_tracker = 0; otherwise successful = growth_tracker + 1, and if successful == growth_interval then scale *= growth_factor and growth_tracker = 0, else growth_tracker = successful."
+    },
+    "snapshot": "sources/TS_SHARDED_SCALER.py.gz",
+    "snapshot_sha256": "c324f6547d5b0c08abef6cfb987f3ecebcff64a82f8b1fb798726f496a5c8860",
+    "path": "torch/distributed/fsdp/sharded_grad_scaler.py",
     "torch_version": "2.10.0+cu128",
     "retrieved": "2026-10-17"
   }

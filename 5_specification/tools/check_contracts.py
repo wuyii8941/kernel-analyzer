@@ -45,8 +45,13 @@ def killed(mres, expected, outputs):
     if mres.outcome != "value":
         return True, f"outcome {mres.outcome}"
     v, checks = safe_compare(mres, expected, outputs)
-    bad = [f"{p}: {d}" for p, vv, d in checks if vv in (C.CONTRADICTION, C.STRUCTURE)]
-    return v in (C.CONTRADICTION, C.STRUCTURE), (bad[0] if bad else v)[:120]
+    # a structure difference rejects a mutant only when it is a real difference of shape, keys, type or outcome;
+    # 'cannot compare' (an inexact allowed-set element, a failed comparison) is not evidence
+    def real(vv, d):
+        return vv == C.CONTRADICTION or (vv == C.STRUCTURE and not any(
+            k in d for k in ("not exact", "is an enclosure", "comparison failed", "expected value:")))
+    bad = [f"{p}: {d}" for p, vv, d in checks if real(vv, d)]
+    return bool(bad), (bad[0] if bad else v)[:120]
 
 
 def check_contract(path: Path, sources: dict, adapters: Path) -> dict:

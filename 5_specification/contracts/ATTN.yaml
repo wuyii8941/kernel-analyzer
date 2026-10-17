@@ -1,0 +1,357 @@
+schema_version: '1.2'
+id: ATTN
+role: ATTN
+title: Scaled dot-product attention (SDPA, flex attention with the tested score and mask modifications, FlashAttention conventions)
+  with out, log-sum-exp and the VJP, real-number semantics
+review:
+  status: drafted
+  author: Claude (spec v3 author, group D1_attention), 2026-10-17
+  date: '2026-10-17'
+  scope: Real-number semantics of one attention call (forward and VJP); awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires:
+  - source_profile_matched
+  - input_contract_validated
+  - all_required_outputs_bound
+  - reference_semantics_and_guarantees_validated
+  - no_unresolved_contradiction
+  - contract_and_implementation_hashes_bound
+covers:
+- torch.nn.functional.scaled_dot_product_attention
+- aten._scaled_dot_product_attention_math
+- aten._scaled_dot_product_flash_attention
+- aten._scaled_dot_product_efficient_attention
+- aten._scaled_dot_product_cudnn_attention
+- torch.nn.attention.flex_attention.flex_attention (score_mod none or softcap, mask_mod expressed as a boolean mask)
+- flash_attn.flash_attn_func (causal, window_size, softcap)
+- Triton tutorial 06-fused-attention (forward o and M, backward dq dk dv)
+- manual softmax(q k^T * scale + mask) v
+profiles:
+  sdpa:
+    meaning: SDPA conventions. is_causal is the upper-left (top-left) triangle; no window argument; a query row without
+      any allowed key makes the query domain_undefined; lse in natural log.
+    task_choice_required: false
+  sdpa_zero_rows:
+    meaning: As sdpa, but a query row without any allowed key gives out 0, lse -inf and no gradient contribution (the aten._safe_softmax
+      convention of the SDPA math backend and the flex attention reference). A convention, bound by the task.
+    task_choice_required: true
+  lower_right:
+    meaning: FlashAttention / causal_lower_right conventions. is_causal and window_size are aligned to the bottom-right
+      corner (query i sits at position i + S - L); a row without any allowed key makes the query domain_undefined; lse in
+      natural log.
+    task_choice_required: false
+  lower_right_zero_rows:
+    meaning: As lower_right, but a row without any allowed key gives out 0, lse -inf and no gradient contribution (FlashAttention
+      documents output zero for such rows). A convention, bound by the task.
+    task_choice_required: true
+  sdpa_lse_base2:
+    meaning: As sdpa, but the lse output is the base-2 log-sum-exp of the (natural-unit) scores, lse / log(2), as the Triton
+      tutorial stores in M.
+    task_choice_required: false
+outputs:
+  out:
+    shape: '[B][Hq][L][Ev] (or [Hq][L][Ev] without batch)'
+    guarantee: rigorous_enclosure
+  lse:
+    shape: '[B][Hq][L] (or [Hq][L]); natural or base-2 by profile'
+    guarantee: rigorous_enclosure
+  dq:
+    shape: shape of q; VJP of out against the explicit upstream dout
+    guarantee: rigorous_enclosure
+  dk:
+    shape: shape of k; summed over the query heads that share each key/value head
+    guarantee: rigorous_enclosure
+  dv:
+    shape: shape of v; summed over the query heads that share each key/value head
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: q, k, v, masks, scale and dout are the exact values received (a binary float is its exact rational value);
+    'inf' / '-inf' only in additive masks.
+  quality: No tolerance. Exact results compare exactly; exp, log, tanh and sqrt results are rigorous enclosures.
+  test_evidence: Exact rational equality or containment of the expected formula's enclosure.
+  error_handling: Rows without an allowed key are domain_undefined except in the *_zero_rows profiles; documented argument
+    errors are invalid_input; dropout and the window argument outside the bottom-right profiles are unsupported.
+decisions:
+- id: AT.EMPTY_ROW
+  status: drafted
+  statement: 'A query row without any allowed key (every key masked by the boolean mask, causal mask, window or a -inf additive
+    entry) has no real softmax: the softmax over an empty set is 0/0. Alternatives: (a) domain_undefined, (b) out 0 as aten._safe_softmax
+    (SDPA math backend, flex attention reference) and FlashAttention ("the output will be zero"), (c) NaN as the documented
+    SDPA reference formula (torch.softmax of an all -inf row) gives. Decision: the profiles sdpa, lower_right and sdpa_lse_base2
+    make the query domain_undefined and demand no device convention (zero, NaN or any finite value is not judged); the profiles
+    sdpa_zero_rows and lower_right_zero_rows bind (b): out 0, no gradient contribution, and lse -inf as the flex reference
+    sets for fully masked rows. (c) is not a real value and is not offered. The essential-round records "undefined (ATT-A1)"
+    map to the first group; their defined rows are judged by restricting the query to those rows (the harness zeroed the
+    upstream there).'
+  basis:
+  - T_SDPA.REFERENCE
+  - TS_ATTN_CPP.SAFE_SOFTMAX
+  - TS_DECOMP.SAFE_SOFTMAX
+  - FA_IFACE.EMPTY_ROW
+  - TS_FLEX_HOP.LSE_MASKED
+- id: AT.ALIGN
+  status: drafted
+  statement: 'For L != S the causal mask has two documented alignments: upper-left (SDPA is_causal, causal_upper_left: key
+    j allowed for j <= i) and lower-right (causal_lower_right, FlashAttention: j <= i + S - L). Both are declared conventions,
+    not errors: they are separate profiles and a kernel is compared with the convention of the API it implements. Mixing
+    them (an SDPA replacement using lower-right) is the misreading the mutants test.'
+  basis:
+  - T_SDPA.CAUSAL
+  - T_CAUSAL_UL.UL
+  - T_CAUSAL_LR.LR
+  - FA_IFACE.CAUSAL_BR
+- id: AT.WINDOW
+  status: drafted
+  statement: 'window = [left, right] follows FlashAttention: query i attends keys in [i + S - L - left, i + S - L + right]
+    inclusive, -1 meaning unbounded, combined by AND with is_causal and the masks. It exists only in the lower_right profiles:
+    SDPA has no window argument (sliding windows of SDPA or flex attention are boolean masks / mask_mods and are judged
+    through AT.C2), so a window under the sdpa profiles is unsupported. The v1 specification measured the window from the
+    query index without the S - L offset; that reading is a mutant here.'
+  basis:
+  - FA_IFACE.WINDOW
+- id: AT.SOFTCAP
+  status: drafted
+  statement: 'softcap c > 0 replaces each scaled score s by c * tanh(s / c) before the additive mask and the softmax (Gemma
+    2 formula; HF Gemma2 applies it after the scaling and before the mask; the flex reference applies score_mod to the scaled
+    score; vLLM caps the scaled score). softcap null or 0 means off (FlashAttention: anything > 0 activates). Alternative
+    orders (cap of the unscaled dot product, cap after the mask) are not used by any source.'
+  basis:
+  - GEMMA2.SOFTCAP
+  - HF_GEMMA2.SOFTCAP
+  - TS_FLEX_HOP.MATH
+  - VLLM_UA.ORDER
+  - FA_IFACE.SOFTCAP
+- id: AT.LSE_BASE
+  status: drafted
+  statement: 'lse is log of the sum over allowed keys of exp(score + bias) in natural log (FlashAttention softmax_lse, flex
+    attention returned lse). The Triton tutorial stores M = m_i + log2(l_i) with scores pre-multiplied by 1/log(2), which
+    is lse / log(2): the profile sdpa_lse_base2. Which base a kernel stores is its interface declaration.'
+  basis:
+  - FA_IFACE.LSE
+  - T_FLEX.LSE
+  - TS_FLEX_API.LSE
+  - TRITON_TUT06.FWD
+- id: AT.VJP
+  status: drafted
+  statement: dq, dk, dv are the vector-Jacobian product of out (as a function of q, k, v) against the explicit upstream
+    dout, obtained by differentiating the reference formula; lse receives no upstream (its gradient is not part of this
+    contract) and the additive mask has no gradient output. Rows without allowed keys contribute nothing in the zero-row
+    profiles. A key/value head shared by several query heads (GQA, or Hkv = 1 broadcast) receives the sum over them.
+  basis:
+  - T_SDPA.REFERENCE
+  - T_SDPA.GQA
+- id: AT.HEADS
+  status: drafted
+  statement: 'With enable_gqa the number of query heads must be a multiple of the key/value heads and query head h uses
+    key/value head h // (Hq / Hkv) (repeat_interleave; FlashAttention: Q heads 0, 1, 2 -> KV head 0). Without enable_gqa
+    the reference formula is a batched matmul: Hkv = Hq, or Hkv = 1 broadcast; other head counts are invalid_input.'
+  basis:
+  - T_SDPA.GQA
+  - T_SDPA.REFERENCE
+  - FA_IFACE.GQA
+  - HF_LLAMA.REPEAT_KV
+  - TS_FLEX_HOP.MATH
+- id: AT.DROPOUT
+  status: drafted
+  statement: dropout_p > 0 makes the result random; it is outside these profiles (unsupported). The tested attention calls
+    all use dropout_p = 0.
+  basis:
+  - T_SDPA.DROPOUT
+clauses:
+- {id: AT.C1, basis: [T_SDPA.SCALE, T_SDPA.REFERENCE, T_FLEX.SCALE, FA_IFACE.SCALE], statement: 'scores s_ij = scale * q_i
+      . k_j with scale = 1/sqrt(E) when scale is None, else the given scale', observes: [out, lse, dq, dk], evidence_kind: definition}
+- {id: AT.C2, basis: [T_SDPA.BOOL_MASK, T_FLEX.MASK_MOD, TS_FLEX_HOP.MATH], statement: 'boolean attn_mask (or a flex mask_mod):
+      key j takes part in row i only where the mask is True', observes: [out, lse], evidence_kind: definition}
+- {id: AT.C3, basis: [T_SDPA.FLOAT_MASK, T_SDPA.MASK_SHAPE], statement: 'additive attn_mask: added to the scores; -inf entries
+      take no part; +inf makes the row softmax undefined', observes: [out, lse], evidence_kind: definition}
+- {id: AT.C4, basis: [T_SDPA.CAUSAL, T_CAUSAL_UL.UL, TS_ATTN_CPP.MATH, AT.ALIGN], statement: 'sdpa profiles: is_causal allows
+      key j for row i iff j <= i (upper-left)', observes: [out, lse], evidence_kind: definition}
+- {id: AT.C5, basis: [T_CAUSAL_LR.LR, FA_IFACE.CAUSAL_BR, AT.ALIGN], statement: 'lower_right profiles: is_causal allows key
+      j for row i iff j <= i + S - L', observes: [out, lse], evidence_kind: definition}
+- {id: AT.C6, basis: [T_SDPA.EXCLUSIVE], statement: attn_mask together with is_causal is invalid_input, observes: [out], evidence_kind: definition}
+- {id: AT.C7, basis: [AT.HEADS], statement: query head h uses key/value head h // (Hq/Hkv) with enable_gqa; without it Hkv
+      must equal Hq or be 1, observes: [out, dv], evidence_kind: definition}
+- {id: AT.C8, basis: [AT.SOFTCAP], statement: 'softcap c: s -> c * tanh(s / c) on the scaled score, before the mask', observes: [
+      out, lse, dq, dk], evidence_kind: definition}
+- {id: AT.C9, basis: [AT.WINDOW], statement: 'window [left, right] (lower_right profiles): keys in [i + S - L - left, i +
+      S - L + right]; unsupported in the sdpa profiles', observes: [out, lse], evidence_kind: definition}
+- {id: AT.C10, basis: [T_SDPA.REFERENCE, T_SOFTMAX.DEF], statement: P_i = softmax of s_ij + bias_ij over the allowed keys
+      of row i; out_i = sum_j P_ij v_j, observes: [out], evidence_kind: definition}
+- {id: AT.C11, basis: [AT.EMPTY_ROW], statement: 'sdpa, lower_right, sdpa_lse_base2: a row without allowed key makes the query
+      domain_undefined', observes: [out], evidence_kind: definition}
+- {id: AT.C12, basis: [AT.EMPTY_ROW, TS_ATTN_CPP.SAFE_SOFTMAX, FA_IFACE.EMPTY_ROW], statement: 'zero-row profiles: such a
+      row gives out 0, lse -inf and contributes nothing to dq, dk, dv', observes: [out, lse, dq, dk, dv], evidence_kind: definition}
+- {id: AT.C13, basis: [AT.LSE_BASE], statement: lse_i = log sum_j exp(s_ij + bias_ij) over the allowed keys; divided by log(2)
+      in sdpa_lse_base2, observes: [lse], evidence_kind: definition}
+- {id: AT.C14, basis: [AT.VJP], statement: 'dv_j = sum_i P_ij dout_i; dS_ij = P_ij (dout_i . v_j - sum_l P_il dout_i . v_l),
+      times 1 - tanh^2 under softcap; dq_i = scale sum_j dS_ij k_j; dk_j = scale sum_i dS_ij q_i; shared heads summed', observes: [
+      dq, dk, dv], evidence_kind: derived}
+- {id: AT.C15, basis: [T_SDPA.SIGNATURE, T_SDPA.MASK_SHAPE], statement: 'batch entries are independent problems; masks broadcast
+      to (B, Hq, L, S) by the documented rule', observes: [out], evidence_kind: definition}
+- {id: AT.C16, basis: [AT.DROPOUT], statement: dropout_p > 0 is unsupported, observes: [out], evidence_kind: definition}
+examples:
+- {id: AT.E1, profile: sdpa, clauses: [AT.C1, AT.C10, AT.C13, AT.C14], input: {attn_mask: null, is_causal: false, scale: null,
+      softcap: null, window: null, enable_gqa: false, dropout_p: 0, q: [[[1, 1, 1, 1]]], k: [[[1, 1, 1, 1], [0, 0, 0, 0]]],
+      v: [[[1], [0]]], dout: [[[1]]]}, expected: {outcome: value, fields: {out: [[[exp(2)/(1 + exp(2))]]], lse: [[log(1 +
+              exp(2))]], dq: [[[exp(2)/(2*(1 + 2*exp(2) + exp(4))), exp(2)/(2*(1 + 2*exp(2) + exp(4))), exp(2)/(2*(1 + 2*exp(2)
+                + exp(4))), exp(2)/(2*(1 + 2*exp(2) + exp(4)))]]], dk: [[[exp(2)/(2*(1 + 2*exp(2) + exp(4))), exp(2)/(2*(1
+                + 2*exp(2) + exp(4))), exp(2)/(2*(1 + 2*exp(2) + exp(4))), exp(2)/(2*(1 + 2*exp(2) + exp(4)))], [-exp(2)/(2*(1
+                + exp(2))**2), -exp(2)/(2*(1 + exp(2))**2), -exp(2)/(2*(1 + exp(2))**2), -exp(2)/(2*(1 + exp(2))**2)]]], dv: [
+          [[exp(2)/(1 + exp(2))], [1/(1 + exp(2))]]]}}, note: 'E = 4: default scale 1/2, scores [2, 0]'}
+- {id: AT.E2, profile: sdpa, clauses: [AT.C1, AT.C10], input: {attn_mask: null, is_causal: false, scale: 1, softcap: null,
+      window: null, enable_gqa: false, dropout_p: 0, q: [[[1, 1, 1, 1]]], k: [[[1, 1, 1, 1], [0, 0, 0, 0]]], v: [[[1], [0]]],
+      dout: [[[1]]]}, expected: {outcome: value, fields: {out: [[[exp(4)/(1 + exp(4))]]], lse: [[log(1 + exp(4))]], dq: [
+          [[exp(4)/(1 + 2*exp(4) + exp(8)), exp(4)/(1 + 2*exp(4) + exp(8)), exp(4)/(1 + 2*exp(4) + exp(8)), exp(4)/(1 + 2*exp(4)
+                + exp(8))]]], dk: [[[exp(4)/(1 + 2*exp(4) + exp(8)), exp(4)/(1 + 2*exp(4) + exp(8)), exp(4)/(1 + 2*exp(4)
+                + exp(8)), exp(4)/(1 + 2*exp(4) + exp(8))], [-exp(4)/(1 + exp(4))**2, -exp(4)/(1 + exp(4))**2, -exp(4)/(1
+                + exp(4))**2, -exp(4)/(1 + exp(4))**2]]], dv: [[[exp(4)/(1 + exp(4))], [1/(1 + exp(4))]]]}}, note: 'explicit
+      scale 1: scores [4, 0]'}
+- {id: AT.E3, profile: sdpa, clauses: [AT.C2, AT.C10], input: {attn_mask: [[true, false]], is_causal: false, scale: null,
+      softcap: null, window: null, enable_gqa: false, dropout_p: 0, q: [[[0]]], k: [[[0], [0]]], v: [[[1], [3]]], dout: [
+        [[1]]]}, expected: {outcome: value, fields: {out: [[[1]]], lse: [[0]], dq: [[[0]]], dk: [[[0], [0]]], dv: [[[1], [
+              0]]]}}}
+- {id: AT.E4, profile: sdpa, clauses: [AT.C3, AT.C10, AT.C14], input: {attn_mask: [[1, 0]], is_causal: false, scale: null,
+      softcap: null, window: null, enable_gqa: false, dropout_p: 0, q: [[[0]]], k: [[[0], [0]]], v: [[[1], [0]]], dout: [
+        [[1]]]}, expected: {outcome: value, fields: {out: [[[exp(1)/(1 + exp(1))]]], lse: [[log(1 + exp(1))]], dq: [[[0]]],
+        dk: [[[0], [0]]], dv: [[[exp(1)/(1 + exp(1))], [1/(1 + exp(1))]]]}}, note: 'additive mask [1, 0]'}
+- {id: AT.E5, profile: sdpa, clauses: [AT.C3], input: {attn_mask: [[0, -inf]], is_causal: false, scale: null, softcap: null,
+      window: null, enable_gqa: false, dropout_p: 0, q: [[[2]]], k: [[[1], [5]]], v: [[[1], [3]]], dout: [[[1]]]}, expected: {
+      outcome: value, fields: {out: [[[1]]], lse: [[2]], dq: [[[0]]], dk: [[[0], [0]]], dv: [[[1], [0]]]}}, note: -inf entries
+      take no part}
+- {id: AT.E6, profile: sdpa, clauses: [AT.C4, AT.C10, AT.C14], input: {attn_mask: null, is_causal: true, scale: null, softcap: null,
+      window: null, enable_gqa: false, dropout_p: 0, q: [[[0], [0]]], k: [[[0], [0], [0]]], v: [[[0], [1], [2]]], dout: [
+        [[1], [1]]]}, expected: {outcome: value, fields: {out: [[[0], [1/2]]], lse: [[0, log(2)]], dq: [[[0], [0]]], dk: [
+          [[0], [0], [0]]], dv: [[[3/2], [1/2], [0]]]}}, note: 'L = 2, S = 3: top-left causal'}
+- {id: AT.E7, profile: lower_right, clauses: [AT.C5, AT.C14], input: {attn_mask: null, is_causal: true, scale: null, softcap: null,
+      window: null, enable_gqa: false, dropout_p: 0, q: [[[0], [0]]], k: [[[0], [0], [0]]], v: [[[0], [1], [2]]], dout: [
+        [[1], [1]]]}, expected: {outcome: value, fields: {out: [[[1/2], [1]]], lse: [[log(2), log(3)]], dq: [[[0], [0]]],
+        dk: [[[0], [0], [0]]], dv: [[[5/6], [5/6], [1/3]]]}}, note: 'L = 2, S = 3: bottom-right causal'}
+- {id: AT.E8, profile: lower_right, clauses: [AT.C5, AT.C11], input: {attn_mask: null, is_causal: true, scale: null, softcap: null,
+      window: null, enable_gqa: false, dropout_p: 0, q: [[[0], [0], [0]]], k: [[[0], [0]]], v: [[[1], [3]]], dout: [[[1],
+          [1], [1]]]}, expected: {outcome: domain_undefined}, note: 'L = 3 > S = 2 bottom-right: row 0 has no key'}
+- {id: AT.E9, profile: lower_right_zero_rows, clauses: [AT.C5, AT.C12, AT.C14], input: {attn_mask: null, is_causal: true,
+      scale: null, softcap: null, window: null, enable_gqa: false, dropout_p: 0, q: [[[0], [0], [0]]], k: [[[0], [0]]], v: [
+        [[1], [3]]], dout: [[[1], [1], [1]]]}, expected: {outcome: value, fields: {out: [[[0], [1], [2]]], lse: [[-inf, 0,
+            log(2)]], dq: [[[0], [0], [0]]], dk: [[[0], [0]]], dv: [[[3/2], [1/2]]]}}}
+- {id: AT.E10, profile: sdpa, clauses: [AT.C6], input: {attn_mask: [[true]], is_causal: true, scale: null, softcap: null,
+      window: null, enable_gqa: false, dropout_p: 0, q: [[[0]]], k: [[[0]]], v: [[[1]]], dout: [[[1]]]}, expected: {outcome: invalid_input}}
+- {id: AT.E11, profile: sdpa, clauses: [AT.C7, AT.C14], input: {attn_mask: null, is_causal: false, scale: null, softcap: null,
+      window: null, enable_gqa: true, dropout_p: 0, q: [[[0]], [[0]], [[0]], [[0]]], k: [[[0]], [[0]]], v: [[[1]], [[2]]],
+      dout: [[[1]], [[2]], [[3]], [[4]]]}, expected: {outcome: value, fields: {out: [[[1]], [[1]], [[2]], [[2]]], lse: [[
+            0], [0], [0], [0]], dq: [[[0]], [[0]], [[0]], [[0]]], dk: [[[0]], [[0]]], dv: [[[3]], [[7]]]}}, note: 'Hq = 4,
+      Hkv = 2'}
+- {id: AT.E12, profile: sdpa, clauses: [AT.C7], input: {attn_mask: null, is_causal: false, scale: null, softcap: null, window: null,
+      enable_gqa: false, dropout_p: 0, q: [[[0]], [[0]], [[0]], [[0]]], k: [[[0]], [[0]]], v: [[[1]], [[2]]], dout: [[[1]],
+        [[2]], [[3]], [[4]]]}, expected: {outcome: invalid_input}, note: 'Hq = 4, Hkv = 2 without enable_gqa'}
+- {id: AT.E13, profile: sdpa, clauses: [AT.C8, AT.C14], input: {attn_mask: null, is_causal: false, scale: 1/2, softcap: 1,
+      window: null, enable_gqa: false, dropout_p: 0, q: [[[4]]], k: [[[1], [0]]], v: [[[1], [0]]], dout: [[[1]]]}, expected: {
+      outcome: value, fields: {out: [[[exp(tanh(2))/(1 + exp(tanh(2)))]]], lse: [[log(1 + exp(tanh(2)))]], dq: [[[2*exp(tanh(2)
+                + 4)/((1 + exp(4))**2*(1 + exp(tanh(2)))**2)]]], dk: [[[8*exp(tanh(2) + 4)/((1 + exp(4))**2*(1 + exp(tanh(2)))**2)],
+            [-2*exp(-tanh(2))/(exp(-tanh(2)) + 1)**2]]], dv: [[[exp(tanh(2))/(1 + exp(tanh(2)))], [1/(1 + exp(tanh(2)))]]]}},
+    note: 'scaled scores [2, 0]'}
+- {id: AT.E14, profile: lower_right, clauses: [AT.C9, AT.C14], input: {attn_mask: null, is_causal: false, scale: null, softcap: null,
+      window: [1, 0], enable_gqa: false, dropout_p: 0, q: [[[0]]], k: [[[0], [0], [0], [0], [0]]], v: [[[0], [1], [2], [3],
+          [4]]], dout: [[[1]]]}, expected: {outcome: value, fields: {out: [[[7/2]]], lse: [[log(2)]], dq: [[[0]]], dk: [[
+            [0], [0], [0], [0], [0]]], dv: [[[0], [0], [0], [1/2], [1/2]]]}}, note: 'v2 re-check of the v1 window error: Lq
+      = 1, Lk = 5, window (1, 0) -> keys 3, 4'}
+- {id: AT.E15, profile: sdpa, clauses: [AT.C9], input: {attn_mask: null, is_causal: false, scale: null, softcap: null, window: [
+        1, 0], enable_gqa: false, dropout_p: 0, q: [[[0]]], k: [[[0], [0]]], v: [[[0], [1]]], dout: [[[1]]]}, expected: {
+      outcome: unsupported}}
+- {id: AT.E16, profile: sdpa, clauses: [AT.C11], input: {attn_mask: [[false, false], [true, true]], is_causal: false, scale: null,
+      softcap: null, window: null, enable_gqa: false, dropout_p: 0, q: [[[0], [0]]], k: [[[1], [0]]], v: [[[1], [3]]], dout: [
+        [[1], [1]]]}, expected: {outcome: domain_undefined}}
+- {id: AT.E17, profile: sdpa_zero_rows, clauses: [AT.C12, AT.C14], input: {attn_mask: [[false, false], [true, true]], is_causal: false,
+      scale: null, softcap: null, window: null, enable_gqa: false, dropout_p: 0, q: [[[0], [0]]], k: [[[1], [0]]], v: [[[
+            1], [3]]], dout: [[[1], [1]]]}, expected: {outcome: value, fields: {out: [[[0], [2]]], lse: [[-inf, log(2)]],
+        dq: [[[0], [-1/2]]], dk: [[[0], [0]]], dv: [[[1/2], [1/2]]]}}}
+- {id: AT.E18, profile: sdpa_lse_base2, clauses: [AT.C13], input: {attn_mask: null, is_causal: false, scale: null, softcap: null,
+      window: null, enable_gqa: false, dropout_p: 0, q: [[[0]]], k: [[[0], [0]]], v: [[[1], [3]]], dout: [[[1]]]}, expected: {
+      outcome: value, fields: {out: [[[2]]], lse: [[1]], dq: [[[0]]], dk: [[[0], [0]]], dv: [[[1/2], [1/2]]]}}, note: base-2
+      log-sum-exp of two zero scores is 1}
+- {id: AT.E19, profile: sdpa, clauses: [AT.C14], input: {attn_mask: null, is_causal: false, scale: null, softcap: null, window: null,
+      enable_gqa: false, dropout_p: 0, q: [[[1]]], k: [[[1], [0]]], v: [[[1], [0]]], dout: [[[1]]]}, expected: {outcome: value,
+      fields: {out: [[[exp(1)/(1 + exp(1))]]], lse: [[log(1 + exp(1))]], dq: [[[exp(1)/(1 + 2*exp(1) + exp(2))]]], dk: [[
+            [exp(1)/(1 + 2*exp(1) + exp(2))], [-exp(1)/(1 + exp(1))**2]]], dv: [[[exp(1)/(1 + exp(1))], [1/(1 + exp(1))]]]}},
+    note: non-causal backward}
+- {id: AT.E20, profile: sdpa, clauses: [AT.C15, AT.C2], input: {attn_mask: [[true, false]], is_causal: false, scale: null,
+      softcap: null, window: null, enable_gqa: false, dropout_p: 0, q: [[[[0]]], [[[0]]]], k: [[[[0], [0]]], [[[0], [0]]]],
+      v: [[[[1], [3]]], [[[5], [7]]]], dout: [[[[1]]], [[[1]]]]}, expected: {outcome: value, fields: {out: [[[[1]]], [[[5]]]],
+        lse: [[[0]], [[0]]], dq: [[[[0]]], [[[0]]]], dk: [[[[0], [0]]], [[[0], [0]]]], dv: [[[[1], [0]]], [[[1], [0]]]]}},
+    note: 'batch of 2, mask (L, S) broadcast'}
+- {id: AT.E21, profile: sdpa, clauses: [AT.C16], input: {attn_mask: null, is_causal: false, scale: null, softcap: null, window: null,
+      enable_gqa: false, dropout_p: 1/10, q: [[[0]]], k: [[[0]]], v: [[[1]]], dout: [[[1]]]}, expected: {outcome: unsupported}}
+- {id: AT.E22, profile: sdpa, clauses: [AT.C3], input: {attn_mask: [[0, inf]], is_causal: false, scale: null, softcap: null,
+      window: null, enable_gqa: false, dropout_p: 0, q: [[[0]]], k: [[[0], [0]]], v: [[[1], [3]]], dout: [[[1]]]}, expected: {
+      outcome: domain_undefined}}
+- {id: AT.E23, profile: sdpa, clauses: [AT.C7, AT.C14], input: {attn_mask: null, is_causal: false, scale: null, softcap: null,
+      window: null, enable_gqa: false, dropout_p: 0, q: [[[0]], [[0]]], k: [[[0]]], v: [[[2]]], dout: [[[1]], [[1]]]}, expected: {
+      outcome: value, fields: {out: [[[2]], [[2]]], lse: [[0], [0]], dq: [[[0]], [[0]]], dk: [[[0]]], dv: [[[2]]]}}, note: Hkv
+      = 1 broadcasts without enable_gqa}
+- {id: AT.E24, profile: sdpa_zero_rows, clauses: [AT.C4, AT.C12], input: {attn_mask: null, is_causal: true, scale: null, softcap: null,
+      window: null, enable_gqa: false, dropout_p: 0, q: [[[0], [0], [0]]], k: [[[0], [0]]], v: [[[1], [3]]], dout: [[[1],
+          [1], [1]]]}, expected: {outcome: value, fields: {out: [[[1], [2], [2]]], lse: [[0, log(2), log(2)]], dq: [[[0],
+            [0], [0]]], dk: [[[0], [0]]], dv: [[[2], [1]]]}}, note: 'L = 3 > S = 2 top-left: every row has a key'}
+signature:
+  inputs:
+  - q [B][Hq][L][E] or [Hq][L][E]; k [.][Hkv][S][E]; v [.][Hkv][S][Ev]
+  - 'dout: shape of out (required)'
+  - 'attn_mask: null, all-boolean or all-numeric (with -inf / inf), broadcastable to (B, Hq, L, S)'
+  - is_causal (bool), scale (null or rational), softcap (null, 0 or > 0), window (null or [left, right], lower_right profiles),
+    enable_gqa (bool), dropout_p (0)
+  pre_state: []
+  post_state: []
+  observation_unit: out, lse and the complete VJP of one attention call
+domain:
+  valid:
+  - finite rational q
+  - k
+  - v
+  - dout; Hkv divides Hq with enable_gqa; additive masks may hold -inf
+  domain_undefined:
+  - a row without any allowed key (profiles without _zero_rows)
+  - +inf in an additive mask on an allowed key
+  invalid_input:
+  - attn_mask with is_causal
+  - head counts outside AT.HEADS
+  - shape mismatches
+  - mixed boolean / numeric masks
+  - negative softcap
+  - window entries below -1
+  unsupported:
+  - dropout_p > 0
+  - window in the sdpa profiles
+  - score_mod / mask_mod other than softcap and boolean masks
+  - ALiBi
+  - attention sinks
+mutation_requirements:
+- {id: AT.M1, misreading: default scale 1/E instead of 1/sqrt(E), witnesses: [AT.E1]}
+- {id: AT.M2, misreading: 'explicit scale replaced by the default 1/sqrt(E) (Inductor attention rewrite, bug B018 A)', witnesses: [
+      AT.E2]}
+- {id: AT.M3, misreading: boolean mask read as True = masked, witnesses: [AT.E3]}
+- {id: AT.M4, misreading: additive mask read as a keep mask where the value equals 1 (bug B018 B), witnesses: [AT.E4]}
+- {id: AT.M5, misreading: SDPA is_causal aligned to the bottom-right corner, witnesses: [AT.E6]}
+- {id: AT.M6, misreading: FlashAttention causal aligned to the top-left corner, witnesses: [AT.E7]}
+- {id: AT.M7, misreading: window measured from the query index without the S - L offset (the v1 specification error), witnesses: [
+      AT.E14]}
+- {id: AT.M8, misreading: GQA heads tiled (h % Hkv) instead of repeat_interleave, witnesses: [AT.E11]}
+- {id: AT.M9, misreading: softcap applied to the unscaled dot product, witnesses: [AT.E13]}
+- {id: AT.M10, misreading: 'a row without allowed key averages every key (finite fill value, bug B018 B)', witnesses: [AT.E16,
+      AT.E17]}
+- {id: AT.M11, misreading: causal mask excludes the diagonal (planted mask_diag of the flash attention case), witnesses: [
+      AT.E6]}
+- {id: AT.M12, misreading: backward computed with the causal mask while the forward is not causal (bug B011), witnesses: [
+      AT.E19]}
+- {id: AT.M13, misreading: dk / dv taken from one query head instead of summed over the GQA group, witnesses: [AT.E11]}
+- {id: AT.M14, misreading: natural-log lse reported where the base-2 M is declared, witnesses: [AT.E18]}
+- {id: AT.M15, misreading: attn_mask together with is_causal silently accepted, witnesses: [AT.E10]}
+nonclaims:
+- Floating-point rounding, block order of the online softmax and TF32 inputs of a kernel are the numerical question (K -
+  G); this contract states the real target.
+- Whatever a device returns for rows without an allowed key is not judged in the profiles without _zero_rows.
+- A kernel that masks with a large finite negative bias (e.g. -1.0e6 in the Triton tutorial) instead of -inf differs from
+  this target by terms of order exp(-bias); that difference belongs to the program's own semantics (G), not to f.
+- Clauses resting only on reference programs (zero-row convention, softcap order, base-2 M) state agreement with those programs,
+  not a documented requirement of PyTorch.
+changes: []

@@ -1,0 +1,302 @@
+schema_version: '1.2'
+id: EMB
+role: EMB
+title: Embedding lookup and embedding bags (padding_idx, max_norm renormalisation, scale_grad_by_freq, sum / mean / max,
+  per_sample_weights) with the backward pass, real-number semantics
+review:
+  status: drafted
+  author: Claude (spec v3 author, group D1_attention), 2026-10-17
+  date: '2026-10-17'
+  scope: Real-number semantics of one F.embedding / F.embedding_bag call and its weight gradient; awaiting a review by someone
+    who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires:
+  - source_profile_matched
+  - input_contract_validated
+  - all_required_outputs_bound
+  - reference_semantics_and_guarantees_validated
+  - no_unresolved_contradiction
+  - contract_and_implementation_hashes_bound
+covers:
+- torch.nn.functional.embedding
+- torch.nn.Embedding
+- torch.nn.functional.embedding_bag
+- torch.nn.EmbeddingBag
+- aten.embedding
+- aten.embedding_dense_backward
+- aten.embedding_renorm_
+- aten._embedding_bag
+- aten._embedding_bag_backward
+- FlagGems embedding (forward)
+profiles:
+  renorm_doc:
+    meaning: max_norm renormalisation as documented, a row with norm larger than max_norm is scaled to norm max_norm exactly
+      (factor max_norm / norm). Without max_norm both profiles coincide.
+    task_choice_required: false
+  renorm_aten:
+    meaning: max_norm renormalisation as the ATen kernel computes it, factor max_norm / (norm + 1e-7) with 1e-7 the decimal
+      constant of the source. Agreement with a reference program; bound by the task.
+    task_choice_required: true
+outputs:
+  out:
+    shape: 'embedding: indices shape + [D]; embedding_bag: [bags][D]'
+    guarantee: rigorous_enclosure
+  dweight:
+    shape: '[V][D], VJP against the explicit upstream (the renormalised weight is the parameter)'
+    guarantee: rigorous_enclosure
+  dpsw:
+    shape: shape of per_sample_weights, [] when there are none
+    guarantee: rigorous_enclosure
+  weight_after:
+    shape: '[V][D], the weight after the in-place renormalisation (the input weight without max_norm)'
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: weight, upstream and per_sample_weights are the exact values received; indices, offsets and padding_idx
+    are exact integers.
+  quality: No tolerance; everything is exact except a 2-norm renormalisation by an irrational norm (rigorous enclosure).
+  test_evidence: Exact equality or containment of the expected formula's enclosure.
+  error_handling: Documented argument errors (index out of range, padding_idx outside [-V, V), per_sample_weights outside
+    mode sum, scale_grad_by_freq with mode max, offsets[0] != 0) are invalid_input; a mean or max over a bag holding only
+    padding entries is domain_undefined.
+decisions:
+- id: EM.RENORM
+  status: drafted
+  statement: 'The documentation says a row with norm larger than max_norm "is renormalized to have norm max_norm"; the ATen
+    kernel multiplies by max_norm / (norm + 1e-7), so the renormalised norm is slightly below max_norm (the closure round
+    measured this as a float64 difference beyond tolerance). Neither reading may be chosen to make one side pass: two profiles,
+    renorm_doc (the documentation, default) and renorm_aten (the reference program, bound by the task). Both renormalise
+    only rows referenced by the indices (every occurrence counts once, the padding row included), test norm > max_norm strictly,
+    and modify the weight in place (weight_after). The 1e-7 is taken as the decimal 10^-7 of the source text; its binary
+    rounding on a device is a numerical difference. norm_type 1, 2 and inf are supported.'
+  basis:
+  - T_EMBEDDING.MAX_NORM
+  - T_EMBEDDING_BAG_F.MAX_NORM
+  - TS_EMBEDDING_CPP.RENORM
+  - TS_FUNCTIONAL_EMB.EMB_RENORM
+- id: EM.MAXNORM_GRAD
+  status: drafted
+  statement: 'The renormalisation runs under no_grad before the lookup and modifies the weight in place, so the output is
+    a lookup of the modified weight and the gradient is that of the lookup with respect to the weight tensor after the call
+    (no derivative of the renormalisation). Alternative: differentiating through x * max_norm / |x| as a function; rejected
+    because the documented in-place modification makes the renormalised tensor the parameter.'
+  basis:
+  - TS_FUNCTIONAL_EMB.EMB_RENORM
+  - T_EMBEDDING.MAX_NORM
+- id: EM.PAD
+  status: drafted
+  statement: 'padding_idx entries do not contribute to the gradient (their rows get no gradient from them). F.embedding
+    returns the stored padding row in the forward pass (only nn.Embedding initialises that row to zeros on construction).
+    A negative padding_idx is replaced by V + padding_idx; values outside [-V, V) are invalid. In bags the padding entries
+    are excluded from the reduction: they neither add to a sum nor count in a mean, and their per-sample weights get zero
+    gradient.'
+  basis:
+  - T_EMBEDDING_F.PADDING
+  - T_EMBEDDING.PADDING
+  - TS_FUNCTIONAL_EMB.EMB_PADDING
+  - T_EMBEDDING_BAG_F.PADDING
+  - T_EMBEDDING_BAG.PADDING
+  - TS_EMBEDDINGBAG_CPP.MEAN
+- id: EM.PAD_BAG
+  status: drafted
+  statement: 'A bag of length 0 returns zeros in every mode (documented). A non-empty bag whose entries are all padding_idx
+    is not covered by that sentence: its sum is the empty sum 0 (the documentation example shows zeros for mode sum), but
+    its mean (0/0) and its max (maximum of an empty set) have no real value: domain_undefined, no device convention demanded
+    (ATen returns zeros). The tested conditions put an all-padding bag only under mode sum.'
+  basis:
+  - T_EMBEDDING_BAG_F.EMPTY
+  - T_EMBEDDING_BAG_F.PADDING
+- id: EM.MAX_TIE
+  status: drafted
+  statement: 'mode max returns the element-wise maximum over the bag; its gradient goes, per dimension, to the entry that
+    attains the maximum. When several entries of different rows tie, EmbeddingBag is documented as equivalent to torch.max(dim=1),
+    whose index is that of the first maximal value, and the ATen kernel keeps the first maximal entry in bag order: the
+    gradient goes to the first maximal entry. Alternatives (even split as amax documents, any tied entry) contradict that
+    equivalence; the even split is a mutant.'
+  basis:
+  - T_EMBEDDING_BAG.EQUIV
+  - T_MAX.DIM
+  - TS_EMBEDDINGBAG_CPP.MAX
+  - T_AMAX.GRAD
+- id: EM.FREQ
+  status: drafted
+  statement: scale_grad_by_freq divides the gradient contribution of every occurrence of index k by the number of occurrences
+    of k in the whole input (the mini-batch), as the ATen backward counts it; with bags the same factor applies to each
+    entry (not supported for mode max).
+  basis:
+  - T_EMBEDDING.FREQ
+  - TS_EMBEDDING_CPP.DENSE_BWD
+  - T_EMBEDDING_BAG_F.MAX_OPTS
+clauses:
+- {id: EM.C1, basis: [T_EMBEDDING_F.DEF, TS_EMBEDDING_CPP.FORWARD], statement: 'embedding: out[pos] = weight_after[idx[pos]];
+      indices outside [0, V) are invalid', observes: [out], evidence_kind: definition}
+- {id: EM.C2, basis: [TS_EMBEDDING_CPP.DENSE_BWD], statement: 'dweight[k] = sum of upstream[pos] over positions with idx =
+      k (not padding)', observes: [dweight], evidence_kind: derived}
+- {id: EM.C3, basis: [EM.PAD], statement: 'padding_idx: forward returns the stored row; no gradient from padding entries;
+      negative values count from the end', observes: [out, dweight], evidence_kind: definition}
+- {id: EM.C4, basis: [EM.FREQ], statement: 'scale_grad_by_freq: each contribution divided by the frequency of its index in
+      the input', observes: [dweight], evidence_kind: definition}
+- {id: EM.C5, basis: [EM.RENORM], statement: 'max_norm: referenced rows with norm > max_norm scaled by max_norm / norm (renorm_doc)
+      or max_norm / (norm + 1e-7) (renorm_aten), in place', observes: [out, weight_after], evidence_kind: definition}
+- {id: EM.C6, basis: [EM.MAXNORM_GRAD], statement: with max_norm the gradient is that of the lookup of the renormalised weight
+      (no derivative of the renormalisation), observes: [dweight], evidence_kind: definition}
+- {id: EM.C7, basis: [T_EMBEDDING_BAG_F.OFFSETS, TS_EMBEDDINGBAG_CPP.OFFSETS], statement: 'bags: 1-D indices split by offsets
+      (offsets[0] = 0; include_last_offset: last offset ends the last bag); 2-D indices: one bag per row', observes: [out],
+    evidence_kind: definition}
+- {id: EM.C8, basis: [T_EMBEDDING_BAG.MODES, T_EMBEDDING_BAG.EQUIV], statement: 'mode sum: sum of the rows; mode mean: sum
+      divided by the number of entries; gradient distributed accordingly', observes: [out, dweight], evidence_kind: definition}
+- {id: EM.C9, basis: [EM.MAX_TIE, T_EMBEDDING_BAG_F.MAX_OPTS], statement: 'mode max: element-wise maximum, gradient to the
+      first maximal entry per dimension; scale_grad_by_freq with max is invalid', observes: [out, dweight], evidence_kind: definition}
+- {id: EM.C10, basis: [T_EMBEDDING_BAG.PSW, T_EMBEDDING_BAG_F.PSW, TS_FUNCTIONAL_EMB.BAG_CHECKS], statement: 'per_sample_weights
+      (mode sum only) scale each row; dpsw[e] = upstream[bag(e)] . row(e)', observes: [out, dweight, dpsw], evidence_kind: definition}
+- {id: EM.C11, basis: [T_EMBEDDING_BAG_F.EMPTY], statement: a bag of length 0 returns zeros in every mode, observes: [out],
+    evidence_kind: definition}
+- {id: EM.C12, basis: [EM.PAD, EM.PAD_BAG], statement: padding entries are excluded from bag reductions (not counted in a
+      mean); an all-padding bag sums to 0 and has no mean or max, observes: [out, dweight], evidence_kind: definition}
+examples:
+- {id: EM.E1, profile: renorm_doc, clauses: [EM.C1, EM.C2], input: {op: embedding, padding_idx: null, max_norm: null, scale_grad_by_freq: false,
+      weight: [[1, 2], [3, 4], [5, 6]], indices: [2, 0, 2], upstream: [[1, 1], [2, 3], [10, 20]]}, expected: {outcome: value,
+      fields: {out: [[5, 6], [1, 2], [5, 6]], dweight: [[2, 3], [0, 0], [11, 21]], dpsw: [], weight_after: [[1, 2], [3, 4],
+          [5, 6]]}}}
+- {id: EM.E2, profile: renorm_doc, clauses: [EM.C3], input: {op: embedding, padding_idx: 0, max_norm: null, scale_grad_by_freq: false,
+      weight: [[7, 8], [1, 2]], indices: [0, 1, 0], upstream: [[1, 1], [2, 2], [3, 3]]}, expected: {outcome: value, fields: {
+        out: [[7, 8], [1, 2], [7, 8]], dweight: [[0, 0], [2, 2]], dpsw: [], weight_after: [[7, 8], [1, 2]]}}, note: the stored
+      padding row is returned; it gets no gradient}
+- {id: EM.E3, profile: renorm_doc, clauses: [EM.C3], input: {op: embedding, padding_idx: -1, max_norm: null, scale_grad_by_freq: false,
+      weight: [[7, 8], [1, 2]], indices: [1, 0], upstream: [[1, 2], [3, 4]]}, expected: {outcome: value, fields: {out: [[
+            1, 2], [7, 8]], dweight: [[3, 4], [0, 0]], dpsw: [], weight_after: [[7, 8], [1, 2]]}}, note: padding_idx -1 =
+      row 1}
+- {id: EM.E4, profile: renorm_doc, clauses: [EM.C4], input: {op: embedding, padding_idx: null, max_norm: null, scale_grad_by_freq: true,
+      weight: [[1, 1], [2, 2]], indices: [1, 1, 0], upstream: [[2, 4], [6, 8], [1, 1]]}, expected: {outcome: value, fields: {
+        out: [[2, 2], [2, 2], [1, 1]], dweight: [[1, 1], [4, 6]], dpsw: [], weight_after: [[1, 1], [2, 2]]}}}
+- {id: EM.E5, profile: renorm_doc, clauses: [EM.C5, EM.C6], input: {op: embedding, padding_idx: null, max_norm: 1, scale_grad_by_freq: false,
+      weight: [[3, 4], [0, 1], [6, 8]], indices: [0, 1], upstream: [[1, 0], [0, 1]]}, expected: {outcome: value, fields: {
+        out: [[3/5, 4/5], [0, 1]], dweight: [[1, 0], [0, 1], [0, 0]], dpsw: [], weight_after: [[3/5, 4/5], [0, 1], [6, 8]]}},
+    note: row 0 renormalised to norm 1; row 1 has norm 1 (not larger); row 2 not referenced}
+- {id: EM.E6, profile: renorm_aten, clauses: [EM.C5, EM.C6], input: {op: embedding, padding_idx: null, max_norm: 1, scale_grad_by_freq: false,
+      weight: [[3, 4], [0, 1], [6, 8]], indices: [0, 1], upstream: [[1, 0], [0, 1]]}, expected: {outcome: value, fields: {
+        out: [[10000000/16666667, 40000000/50000001], [0, 1]], dweight: [[1, 0], [0, 1], [0, 0]], dpsw: [], weight_after: [
+          [10000000/16666667, 40000000/50000001], [0, 1], [6, 8]]}}, note: scale max_norm / (norm + 1e-7)}
+- {id: EM.E7, profile: renorm_aten, clauses: [EM.C5], input: {op: embedding, padding_idx: null, max_norm: 5, scale_grad_by_freq: false,
+      weight: [[3, 4]], indices: [0], upstream: [[0, 0]]}, expected: {outcome: value, fields: {out: [[3, 4]], dweight: [[
+            0, 0]], dpsw: [], weight_after: [[3, 4]]}}, note: 'norm equal to max_norm: unchanged'}
+- {id: EM.E8, profile: renorm_doc, clauses: [EM.C5], input: {op: embedding, padding_idx: null, max_norm: 1, scale_grad_by_freq: false,
+      weight: [[1, 1]], indices: [0], upstream: [[1, 1]]}, expected: {outcome: value, fields: {out: [[sqrt(2)/2, sqrt(2)/2]],
+        dweight: [[1, 1]], dpsw: [], weight_after: [[sqrt(2)/2, sqrt(2)/2]]}}, note: irrational norm sqrt(2)}
+- {id: EM.E9, profile: renorm_doc, clauses: [EM.C3, EM.C5, EM.C6], input: {op: embedding, padding_idx: 0, max_norm: 1, scale_grad_by_freq: false,
+      weight: [[3, 4], [0, 1]], indices: [0, 1, 0], upstream: [[1, 1], [2, 2], [3, 3]]}, expected: {outcome: value, fields: {
+        out: [[3/5, 4/5], [0, 1], [3/5, 4/5]], dweight: [[0, 0], [2, 2]], dpsw: [], weight_after: [[3/5, 4/5], [0, 1]]}},
+    note: the referenced padding row is renormalised too}
+- {id: EM.E10, profile: renorm_doc, clauses: [EM.C7, EM.C8], input: {op: embedding_bag, padding_idx: null, max_norm: null,
+      scale_grad_by_freq: false, mode: sum, offsets: [0, 2], per_sample_weights: null, include_last_offset: false, weight: [
+        [1, 0], [0, 1], [2, 2]], indices: [0, 2, 1, 1, 2], upstream: [[1, 2], [3, 4]]}, expected: {outcome: value, fields: {
+        out: [[3, 2], [2, 4]], dweight: [[1, 2], [6, 8], [4, 6]], dpsw: [], weight_after: [[1, 0], [0, 1], [2, 2]]}}}
+- {id: EM.E11, profile: renorm_doc, clauses: [EM.C7, EM.C8], input: {op: embedding_bag, padding_idx: null, max_norm: null,
+      scale_grad_by_freq: false, mode: mean, offsets: [0, 2], per_sample_weights: null, include_last_offset: false, weight: [
+        [1, 0], [0, 1], [2, 2]], indices: [0, 2, 1, 1, 2], upstream: [[1, 2], [3, 4]]}, expected: {outcome: value, fields: {
+        out: [[3/2, 1], [2/3, 4/3]], dweight: [[1/2, 1], [2, 8/3], [3/2, 7/3]], dpsw: [], weight_after: [[1, 0], [0, 1], [
+            2, 2]]}}}
+- {id: EM.E12, profile: renorm_doc, clauses: [EM.C9], input: {op: embedding_bag, padding_idx: null, max_norm: null, scale_grad_by_freq: false,
+      mode: max, offsets: [0], per_sample_weights: null, include_last_offset: false, weight: [[1, 5], [3, 2], [3, 0]], indices: [
+        0, 1, 2], upstream: [[10, 20]]}, expected: {outcome: value, fields: {out: [[3, 5]], dweight: [[0, 20], [10, 0], [
+            0, 0]], dpsw: [], weight_after: [[1, 5], [3, 2], [3, 0]]}}, note: 'dimension 0 ties between rows 1 and 2: the
+      first maximal entry gets the gradient'}
+- {id: EM.E13, profile: renorm_doc, clauses: [EM.C10], input: {op: embedding_bag, padding_idx: null, max_norm: null, scale_grad_by_freq: false,
+      mode: sum, offsets: [0], per_sample_weights: [2, 1/2], include_last_offset: false, weight: [[1, 2], [4, 6]], indices: [
+        0, 1], upstream: [[1, 1]]}, expected: {outcome: value, fields: {out: [[4, 7]], dweight: [[2, 2], [1/2, 1/2]], dpsw: [
+          3, 10], weight_after: [[1, 2], [4, 6]]}}}
+- {id: EM.E14, profile: renorm_doc, clauses: [EM.C11], input: {op: embedding_bag, padding_idx: null, max_norm: null, scale_grad_by_freq: false,
+      mode: mean, offsets: [0, 0], per_sample_weights: null, include_last_offset: false, weight: [[1, 1], [2, 4]], indices: [
+        1], upstream: [[5, 5], [1, 2]]}, expected: {outcome: value, fields: {out: [[0, 0], [2, 4]], dweight: [[0, 0], [1,
+            2]], dpsw: [], weight_after: [[1, 1], [2, 4]]}}, note: bag 0 is empty}
+- {id: EM.E15, profile: renorm_doc, clauses: [EM.C3, EM.C12], input: {op: embedding_bag, padding_idx: 0, max_norm: null, scale_grad_by_freq: false,
+      mode: sum, offsets: [0, 2], per_sample_weights: null, include_last_offset: false, weight: [[9, 9], [1, 2]], indices: [
+        1, 0, 0, 0], upstream: [[1, 1], [2, 2]]}, expected: {outcome: value, fields: {out: [[1, 2], [0, 0]], dweight: [[0,
+            0], [1, 1]], dpsw: [], weight_after: [[9, 9], [1, 2]]}}, note: bag 1 holds only padding entries}
+- {id: EM.E16, profile: renorm_doc, clauses: [EM.C12], input: {op: embedding_bag, padding_idx: 0, max_norm: null, scale_grad_by_freq: false,
+      mode: mean, offsets: [0], per_sample_weights: null, include_last_offset: false, weight: [[9, 9], [1, 2]], indices: [
+        1, 0, 1], upstream: [[3, 6]]}, expected: {outcome: value, fields: {out: [[1, 2]], dweight: [[0, 0], [3, 6]], dpsw: [],
+        weight_after: [[9, 9], [1, 2]]}}, note: the mean counts the two non-padding entries}
+- {id: EM.E17, profile: renorm_doc, clauses: [EM.C12], input: {op: embedding_bag, padding_idx: 0, max_norm: null, scale_grad_by_freq: false,
+      mode: mean, offsets: [0], per_sample_weights: null, include_last_offset: false, weight: [[9, 9], [1, 2]], indices: [
+        0, 0], upstream: [[1, 1]]}, expected: {outcome: domain_undefined}}
+- {id: EM.E18, profile: renorm_doc, clauses: [EM.C7], input: {op: embedding_bag, padding_idx: null, max_norm: null, scale_grad_by_freq: false,
+      mode: sum, offsets: [0, 1, 3], per_sample_weights: null, include_last_offset: true, weight: [[1, 0], [0, 1]], indices: [
+        0, 1, 1], upstream: [[1, 1], [1, 2]]}, expected: {outcome: value, fields: {out: [[1, 0], [0, 2]], dweight: [[1, 1],
+          [2, 4]], dpsw: [], weight_after: [[1, 0], [0, 1]]}}}
+- {id: EM.E19, profile: renorm_doc, clauses: [EM.C10], input: {op: embedding_bag, padding_idx: null, max_norm: null, scale_grad_by_freq: false,
+      mode: mean, offsets: [0], per_sample_weights: [1, 1], include_last_offset: false, weight: [[1, 0], [0, 1]], indices: [
+        0, 1], upstream: [[1, 1]]}, expected: {outcome: invalid_input}}
+- {id: EM.E20, profile: renorm_doc, clauses: [EM.C9], input: {op: embedding_bag, padding_idx: null, max_norm: null, scale_grad_by_freq: true,
+      mode: max, offsets: [0], per_sample_weights: null, include_last_offset: false, weight: [[1, 0], [0, 1]], indices: [
+        0, 1], upstream: [[1, 1]]}, expected: {outcome: invalid_input}}
+- {id: EM.E21, profile: renorm_doc, clauses: [EM.C1], input: {op: embedding, padding_idx: null, max_norm: null, scale_grad_by_freq: false,
+      weight: [[1, 0], [0, 1]], indices: [2], upstream: [[1, 1]]}, expected: {outcome: invalid_input}}
+- {id: EM.E22, profile: renorm_doc, clauses: [EM.C7, EM.C8], input: {op: embedding_bag, padding_idx: null, max_norm: null,
+      scale_grad_by_freq: false, mode: sum, offsets: null, per_sample_weights: null, include_last_offset: false, weight: [
+        [1, 0], [0, 1]], indices: [[0, 1], [1, 1]], upstream: [[1, 0], [0, 1]]}, expected: {outcome: value, fields: {out: [
+          [1, 1], [0, 2]], dweight: [[1, 0], [1, 2]], dpsw: [], weight_after: [[1, 0], [0, 1]]}}, note: '2-D input: one bag
+      per row'}
+- {id: EM.E23, profile: renorm_doc, clauses: [EM.C7], input: {op: embedding_bag, padding_idx: null, max_norm: null, scale_grad_by_freq: false,
+      mode: sum, offsets: [1], per_sample_weights: null, include_last_offset: false, weight: [[1, 0], [0, 1]], indices: [
+        0, 1], upstream: [[1, 1]]}, expected: {outcome: invalid_input}}
+- {id: EM.E24, profile: renorm_doc, clauses: [EM.C5], input: {op: embedding, padding_idx: null, max_norm: 2, scale_grad_by_freq: false,
+      weight: [[3, -1]], indices: [0], norm_type: 1, upstream: [[1, 1]]}, expected: {outcome: value, fields: {out: [[3/2,
+            -1/2]], dweight: [[1, 1]], dpsw: [], weight_after: [[3/2, -1/2]]}}, note: 1-norm 4 > 2}
+- {id: EM.E25, profile: renorm_doc, clauses: [EM.C1, EM.C2], input: {op: embedding, padding_idx: null, max_norm: null, scale_grad_by_freq: false,
+      weight: [[1, 2], [3, 4]], indices: [[1], [0]], upstream: [[[1, 0]], [[0, 1]]]}, expected: {outcome: value, fields: {
+        out: [[[3, 4]], [[1, 2]]], dweight: [[0, 1], [1, 0]], dpsw: [], weight_after: [[1, 2], [3, 4]]}}, note: 2-D indices}
+signature:
+  inputs:
+  - 'op: embedding | embedding_bag'
+  - 'weight [V][D]; indices (embedding: any rank; bag: 1-D with offsets or 2-D)'
+  - padding_idx, max_norm, norm_type (1, 2, inf), scale_grad_by_freq
+  - 'bag only: mode, offsets, per_sample_weights, include_last_offset'
+  - 'upstream: shape of out'
+  pre_state:
+  - weight
+  post_state:
+  - weight_after
+  observation_unit: out, the weight gradient, the per-sample-weight gradient and the weight after the call
+domain:
+  valid:
+  - indices in [0, V)
+  - padding_idx in [-V, V)
+  - positive max_norm
+  - rational weights
+  domain_undefined:
+  - mean or max of a non-empty bag holding only padding entries
+  invalid_input:
+  - indices out of range
+  - padding_idx out of range
+  - per_sample_weights with mode mean or max
+  - scale_grad_by_freq with mode max
+  - offsets[0] != 0 or decreasing offsets
+  - shape mismatches
+  unsupported:
+  - norm_type other than 1
+  - 2
+  - inf
+  - sparse gradients
+mutation_requirements:
+- {id: EM.M1, misreading: padding row receives gradient, witnesses: [EM.E2]}
+- {id: EM.M2, misreading: padding entries return zeros in F.embedding (confusing nn.Embedding initialisation with the forward
+      pass), witnesses: [EM.E2]}
+- {id: EM.M3, misreading: scale_grad_by_freq ignored, witnesses: [EM.E4]}
+- {id: EM.M4, misreading: renorm_doc computed with the 1e-7 of the ATen kernel, witnesses: [EM.E5]}
+- {id: EM.M5, misreading: renorm_aten computed without the 1e-7, witnesses: [EM.E6]}
+- {id: EM.M6, misreading: every row of the table renormalised, not only the referenced ones: null, witnesses: [EM.E5]}
+- {id: EM.M7, misreading: gradient taken through the renormalisation, witnesses: [EM.E5]}
+- {id: EM.M8, misreading: mean over a bag counts padding entries, witnesses: [EM.E16]}
+- {id: EM.M9, misreading: mean of an empty bag treated as 0/0, witnesses: [EM.E14]}
+- {id: EM.M10, misreading: per_sample_weights ignored, witnesses: [EM.E13]}
+- {id: EM.M11, misreading: include_last_offset ignored (the last offset starts a bag), witnesses: [EM.E18]}
+- {id: EM.M12, misreading: max-mode gradient split evenly between tied entries (the amax rule), witnesses: [EM.E12]}
+- {id: EM.M13, misreading: renormalisation also applied when the norm equals max_norm, witnesses: [EM.E7]}
+- {id: EM.M14, misreading: negative padding_idx not counted from the end, witnesses: [EM.E3]}
+nonclaims:
+- The renorm_aten profile states agreement with the ATen kernel, not a documented requirement.
+- Rounding of the renormalisation factor and of accumulated gradients on a device is the numerical question (K - G).
+- The FlagGems embedding call is covered for its forward value; its internal dtype conversion kernel is part of that call.
+changes: []
