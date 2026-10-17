@@ -1,0 +1,215 @@
+schema_version: '1.2'
+id: SCHED
+role: SCHED
+title: Learning-rate schedules - CosineAnnealingLR, LinearLR, OneCycleLR, transformers cosine-with-warmup - as lr sequences
+review:
+  status: drafted
+  author: Claude (spec v3 author, group E2_program), 2026-10-17
+  date: '2026-10-17'
+  scope: Documented schedule formulas (PyTorch 2.10, transformers 4.57.3) with the step arithmetic of the reference
+    programs where the documents give none; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [torch.optim.lr_scheduler.CosineAnnealingLR, torch.optim.lr_scheduler.LinearLR, torch.optim.lr_scheduler.OneCycleLR,
+  torch.optim.lr_scheduler.LambdaLR, transformers.get_cosine_schedule_with_warmup]
+profiles:
+  closed_form:
+    meaning: lr_t is a function of the step counter t only (CosineAnnealingLR SGDR closed form, LinearLR linear factor,
+      OneCycleLR phases, transformers lambda). External changes of the group lr do not enter.
+    task_choice_required: true
+  recursive:
+    meaning: lr_t is computed from lr_{t-1} as the documented recursion of CosineAnnealingLR and the chainable form of
+      LinearLR do; OneCycleLR and the transformers schedule are not recursive and coincide with closed_form. Without
+      external lr changes the two profiles give the same sequence.
+    task_choice_required: true
+outputs:
+  lr:
+    shape: '[steps + 1]: lr after construction, then after each step()'
+    guarantee: rigorous_enclosure
+readings:
+  doc_recursion_only:
+    meaning: CosineAnnealingLR recursion exactly as the 2.10 page writes it, without the reference program's branch
+      at T_cur = (2k+1) T_max, where its denominator is zero (SCH.COS_SINGULAR). Diagnostic only.
+    basis: [T_COSINE_LR.RECURSIVE]
+  linear_example_shift:
+    meaning: The LinearLR page's example labels, which list for epoch t the value of t + 1 (SCH.LINEAR_EXAMPLE).
+      Diagnostic only.
+    basis: [T_LINEAR_LR.EXAMPLE]
+comparison:
+  input_binding: Learning rates and factors are the exact values received (a binary float is its exact rational).
+  quality: No tolerance. cos(pi q) is exact for q a multiple of 1/2 or 1/3, otherwise a rigorous enclosure.
+  test_evidence: Exact equality or enclosure containment.
+  error_handling: Out-of-range parameters and steps beyond OneCycleLR's total_steps are invalid_input.
+decisions:
+- id: SCH.STEP0
+  status: drafted
+  statement: 'lr_0 is the value set at construction (the constructor performs the initial step, last_epoch 0); each
+    step() after optimizer.step() advances t by one. Alternative (counting from the first step() call, lr_0 = value
+    after one step) is the pre-1.1 order the torch.optim page warns about; rejected.'
+  basis: [T_OPTIM.ORDER, T_COSINE_LR.STEP, TS_LR_SCHEDULER.INIT, T_LAMBDA_LR.DEF]
+- id: SCH.T_CUR
+  status: drafted
+  statement: 'Earlier pending item SCH-A1 (T_cur >= T_max) decided: the 2.10 page says this implementation performs
+    cosine annealing without restarts, T_cur = t increasing monotonically, so the closed form continues periodically
+    for t >= T_max (back up to base_lr at 2 T_max). Alternatives: clamp at eta_min after T_max; SGDR warm restarts
+    (T_cur reset to 0) - both contradict the page.'
+  basis: [T_COSINE_LR.NO_RESTART, T_COSINE_LR.CLOSED]
+- id: SCH.COS_SINGULAR
+  status: drafted
+  statement: 'The 2.10 page writes the recursion with denominator 1 + cos(T_cur pi / T_max), zero at T_cur = (2k+1)
+    T_max. Profile recursive takes there the torch 2.10 reference program''s branch eta_{t+1} = eta_t + (base_lr -
+    eta_min)(1 - cos(pi/T_max))/2 (claim: consistent with the reference program). Alternatives: (a) domain_undefined
+    (diagnostic reading doc_recursion_only); (b) the closed-form value - equal to the branch when the lr was not
+    changed outside the scheduler, different otherwise (mutation SCH.M12).'
+  basis: [T_COSINE_LR.RECURSIVE, TS_LR_SCHEDULER.COSINE]
+- id: SCH.LINEAR_EXAMPLE
+  status: drafted
+  statement: 'LinearLR: lr_t = base_lr (start + (end - start) min(t, total_iters)/total_iters). The parameter text
+    (start_factor multiplies the lr in the first epoch; the factor reaches end_factor at total_iters) and the reference
+    program agree; the page''s example lists 0.003687 for epoch 0, which is the value at t = 1 (0.0025 = 0.05 x 0.05
+    at t = 0). Recorded as a documentation inconsistency; the example labelling is the diagnostic reading
+    linear_example_shift. Factors outside 0 < start <= 1, 0 <= end <= 1 are refused by the reference program
+    (invalid_input).'
+  basis: [T_LINEAR_LR.PARAMS, T_LINEAR_LR.EXAMPLE, T_LINEAR_LR.DEF, TS_LR_SCHEDULER.LINEAR]
+- id: SCH.ONECYCLE
+  status: drafted
+  statement: 'The OneCycleLR page fixes initial_lr = max_lr/div_factor, min_lr = initial_lr/final_div_factor, the
+    phase meaning of pct_start and the annealing strategies, but not the step arithmetic. Adopted from the torch 2.10
+    reference program: phase ends pct_start*total - 1 and total - 1 (three_phase: also 2 pct_start*total - 2),
+    pct = (t - start)/(end - start), cos anneal end + (start - end)(1 + cos(pi pct))/2; t > total_steps is refused
+    (invalid_input); t = total_steps extrapolates (pct > 1). For total_steps = 1 (tested, earlier "outside the
+    contract") phase 1 is empty and lr_0 = min_lr. Alternatives: domain_undefined for cycles too short for both
+    phases; lr_0 = initial_lr as the prose suggests. Claims: consistent with the reference program.'
+  basis: [T_ONECYCLE_LR.DEF, T_ONECYCLE_LR.PARAMS, TS_LR_SCHEDULER.ONECYCLE]
+- id: SCH.HF
+  status: drafted
+  statement: 'get_cosine_schedule_with_warmup is LambdaLR with the transformers 4.57.3 lambda: t < w -> t/max(1, w);
+    else progress = (t - w)/max(1, T - w), lambda = max(0, (1 + cos(2 pi c progress))/2). The docstring describes the
+    shape only. total <= warmup (earlier refused as illegal) and t > total are defined by the program''s guards
+    (max(1, .)): with T = w = 1 the sequence is 0, 1, 0, 1, ... and past T the cosine rises again. Alternatives:
+    refuse T <= w (the docstring''s decay phase is empty) or hold 0 after T (docstring "to 0"); the docstring is silent
+    on both and the program defines them. Claims: consistent with the reference program.'
+  basis: [HF_SCHED_DOC.COSINE, HF_SCHED_SRC.LAMBDA, T_LAMBDA_LR.DEF]
+clauses:
+- {id: SC.C1, basis: [SCH.STEP0], statement: 'lr_0 after construction; lr_t after t step() calls', observes: [lr],
+  evidence_kind: definition}
+- {id: SC.C2, basis: [T_COSINE_LR.CLOSED, SCH.T_CUR], statement: 'closed_form cosine: eta_min + (base - eta_min)(1 + cos(pi
+    t/T_max))/2 for every t >= 0', observes: [lr], evidence_kind: definition}
+- {id: SC.C3, basis: [T_COSINE_LR.RECURSIVE, SCH.COS_SINGULAR], statement: 'recursive cosine: lr_t = eta_min + (lr_{t-1}
+    - eta_min)(1 + cos(pi t/T_max))/(1 + cos(pi (t-1)/T_max)), branch at t - 1 = (2k+1) T_max; lr_{t-1} is the group
+    lr, including an external change', observes: [lr], evidence_kind: definition}
+- {id: SC.C4, basis: [SCH.LINEAR_EXAMPLE], statement: 'LinearLR closed form, and its chainable recursion (equal without
+    external changes)', observes: [lr], evidence_kind: definition}
+- {id: SC.C5, basis: [SCH.ONECYCLE], statement: 'OneCycleLR phases, annealing, refusal beyond total_steps', observes: [lr],
+  evidence_kind: definition}
+- {id: SC.C6, basis: [SCH.HF], statement: 'transformers cosine schedule with warmup: base_lr * lambda(t)', observes: [lr],
+  evidence_kind: definition}
+- {id: SC.C7, basis: [T_COSINE_LR.STATE, TS_LR_SCHEDULER.INIT], statement: 'state_dict / load_state_dict carries the step
+    counter and the scheduler attributes, the optimizer state carries the group lr: a resumed run continues the same
+    sequence', observes: [lr], evidence_kind: derived}
+- {id: SC.C8, basis: [T_COSINE_LR.PARAMS, TS_LR_SCHEDULER.LINEAR, TS_LR_SCHEDULER.ONECYCLE], statement: 'invalid input:
+    T_max < 1, total_iters < 1, factors out of range, steps beyond total_steps, resume after the last step', observes: [
+    lr], evidence_kind: definition}
+examples:
+- {id: SC.E1, profile: closed_form, clauses: [SC.C1, SC.C2], input: {schedule: cosine_annealing, base_lr: 1, eta_min: 0,
+    T_max: 4, steps: 4}, expected: {outcome: value, fields: {lr: [1, 1/2+sqrt(2)/4, 1/2, 1/2-sqrt(2)/4, 0]}}}
+- {id: SC.E2, profile: closed_form, clauses: [SC.C2], note: 'tested shape (T_max = 1, eta_min = base/10, 2n + 2 steps):
+    no restart, periodic', input: {schedule: cosine_annealing, base_lr: 1/10, eta_min: 1/100, T_max: 1, steps: 4},
+  expected: {outcome: value, fields: {lr: [1/10, 1/100, 1/10, 1/100, 1/10]}}}
+- {id: SC.E3, profile: recursive, clauses: [SC.C2, SC.C3], note: same tested shape under the recursion (branch at t = 2,
+    4), input: {schedule: cosine_annealing, base_lr: 1/10, eta_min: 1/100, T_max: 1, steps: 4}, expected: {outcome: value,
+    fields: {lr: [1/10, 1/100, 1/10, 1/100, 1/10]}}}
+- {id: SC.E4, profile: recursive, clauses: [SC.C3], note: the group lr is set to 1/2 from outside after step 1, input: {
+    schedule: cosine_annealing, base_lr: 1, eta_min: 0, T_max: 4, steps: 2, external_lr: {1: 1/2}}, expected: {outcome: value,
+    fields: {lr: [1, 1/2+sqrt(2)/4, 1/(2+sqrt(2))]}}}
+- {id: SC.E5, profile: closed_form, clauses: [SC.C2], input: {schedule: cosine_annealing, base_lr: 1, eta_min: 0, T_max: 4,
+    steps: 2, external_lr: {1: 1/2}}, expected: {outcome: value, fields: {lr: [1, 1/2+sqrt(2)/4, 1/2]}}}
+- id: SC.E6
+  profile: recursive
+  clauses: [SC.C3]
+  note: external change to 1/4 after step 1; the step to t = 2 is the singular one (T_cur = T_max = 1)
+  input: {schedule: cosine_annealing, base_lr: 1, eta_min: 0, T_max: 1, steps: 3, external_lr: {1: 1/4}}
+  expected: {outcome: value, fields: {lr: [1, 0, 5/4, 0]}}
+  readings:
+    doc_recursion_only: {outcome: domain_undefined}
+- id: SC.E7
+  profile: closed_form
+  clauses: [SC.C1, SC.C4]
+  note: tested LinearLR shape (start 0.1, total_iters = 1)
+  input: {schedule: linear, base_lr: 1/10, start_factor: 1/10, end_factor: 1, total_iters: 1, steps: 4}
+  expected: {outcome: value, fields: {lr: [1/100, 1/10, 1/10, 1/10, 1/10]}}
+  readings:
+    linear_example_shift: {outcome: value, fields: {lr: [1/10, 1/10, 1/10, 1/10, 1/10]}}
+- id: SC.E8
+  profile: closed_form
+  clauses: [SC.C4]
+  note: parameters of the page's example (0.05, start 0.05, 40 iterations)
+  input: {schedule: linear, base_lr: 1/20, start_factor: 1/20, end_factor: 1, total_iters: 40, steps: 3}
+  expected: {outcome: value, fields: {lr: [1/400, 59/16000, 39/8000, 97/16000]}}
+  readings:
+    linear_example_shift: {outcome: value, fields: {lr: [59/16000, 39/8000, 97/16000, 29/4000]}}
+- {id: SC.E9, profile: recursive, clauses: [SC.C4], input: {schedule: linear, base_lr: 1/20, start_factor: 1/20, end_factor: 1,
+    total_iters: 40, steps: 3}, expected: {outcome: value, fields: {lr: [1/400, 59/16000, 39/8000, 97/16000]}}}
+- {id: SC.E10, profile: closed_form, clauses: [SC.C5], note: 'tested OneCycleLR shape (total_steps = 1): phase 1 empty,
+    lr_1 extrapolated at pct = 17/7', input: {schedule: one_cycle, max_lr: 1, total_steps: 1, pct_start: 3/10, steps: 1},
+  expected: {outcome: value, fields: {lr: [1/250000, 1/250000+(249999/250000)*(1+cos(17*pi/7))/2]}}}
+- {id: SC.E11, profile: closed_form, clauses: [SC.C5, SC.C8], input: {schedule: one_cycle, max_lr: 1, total_steps: 1,
+    pct_start: 3/10, steps: 2}, expected: {outcome: invalid_input}}
+- {id: SC.E12, profile: closed_form, clauses: [SC.C5], input: {schedule: one_cycle, max_lr: 1, total_steps: 10, pct_start: 3/10,
+    steps: 3}, expected: {outcome: value, fields: {lr: [1/25, 13/25, 1, 1/250000+(249999/250000)*(1+cos(pi/7))/2]}}}
+- {id: SC.E13, profile: closed_form, clauses: [SC.C6], note: 'tested shape n = 10: warmup max(n // 10, 1) = 1',
+  input: {schedule: hf_cosine_warmup, base_lr: 1/10, num_warmup_steps: 1, num_training_steps: 10, steps: 11},
+  expected: {outcome: value, fields: {lr: [0, 1/10, (1+cos(pi/9))/20, (1+cos(2*pi/9))/20, 3/40, (1+cos(4*pi/9))/20,
+        (1+cos(5*pi/9))/20, 1/40, (1+cos(7*pi/9))/20, (1+cos(8*pi/9))/20, 0, (1+cos(10*pi/9))/20]}}}
+- {id: SC.E14, profile: recursive, clauses: [SC.C6], note: 'tested shape n = 1 (earlier refused): total = warmup = 1',
+  input: {schedule: hf_cosine_warmup, base_lr: 1, num_warmup_steps: 1, num_training_steps: 1, steps: 4}, expected: {
+    outcome: value, fields: {lr: [0, 1, 0, 1, 0]}}}
+- {id: SC.E15, profile: closed_form, clauses: [SC.C7], input: {schedule: cosine_annealing, base_lr: 1, eta_min: 0, T_max: 4,
+    steps: 4, resume_at: 2}, expected: {outcome: value, fields: {lr: [1, 1/2+sqrt(2)/4, 1/2, 1/2-sqrt(2)/4, 0]}}}
+- {id: SC.E16, profile: recursive, clauses: [SC.C7, SC.C4], note: tested LinearLR resume shape (state saved after one step),
+  input: {schedule: linear, base_lr: 1/10, start_factor: 1/10, end_factor: 1, total_iters: 1, steps: 4, resume_at: 1},
+  expected: {outcome: value, fields: {lr: [1/100, 1/10, 1/10, 1/10, 1/10]}}}
+- {id: SC.N1, profile: closed_form, clauses: [SC.C8], input: {schedule: cosine_annealing, base_lr: 1, T_max: 0, steps: 2},
+  expected: {outcome: invalid_input}}
+- {id: SC.N2, profile: recursive, clauses: [SC.C8], input: {schedule: linear, base_lr: 1, start_factor: 0, total_iters: 2,
+    steps: 2}, expected: {outcome: invalid_input}}
+- {id: SC.N3, profile: closed_form, clauses: [SC.C8], input: {schedule: cosine_annealing, base_lr: 1, T_max: 2, steps: 2,
+    resume_at: 3}, expected: {outcome: invalid_input}}
+signature:
+  inputs: ['schedule: cosine_annealing | linear | one_cycle | hf_cosine_warmup', 'its documented parameters (base_lr is
+      the optimizer lr; one_cycle takes max_lr)', 'steps N; optional resume_at k (state saved after k steps and loaded
+      into a fresh optimizer and scheduler); optional external_lr {t: value} (group lr changed after step t)']
+  pre_state: [optimizer group lr]
+  post_state: []
+  observation_unit: the lr sequence lr_0 .. lr_N of one parameter group
+domain:
+  valid: [rational learning rates and factors; T_max >= 1; total_iters >= 1; steps <= total_steps for OneCycleLR]
+  domain_undefined: [a OneCycleLR phase of zero length (start = end step)]
+  invalid_input: [T_max < 1, total_iters < 1, LinearLR factors out of range, OneCycleLR steps beyond total_steps, resume_at
+      > steps]
+  unsupported: [momentum cycling of OneCycleLR (not observed), other schedulers, several parameter groups with different
+      lambdas]
+mutation_requirements:
+- {id: SCH.M1, misreading: cosine held at eta_min once t >= T_max, witnesses: [SC.E2]}
+- {id: SCH.M2, misreading: cosine restarts every T_max epochs (SGDR warm restarts), witnesses: [SC.E2]}
+- {id: SCH.M3, misreading: 'lr_0 is the value after one step (scheduler stepped before the optimizer)', witnesses: [SC.E1]}
+- {id: SCH.M4, misreading: resuming restarts the step counter at 0, witnesses: [SC.E15]}
+- {id: SCH.M5, misreading: LinearLR keeps changing after total_iters, witnesses: [SC.E7]}
+- {id: SCH.M6, misreading: 'OneCycleLR phase 1 ends at pct_start * total_steps (no -1)', witnesses: [SC.E12]}
+- {id: SCH.M7, misreading: OneCycleLR starts at max_lr (div_factor ignored), witnesses: [SC.E12]}
+- {id: SCH.M8, misreading: OneCycleLR extrapolates beyond total_steps instead of refusing, witnesses: [SC.E11]}
+- {id: SCH.M9, misreading: 'warmup cosine refuses total <= warmup (the earlier spec''s refusal)', witnesses: [SC.E14]}
+- {id: SCH.M10, misreading: warmup cosine held at 0 after num_training_steps, witnesses: [SC.E14]}
+- {id: SCH.M11, misreading: 'warmup counts from 1: lambda = (t + 1)/warmup', witnesses: [SC.E13]}
+- {id: SCH.M12, misreading: recursive cosine uses the closed-form value at the singular step, witnesses: [SC.E6]}
+- {id: SCH.M13, misreading: recursive cosine ignores an external lr change (computes from its own previous value),
+  witnesses: [SC.E4]}
+nonclaims:
+- OneCycleLR step arithmetic and the transformers schedule are "consistent with the reference program" claims.
+- Momentum / beta1 cycling is not observed by this contract.
+- Floating-point evaluation of cos and of the recursion (and resulting chained-vs-closed differences) is the numerical
+  question (K - G).
+changes: []

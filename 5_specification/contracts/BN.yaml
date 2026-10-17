@@ -1,0 +1,223 @@
+schema_version: '1.2'
+id: BN
+role: BN
+title: BatchNorm (training and evaluation) - output, running-statistics update and VJP, real-number semantics
+review:
+  status: drafted
+  author: Claude (spec v3 author, group C_act_norm_loss), 2026-10-17
+  date: '2026-10-17'
+  scope: One BatchNorm call with an explicit pre-state; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [torch.nn.BatchNorm1d, torch.nn.BatchNorm2d, torch.nn.functional.batch_norm, aten.native_batch_norm,
+  aten._native_batch_norm_legit, aten._native_batch_norm_legit_no_training, aten.native_batch_norm_backward]
+profiles:
+  torch:
+    meaning: 'torch.nn.BatchNorm as documented: training normalises with the biased batch variance and updates the
+      running statistics with the unbiased variance and the documented momentum rule (momentum null = cumulative
+      average); evaluation normalises with the running statistics; track_running_stats False (state null) always uses
+      batch statistics.'
+    task_choice_required: false
+outputs:
+  y:
+    shape: the input's shape (N, C, *)
+    guarantee: rigorous_enclosure
+  state:
+    shape: 'dict: running_mean [C], running_var [C], num_batches_tracked (when given); {} when untracked'
+    guarantee: exact
+  saved:
+    shape: 'dict: mean [C], rstd [C] used to normalise'
+    guarantee: rigorous_enclosure
+  grad:
+    shape: 'dict: x (shape of x), weight / bias [C] when given'
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Values are the exact rationals received (momentum 0.1 and eps 1e-5 as binary doubles are their exact
+    binary values).
+  quality: No tolerance; the post-state is exact rational arithmetic, y / saved / grad exact or rigorous enclosures.
+  test_evidence: Hand / sympy derivations (sympy differentiation of sum(upstream * y)).
+  error_handling: The batch-size and eps checks of torch.nn.functional.batch_norm are invalid_input (decision BN.N1).
+decisions:
+- id: BN.RUNNING
+  status: drafted
+  statement: 'In training with tracked statistics, per channel c with n = N * prod(spatial) values: running_mean <-
+    (1 - f) running_mean + f mean, running_var <- (1 - f) running_var + f var_unbiased, var_unbiased = var_biased * n /
+    (n - 1), f = momentum. Normalisation uses the biased variance. Both statements are on the page; torch''s
+    decomposition agrees.'
+  basis: [T_BATCHNORM2D.VAR, T_BATCHNORM2D.MOMENTUM, NORM_TS_DECOMP.BN_HELPER]
+- id: BN.MOMENTUM_NONE
+  status: drafted
+  statement: momentum null means the cumulative moving average - num_batches_tracked is incremented first and f = 1 /
+    num_batches_tracked (so the first batch copies its statistics). The query must carry num_batches_tracked (invalid
+    otherwise). The v1 reference incremented the counter once per channel (SPECIFICATION_v2 section 3); the counter is
+    incremented once per call.
+  basis: [T_BATCHNORM2D.MOMENTUM, NORM_TS_BNMOD.MOMENTUM_NONE]
+- id: BN.EVAL
+  status: drafted
+  statement: In evaluation with running statistics, y uses running_mean and running_var (x_hat = (x - running_mean) /
+    sqrt(running_var + eps)), the state is unchanged, and the VJP does not go through any statistic (dx = g w r). With
+    state null (track_running_stats False) batch statistics are used in both modes and nothing is updated.
+  basis: [T_BATCHNORM2D.RUNNING, NORM_TS_BNMOD.MOMENTUM_NONE, NORM_TS_DECOMP.BN_HELPER]
+- id: BN.N1
+  status: drafted
+  statement: 'torch.nn.functional.batch_norm raises when training with one value per channel (n = 1, where the
+    unbiased running variance would divide by n - 1 = 0) and when eps <= 0; both are invalid_input here, for every
+    state. Alternatives - (a) domain_undefined for n = 1 (the v2.4 NORM-A2 choice; the real target is undefined only
+    for the running variance, y would be bias); (b) accept eps = 0. Rejected because the API rejects these inputs
+    (torch source; the page does not state it). Phase-2b batch 1 has n = 10 per channel and is valid.'
+  basis: [T_BATCHNORM_F.DEF, NORM_TS_BNMOD.MOMENTUM_NONE]
+- id: BN.SAVED
+  status: drafted
+  statement: saved holds the mean and rstd = 1/sqrt(var + eps) used to normalise - batch statistics in training,
+    running_mean and 1/sqrt(running_var + eps) in evaluation (torch's decomposition returns the latter on non-CPU
+    devices and empty tensors on CPU; a binding to a CPU kernel does not observe saved in evaluation). Not documented
+    on the page.
+  basis: [NORM_TS_DECOMP.BN_HELPER]
+- id: BN.VJP
+  status: drafted
+  statement: 'grad is the VJP against the explicit upstream g - training (batch statistics) per channel dx = r (h -
+    mean(h) - x_hat mean(h x_hat)), h = g w; evaluation dx = r h; dweight_c = sum of g x_hat, dbias_c = sum of g over
+    the channel. Derived by differentiating the documented forward; the running statistics are buffers, not
+    differentiated.'
+  basis: [T_BATCHNORM2D.DEF, T_BATCHNORM2D.VAR]
+clauses:
+- {id: BN.C1, basis: [T_BATCHNORM2D.DEF, T_BATCHNORM2D.VAR, BN.SAVED], statement: 'training - per channel over (N, *)
+    mean and biased variance, y = (x - mean) / sqrt(var + eps) * w + b', observes: [y, saved], evidence_kind: definition}
+- {id: BN.C2, basis: [BN.RUNNING], statement: 'training with tracked statistics - running_mean, running_var updated with
+    momentum f and the unbiased variance n/(n-1)', observes: [state], evidence_kind: definition}
+- {id: BN.C3, basis: [BN.MOMENTUM_NONE], statement: 'momentum null - num_batches_tracked + 1, f = 1 /
+    num_batches_tracked', observes: [state], evidence_kind: definition}
+- {id: BN.C4, basis: [BN.EVAL], statement: 'evaluation - running statistics normalise, state unchanged, dx = g w r',
+  observes: [y, state, grad], evidence_kind: definition}
+- {id: BN.C5, basis: [BN.VJP], statement: 'training VJP through the batch statistics; dweight, dbias per channel',
+  observes: [grad], evidence_kind: derived}
+- {id: BN.C6, basis: [BN.EVAL, T_BATCHNORM2D.RUNNING], statement: 'state null (untracked) - batch statistics, state {}',
+  observes: [y, state], evidence_kind: definition}
+- {id: BN.C7, basis: [BN.N1], statement: 'training with one value per channel, or eps <= 0, is invalid_input',
+  observes: [y], evidence_kind: definition}
+examples:
+- id: BN.E1
+  profile: torch
+  clauses: [BN.C1, BN.C2, BN.C5]
+  input: {x: [[1, 0], [3, 2]], weight: [2, 1], bias: [0, '1/2'], training: true, momentum: '1/10', eps: '9/16',
+    state: {running_mean: [0, 1], running_var: [1, 2], num_batches_tracked: 0}, upstream: [[1, 1], [0, 3]]}
+  expected:
+    outcome: value
+    fields:
+      y: [['-8/5', '-3/10'], ['8/5', '13/10']]
+      state: {running_mean: ['1/5', 1], running_var: ['11/10', 2], num_batches_tracked: 1}
+      saved: {mean: [2, 1], rstd: ['4/5', '4/5']}
+      grad: {x: [['36/125', '-36/125'], ['-36/125', '36/125']], weight: ['-4/5', '8/5'], bias: [1, 4]}
+- id: BN.E2
+  profile: torch
+  clauses: [BN.C4]
+  input: {x: [[1, 0], [3, 2]], weight: [2, 1], bias: [0, '1/2'], training: false, momentum: '1/10', eps: 1,
+    state: {running_mean: [2, 0], running_var: [3, 0]}, upstream: [[1, 1], [0, 3]]}
+  expected:
+    outcome: value
+    fields:
+      y: [[-1, '1/2'], [1, '5/2']]
+      state: {running_mean: [2, 0], running_var: [3, 0]}
+      saved: {mean: [2, 0], rstd: ['1/2', 1]}
+      grad: {x: [[1, 1], [0, 3]], weight: ['-1/2', 6], bias: [1, 4]}
+- id: BN.E3
+  profile: torch
+  clauses: [BN.C1, BN.C3, BN.C5]
+  input: {x: [[1, 10], [3, 14]], weight: null, bias: null, training: true, momentum: null, eps: '9/16', state: {
+      running_mean: [0, 0], running_var: [1, 1], num_batches_tracked: 0}, upstream: [[1, 0], [0, 1]]}
+  expected:
+    outcome: value
+    fields:
+      y: [['-4/5', '-8*sqrt(73)/73'], ['4/5', '8*sqrt(73)/73']]
+      state: {running_mean: [2, 12], running_var: [2, 8], num_batches_tracked: 1}
+      saved: {mean: [2, 12], rstd: ['4/5', '4*sqrt(73)/73']}
+      grad: {x: [['18/125', '-18*sqrt(73)/5329'], ['-18/125', '18*sqrt(73)/5329']]}
+  note: the v2 recheck of the v1 counter error - after the first batch the count is 1, running_mean [2, 12],
+    running_var [2, 8]
+- id: BN.E4
+  profile: torch
+  clauses: [BN.C1, BN.C3, BN.C5]
+  input: {x: [[3, 12], [5, 12]], weight: null, bias: null, training: true, momentum: null, eps: 3, state: {running_mean: [
+        2, 12], running_var: [2, 8], num_batches_tracked: 1}, upstream: [[0, 1], [0, 0]]}
+  expected:
+    outcome: value
+    fields:
+      y: [['-1/2', 0], ['1/2', 0]]
+      state: {running_mean: [3, 12], running_var: [2, 4], num_batches_tracked: 2}
+      saved: {mean: [4, 12], rstd: ['1/2', 'sqrt(3)/3']}
+      grad: {x: [[0, 'sqrt(3)/6'], [0, '-sqrt(3)/6']]}
+  note: second batch of the cumulative average (f = 1/2); channel 1 is constant
+- {id: BN.E5, profile: torch, clauses: [BN.C7], input: {x: [[5]], weight: [2], bias: [7], training: true, momentum: '1/10',
+    eps: '1/4', state: null, upstream: [[3]]}, expected: {outcome: invalid_input}}
+- {id: BN.E6, profile: torch, clauses: [BN.C7], input: {x: [[1, 0], [3, 2]], weight: null, bias: null, training: true,
+    momentum: '1/10', eps: 0, state: null, upstream: [[1, 1], [0, 3]]}, expected: {outcome: invalid_input}}
+- id: BN.E7
+  profile: torch
+  clauses: [BN.C6, BN.C1, BN.C5]
+  input: {x: [[1, 0], [3, 2]], weight: [2, 1], bias: [0, '1/2'], training: true, momentum: '1/10', eps: '9/16', state: null,
+    upstream: [[1, 1], [0, 3]]}
+  expected:
+    outcome: value
+    fields:
+      y: [['-8/5', '-3/10'], ['8/5', '13/10']]
+      state: {}
+      saved: {mean: [2, 1], rstd: ['4/5', '4/5']}
+      grad: {x: [['36/125', '-36/125'], ['-36/125', '36/125']], weight: ['-4/5', '8/5'], bias: [1, 4]}
+- id: BN.E8
+  profile: torch
+  clauses: [BN.C1, BN.C2, BN.C5]
+  input: {x: [[[1, 3], [0, 2]]], weight: [2, 1], bias: [0, '1/2'], training: true, momentum: '1/10', eps: '9/16', state: {
+      running_mean: [0, 1], running_var: [1, 2]}, upstream: [[[1, 0], [1, 3]]]}
+  expected:
+    outcome: value
+    fields:
+      y: [[['-8/5', '8/5'], ['-3/10', '13/10']]]
+      state: {running_mean: ['1/5', 1], running_var: ['11/10', 2]}
+      saved: {mean: [2, 1], rstd: ['4/5', '4/5']}
+      grad: {x: [[['36/125', '-36/125'], ['-36/125', '36/125']]], weight: ['-4/5', '8/5'], bias: [1, 4]}
+  note: batch 1 with a spatial axis (n = 2 per channel), as phase-2b batch 1 (n = 10)
+- id: BN.E9
+  profile: torch
+  clauses: [BN.C1, BN.C2, BN.C5]
+  input: {x: [[[4, 4]], [[4, 4]]], weight: null, bias: null, training: true, momentum: '1/10', eps: '1/4', state: {running_mean: [
+        0], running_var: [2]}, upstream: [[[1, 0]], [[0, 0]]]}
+  expected:
+    outcome: value
+    fields:
+      y: [[[0, 0]], [[0, 0]]]
+      state: {running_mean: ['2/5'], running_var: ['9/5']}
+      saved: {mean: [4], rstd: [2]}
+      grad: {x: [[['3/2', '-1/2']], [['-1/2', '-1/2']]]}
+  note: phase-2b constant_rows - zero batch variance, finite with eps > 0
+signature:
+  inputs: ['x (N, C, *)', 'weight, bias: [C] or null', 'training: boolean', 'momentum: exact rational in [0, 1] or null
+      (cumulative average)', 'eps > 0', 'state: null (untracked) or {running_mean, running_var[, num_batches_tracked]}',
+    'upstream: shape of x']
+  pre_state: [running_mean, running_var, num_batches_tracked]
+  post_state: [running_mean, running_var, num_batches_tracked]
+  observation_unit: 'one call: y, post-state, saved statistics and the VJP; aten.native_batch_norm(x, w, b, rm, rv,
+    training, momentum, eps) = (y, save_mean, save_invstd) maps to y and saved, its running buffers to state'
+domain:
+  valid: [exact rational inputs, n >= 2 values per channel in training, eps > 0, 'momentum in [0, 1] or null']
+  domain_undefined: [an empty channel set]
+  invalid_input: [one value per channel in training, eps <= 0, momentum null without num_batches_tracked, negative
+      running_var, shapes that do not match, missing or extra fields]
+  unsupported: [infinite or NaN values]
+mutation_requirements:
+- {id: BN.M1, misreading: running_var updated with the biased variance (no n/(n-1)), witnesses: [BN.E1]}
+- {id: BN.M2, misreading: 'momentum convention reversed (momentum weights the old estimate)', witnesses: [BN.E1]}
+- {id: BN.M3, misreading: evaluation normalises with batch statistics, witnesses: [BN.E2]}
+- {id: BN.M4, misreading: 'v1 - num_batches_tracked incremented once per channel (momentum null)', witnesses: [BN.E3]}
+- {id: BN.M5, misreading: normalisation with the unbiased variance, witnesses: [BN.E1]}
+- {id: BN.M6, misreading: training dx without the batch-statistics terms, witnesses: [BN.E1]}
+- {id: BN.M7, misreading: running statistics not updated in training, witnesses: [BN.E1]}
+- {id: BN.M8, misreading: num_batches_tracked not incremented, witnesses: [BN.E1, BN.E4]}
+- {id: BN.M9, misreading: statistics per spatial position (over N only), witnesses: [BN.E8]}
+- {id: BN.M10, misreading: running statistics updated in evaluation, witnesses: [BN.E2]}
+nonclaims:
+- Floating-point rounding is the numerical question K - G.
+- The saved statistics and the invalid_input conditions of BN.N1 rest on torch sources, not on the documentation page.
+changes: []

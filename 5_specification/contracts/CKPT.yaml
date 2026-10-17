@@ -1,0 +1,134 @@
+schema_version: '1.2'
+id: CKPT
+role: CKPT
+title: Activation checkpointing - the checkpointed program has the value and gradients of the same program without it
+review:
+  status: drafted
+  author: Claude (spec v3 author, group E2_program), 2026-10-17
+  date: '2026-10-17'
+  scope: Composition contract; its reference evaluates the un-checkpointed program; awaiting a review by someone who did
+    not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [torch.utils.checkpoint.checkpoint, transformers.PreTrainedModel.gradient_checkpointing_enable]
+profiles:
+  identity:
+    meaning: f(program with a checkpointed region) = f(the same program without checkpointing), forward value and the VJP
+      with respect to the parameters and (when it requires grad) the input, for the reentrant, non-reentrant and
+      transformers variants. The program language here is linear / gelu / tanh / mul; larger programs (Llama) are
+      evaluated through GRAPH and the operator contracts with the same identity.
+    task_choice_required: false
+outputs:
+  y:
+    shape: rows x features of the last value
+    guarantee: rigorous_enclosure
+  grads:
+    shape: '{parameter name: gradient with the parameter''s shape, x: input gradient when x requires grad}'
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Inputs, parameters and upstream are the exact values received.
+  quality: No tolerance; exact values or enclosure containment (erf, exp, tanh enclosed).
+  test_evidence: Exact equality or enclosure containment.
+  error_handling: A region outside the program, or the documented reentrant precondition violated, is invalid_input.
+decisions:
+- id: CK.IDENTITY
+  status: drafted
+  statement: 'Checkpointing changes what is stored, not what is computed: the region is recomputed by re-invoking the
+    same function, so the target value and gradients are those of the program without checkpointing (earlier role CKPT,
+    "recompute equals saved"; earlier status "no f"). The page warns that a backward invocation differing from the
+    forward (global state, RNG) may break equivalence; RNG is stashed by default, and the tested programs have no
+    randomness. Alternative (accept recompute differences as legitimate) is not supported by the page, which calls them
+    potentially silently incorrect gradients.'
+  basis: [T_CHECKPOINT.DEF, T_CHECKPOINT.WARN, T_CHECKPOINT.RNG, HF_MODEL_DOC.GC]
+- id: CK.REENTRANT
+  status: drafted
+  statement: 'Reentrant variant: the page states that if no input of the region requires grad the checkpointed part gets
+    no gradients - a documented difference from the plain program. Such an input is outside the identity
+    (invalid_input for variant reentrant); the non-reentrant and transformers (use_reentrant=False as tested) variants
+    have no such requirement.'
+  basis: [T_CHECKPOINT.REENTRANT]
+- id: CK.PROGRAM
+  status: drafted
+  statement: 'Value semantics of the program steps: linear y = x W^T + b, gelu (exact erf form), tanh, element-wise
+    product; their VJPs are the ordinary derivatives (all differentiable). A value used twice and a parameter used
+    inside and outside the region accumulate the gradient of every use.'
+  basis: [T_LINEAR.DEF, T_GELU.DEF, T_TANH.DEF, T_AUTOGRAD_NOTES.RULES]
+clauses:
+- {id: CK.C1, basis: [CK.IDENTITY, CK.PROGRAM], statement: 'y and grads equal those of the program evaluated without the
+    region', observes: [y, grads], evidence_kind: definition}
+- {id: CK.C2, basis: [CK.PROGRAM], statement: 'gradients of shared parameters and reused values accumulate every use,
+    inside and outside the region', observes: [grads], evidence_kind: derived}
+- {id: CK.C3, basis: [CK.REENTRANT], statement: 'reentrant variant without any region input requiring grad:
+    invalid_input', observes: [grads], evidence_kind: definition}
+- {id: CK.C4, basis: [CK.IDENTITY], statement: 'a region outside the program is invalid_input (never truncated)',
+  observes: [y], evidence_kind: definition}
+examples:
+- id: CK.E1
+  profile: identity
+  clauses: [CK.C1]
+  note: tested mlp graph Linear-GELU-Linear, whole block checkpointed
+  input: {program: {x: [[1]], params: {W1: [[2]], b1: [0], W2: [[1]], b2: [0]}, steps: [{op: linear, in: 0, w: W1, b: b1},
+        {op: gelu, in: 1}, {op: linear, in: 2, w: W2, b: b2}]}, checkpoint: {start: 1, end: 3, variant: non_reentrant},
+    upstream: [[1]]}
+  expected: {outcome: value, fields: {y: [[1+erf(sqrt(2))]], grads: {W1: [['(1+erf(sqrt(2)))/2+2*exp(-2)/sqrt(2*pi)']], b1: [
+          '(1+erf(sqrt(2)))/2+2*exp(-2)/sqrt(2*pi)'], W2: [[1+erf(sqrt(2))]], b2: [1], x: [['1+erf(sqrt(2))+4*exp(-2)/sqrt(2*pi)']]}}}
+- id: CK.E2
+  profile: identity
+  clauses: [CK.C1]
+  input: {program: {x: [[1]], params: {W1: [[2]], b1: [0], W2: [[1]], b2: [0]}, steps: [{op: linear, in: 0, w: W1, b: b1},
+        {op: gelu, in: 1}, {op: linear, in: 2, w: W2, b: b2}]}, checkpoint: {start: 1, end: 3, variant: reentrant}, upstream: [
+      [1]]}
+  expected: {outcome: value, fields: {y: [[1+erf(sqrt(2))]], grads: {W1: [['(1+erf(sqrt(2)))/2+2*exp(-2)/sqrt(2*pi)']], b1: [
+          '(1+erf(sqrt(2)))/2+2*exp(-2)/sqrt(2*pi)'], W2: [[1+erf(sqrt(2))]], b2: [1], x: [['1+erf(sqrt(2))+4*exp(-2)/sqrt(2*pi)']]}}}
+- id: CK.E3
+  profile: identity
+  clauses: [CK.C1, CK.C2]
+  note: tested reuse_twice graph z * tanh(z), z = Linear(x), region = tanh and product
+  input: {program: {x: [[0]], params: {W1: [[1]], b1: [1]}, steps: [{op: linear, in: 0, w: W1, b: b1}, {op: tanh, in: 1},
+        {op: mul, lhs: 1, rhs: 2}]}, checkpoint: {start: 2, end: 3, variant: hf_gradient_checkpointing}, upstream: [[1]]}
+  expected: {outcome: value, fields: {y: [[tanh(1)]], grads: {W1: [[0]], b1: ['tanh(1)+1-tanh(1)**2'], x: [['tanh(1)+1-tanh(1)**2']]}}}
+- id: CK.E4
+  profile: identity
+  clauses: [CK.C1, CK.C2]
+  note: tested shared_param graph - the same Linear outside and inside the region
+  input: {program: {x: [[1]], params: {W: [[2]], b: [1]}, steps: [{op: linear, in: 0, w: W, b: b}, {op: linear, in: 1, w: W,
+          b: b}]}, checkpoint: {start: 2, end: 2, variant: reentrant}, upstream: [[1]]}
+  expected: {outcome: value, fields: {y: [[7]], grads: {W: [[5]], b: [3], x: [[4]]}}}
+- {id: CK.E5, profile: identity, clauses: [CK.C3], input: {program: {x: [[1]], params: {W: [[2]], b: [0]}, steps: [{op: linear,
+          in: 0, w: W, b: b}]}, checkpoint: {start: 1, end: 1, variant: reentrant}, x_requires_grad: false, upstream: [[1]]},
+  expected: {outcome: invalid_input}}
+- {id: CK.E6, profile: identity, clauses: [CK.C1, CK.C3], input: {program: {x: [[1]], params: {W: [[2]], b: [0]}, steps: [{op: linear,
+          in: 0, w: W, b: b}]}, checkpoint: {start: 1, end: 1, variant: non_reentrant}, x_requires_grad: false, upstream: [[1]]},
+  expected: {outcome: value, fields: {y: [[2]], grads: {W: [[1]], b: [1]}}}}
+- {id: CK.E7, profile: identity, clauses: [CK.C4], input: {program: {x: [[1]], params: {W: [[2]], b: [0]}, steps: [{op: linear,
+          in: 0, w: W, b: b}]}, checkpoint: {start: 1, end: 3, variant: non_reentrant}, upstream: [[1]]}, expected: {outcome: invalid_input}}
+- {id: CK.E8, profile: identity, clauses: [CK.C1], input: {program: {x: [[1, 0], [0, 1]], params: {W: [[1, 2]], b: [0]}, steps: [
+        {op: linear, in: 0, w: W, b: b}]}, checkpoint: {start: 1, end: 1, variant: non_reentrant}, upstream: [[1], [1]]}, expected: {
+    outcome: value, fields: {y: [[1], [2]], grads: {W: [[1, 1]], b: [2], x: [[1, 2], [1, 2]]}}}}
+signature:
+  inputs: ['program: {x, params, steps}', 'checkpoint: {start, end, variant}', 'x_requires_grad', 'upstream']
+  pre_state: []
+  post_state: []
+  observation_unit: one forward and backward of the program
+domain:
+  valid: [regions inside the program; finite values]
+  domain_undefined: []
+  invalid_input: [region outside the program, reentrant region without an input requiring grad, shape mismatches]
+  unsupported: [gelu approximate=tanh in this program language, programs with randomness (dropout p > 0), detached
+      tensors inside a reentrant region]
+mutation_requirements:
+- {id: CK.M1, misreading: 'the recomputed region contributes no parameter gradients (recompute detached from autograd)',
+  witnesses: [CK.E1]}
+- {id: CK.M2, misreading: a parameter shared inside and outside the region receives only the inside gradient, witnesses: [CK.E4]}
+- {id: CK.M3, misreading: a value used twice in the region receives the gradient of one use only, witnesses: [CK.E3]}
+- {id: CK.M4, misreading: 'a region outside the program silently truncated (the v2.2 length-truncation error)', witnesses: [CK.E7]}
+- {id: CK.M5, misreading: the reentrant precondition ignored, witnesses: [CK.E5]}
+- {id: CK.M6, misreading: no gradient flows to the input of a checkpointed region, witnesses: [CK.E1, CK.E8]}
+nonclaims:
+- Floating-point recomputation differences (e.g. a compiled recompute rounding differently) are the numerical question
+  (K - G); the target is the identity in real arithmetic.
+- The operators inside a checkpointed Llama are judged by their own contracts through GRAPH.
+changes: []

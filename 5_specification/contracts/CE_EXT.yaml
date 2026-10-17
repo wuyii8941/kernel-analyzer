@@ -1,0 +1,208 @@
+schema_version: '1.2'
+id: CE_EXT
+role: CE
+title: Cross entropy - tested variants outside the reviewed pilot (C = 1, probability targets with label smoothing and
+  rows as received, K-dimensional inputs)
+review:
+  status: drafted
+  author: Claude (spec v3 author, group C_act_norm_loss), 2026-10-17
+  date: '2026-10-17'
+  scope: Extends the semantics of contracts/CE.yaml (not modified) to the listed variants; awaiting a review by someone
+    who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [torch.nn.CrossEntropyLoss, torch.nn.functional.cross_entropy]
+profiles:
+  index_single_class:
+    meaning: Class-index targets with C = 1 (input (N, 1, d..)); any eps in [0, 1]; optional non-negative weight;
+      declared ignore_index.
+    task_choice_required: false
+  index_kdim:
+    meaning: Class-index targets, C >= 2, K-dimensional input (N, C, d_1..d_K), K >= 1; eps = 0 with or without weights,
+      or eps > 0 without weights.
+    task_choice_required: false
+  probability:
+    meaning: Probability targets of the input's shape ((N, C) or (N, C, d_1..d_K)), entries in [0, 1] as received (rows
+      need not sum to exactly 1, decision CEX.PROB_ROWS); eps in [0, 1]; optional non-negative weight.
+    task_choice_required: false
+outputs:
+  loss:
+    shape: scalar for sum / mean; (N, d_1..d_K) for none
+    guarantee: rigorous_enclosure
+  gradient:
+    shape: VJP against the explicit upstream, shape of the logits
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: All values are the exactly received rationals (label_smoothing 0.1 as a binary double is its exact
+    value; float32-rounded probability rows are taken as received).
+  quality: No tolerance; rigorous enclosures (the v2.4 Decimal-interval cross entropy that the pilot uses).
+  test_evidence: Hand / sympy closed forms.
+  error_handling: Shape and range violations are invalid_input; a zero mean mass is domain_undefined.
+decisions:
+- id: CEX.REUSE
+  status: drafted
+  statement: The row loss l = - sum_c a_c log softmax(x)_c, the gradient sum_c a_c (p - e_c) = A p - a (A = sum_c a_c)
+    and the mean denominators are those of the reviewed pilot (CE.C1-CE.C7); this contract only extends them to the
+    variants below and does not change the pilot. Weighted label smoothing with class-index targets keeps the pilot's
+    task-bound reading CE.R_A and is not offered here except where it is reading-independent (C = 1).
+  basis: [T_CE_LOSS.INDEX, T_CE_LOSS.REDUCE_INDEX, T_CE_LOSS.PROB, T_CE_LOSS.SMOOTH]
+- id: CEX.C1
+  status: drafted
+  statement: C = 1 is API-valid (input (minibatch, C)). The formulas apply unchanged - softmax over one class is 1, so
+    every non-ignored row has loss 0 and gradient 0; with smoothing a = w_0 ((1 - eps) + eps / 1) = w_0, so the readings
+    R_A / R_B / R_C coincide; the mean denominator is sum of w_0 over non-ignored rows (zero mass - domain_undefined).
+    Alternative (treat C = 1 as degenerate / undefined) rejected - nothing in the formula is undefined.
+  basis: [T_CE_LOSS.LOGITS, T_CE_LOSS.INDEX, T_CE_LOSS.REDUCE_INDEX, T_CE_LOSS.SMOOTH]
+- id: CEX.PROB_ROWS
+  status: drafted
+  statement: 'Probability targets are used as received, entries in [0, 1], without requiring an exact row sum of 1. The
+    page asks for soft labels summing to 1 but does not validate, and its own correct example builds the target as
+    torch.randn(3, 5).softmax(dim=1) in float32, whose exact values do not sum to 1; the phase-1 conditions are float64
+    normalised rows rounded to the candidate dtype in the same way. Alternatives - (a) the pilot''s exact sum-to-one
+    condition (invalid_input on the page''s own example and on every tested probability condition); (b) renormalise
+    each row (changes the displayed formula); (c) accept any real entries (the page calls entries outside [0, 1]
+    incorrectly specified). Entries outside [0, 1] are invalid_input. With rows summing to exactly 1 and eps = 0 this
+    profile equals CE.probability_unsmoothed.'
+  basis: [T_CE_LOSS.PROB, T_CE_LOSS.SHAPE, T_CE_LOSS.PROB_VALID]
+- id: CEX.PROB_SMOOTH
+  status: drafted
+  statement: Label smoothing with probability targets mixes the target with the uniform distribution, y' = (1 - eps) y +
+    eps / C, and the probability formula is applied to y' with per-class weights, a_c = w_c y'_c; mean divides by the
+    number of positions. Alternatives - smoothing over the C - 1 other classes, or an unweighted uniform term - have no
+    source (mutants CEX.M1, CEX.M7).
+  basis: [T_CE_LOSS.SMOOTH, T_CE_LOSS.PROB]
+- id: CEX.KDIM
+  status: drafted
+  statement: 'For input (N, C, d_1..d_K) the class axis is dim 1 and every position (n, d_1..d_K) is one row; N in the
+    formulas spans the minibatch and d_1..d_K. Class-index mean divides by the sum of w_{y} over non-ignored positions;
+    probability mean by N * prod(d); none returns shape (N, d_1..d_K). The functional page''s parameter text ("divided
+    by the number of elements in the output") agrees for unweighted inputs; for weighted class-index targets the
+    CrossEntropyLoss formula (weighted mean) governs, as in the pilot. Weighted label smoothing with K-dimensional
+    class-index input is outside the profiles (not tested).'
+  basis: [T_CE_LOSS.LOGITS, T_CE_LOSS.INDEX, T_CE_LOSS.REDUCE_INDEX, T_CE_LOSS.PROB, T_CE_LOSS.SHAPE, T_CE_F.MEAN_TEXT]
+- id: CEX.VJP
+  status: drafted
+  statement: gradient is the VJP of the selected loss against the explicit upstream - a scalar for sum / mean (reused on
+    every position), the loss's shape for none - obtained by differentiating the declared loss.
+  basis: [T_CE_LOSS.INDEX, T_CE_LOSS.PROB]
+clauses:
+- {id: CEX.C1, basis: [CEX.C1, CEX.REUSE], statement: 'C = 1 - loss 0 and gradient 0 on every non-ignored row, for every
+    eps and weight; zero mean mass undefined', observes: [loss, gradient], evidence_kind: derived}
+- {id: CEX.C2, basis: [CEX.PROB_SMOOTH, CEX.REUSE], statement: 'probability targets with smoothing - a_c = w_c ((1 -
+    eps) y_c + eps / C); l = - sum a_c log p_c; mean by the number of positions', observes: [loss, gradient],
+  evidence_kind: definition}
+- {id: CEX.C3, basis: [CEX.PROB_ROWS], statement: 'probability rows are used as received (entries in [0, 1], any row sum);
+    entries outside [0, 1] are invalid_input', observes: [loss, gradient], evidence_kind: definition}
+- {id: CEX.C4, basis: [CEX.KDIM], statement: 'K-dimensional input - class axis 1, positions as rows, means over all
+    positions (index - weight mass of the non-ignored positions)', observes: [loss, gradient], evidence_kind: definition}
+- {id: CEX.C5, basis: [CEX.VJP, CEX.REUSE], statement: 'gradient = (A p - a) times the upstream of the position, divided by
+    the mean denominator for mean; ignored positions have zero gradient', observes: [gradient], evidence_kind: derived}
+examples:
+- {id: CEX.E1, profile: index_single_class, clauses: [CEX.C1], input: {logits: [[3]], target: [0], weights: null, eps: 0,
+    ignore_index: -100, reduction: mean, upstream: 1}, expected: {outcome: value, fields: {loss: 0, gradient: [[0]]}}}
+- {id: CEX.E2, profile: index_single_class, clauses: [CEX.C1, CEX.C5], input: {logits: [[1], [-5]], target: [0, 0], weights: [
+      2], eps: '1/10', ignore_index: -100, reduction: sum, upstream: 3}, expected: {outcome: value, fields: {loss: 0,
+      gradient: [[0], [0]]}}}
+- {id: CEX.E3, profile: index_single_class, clauses: [CEX.C1], input: {logits: [[2]], target: [-100], weights: null, eps: '1/10',
+    ignore_index: -100, reduction: mean, upstream: 1}, expected: {outcome: domain_undefined}}
+- {id: CEX.E4, profile: index_single_class, clauses: [CEX.C1, CEX.C5], input: {logits: [[0], [7]], target: [0, -100], weights: null,
+    eps: 0, ignore_index: -100, reduction: none, upstream: [2, 5]}, expected: {outcome: value, fields: {loss: [0, 0], gradient: [
+        [0], [0]]}}}
+- {id: CEX.E5, profile: probability, clauses: [CEX.C2, CEX.C5], input: {logits: [[0, 0]], target: [[1, 0]], weights: null,
+    eps: '1/2', reduction: sum, upstream: 1}, expected: {outcome: value, fields: {loss: log(2), gradient: [['-1/4', '1/4']]}}}
+- {id: CEX.E6, profile: probability, clauses: [CEX.C2, CEX.C5], input: {logits: [[0, 1]], target: [[1, 0]], weights: [1, 3],
+    eps: '1/2', reduction: sum, upstream: 1}, expected: {outcome: value, fields: {loss: 3*log(1+exp(1))/2-3/4, gradient: [
+        [3/(2*(1+exp(1)))-3/4, 3*exp(1)/(2*(1+exp(1)))-3/4]]}}}
+- {id: CEX.E7, profile: probability, clauses: [CEX.C2, CEX.C3, CEX.C5], input: {logits: [[0, 0]], target: [['1/4', '3/4']],
+    weights: [2, 4], eps: 0, reduction: mean, upstream: 1}, expected: {outcome: value, fields: {loss: 7*log(2)/2, gradient: [
+        ['5/4', '-5/4']]}}, note: mean divides by N = 1, not by the target weight mass 7/2}
+- {id: CEX.E8, profile: probability, clauses: [CEX.C3, CEX.C5], input: {logits: [[0, 0]], target: [['1/2', '1/4']], weights: null,
+    eps: 0, ignore_index: -100, reduction: sum, upstream: 1}, expected: {outcome: value, fields: {loss: 3*log(2)/4, gradient: [
+        ['-1/8', '1/8']]}}, note: a row summing to 3/4 is used as received (ignore_index is accepted and unused)}
+- {id: CEX.E9, profile: probability, clauses: [CEX.C3], input: {logits: [[0, 0]], target: [['3/2', '-1/2']], weights: null,
+    eps: 0, reduction: sum, upstream: 1}, expected: {outcome: invalid_input}}
+- id: CEX.E10
+  profile: probability
+  clauses: [CEX.C4, CEX.C2, CEX.C5]
+  input: {logits: [[[0, 1], [0, 0]]], target: [[[1, 0], [0, 1]]], weights: null, eps: 0, reduction: mean, upstream: 1}
+  expected:
+    outcome: value
+    fields:
+      loss: (log(2)+log(1+exp(1)))/2
+      gradient: [[['-1/4', exp(1)/(2*(1+exp(1)))], ['1/4', -exp(1)/(2*(1+exp(1)))]]]
+  note: (N, C, d) = (1, 2, 2); the two positions are rows (logits [0, 0] and [1, 0]); mean over N * d = 2
+- id: CEX.E11
+  profile: index_kdim
+  clauses: [CEX.C4, CEX.C5]
+  input: {logits: [[[0, 1], [0, 0]]], target: [[0, 1]], weights: null, eps: 0, ignore_index: -100, reduction: mean, upstream: 1}
+  expected:
+    outcome: value
+    fields:
+      loss: (log(2)+log(1+exp(1)))/2
+      gradient: [[['-1/4', exp(1)/(2*(1+exp(1)))], ['1/4', -exp(1)/(2*(1+exp(1)))]]]
+- id: CEX.E12
+  profile: index_kdim
+  clauses: [CEX.C4, CEX.C5]
+  input: {logits: [[[0, 1], [0, 0]]], target: [[0, -100]], weights: [2, 1], eps: 0, ignore_index: -100, reduction: none,
+    upstream: [[3, 5]]}
+  expected:
+    outcome: value
+    fields:
+      loss: [[2*log(2), 0]]
+      gradient: [[[-3, 0], [3, 0]]]
+- {id: CEX.E13, profile: index_kdim, clauses: [CEX.C4], input: {logits: [[[0, 1], [0, 0]]], target: [[0, 1]], weights: [1, 2],
+    eps: '1/10', ignore_index: -100, reduction: mean, upstream: 1}, expected: {outcome: unsupported}, note: weighted
+    smoothing with K-dimensional input is outside the profiles (not tested)}
+- id: CEX.E14
+  profile: probability
+  clauses: [CEX.C2, CEX.C5]
+  input: {logits: [[0, 0], [0, 0]], target: [[1, 0], [0, 1]], weights: null, eps: 0, reduction: none, upstream: [2, -1]}
+  expected:
+    outcome: value
+    fields:
+      loss: [log(2), log(2)]
+      gradient: [[-1, 1], ['-1/2', '1/2']]
+signature:
+  inputs: ['logits (N, C) or (N, C, d_1..d_K)', 'target - class indices (N, d..) or probabilities of the logits'' shape',
+    'weights [C] or null', 'eps (label_smoothing) in [0, 1]', 'ignore_index (index profiles; accepted and unused for
+      probabilities)', 'reduction sum / mean / none', 'upstream - scalar for sum / mean, loss-shaped for none']
+  pre_state: []
+  post_state: []
+  observation_unit: loss and the complete VJP
+domain:
+  valid:
+  - finite rational logits of rank >= 2
+  - index targets in [0, C) or equal to ignore_index
+  - probability entries in [0, 1]
+  - non-negative weights
+  domain_undefined:
+  - mean with zero normalisation mass
+  invalid_input:
+  - ragged or mismatched shapes
+  - probability entries outside [0, 1]
+  - index targets out of range
+  - upstream of the wrong shape
+  - eps outside [0, 1]
+  unsupported:
+  - unbatched (C) input
+  - negative weights
+  - weighted label smoothing with K-dimensional class-index input
+  - C >= 2 two-dimensional class-index input (the pilot's profiles)
+mutation_requirements:
+- {id: CEX.M1, misreading: probability smoothing over C - 1 classes, witnesses: [CEX.E5]}
+- {id: CEX.M2, misreading: 'smoothing as (1 - eps) y without the uniform term', witnesses: [CEX.E5]}
+- {id: CEX.M3, misreading: probability mean divided by the target weight mass instead of the number of positions,
+  witnesses: [CEX.E7]}
+- {id: CEX.M4, misreading: K-dimensional mean over the minibatch only, witnesses: [CEX.E10, CEX.E11]}
+- {id: CEX.M5, misreading: C = 1 taken as undefined, witnesses: [CEX.E1]}
+- {id: CEX.M6, misreading: probability rows renormalised, witnesses: [CEX.E8]}
+- {id: CEX.M7, misreading: uniform smoothing term not weighted, witnesses: [CEX.E6]}
+- {id: CEX.M8, misreading: class axis taken as the last axis of a K-dimensional input, witnesses: [CEX.E10]}
+- {id: CEX.M9, misreading: 'none: upstream ignored', witnesses: [CEX.E12, CEX.E14]}
+nonclaims:
+- The reviewed pilot contracts/CE.yaml is unchanged; for 2-D class-index inputs with C >= 2 its profiles apply.
+- These formulas do not choose a task-quality delta; rounding of the received values is the numerical question K - G.
+changes: []

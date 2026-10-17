@@ -1,0 +1,191 @@
+schema_version: '1.2'
+id: DIVERG
+role: DIVERG
+title: Divergence losses - KL divergence (torch.nn.KLDivLoss; Liger's eps-clamped variant), Liger's generalised JSD and
+  total variation distance, with the VJP w.r.t. the first argument
+review:
+  status: drafted
+  author: Claude (spec v3 author, group C_act_norm_loss), 2026-10-17
+  date: '2026-10-17'
+  scope: Loss value and input VJP of the listed operations; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [torch.nn.KLDivLoss, torch.nn.functional.kl_div, liger.LigerKLDivLossFunction, liger.LigerJSDFunction,
+  liger.LigerTVDLossFunction]
+profiles:
+  torch_kl:
+    meaning: torch.nn.KLDivLoss as documented (input in log-space; target probabilities or, with log_target, log
+      probabilities); any shape.
+    task_choice_required: false
+  liger_kl:
+    meaning: 'Liger''s KL kernel: as torch_kl except that, with log_target False, log(target) is replaced by
+      log(max(target, eps)) (reference program); (BT, V) inputs.'
+    task_choice_required: true
+  liger_jsd:
+    meaning: Liger's generalised Jensen-Shannon divergence JSD(beta) of log-space inputs, normalised by the number of
+      non-ignored rows (reference program).
+    task_choice_required: false
+  liger_tvd:
+    meaning: Liger's total variation distance 0.5 |p - q| with its reductions; gradient -1/2 at p = q as the reference
+      program writes it.
+    task_choice_required: false
+  tvd_min_norm:
+    meaning: As liger_tvd except that the gradient at p = q is 0, the minimum-norm sub-gradient of the autograd notes.
+    task_choice_required: true
+outputs:
+  loss:
+    shape: scalar, or the input's shape for reduction none
+    guarantee: rigorous_enclosure
+  grad:
+    shape: VJP w.r.t. the first argument (input), the input's shape
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: All values are the exactly received rationals (eps 1e-10 as a binary double is its exact value).
+  quality: No tolerance; exact where rational, rigorous enclosures otherwise.
+  test_evidence: Hand / sympy derivations from the written definitions.
+  error_handling: A real-undefined pointwise term is domain_undefined; shape and argument violations are invalid_input.
+decisions:
+- id: DV.KL_DEF
+  status: drafted
+  statement: 'Pointwise L = t (log t - x) for log_target False and exp(t) (t - x) for log_target True (x the input in
+    log-space, t the target); reductions none, sum, mean = sum / numel, batchmean = sum / input.size(0).'
+  basis: [T_KLDIV.DEF, T_KLDIV.REDUCTION, T_KLDIV.SHAPE, T_KLDIV_F.DEF]
+- id: DV.KL_ZERO
+  status: drafted
+  statement: A zero target with log_target False contributes 0 (the limit t log t -> 0, the convention of the KL
+    divergence L = t log(t / y_pred) the page defines). Alternative - read the page's "roughly equivalent" code
+    target * (target.log() - input) literally, 0 * (-inf), undefined; rejected because the page calls that code only
+    roughly equivalent to the defined divergence. The gradient there is -t = 0.
+  basis: [T_KLDIV.DEF]
+- id: DV.KL_NEG
+  status: drafted
+  statement: A negative target with log_target False has no real log - domain_undefined under torch_kl, with no
+    requirement on the device output. The tested Liger call passes log_softmax outputs (negative) as target with
+    log_target False, so under torch_kl it is domain_undefined. Liger replaces log(t) by log(max(t, eps)) and returns a
+    value; that program-defined function is profile liger_kl (task binding) - t (log max(t, eps) - x), gradient -t.
+  basis: [T_KLDIV.DEF, DIV_LIGER_KLDIV.FWD, DIV_LIGER_KLDIV.BWD]
+- id: DV.KL_GRAD
+  status: drafted
+  statement: grad is the VJP w.r.t. the input only - -t (log_target False) or -exp(t) (log_target True) times the
+    upstream, divided like the loss; a target gradient is not part of this contract (Liger returns none).
+  basis: [T_KLDIV.DEF, DIV_LIGER_KLDIV.BWD]
+- id: DV.JSD_DEF
+  status: drafted
+  statement: 'JSD(beta) = beta KL(P || M) + (1 - beta) KL(Q || M), M = beta P + (1 - beta) Q, P = exp(target) (teacher),
+    Q = exp(input) (student), elementwise sum beta P Y + (1 - beta) Q X - M log M over all non-ignored rows, divided by
+    their number; output a scalar, gradient (1 - beta) Q (X - log M) / n times the upstream. For beta = 0 and beta = 1
+    the documented behaviour is forward KL(P || Q) and reverse KL(Q || P) (gradients -P and Q (X - Y) + Q), although the
+    displayed formula evaluates to 0 there - the discontinuity is recorded; the profile follows the args text and code.
+    Inputs need not be normalised.'
+  basis: [DIV_LIGER_JSD.DEF, DIV_LIGER_JSD.KERNEL, DIV_LIGER_JSD.BETA, DIV_LIGER_JSD_MOD.PAGE]
+- id: DV.IGNORE
+  status: drafted
+  statement: For JSD and TVD with labels, rows whose label equals ignore_index contribute no loss and zero gradient and
+    are not counted; a zero count with a normalising reduction (JSD always, TVD batchmean / mean) is domain_undefined.
+  basis: [DIV_LIGER_JSD.LABELS, DIV_LIGER_TVD.DEF]
+- id: DV.TVD_DEF
+  status: drafted
+  statement: TVD pointwise 0.5 |p - q|; batchmean divides the sum by the non-ignored rows, mean by rows * V, sum,
+    none per element; gradient 0.5 sign(p - q) divided likewise, times the upstream.
+  basis: [DIV_LIGER_TVD.DEF, DIV_LIGER_TVD.GRAD]
+- id: DV.TVD_TIE
+  status: drafted
+  statement: At p = q |p - q| is not differentiable. The reference program writes -1/2 (where(p > q, 0.5, -0.5)) -
+    profile liger_tvd; the autograd notes' minimum-norm sub-gradient gives 0 - profile tvd_min_norm (task binding).
+    Neither is forced; ties are improbable in the tested call (softmax of random values).
+  basis: [DIV_LIGER_TVD.GRAD, ACT_AUTOGRAD.NONDIFF]
+clauses:
+- {id: DV.C1, basis: [DV.KL_DEF, DV.KL_GRAD], statement: 'torch KL - pointwise terms, reductions and the input VJP',
+  observes: [loss, grad], evidence_kind: definition}
+- {id: DV.C2, basis: [DV.KL_ZERO], statement: 'zero target term is 0', observes: [loss, grad], evidence_kind: definition}
+- {id: DV.C3, basis: [DV.KL_NEG], statement: 'negative target with log_target False - domain_undefined (torch_kl); value
+    t (log max(t, eps) - x) under liger_kl', observes: [loss, grad], evidence_kind: definition}
+- {id: DV.C4, basis: [DV.JSD_DEF], statement: 'JSD(beta) loss and gradient, beta in (0, 1)', observes: [loss, grad],
+  evidence_kind: definition}
+- {id: DV.C5, basis: [DV.JSD_DEF], statement: 'JSD beta = 0 forward KL, beta = 1 reverse KL', observes: [loss, grad],
+  evidence_kind: definition}
+- {id: DV.C6, basis: [DV.IGNORE], statement: 'ignored rows - no loss, zero gradient, not counted; zero count undefined',
+  observes: [loss, grad], evidence_kind: definition}
+- {id: DV.C7, basis: [DV.TVD_DEF, DV.TVD_TIE], statement: 'TVD loss, reductions and gradient; tie convention per
+    profile', observes: [loss, grad], evidence_kind: definition}
+- {id: DV.C8, basis: [DV.KL_DEF], statement: 'unknown reduction or mismatched shapes are invalid_input', observes: [loss],
+  evidence_kind: definition}
+examples:
+- {id: DV.E1, profile: torch_kl, clauses: [DV.C1, DV.C2], input: {op: kl_div, input: [[-1, -2], [0, -1]], target: [['1/2',
+        '1/2'], [1, 0]], reduction: batchmean, log_target: false, upstream: 1}, expected: {outcome: value, fields: {loss: 3/4-log(2)/2,
+      grad: [['-1/4', '-1/4'], ['-1/2', 0]]}}}
+- {id: DV.E2, profile: torch_kl, clauses: [DV.C1], input: {op: kl_div, input: [[0, -1]], target: [[0, 1]], reduction: sum,
+    log_target: true, upstream: 3}, expected: {outcome: value, fields: {loss: 2*exp(1), grad: [[-3, -3*exp(1)]]}}}
+- {id: DV.E3, profile: torch_kl, clauses: [DV.C1, DV.C2], input: {op: kl_div, input: [[1, 0]], target: [['1/4', 0]], reduction: none,
+    log_target: false, upstream: [[2, 5]]}, expected: {outcome: value, fields: {loss: [[-log(2)/2-1/4, 0]], grad: [['-1/2',
+          0]]}}}
+- {id: DV.E4, profile: torch_kl, clauses: [DV.C1], input: {op: kl_div, input: [[0, 0]], target: [['1/2', '1/2']], reduction: mean,
+    log_target: false, upstream: 1}, expected: {outcome: value, fields: {loss: -log(2)/2, grad: [['-1/4', '-1/4']]}}}
+- {id: DV.E5, profile: torch_kl, clauses: [DV.C3], input: {op: kl_div, input: [[-1, -2]], target: [['-1/2', '-3/2']], reduction: batchmean,
+    log_target: false, upstream: 1}, expected: {outcome: domain_undefined}, note: the shape of the tested Liger call
+    (log-probabilities passed as a probability target)}
+- {id: DV.E6, profile: liger_kl, clauses: [DV.C3], input: {op: kl_div, input: [[-1, -2]], target: [['-1/2', '-3/2']], reduction: batchmean,
+    log_target: false, eps: '1/4', upstream: 1}, expected: {outcome: value, fields: {loss: 4*log(2)-7/2, grad: [['1/2', '3/2']]}}}
+- {id: DV.E7, profile: liger_jsd, clauses: [DV.C4], input: {op: jsd, input: [[0, -1]], target: [[-1, 0]], beta: '1/2', labels: null,
+    ignore_index: -100, upstream: 1}, expected: {outcome: value, fields: {loss: (-1-(1+exp(1))*(-1-log(2)+log(1+exp(1))))*exp(-1),
+      grad: [[-log(1+exp(1))/2+log(2)/2+1/2, (log(2)-log(1+exp(1)))*exp(-1)/2]]}}}
+- {id: DV.E8, profile: liger_jsd, clauses: [DV.C4], input: {op: jsd, input: [[0, -1]], target: [[-1, 0]], beta: '1/4', labels: null,
+    ignore_index: -100, upstream: 1}, expected: {outcome: value, fields: {loss: -exp(-1)-(1+3*exp(1))/(4*exp(1))*log((1+3*exp(1))/(4*exp(1)))-(exp(1)+3)/(4*exp(1))*log((exp(1)+3)/(4*exp(1))),
+      grad: [[-3*log(1+3*exp(1))/4+3/4+3*log(2)/2, 3*exp(-1)*(2*log(2)-log(exp(1)+3))/4]]}}}
+- {id: DV.E9, profile: liger_jsd, clauses: [DV.C4, DV.C6], input: {op: jsd, input: [[0, -1], [5, 5]], target: [[-1, 0], [0,
+        0]], beta: '1/2', labels: [3, -100], ignore_index: -100, upstream: 1}, expected: {outcome: value, fields: {loss: (-1-(1+exp(1))*(-1-log(2)+log(1+exp(1))))*exp(-1),
+      grad: [[-log(1+exp(1))/2+log(2)/2+1/2, (log(2)-log(1+exp(1)))*exp(-1)/2], [0, 0]]}}}
+- {id: DV.E10, profile: liger_jsd, clauses: [DV.C5], input: {op: jsd, input: [[0, -1]], target: [[-1, 0]], beta: 0, labels: null,
+    ignore_index: -100, upstream: 1}, expected: {outcome: value, fields: {loss: 1-exp(-1), grad: [[-exp(-1), -1]]}}}
+- {id: DV.E11, profile: liger_jsd, clauses: [DV.C5], input: {op: jsd, input: [[0, -1]], target: [[-1, 0]], beta: 1, labels: null,
+    ignore_index: -100, upstream: 1}, expected: {outcome: value, fields: {loss: 1-exp(-1), grad: [[2, 0]]}}}
+- {id: DV.E12, profile: liger_jsd, clauses: [DV.C6], input: {op: jsd, input: [[0, -1]], target: [[-1, 0]], beta: '1/2', labels: [
+      -100], ignore_index: -100, upstream: 1}, expected: {outcome: domain_undefined}}
+- {id: DV.E13, profile: liger_tvd, clauses: [DV.C7], input: {op: tvd, input: [['1/2', '1/2'], [1, 0]], target: [['1/4', '3/4'],
+      [1, 0]], reduction: batchmean, labels: null, ignore_index: -100, upstream: 1}, expected: {outcome: value, fields: {
+      loss: '1/8', grad: [['1/4', '-1/4'], ['-1/4', '-1/4']]}}}
+- {id: DV.E14, profile: tvd_min_norm, clauses: [DV.C7], input: {op: tvd, input: [['1/2', '1/2'], [1, 0]], target: [['1/4',
+        '3/4'], [1, 0]], reduction: batchmean, labels: null, ignore_index: -100, upstream: 1}, expected: {outcome: value,
+    fields: {loss: '1/8', grad: [['1/4', '-1/4'], [0, 0]]}}}
+- {id: DV.E15, profile: liger_tvd, clauses: [DV.C7, DV.C6], input: {op: tvd, input: [[1, 0], [0, 1]], target: [[0, 1], [0, 1]],
+    reduction: none, labels: [0, -100], ignore_index: -100, upstream: [[2, 3], [5, 7]]}, expected: {outcome: value, fields: {
+      loss: [['1/2', '1/2'], [0, 0]], grad: [[1, '-3/2'], [0, 0]]}}}
+- {id: DV.E16, profile: torch_kl, clauses: [DV.C8], input: {op: kl_div, input: [[0]], target: [[1]], reduction: average,
+    log_target: false, upstream: 1}, expected: {outcome: invalid_input}}
+signature:
+  inputs: ['op: kl_div | jsd | tvd', 'input, target: nested lists of one shape ((BT, V) for the Liger profiles)',
+    'kl_div: reduction, log_target (and eps in liger_kl)', 'jsd: beta, labels, ignore_index', 'tvd: reduction, labels,
+      ignore_index', 'upstream: scalar, or the input''s shape for reduction none']
+  pre_state: []
+  post_state: []
+  observation_unit: loss and the VJP w.r.t. the first argument
+domain:
+  valid:
+  - finite rational inputs of matching shapes; beta in [0, 1]; eps > 0
+  domain_undefined:
+  - negative target with log_target False (torch_kl); zero non-ignored count with a normalising reduction
+  invalid_input:
+  - unknown reduction, mismatched shapes, labels of the wrong length, beta outside [0, 1]
+  unsupported:
+  - ops outside the profile; infinite or NaN values
+mutation_requirements:
+- {id: DV.M1, misreading: batchmean computed as mean, witnesses: [DV.E1]}
+- {id: DV.M2, misreading: log_target ignored, witnesses: [DV.E2]}
+- {id: DV.M3, misreading: 'arguments swapped (divergence of the input from the target)', witnesses: [DV.E4]}
+- {id: DV.M4, misreading: gradient sign flipped, witnesses: [DV.E1]}
+- {id: DV.M5, misreading: JSD beta weighting swapped between P and Q, witnesses: [DV.E8]}
+- {id: DV.M6, misreading: JSD mixture taken in log-space (geometric mixture), witnesses: [DV.E7]}
+- {id: DV.M7, misreading: JSD normalised by all rows instead of the non-ignored rows, witnesses: [DV.E9]}
+- {id: DV.M8, misreading: TVD without the factor 0.5, witnesses: [DV.E13]}
+- {id: DV.M9, misreading: TVD batchmean dividing by elements, witnesses: [DV.E13]}
+- {id: DV.M10, misreading: zero-target KL term taken as undefined, witnesses: [DV.E1]}
+- {id: DV.M11, misreading: liger_kl without the eps clamp, witnesses: [DV.E6]}
+- {id: DV.M12, misreading: TVD tie gradient of the other profile, witnesses: [DV.E13, DV.E14]}
+- {id: DV.M13, misreading: 'JSD beta = 0 evaluated with the general formula (0)', witnesses: [DV.E10]}
+nonclaims:
+- JSD, TVD and the eps-clamped KL rest on the Liger reference program only; agreement is agreement with that program.
+- Rounding is the numerical question K - G.
+changes: []

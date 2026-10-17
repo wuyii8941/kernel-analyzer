@@ -1,0 +1,1231 @@
+{
+ "group": "C_act_norm_loss",
+ "date": "2026-10-16",
+ "author": "Claude (spec v3 author), drafted; contracts are drafted, not reviewed",
+ "instances": {
+  "file": ".cache/spec_v3/group_C_act_norm_loss.jsonl",
+  "sha256": "9313c5425dd7170fa2c11d87059a338efb1b3d0184d8402e964b7cd544a3d920",
+  "lines": 496,
+  "distinct_ids": 488,
+  "extra_from_inventory": [
+   "composition_corpus/gems.group_norm.bfloat16/_to_copy_func_kernel_rank_1",
+   "composition_corpus/gems.group_norm.bfloat16/group_norm_kernel",
+   "composition_corpus/gems.group_norm.float16/_to_copy_func_kernel_rank_1",
+   "composition_corpus/gems.group_norm.float16/group_norm_kernel",
+   "composition_corpus/gems.group_norm.float32/group_norm_kernel"
+  ],
+  "note": "identical ids occur twice in the group file (two recorded launches of one FlagGems kernel); each line is bound. Phase-1 FLCE parameters are regenerated from pre-reorg-20261009:scripts/essential/conditions.py (flce_conditions); phase-2b parameters are read from the condition id."
+ },
+ "meaning": "Each entry names the contract and profile(s) whose reference defines f for the listed tested instances, the query (operation and parameters as the contract's input), and the outcomes the reference can give on the tested inputs (value / domain_undefined / invalid_input). A profile with task_choice_required needs the task binding named in task_binding. Phase-4 runs (V3) evaluate these queries on the recorded inputs.",
+ "bindings": [
+  {
+   "id": "C-CE1",
+   "contract": "CE",
+   "profiles": [
+    "index_unsmoothed"
+   ],
+   "outcomes": [
+    "value",
+    "domain_undefined (mean with zero class-weight mass)"
+   ],
+   "query": "logits [N, C] and targets as received (layout 'transposed' changes no value), weights none / ints / zeros, ignore_index -100 / 0 / -1, reduction none / sum / mean, upstream ones",
+   "note": "reviewed pilot; huge (1e30) and large (1e4) logits give values (probe 2026-10-17)",
+   "instances": [
+    "essential_phase1/ce000",
+    "essential_phase1/ce002",
+    "essential_phase1/ce004",
+    "essential_phase1/ce006",
+    "essential_phase1/ce008",
+    "essential_phase1/ce010",
+    "essential_phase1/ce012",
+    "essential_phase1/ce014",
+    "essential_phase1/ce016",
+    "essential_phase1/ce018",
+    "essential_phase1/ce020",
+    "essential_phase1/ce022",
+    "essential_phase1/ce024",
+    "essential_phase1/ce026",
+    "essential_phase1/ce028",
+    "essential_phase1/ce030",
+    "essential_phase1/ce032",
+    "essential_phase1/ce034",
+    "essential_phase1/ce036",
+    "essential_phase1/ce038",
+    "essential_phase1/ce040",
+    "essential_phase1/ce042",
+    "essential_phase1/ce044",
+    "essential_phase1/ce046",
+    "essential_phase1/ce048",
+    "essential_phase1/ce050",
+    "essential_phase1/ce052",
+    "essential_phase1/ce054",
+    "essential_phase1/ce056",
+    "essential_phase1/ce058",
+    "essential_phase1/ce060",
+    "essential_phase1/ce062",
+    "essential_phase1/ce064",
+    "essential_phase1/ce066",
+    "essential_phase1/ce068",
+    "essential_phase1/ce070",
+    "essential_phase1/ce072",
+    "essential_phase1/ce074",
+    "essential_phase1/ce076",
+    "essential_phase1/ce078",
+    "essential_phase1/ce080",
+    "essential_phase1/ce082",
+    "essential_phase1/ce084",
+    "essential_phase1/ce086",
+    "essential_phase1/ce088",
+    "essential_phase1/ce090",
+    "essential_phase1/ce092",
+    "essential_phase1/ce094",
+    "essential_phase1/ce096",
+    "essential_phase1/ce098",
+    "essential_phase1/ce100",
+    "essential_phase1/ce102",
+    "essential_phase1/ce104",
+    "essential_phase1/ce106",
+    "essential_phase1/ce108",
+    "essential_phase1/ce110",
+    "essential_phase1/ce112",
+    "essential_phase1/ce114",
+    "essential_phase1/ce116",
+    "essential_phase1/ce118",
+    "essential_phase1/ce120",
+    "essential_phase1/ce122",
+    "essential_phase1/ce124",
+    "essential_phase1/ce126",
+    "essential_phase1/ce128",
+    "essential_phase1/ce130",
+    "essential_phase1/ce132",
+    "essential_phase1/ce134",
+    "essential_phase1/ce136",
+    "essential_phase1/ce138",
+    "essential_phase1/ce140",
+    "essential_phase1/ce142",
+    "essential_phase1/ce144",
+    "essential_phase1/ce146",
+    "essential_phase1/ce148",
+    "essential_phase1/ce150",
+    "essential_phase1/ce152",
+    "essential_phase1/ce154",
+    "essential_phase1/ce156",
+    "essential_phase1/ce158",
+    "essential_phase1/ce160",
+    "essential_phase1/ce162",
+    "essential_phase1/ce164",
+    "essential_phase1/ce166",
+    "essential_phase1/ce168",
+    "essential_phase1/ce170",
+    "essential_phase1/ce172",
+    "essential_phase1/ce174",
+    "essential_phase1/ce176",
+    "essential_phase1/ce178",
+    "essential_phase1/ce180",
+    "essential_phase1/ce182",
+    "essential_phase1/ce184",
+    "essential_phase1/ce186",
+    "essential_phase1/ce188",
+    "essential_phase1/ce190",
+    "essential_phase1/ce192",
+    "essential_phase1/ce194",
+    "essential_phase1/ce196",
+    "essential_phase1/ce198",
+    "essential_phase1/ce200",
+    "essential_phase1/ce202",
+    "essential_phase1/ce204",
+    "essential_phase1/ce206",
+    "essential_phase1/ce208",
+    "essential_phase1/ce210",
+    "essential_phase1/ce212",
+    "essential_phase1/ce214",
+    "essential_phase1/ce216",
+    "essential_phase1/ce218",
+    "essential_phase1/ce220",
+    "essential_phase1/ce222",
+    "essential_phase1/ce223",
+    "essential_phase1/ce225",
+    "essential_phase1/ce227",
+    "essential_phase1/ce229",
+    "essential_phase1/ce231",
+    "essential_phase1/ce233",
+    "essential_phase1/ce244",
+    "essential_phase1/ce246",
+    "essential_phase1/ce248"
+   ],
+   "instance_lines": 121
+  },
+  {
+   "id": "C-CE2",
+   "contract": "CE",
+   "profiles": [
+    "index_smoothing_unweighted"
+   ],
+   "outcomes": [
+    "value",
+    "domain_undefined (mean with zero class-weight mass)"
+   ],
+   "query": "as C-CE1, label_smoothing = the received 0.1",
+   "note": "reviewed pilot",
+   "instances": [
+    "essential_phase1/ce001",
+    "essential_phase1/ce007",
+    "essential_phase1/ce013",
+    "essential_phase1/ce019",
+    "essential_phase1/ce025",
+    "essential_phase1/ce031",
+    "essential_phase1/ce037",
+    "essential_phase1/ce043",
+    "essential_phase1/ce049",
+    "essential_phase1/ce055",
+    "essential_phase1/ce061",
+    "essential_phase1/ce067",
+    "essential_phase1/ce073",
+    "essential_phase1/ce079",
+    "essential_phase1/ce085",
+    "essential_phase1/ce091",
+    "essential_phase1/ce097",
+    "essential_phase1/ce103",
+    "essential_phase1/ce109",
+    "essential_phase1/ce115",
+    "essential_phase1/ce121",
+    "essential_phase1/ce127",
+    "essential_phase1/ce133",
+    "essential_phase1/ce139",
+    "essential_phase1/ce145",
+    "essential_phase1/ce151",
+    "essential_phase1/ce157",
+    "essential_phase1/ce163",
+    "essential_phase1/ce169",
+    "essential_phase1/ce175",
+    "essential_phase1/ce181",
+    "essential_phase1/ce187",
+    "essential_phase1/ce193",
+    "essential_phase1/ce199",
+    "essential_phase1/ce205",
+    "essential_phase1/ce211",
+    "essential_phase1/ce217",
+    "essential_phase1/ce219",
+    "essential_phase1/ce221",
+    "essential_phase1/ce224",
+    "essential_phase1/ce226",
+    "essential_phase1/ce228",
+    "essential_phase1/ce230",
+    "essential_phase1/ce232",
+    "essential_phase1/ce234",
+    "essential_phase1/ce245",
+    "essential_phase1/ce247",
+    "essential_phase1/ce249"
+   ],
+   "instance_lines": 48
+  },
+  {
+   "id": "C-CE3",
+   "contract": "CE",
+   "profiles": [
+    "index_smoothing_R_A"
+   ],
+   "outcomes": [
+    "value",
+    "domain_undefined (mean with zero class-weight mass)"
+   ],
+   "task_binding": "CE.R_A (task choice of the pilot)",
+   "query": "as C-CE1 with class weights and label smoothing",
+   "note": "reviewed pilot; needs the R_A binding",
+   "instances": [
+    "essential_phase1/ce003",
+    "essential_phase1/ce005",
+    "essential_phase1/ce009",
+    "essential_phase1/ce011",
+    "essential_phase1/ce015",
+    "essential_phase1/ce017",
+    "essential_phase1/ce021",
+    "essential_phase1/ce023",
+    "essential_phase1/ce027",
+    "essential_phase1/ce029",
+    "essential_phase1/ce033",
+    "essential_phase1/ce035",
+    "essential_phase1/ce039",
+    "essential_phase1/ce041",
+    "essential_phase1/ce045",
+    "essential_phase1/ce047",
+    "essential_phase1/ce051",
+    "essential_phase1/ce053",
+    "essential_phase1/ce057",
+    "essential_phase1/ce059",
+    "essential_phase1/ce063",
+    "essential_phase1/ce065",
+    "essential_phase1/ce069",
+    "essential_phase1/ce071",
+    "essential_phase1/ce075",
+    "essential_phase1/ce077",
+    "essential_phase1/ce081",
+    "essential_phase1/ce083",
+    "essential_phase1/ce087",
+    "essential_phase1/ce089",
+    "essential_phase1/ce093",
+    "essential_phase1/ce095",
+    "essential_phase1/ce099",
+    "essential_phase1/ce101",
+    "essential_phase1/ce105",
+    "essential_phase1/ce107",
+    "essential_phase1/ce111",
+    "essential_phase1/ce113",
+    "essential_phase1/ce117",
+    "essential_phase1/ce119",
+    "essential_phase1/ce123",
+    "essential_phase1/ce125",
+    "essential_phase1/ce129",
+    "essential_phase1/ce131",
+    "essential_phase1/ce135",
+    "essential_phase1/ce137",
+    "essential_phase1/ce141",
+    "essential_phase1/ce143",
+    "essential_phase1/ce147",
+    "essential_phase1/ce149",
+    "essential_phase1/ce153",
+    "essential_phase1/ce155",
+    "essential_phase1/ce159",
+    "essential_phase1/ce161",
+    "essential_phase1/ce165",
+    "essential_phase1/ce167",
+    "essential_phase1/ce171",
+    "essential_phase1/ce173",
+    "essential_phase1/ce177",
+    "essential_phase1/ce179",
+    "essential_phase1/ce183",
+    "essential_phase1/ce185",
+    "essential_phase1/ce189",
+    "essential_phase1/ce191",
+    "essential_phase1/ce195",
+    "essential_phase1/ce197",
+    "essential_phase1/ce201",
+    "essential_phase1/ce203",
+    "essential_phase1/ce207",
+    "essential_phase1/ce209",
+    "essential_phase1/ce213",
+    "essential_phase1/ce215",
+    "essential_phase1/ce235",
+    "essential_phase1/ce236",
+    "essential_phase1/ce237"
+   ],
+   "instance_lines": 75
+  },
+  {
+   "id": "C-CE4",
+   "contract": "CE_EXT",
+   "profiles": [
+    "index_single_class"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "N = 1, C = 1, eps 0 / 0.1, reduction none / sum / mean",
+   "note": "pilot: unsupported; loss 0, gradient 0",
+   "instances": [
+    "essential_phase1/ce238",
+    "essential_phase1/ce239",
+    "essential_phase1/ce240",
+    "essential_phase1/ce241",
+    "essential_phase1/ce242",
+    "essential_phase1/ce243"
+   ],
+   "instance_lines": 6
+  },
+  {
+   "id": "C-CE5",
+   "contract": "CE_EXT",
+   "profiles": [
+    "probability"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "probability rows as received (float64 normalised rows rounded to the candidate dtype), eps 0 / 0.1, weights none / ints, all reductions",
+   "note": "pilot: invalid_input (eps 0, rows do not sum to exactly 1) or unsupported (eps 0.1); decision CEX.PROB_ROWS; probe: 90 / 90 condition-seeds give values",
+   "instances": [
+    "essential_phase1/ce250",
+    "essential_phase1/ce251",
+    "essential_phase1/ce252",
+    "essential_phase1/ce253",
+    "essential_phase1/ce254",
+    "essential_phase1/ce255",
+    "essential_phase1/ce256",
+    "essential_phase1/ce257",
+    "essential_phase1/ce258",
+    "essential_phase1/ce259",
+    "essential_phase1/ce260",
+    "essential_phase1/ce261",
+    "essential_phase1/ce262",
+    "essential_phase1/ce263",
+    "essential_phase1/ce264",
+    "essential_phase1/ce265",
+    "essential_phase1/ce266",
+    "essential_phase1/ce267",
+    "essential_phase1/ce268",
+    "essential_phase1/ce269",
+    "essential_phase1/ce270",
+    "essential_phase1/ce271",
+    "essential_phase1/ce272",
+    "essential_phase1/ce273"
+   ],
+   "instance_lines": 24
+  },
+  {
+   "id": "C-FL1",
+   "contract": "FLCE",
+   "profiles": [
+    "index_unsmoothed"
+   ],
+   "outcomes": [
+    "value",
+    "domain_undefined (mean with zero class-weight mass)"
+   ],
+   "query": "hidden [N, 64], weight [V, 64], no bias, targets with ignore none / partial / all, ce_weight none / ints, reduction none / sum / mean",
+   "note": "parameters regenerated from flce_conditions()",
+   "instances": [
+    "essential_phase1/flce000",
+    "essential_phase1/flce001",
+    "essential_phase1/flce004",
+    "essential_phase1/flce005",
+    "essential_phase1/flce008",
+    "essential_phase1/flce009",
+    "essential_phase1/flce012",
+    "essential_phase1/flce013",
+    "essential_phase1/flce016",
+    "essential_phase1/flce017",
+    "essential_phase1/flce020",
+    "essential_phase1/flce021",
+    "essential_phase1/flce024",
+    "essential_phase1/flce025",
+    "essential_phase1/flce028",
+    "essential_phase1/flce029",
+    "essential_phase1/flce032",
+    "essential_phase1/flce033",
+    "essential_phase1/flce036",
+    "essential_phase1/flce037",
+    "essential_phase1/flce040",
+    "essential_phase1/flce041",
+    "essential_phase1/flce044",
+    "essential_phase1/flce045",
+    "essential_phase1/flce048",
+    "essential_phase1/flce049",
+    "essential_phase1/flce052",
+    "essential_phase1/flce053",
+    "essential_phase1/flce056",
+    "essential_phase1/flce057",
+    "essential_phase1/flce060",
+    "essential_phase1/flce061",
+    "essential_phase1/flce064",
+    "essential_phase1/flce065",
+    "essential_phase1/flce068",
+    "essential_phase1/flce069"
+   ],
+   "instance_lines": 36
+  },
+  {
+   "id": "C-FL2",
+   "contract": "FLCE",
+   "profiles": [
+    "index_smoothing_unweighted"
+   ],
+   "outcomes": [
+    "value",
+    "domain_undefined (mean with zero class-weight mass)"
+   ],
+   "query": "as C-FL1 with label smoothing 0.1",
+   "instances": [
+    "essential_phase1/flce002",
+    "essential_phase1/flce006",
+    "essential_phase1/flce010",
+    "essential_phase1/flce014",
+    "essential_phase1/flce018",
+    "essential_phase1/flce022",
+    "essential_phase1/flce026",
+    "essential_phase1/flce030",
+    "essential_phase1/flce034",
+    "essential_phase1/flce038",
+    "essential_phase1/flce042",
+    "essential_phase1/flce046",
+    "essential_phase1/flce050",
+    "essential_phase1/flce054",
+    "essential_phase1/flce058",
+    "essential_phase1/flce062",
+    "essential_phase1/flce066",
+    "essential_phase1/flce070"
+   ],
+   "instance_lines": 18
+  },
+  {
+   "id": "C-FL3",
+   "contract": "FLCE",
+   "profiles": [
+    "index_smoothing_R_A"
+   ],
+   "outcomes": [
+    "value",
+    "domain_undefined (mean with zero class-weight mass)"
+   ],
+   "task_binding": "CE.R_A (Liger computes the same reading, decision FL.R_A)",
+   "query": "as C-FL1 with class weights and label smoothing 0.1",
+   "instances": [
+    "essential_phase1/flce003",
+    "essential_phase1/flce007",
+    "essential_phase1/flce011",
+    "essential_phase1/flce015",
+    "essential_phase1/flce019",
+    "essential_phase1/flce023",
+    "essential_phase1/flce027",
+    "essential_phase1/flce031",
+    "essential_phase1/flce035",
+    "essential_phase1/flce039",
+    "essential_phase1/flce043",
+    "essential_phase1/flce047",
+    "essential_phase1/flce051",
+    "essential_phase1/flce055",
+    "essential_phase1/flce059",
+    "essential_phase1/flce063",
+    "essential_phase1/flce067",
+    "essential_phase1/flce071"
+   ],
+   "instance_lines": 18
+  },
+  {
+   "id": "C-ACT1",
+   "contract": "ACT",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "aten.relu",
+    "aten.threshold_backward"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "forward aten.relu(a); VJP aten.threshold_backward(g, a, 0); values gauss / zeros / huge / tiny, layout contiguous / offset (not semantic)",
+   "note": "relu'(0) = 0 (decision ACT.RELU0)",
+   "instances": [
+    "essential_phase2b/acti_relu_gauss_contiguous",
+    "essential_phase2b/acti_relu_gauss_offset",
+    "essential_phase2b/acti_relu_huge_contiguous",
+    "essential_phase2b/acti_relu_tiny_contiguous",
+    "essential_phase2b/acti_relu_zeros_contiguous"
+   ],
+   "instance_lines": 5
+  },
+  {
+   "id": "C-ACT2",
+   "contract": "ACT",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "aten.silu",
+    "aten.silu_backward"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "aten.silu(a); aten.silu_backward(g, a)",
+   "note": "huge negative inputs (about -1e30): the enclosure is valid but kernel_spec.num.ends cannot compare it (shared-code limitation reported)",
+   "instances": [
+    "essential_phase2b/acti_silu_gauss_contiguous",
+    "essential_phase2b/acti_silu_huge_contiguous",
+    "essential_phase2b/acti_silu_tiny_contiguous",
+    "essential_phase2b/acti_silu_zeros_contiguous"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-ACT3",
+   "contract": "ACT",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "aten.gelu",
+    "aten.gelu_backward"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "approximate='none'",
+   "instances": [
+    "essential_phase2b/acti_gelu_erf_gauss_contiguous",
+    "essential_phase2b/acti_gelu_erf_huge_contiguous",
+    "essential_phase2b/acti_gelu_erf_tiny_contiguous",
+    "essential_phase2b/acti_gelu_erf_zeros_contiguous"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-ACT4",
+   "contract": "ACT",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "aten.gelu",
+    "aten.gelu_backward"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "approximate='tanh'",
+   "instances": [
+    "essential_phase2b/acti_gelu_tanh_gauss_contiguous",
+    "essential_phase2b/acti_gelu_tanh_huge_contiguous",
+    "essential_phase2b/acti_gelu_tanh_tiny_contiguous",
+    "essential_phase2b/acti_gelu_tanh_zeros_contiguous"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-ACT5",
+   "contract": "ACT",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "act.swiglu",
+    "act.swiglu_backward"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "F.silu(a) * b and its VJP (da, db)",
+   "instances": [
+    "essential_phase2b/acti_swiglu_gauss_contiguous",
+    "essential_phase2b/acti_swiglu_huge_contiguous",
+    "essential_phase2b/acti_swiglu_tiny_contiguous",
+    "essential_phase2b/acti_swiglu_zeros_contiguous"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-ACT6",
+   "contract": "ACT",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "act.geglu",
+    "act.geglu_backward"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "F.gelu(a) * b: act.geglu(a, b, approximate='none') and its VJP",
+   "instances": [
+    "essential_phase2b/acti_geglu_gauss_contiguous",
+    "essential_phase2b/acti_geglu_huge_contiguous",
+    "essential_phase2b/acti_geglu_tiny_contiguous",
+    "essential_phase2b/acti_geglu_zeros_contiguous"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-ACT7",
+   "contract": "ACT",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "aten.gelu_backward"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "approximate='tanh', |x| >= 2^64 (example ACT.E10)",
+   "instances": [
+    "bugs/B023"
+   ],
+   "instance_lines": 1
+  },
+  {
+   "id": "C-NM1",
+   "contract": "NORM",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "torch.nn.functional.layer_norm"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "layer_norm over the last axis of (batch, 5, 12), eps the received 1e-5, affine / no affine, batch 1 / 2 / 7, random upstream; values gauss / constant_rows / huge_offset / tiny",
+   "instances": [
+    "essential_phase2b/norm_layer_norm_constant_rows_aff_b1",
+    "essential_phase2b/norm_layer_norm_gauss_aff_b1",
+    "essential_phase2b/norm_layer_norm_gauss_aff_b2",
+    "essential_phase2b/norm_layer_norm_gauss_aff_b7",
+    "essential_phase2b/norm_layer_norm_gauss_noaff_b1",
+    "essential_phase2b/norm_layer_norm_huge_offset_aff_b1",
+    "essential_phase2b/norm_layer_norm_tiny_aff_b1"
+   ],
+   "instance_lines": 7
+  },
+  {
+   "id": "C-NM2",
+   "contract": "NORM",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "torch.nn.functional.rms_norm"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "rms_norm, eps 1e-5 given explicitly, weight",
+   "instances": [
+    "essential_phase2b/norm_rms_norm_constant_rows_aff_b1",
+    "essential_phase2b/norm_rms_norm_gauss_aff_b1",
+    "essential_phase2b/norm_rms_norm_huge_offset_aff_b1",
+    "essential_phase2b/norm_rms_norm_tiny_aff_b1"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-NM3",
+   "contract": "NORM",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "torch.nn.functional.group_norm"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "(batch, 6, 10), 3 groups, eps 1e-5, affine",
+   "instances": [
+    "essential_phase2b/norm_group_norm_constant_rows_aff_b1",
+    "essential_phase2b/norm_group_norm_gauss_aff_b1",
+    "essential_phase2b/norm_group_norm_huge_offset_aff_b1",
+    "essential_phase2b/norm_group_norm_tiny_aff_b1"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-BN1",
+   "contract": "BN",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "torch.nn.functional.batch_norm"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "(batch, 6, 10), momentum 0.1, eps 1e-5, given running statistics, training True / False, affine; batch 1 has n = 10 values per channel",
+   "instances": [
+    "essential_phase2b/norm_batch_norm_eval_constant_rows_aff_b1",
+    "essential_phase2b/norm_batch_norm_eval_gauss_aff_b1",
+    "essential_phase2b/norm_batch_norm_eval_huge_offset_aff_b1",
+    "essential_phase2b/norm_batch_norm_eval_tiny_aff_b1",
+    "essential_phase2b/norm_batch_norm_train_constant_rows_aff_b1",
+    "essential_phase2b/norm_batch_norm_train_gauss_aff_b1",
+    "essential_phase2b/norm_batch_norm_train_huge_offset_aff_b1",
+    "essential_phase2b/norm_batch_norm_train_tiny_aff_b1"
+   ],
+   "instance_lines": 8
+  },
+  {
+   "id": "C-NM4",
+   "contract": "NORM",
+   "profiles": [
+    "rms_offset"
+   ],
+   "ops": [
+    "transformers.Qwen3NextRMSNorm"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "task_binding": "model Qwen3-Next: offset 1",
+   "query": "y = x rstd (1 + w) (example NM.E8)",
+   "instances": [
+    "bugs/B004"
+   ],
+   "instance_lines": 1
+  },
+  {
+   "id": "C-NM5",
+   "contract": "NORM",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "torch.nn.functional.layer_norm"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "M = 256, N = 1000, eps 1e-5, weight and bias; dx, dw, db",
+   "instances": [
+    "general_round_v3_1/tut_layernorm_n1000_bwd"
+   ],
+   "instance_lines": 1
+  },
+  {
+   "id": "C-CE6",
+   "contract": "CE",
+   "profiles": [
+    "index_unsmoothed"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "flash_attn per-row cross entropy, label_smoothing 0, logit_scale 1, lse_square_scale 0: reduction none with the recorded upstream",
+   "instances": [
+    "general_round_v3_1/fa_ce_plain_bwd"
+   ],
+   "instance_lines": 1
+  },
+  {
+   "id": "C-L1",
+   "contract": "NORM",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "liger.LigerRMSNormFunction"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "x (4, 64, 256), w (256), eps 1e-6, offset 0.0, casting_mode llama (decision NM.CASTS), upstream ones",
+   "instances": [
+    "composition_corpus/liger.rms_norm.bfloat16/_rms_norm_backward_kernel",
+    "composition_corpus/liger.rms_norm.bfloat16/_rms_norm_forward_kernel",
+    "composition_corpus/liger.rms_norm.float32/_rms_norm_backward_kernel",
+    "composition_corpus/liger.rms_norm.float32/_rms_norm_forward_kernel"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-L2",
+   "contract": "NORM",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "liger.LigerLayerNormFunction"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "x (4, 64, 256), w, b, eps 1e-5, upstream ones",
+   "instances": [
+    "composition_corpus/liger.layer_norm.bfloat16/_layer_norm_backward_kernel",
+    "composition_corpus/liger.layer_norm.bfloat16/_layer_norm_forward_kernel",
+    "composition_corpus/liger.layer_norm.float32/_layer_norm_backward_kernel",
+    "composition_corpus/liger.layer_norm.float32/_layer_norm_forward_kernel"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-L3",
+   "contract": "NORM",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "liger.LigerGroupNormFunction"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "x (4, 32, 128), 32 channels, 8 groups, eps 1e-5, affine",
+   "instances": [
+    "composition_corpus/liger.group_norm.bfloat16/_group_norm_backward_kernel",
+    "composition_corpus/liger.group_norm.bfloat16/_group_norm_forward_kernel",
+    "composition_corpus/liger.group_norm.float32/_group_norm_backward_kernel",
+    "composition_corpus/liger.group_norm.float32/_group_norm_forward_kernel"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-L4",
+   "contract": "ACT",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "act.swiglu",
+    "act.swiglu_backward"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "LigerSiLUMulFunction(a, b), upstream ones",
+   "instances": [
+    "composition_corpus/liger.swiglu.bfloat16/_swiglu_backward_kernel",
+    "composition_corpus/liger.swiglu.bfloat16/_swiglu_forward_kernel",
+    "composition_corpus/liger.swiglu.float32/_swiglu_backward_kernel",
+    "composition_corpus/liger.swiglu.float32/_swiglu_forward_kernel"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-L5",
+   "contract": "ACT",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "act.geglu",
+    "act.geglu_backward"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "LigerGELUMulFunction(a, b) = act.geglu(a, b, approximate='tanh') (decision ACT.GEGLU_FORM)",
+   "instances": [
+    "composition_corpus/liger.geglu.bfloat16/_geglu_tanh_backward_kernel",
+    "composition_corpus/liger.geglu.bfloat16/_geglu_tanh_forward_kernel",
+    "composition_corpus/liger.geglu.float32/_geglu_tanh_backward_kernel",
+    "composition_corpus/liger.geglu.float32/_geglu_tanh_forward_kernel"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-L6",
+   "contract": "CE",
+   "profiles": [
+    "index_unsmoothed"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "LigerCrossEntropyFunction(logits (64, 1000), t, None) defaults: ignore_index -100, no smoothing, no z-loss, mean",
+   "instances": [
+    "composition_corpus/liger.cross_entropy.bfloat16/liger_cross_entropy_kernel",
+    "composition_corpus/liger.cross_entropy.float32/liger_cross_entropy_kernel"
+   ],
+   "instance_lines": 2
+  },
+  {
+   "id": "C-L7",
+   "contract": "DIVERG",
+   "profiles": [
+    "torch_kl",
+    "liger_kl"
+   ],
+   "outcomes": [
+    "domain_undefined (torch_kl: negative target with log_target False)",
+    "value (liger_kl)"
+   ],
+   "query": "LigerKLDivLossFunction(p, q, 'batchmean', False) with p and q both log_softmax outputs",
+   "task_binding": "liger_kl needs an explicit binding to Liger's eps-clamped definition (eps 1e-10)",
+   "note": "decision DV.KL_NEG: the tested call passes log-probabilities as a probability target",
+   "instances": [
+    "composition_corpus/liger.kl_div.bfloat16/_kldiv_kernel_backward",
+    "composition_corpus/liger.kl_div.bfloat16/_kldiv_kernel_forward",
+    "composition_corpus/liger.kl_div.float32/_kldiv_kernel_backward",
+    "composition_corpus/liger.kl_div.float32/_kldiv_kernel_forward"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-L8",
+   "contract": "DIVERG",
+   "profiles": [
+    "liger_jsd"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "LigerJSDFunction(p, q, None, 0.5, -100): beta 1/2, no labels",
+   "instances": [
+    "composition_corpus/liger.jsd.bfloat16/_jsd_kernel",
+    "composition_corpus/liger.jsd.float32/_jsd_kernel"
+   ],
+   "instance_lines": 2
+  },
+  {
+   "id": "C-L9",
+   "contract": "DIVERG",
+   "profiles": [
+    "liger_tvd"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "LigerTVDLossFunction(p, q, None, 'batchmean', -100); tvd_min_norm differs only at ties p = q",
+   "instances": [
+    "composition_corpus/liger.tvd.bfloat16/_tv_distance_kernel",
+    "composition_corpus/liger.tvd.float32/_tv_distance_kernel"
+   ],
+   "instance_lines": 2
+  },
+  {
+   "id": "C-L10",
+   "contract": "SPARSEMAX",
+   "profiles": [
+    "paper"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "LigerSparsemaxFunction(x (32, 256), -1), upstream ones",
+   "instances": [
+    "composition_corpus/liger.sparsemax.bfloat16/_sparsemax_backward_kernel",
+    "composition_corpus/liger.sparsemax.bfloat16/_sparsemax_forward_kernel",
+    "composition_corpus/liger.sparsemax.float32/_sparsemax_backward_kernel",
+    "composition_corpus/liger.sparsemax.float32/_sparsemax_forward_kernel"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-L11",
+   "contract": "DYT",
+   "profiles": [
+    "paper"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "LigerDyTFunction(x (64, 256), alpha [0.5], gamma, beta), upstream ones",
+   "instances": [
+    "composition_corpus/liger.dyt.bfloat16/_dyt_bwd_kernel",
+    "composition_corpus/liger.dyt.bfloat16/_dyt_fwd_kernel",
+    "composition_corpus/liger.dyt.float32/_dyt_bwd_kernel",
+    "composition_corpus/liger.dyt.float32/_dyt_fwd_kernel"
+   ],
+   "instance_lines": 4
+  },
+  {
+   "id": "C-G1",
+   "contract": "ACT",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "aten.relu"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "torch.relu(x (64, 512)); the _to_copy kernel is the dtype conversion of the input (CAST)",
+   "instances": [
+    "composition_corpus/gems.relu.bfloat16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.relu.bfloat16/relu_forward_kernel_rank_1",
+    "composition_corpus/gems.relu.float16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.relu.float16/relu_forward_kernel_rank_1",
+    "composition_corpus/gems.relu.float32/relu_forward_kernel_rank_1"
+   ],
+   "instance_lines": 5
+  },
+  {
+   "id": "C-G2",
+   "contract": "ACT",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "aten.gelu"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "F.gelu(x), approximate='none'",
+   "instances": [
+    "composition_corpus/gems.gelu.bfloat16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.gelu.bfloat16/gelu_none_kernel_rank_1",
+    "composition_corpus/gems.gelu.float16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.gelu.float16/gelu_none_kernel_rank_1",
+    "composition_corpus/gems.gelu.float32/gelu_none_kernel_rank_1"
+   ],
+   "instance_lines": 5
+  },
+  {
+   "id": "C-G3",
+   "contract": "ACT",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "aten.silu"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "F.silu(x)",
+   "instances": [
+    "composition_corpus/gems.silu.bfloat16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.silu.bfloat16/silu_forward_kernel_rank_1",
+    "composition_corpus/gems.silu.float16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.silu.float16/silu_forward_kernel_rank_1",
+    "composition_corpus/gems.silu.float32/silu_forward_kernel_rank_1"
+   ],
+   "instance_lines": 5
+  },
+  {
+   "id": "C-G4",
+   "contract": "MATHFN",
+   "profiles": [
+    "real"
+   ],
+   "ops": [
+    "aten.tanh"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "torch.tanh(x)",
+   "note": "forward only; MATHFN (another group's contract) covers aten.tanh",
+   "instances": [
+    "composition_corpus/gems.tanh.bfloat16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.tanh.bfloat16/tanh_kernel_kernel_rank_1",
+    "composition_corpus/gems.tanh.float16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.tanh.float16/tanh_kernel_kernel_rank_1",
+    "composition_corpus/gems.tanh.float32/tanh_kernel_kernel_rank_1"
+   ],
+   "instance_lines": 5
+  },
+  {
+   "id": "C-G5",
+   "contract": "MATHFN",
+   "profiles": [
+    "real"
+   ],
+   "ops": [
+    "aten.sigmoid"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "torch.sigmoid(x)",
+   "note": "forward only; MATHFN covers aten.sigmoid",
+   "instances": [
+    "composition_corpus/gems.sigmoid.bfloat16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.sigmoid.bfloat16/sigmoid_forward_kernel_rank_1",
+    "composition_corpus/gems.sigmoid.float16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.sigmoid.float16/sigmoid_forward_kernel_rank_1",
+    "composition_corpus/gems.sigmoid.float32/sigmoid_forward_kernel_rank_1"
+   ],
+   "instance_lines": 5
+  },
+  {
+   "id": "C-G6",
+   "contract": "NORM",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "torch.nn.functional.layer_norm"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "F.layer_norm(x (64, 512), (512,)), no affine, eps 1e-5; fill_scalar / _to_copy kernels are helpers of the call; forward only (upstream not observed)",
+   "instances": [
+    "composition_corpus/gems.layer_norm.bfloat16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.layer_norm.bfloat16/fill_scalar_func_kernel_rank_1",
+    "composition_corpus/gems.layer_norm.bfloat16/layer_norm_persistent_kernel",
+    "composition_corpus/gems.layer_norm.float16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.layer_norm.float16/fill_scalar_func_kernel_rank_1",
+    "composition_corpus/gems.layer_norm.float16/layer_norm_persistent_kernel",
+    "composition_corpus/gems.layer_norm.float32/fill_scalar_func_kernel_rank_1",
+    "composition_corpus/gems.layer_norm.float32/layer_norm_persistent_kernel"
+   ],
+   "instance_lines": 14
+  },
+  {
+   "id": "C-G7",
+   "contract": "NORM",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "torch.nn.functional.rms_norm"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "F.rms_norm(x (64, 512), (512,), ones), eps=None resolved to torch.finfo(dtype).eps: 2^-23 / 2^-10 / 2^-7 for float32 / float16 / bfloat16 (decision NM.RMS_EPS)",
+   "instances": [
+    "composition_corpus/gems.rms_norm.bfloat16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.rms_norm.bfloat16/ones_kernel",
+    "composition_corpus/gems.rms_norm.bfloat16/rms_norm_kernel",
+    "composition_corpus/gems.rms_norm.float16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.rms_norm.float16/ones_kernel",
+    "composition_corpus/gems.rms_norm.float16/rms_norm_kernel",
+    "composition_corpus/gems.rms_norm.float32/ones_kernel",
+    "composition_corpus/gems.rms_norm.float32/rms_norm_kernel"
+   ],
+   "instance_lines": 8
+  },
+  {
+   "id": "C-G8",
+   "contract": "NORM",
+   "profiles": [
+    "torch"
+   ],
+   "ops": [
+    "torch.nn.functional.group_norm"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "F.group_norm(x (4, 32, 128), 8), no affine, eps 1e-5; forward only",
+   "note": "kind taken from corpus/instances.jsonl.gz (not in the group file)",
+   "instances": [
+    "composition_corpus/gems.group_norm.bfloat16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.group_norm.bfloat16/group_norm_kernel",
+    "composition_corpus/gems.group_norm.float16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.group_norm.float16/group_norm_kernel",
+    "composition_corpus/gems.group_norm.float32/group_norm_kernel"
+   ],
+   "instance_lines": 5
+  },
+  {
+   "id": "C-G9",
+   "contract": "CE",
+   "profiles": [
+    "index_unsmoothed"
+   ],
+   "outcomes": [
+    "value"
+   ],
+   "query": "F.cross_entropy(x (64, 100).float(), randint) defaults (mean); log_softmax / nll / fill / _to_copy kernels are parts of the call; forward only",
+   "instances": [
+    "composition_corpus/gems.cross_entropy.bfloat16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.cross_entropy.bfloat16/fill_scalar_func_kernel_rank_1",
+    "composition_corpus/gems.cross_entropy.bfloat16/log_softmax_kernel",
+    "composition_corpus/gems.cross_entropy.bfloat16/nll_loss_forward_kernel",
+    "composition_corpus/gems.cross_entropy.float16/_to_copy_func_kernel_rank_1",
+    "composition_corpus/gems.cross_entropy.float16/fill_scalar_func_kernel_rank_1",
+    "composition_corpus/gems.cross_entropy.float16/log_softmax_kernel",
+    "composition_corpus/gems.cross_entropy.float16/nll_loss_forward_kernel",
+    "composition_corpus/gems.cross_entropy.float32/fill_scalar_func_kernel_rank_1",
+    "composition_corpus/gems.cross_entropy.float32/log_softmax_kernel",
+    "composition_corpus/gems.cross_entropy.float32/nll_loss_forward_kernel"
+   ],
+   "instance_lines": 13
+  }
+ ],
+ "gaps": [],
+ "counts": {
+  "lines": 501,
+  "bound_lines": 501,
+  "gap_lines": 0,
+  "by_contract": {
+   "CE": 260,
+   "CE_EXT": 30,
+   "FLCE": 72,
+   "ACT": 49,
+   "NORM": 56,
+   "BN": 8,
+   "DIVERG": 8,
+   "SPARSEMAX": 4,
+   "DYT": 4,
+   "MATHFN": 10
+  }
+ }
+}

@@ -1,0 +1,112 @@
+schema_version: '1.2'
+id: ACCUM
+role: ACCUM
+title: Gradient-accumulation window normalisation - loss and gradient averaged over all valid tokens of the window
+review:
+  status: drafted
+  author: Claude (spec v3 author, group E2_program), 2026-10-17
+  date: '2026-10-17'
+  scope: A task decision (the objective of the accumulation loop), not a property of a kernel; awaiting a review by
+    someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [gradient accumulation loops (transformers Trainer, accelerate accumulate, hand-written loops), num_items_in_batch]
+profiles:
+  token_mean:
+    meaning: 'One declared task: L = (sum of per-token losses over every micro-batch of the window, all ranks) / (number
+      of valid tokens in the window); the window gradient is the gradient of L.'
+    task_choice_required: true
+outputs:
+  loss:
+    shape: scalar
+    guarantee: exact
+  grad:
+    shape: '[P], the window gradient'
+    guarantee: exact
+comparison:
+  input_binding: Per-token losses and per-token gradients are the exact values received; counts are the lengths of the
+    lists (never coerced).
+  quality: Exact rational equality.
+  test_evidence: Exact rational equality.
+  error_handling: Missing or extra per-token gradients are invalid_input; an empty window is domain_undefined.
+decisions:
+- id: ACC.TASK
+  status: needs_binding
+  statement: 'The task owner selects the window objective. Selected here: equal weight for every valid token of the
+    window, L = sum of token losses / total valid tokens, over all micro-batches and ranks (phase-1 reviewed decision
+    ACC-A1; the HF gradient-accumulation article is a supporting example, not an authority for every objective).
+    Alternatives: the mean of micro-batch means (what the PyTorch AMP example''s loss / iters_to_accumulate gives with
+    mean-reduced losses; under the token-mean task it is the labelled error variant ACC-E1, equal to L only when all
+    micro-batches hold the same number of tokens); sequence-weighted objectives - other tasks, outside this profile.
+    No verdict against a declared micro-batch-mean task follows from this contract.'
+  basis: [PH1_DECISIONS.ACC_A1, PH1_AMBIGUITIES.ACC_E1, HF.TOKEN_MEAN, T_AMP_EXAMPLES.ACCUM]
+- id: ACC.EMPTY
+  status: drafted
+  statement: 'Reviewed decision ACC-A1, reused: a window without any valid token has no token mean (domain_undefined;
+    skip / zero / NaN conventions are not judged); an empty micro-batch inside a window with tokens contributes 0 to
+    both sums.'
+  basis: [PH1_DECISIONS.ACC_A1]
+- id: ACC.GRAD
+  status: drafted
+  statement: 'The window gradient is the gradient of L: (sum of the per-token loss gradients) / (total valid tokens).
+    It follows by linearity from ACC.TASK; a loop whose gradient is normalised differently from its loss optimises a
+    different objective.'
+  basis: [ACC.TASK]
+clauses:
+- {id: AC.C1, basis: [ACC.TASK], statement: 'L = sum_b sum_i l_bi / sum_b n_b over all micro-batches of all ranks',
+  observes: [loss], evidence_kind: definition}
+- {id: AC.C2, basis: [ACC.GRAD], statement: 'grad = sum_b sum_i g_bi / sum_b n_b', observes: [grad], evidence_kind: derived}
+- {id: AC.C3, basis: [ACC.EMPTY], statement: 'N = 0: domain_undefined; an empty micro-batch contributes 0', observes: [loss,
+    grad], evidence_kind: definition}
+- {id: AC.C4, basis: [ACC.TASK], statement: 'membership: the window is the set of listed micro-batches; regrouping the
+    same tokens into other micro-batches or ranks does not change L', observes: [loss], evidence_kind: derived}
+examples:
+- {id: AC.E1, profile: token_mean, clauses: [AC.C1, AC.C2], input: {microbatches: [{losses: [1, 3], grads: [[1, 0], [3, 0]]},
+      {losses: [8], grads: [[0, 8]]}]}, expected: {outcome: value, fields: {loss: 4, grad: ['4/3', '8/3']}}}
+- {id: AC.E2, profile: token_mean, clauses: [AC.C1, AC.C2], note: 'equal token counts: the mean of micro-batch means
+    coincides (normal control)', input: {microbatches: [{losses: [1, 3], grads: [[1], [3]]}, {losses: [5, 7], grads: [[5],
+          [7]]}]}, expected: {outcome: value, fields: {loss: 4, grad: [4]}}}
+- {id: AC.E3, profile: token_mean, clauses: [AC.C3, AC.C1], note: 'tested empty_microbatch shape: the first micro-batch
+    has no valid label', input: {microbatches: [{losses: [], grads: []}, {losses: [2, 4], grads: [[2], [4]]}]}, expected: {
+    outcome: value, fields: {loss: 3, grad: [3]}}}
+- {id: AC.E4, profile: token_mean, clauses: [AC.C3], input: {microbatches: [{losses: [], grads: []}, {losses: [], grads: []}]},
+  expected: {outcome: domain_undefined}}
+- {id: AC.E5, profile: token_mean, clauses: [AC.C2], input: {microbatches: [{losses: [1, 2], grads: [[1]]}]}, expected: {
+    outcome: invalid_input}}
+- {id: AC.E6, profile: token_mean, clauses: [AC.C1, AC.C2], note: 'tested unequal shape: 5 and 19 valid labels in the two
+    micro-batches', input: {microbatches: [{losses: [1, 1, 1, 1, 1], grads: [[1], [1], [1], [1], [1]]}, {losses: [2, 2, 2,
+          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], grads: [[2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2],
+          [2], [2], [2], [2], [2], [2], [2]]}]}, expected: {outcome: value, fields: {loss: '43/24', grad: ['43/24']}}}
+- {id: AC.E7, profile: token_mean, clauses: [AC.C1, AC.C4], note: 'two ranks, window over both', input: {microbatches: [{rank: 0,
+        losses: [1], grads: [[1]]}, {rank: 1, losses: [2, 3], grads: [[2], [3]]}, {rank: 1, losses: [4], grads: [[4]]}]},
+  expected: {outcome: value, fields: {loss: '5/2', grad: ['5/2']}}}
+signature:
+  inputs: ['microbatches: list of {losses: per-token losses of the valid tokens, grads: one gradient vector per valid
+      token, rank (optional label)}']
+  pre_state: []
+  post_state: []
+  observation_unit: one accumulation window (all micro-batches before one optimizer step, all ranks)
+domain:
+  valid: [one gradient per loss; gradient vectors of equal length; rational values]
+  domain_undefined: [no valid token in the window]
+  invalid_input: [number of gradients different from the number of losses, ragged gradient vectors]
+  unsupported: [micro-batch-mean or sequence-weighted objectives, class-weighted normalisation]
+mutation_requirements:
+- {id: ACC.M1, misreading: mean of micro-batch means (ACC-E1), witnesses: [AC.E1, AC.E6]}
+- {id: ACC.M2, misreading: 'each micro-batch mean divided by the number of micro-batches (loss / k) and summed, an empty
+    micro-batch counted as 0', witnesses: [AC.E3]}
+- {id: ACC.M3, misreading: 'per-rank window means averaged over ranks (plain DDP average)', witnesses: [AC.E7]}
+- {id: ACC.M4, misreading: gradient normalised by the number of micro-batches instead of tokens, witnesses: [AC.E1]}
+- {id: ACC.M5, misreading: an empty window yields loss 0 and zero gradient, witnesses: [AC.E4]}
+- {id: ACC.M6, misreading: missing per-token gradients silently dropped, witnesses: [AC.E5]}
+composition_binding:
+- A micro-batch loss computed by cross_entropy with reduction mean is not a token sum; recover sums with the declared
+  count (CE contract) or use reduction sum divided by the window count (num_items_in_batch).
+- Cross-rank aggregation of window sums and counts is RANKMEAN; the valid-token count after the label shift is LABELS.
+nonclaims:
+- Task selection is required per use; this contract does not say which objective a library intends.
+- Floating-point accumulation order is the numerical question (K - G).
+changes: []

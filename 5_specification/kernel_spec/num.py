@@ -150,9 +150,24 @@ def ends(x) -> tuple[Fraction, Fraction]:
         for e in (a, b):
             if e in (libmp.fnan, libmp.finf, libmp.fninf):
                 raise ValueError("enclosure with a non-finite endpoint")
-        return Fraction(*libmp.to_rational(a)), Fraction(*libmp.to_rational(b))
+        return _exact_or_widened(a, "lo"), _exact_or_widened(b, "hi")
     q = rational(x)
     return q, q
+
+
+_TINY_EXP = -(1 << 20)      # below 2^-1048576 an endpoint is widened outward instead of being written out exactly
+
+
+def _exact_or_widened(e, side):
+    """Exact rational endpoint; an endpoint of astronomically small magnitude (e.g. exp(-1e30)) is widened outward to 0
+    or to +-2^-1048576, which keeps the enclosure rigorous and representable."""
+    sign, man, exp, bc = e
+    if man and exp + bc < _TINY_EXP:
+        neg = bool(sign)
+        if side == "lo":
+            return -Fraction(1, 1 << (1 << 20)) if neg else Fraction(0)
+        return Fraction(0) if neg else Fraction(1, 1 << (1 << 20))
+    return Fraction(*libmp.to_rational(e))
 
 
 def hull(lo, hi) -> IV:

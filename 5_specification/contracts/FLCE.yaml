@@ -1,0 +1,186 @@
+schema_version: '1.2'
+id: FLCE
+role: CE
+title: Fused linear cross entropy CE(x W^T + b) with the VJP w.r.t. x, W and b
+review:
+  status: drafted
+  author: Claude (spec v3 author, group C_act_norm_loss), 2026-10-17
+  date: '2026-10-17'
+  scope: The composition of torch.nn.functional.linear and the cross entropy of contracts/CE.yaml; awaiting a review by
+    someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [liger.LigerFusedLinearCrossEntropyFunction, liger.LigerFusedLinearCrossEntropyLoss, unsloth.fused_ce]
+profiles:
+  index_unsmoothed:
+    meaning: Class-index targets, eps = 0, optional class weights, declared ignore_index.
+    task_choice_required: false
+  index_smoothing_unweighted:
+    meaning: Class-index targets, no class weights, 0 <= eps <= 1.
+    task_choice_required: false
+  index_smoothing_R_A:
+    meaning: Class weights with label smoothing under the pilot's selected reading CE.R_A (decision FL.R_A).
+    task_choice_required: true
+outputs:
+  loss:
+    shape: scalar for sum / mean; [N] for none
+    guarantee: rigorous_enclosure
+  grad:
+    shape: 'dict: hidden [N, H], weight [V, H], bias [V] (when a bias is given) - the VJP against the explicit upstream'
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: All values are the exactly received rationals; the logits x W^T + b are formed exactly.
+  quality: No tolerance; rigorous enclosures (the pilot's v2.4 cross entropy, then interval arithmetic for the chain).
+  test_evidence: sympy closed forms (loss of CE(x W^T + b), gradients by symbolic differentiation).
+  error_handling: Shape and range violations are invalid_input; a zero mean mass is domain_undefined.
+decisions:
+- id: FL.DEF
+  status: drafted
+  statement: The fused operation is the composition logits = x W^T + b (torch.nn.functional.linear) followed by the cross
+    entropy of the reviewed pilot (same profiles, ignore_index, class weights, reductions and mean denominators); fusing
+    and chunking change only the evaluation order. Liger's fused_linear_cross_entropy computes exactly this composition
+    (reference program).
+  basis: [T_LINEAR.DEF, T_LINEAR.SHAPE, T_CE_LOSS.INDEX, T_CE_LOSS.REDUCE_INDEX, CE_LIGER_FLCE.DEF]
+- id: FL.VJP
+  status: drafted
+  statement: 'With G = the VJP of the cross entropy w.r.t. the logits against the upstream (rows (A p - a) times the
+    row''s upstream, divided by the mean denominator for mean), the chain rule through the linear map gives grad hidden
+    = G W, grad weight = G^T x, grad bias = sum over rows of G. Ignored rows have G = 0.'
+  basis: [T_LINEAR.DEF, T_CE_LOSS.INDEX, CE_LIGER_FLCE.DEF]
+- id: FL.R_A
+  status: drafted
+  statement: Class weights together with label smoothing take the pilot's reading CE.R_A (a_c = w_c ((1 - eps)
+    onehot_c + eps / V), mean by the summed target-class weight), which needs the same task binding as the pilot. Liger's
+    kernel computes the coefficient (1 - eps) w_y on the target class plus (eps / V) w_c on every class and divides the
+    mean by the sum of target weights - the same as R_A. The pilot's diagnostic reading R_B (w_y on every term) is
+    mutant FL.M2.
+  basis: [T_CE_LOSS.SMOOTH, T_CE_LOSS.WEIGHT, CE_LIGER_CE.WSMOOTH, CE_LIGER_CE.MEAN]
+- id: FL.NONE_UPSTREAM
+  status: drafted
+  statement: For reduction none the VJP takes one upstream value per row. Liger 0.7.0's backward multiplies the stored
+    gradients by a single loaded grad_output element (element_mul_kernel), which equals the VJP only for a uniform
+    upstream (e.g. loss.sum().backward()); a non-uniform upstream contradicts this contract (mutant FL.M3 models it).
+  basis: [CE_LIGER_FLCE.NONE, CE_LIGER_FLCE.BACKWARD, CE_LIGER_UTILS.ELEMENT_MUL]
+- id: FL.EXTRAS
+  status: drafted
+  statement: softcap, the z-loss (lse_square_scale), token scaling and token accuracy are documented options of the
+    reference program that no tested condition uses; they are outside the profiles (unsupported). One class (V = 1) is
+    outside the profiles as in the pilot.
+  basis: [CE_LIGER_FLCE.PARAMS, CE_LIGER_CE.EXTRAS, CE_LIGER_FLCE.TOKEN_SCALING]
+clauses:
+- {id: FL.C1, basis: [FL.DEF], statement: 'loss = CE(x W^T + b) with the pilot''s row losses, ignore_index and reductions',
+  observes: [loss], evidence_kind: definition}
+- {id: FL.C2, basis: [FL.VJP], statement: 'grad hidden = G W, grad weight = G^T x, grad bias = sum_n G_n', observes: [grad],
+  evidence_kind: derived}
+- {id: FL.C3, basis: [FL.DEF, T_CE_LOSS.REDUCE_INDEX], statement: 'mean divides by the summed class weight of the
+    non-ignored rows; zero mass is domain_undefined', observes: [loss, grad], evidence_kind: definition}
+- {id: FL.C4, basis: [FL.R_A, T_CE_LOSS.SMOOTH], statement: 'label smoothing - a_c = w_c ((1 - eps) onehot_c + eps / V)
+    (weights 1 when absent)', observes: [loss, grad], evidence_kind: definition}
+- {id: FL.C5, basis: [FL.NONE_UPSTREAM, FL.VJP], statement: 'reduction none - per-row loss and a per-row upstream in the
+    VJP', observes: [loss, grad], evidence_kind: derived}
+- {id: FL.C6, basis: [FL.DEF, T_LINEAR.SHAPE], statement: 'mismatched shapes and out-of-range targets are invalid_input',
+  observes: [loss], evidence_kind: definition}
+examples:
+- id: FL.E1
+  profile: index_unsmoothed
+  clauses: [FL.C1, FL.C2]
+  input: {hidden: [[1, 0]], weight: [[0, 1], [2, 0]], bias: null, target: [0], ce_weight: null, eps: 0, ignore_index: -100,
+    reduction: sum, upstream: 1}
+  expected:
+    outcome: value
+    fields:
+      loss: log(1+exp(2))
+      grad: {hidden: [[2*exp(2)/(1+exp(2)), -exp(2)/(1+exp(2))]], weight: [[-exp(2)/(1+exp(2)), 0], [exp(2)/(1+exp(2)),
+            0]]}
+- id: FL.E2
+  profile: index_unsmoothed
+  clauses: [FL.C1, FL.C2, FL.C3]
+  input: {hidden: [[1], [2], [0]], weight: [[1], [0]], bias: [0, 1], target: [0, 1, -100], ce_weight: [1, 3], eps: 0,
+    ignore_index: -100, reduction: mean, upstream: 1}
+  expected:
+    outcome: value
+    fields:
+      loss: log(2)/4+3*log(1+exp(1))/4
+      grad: {hidden: [['-1/8'], [3*exp(1)/(4*(1+exp(1)))], [0]], weight: [[(11*exp(1)-1)/(8*(1+exp(1)))], [(1-11*exp(1))/(8*(1+exp(1)))]],
+        bias: [(5*exp(1)-1)/(8*(1+exp(1))), (1-5*exp(1))/(8*(1+exp(1)))]}
+  note: mean by the class-weight mass 1 + 3 of the non-ignored rows; the ignored row has zero gradient
+- id: FL.E3
+  profile: index_unsmoothed
+  clauses: [FL.C5, FL.C2]
+  input: {hidden: [[1], [0]], weight: [[1], [-1]], bias: null, target: [1, 0], ce_weight: null, eps: 0, ignore_index: -100,
+    reduction: none, upstream: [2, 5]}
+  expected:
+    outcome: value
+    fields:
+      loss: [log(1+exp(2)), log(2)]
+      grad: {hidden: [[4*exp(2)/(1+exp(2))], [-5]], weight: [[2*exp(2)/(1+exp(2))], [-2*exp(2)/(1+exp(2))]]}
+  note: a non-uniform upstream for reduction none (decision FL.NONE_UPSTREAM)
+- id: FL.E4
+  profile: index_smoothing_unweighted
+  clauses: [FL.C4, FL.C2]
+  input: {hidden: [[1]], weight: [[0], [1]], bias: null, target: [0], ce_weight: null, eps: '1/2', ignore_index: -100,
+    reduction: sum, upstream: 2}
+  expected:
+    outcome: value
+    fields:
+      loss: log(1+exp(1))-1/4
+      grad: {hidden: [[(3*exp(1)-1)/(2*(1+exp(1)))]], weight: [[(1-3*exp(1))/(2*(1+exp(1)))], [(3*exp(1)-1)/(2*(1+exp(1)))]]}
+- id: FL.E5
+  profile: index_smoothing_R_A
+  clauses: [FL.C4, FL.C3, FL.C2]
+  input: {hidden: [[1]], weight: [[0], [1]], bias: null, target: [0], ce_weight: [1, 3], eps: '1/2', ignore_index: -100,
+    reduction: mean, upstream: 1}
+  expected:
+    outcome: value
+    fields:
+      loss: 3*log(1+exp(1))/2-3/4
+      grad: {hidden: [[3*(exp(1)-1)/(4*(1+exp(1)))]], weight: [[3*(1-exp(1))/(4*(1+exp(1)))], [3*(exp(1)-1)/(4*(1+exp(1)))]]}
+- {id: FL.E6, profile: index_unsmoothed, clauses: [FL.C3], input: {hidden: [[1]], weight: [[0], [1]], bias: null, target: [
+      -100], ce_weight: null, eps: 0, ignore_index: -100, reduction: mean, upstream: 1}, expected: {outcome: domain_undefined}}
+- id: FL.E7
+  profile: index_unsmoothed
+  clauses: [FL.C1, FL.C2]
+  input: {hidden: [[1, 2]], weight: [[1, 0], [1, 1]], bias: null, target: [1], ce_weight: null, eps: 0, ignore_index: -100,
+    reduction: sum, upstream: 1}
+  expected:
+    outcome: value
+    fields:
+      loss: log(1+exp(2))-2
+      grad: {hidden: [[0, -1/(1+exp(2))]], weight: [[1/(1+exp(2)), 2/(1+exp(2))], [-1/(1+exp(2)), -2/(1+exp(2))]]}
+- {id: FL.E8, profile: index_unsmoothed, clauses: [FL.C6], input: {hidden: [[1]], weight: [[0], [1]], bias: null, target: [
+      2], ce_weight: null, eps: 0, ignore_index: -100, reduction: sum, upstream: 1}, expected: {outcome: invalid_input}}
+signature:
+  inputs: ['hidden [N, H]', 'weight [V, H]', 'bias [V] or null', 'target [N] class indices or ignore_index',
+    'ce_weight [V] or null', 'eps in [0, 1]', 'ignore_index', 'reduction sum / mean / none', 'upstream - scalar for sum /
+      mean, [N] for none']
+  pre_state: []
+  post_state: []
+  observation_unit: loss and the complete VJP (hidden, weight, bias)
+domain:
+  valid:
+  - finite rational hidden, weight, bias of consistent shapes, V >= 2
+  - targets in [0, V) or equal to ignore_index; non-negative class weights; eps in [0, 1]
+  domain_undefined:
+  - mean with zero class-weight mass (e.g. every row ignored)
+  invalid_input:
+  - mismatched shapes, out-of-range targets, upstream of the wrong shape, eps outside [0, 1]
+  - profile conditions (eps = 0 for index_unsmoothed, no weights for index_smoothing_unweighted, weights for R_A)
+  unsupported:
+  - softcap, z-loss, token scaling, V = 1, negative class weights
+mutation_requirements:
+- {id: FL.M1, misreading: mean by N instead of the class-weight mass, witnesses: [FL.E2]}
+- {id: FL.M2, misreading: 'weighted smoothing as R_B (target-class weight on every term)', witnesses: [FL.E5]}
+- {id: FL.M3, misreading: 'none: every row scaled by the first upstream element (Liger 0.7.0 element_mul backward)',
+  witnesses: [FL.E3]}
+- {id: FL.M4, misreading: 'none: upstream ignored', witnesses: [FL.E3]}
+- {id: FL.M5, misreading: ignored rows contribute a gradient, witnesses: [FL.E2]}
+- {id: FL.M6, misreading: 'grad hidden = G W^T instead of G W', witnesses: [FL.E7]}
+- {id: FL.M7, misreading: grad weight without the upstream factor, witnesses: [FL.E4]}
+- {id: FL.M8, misreading: grad bias from the first row only, witnesses: [FL.E2]}
+nonclaims:
+- Chunking, accumulation dtype and fusion are evaluation-order choices (numerical question K - G).
+- Agreement with Liger and Unsloth is agreement with reference programs; the definition rests on the torch pages.
+changes: []

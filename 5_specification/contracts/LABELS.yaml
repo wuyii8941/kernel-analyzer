@@ -1,0 +1,92 @@
+schema_version: '1.2'
+id: LABELS
+role: LABELS
+title: Causal language-model label shift and valid-label counting (num_items_in_batch)
+review:
+  status: drafted
+  author: Claude (spec v3 author, group E2_program), 2026-10-17
+  date: '2026-10-17'
+  scope: Label shift of the transformers causal-LM loss (reference program) and the count of valid labels used as the
+    window denominator (task decision); awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [transformers ForCausalLMLoss label shift, transformers Trainer num_items_in_batch]
+profiles:
+  causal_shift:
+    meaning: 'Each sequence''s labels are shifted left by one and the last position gets ignore_index (position t is
+      trained on label t+1); the count is the number of shifted labels different from ignore_index over the whole window.'
+    task_choice_required: true
+outputs:
+  shifted:
+    shape: same nesting as labels
+    kind: discrete
+    guarantee: exact
+  count:
+    shape: integer
+    kind: discrete
+    guarantee: exact
+comparison:
+  input_binding: Label ids are the exact integers received; ignore_index is an input.
+  quality: Exact.
+  test_evidence: Exact equality.
+  error_handling: A negative label other than ignore_index (or one at or above vocab_size when given) is invalid_input.
+decisions:
+- id: LB.SHIFT
+  status: drafted
+  statement: 'The shift is the one of the transformers 4.57.3 causal-LM loss (labels padded right with ignore_index,
+    then labels[..., 1:]); the model documentation states only that labels equal to -100 are ignored. Claims on the shift
+    are "consistent with the reference program". Alternatives: labels already shifted by the caller (no shift) - a
+    different interface (shift_labels given), outside this profile; shift to the right - contradicts next-token
+    prediction.'
+  basis: [HF_LOSS_SRC.SHIFT, HF_LLAMA_DOC.LABELS]
+- id: LB.COUNT
+  status: needs_binding
+  statement: 'Task decision (as RM.TASK / ACC.TASK): the denominator of the window loss is the number of valid shifted
+    labels in the whole window (all micro-batches, all ranks), the num_items_in_batch of the reference program. Counting
+    before the shift, counting padding, or counting per micro-batch define other objectives. A window may have count 0
+    (its token mean is then undefined - ACCUM), which is a value here.'
+  basis: [HF_LOSS_SRC.NUM_ITEMS, HF.TOKEN_MEAN, PCE.IGNORE]
+clauses:
+- {id: LB.C1, basis: [LB.SHIFT], statement: 'shifted[r] = labels[r][1:] + [ignore_index]', observes: [shifted], evidence_kind: definition}
+- {id: LB.C2, basis: [LB.COUNT], statement: 'count = number of shifted labels != ignore_index over all sequences', observes: [
+    count], evidence_kind: definition}
+- {id: LB.C3, basis: [HF_LLAMA_DOC.LABELS], statement: 'labels are class indices or ignore_index; ignore_index is an input,
+    not hard-coded', observes: [shifted, count], evidence_kind: definition}
+examples:
+- {id: LB.E1, profile: causal_shift, clauses: [LB.C1, LB.C2], input: {labels: [[5, 6, 7]]}, expected: {outcome: value, fields: {
+      shifted: [[6, 7, -100]], count: 2}}}
+- {id: LB.E2, profile: causal_shift, clauses: [LB.C1, LB.C2], note: padded batch (collate pads labels with -100), input: {
+    labels: [[5, 6, -100, -100], [1, 2, 3, 4]]}, expected: {outcome: value, fields: {shifted: [[6, -100, -100, -100], [2, 3, 4,
+          -100]], count: 4}}}
+- {id: LB.E3, profile: causal_shift, clauses: [LB.C1, LB.C2], note: a length-1 sequence has no label after the shift (tested
+    empty_microbatch), input: {labels: [[9], [4, 5]]}, expected: {outcome: value, fields: {shifted: [[-100], [5, -100]], count: 1}}}
+- {id: LB.E4, profile: causal_shift, clauses: [LB.C1, LB.C3], input: {labels: [[3, -1, 4]], ignore_index: -1}, expected: {
+    outcome: value, fields: {shifted: [[-1, 4, -1]], count: 1}}}
+- {id: LB.E5, profile: causal_shift, clauses: [LB.C2], input: {labels: [[7]]}, expected: {outcome: value, fields: {shifted: [
+        [-100]], count: 0}}}
+- {id: LB.E6, profile: causal_shift, clauses: [LB.C1, LB.C2], note: tested unequal lengths 3 and 4, input: {labels: [[1, 2,
+        3], [1, 2, 3, 4]]}, expected: {outcome: value, fields: {shifted: [[2, 3, -100], [2, 3, 4, -100]], count: 5}}}
+- {id: LB.N1, profile: causal_shift, clauses: [LB.C3], input: {labels: [[1, -5, 2]]}, expected: {outcome: invalid_input}}
+signature:
+  inputs: ['labels: list of label-id lists, one per sequence of the window', 'ignore_index (default -100)', 'vocab_size
+      (optional)']
+  pre_state: []
+  post_state: []
+  observation_unit: the labels of one accumulation window
+domain:
+  valid: [integer labels that are class indices or ignore_index]
+  domain_undefined: []
+  invalid_input: [negative labels other than ignore_index, labels >= vocab_size when vocab_size is given]
+  unsupported: [caller-provided shift_labels, packed sequences with position_ids (PACK)]
+mutation_requirements:
+- {id: LB.M1, misreading: labels not shifted, witnesses: [LB.E1, LB.E6]}
+- {id: LB.M2, misreading: labels shifted to the right, witnesses: [LB.E1]}
+- {id: LB.M3, misreading: count taken before the shift, witnesses: [LB.E2]}
+- {id: LB.M4, misreading: count includes ignored positions, witnesses: [LB.E2]}
+- {id: LB.M5, misreading: ignore_index hard-coded to -100, witnesses: [LB.E4]}
+nonclaims:
+- The loss itself is CE; the window normalisation is ACCUM / RANKMEAN.
+changes: []

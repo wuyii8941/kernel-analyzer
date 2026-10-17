@@ -1538,6 +1538,8 @@ def _pi():
 
 
 def gelu_backward(grad, a, approximate="none"):
+    if approximate not in ("none", "tanh"):
+        raise Invalid(f"gelu approximate={approximate!r}")
     g, a = _floatify(grad), _floatify(a)
     if approximate == "none":
         def d(x):

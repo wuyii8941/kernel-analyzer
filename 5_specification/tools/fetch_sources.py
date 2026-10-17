@@ -145,9 +145,11 @@ def main():
         with locked_sources() as S:
             for e in todo:
                 if e["sid"] in S:
-                    for k in ("items", "title", "kind", "version", "identity", "note"):
+                    for k in ("title", "kind", "version", "identity", "note"):
                         if k in e:
                             S[e["sid"]][k] = e[k]
+                    if "items" in e:                      # merge, so that authors updating one source do not drop items
+                        S[e["sid"]].setdefault("items", {}).update(e["items"])
                     print(f"{e['sid']}: items updated")
                 else:
                     print(f"{e['sid']}: not registered (fetch it first)")

@@ -1,0 +1,98 @@
+schema_version: '1.2'
+id: SPARSEMAX
+role: SPARSEMAX
+title: Sparsemax (Martins and Astudillo 2016) along a dimension, with its VJP
+review:
+  status: drafted
+  author: Claude (spec v3 author, group C_act_norm_loss), 2026-10-17
+  date: '2026-10-17'
+  scope: The Euclidean projection onto the simplex and its support Jacobian; awaiting a review by someone who did not
+    write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [liger.LigerSparsemaxFunction, sparsemax]
+profiles:
+  paper:
+    meaning: sparsemax(z) = argmin over the simplex of ||p - z||^2 (Prop. 1, tau(z)); VJP J v = s (.) (v - mean_S(v))
+      with S = {j - p_j > 0} (Eq. 14), also at splitting points (decision SM.SPLIT).
+    task_choice_required: false
+outputs:
+  y:
+    shape: shape of x
+    guarantee: exact
+  grad:
+    shape: shape of x (VJP against the explicit upstream)
+    guarantee: exact
+comparison:
+  input_binding: Values are the exactly received rationals; the result is piecewise linear and exact.
+  quality: Exact rational equality.
+  test_evidence: Hand computation of tau and of the support VJP.
+  error_handling: dim out of range and shape mismatches are invalid_input.
+decisions:
+- id: SM.DEF
+  status: drafted
+  statement: sparsemax along dim is the paper's projection applied to every 1-D slice along dim (Liger transposes dim
+    to the last axis and works row by row); p_i = [z_i - tau]_+ with tau = (sum of the k(z) largest values - 1) / k(z),
+    k(z) = max{k - 1 + k z_(k) > sum_{j<=k} z_(j)}.
+  basis: [DIV_SPARSEMAX_PAPER.DEF, DIV_SPARSEMAX_PAPER.PROP1, DIV_LIGER_SPARSEMAX.FWD]
+- id: SM.VJP
+  status: drafted
+  statement: grad = s (.) (g - g_hat), g_hat the mean of the upstream over the support S, s its indicator (Eq. 14 of
+    the paper; Liger's backward computes the same with S = {output > 0}).
+  basis: [DIV_SPARSEMAX_PAPER.JAC, DIV_LIGER_SPARSEMAX.BWD]
+- id: SM.SPLIT
+  status: drafted
+  statement: At a splitting point (some z_j = tau, so p_j = 0 while j is on the edge of the support) sparsemax is not
+    differentiable and the paper allows any matrix of the generalized Clarke Jacobian. The profile takes the paper's
+    formula with S = {j - p_j > 0}, which is one element of that set and what Liger computes. Alternatives - another
+    Clarke element (e.g. counting the edge index in S, mutant SM.M5) - are legal readings of the paper but not offered
+    as a profile, since the Clarke set is a convex hull, not a finite allowed set, and no tested condition targets ties
+    (Gaussian inputs).
+  basis: [DIV_SPARSEMAX_PAPER.JAC]
+clauses:
+- {id: SM.C1, basis: [SM.DEF], statement: 'y = [z - tau(z)]_+ per slice along dim; sums to 1', observes: [y],
+  evidence_kind: definition}
+- {id: SM.C2, basis: [SM.VJP], statement: 'grad = s (.) (g - mean_S g)', observes: [grad], evidence_kind: derived}
+- {id: SM.C3, basis: [SM.SPLIT], statement: 'at splitting points S = {p > 0}', observes: [grad], evidence_kind: definition}
+- {id: SM.C4, basis: [SM.DEF], statement: 'dim out of range or a mismatched upstream is invalid_input', observes: [y],
+  evidence_kind: definition}
+examples:
+- {id: SM.E1, profile: paper, clauses: [SM.C1, SM.C2], input: {x: [['1/2', 0, -1]], dim: -1, upstream: [[1, 2, 7]]},
+  expected: {outcome: value, fields: {y: [['3/4', '1/4', 0]], grad: [['-1/2', '1/2', 0]]}}, note: 'tau = -1/4, support
+    {0, 1}'}
+- {id: SM.E2, profile: paper, clauses: [SM.C1, SM.C2], input: {x: [['1/2', 2], [0, 0]], dim: 0, upstream: [[1, 1], [0, 2]]},
+  expected: {outcome: value, fields: {y: [['3/4', 1], ['1/4', 0]], grad: [['1/2', 0], ['-1/2', 0]]}}}
+- {id: SM.E3, profile: paper, clauses: [SM.C1, SM.C2], input: {x: [[1, 1, 1, 1]], dim: 1, upstream: [[1, 0, 0, 0]]},
+  expected: {outcome: value, fields: {y: [['1/4', '1/4', '1/4', '1/4']], grad: [['3/4', '-1/4', '-1/4', '-1/4']]}}}
+- {id: SM.E4, profile: paper, clauses: [SM.C1, SM.C3], input: {x: [[1, 0]], dim: -1, upstream: [[1, 2]]}, expected: {
+    outcome: value, fields: {y: [[1, 0]], grad: [[0, 0]]}}, note: 'splitting point - tau = 0 = z_2'}
+- {id: SM.E5, profile: paper, clauses: [SM.C1, SM.C2], input: {x: [[1000000, -1000000], [2, 0]], dim: -1, upstream: [[3,
+        5], [1, 1]]}, expected: {outcome: value, fields: {y: [[1, 0], [1, 0]], grad: [[0, 0], [0, 0]]}}}
+- {id: SM.E6, profile: paper, clauses: [SM.C4], input: {x: [[1, 0]], dim: 2, upstream: [[1, 2]]}, expected: {outcome: invalid_input}}
+signature:
+  inputs: ['x: nested list of rationals', 'dim: the reduction dimension (negative counts from the end)', 'upstream: shape
+      of x']
+  pre_state: []
+  post_state: []
+  observation_unit: y and the VJP
+domain:
+  valid:
+  - finite rational values of rank >= 1
+  domain_undefined: []
+  invalid_input:
+  - dim out of range, upstream of another shape, ragged input
+  unsupported:
+  - infinite or NaN values
+mutation_requirements:
+- {id: SM.M1, misreading: softmax instead of sparsemax, witnesses: [SM.E1]}
+- {id: SM.M2, misreading: tau divided by K instead of the support size, witnesses: [SM.E1]}
+- {id: SM.M3, misreading: VJP without the mean subtraction, witnesses: [SM.E1]}
+- {id: SM.M4, misreading: VJP mean over all K entries, witnesses: [SM.E1]}
+- {id: SM.M5, misreading: 'support taken as z >= tau (edge index included at a splitting point)', witnesses: [SM.E4]}
+- {id: SM.M6, misreading: 'shift without clipping at 0 (z - tau)', witnesses: [SM.E1]}
+nonclaims:
+- Rounding of the device computation is the numerical question K - G.
+changes: []

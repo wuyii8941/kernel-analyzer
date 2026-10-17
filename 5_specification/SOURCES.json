@@ -2388,7 +2388,9 @@
     "kind": "reference_program",
     "version": "v0.7.0",
     "items": {
-      "PAGE": "Liger sparsemax kernel source"
+      "PAGE": "Liger sparsemax source",
+      "FWD": "LigerSparsemaxFunction.forward(x, dim): along dim, sort descending, cumulative sums, support = z_sorted > (cumsum - 1) / r, k = |support|, tau = (sum of supported sorted values - 1) / k, y = max(x - tau, 0).",
+      "BWD": "backward: supp = (output > 0); gi = go - sum(go over supp) / |supp| on supp, 0 elsewhere."
     },
     "snapshot": "sources/DIV_LIGER_SPARSEMAX.py.gz",
     "snapshot_sha256": "01e59ed718241c91442964e3dafbbfd218fb2f3b46be3a97029b3e413a426345",
@@ -2402,7 +2404,9 @@
     "kind": "reference_program",
     "version": "v0.7.0",
     "items": {
-      "PAGE": "Liger DyT kernel source"
+      "PAGE": "Liger DyT source",
+      "FWD": "_dyt_fwd_kernel: y = tanh(alpha x) * gamma (+ beta when HAVE_BETA), alpha a one-element tensor, gamma / beta per column of the last dimension N; LigerDyTFunction.forward(x, alpha, gamma, beta).",
+      "BWD": "_dyt_bwd_kernel: db = sum of dy, dg = sum of dy tanh(alpha x) over rows; tmp = (1 - tanh^2(alpha x)) dy gamma; da = sum of x tmp; dx = alpha tmp."
     },
     "snapshot": "sources/DIV_LIGER_DYT.py.gz",
     "snapshot_sha256": "3968d8e89e9d1c57639b625916ebe41d23a58d9aba98bdd786b759490d8250bc",
@@ -2416,7 +2420,7 @@
     "kind": "reference_program",
     "version": "v0.7.0",
     "items": {
-      "PAGE": "Liger DyT module"
+      "PAGE": "LigerDyT(hidden_size, beta=True, init_alpha=0.5): alpha = ones(1) * init_alpha, gamma = ones(hidden_size), beta = zeros(hidden_size) or None when beta=False."
     },
     "snapshot": "sources/DIV_LIGER_DYT_MOD.py.gz",
     "snapshot_sha256": "46783e319412a6b9c619616da6660ab7b3085f6eaf15461bab9aee3383231fe5",
@@ -2429,7 +2433,7 @@
     "title": "Martins and Astudillo 2016, From Softmax to Sparsemax (arXiv abstract page)",
     "kind": "paper",
     "items": {
-      "PAGE": "abstract"
+      "PAGE": "Abstract page of arXiv:1602.02068 (Martins and Astudillo 2016): sparsemax, an activation similar to softmax that outputs sparse probabilities; its Jacobian is derived for efficient backpropagation."
     },
     "snapshot": "sources/DIV_SPARSEMAX_ABS.txt.gz",
     "snapshot_sha256": "ab05509b314cb38c6a1c6bf32301d6eeb3d66b045541fe1ea246a88d1d7ed587",
@@ -2442,7 +2446,10 @@
     "title": "Martins and Astudillo 2016, From Softmax to Sparsemax (ar5iv HTML rendering of arXiv 1602.02068)",
     "kind": "paper",
     "items": {
-      "PAGE": "full text"
+      "PAGE": "full text (ar5iv rendering)",
+      "DEF": "sparsemax(z) := argmin_{p in simplex Delta^{K-1}} ||p - z||^2 (Eq. 2).",
+      "PROP1": "Proposition 1: sparsemax_i(z) = [z_i - tau(z)]_+, tau the unique function with sum_j [z_j - tau(z)]_+ = 1; tau(z) = (sum_{j <= k(z)} z_(j) - 1) / k(z) = (sum_{j in S(z)} z_j - 1) / |S(z)|, k(z) = max{k : 1 + k z_(k) > sum_{j <= k} z_(j)}, z_(1) >= z_(2) >= ... sorted, S(z) = {j : sparsemax_j(z) > 0} the support (Algorithm 1).",
+      "JAC": "sparsemax is differentiable except at splitting points where S(z) changes; there an arbitrary matrix of the generalized Clarke Jacobian may be taken. Eq. 11-12: d sparsemax_i / d z_j = delta_ij - 1/|S(z)| if i, j in S(z), else 0; J = Diag(s) - s s^T / |S(z)|; Eq. 14: J v = s (.) (v - v_hat 1), v_hat = sum_{j in S(z)} v_j / |S(z)|."
     },
     "snapshot": "sources/DIV_SPARSEMAX_PAPER.txt.gz",
     "snapshot_sha256": "37839bc9c64c0928ae799c3ad8e9b55bf6d54fbe1731930c0d0b291c47d1a650",
@@ -2455,7 +2462,7 @@
     "title": "Zhu et al. 2025, Transformers without Normalization (arXiv abstract page)",
     "kind": "paper",
     "items": {
-      "PAGE": "abstract"
+      "PAGE": "Abstract page of arXiv:2503.10622 (Transformers without Normalization): Dynamic Tanh (DyT), the element-wise operation DyT(x) = tanh(alpha x), as a drop-in replacement for normalization layers."
     },
     "snapshot": "sources/DIV_DYT_ABS.txt.gz",
     "snapshot_sha256": "9df32c4204ed83f9421381e8a6df27a0c2f7940e1f549d62f8f4edd9b29f2405",
@@ -2469,7 +2476,8 @@
     "kind": "paper",
     "version": "v2",
     "items": {
-      "PAGE": "full text"
+      "PAGE": "full text (arXiv HTML v2)",
+      "DEF": "DyT(x) = gamma * tanh(alpha x) + beta, alpha a learnable scalar, gamma and beta learnable per-channel vectors of shape (C,) (Eq. 2, pseudocode: alpha = ones(1) * init_alpha, gamma = ones(C), beta = zeros(C)); alpha initialised to 0.5 by default."
     },
     "snapshot": "sources/DIV_DYT_PAPER.txt.gz",
     "snapshot_sha256": "596963ce6f4991eb78666c665467bcac4ad1b0350abd52d65a325b3a3f02de6e",
@@ -2868,7 +2876,10 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "checkpoint page"
+      "DEF": "Activation checkpointing trades compute for memory: tensors produced in the passed function are not kept alive until the backward pass; the passed args are kept and the unsaved tensors are recomputed by re-invoking the function in the backward pass as needed for gradient computation; it can be applied to any part of a model.",
+      "WARN": "Warning: if the function invocation during the backward pass differs from the forward pass (e.g. due to a global variable), the checkpointed version may not be equivalent, potentially raising an error or leading to silently incorrect gradients.",
+      "RNG": "By default the RNG state is stashed and restored so that checkpointed passes using RNG (e.g. dropout) have deterministic output compared to non-checkpointed passes; preserve_rng_state=False omits this.",
+      "REENTRANT": "Reentrant variant (use_reentrant=True): at least one input and output must have requires_grad=True, otherwise the checkpointed part of the model will not have gradients; the non-reentrant version does not have this requirement; reentrant does not support detached tensors inside the region (backward raises); use_reentrant=False is recommended and should be passed explicitly."
     },
     "snapshot": "sources/T_CHECKPOINT.txt.gz",
     "snapshot_sha256": "05374b0d047f1acaa22a23ffc69264cc105c0b6481cd17d86b3d0b4ed93944c6",
@@ -2896,7 +2907,7 @@
     "kind": "versioned_document",
     "version": "transformers 4.57.3",
     "items": {
-      "PAGE": "HF llama page"
+      "LABELS": "LlamaForCausalLM labels (batch_size, sequence_length): labels for computing the language modeling loss; indices should be in [0, ..., config.vocab_size] or -100; tokens with indices set to -100 are ignored (masked), the loss is only computed for the tokens with labels in [0, ..., config.vocab_size]."
     },
     "snapshot": "sources/HF_LLAMA_DOC.txt.gz",
     "snapshot_sha256": "241926054a796c4578c04fa7fa22bcd0f05b65ccd3da401996e49a335042b21d",
@@ -2910,7 +2921,7 @@
     "kind": "versioned_document",
     "version": "transformers 4.57.3",
     "items": {
-      "PAGE": "HF model page"
+      "GC": "PreTrainedModel.gradient_checkpointing_enable(gradient_checkpointing_kwargs=None): activates gradient checkpointing for the current model; the kwargs are passed along to torch.utils.checkpoint.checkpoint; the __call__ of the modules is passed so that hooks are attached."
     },
     "snapshot": "sources/HF_MODEL_DOC.txt.gz",
     "snapshot_sha256": "810f5d364942220e6c9dd4786608941174cd84d4e389af0ac49b7774c45f641c",
@@ -3041,7 +3052,8 @@
     "kind": "reference_program",
     "version": "transformers 4.57.3",
     "items": {
-      "PAGE": "HF loss source"
+      "SHIFT": "ForCausalLMLoss: if shift_labels is not given, labels are padded on the right with ignore_index (pad (0, 1)) and shift_labels = labels[..., 1:] (so position t is trained on label t+1 and the last position is ignored); logits and shifted labels are flattened.",
+      "NUM_ITEMS": "fixed_cross_entropy: with num_items_in_batch the loss is cross_entropy(..., ignore_index, reduction='sum') / num_items_in_batch, otherwise reduction='mean'."
     },
     "snapshot": "sources/HF_LOSS_SRC.py.gz",
     "snapshot_sha256": "fa65f18b3167f45989d7a8ba86432a41d322338f9789cc89b08d5d7f20f110b7",

@@ -1,0 +1,106 @@
+schema_version: '1.2'
+id: DYT
+role: DYT
+title: Dynamic Tanh DyT(x) = gamma * tanh(alpha x) + beta (arXiv 2503.10622) with its VJP
+review:
+  status: drafted
+  author: Claude (spec v3 author, group C_act_norm_loss), 2026-10-17
+  date: '2026-10-17'
+  scope: Forward value and VJP w.r.t. x, alpha, gamma, beta; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [liger.LigerDyTFunction, liger.LigerDyT, DyT]
+profiles:
+  paper:
+    meaning: DyT(x) = gamma * tanh(alpha x) + beta, alpha a scalar (one-element tensor), gamma and beta per channel of
+      the last dimension, beta optional (Liger's beta=False).
+    task_choice_required: false
+outputs:
+  y:
+    shape: shape of x
+    guarantee: rigorous_enclosure
+  grad:
+    shape: 'dict: x (shape of x), alpha [1], gamma [C], beta [C] when given'
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Values are the exactly received rationals.
+  quality: No tolerance; rigorous enclosures of tanh.
+  test_evidence: Hand derivation (d tanh(u) = 1 - tanh(u)^2).
+  error_handling: Shape violations are invalid_input.
+decisions:
+- id: DY.DEF
+  status: drafted
+  statement: y = gamma_c tanh(alpha x) + beta_c with c the index in the last dimension; alpha is a learnable scalar
+    (stored as a one-element tensor in the paper's pseudocode and in Liger); beta may be absent (Liger's beta=False),
+    then y = gamma_c tanh(alpha x). The abstract's DyT(x) = tanh(alpha x) is the operation without the per-channel
+    affine part that the paper's Eq. 2 includes.
+  basis: [DIV_DYT_PAPER.DEF, DIV_DYT_ABS.PAGE, DIV_LIGER_DYT.FWD, DIV_LIGER_DYT_MOD.PAGE]
+- id: DY.VJP
+  status: drafted
+  statement: 'With t = tanh(alpha x) and upstream g - dx = alpha gamma_c (1 - t^2) g; dalpha = sum over all elements of
+    x gamma_c (1 - t^2) g; dgamma_c = sum over the leading dims of t g; dbeta_c = sum of g. Derived by
+    differentiation; Liger''s backward computes the same.'
+  basis: [DIV_DYT_PAPER.DEF, DIV_LIGER_DYT.BWD]
+clauses:
+- {id: DY.C1, basis: [DY.DEF], statement: 'y = gamma tanh(alpha x) + beta (beta optional)', observes: [y],
+  evidence_kind: definition}
+- {id: DY.C2, basis: [DY.VJP], statement: 'VJP for x, alpha, gamma, beta', observes: [grad], evidence_kind: derived}
+- {id: DY.C3, basis: [DY.DEF], statement: 'alpha not one element, gamma / beta not of length C are invalid_input',
+  observes: [y], evidence_kind: definition}
+examples:
+- id: DY.E1
+  profile: paper
+  clauses: [DY.C1, DY.C2]
+  input: {x: [[0, 1]], alpha: ['1/2'], gamma: [2, 3], beta: [1, -1], upstream: [[1, 1]]}
+  expected:
+    outcome: value
+    fields:
+      y: [[1, 3*tanh(1/2)-1]]
+      grad: {x: [[1, 3*(1-tanh(1/2)*tanh(1/2))/2]], alpha: [3*(1-tanh(1/2)*tanh(1/2))], gamma: [0, tanh(1/2)], beta: [1,
+          1]}
+- id: DY.E2
+  profile: paper
+  clauses: [DY.C1, DY.C2]
+  input: {x: [[1], [-2]], alpha: [1], gamma: [1], beta: [0], upstream: [[1], [2]]}
+  expected:
+    outcome: value
+    fields:
+      y: [[tanh(1)], [-tanh(2)]]
+      grad: {x: [[1-tanh(1)*tanh(1)], [2*(1-tanh(2)*tanh(2))]], alpha: [1-tanh(1)*tanh(1)-4*(1-tanh(2)*tanh(2))], gamma: [
+          tanh(1)-2*tanh(2)], beta: [3]}
+- id: DY.E3
+  profile: paper
+  clauses: [DY.C1, DY.C2]
+  input: {x: [[2]], alpha: ['1/2'], gamma: [3], beta: null, upstream: [[5]]}
+  expected:
+    outcome: value
+    fields:
+      y: [[3*tanh(1)]]
+      grad: {x: [[15*(1-tanh(1)*tanh(1))/2]], alpha: [30*(1-tanh(1)*tanh(1))], gamma: [5*tanh(1)]}
+- {id: DY.E4, profile: paper, clauses: [DY.C3], input: {x: [[1, 2]], alpha: ['1/2'], gamma: [1], beta: null, upstream: [[1,
+        1]]}, expected: {outcome: invalid_input}}
+signature:
+  inputs: ['x (*, C)', 'alpha [a]', 'gamma [C]', 'beta [C] or null', 'upstream (shape of x)']
+  pre_state: []
+  post_state: []
+  observation_unit: y and the complete VJP
+domain:
+  valid:
+  - finite rational values; gamma, beta of length C
+  domain_undefined: []
+  invalid_input:
+  - alpha not a one-element list, parameter lengths not C, upstream of another shape
+  unsupported:
+  - infinite or NaN values
+mutation_requirements:
+- {id: DY.M1, misreading: 'alpha applied outside the tanh (alpha tanh(x))', witnesses: [DY.E1]}
+- {id: DY.M2, misreading: dx without the factor alpha, witnesses: [DY.E1]}
+- {id: DY.M3, misreading: dalpha without the factor x, witnesses: [DY.E2]}
+- {id: DY.M4, misreading: dgamma not summed over rows, witnesses: [DY.E2]}
+- {id: DY.M5, misreading: dbeta not summed over rows, witnesses: [DY.E2]}
+nonclaims:
+- Rounding is the numerical question K - G; agreement with Liger is agreement with a reference program.
+changes: []

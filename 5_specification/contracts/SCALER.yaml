@@ -1,0 +1,117 @@
+schema_version: '1.2'
+id: SCALER
+role: SCALER
+title: torch.amp.GradScaler iteration - unscale, inf/NaN check, step skipping and scale update (state machine)
+review:
+  status: drafted
+  author: Claude (spec v3 author, group E2_program), 2026-10-17
+  date: '2026-10-17'
+  scope: One scaler iteration (unscale_, step decision, update) as documented, with the update arithmetic of the
+    reference program; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+covers: [torch.amp.GradScaler.unscale_, torch.amp.GradScaler.step, torch.amp.GradScaler.update, torch.amp.GradScaler.scale]
+profiles:
+  real:
+    meaning: Exact scale arithmetic on the received gradients of the scaled loss; inf and NaN gradient elements are
+      admitted because the documented step decision depends on them.
+    task_choice_required: false
+outputs:
+  unscaled:
+    shape: 'the gradients divided by the scale (same structure as grads); a NaN element is written {set: []}'
+    guarantee: exact
+  found_inf:
+    kind: boolean
+    guarantee: exact
+  stepped:
+    kind: boolean
+    guarantee: exact
+  scale:
+    shape: scalar, after update()
+    guarantee: exact
+  growth_tracker:
+    shape: integer, after update()
+    kind: discrete
+    guarantee: exact
+comparison:
+  input_binding: The scale, factors and gradients are the exact values received (scaled gradients as stored).
+  quality: 'Exact. An unscaled element that is NaN (NaN divided by the scale, IEEE 754 6.2) is written {set: []}.'
+  test_evidence: Exact equality.
+  error_handling: A growth tracker at or above growth_interval is an inconsistent pre-state (invalid_input); scale 0 is
+    domain_undefined.
+decisions:
+- id: SCL.UPDATE
+  status: drafted
+  statement: 'Update rule: a skipped iteration multiplies the scale by backoff_factor and resets the count of consecutive
+    unskipped iterations to 0; an unskipped iteration increments it, and when it reaches growth_interval the scale is
+    multiplied by growth_factor and the count restarts at 0. The documents say "if growth_interval unskipped iterations
+    occur consecutively"; whether the count restarts after a growth is fixed by the reference program (the Python
+    version of _amp_update_scale_). Alternatives: grow at every iteration once the count has reached growth_interval
+    (count not reset); grow when the count before the increment equals growth_interval (one iteration later). Claim on
+    the restart point: consistent with the reference program.'
+  basis: [TS_GRAD_SCALER.DOC, TS_GRAD_SCALER.UPDATE, TS_SHARDED_SCALER.UPDATE_RULE]
+- id: SCL.FOUND_INF
+  status: drafted
+  statement: 'found_inf is true iff any gradient element handled by the optimizer at this unscale is +inf, -inf or NaN
+    (earlier AMP-A1: all parameters of the optimizer at that unscale_ call). The gradients are unscaled in place whether
+    or not the step is skipped (inf / S = inf; NaN stays NaN). enabled=False: no unscaling, the step always runs, the
+    scale and the tracker are unchanged.'
+  basis: [TS_GRAD_SCALER.UNSCALE, T_AMP_EXAMPLES.SKIP, TS_GRAD_SCALER.DOC, IEEE754.NAN_PROP]
+clauses:
+- {id: SCL.C1, basis: [T_AMP.SCALING, TS_GRAD_SCALER.UNSCALE], statement: 'unscaled = grads / scale (exact)', observes: [
+    unscaled], evidence_kind: definition}
+- {id: SCL.C2, basis: [SCL.FOUND_INF, T_AMP_EXAMPLES.SKIP], statement: 'found_inf iff some element is inf or NaN; the
+    optimizer step runs iff not found_inf', observes: [found_inf, stepped], evidence_kind: definition}
+- {id: SCL.C3, basis: [SCL.UPDATE], statement: 'found_inf: scale *= backoff, tracker = 0; else tracker + 1, and on
+    reaching growth_interval scale *= growth, tracker = 0', observes: [scale, growth_tracker], evidence_kind: definition}
+- {id: SCL.C4, basis: [TS_GRAD_SCALER.DOC], statement: 'enabled=False: step runs, nothing else changes', observes: [unscaled,
+    stepped, scale], evidence_kind: definition}
+examples:
+- {id: SCL.E1, profile: real, clauses: [SCL.C1, SCL.C2, SCL.C3], input: {scale: 65536, growth_tracker: 0, grads: [[65536,
+        -32768], [16384]]}, expected: {outcome: value, fields: {unscaled: [[1, '-1/2'], ['1/4']], found_inf: false, stepped: true,
+      scale: 65536, growth_tracker: 1}}}
+- {id: SCL.E2, profile: real, clauses: [SCL.C3], input: {scale: 8, growth_tracker: 2, growth_interval: 3, grads: [[8]]},
+  expected: {outcome: value, fields: {unscaled: [[1]], found_inf: false, stepped: true, scale: 16, growth_tracker: 0}}}
+- {id: SCL.E3, profile: real, clauses: [SCL.C1, SCL.C2, SCL.C3], input: {scale: 65536, growth_tracker: 5, grads: [['inf',
+        2]]}, expected: {outcome: value, fields: {unscaled: [['inf', '1/32768']], found_inf: true, stepped: false, scale: 32768,
+      growth_tracker: 0}}}
+- {id: SCL.E4, profile: real, clauses: [SCL.C1, SCL.C2, SCL.C3], input: {scale: 4, growth_tracker: 0, grads: [['nan', 4]]},
+  expected: {outcome: value, fields: {unscaled: [[{set: []}, 1]], found_inf: true, stepped: false, scale: 2, growth_tracker: 0}}}
+- {id: SCL.E5, profile: real, clauses: [SCL.C2, SCL.C3], input: {scale: 3, backoff_factor: '1/3', growth_tracker: 1, grads: [[
+        '-inf']]}, expected: {outcome: value, fields: {unscaled: [['-inf']], found_inf: true, stepped: false, scale: 1, growth_tracker: 0}}}
+- {id: SCL.E6, profile: real, clauses: [SCL.C4], input: {scale: 65536, growth_tracker: 7, enabled: false, grads: [['inf', 2]]},
+  expected: {outcome: value, fields: {unscaled: [['inf', 2]], found_inf: false, stepped: true, scale: 65536, growth_tracker: 7}}}
+- {id: SCL.E7, profile: real, clauses: [SCL.C3], input: {scale: 8, growth_tracker: 0, growth_interval: 1, grads: [[2]]},
+  expected: {outcome: value, fields: {unscaled: [['1/4']], found_inf: false, stepped: true, scale: 16, growth_tracker: 0}}}
+- {id: SCL.N1, profile: real, clauses: [SCL.C3], input: {scale: 8, growth_tracker: 3, growth_interval: 3, grads: [[1]]},
+  expected: {outcome: invalid_input}}
+- {id: SCL.N2, profile: real, clauses: [SCL.C1], input: {scale: 0, grads: [[1]]}, expected: {outcome: domain_undefined}}
+signature:
+  inputs: ['grads: list of gradient tensors of the scaled loss (elements may be inf / nan)', 'pre-state: scale (default
+      65536), growth_tracker (default 0)', 'growth_factor (2), backoff_factor (1/2), growth_interval (2000), enabled']
+  pre_state: [scale, growth_tracker]
+  post_state: [scale, growth_tracker, unscaled gradients]
+  observation_unit: one iteration unscale_ -> step decision -> update()
+domain:
+  valid: [nonzero scale; 0 <= growth_tracker < growth_interval; growth_interval >= 1]
+  domain_undefined: [scale 0]
+  invalid_input: [growth_tracker >= growth_interval]
+  unsupported: [update(new_scale) with a manual scale, several optimizers per iteration, sparse gradients]
+mutation_requirements:
+- {id: SCL.M1, misreading: the optimizer step runs although an inf was found, witnesses: [SCL.E3]}
+- {id: SCL.M2, misreading: only infinities are checked (NaN not detected), witnesses: [SCL.E4]}
+- {id: SCL.M3, misreading: the scale is not backed off after a skipped step, witnesses: [SCL.E3]}
+- {id: SCL.M4, misreading: the growth tracker is not reset by a skipped step, witnesses: [SCL.E3]}
+- {id: SCL.M5, misreading: the tracker is not reset after a growth, witnesses: [SCL.E2]}
+- {id: SCL.M6, misreading: 'growth one iteration late (when the tracker before the increment equals growth_interval)',
+  witnesses: [SCL.E2, SCL.E7]}
+- {id: SCL.M7, misreading: unscale multiplies by the scale, witnesses: [SCL.E1]}
+- {id: SCL.M8, misreading: gradients are left scaled when the step is skipped, witnesses: [SCL.E3]}
+- {id: SCL.M9, misreading: with enabled=False non-finite gradients still skip the step, witnesses: [SCL.E6]}
+nonclaims:
+- The float32 reciprocal used by the device unscale is the numerical question (K - G); the target divides exactly.
+- Whether the scale should be bounded (e.g. stay above 1) is not claimed; the documents say it is not guaranteed.
+changes: []
