@@ -1,0 +1,300 @@
+{
+ "root": ".cache/sufficiency/E3_models",
+ "model_configs": {
+  "attempted": 12,
+  "capture_rc": {
+   "0": 10,
+   "1": 2
+  },
+  "failed": [
+   "facebook__esm2_t33_650M_UR50D/bf16: 1",
+   "facebook__esm2_t33_650M_UR50D/fp32tf32: 1"
+  ]
+ },
+ "units_captured": 357,
+ "verify": {
+  "bit_identical": 281,
+  "mismatch": 57,
+  "not_established": 9,
+  "partial": 10
+ },
+ "candidate_coverage": {
+  "k": 266,
+  "n": 357,
+  "wilson": [
+   0.7451,
+   0.6974,
+   0.7875
+  ]
+ },
+ "dynamic_set": {
+  "n": 357,
+  "of": 357,
+  "seed": 20261019
+ },
+ "complete_reference": {
+  "admitted_strict": {
+   "k": 0,
+   "n": 357,
+   "wilson": [
+    0.0,
+    0,
+    0.0106
+   ],
+   "reason": "GRAPH (composition) is drafted, not validated"
+  },
+  "development_drafted_GRAPH": {
+   "k": 119,
+   "n": 357,
+   "wilson": [
+    0.3333,
+    0.2864,
+    0.3838
+   ]
+  }
+ },
+ "bias_query_available": {
+  "k": 0,
+  "n": 357,
+  "reason": "no automatic route from compiled units to the contract measurement mode"
+ },
+ "classes": {
+  "implementation extension needed": {
+   "k": 162,
+   "wilson": [
+    0.4538,
+    0.4029,
+    0.5056
+   ]
+  },
+  "new or modified task contract needed": {
+   "k": 85,
+   "wilson": [
+    0.2381,
+    0.1968,
+    0.2849
+   ]
+  },
+  "manual binding needed": {
+   "k": 64,
+   "wilson": [
+    0.1793,
+    0.143,
+    0.2224
+   ]
+  },
+  "run or evidence insufficient": {
+   "k": 46,
+   "wilson": [
+    0.1289,
+    0.098,
+    0.1676
+   ]
+  }
+ },
+ "reasons": {
+  "implementation extension needed | only the composition contract GRAPH is not admitted (complete reference evaluated)": 104,
+  "implementation extension needed | tool refuses a reference without bit-identical K-G (verify: mismatch)": 43,
+  "run or evidence insufficient | over the 600 s budget": 40,
+  "new or modified task contract needed | operations without a contract: aten.scalar_tensor,prims.iota": 25,
+  "manual binding needed | output type or shape mapping not established: out_ptr0 -> prepare_softmax_online_default": 20,
+  "new or modified task contract needed | operations without a contract: aten.pow": 20,
+  "new or modified task contract needed | operations without a contract: prims.inductor_lookup_seed,prims.inductor_random": 16,
+  "new or modified task contract needed | operations without a contract: aten.scalar_tensor": 10,
+  "manual binding needed | input type or shape mapping not established: prepare_softmax_online_default": 10,
+  "implementation extension needed | tool refuses a reference without bit-identical K-G (verify: partial)": 10,
+  "manual binding needed | provenance binding incomplete: placeholder getitem_21 matches 0 parameters": 8,
+  "new or modified task contract needed | operations without a contract: aten.index_put_": 8,
+  "run or evidence insufficient | no graph fragment / kernel source": 6,
+  "implementation extension needed | reference not_established": 5,
+  "manual binding needed | provenance binding incomplete: placeholder primals_3 matches 0 parameters": 4,
+  "manual binding needed | provenance binding incomplete: placeholder buf103 matches 0 parameters": 2,
+  "manual binding needed | provenance binding incomplete: placeholder buf106 matches 0 parameters": 2,
+  "manual binding needed | provenance binding incomplete: placeholder primals_4 matches 0 parameters": 2,
+  "manual binding needed | provenance binding incomplete: write to parameter arg_A recorded as input": 2,
+  "new or modified task contract needed | operations without a contract: prims.device_put,prims.iota": 2,
+  "new or modified task contract needed | operations without a contract: prims.iota": 2,
+  "new or modified task contract needed | operations without a contract: aten.unbind": 2,
+  "manual binding needed | provenance binding incomplete: placeholder primals_1 matches 0 parameters": 2,
+  "manual binding needed | provenance binding incomplete: placeholder getitem_31 matches 0 parameters": 2,
+  "manual binding needed | provenance binding incomplete: placeholder primals_2 matches 0 parameters": 2,
+  "manual binding needed | provenance binding incomplete: placeholder buf105 matches 0 parameters": 1,
+  "manual binding needed | provenance binding incomplete: placeholder buf108 matches 0 parameters": 1,
+  "manual binding needed | provenance binding incomplete: placeholder buf111 matches 0 parameters": 1,
+  "manual binding needed | provenance binding incomplete: placeholder buf2 matches 0 parameters": 1,
+  "manual binding needed | provenance binding incomplete: placeholder buf109 matches 0 parameters": 1,
+  "manual binding needed | provenance binding incomplete: placeholder buf68 matches 0 parameters": 1,
+  "manual binding needed | provenance binding incomplete: placeholder buf101 matches 0 parameters": 1,
+  "manual binding needed | provenance binding incomplete: placeholder buf104 matches 0 parameters": 1
+ },
+ "groups": {
+  "model": {
+   "FacebookAI__xlm-roberta-base/bf16": {
+    "implementation extension needed": 16,
+    "_n": 29,
+    "_complete_dev": 14,
+    "new or modified task contract needed": 5,
+    "manual binding needed": 7,
+    "run or evidence insufficient": 1
+   },
+   "FacebookAI__xlm-roberta-base/fp32tf32": {
+    "run or evidence insufficient": 8,
+    "_n": 35,
+    "_complete_dev": 8,
+    "new or modified task contract needed": 5,
+    "implementation extension needed": 17,
+    "manual binding needed": 5
+   },
+   "albert__albert-base-v2/bf16": {
+    "implementation extension needed": 15,
+    "_n": 33,
+    "_complete_dev": 18,
+    "new or modified task contract needed": 10,
+    "manual binding needed": 8
+   },
+   "albert__albert-base-v2/fp32tf32": {
+    "manual binding needed": 8,
+    "_n": 49,
+    "_complete_dev": 18,
+    "new or modified task contract needed": 19,
+    "implementation extension needed": 17,
+    "run or evidence insufficient": 5
+   },
+   "almanach__camembert-base/bf16": {
+    "implementation extension needed": 16,
+    "_n": 33,
+    "_complete_dev": 13,
+    "new or modified task contract needed": 7,
+    "run or evidence insufficient": 2,
+    "manual binding needed": 8
+   },
+   "almanach__camembert-base/fp32tf32": {
+    "run or evidence insufficient": 11,
+    "_n": 41,
+    "_complete_dev": 9,
+    "new or modified task contract needed": 9,
+    "implementation extension needed": 16,
+    "manual binding needed": 5
+   },
+   "answerdotai__ModernBERT-base/bf16": {
+    "new or modified task contract needed": 7,
+    "_n": 27,
+    "_complete_dev": 12,
+    "implementation extension needed": 14,
+    "manual binding needed": 6
+   },
+   "answerdotai__ModernBERT-base/fp32tf32": {
+    "new or modified task contract needed": 8,
+    "_n": 41,
+    "_complete_dev": 10,
+    "implementation extension needed": 21,
+    "run or evidence insufficient": 7,
+    "manual binding needed": 5
+   },
+   "distilbert__distilbert-base-uncased/bf16": {
+    "new or modified task contract needed": 6,
+    "_n": 30,
+    "_complete_dev": 12,
+    "implementation extension needed": 16,
+    "manual binding needed": 7,
+    "run or evidence insufficient": 1
+   },
+   "distilbert__distilbert-base-uncased/fp32tf32": {
+    "new or modified task contract needed": 9,
+    "_n": 39,
+    "_complete_dev": 5,
+    "run or evidence insufficient": 11,
+    "implementation extension needed": 14,
+    "manual binding needed": 5
+   }
+  },
+  "structure": {
+   "per": {
+    "implementation extension needed": 60,
+    "_n": 123,
+    "_complete_dev": 22,
+    "new or modified task contract needed": 30,
+    "manual binding needed": 31,
+    "run or evidence insufficient": 2
+   },
+   "poi": {
+    "new or modified task contract needed": 21,
+    "_n": 69,
+    "_complete_dev": 31,
+    "implementation extension needed": 32,
+    "manual binding needed": 11,
+    "run or evidence insufficient": 5
+   },
+   "red": {
+    "manual binding needed": 20,
+    "_n": 101,
+    "_complete_dev": 59,
+    "new or modified task contract needed": 24,
+    "implementation extension needed": 54,
+    "run or evidence insufficient": 3
+   },
+   "tem": {
+    "run or evidence insufficient": 36,
+    "_n": 64,
+    "_complete_dev": 7,
+    "implementation extension needed": 16,
+    "new or modified task contract needed": 10,
+    "manual binding needed": 2
+   }
+  },
+  "semantic": {
+   "elementwise_layout": {
+    "new or modified task contract needed": 20,
+    "_n": 72,
+    "_complete_dev": 31,
+    "implementation extension needed": 32,
+    "manual binding needed": 13,
+    "run or evidence insufficient": 7
+   },
+   "index_scatter": {
+    "manual binding needed": 11,
+    "_n": 18,
+    "_complete_dev": 1,
+    "implementation extension needed": 3,
+    "new or modified task contract needed": 4
+   },
+   "inplace_state": {
+    "new or modified task contract needed": 8,
+    "_n": 8,
+    "_complete_dev": 0
+   },
+   "matmul": {
+    "run or evidence insufficient": 36,
+    "_n": 66,
+    "_complete_dev": 7,
+    "new or modified task contract needed": 14,
+    "implementation extension needed": 16
+   },
+   "normalization": {
+    "new or modified task contract needed": 18,
+    "_n": 41,
+    "_complete_dev": 3,
+    "implementation extension needed": 22,
+    "manual binding needed": 1
+   },
+   "random": {
+    "new or modified task contract needed": 16,
+    "_n": 16,
+    "_complete_dev": 0
+   },
+   "reduction": {
+    "implementation extension needed": 114,
+    "_n": 179,
+    "_complete_dev": 81,
+    "new or modified task contract needed": 51,
+    "manual binding needed": 11,
+    "run or evidence insufficient": 3
+   },
+   "softmax": {
+    "manual binding needed": 40,
+    "_n": 40,
+    "_complete_dev": 0
+   }
+  }
+ }
+}
