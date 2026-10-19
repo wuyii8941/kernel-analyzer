@@ -92,9 +92,10 @@ def verdict(report):
     for name, o in outs.items():
         sem = o.get("semantic") or {}
         excl += int(sem.get("reference_difference_excludes_zero") or 0)
-        if o.get("status") != "evaluated" or (o.get("complete_rate") or 0) < 1.0 or not sem:
+        rate = (o.get("reference") or {}).get("complete_rate")
+        if o.get("status") != "evaluated" or (rate or 0) < 1.0 or not sem:
             complete = False
-            reasons.append(f"{name}: {o.get('status')} complete_rate={o.get('complete_rate')}")
+            reasons.append(f"{name}: {o.get('status')} reference complete_rate={rate}")
     if excl:
         return "detected", f"{excl} coordinates with G_pi - f excluding zero"
     if complete:
@@ -102,7 +103,22 @@ def verdict(report):
     return "not_established", "; ".join(reasons)[:300]
 
 
+def rescore(root):
+    """Re-derive every verdict from the saved reports (results.jsonl is kept; rescored.jsonl is written)."""
+    rows = [json.loads(l) for l in open(root / "results.jsonl")]
+    with open(root / "rescored.jsonl", "x") as fh:
+        for row in rows:
+            rpath = root / "reports" / f"{row['id']}.json"
+            report = json.loads(rpath.read_text()) if rpath.exists() else None
+            if report is not None:
+                row["verdict"], row["reason"] = verdict(report)
+            fh.write(json.dumps(row) + "\n")
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--rescore":
+        rescore(Path(sys.argv[2]))
+        return 0
     ap = argparse.ArgumentParser()
     ap.add_argument("--spec-src", type=Path, required=True, help="frozen 5_specification tree (worktree at F)")
     ap.add_argument("--root", type=Path, required=True)

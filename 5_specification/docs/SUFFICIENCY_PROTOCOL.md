@@ -164,3 +164,11 @@ cut-cross-entropy 25.1.1（已安装于 liger 环境，仓库此前从未使用�
   捕获与 K−Gπ 核对不受影响，不重跑。
 - E3 新模型 ESM2-650M 两个配置捕获失败：流水线把层数截为 2 层，而 ESM 的 contact head 需要全部层的权重
   （state_dict 尺寸不符）。这是冻结流水线自身的限制，按「运行或证据不足」留在分母中，不改流水线补跑。
+- 2026-10-20 偏差 D2（评价脚本缺陷，不改判定规则）：`run_e4.py:verdict` 从输出的顶层读取 `complete_rate`，而 measure
+  报告把它放在 `reference.complete_rate`，导致所有完整的对照被记为未建立。修正读取路径后，用已保存的报告逐例重算
+  判定（`run_e4.py --rescore`，原 `results.jsonl` 保留，新结果 `rescored.jsonl`），没有重跑任何用例。
+- 2026-10-20 偏差 D3（运行环境）：以 Inductor 调用为基础的 21 例（M2 的 12 例、M7 的 9 例）被准入拒绝：
+  「bound runtime package version is 2.10.0, expected 2.10.0+cu128」。评价用的 liger 环境中 torch 发行版本号为
+  2.10.0，而这些绑定计划固定 2.10.0+cu128。核实 `/data1/tzh/envs/hf_ga_5190`（torch 2.10.0+cu128、Triton 3.6.0、
+  yaml、python-flint）能正常完成未修改的基础绑定 inductor_var 的正式测量后，只在该环境中重跑这 21 例，结果单独保存
+  （`.cache/sufficiency/E4_env/`），其余 145 例保持 liger 环境的结果。
